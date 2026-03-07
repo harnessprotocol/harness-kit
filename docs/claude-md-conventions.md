@@ -1,4 +1,4 @@
-# CLAUDE.md Conventions: Three-File Structure
+# Claude Conventions
 
 A convention for organizing Claude Code configuration across three companion files with distinct responsibilities.
 
