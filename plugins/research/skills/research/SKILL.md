@@ -344,8 +344,7 @@ When **updating** an existing synthesis, ensure its frontmatter is present and t
 After writing or updating the synthesis file, rebuild the master index from scratch:
 
 ```bash
-cd /Users/john/claude_playground
-python3 scripts/rebuild-research-index.py
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/rebuild-research-index.py"
 ```
 
 Expected output: `Rebuilt INDEX.md: N entries`

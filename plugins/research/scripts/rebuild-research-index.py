@@ -21,7 +21,7 @@ except ImportError:
     print("Error: PyYAML required. Run: pip install pyyaml", file=sys.stderr)
     sys.exit(1)
 
-RESEARCH_DIR = Path(__file__).parent.parent / "research"
+RESEARCH_DIR = Path.cwd() / "research"
 INDEX_PATH = RESEARCH_DIR / "INDEX.md"
 
 SKIP_FILES = {"INDEX.md", "README.md", "TEMPLATE.md", "ROADMAP.md",

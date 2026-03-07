@@ -1,25 +1,21 @@
-# Research Skill
+# Research Plugin
 
-A Claude Code skill for systematically processing and indexing research materials — from any source, any medium — into a structured knowledge base you can build on over time.
+A Claude Code plugin for systematically processing and indexing research materials — from any source, any medium — into a structured knowledge base you can build on over time.
 
-## Installation
+## Components
 
-Copy the `research/` skill directory into your Claude skills folder:
-
-```bash
-cp -r research/ ~/.claude/skills/research/
-```
-
-The `/research:` command will be available in your next Claude Code session.
+- **`/research` skill** — the main workflow. Point it at a source, it extracts, preserves, and synthesizes.
+- **`rebuild-research-index.py`** — regenerates `research/INDEX.md` from synthesis file frontmatter. The skill runs this automatically after each session. You can also run it manually if files get out of sync.
 
 ## Requirements
 
 - **Claude Code** — required
 - **`gh` CLI** ([GitHub CLI](https://cli.github.com/)) — required only for GitHub repository URLs; all other sources work without it
+- **Python 3.10+** — for the index rebuild script (`pip install pyyaml`)
 
 ## What It Does
 
-When you invoke `/research:` with a source, the skill:
+When you invoke `/research` with a source, the skill:
 
 1. Checks whether you've already researched this (exact URL match) and whether a synthesis for this topic already exists
 2. Fetches the content using the appropriate method for the source type
@@ -56,7 +52,7 @@ For content that isn't on the web — a podcast playing through your speakers, a
 Tools like [Superwhisper](https://superwhisper.com) or [Spokenly](https://spokenly.app) run locally and can transcribe anything your microphone picks up. When you're done, save the transcript as a text or markdown file and process it like any local file:
 
 ```
-/research: ~/Downloads/podcast-transcript.md
+/research ~/Downloads/podcast-transcript.md
 ```
 
 This effectively makes any audio source researchable — live or recorded.
@@ -66,15 +62,15 @@ This effectively makes any audio source researchable — live or recorded.
 ### Process a single source
 
 ```
-/research: https://example.com/article
-/research: https://github.com/owner/repo
-/research: ~/Downloads/paper.pdf
+/research https://example.com/article
+/research https://github.com/owner/repo
+/research ~/Downloads/paper.pdf
 ```
 
 ### Process multiple sources at once
 
 ```
-/research: https://url1.com, https://url2.com, /path/to/file.pdf
+/research https://url1.com, https://url2.com, /path/to/file.pdf
 ```
 
 Each source goes through the full workflow sequentially.
@@ -82,10 +78,16 @@ Each source goes through the full workflow sequentially.
 ### Audit for gaps
 
 ```
-/research:
+/research
 ```
 
 Scans `resources/` and `research/` to find raw files without syntheses, syntheses missing source references, and INDEX.md gaps. Processes any found.
+
+### Rebuild the index manually
+
+```bash
+python3 "${CLAUDE_PLUGIN_ROOT}/scripts/rebuild-research-index.py"
+```
 
 ## Output Structure
 
@@ -99,7 +101,7 @@ your-project/
     ├── ai-routing/
     │   └── temporal.md                    # One synthesis per topic, updated as sources accumulate
     ├── agent-memory/
-    │   └── letta.md
+    │   └── cognee.md
     └── psychology/
         └── identity-continuity.md
 ```
