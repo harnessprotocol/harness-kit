@@ -1,0 +1,58 @@
+name: Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate JSON manifests
+        run: |
+          echo "Checking marketplace.json..."
+          python3 -c "import json; json.load(open('.claude-plugin/marketplace.json'))"
+
+          echo "Checking plugin manifests..."
+          for manifest in plugins/*/.claude-plugin/plugin.json; do
+            echo "  $manifest"
+            python3 -c "import json; json.load(open('$manifest'))"
+          done
+
+      - name: Check version alignment
+        run: |
+          python3 -c "
+          import json, sys
+
+          marketplace = json.load(open('.claude-plugin/marketplace.json'))
+          errors = []
+
+          for plugin in marketplace['plugins']:
+              name = plugin['name']
+              mp_version = plugin['version']
+              manifest_path = f\"plugins/{name}/.claude-plugin/plugin.json\"
+
+              try:
+                  manifest = json.load(open(manifest_path))
+              except FileNotFoundError:
+                  errors.append(f'{name}: plugin.json not found at {manifest_path}')
+                  continue
+
+              pj_version = manifest.get('version', '(missing)')
+              if mp_version != pj_version:
+                  errors.append(f'{name}: marketplace.json says {mp_version}, plugin.json says {pj_version}')
+
+          if errors:
+              print('Version mismatch:')
+              for e in errors:
+                  print(f'  {e}')
+              sys.exit(1)
+          else:
+              for plugin in marketplace['plugins']:
+                  print(f\"{plugin['name']}: v{plugin['version']}\")
+              print('All versions aligned.')
+          "

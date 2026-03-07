@@ -8,6 +8,9 @@ Claude Code configuration — skills, agents, and settings worth sharing, distri
 claude-setup/
 ├── .claude-plugin/
 │   └── marketplace.json          ← marketplace catalog
+├── .github/
+│   └── workflows/
+│       └── validate.yml          ← CI: manifest parsing + version alignment
 ├── plugins/
 │   └── research/                 ← one directory per plugin
 │       ├── .claude-plugin/
