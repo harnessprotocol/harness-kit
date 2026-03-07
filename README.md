@@ -20,7 +20,7 @@ If your Claude Code build doesn’t support the plugin marketplace:
 curl -fsSL https://raw.githubusercontent.com/siracusa5/claude-setup/main/install.sh | bash
 ```
 
-Downloads skill files to `~/.claude/skills/` and verifies SHA256 checksums. This installs only the skill files; the full plugin (e.g. index rebuild script) comes from the marketplace install.
+Downloads skill files to `~/.claude/skills/` over HTTPS. This installs only the skill files; the full plugin (e.g. index rebuild script) comes from the marketplace install.
 </details>
 
 ---

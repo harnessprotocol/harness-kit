@@ -38,29 +38,11 @@ if [[ -n "$LOCAL_PLUGINS" ]]; then
 else
   echo "Remote install: downloading from ${REPO}"
 
-  # Download checksums
-  CHECKSUMS=$(curl -fsSL "${RAW_BASE}/checksums.sha256")
-
-  # research skill
   RESEARCH_DEST="${SKILLS_DEST}/research"
   mkdir -p "$RESEARCH_DEST"
 
-  for file in SKILL.md README.md; do
-    curl -fsSL "${RAW_BASE}/plugins/research/skills/research/${file}" -o "${RESEARCH_DEST}/${file}"
-    expected=$(echo "$CHECKSUMS" | grep "plugins/research/skills/research/${file}" | awk '{print $1}')
-    if [[ -z "$expected" ]]; then
-      echo "Warning: no checksum found for ${file}, skipping verification" >&2
-    else
-      actual=$(shasum -a 256 "${RESEARCH_DEST}/${file}" | awk '{print $1}')
-      if [[ "$actual" != "$expected" ]]; then
-        echo "Error: checksum mismatch for ${file}" >&2
-        echo "  expected: ${expected}" >&2
-        echo "  got:      ${actual}" >&2
-        rm -f "${RESEARCH_DEST}/${file}"
-        exit 1
-      fi
-    fi
-  done
+  curl -fsSL "${RAW_BASE}/plugins/research/skills/research/SKILL.md"  -o "${RESEARCH_DEST}/SKILL.md"
+  curl -fsSL "${RAW_BASE}/plugins/research/skills/research/README.md" -o "${RESEARCH_DEST}/README.md"
 
   echo "Installed:"
   echo "  ~/.claude/skills/research/"

@@ -19,7 +19,6 @@ claude-setup/
 │               ├── SKILL.md      ← skill definition (what Claude reads)
 │               └── README.md     ← usage docs (what humans read)
 ├── install.sh                    ← script fallback for users without plugin marketplace
-├── checksums.sha256              ← SHA256 hashes for remote install verification
 ├── CLAUDE.md                     ← this file
 └── README.md
 ```
@@ -72,21 +71,11 @@ Add an entry to `.claude-plugin/marketplace.json` under `plugins`:
 
 Note: `source` is relative to `pluginRoot` (`./plugins`), so `"./research"` resolves to `./plugins/research`.
 
-### 4. Update checksums
-
-If the plugin includes files distributed by `install.sh` (anything under `plugins/*/skills/`), regenerate checksums:
-
-```bash
-shasum -a 256 plugins/*/skills/*/*.md > checksums.sha256
-```
-
-This must be done any time a distributed file changes. The remote install script verifies these hashes — a stale checksum file will cause installs to fail.
-
-### 5. Add a section to README.md
+### 4. Add a section to README.md
 
 Under `## Skills` (or a new `## Agents`, `## Hooks` section as appropriate), add a one-liner and a link to the plugin's README.
 
-### 6. Test it
+### 5. Test it
 
 ```bash
 # From within Claude Code:
@@ -112,5 +101,4 @@ Bump `version` in both `plugin.json` and the `marketplace.json` entry when makin
 When changing any plugin's skill files:
 
 1. Bump `version` in `plugins/<name>/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json`
-2. Regenerate checksums: `shasum -a 256 plugins/*/skills/*/*.md > checksums.sha256`
-3. Commit all three together — a version bump without updated checksums (or vice versa) will break remote installs
+2. Commit together — version in both manifests must match
