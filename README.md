@@ -8,6 +8,8 @@ Claude Code plugins — the parts worth sharing. Add a marketplace once, then in
 
 **Requires:** [Claude Code](https://claude.ai/claude-code)
 
+> **[CLAUDE.md Conventions: Three-File Structure](docs/claude-md-conventions.md)** — How to organize Claude Code configuration across CLAUDE.md, AGENT.md, and SOUL.md with separation of concerns, cascade rules, and practical examples.
+
 ## Install
 
 ```
