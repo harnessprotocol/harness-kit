@@ -1,20 +1,20 @@
 # claude-setup
 
-My personal Claude Code setup — the parts worth sharing.
+Claude Code configuration — the parts worth sharing.
 
 ---
 
 ## `/research` skill
 
-I read a lot. Blog posts, GitHub repos, papers, YouTube talks. For a while the knowledge just evaporated — browser tabs closed, notes scattered, no way to build on what I'd already looked into.
+You read something interesting. You synthesize it, maybe take a few notes, move on. Three weeks later you vaguely remember it existed but can't find it. You re-read it. This is the loop.
 
-This skill fixes that. You throw a source at it and it builds a real knowledge base: raw content preserved verbatim, a synthesized document that gets updated as you find more on the same topic, and a master index so you can actually find things later.
+This skill breaks the loop. Point it at anything — a URL, a GitHub repo, a YouTube talk, a PDF — and it builds a knowledge base that actually compounds over time.
 
 ```
 /research: https://github.com/letta-ai/letta
 ```
 
-That one command fetches the repo, identifies the important docs, synthesizes the key ideas, and drops everything into your project:
+That fetches the repo, identifies the important docs, synthesizes the key ideas, and drops everything into your project:
 
 ```
 your-project/
@@ -26,7 +26,7 @@ your-project/
         └── letta.md                    ← synthesis, tagged, dated
 ```
 
-The part that makes it actually useful over time: if you research a YouTube talk about Letta next week, it doesn't create a second file. It finds the existing synthesis and folds the new insights in. One document per topic, fed by as many sources as you find.
+The part that makes it worth using over time: when you find a YouTube talk about Letta next week, it doesn't create a second file. It finds the existing synthesis and folds the new insights in. One document per topic, fed by as many sources as you find.
 
 Works with anything you can link to or read:
 
@@ -40,7 +40,7 @@ Works with anything you can link to or read:
 | Reddit threads | Full thread |
 | Local files | PDF, markdown, text, code — anything readable |
 
-One thing I added that I haven't seen elsewhere: for GitHub repos, it scans fetched content for prompt injection before saving or synthesizing anything — HTML comments, zero-width characters, imperative language targeting AI tools. If it finds something suspicious, it flags it and documents it. It never follows it.
+For GitHub repos, fetched content gets scanned for prompt injection before anything is saved — HTML comments, zero-width characters, imperative language targeting AI tools. Suspicious content gets flagged and documented, never followed.
 
 **Install:**
 
@@ -82,4 +82,4 @@ claude-setup/
 
 Skills go in `~/.claude/skills/`. Scripts go in your project.
 
-Nothing in here was added because it seemed like a good idea. It's here because I use it.
+Nothing in here was added because it seemed like a good idea. It's here because it's useful.
