@@ -1,62 +1,46 @@
 # claude-setup
 
-Claude Code configuration worth sharing — skills and scripts developed through daily use.
+My personal Claude Code setup — the parts worth sharing.
 
-## Skills
+---
 
-Skills are slash commands that give Claude Code structured, repeatable workflows.
+## `/research` skill
 
-### `/research` — Build a knowledge base from anything
+I read a lot. Blog posts, GitHub repos, papers, YouTube talks. For a while the knowledge just evaporated — browser tabs closed, notes scattered, no way to build on what I'd already looked into.
 
-Feed it a URL, GitHub repo, YouTube video, PDF, or local file. It fetches the content, saves it verbatim, synthesizes it into a structured document, and maintains a master index so everything stays findable.
-
-**A session looks like this:**
+This skill fixes that. You throw a source at it and it builds a real knowledge base: raw content preserved verbatim, a synthesized document that gets updated as you find more on the same topic, and a master index so you can actually find things later.
 
 ```
 /research: https://github.com/letta-ai/letta
 ```
 
-Claude fetches the repo tree, identifies key docs, scans for prompt injection, then produces:
+That one command fetches the repo, identifies the important docs, synthesizes the key ideas, and drops everything into your project:
 
 ```
 your-project/
 ├── resources/
-│   └── letta-readme-2026-03-06.md        ← raw content, preserved verbatim
+│   └── letta-readme-2026-03-06.md     ← verbatim content, always saved first
 └── research/
-    ├── INDEX.md                           ← master index, auto-updated
+    ├── INDEX.md                        ← searchable master index
     └── agent-memory/
-        └── letta.md                       ← synthesis with frontmatter tags
+        └── letta.md                    ← synthesis, tagged, dated
 ```
 
-The synthesis file starts like:
+The part that makes it actually useful over time: if you research a YouTube talk about Letta next week, it doesn't create a second file. It finds the existing synthesis and folds the new insights in. One document per topic, fed by as many sources as you find.
 
-```yaml
----
-tags: [github, python, memory, multi-agent, open-source]
-date: 2026-03-06
-source: https://github.com/letta-ai/letta
----
+Works with anything you can link to or read:
 
-# Letta
+| Source | How it works |
+|--------|-------------|
+| GitHub repo | Fetches tree + key files via the API — verbatim, not rendered |
+| Docs / articles / blog posts | WebFetch extraction |
+| YouTube video | Description + transcript if available |
+| Podcast episode | Show notes + linked transcripts |
+| Academic papers | arXiv, PDF URLs |
+| Reddit threads | Full thread |
+| Local files | PDF, markdown, text, code — anything readable |
 
-## Overview
-...
-```
-
-**Multiple sources, one synthesis.** Research the docs today, find a conference talk tomorrow — both feed the same `letta.md` rather than creating parallel documents. Knowledge accumulates rather than sprawls.
-
-**Supported sources:**
-
-| Source | Example |
-|--------|---------|
-| GitHub repository | `github.com/owner/repo` |
-| Documentation site | `docs.example.com` |
-| Academic paper | arXiv, PDF URLs |
-| Blog post / article | dev.to, Substack, personal sites |
-| Reddit thread | any `reddit.com` link |
-| YouTube video | description + transcript if available |
-| Podcast episode | show notes + any linked transcript |
-| Local file | PDF, markdown, text, code |
+One thing I added that I haven't seen elsewhere: for GitHub repos, it scans fetched content for prompt injection before saving or synthesizing anything — HTML comments, zero-width characters, imperative language targeting AI tools. If it finds something suspicious, it flags it and documents it. It never follows it.
 
 **Install:**
 
@@ -64,46 +48,38 @@ source: https://github.com/letta-ai/letta
 cp -r skills/research/ ~/.claude/skills/research/
 ```
 
-Requires [Claude Code](https://claude.ai/claude-code). The [`gh` CLI](https://cli.github.com/) is only needed for GitHub repo URLs.
+Requires [Claude Code](https://claude.ai/claude-code). The [`gh` CLI](https://cli.github.com/) is only needed for GitHub URLs.
 
-Full docs: [`skills/research/README.md`](skills/research/README.md)
+Full usage docs in [`skills/research/README.md`](skills/research/README.md).
 
 ---
 
-## Scripts
+## `scripts/rebuild-research-index.py`
 
-### `rebuild-research-index.py`
-
-Regenerates `research/INDEX.md` from synthesis file YAML frontmatter. The research skill calls this automatically at the end of each session; run it manually to repair drift or after editing files by hand.
-
-**Requires:** Python 3.10+, `pyyaml`
+Regenerates `research/INDEX.md` by scanning synthesis files and reading their YAML frontmatter. The research skill runs this automatically at the end of every session, but you can run it manually if you edit files by hand or something gets out of sync.
 
 ```bash
 pip install pyyaml
-python3 scripts/rebuild-research-index.py
-python3 scripts/rebuild-research-index.py --dry-run
+python3 scripts/rebuild-research-index.py        # rebuild
+python3 scripts/rebuild-research-index.py --dry-run  # preview
 ```
 
-Place it in a `scripts/` directory at your project root, alongside your `research/` directory.
+Requires Python 3.10+. Expects `research/` and `scripts/` to sit at the same level in your project.
 
 ---
 
-## Repo structure
+## How this repo works
 
 ```
 claude-setup/
 ├── skills/
 │   └── research/
-│       ├── SKILL.md        ← skill implementation (read by Claude)
-│       └── README.md       ← usage docs (read by you)
+│       ├── SKILL.md     ← what Claude reads to run the workflow
+│       └── README.md    ← what you read to understand it
 └── scripts/
     └── rebuild-research-index.py
 ```
 
-Skills install to `~/.claude/skills/`. Scripts live in your project's `scripts/` directory.
+Skills go in `~/.claude/skills/`. Scripts go in your project.
 
----
-
-## Philosophy
-
-This is a working setup, not a framework. Everything here earned its place through use. Nothing is included speculatively.
+Nothing in here was added because it seemed like a good idea. It's here because I use it.
