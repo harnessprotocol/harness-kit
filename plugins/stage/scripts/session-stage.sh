@@ -22,7 +22,10 @@ fi
 
 STAGING_FILE=""
 
-# 1. Project-local: scripts/session-staging.md in current working directory
+# 1. Project-local: scripts/session-staging.md in current working directory.
+# Note: $PWD may not be the project root when a Stop hook fires — Claude Code
+# may set a different working directory. If the file doesn't exist here, we
+# fall through to the global fallback rather than creating a stray file.
 if [[ -f "$PWD/scripts/session-staging.md" ]]; then
   STAGING_FILE="$PWD/scripts/session-staging.md"
 elif [[ -d "$PWD/scripts" ]]; then
@@ -74,13 +77,14 @@ TODAY=$(date '+%Y-%m-%d')
 MANUAL_CONTEXT=""
 
 if grep -q "<!-- source: manual -->" "$STAGING_FILE" 2>/dev/null; then
-  # Extract today's manual entries if any exist
+  # Extract today's manual entries if any exist.
+  # `found` is intentionally not reset between sections — if the user ran
+  # /stage multiple times today, we accumulate all their bullets.
   MANUAL_TODAY=$(awk "
     /^## ${TODAY}/ { in_section=1; next }
     /^## [0-9]/ { in_section=0 }
     in_section && /<!-- source: manual -->/ { found=1 }
     in_section && found && /^- / { print }
-    in_section && /^## / { found=0 }
   " "$STAGING_FILE" 2>/dev/null || echo "")
 
   if [[ -n "$MANUAL_TODAY" ]]; then

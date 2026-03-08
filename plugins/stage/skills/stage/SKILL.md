@@ -30,8 +30,8 @@ Capture information from the current conversation into a staging file for the da
 
 Classify the argument:
 - **No argument** → auto-extract mode
-- **`decisions`** → filter to decisions only
-- **`technical`** → filter to technical facts only
+- **Exactly the word `decisions`** → filter to decisions only
+- **Exactly the word `technical`** → filter to technical facts only
 - **Anything else** → treat as specific facts provided by the user
 
 ### Step 2: Resolve Staging File
@@ -67,15 +67,16 @@ date '+%Y-%m-%d %H:%M'
 
 ### Step 4: Append to Staging File
 
-Use the **Edit tool** (NOT Write — Write would overwrite the file) to append the following to the end of the staging file:
+Use **Bash** with `>>` to append — do NOT use Write (overwrites the whole file) or Edit (find-replace, not true append):
 
-```markdown
-
-## YYYY-MM-DD HH:MM
-<!-- source: manual -->
-- bullet 1
-- bullet 2
-- bullet 3
+```bash
+{
+  echo ""
+  echo "## YYYY-MM-DD HH:MM"
+  echo "<!-- source: manual -->"
+  echo "- bullet 1"
+  echo "- bullet 2"
+} >> /path/to/staging-file.md
 ```
 
 The `<!-- source: manual -->` marker tells the Stop hook that manual staging already happened today, enabling deduplication.
@@ -95,7 +96,7 @@ Display what was staged to the user. Show the exact bullets that were written. K
 
 | Mistake | Fix |
 |---------|-----|
-| Using Write instead of Edit to append | Write overwrites the file. Always use Edit to append. |
+| Using Write or Edit to append | Write overwrites. Edit is find-replace, not append. Use Bash `>>`. |
 | Exceeding 8 bullets | Pick the most important facts. Cut the rest. |
 | Omitting `<!-- source: manual -->` | The Stop hook uses this marker for deduplication. Always include it. |
 | Writing summaries instead of bullet facts | "Decided to use SQLite for storage" not "We had a productive discussion about databases." |

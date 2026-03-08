@@ -77,7 +77,7 @@ Add to `~/.claude/hooks.json`:
 }
 ```
 
-Replace `/path/to/plugins/stage/scripts/session-stage.sh` with the actual path after installing.
+After `plugin install stage@harness-kit`, the script will be at `~/.claude/plugins/stage/scripts/session-stage.sh`. For a local clone, use the absolute path to `plugins/stage/scripts/session-stage.sh` within the repo.
 
 The hook reads from stdin (the Stop event payload), finds the session transcript, summarizes it, and appends to the staging file. It checks for `<!-- source: manual -->` entries from today and skips facts already captured manually.
 
