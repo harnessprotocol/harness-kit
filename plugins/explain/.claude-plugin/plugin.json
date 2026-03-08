@@ -1,0 +1,5 @@
+{
+  "name": "explain",
+  "description": "Structured code explainer — layered explanations of files, functions, directories, or concepts",
+  "version": "0.1.0"
+}

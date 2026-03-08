@@ -1,5 +1,5 @@
 {
-  "name": "claude-setup",
+  "name": "harness-kit",
   "owner": {
     "name": "siracusa5"
   },
@@ -12,6 +12,22 @@
       "name": "research",
       "source": "./research",
       "description": "Process any source into a structured, compounding knowledge base",
+      "version": "0.1.0",
+      "author": { "name": "siracusa5" },
+      "license": "MIT"
+    },
+    {
+      "name": "explain",
+      "source": "./explain",
+      "description": "Structured code explainer — layered explanations of files, functions, directories, or concepts",
+      "version": "0.1.0",
+      "author": { "name": "siracusa5" },
+      "license": "MIT"
+    },
+    {
+      "name": "data-lineage",
+      "source": "./data-lineage",
+      "description": "Trace column-level data lineage through SQL, Kafka, Spark, and JDBC codebases",
       "version": "0.1.0",
       "author": { "name": "siracusa5" },
       "license": "MIT"

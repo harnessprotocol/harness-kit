@@ -1,26 +1,40 @@
-# claude-setup
+# harness-kit
 
 Claude Code configuration — skills, agents, and settings worth sharing, distributed as a plugin marketplace.
 
 ## Repo structure
 
 ```
-claude-setup/
+harness-kit/
 ├── .claude-plugin/
 │   └── marketplace.json          ← marketplace catalog
 ├── .github/
 │   └── workflows/
 │       └── validate.yml          ← CI: manifest parsing + version alignment
-├── plugins/
-│   └── research/                 ← one directory per plugin
+├── plugins/                      ← one directory per plugin
+│   ├── research/
+│   │   ├── .claude-plugin/
+│   │   │   └── plugin.json       ← plugin manifest
+│   │   ├── scripts/
+│   │   │   └── rebuild-research-index.py
+│   │   └── skills/
+│   │       └── research/
+│   │           ├── SKILL.md      ← skill definition (what Claude reads)
+│   │           └── README.md     ← usage docs (what humans read)
+│   ├── explain/
+│   │   ├── .claude-plugin/
+│   │   │   └── plugin.json
+│   │   └── skills/
+│   │       └── explain/
+│   │           ├── SKILL.md
+│   │           └── README.md
+│   └── data-lineage/
 │       ├── .claude-plugin/
-│       │   └── plugin.json       ← plugin manifest
-│       ├── scripts/
-│       │   └── rebuild-research-index.py
+│       │   └── plugin.json
 │       └── skills/
-│           └── research/
-│               ├── SKILL.md      ← skill definition (what Claude reads)
-│               └── README.md     ← usage docs (what humans read)
+│           └── data-lineage/
+│               ├── SKILL.md
+│               └── README.md
 ├── install.sh                    ← script fallback for users without plugin marketplace
 ├── CLAUDE.md                     ← this file
 └── README.md
@@ -83,7 +97,7 @@ Under `## Skills` (or a new `## Agents`, `## Hooks` section as appropriate), add
 ```bash
 # From within Claude Code:
 /plugin marketplace add ./   # add local marketplace
-/plugin install <plugin-name>@claude-setup
+/plugin install <plugin-name>@harness-kit
 ```
 
 ## Installing
@@ -91,8 +105,8 @@ Under `## Skills` (or a new `## Agents`, `## Hooks` section as appropriate), add
 Users add the marketplace once and install plugins by name:
 
 ```
-/plugin marketplace add siracusa5/claude-setup
-/plugin install research@claude-setup
+/plugin marketplace add siracusa5/harness-kit
+/plugin install research@harness-kit
 ```
 
 ## Versioning

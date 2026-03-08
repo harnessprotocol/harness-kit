@@ -1,0 +1,5 @@
+{
+  "name": "data-lineage",
+  "description": "Trace column-level data lineage through SQL, Kafka, Spark, and JDBC codebases",
+  "version": "0.1.0"
+}
