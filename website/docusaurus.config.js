@@ -112,7 +112,7 @@ const config = {
             ],
           },
         ],
-        copyright: `Copyright © ${new Date().getFullYear()} harness-kit contributors. MIT License.`,
+        copyright: `Copyright © ${new Date().getFullYear()} harness-kit contributors. Apache-2.0 License.`,
       },
       prism: {
         theme: require('prism-react-renderer').themes.github,
