@@ -57,6 +57,29 @@ jobs:
               print('All versions aligned.')
           "
 
+      - name: Validate developed_with field
+        run: |
+          python3 -c "
+          import json, sys, glob
+
+          errors = []
+
+          for manifest_path in glob.glob('plugins/*/.claude-plugin/plugin.json'):
+              manifest = json.load(open(manifest_path))
+              dw = manifest.get('developed_with')
+              if dw is not None:
+                  if not isinstance(dw, str) or not dw.strip():
+                      errors.append(f'{manifest_path}: developed_with must be non-empty string if present, got {dw!r}')
+
+          if errors:
+              print('developed_with validation errors:')
+              for e in errors:
+                  print(f'  {e}')
+              sys.exit(1)
+          else:
+              print('developed_with field valid (optional).')
+          "
+
       - name: Validate requires.env schema
         run: |
           python3 -c "
