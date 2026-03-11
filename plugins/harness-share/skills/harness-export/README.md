@@ -21,7 +21,7 @@ The skill:
 version: 1
 
 marketplaces:
-  harness-kit: siracusa5/harness-kit
+  harness-kit: harnessprotocol/harness-kit
 
 plugins:
   - name: explain
@@ -40,5 +40,5 @@ Commit `harness.yaml` to your dotfiles repo. Teammates can import it with:
 Or with the shell fallback (no Claude Code required):
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/siracusa5/harness-kit/main/harness-restore.sh | bash -s -- harness.yaml
+curl -fsSL https://raw.githubusercontent.com/harnessprotocol/harness-kit/main/harness-restore.sh | bash -s -- harness.yaml
 ```

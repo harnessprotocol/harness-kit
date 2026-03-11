@@ -87,17 +87,17 @@ For **protocol v1 format** (`source: owner/repo`), derive marketplace info from 
 ```
 Run these in Claude Code:
 
-/plugin marketplace add siracusa5/harness-kit
+/plugin marketplace add harnessprotocol/harness-kit
 /plugin marketplace add obra/superpowers-marketplace
 
 /plugin install explain@harness-kit
 /plugin install superpowers@obra
 ```
 
-The marketplace short name to use in `/plugin install` commands is the **repo name** (last segment of `owner/repo`). Example: `siracusa5/harness-kit` → short name `harness-kit`.
+The marketplace short name to use in `/plugin install` commands is the **repo name** (last segment of `owner/repo`). Example: `harnessprotocol/harness-kit` → short name `harness-kit`.
 
 For **legacy format** (`marketplace: key` + `marketplaces:` section), resolve as before:
-- `marketplace: harness-kit` + `marketplaces.harness-kit: siracusa5/harness-kit` → `/plugin marketplace add siracusa5/harness-kit`
+- `marketplace: harness-kit` + `marketplaces.harness-kit: harnessprotocol/harness-kit` → `/plugin marketplace add harnessprotocol/harness-kit`
 
 Only include marketplaces for plugins actually selected.
 
@@ -153,7 +153,7 @@ After all the above, add:
 
 > "If you'd rather install without Claude Code, use the shell script:
 > ```bash
-> curl -fsSL https://raw.githubusercontent.com/siracusa5/harness-kit/main/harness-restore.sh | bash -s -- harness.yaml
+> curl -fsSL https://raw.githubusercontent.com/harnessprotocol/harness-kit/main/harness-restore.sh | bash -s -- harness.yaml
 > ```
 > This installs skill files directly (no scripts or hooks — those require the marketplace install)."
 

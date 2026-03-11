@@ -4,7 +4,7 @@
 # for the daily reflection to consume and write to the knowledge graph.
 #
 # Bundled with the harness-kit capture-session plugin.
-# https://github.com/siracusa5/harness-kit
+# https://github.com/harnessprotocol/harness-kit
 
 set -euo pipefail
 

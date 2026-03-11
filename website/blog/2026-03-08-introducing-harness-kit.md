@@ -20,7 +20,7 @@ harness-kit v0.1.0 is out. Five plugins for Claude Code, each packaging a workfl
 ## Install
 
 ```
-/plugin marketplace add siracusa5/harness-kit
+/plugin marketplace add harnessprotocol/harness-kit
 /plugin install research@harness-kit
 ```
 

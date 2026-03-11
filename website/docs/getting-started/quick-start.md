@@ -10,7 +10,7 @@ Install a plugin and try it in under a minute.
 ## 1. Add the marketplace
 
 ```
-/plugin marketplace add siracusa5/harness-kit
+/plugin marketplace add harnessprotocol/harness-kit
 ```
 
 ## 2. Install a plugin

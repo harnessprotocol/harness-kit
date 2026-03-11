@@ -22,7 +22,7 @@ Without an argument, looks for `harness.yaml` in the current directory.
 ```
 Run these in Claude Code:
 
-/plugin marketplace add siracusa5/harness-kit
+/plugin marketplace add harnessprotocol/harness-kit
 /plugin install explain@harness-kit
 /plugin install research@harness-kit
 ```
@@ -32,7 +32,7 @@ Run these in Claude Code:
 If you don't have Claude Code, use `harness-restore.sh` instead:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/siracusa5/harness-kit/main/harness-restore.sh | bash -s -- harness.yaml
+curl -fsSL https://raw.githubusercontent.com/harnessprotocol/harness-kit/main/harness-restore.sh | bash -s -- harness.yaml
 ```
 
 This downloads skill files directly (skills only — no scripts or hooks).

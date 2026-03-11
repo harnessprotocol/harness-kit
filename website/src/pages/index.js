@@ -77,7 +77,7 @@ function Hero() {
         <h1 className="hero__title">{siteConfig.title}</h1>
         <p className="hero__subtitle">{siteConfig.tagline}</p>
         <div className="hero-install">
-          <code>/plugin marketplace add siracusa5/harness-kit</code>
+          <code>/plugin marketplace add harnessprotocol/harness-kit</code>
         </div>
         <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', justifyContent: 'center', alignItems: 'center' }}>
           <Link className="button button--primary button--lg" to="/docs/getting-started/installation">
@@ -86,7 +86,7 @@ function Hero() {
           <Link className="button button--outline button--lg" to="/docs/plugins/overview">
             Browse Plugins
           </Link>
-          <Link className="button button--outline button--lg" href="https://github.com/siracusa5/harness-kit">
+          <Link className="button button--outline button--lg" href="https://github.com/harnessprotocol/harness-kit">
             GitHub ↗
           </Link>
         </div>

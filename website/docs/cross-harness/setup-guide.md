@@ -16,7 +16,7 @@ The skill format used by harness-kit follows the [Agent Skills specification](ht
 **Native plugin install (Copilot CLI):** GitHub Copilot has its own plugin system with a compatible structure. It discovers `plugin.json` in `.claude-plugin/` — the same location harness-kit uses — and follows the same `skills/NAME/SKILL.md` path. Install directly from the repo:
 
 ```
-copilot plugin install siracusa5/harness-kit
+copilot plugin install harnessprotocol/harness-kit
 ```
 
 **Manual — repo-wide instructions:** Copy a plugin's `SKILL.md` to `.github/copilot-instructions.md`. Copilot picks it up automatically for all conversations in that repo.

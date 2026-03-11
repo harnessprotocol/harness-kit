@@ -4,9 +4,9 @@
 
 A configuration framework for AI coding tools.
 
-[![Release](https://img.shields.io/github/v/release/siracusa5/harness-kit?style=flat-square)](https://github.com/siracusa5/harness-kit/releases)
-[![Validate](https://img.shields.io/github/actions/workflow/status/siracusa5/harness-kit/validate.yml?style=flat-square&label=validate)](https://github.com/siracusa5/harness-kit/actions/workflows/validate.yml)
-[![License](https://img.shields.io/github/license/siracusa5/harness-kit?style=flat-square)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/harnessprotocol/harness-kit?style=flat-square)](https://github.com/harnessprotocol/harness-kit/releases)
+[![Validate](https://img.shields.io/github/actions/workflow/status/harnessprotocol/harness-kit/validate.yml?style=flat-square&label=validate)](https://github.com/harnessprotocol/harness-kit/actions/workflows/validate.yml)
+[![License](https://img.shields.io/github/license/harnessprotocol/harness-kit?style=flat-square)](LICENSE)
 
 Requires [Claude Code](https://claude.ai/claude-code)
 
@@ -17,7 +17,7 @@ Building a good AI setup takes real work. harness-kit makes it portable. Package
 ## Install
 
 ```
-/plugin marketplace add siracusa5/harness-kit
+/plugin marketplace add harnessprotocol/harness-kit
 ```
 
 <details>
@@ -26,7 +26,7 @@ Building a good AI setup takes real work. harness-kit makes it portable. Package
 If your Claude Code build doesn't support the plugin marketplace:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/siracusa5/harness-kit/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/harnessprotocol/harness-kit/main/install.sh | bash
 ```
 
 Downloads skill files to `~/.claude/skills/` over HTTPS. This installs only the skill files; the full plugin (e.g. index rebuild script) comes from the marketplace install.
@@ -97,14 +97,14 @@ The import wizard shows each plugin with its description and lets you pick a sub
 **Shell fallback (no Claude Code required):**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/siracusa5/harness-kit/main/harness-restore.sh | bash -s -- harness.yaml
+curl -fsSL https://raw.githubusercontent.com/harnessprotocol/harness-kit/main/harness-restore.sh | bash -s -- harness.yaml
 ```
 
 See [`harness.yaml.example`](harness.yaml.example) for the config format.
 
 ## Using with Other Tools
 
-harness-kit targets Claude Code, but SKILL.md files are plain markdown — copy them into any tool's instruction system. VS Code Copilot reads `CLAUDE.md` natively via the `chat.useClaudeMdFile` setting, so the conventions guide works without modification. For per-tool setup (Copilot, Cursor, Windsurf, MCP), see the [Cross-Harness setup guide](https://siracusa5.github.io/harness-kit/docs/cross-harness/setup-guide).
+harness-kit targets Claude Code, but SKILL.md files are plain markdown — copy them into any tool's instruction system. VS Code Copilot reads `CLAUDE.md` natively via the `chat.useClaudeMdFile` setting, so the conventions guide works without modification. For per-tool setup (Copilot, Cursor, Windsurf, MCP), see the [Cross-Harness setup guide](https://harnesskit.ai/docs/cross-harness/setup-guide).
 
 ## Conventions Guide
 

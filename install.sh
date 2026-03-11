@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Fallback installer for Claude Code versions without plugin marketplace support.
 # Preferred install:
-#   /plugin marketplace add siracusa5/harness-kit
+#   /plugin marketplace add harnessprotocol/harness-kit
 #   /plugin install research@harness-kit
 
 set -euo pipefail
 
-REPO="siracusa5/harness-kit"
+REPO="harnessprotocol/harness-kit"
 BRANCH="main"
 RAW_BASE="https://raw.githubusercontent.com/${REPO}/${BRANCH}"
 

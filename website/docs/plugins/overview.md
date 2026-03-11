@@ -24,7 +24,7 @@ Plugin dependencies are formally declared in `plugin.json` under `requires`. See
 ## Install any plugin
 
 ```
-/plugin marketplace add siracusa5/harness-kit
+/plugin marketplace add harnessprotocol/harness-kit
 /plugin install <plugin-name>@harness-kit
 ```
 

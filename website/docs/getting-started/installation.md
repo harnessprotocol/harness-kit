@@ -12,7 +12,7 @@ The primary distribution channel is [Claude Code](https://claude.ai/claude-code)
 Add the marketplace once, then install plugins by name:
 
 ```
-/plugin marketplace add siracusa5/harness-kit
+/plugin marketplace add harnessprotocol/harness-kit
 /plugin install research@harness-kit
 ```
 
@@ -32,7 +32,7 @@ Repeat for any plugin you want:
 If your Claude Code build doesn't support the plugin marketplace yet:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/siracusa5/harness-kit/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/harnessprotocol/harness-kit/main/install.sh | bash
 ```
 
 This downloads skill files to `~/.claude/skills/` over HTTPS. It installs **only the skill files** — bundled scripts (like the research index rebuilder) require the full marketplace install.

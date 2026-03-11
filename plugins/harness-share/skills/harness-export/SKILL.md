@@ -131,7 +131,7 @@ Tell the user where the file was written:
 > "Saved to `harness.yaml`. Commit it to your dotfiles or share it with a teammate. They can import it with `/harness-import` inside Claude Code, or with the shell fallback:
 >
 > ```bash
-> curl -fsSL https://raw.githubusercontent.com/siracusa5/harness-kit/main/harness-restore.sh | bash -s -- harness.yaml
+> curl -fsSL https://raw.githubusercontent.com/harnessprotocol/harness-kit/main/harness-restore.sh | bash -s -- harness.yaml
 > ```"
 
 ---

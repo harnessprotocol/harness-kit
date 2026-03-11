@@ -3,7 +3,7 @@
 #
 # Usage:
 #   ./harness-restore.sh [path/to/harness.yaml]
-#   curl -fsSL https://raw.githubusercontent.com/siracusa5/harness-kit/main/harness-restore.sh | bash -s -- harness.yaml
+#   curl -fsSL https://raw.githubusercontent.com/harnessprotocol/harness-kit/main/harness-restore.sh | bash -s -- harness.yaml
 
 set -euo pipefail
 
@@ -15,7 +15,7 @@ if [[ ! -f "$CONFIG" ]]; then
   echo "harness-restore: config not found: $CONFIG" >&2
   echo ""
   echo "Get a template:"
-  echo "  curl -fsSL https://raw.githubusercontent.com/siracusa5/harness-kit/main/harness.yaml.example > harness.yaml"
+  echo "  curl -fsSL https://raw.githubusercontent.com/harnessprotocol/harness-kit/main/harness.yaml.example > harness.yaml"
   echo ""
   echo "Or generate from your current setup (inside Claude Code):"
   echo "  /harness-export"
@@ -57,7 +57,7 @@ for line in content.splitlines():
         continue
 
     if section == 'marketplaces' and ':' in stripped and not stripped.startswith('-'):
-        # "harness-kit: siracusa5/harness-kit"
+        # "harness-kit: harnessprotocol/harness-kit"
         parts = stripped.split(':', 1)
         name = parts[0].strip()
         source = parts[1].strip()
@@ -173,9 +173,9 @@ for i in "${!selected_names[@]}"; do
     continue
   fi
 
-  # Only know how to download from siracusa5/harness-kit (known URL pattern)
+  # Only know how to download from harnessprotocol/harness-kit (known URL pattern)
   case "$source" in
-    siracusa5/harness-kit)
+    harnessprotocol/harness-kit)
       raw_base="https://raw.githubusercontent.com/${source}/${BRANCH}"
       dest="${SKILLS_DEST}/${name}"
       mkdir -p "$dest"

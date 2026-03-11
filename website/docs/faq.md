@@ -73,7 +73,7 @@ MCP servers give your AI new tools — database access, web search, external API
 
 ## What is the harness.yaml file?
 
-A list of your installed plugins with their sources and versions. Export it with `/harness-export`, commit it, and restore it anywhere with `/harness-import` or `harness-restore.sh`. See [`harness.yaml.example`](https://github.com/siracusa5/harness-kit/blob/main/harness.yaml.example) for the format.
+A list of your installed plugins with their sources and versions. Export it with `/harness-export`, commit it, and restore it anywhere with `/harness-import` or `harness-restore.sh`. See [`harness.yaml.example`](https://github.com/harnessprotocol/harness-kit/blob/main/harness.yaml.example) for the format.
 
 ## I already have prompts in my CLAUDE.md. Should I move them?
 
@@ -96,7 +96,7 @@ See [Where harness-kit fits](/docs/concepts/comparison) for the full breakdown.
 
 ## What is the Harness Protocol?
 
-The [Harness Protocol](https://github.com/siracusa5/harness-protocol) is an open specification for portable AI coding harness configuration. It defines a vendor-neutral `harness.yaml` format validated by JSON Schema. harness-kit is the reference implementation, the same way Claude Desktop implements MCP. Any tool that correctly validates and applies `harness.yaml` per the spec is a conformant implementation; harness-kit is not required.
+The [Harness Protocol](https://github.com/harnessprotocol/harness-protocol) is an open specification for portable AI coding harness configuration. It defines a vendor-neutral `harness.yaml` format validated by JSON Schema. harness-kit is the reference implementation, the same way Claude Desktop implements MCP. Any tool that correctly validates and applies `harness.yaml` per the spec is a conformant implementation; harness-kit is not required.
 
 The spec is Apache 2.0. See [Harness Protocol](/docs/concepts/harness-protocol) for how it relates to harness-kit.
 

@@ -25,4 +25,4 @@ python evals/runner.py
 python evals/render_results.py
 ```
 
-Or trigger the [eval workflow](https://github.com/siracusa5/harness-kit/actions/workflows/evals.yml) on a release.
+Or trigger the [eval workflow](https://github.com/harnessprotocol/harness-kit/actions/workflows/evals.yml) on a release.

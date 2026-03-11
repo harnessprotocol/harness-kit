@@ -9,7 +9,7 @@ const config = {
   url: 'https://harnesskit.ai',
   baseUrl: '/',
 
-  organizationName: 'siracusa5',
+  organizationName: 'harnessprotocol',
   projectName: 'harness-kit',
 
   onBrokenLinks: 'throw',
@@ -43,11 +43,11 @@ const config = {
       ({
         docs: {
           sidebarPath: './sidebars.js',
-          editUrl: 'https://github.com/siracusa5/harness-kit/tree/main/website/',
+          editUrl: 'https://github.com/harnessprotocol/harness-kit/tree/main/website/',
         },
         blog: {
           showReadingTime: true,
-          editUrl: 'https://github.com/siracusa5/harness-kit/tree/main/website/',
+          editUrl: 'https://github.com/harnessprotocol/harness-kit/tree/main/website/',
         },
         theme: {
           customCss: './src/css/custom.css',
@@ -75,7 +75,7 @@ const config = {
           },
           { to: '/blog', label: 'Blog', position: 'left' },
           {
-            href: 'https://github.com/siracusa5/harness-kit',
+            href: 'https://github.com/harnessprotocol/harness-kit',
             label: 'GitHub',
             position: 'right',
           },
@@ -97,7 +97,7 @@ const config = {
             items: [
               {
                 label: 'Issues',
-                href: 'https://github.com/siracusa5/harness-kit/issues',
+                href: 'https://github.com/harnessprotocol/harness-kit/issues',
               },
             ],
           },
@@ -107,7 +107,7 @@ const config = {
               { label: 'Blog', to: '/blog' },
               {
                 label: 'GitHub',
-                href: 'https://github.com/siracusa5/harness-kit',
+                href: 'https://github.com/harnessprotocol/harness-kit',
               },
             ],
           },
