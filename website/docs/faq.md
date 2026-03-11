@@ -33,7 +33,7 @@ A prompt tells Claude what to do. A SKILL.md specifies how: step ordering, input
 
 ## Does this only work with Claude Code?
 
-The install system targets Claude Code's plugin marketplace. But SKILL.md files follow the [Agent Skills open standard](https://agentskills.io) — a cross-platform spec for skill portability. VS Code Copilot reads `CLAUDE.md` natively via `chat.useClaudeMdFile`. See the [Cross-Harness setup guide](/docs/cross-harness/setup-guide) for Cursor, Windsurf, and others.
+The install system targets Claude Code's plugin marketplace. But SKILL.md files follow the [Agent Skills open standard](https://agentskills.io), a cross-platform spec for skill portability. VS Code Copilot reads `CLAUDE.md` natively via `chat.useClaudeMdFile`. See the [Cross-Harness setup guide](/docs/cross-harness/setup-guide) for Cursor, Windsurf, and others.
 
 ## How many skills can I install?
 
@@ -41,7 +41,7 @@ Claude loads all skill descriptions into roughly 2% of the context window (~16K 
 
 ## What are the size limits for a SKILL.md?
 
-Keep SKILL.md under **500 lines / 5,000 words**. Move reference tables, tag taxonomies, and lookup data to a `references/` subdirectory and load them via `${CLAUDE_SKILL_DIR}`. The `description` frontmatter field has a hard cap of 1,024 characters — no XML angle brackets (`<` or `>`). See [Creating Plugins](/docs/guides/creating-plugins) for the full field reference.
+Keep SKILL.md under **500 lines / 5,000 words**. Move reference tables, tag taxonomies, and lookup data to a `references/` subdirectory and load them via `${CLAUDE_SKILL_DIR}`. The `description` frontmatter field has a hard cap of 1,024 characters; no XML angle brackets (`<` or `>`). See [Creating Plugins](/docs/guides/creating-plugins) for the full field reference.
 
 ## Is this safe? What does installing a plugin actually do?
 
@@ -53,7 +53,7 @@ No. harness-kit is free and open source (Apache 2.0). All you need is Claude Cod
 
 ## How do I share my setup with teammates?
 
-Run `/harness-export` to write a `harness.yaml` with your installed plugins. Commit it to your dotfiles or send it to a teammate. They run `/harness-import harness.yaml` and pick what they want from an interactive list — your setup is a starting point, not something they have to replicate exactly.
+Run `/harness-export` to write a `harness.yaml` with your installed plugins. Commit it to your dotfiles or send it to a teammate. They run `/harness-import harness.yaml` and pick what they want from an interactive list. Your setup is a starting point, not something they have to replicate exactly.
 
 ## Can I use this across multiple projects?
 
