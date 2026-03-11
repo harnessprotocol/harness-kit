@@ -62,8 +62,8 @@ Produces a structured explanation: summary, key components, how it connects, pat
 | [`research`](plugins/research/skills/research/README.md) | Process any source into a structured, compounding knowledge base | `/research https://...` |
 | [`data-lineage`](plugins/data-lineage/skills/data-lineage/README.md) | Trace column-level data lineage through SQL, Kafka, Spark, and JDBC codebases | `/data-lineage orders.amount` |
 | [`orient`](plugins/orient/skills/orient/README.md) ¹ | Topic-focused session orientation across graph, knowledge, journal, and research | `/orient auth` |
-| [`capture-session`](plugins/capture-session/skills/capture-session/README.md) ¹ | Capture session information into a staging file for later reflection | `/capture-session` |
-| [`harness-share`](plugins/harness-share/skills/harness-export/README.md) | Export your plugin setup to `harness.yaml` and import it anywhere | `/harness-export` |
+| [`stage`](plugins/stage/skills/stage/README.md) ¹ | Capture session information into a staging file for later reflection | `/stage` |
+| [`harness-share`](plugins/harness-share/skills/harness-export/README.md) | Export your plugin setup to `harness.yaml`, import it anywhere, and validate against the Harness Protocol v1 spec | `/harness-export` · `/harness-import` · `/harness-validate` |
 
 ¹ Personal-workflow plugins designed for projects using the [knowledge graph + journal pattern](docs/claude-md-conventions.md).
 
@@ -87,9 +87,12 @@ Capture your installed plugins into a `harness.yaml` file, commit it to your dot
 ```
 /harness-export               # write harness.yaml from your current setup
 /harness-import harness.yaml  # interactive wizard to pick what to install
+/harness-validate             # validate harness.yaml against the Harness Protocol v1 schema
 ```
 
 The import wizard shows each plugin with its description and lets you pick a subset — your config is a starting point, not a mandate.
+
+`harness.yaml` follows the [Harness Protocol v1](https://harnessprotocol.ai) open spec — a vendor-neutral format for portable AI coding harnesses that can declare plugins, MCP servers, environment variables, and instructions in one shareable file.
 
 **Shell fallback (no Claude Code required):**
 

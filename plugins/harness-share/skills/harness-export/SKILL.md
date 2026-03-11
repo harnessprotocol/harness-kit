@@ -1,12 +1,14 @@
 ---
 name: harness-export
-description: Use when user invokes /harness-export or wants to save their current harness-kit plugin setup to a shareable harness.yaml file. Detects installed skills, collects marketplace info, and writes the config. Do NOT use for importing or restoring a harness — use /harness-import instead.
+description: Use when user invokes /harness-export or wants to save their current harness-kit plugin setup to a shareable harness.yaml file. Detects installed skills, collects source info, and writes the config in Harness Protocol v1 format. Do NOT use for importing or restoring a harness — use /harness-import instead.
 disable-model-invocation: true
 ---
 
 # Export Your Harness Configuration
 
 You are helping the user capture their current harness-kit setup into a `harness.yaml` file they can share with teammates or commit to their dotfiles repo.
+
+This file follows the **Harness Protocol v1 format** — the open spec at harnessprotocol.ai. It is backward-compatible with harness-import (which handles both old and new formats).
 
 ## Workflow Order (MANDATORY)
 
@@ -26,15 +28,17 @@ Collect the directory names as your list of installed plugin names.
 
 ---
 
-### Step 2: Ask about marketplaces
+### Step 2: Ask about sources and metadata
 
 Tell the user what skills you found, then ask:
 
-> "I found these installed skills: [list]. Which marketplaces have you added? For each, provide the short name and the owner/repo path — for example:
-> - `harness-kit` → `siracusa5/harness-kit`
-> - `obra` → `obra/superpowers-marketplace`
+> "I found these installed skills: [list]. A couple of quick questions:
 >
-> If you've only added harness-kit, just say so."
+> 1. For each plugin, which repo is it from? Format: `owner/repo` — for example `siracusa5/harness-kit`. If a plugin is from harness-kit, just say so and I'll fill it in.
+> 2. What name and description should I give this harness profile? (optional — press enter to skip)
+> 3. Do you have any MCP servers, env variables, or CLAUDE.md instructions you'd like to include? (optional)
+>
+> If you've only added harness-kit plugins, just say so."
 
 Wait for the user's response before proceeding.
 
@@ -42,9 +46,9 @@ Wait for the user's response before proceeding.
 
 ### Step 3: Build the plugin entries
 
-For each installed skill, determine its marketplace and description:
+For each installed skill, determine its source repo:
 
-**Known harness-kit plugins** (marketplace: `harness-kit`):
+**Known harness-kit plugins** (source: `siracusa5/harness-kit`):
 | Plugin | Description |
 |--------|-------------|
 | explain | Layered explanations of files, functions, directories, or concepts |
@@ -56,34 +60,67 @@ For each installed skill, determine its marketplace and description:
 | docgen | Generate or update README, API docs, architecture overview, or changelog |
 | harness-export | Export your installed plugins to a shareable harness.yaml |
 | harness-import | Import a harness.yaml and interactively select plugins to install |
+| harness-validate | Validate a harness.yaml file against the Harness Protocol v1 JSON Schema |
 
 For any installed skill **not in this table**, ask the user:
-> "I see `[name]` installed but don't recognize it. What marketplace is it from, and what does it do in one sentence?"
+> "I see `[name]` installed but don't recognize it. What `owner/repo` is it from, and what does it do in one sentence?"
 
 ---
 
 ### Step 4: Write harness.yaml
 
-Write `harness.yaml` to the current directory (or a path the user specifies). Use this format exactly:
+Write `harness.yaml` to the current directory (or a path the user specifies). Use the **Harness Protocol v1 format**:
 
 ```yaml
-version: 1
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
+version: "1"
 
-marketplaces:
-  harness-kit: siracusa5/harness-kit
-  # add other marketplaces as: short-name: owner/repo
+# Profile identity (optional but recommended)
+metadata:
+  name: my-harness
+  description: My personal harness configuration.
 
 plugins:
   - name: explain
-    marketplace: harness-kit
+    source: siracusa5/harness-kit
     description: Layered explanations of files, functions, directories, or concepts
   # additional plugins follow the same structure
 ```
 
+**With MCP servers** (include only if user provided them):
+```yaml
+mcp-servers:
+  postgres:
+    transport: stdio
+    command: uvx
+    args:
+      - mcp-server-postgres
+      - ${DB_CONNECTION_STRING}
+```
+
+**With env declarations** (include only if user has env vars):
+```yaml
+env:
+  - name: DB_CONNECTION_STRING
+    description: PostgreSQL connection string.
+    required: true
+    sensitive: true
+```
+
+**With instructions** (include only if user wants to bundle CLAUDE.md/AGENT.md content):
+```yaml
+instructions:
+  operational: |
+    Your operational instructions here.
+  import-mode: merge
+```
+
 Rules:
-- `marketplaces` is a mapping: short name → `owner/repo` path
-- `plugins[].marketplace` must match a key in `marketplaces`
-- Include only the marketplaces for plugins that are actually installed
+- `version` must be the string `"1"` (quoted), not the integer `1`
+- `source` is `owner/repo` — no `marketplace:` key, no `marketplaces:` section
+- Only include `mcp-servers`, `env`, `instructions`, and `permissions` sections if the user provided content for them
+- Omit `metadata` if the user skipped the name/description questions
+- Do NOT include `harness-export` or `harness-import` in the output unless the user explicitly asks
 
 ---
 
@@ -103,6 +140,8 @@ Tell the user where the file was written:
 
 | Mistake | Fix |
 |---------|-----|
-| Including `harness-export` and `harness-import` in the output | Only include plugins the user actually uses. These meta-plugins don't need to be in their config. |
-| Using owner as marketplace key when the repo name is the identifier | For harness-kit: key is `harness-kit`, not `siracusa5`. Ask the user if unsure. |
-| Writing to a path without confirming | Write to `./harness.yaml` by default. If user specified a path in the invocation, use that. |
+| Using `version: 1` (integer) | Must be `version: "1"` (string) — this is what distinguishes the protocol format |
+| Using `marketplace: harness-kit` | Protocol format uses `source: siracusa5/harness-kit` — no `marketplaces:` section |
+| Including `harness-export` and `harness-import` in the output | Only include plugins the user actually uses |
+| Writing to a path without confirming | Write to `./harness.yaml` by default. If user specified a path in the invocation, use that |
+| Adding `mcp-servers:` / `env:` / `instructions:` as empty sections | Only include these sections when the user has actual content to put in them |

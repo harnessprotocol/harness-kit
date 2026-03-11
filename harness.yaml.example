@@ -1,52 +1,87 @@
 # harness.yaml — your personal harness configuration
 #
-# Commit this to your dotfiles and restore it on any new machine.
+# This file follows the Harness Protocol v1 format (harnessprotocol.ai).
+# Commit it to your dotfiles and restore it on any new machine.
 #
 # Restore with Claude Code:
 #   /harness-import harness.yaml
 #
 # Restore without Claude Code (skills only):
 #   curl -fsSL https://raw.githubusercontent.com/siracusa5/harness-kit/main/harness-restore.sh | bash -s -- harness.yaml
+#
+# ── Format note ────────────────────────────────────────────────────────────────
+# Protocol v1:  version: "1"  (string) — uses source: owner/repo per plugin
+# Legacy v1:    version: 1    (integer) — uses marketplace: key + marketplaces: section
+# harness-import handles both. New exports use protocol v1 format.
+# ───────────────────────────────────────────────────────────────────────────────
 
-version: 1
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
+version: "1"
 
-# marketplaces: mapping of short name → owner/repo
-# The short name is what you use after @ in /plugin install commands.
-marketplaces:
-  harness-kit: siracusa5/harness-kit
-  # obra: obra/superpowers-marketplace
+# Profile identity (optional — helps teammates understand what this harness is for)
+metadata:
+  name: my-harness
+  description: My personal harness configuration.
 
+# Plugins — add skills from any harness-kit compatible source.
+# source: owner/repo (resolved via GitHub by default)
 plugins:
   - name: explain
-    marketplace: harness-kit
+    source: siracusa5/harness-kit
     description: Layered explanations of files, functions, directories, or concepts
 
   - name: research
-    marketplace: harness-kit
+    source: siracusa5/harness-kit
     description: Process any source into a structured, compounding knowledge base
 
   - name: review
-    marketplace: harness-kit
+    source: siracusa5/harness-kit
     description: Code review for a branch, PR, or path — severity labels and cross-file analysis
 
   # Uncomment to include additional harness-kit plugins:
   # - name: docgen
-  #   marketplace: harness-kit
+  #   source: siracusa5/harness-kit
   #   description: Generate or update README, API docs, architecture overview, or changelog
 
   # - name: data-lineage
-  #   marketplace: harness-kit
+  #   source: siracusa5/harness-kit
   #   description: Column-level lineage tracing through SQL, Kafka, Spark, and JDBC
 
   # - name: orient
-  #   marketplace: harness-kit
+  #   source: siracusa5/harness-kit
   #   description: Topic-focused session orientation across graph, knowledge, and research
 
-  # - name: capture-session
-  #   marketplace: harness-kit
+  # - name: stage
+  #   source: siracusa5/harness-kit
   #   description: Capture session information into a staging file for later reflection
 
-  # Example third-party plugin (uncomment the marketplace entry above too):
+  # Example third-party plugin:
   # - name: superpowers
-  #   marketplace: obra
+  #   source: obra/superpowers-marketplace
   #   description: Structured dev workflows — TDD, systematic debugging, subagent delegation
+
+# MCP servers (optional) — local or remote tool servers.
+# Uncomment and fill in if you want to bundle MCP server config with your harness.
+# mcp-servers:
+#   postgres:
+#     transport: stdio
+#     command: uvx
+#     args:
+#       - mcp-server-postgres
+#       - ${DB_CONNECTION_STRING}
+
+# Environment variable declarations (optional).
+# List vars that plugins or MCP servers depend on.
+# sensitive: true (default) — harness prompts the user; default values are forbidden.
+# env:
+#   - name: DB_CONNECTION_STRING
+#     description: PostgreSQL connection string.
+#     required: true
+#     sensitive: true
+
+# Harness instructions (optional) — injected into CLAUDE.md/AGENT.md at import time.
+# import-mode: merge (default) appends to existing instructions.
+# instructions:
+#   operational: |
+#     Your operational guidance here.
+#   import-mode: merge
