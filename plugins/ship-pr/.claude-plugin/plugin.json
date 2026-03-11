@@ -1,0 +1,16 @@
+{
+  "name": "ship-pr",
+  "description": "End-of-task workflow: run tests, open a PR, code review, fix CI, sync base, then squash merge",
+  "version": "0.1.0",
+  "requires": {
+    "env": [
+      {
+        "name": "GH_TOKEN",
+        "description": "GitHub personal access token — used by gh CLI for PR creation, CI status checks, and merging",
+        "required": true,
+        "sensitive": true,
+        "when": "All ship-pr operations require GitHub access"
+      }
+    ]
+  }
+}

@@ -71,6 +71,22 @@
       "version": "0.2.0",
       "author": { "name": "siracusa5" },
       "license": "Apache-2.0"
+    },
+    {
+      "name": "ship-pr",
+      "source": "./ship-pr",
+      "description": "End-of-task shipping workflow: run tests, open a PR, code review, fix CI, sync base, then squash merge",
+      "version": "0.1.0",
+      "author": { "name": "harnessprotocol" },
+      "license": "Apache-2.0"
+    },
+    {
+      "name": "pull-request-sweep",
+      "source": "./pull-request-sweep",
+      "description": "Cross-repo PR sweep: triage all open PRs, run code reviews, merge what's ready, fix quick CI blockers, and report",
+      "version": "0.1.0",
+      "author": { "name": "harnessprotocol" },
+      "license": "Apache-2.0"
     }
   ]
 }

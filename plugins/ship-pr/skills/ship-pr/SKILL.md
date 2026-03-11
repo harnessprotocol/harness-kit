@@ -104,7 +104,7 @@ Leave `--reviewer` and `--assignee` unset.
 
 ## Step 4: Code Review
 
-Invoke the `superpowers:code-reviewer` skill (use the Skill tool) to review all changes in this PR.
+Invoke the `review` skill (use the Skill tool) to review all changes in this PR.
 
 The review should cover:
 - **Baseline:** correctness, security, error handling, performance, naming clarity
@@ -204,7 +204,7 @@ Report: "PR merged. Branch cleaned up. Done."
 | 1. Local tests | Run test suite | Yes — fix first |
 | 2. PR check | Exists? | Skip to review |
 | 3. Create PR | Push + `gh pr create` | — |
-| 4. Code review | `superpowers:code-reviewer` | Yes for MUST FIX |
+| 4. Code review | `review` skill | Yes for MUST FIX |
 | 5. CI | `gh pr checks` | Yes — fix or plan |
 | 6. Base sync | Rebase if behind | Yes — resolve conflicts |
 | 7. Merge | `gh pr merge --squash` | — |

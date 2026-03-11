@@ -1,0 +1,16 @@
+{
+  "name": "pull-request-sweep",
+  "description": "Cross-repo PR sweep: triage all open PRs, run code reviews, merge what's ready, fix quick CI blockers",
+  "version": "0.1.0",
+  "requires": {
+    "env": [
+      {
+        "name": "GH_TOKEN",
+        "description": "GitHub personal access token — used by gh CLI for PR discovery, CI checks, merging, and rebasing",
+        "required": true,
+        "sensitive": true,
+        "when": "All pull-request-sweep operations require GitHub access"
+      }
+    ]
+  }
+}

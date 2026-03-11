@@ -88,7 +88,7 @@ Wait for the user to confirm before proceeding to Step 4. This is important — 
 
 ## Step 4: Code Review (for NEEDS_REVIEW PRs)
 
-For each `NEEDS_REVIEW` PR, invoke the `superpowers:code-reviewer` skill to review the changes.
+For each `NEEDS_REVIEW` PR, invoke the `review` skill to review the changes.
 
 **If there are multiple NEEDS_REVIEW PRs:** dispatch code review subagents in parallel — one per PR — then collect all results before proceeding to Step 5. This is the most expensive step; parallelizing keeps total time reasonable.
 
