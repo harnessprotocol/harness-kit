@@ -5,8 +5,16 @@ title: Harness Protocol
 
 # Harness Protocol
 
-The [Harness Protocol](https://github.com/siracusa5/harness-protocol) is an open specification for portable AI coding harness configuration. It defines a vendor-neutral `harness.yaml` format validated by JSON Schema.
+The [Harness Protocol](https://github.com/siracusa5/harness-protocol) is an open specification for portable AI coding harness configuration. It defines a vendor-neutral `harness.yaml` format, validated by [JSON Schema](https://github.com/siracusa5/harness-protocol/blob/main/schema/draft/harness.schema.json), that captures the complete operational context for an AI coding agent: plugins, MCP servers, environment requirements, instructions, and permissions.
 
-harness-kit is the reference implementation. Any tool that correctly validates and applies `harness.yaml` per the spec is a conformant implementation.
+## How harness-kit relates to it
 
-The spec is Apache 2.0.
+harness-kit is the **reference implementation** of the Harness Protocol. The relationship mirrors MCP and Claude Desktop: the protocol is the open specification, and harness-kit is the first tool that implements it.
+
+Conformance does not require harness-kit. Any tool that correctly validates and applies `harness.yaml` according to the specification is a conformant implementation.
+
+## Links
+
+- [Harness Protocol spec](https://github.com/siracusa5/harness-protocol) — full specification, including architecture, field reference, security model, and plugin manifest format
+- [JSON Schema](https://github.com/siracusa5/harness-protocol/blob/main/schema/draft/harness.schema.json) — machine-readable validation schema
+- [harness-kit](https://github.com/siracusa5/harness-kit) — reference implementation

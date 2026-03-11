@@ -63,6 +63,7 @@ const sidebars = {
         'concepts/secrets-management',
         'concepts/cross-harness-portability',
         'concepts/comparison',
+        'concepts/harness-protocol',
       ],
     },
   ],
