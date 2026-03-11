@@ -24,7 +24,7 @@ A prompt tells Claude what to do. A SKILL.md specifies how: step ordering, input
 
 ## Does this only work with Claude Code?
 
-The install system targets Claude Code's plugin marketplace. But SKILL.md files are plain markdown — any tool that reads prompt files can use them. VS Code Copilot reads `CLAUDE.md` natively via `chat.useClaudeMdFile`. See the [Cross-Harness setup guide](https://siracusa5.github.io/harness-kit/docs/cross-harness/setup-guide) for Cursor, Windsurf, and others.
+The install system targets Claude Code's plugin marketplace. But SKILL.md files are plain markdown — any tool that reads prompt files can use them. VS Code Copilot reads `CLAUDE.md` natively via `chat.useClaudeMdFile`. See the [Cross-Harness setup guide](https://harnesskit.ai/docs/cross-harness/setup-guide) for Cursor, Windsurf, and others.
 
 ## Is this safe? What does installing a plugin actually do?
 
@@ -44,7 +44,7 @@ Yes. Plugins install to your harness globally, not per-project. `research` and `
 
 ## Can I build my own plugins?
 
-Yes. A minimal plugin is about 10 lines of boilerplate plus a `SKILL.md`. See the [Creating Plugins guide](https://siracusa5.github.io/harness-kit/docs/guides/creating-plugins). You can also start with a bare skill file in `~/.claude/skills/` and promote it to a plugin when you're ready to share it.
+Yes. A minimal plugin is about 10 lines of boilerplate plus a `SKILL.md`. See the [Creating Plugins guide](https://harnesskit.ai/docs/guides/creating-plugins). You can also start with a bare skill file in `~/.claude/skills/` and promote it to a plugin when you're ready to share it.
 
 ## Can I modify the built-in plugins?
 
@@ -75,10 +75,10 @@ They operate at different layers and don't overlap.
 
 MCP gives your agent tools. A2A lets agents delegate tasks to each other at runtime. The Claude Agent SDK is for building agent-powered applications. harness-kit describes the complete environment, plugins, MCP servers, instructions, permissions, so you can reproduce it on another machine or share it with a teammate. They compose well: a `harness.yaml` can declare MCP servers, the agent runs on the Claude SDK, and could speak A2A to other agents.
 
-See [Where harness-kit fits](https://siracusa5.github.io/harness-kit/docs/concepts/comparison) for the full breakdown.
+See [Where harness-kit fits](https://harnesskit.ai/docs/concepts/comparison) for the full breakdown.
 
 ## What is the Harness Protocol?
 
 The [Harness Protocol](https://github.com/siracusa5/harness-protocol) is an open specification for portable AI coding harness configuration. It defines a vendor-neutral `harness.yaml` format validated by JSON Schema. harness-kit is the reference implementation, the same way Claude Desktop implements MCP. Any tool that correctly validates and applies `harness.yaml` per the spec is a conformant implementation; harness-kit is not required.
 
-The spec is Apache 2.0. See [Harness Protocol](https://siracusa5.github.io/harness-kit/docs/concepts/harness-protocol) for how it relates to harness-kit.
+The spec is Apache 2.0. See [Harness Protocol](https://harnesskit.ai/docs/concepts/harness-protocol) for how it relates to harness-kit.
