@@ -92,7 +92,7 @@ Capture your installed plugins into a `harness.yaml` file, commit it to your dot
 
 The import wizard shows each plugin with its description and lets you pick a subset — your config is a starting point, not a mandate.
 
-`harness.yaml` follows the [Harness Protocol v1](https://harnessprotocol.ai) open spec — a vendor-neutral format for portable AI coding harnesses that can declare plugins, MCP servers, environment variables, and instructions in one shareable file.
+`harness.yaml` follows the [Harness Protocol v1](https://harnessprotocol.io) open spec — a vendor-neutral format for portable AI coding harnesses that can declare plugins, MCP servers, environment variables, and instructions in one shareable file.
 
 **Shell fallback (no Claude Code required):**
 

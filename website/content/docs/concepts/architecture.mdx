@@ -1,0 +1,281 @@
+---
+title: How It Works
+---
+
+# How harness-kit Works
+
+harness-kit packages proven AI workflows as portable plugins. This page explains the pieces and how they fit together.
+
+## The Stack
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 310" style={{width: '100%', maxWidth: '560px', display: 'block', margin: '2rem auto'}}>
+  <defs>
+    <marker id="ap" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" markerUnits="userSpaceOnUse">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#8b7aff" />
+    </marker>
+    <marker id="am" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto" markerUnits="userSpaceOnUse">
+      <polygon points="0 0, 8 3, 0 6" fill="#555" />
+    </marker>
+  </defs>
+  <rect x="16" y="28" width="72" height="34" rx="6" fill="#1a1a24" stroke="#8b7aff" strokeWidth="1.5" />
+  <text x="52" y="50" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="13" fontWeight="600" fill="#e0e0e0">You</text>
+  <line x1="88" y1="45" x2="122" y2="45" markerEnd="url(#ap)" stroke="#8b7aff" strokeWidth="1.5" />
+  <text x="105" y="37" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="10" fill="#8b7aff">install</text>
+  <rect x="132" y="28" width="126" height="34" rx="6" fill="#1a1a24" stroke="#8b7aff" strokeWidth="1.5" />
+  <text x="195" y="50" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="13" fontWeight="600" fill="#e0e0e0">Your Harness</text>
+  <line x1="258" y1="45" x2="312" y2="45" markerEnd="url(#ap)" stroke="#8b7aff" strokeWidth="1.5" />
+  <text x="285" y="37" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="10" fill="#8b7aff">fetch</text>
+  <rect x="322" y="28" width="108" height="34" rx="6" fill="#1a1a24" stroke="#8b7aff" strokeWidth="1.5" />
+  <text x="376" y="50" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="13" fontWeight="600" fill="#e0e0e0">Registry</text>
+  <line x1="376" y1="62" x2="287" y2="100" markerEnd="url(#ap)" stroke="#8b7aff" strokeWidth="1.5" />
+  <text x="362" y="83" textAnchor="start" fontFamily="system-ui, sans-serif" fontSize="10" fill="#8b7aff">downloads</text>
+  <rect x="200" y="108" width="150" height="34" rx="6" fill="#1a1a24" stroke="#8b7aff" strokeWidth="1.5" />
+  <text x="275" y="130" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="13" fontWeight="600" fill="#e0e0e0">Plugin Directory</text>
+  <line x1="275" y1="142" x2="72" y2="188" markerEnd="url(#am)" stroke="#555" strokeWidth="1.5" />
+  <line x1="275" y1="142" x2="196" y2="188" markerEnd="url(#am)" stroke="#555" strokeWidth="1.5" />
+  <line x1="275" y1="142" x2="318" y2="188" markerEnd="url(#am)" stroke="#555" strokeWidth="1.5" />
+  <line x1="275" y1="142" x2="444" y2="188" markerEnd="url(#am)" stroke="#555" strokeWidth="1.5" />
+  <rect x="26" y="196" width="92" height="28" rx="6" fill="#1a1a24" stroke="#8b7aff" strokeWidth="1.5" />
+  <text x="72" y="215" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="12" fontWeight="600" fill="#e0e0e0">SKILL.md</text>
+  <rect x="152" y="196" width="88" height="28" rx="6" fill="#1a1a24" stroke="#555" strokeWidth="1.5" />
+  <text x="196" y="215" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="12" fill="#888">scripts/</text>
+  <rect x="278" y="196" width="80" height="28" rx="6" fill="#1a1a24" stroke="#555" strokeWidth="1.5" />
+  <text x="318" y="215" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="12" fill="#888">hooks/</text>
+  <rect x="404" y="196" width="80" height="28" rx="6" fill="#1a1a24" stroke="#555" strokeWidth="1.5" />
+  <text x="444" y="215" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="12" fill="#888">agents/</text>
+  <line x1="72" y1="224" x2="72" y2="256" markerEnd="url(#ap)" stroke="#8b7aff" strokeWidth="1.5" />
+  <text x="86" y="244" textAnchor="start" fontFamily="system-ui, sans-serif" fontSize="10" fill="#8b7aff">/command</text>
+  <rect x="26" y="264" width="92" height="28" rx="6" fill="#1a1a24" stroke="#8b7aff" strokeWidth="1.5" />
+  <text x="72" y="283" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="12" fontWeight="600" fill="#e0e0e0">Workflow</text>
+  <text x="18" y="14" fontFamily="system-ui, sans-serif" fontSize="9" fill="#666" letterSpacing="0.08em">LOCAL</text>
+  <text x="322" y="14" fontFamily="system-ui, sans-serif" fontSize="9" fill="#666" letterSpacing="0.08em">REMOTE</text>
+  <rect x="310" y="18" width="142" height="54" rx="8" fill="none" stroke="#555" strokeWidth="1" strokeDasharray="4 3" />
+</svg>
+
+## Plugin Lifecycle
+
+1. **Source** — You register harness-kit as a plugin source in your AI tool. This points to the collection — not individual plugins.
+2. **Install** — You install a plugin by name. Your harness downloads the plugin directory and makes it available locally.
+3. **Discovery** — At session start, your harness scans installed plugins and registers any skills it finds.
+4. **Invocation** — You invoke a command (e.g. `/research`). Your harness loads the matching `SKILL.md` into context as the workflow definition.
+5. **Execution** — The AI follows the steps in the SKILL.md, using available tools (file I/O, web fetch, shell commands, MCP servers).
+
+> **Distribution today:** harness-kit distributes through Claude Code's plugin marketplace. SKILL.md files are plain markdown — any tool that reads prompt templates can use them directly. See [Using with Other Tools](/docs/cross-harness/setup-guide).
+
+## Starting Fresh on a New Machine
+
+Your harness setup is fully reproducible. Config files live in version control; plugins reinstall from the registry with the same commands you used the first time.
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 210" style={{width: '100%', maxWidth: '560px', display: 'block', margin: '2rem auto'}}>
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" markerUnits="userSpaceOnUse">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#8b7aff" />
+    </marker>
+  </defs>
+  <text x="103" y="24" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600" fill="#e0e0e0">Your Machine</text>
+  <rect x="8" y="30" width="190" height="172" rx="8" fill="#1a1a24" stroke="#555" strokeWidth="1.5" />
+  <text x="103" y="48" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="9" fill="#666" letterSpacing="0.06em">IN YOUR REPO</text>
+  <rect x="18" y="54" width="84" height="24" rx="5" fill="#12121a" stroke="#8b7aff" strokeWidth="1.5" />
+  <text x="60" y="70" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600" fill="#e0e0e0">CLAUDE.md</text>
+  <rect x="112" y="54" width="78" height="24" rx="5" fill="#12121a" stroke="#8b7aff" strokeWidth="1.5" />
+  <text x="151" y="70" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600" fill="#e0e0e0">AGENT.md</text>
+  <rect x="18" y="86" width="80" height="24" rx="5" fill="#12121a" stroke="#8b7aff" strokeWidth="1.5" />
+  <text x="58" y="102" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600" fill="#e0e0e0">.mcp.json</text>
+  <line x1="18" y1="122" x2="188" y2="122" stroke="#444" strokeWidth="1" />
+  <text x="103" y="136" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="9" fill="#666" letterSpacing="0.06em">PLUGINS</text>
+  <rect x="18" y="142" width="60" height="22" rx="5" fill="#12121a" stroke="#555" strokeWidth="1.5" />
+  <text x="48" y="157" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fill="#888">explain</text>
+  <rect x="86" y="142" width="74" height="22" rx="5" fill="#12121a" stroke="#555" strokeWidth="1.5" />
+  <text x="123" y="157" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fill="#888">research</text>
+  <rect x="18" y="170" width="94" height="22" rx="5" fill="#12121a" stroke="#555" strokeWidth="1.5" />
+  <text x="65" y="185" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fill="#888">data-lineage</text>
+  <rect x="120" y="170" width="60" height="22" rx="5" fill="#12121a" stroke="#555" strokeWidth="1.5" />
+  <text x="150" y="185" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fill="#888">review ...</text>
+  <line x1="202" y1="78" x2="354" y2="78" markerEnd="url(#arr)" stroke="#8b7aff" strokeWidth="1.5" />
+  <text x="278" y="70" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600" fill="#8b7aff">git clone</text>
+  <line x1="202" y1="158" x2="354" y2="158" markerEnd="url(#arr)" stroke="#8b7aff" strokeWidth="1.5" />
+  <text x="278" y="150" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600" fill="#8b7aff">/plugin install</text>
+  <text x="457" y="24" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600" fill="#e0e0e0">New Machine</text>
+  <rect x="362" y="30" width="190" height="172" rx="8" fill="#1a1a24" stroke="#555" strokeWidth="1.5" />
+  <text x="457" y="48" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="9" fill="#666" letterSpacing="0.06em">IN YOUR REPO</text>
+  <rect x="372" y="54" width="84" height="24" rx="5" fill="#12121a" stroke="#8b7aff" strokeWidth="1.5" />
+  <text x="414" y="70" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600" fill="#e0e0e0">CLAUDE.md</text>
+  <rect x="466" y="54" width="78" height="24" rx="5" fill="#12121a" stroke="#8b7aff" strokeWidth="1.5" />
+  <text x="505" y="70" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600" fill="#e0e0e0">AGENT.md</text>
+  <rect x="372" y="86" width="80" height="24" rx="5" fill="#12121a" stroke="#8b7aff" strokeWidth="1.5" />
+  <text x="412" y="102" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600" fill="#e0e0e0">.mcp.json</text>
+  <line x1="372" y1="122" x2="542" y2="122" stroke="#444" strokeWidth="1" />
+  <text x="457" y="136" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="9" fill="#666" letterSpacing="0.06em">PLUGINS</text>
+  <rect x="372" y="142" width="60" height="22" rx="5" fill="#12121a" stroke="#555" strokeWidth="1.5" />
+  <text x="402" y="157" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fill="#888">explain</text>
+  <rect x="440" y="142" width="74" height="22" rx="5" fill="#12121a" stroke="#555" strokeWidth="1.5" />
+  <text x="477" y="157" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fill="#888">research</text>
+  <rect x="372" y="170" width="94" height="22" rx="5" fill="#12121a" stroke="#555" strokeWidth="1.5" />
+  <text x="419" y="185" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fill="#888">data-lineage</text>
+  <rect x="474" y="170" width="60" height="22" rx="5" fill="#12121a" stroke="#555" strokeWidth="1.5" />
+  <text x="504" y="185" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fill="#888">review ...</text>
+</svg>
+
+## Sharing Your Setup
+
+Your entire harness — plugins, versions, sources — serializes into a single `harness.yaml`. Export it, hand it to a teammate, and they selectively import what they need.
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 340" style={{width: '100%', maxWidth: '680px', display: 'block', margin: '2rem auto'}}>
+  <defs>
+    <marker id="ex" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" markerUnits="userSpaceOnUse">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#8b7aff" />
+    </marker>
+    <marker id="gx" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" markerUnits="userSpaceOnUse">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#555" />
+    </marker>
+  </defs>
+
+  {/* — YOUR SETUP — */}
+  <text x="90" y="18" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600" fill="#e0e0e0">Your Setup</text>
+  <rect x="8" y="26" width="164" height="186" rx="8" fill="#1a1a24" stroke="#555" strokeWidth="1.5" />
+
+  <text x="90" y="46" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="9" fill="#666" letterSpacing="0.06em">CONFIG</text>
+  <rect x="18" y="52" width="68" height="22" rx="5" fill="#12121a" stroke="#8b7aff" strokeWidth="1.2" />
+  <text x="52" y="67" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="10" fontWeight="600" fill="#e0e0e0">CLAUDE.md</text>
+  <rect x="94" y="52" width="68" height="22" rx="5" fill="#12121a" stroke="#8b7aff" strokeWidth="1.2" />
+  <text x="128" y="67" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="10" fontWeight="600" fill="#e0e0e0">AGENT.md</text>
+
+  <text x="90" y="94" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="9" fill="#666" letterSpacing="0.06em">PLUGINS</text>
+  <rect x="18" y="100" width="60" height="20" rx="4" fill="#12121a" stroke="#555" strokeWidth="1.2" />
+  <text x="48" y="114" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="10" fill="#888">research</text>
+  <rect x="84" y="100" width="52" height="20" rx="4" fill="#12121a" stroke="#555" strokeWidth="1.2" />
+  <text x="110" y="114" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="10" fill="#888">explain</text>
+  <rect x="18" y="126" width="74" height="20" rx="4" fill="#12121a" stroke="#555" strokeWidth="1.2" />
+  <text x="55" y="140" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="10" fill="#888">data-lineage</text>
+  <rect x="98" y="126" width="52" height="20" rx="4" fill="#12121a" stroke="#555" strokeWidth="1.2" />
+  <text x="124" y="140" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="10" fill="#888">review</text>
+
+  <text x="90" y="168" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="9" fill="#666" letterSpacing="0.06em">MCP SERVERS</text>
+  <rect x="18" y="174" width="60" height="20" rx="4" fill="#12121a" stroke="#555" strokeWidth="1.2" />
+  <text x="48" y="188" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="10" fill="#888">memory</text>
+  <rect x="84" y="174" width="74" height="20" rx="4" fill="#12121a" stroke="#555" strokeWidth="1.2" />
+  <text x="121" y="188" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="10" fill="#888">filesystem</text>
+
+  {/* — EXPORT ARROW — */}
+  <line x1="172" y1="120" x2="218" y2="120" markerEnd="url(#ex)" stroke="#8b7aff" strokeWidth="1.5" />
+  <text x="195" y="112" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="9" fontWeight="600" fill="#8b7aff">/export</text>
+
+  {/* — HARNESS.YAML — */}
+  <rect x="228" y="42" width="224" height="196" rx="10" fill="#12121a" stroke="#8b7aff" strokeWidth="2" />
+  <text x="340" y="66" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="14" fontWeight="700" fill="#8b7aff">harness.yaml</text>
+  <line x1="248" y1="76" x2="432" y2="76" stroke="#333" strokeWidth="1" />
+
+  <text x="258" y="96" fontFamily="monospace, Menlo, Consolas" fontSize="10" fill="#888">sources:</text>
+  <text x="268" y="112" fontFamily="monospace, Menlo, Consolas" fontSize="10" fill="#666">- harnessprotocol/harness-kit</text>
+  <text x="258" y="132" fontFamily="monospace, Menlo, Consolas" fontSize="10" fill="#888">plugins:</text>
+  <text x="268" y="148" fontFamily="monospace, Menlo, Consolas" fontSize="10" fill="#666">- research@0.2.0</text>
+  <text x="268" y="162" fontFamily="monospace, Menlo, Consolas" fontSize="10" fill="#666">- explain@0.2.0</text>
+  <text x="268" y="176" fontFamily="monospace, Menlo, Consolas" fontSize="10" fill="#666">- data-lineage@0.2.0</text>
+  <text x="268" y="190" fontFamily="monospace, Menlo, Consolas" fontSize="10" fill="#666">- review@0.2.0</text>
+  <text x="258" y="210" fontFamily="monospace, Menlo, Consolas" fontSize="10" fill="#888">mcp_servers:</text>
+  <text x="268" y="226" fontFamily="monospace, Menlo, Consolas" fontSize="10" fill="#666">- memory, filesystem</text>
+
+  {/* — SHARE METHODS — */}
+  <text x="340" y="260" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="9" fill="#666" letterSpacing="0.06em">SHARE VIA</text>
+  <rect x="252" y="268" width="40" height="18" rx="4" fill="#1a1a24" stroke="#555" strokeWidth="1" />
+  <text x="272" y="281" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="9" fill="#888">git</text>
+  <rect x="300" y="268" width="44" height="18" rx="4" fill="#1a1a24" stroke="#555" strokeWidth="1" />
+  <text x="322" y="281" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="9" fill="#888">slack</text>
+  <rect x="352" y="268" width="46" height="18" rx="4" fill="#1a1a24" stroke="#555" strokeWidth="1" />
+  <text x="375" y="281" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="9" fill="#888">email</text>
+  <rect x="406" y="268" width="40" height="18" rx="4" fill="#1a1a24" stroke="#555" strokeWidth="1" />
+  <text x="426" y="281" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="9" fill="#888">URL</text>
+
+  {/* — IMPORT ARROW — */}
+  <line x1="452" y1="120" x2="498" y2="120" markerEnd="url(#ex)" stroke="#8b7aff" strokeWidth="1.5" />
+  <text x="475" y="112" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="9" fontWeight="600" fill="#8b7aff">/import</text>
+
+  {/* — TEAMMATE'S SETUP — */}
+  <text x="590" y="18" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600" fill="#e0e0e0">Teammate</text>
+  <rect x="508" y="26" width="164" height="186" rx="8" fill="#1a1a24" stroke="#555" strokeWidth="1.5" />
+
+  <text x="590" y="46" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="9" fill="#666" letterSpacing="0.06em">INTERACTIVE PICKER</text>
+
+  {/* Checkboxes — selected */}
+  <rect x="522" y="54" width="14" height="14" rx="3" fill="#8b7aff" stroke="#8b7aff" strokeWidth="1" />
+  <text x="520" y="66" fontFamily="system-ui, sans-serif" fontSize="11" fill="#fff" dx="3" dy="-1">✓</text>
+  <text x="544" y="66" fontFamily="system-ui, sans-serif" fontSize="11" fill="#e0e0e0">research@0.2.0</text>
+
+  <rect x="522" y="76" width="14" height="14" rx="3" fill="#8b7aff" stroke="#8b7aff" strokeWidth="1" />
+  <text x="520" y="88" fontFamily="system-ui, sans-serif" fontSize="11" fill="#fff" dx="3" dy="-1">✓</text>
+  <text x="544" y="88" fontFamily="system-ui, sans-serif" fontSize="11" fill="#e0e0e0">explain@0.2.0</text>
+
+  {/* Checkboxes — skipped */}
+  <rect x="522" y="98" width="14" height="14" rx="3" fill="none" stroke="#555" strokeWidth="1.2" />
+  <text x="544" y="110" fontFamily="system-ui, sans-serif" fontSize="11" fill="#666">data-lineage@0.2.0</text>
+
+  <rect x="522" y="120" width="14" height="14" rx="3" fill="#8b7aff" stroke="#8b7aff" strokeWidth="1" />
+  <text x="520" y="132" fontFamily="system-ui, sans-serif" fontSize="11" fill="#fff" dx="3" dy="-1">✓</text>
+  <text x="544" y="132" fontFamily="system-ui, sans-serif" fontSize="11" fill="#e0e0e0">review@0.2.0</text>
+
+  <line x1="522" y1="148" x2="656" y2="148" stroke="#333" strokeWidth="1" />
+
+  <text x="590" y="166" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="9" fill="#666" letterSpacing="0.06em">RESULT</text>
+  <rect x="522" y="174" width="60" height="20" rx="4" fill="#12121a" stroke="#8b7aff" strokeWidth="1.2" />
+  <text x="552" y="188" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="10" fill="#e0e0e0">research</text>
+  <rect x="588" y="174" width="52" height="20" rx="4" fill="#12121a" stroke="#8b7aff" strokeWidth="1.2" />
+  <text x="614" y="188" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="10" fill="#e0e0e0">explain</text>
+  <rect x="522" y="198" width="52" height="20" rx="4" fill="#12121a" stroke="#8b7aff" strokeWidth="1.2" />
+  <text x="548" y="212" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="10" fill="#e0e0e0">review</text>
+
+  {/* — Bottom note — */}
+  <text x="340" y="328" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="10" fill="#666">Your setup is a starting point — teammates pick what they want, not an all-or-nothing clone.</text>
+</svg>
+
+The flow:
+
+1. **Export** — `/harness-export` captures your installed plugins, their versions, and sources into a `harness.yaml` file.
+2. **Share** — Commit it to a repo, drop it in Slack, include it in onboarding docs — it's one file.
+3. **Import** — `/harness-import harness.yaml` presents an interactive list. Your teammate picks what they want and skips the rest.
+
+The harness.yaml is a manifest, not a dump. It records *what* you have and *where it came from*, so the import side can fetch the same versions from the same sources. Your configuration becomes a sharable artifact instead of tribal knowledge.
+
+## Plugin Anatomy
+
+Every plugin follows the same directory structure:
+
+```
+plugins/<name>/
+├── .claude-plugin/
+│   └── plugin.json         # name, version, description
+├── skills/
+│   └── <name>/
+│       ├── SKILL.md        # the workflow (what Claude reads)
+│       └── README.md       # human documentation
+└── scripts/                # optional: automation scripts
+    hooks/                  # optional: event hooks
+    agents/                 # optional: agent configurations
+```
+
+| Component | Role | When it runs |
+|-----------|------|-------------|
+| `plugin.json` | Metadata — name, version, description | At install and update |
+| `SKILL.md` | Workflow definition — the actual instructions Claude follows | At slash command invocation |
+| `README.md` | Human-facing docs — usage examples, notes | Never (reference only) |
+| `scripts/` | Shell scripts for automation | Called by SKILL.md or hooks |
+| `hooks/` | Event handlers (e.g., Stop hook) | On harness lifecycle events |
+| `agents/` | Agent configurations | When a skill spawns subagents |
+
+## What Makes a Skill Different from a Prompt
+
+A SKILL.md is more than a prompt — it's a **complete workflow specification**:
+
+- **Mandatory step ordering** — steps must execute in sequence, no skipping
+- **Input parsing rules** — how to interpret arguments
+- **Tool usage patterns** — which tools to use when and how
+- **Output structure** — exact format for results
+- **Error handling** — what to do when things fail
+- **Common mistakes table** — known failure modes and fixes
+
+This structure makes skills repeatable across sessions and transferable across users. The same `/research` invocation produces the same workflow regardless of who runs it.
+
+## Design Philosophy
+
+harness-kit is a framework without a runtime. No SDK, no build step, no execution layer to depend on. The framework is the config format and the portability it creates — uninstall a plugin and nothing breaks, because nothing was ever coupled to it. Skills are plain markdown, readable and editable by anyone.
+
+The SKILL.md is the portable unit. Plugins add distribution, versioning, and optional automation on top — but the workflow itself is just text that any AI tool can read.

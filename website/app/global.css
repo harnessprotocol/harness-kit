@@ -1,0 +1,40 @@
+@import 'tailwindcss';
+@import 'fumadocs-ui/style.css';
+
+:root {
+  --color-fd-primary: 256 80% 58%;
+  --color-fd-primary-foreground: 0 0% 100%;
+  --color-fd-background: 0 0% 100%;
+  --color-fd-foreground: 240 10% 10%;
+  --color-fd-card: 240 5% 96%;
+  --color-fd-card-foreground: 240 10% 10%;
+  --color-fd-muted: 240 5% 92%;
+  --color-fd-muted-foreground: 240 4% 46%;
+  --color-fd-border: 240 6% 90%;
+  --color-fd-accent: 256 60% 95%;
+  --color-fd-accent-foreground: 256 80% 44%;
+  --color-fd-popover: 0 0% 100%;
+  --color-fd-popover-foreground: 240 10% 10%;
+  --color-fd-secondary: 240 5% 94%;
+  --color-fd-secondary-foreground: 240 10% 10%;
+  --color-fd-ring: 256 80% 58%;
+}
+
+.dark {
+  --color-fd-primary: 256 80% 72%;
+  --color-fd-primary-foreground: 0 0% 100%;
+  --color-fd-background: 240 10% 4%;
+  --color-fd-foreground: 0 0% 93%;
+  --color-fd-card: 240 6% 8%;
+  --color-fd-card-foreground: 0 0% 93%;
+  --color-fd-muted: 240 4% 14%;
+  --color-fd-muted-foreground: 240 4% 58%;
+  --color-fd-border: 240 4% 16%;
+  --color-fd-accent: 256 30% 14%;
+  --color-fd-accent-foreground: 256 60% 80%;
+  --color-fd-popover: 240 6% 6%;
+  --color-fd-popover-foreground: 0 0% 93%;
+  --color-fd-secondary: 240 4% 12%;
+  --color-fd-secondary-foreground: 0 0% 93%;
+  --color-fd-ring: 256 80% 72%;
+}

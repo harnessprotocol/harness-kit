@@ -1,0 +1,11 @@
+{
+  "title": "Concepts",
+  "pages": [
+    "architecture",
+    "plugins-vs-skills",
+    "secrets-management",
+    "cross-harness-portability",
+    "comparison",
+    "harness-protocol"
+  ]
+}

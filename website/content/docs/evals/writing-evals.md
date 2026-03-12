@@ -1,5 +1,5 @@
 ---
-sidebar_label: "Writing Evals"
+title: Writing Evals
 ---
 
 # Writing Evals for Your Plugin

@@ -1,5 +1,5 @@
 ---
-sidebar_label: "Compatibility"
+title: Compatibility
 ---
 
 # Skill Compatibility Matrix

@@ -1,0 +1,13 @@
+{
+  "title": "Plugins",
+  "pages": [
+    "overview",
+    "research",
+    "explain",
+    "data-lineage",
+    "orient",
+    "capture-session",
+    "review",
+    "docgen"
+  ]
+}
