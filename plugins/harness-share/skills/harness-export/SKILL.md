@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 You are helping the user capture their current harness-kit setup into a `harness.yaml` file they can share with teammates or commit to their dotfiles repo.
 
-This file follows the **Harness Protocol v1 format** — the open spec at harnessprotocol.ai. It is backward-compatible with harness-import (which handles both old and new formats).
+This file follows the **Harness Protocol v1 format** — the open spec at harnessprotocol.io. It is backward-compatible with harness-import (which handles both old and new formats).
 
 ## Workflow Order (MANDATORY)
 
@@ -72,7 +72,7 @@ For any installed skill **not in this table**, ask the user:
 Write `harness.yaml` to the current directory (or a path the user specifies). Use the **Harness Protocol v1 format**:
 
 ```yaml
-$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
+$schema: https://harnessprotocol.io/schema/v1/harness.schema.json
 version: "1"
 
 # Profile identity (optional but recommended)

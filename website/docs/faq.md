@@ -96,7 +96,7 @@ See [Where harness-kit fits](/docs/concepts/comparison) for the full breakdown.
 
 ## What is the Harness Protocol?
 
-The [Harness Protocol](https://harnessprotocol.ai) is an open specification for portable AI coding harness configuration. It defines a vendor-neutral `harness.yaml` format validated by JSON Schema. harness-kit is the reference implementation, the same way Claude Desktop implements MCP. Any tool that correctly validates and applies `harness.yaml` per the spec is a conformant implementation; harness-kit is not required.
+The [Harness Protocol](https://harnessprotocol.io) is an open specification for portable AI coding harness configuration. It defines a vendor-neutral `harness.yaml` format validated by JSON Schema. harness-kit is the reference implementation, the same way Claude Desktop implements MCP. Any tool that correctly validates and applies `harness.yaml` per the spec is a conformant implementation; harness-kit is not required.
 
 The spec is Apache 2.0. See [Harness Protocol](/docs/concepts/harness-protocol) for how it relates to harness-kit.
 
