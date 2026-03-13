@@ -33,6 +33,7 @@ Also check for any flags the user passed:
 - `--target <claude-code|cursor|copilot|all>` — restricts which targets are compiled
 - `--dry-run` — preview output without writing any files
 - `--clean` — remove orphaned marker blocks in addition to current update
+- `--verbose` — show skipped slots and extra detail in the compilation report
 
 ---
 
@@ -172,11 +173,12 @@ All three files use identical JSON structure. Translate from harness YAML:
 
 **Merging:** If the target MCP file already exists, merge: add new servers defined in the harness, but do not overwrite existing server configurations. Servers already present in the file take precedence.
 
-If a server name in harness.yaml already exists in the target config file, **do not overwrite** but print a warning:
+If a server name in harness.yaml already exists in the target config file, **do not overwrite** but print a warning (substitute the actual target file path and server name):
 ```
-Warning: .mcp.json already defines server 'postgres'. Existing config kept.
-  To update it, edit .mcp.json directly or remove the entry and re-run.
+Warning: <target-config-file> already defines server '<server-name>'. Existing config kept.
+  To update it, edit <target-config-file> directly or remove the entry and re-run.
 ```
+For example: `Warning: .cursor/mcp.json already defines server 'postgres'. Existing config kept.`
 
 Create parent directories if they don't exist.
 
