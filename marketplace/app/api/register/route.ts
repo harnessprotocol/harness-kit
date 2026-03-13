@@ -49,6 +49,23 @@ async function fetchGitHubFile(
 }
 
 export async function POST(request: NextRequest) {
+  // Require API key for registration to prevent spam
+  const apiKey = process.env.REGISTER_API_KEY;
+  if (!apiKey) {
+    return NextResponse.json(
+      { error: "Registration not configured" },
+      { status: 503 },
+    );
+  }
+
+  const authHeader = request.headers.get("authorization") ?? "";
+  if (authHeader !== `Bearer ${apiKey}`) {
+    return NextResponse.json(
+      { error: "Invalid or missing API key" },
+      { status: 401 },
+    );
+  }
+
   const supabase = getServiceSupabase();
   let payload: RegisterPayload;
   try {

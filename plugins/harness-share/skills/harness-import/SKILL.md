@@ -40,8 +40,8 @@ Display the plugin list clearly before asking anything:
 ```
 Plugins in this config:
 
-  1. explain (siracusa5/harness-kit) — Layered explanations of files, functions, directories, or concepts
-  2. research (siracusa5/harness-kit) — Process any source into a structured, compounding knowledge base
+  1. explain (harnessprotocol/harness-kit) — Layered explanations of files, functions, directories, or concepts
+  2. research (harnessprotocol/harness-kit) — Process any source into a structured, compounding knowledge base
   3. superpowers (obra/superpowers-marketplace) — Structured dev workflows — TDD, systematic debugging, subagent delegation
 ```
 

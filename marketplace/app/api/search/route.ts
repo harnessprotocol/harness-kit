@@ -15,8 +15,21 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Convert query to tsquery format for full-text search
-  const tsquery = query.trim().split(/\s+/).join(" & ");
+  // Sanitize and convert query to tsquery format for full-text search
+  const sanitizedTokens = query
+    .trim()
+    .split(/\s+/)
+    .map((token) => token.replace(/[!&|():*\\]/g, ""))
+    .filter(Boolean);
+
+  if (sanitizedTokens.length === 0) {
+    return NextResponse.json(
+      { error: "Query contains no searchable terms" },
+      { status: 400 },
+    );
+  }
+
+  const tsquery = sanitizedTokens.join(" & ");
 
   if (type === "profile") {
     const { data, error } = await supabase
@@ -31,7 +44,7 @@ export async function GET(request: NextRequest) {
       const { data: fallback, error: fallbackError } = await supabase
         .from("profiles")
         .select("*")
-        .or(`name.ilike.%${query.replace(/[,().]/g, "")}%,description.ilike.%${query.replace(/[,().]/g, "")}%`)
+        .or(`name.ilike.%${query.replace(/[,().%_\\]/g, "")}%,description.ilike.%${query.replace(/[,().%_\\]/g, "")}%`)
         .order("name", { ascending: true })
         .limit(20);
 
@@ -60,7 +73,7 @@ export async function GET(request: NextRequest) {
     const { data: fallback, error: fallbackError } = await supabase
       .from("components")
       .select("*")
-      .or(`name.ilike.%${query.replace(/[,().]/g, "")}%,description.ilike.%${query.replace(/[,().]/g, "")}%`)
+      .or(`name.ilike.%${query.replace(/[,().%_\\]/g, "")}%,description.ilike.%${query.replace(/[,().%_\\]/g, "")}%`)
       .order("install_count", { ascending: false })
       .limit(20);
 
