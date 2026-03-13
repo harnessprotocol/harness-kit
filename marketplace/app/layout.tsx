@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Harness Kit Marketplace",
   description:
-    "Skills, agents, and configuration for Claude Code — browse, search, and install components.",
+    "Skills, agents, and configuration for Claude Code — browse, search, and install plugins.",
 };
 
 export default function RootLayout({

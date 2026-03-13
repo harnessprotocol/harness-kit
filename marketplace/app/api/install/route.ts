@@ -33,36 +33,45 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Fetch current component to get install_count
-  const { data: component, error: fetchError } = await supabase
-    .from("components")
-    .select("id, install_count")
-    .eq("slug", slug)
-    .single();
-
-  if (fetchError || !component) {
-    return NextResponse.json(
-      { error: `Component not found: ${slug}` },
-      { status: 404 },
-    );
-  }
-
-  // Increment install_count
-  const newCount = (component.install_count ?? 0) + 1;
-  const { error: updateError } = await supabase
-    .from("components")
-    .update({ install_count: newCount })
-    .eq("id", component.id);
+  // Atomically increment install_count to avoid race conditions
+  const { data: updated, error: updateError } = await supabase
+    .rpc("increment_install_count", { component_slug: slug });
 
   if (updateError) {
-    return NextResponse.json(
-      { error: `Failed to update install count: ${updateError.message}` },
-      { status: 500 },
-    );
+    // Fallback: try direct update if RPC not available
+    const { data: component, error: fetchError } = await supabase
+      .from("components")
+      .select("id, install_count")
+      .eq("slug", slug)
+      .single();
+
+    if (fetchError || !component) {
+      return NextResponse.json(
+        { error: `Plugin not found: ${slug}` },
+        { status: 404 },
+      );
+    }
+
+    const { error: fallbackError } = await supabase
+      .from("components")
+      .update({ install_count: (component.install_count ?? 0) + 1 })
+      .eq("id", component.id);
+
+    if (fallbackError) {
+      return NextResponse.json(
+        { error: `Failed to update install count: ${fallbackError.message}` },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({
+      slug,
+      install_count: (component.install_count ?? 0) + 1,
+    });
   }
 
   return NextResponse.json({
     slug,
-    install_count: newCount,
+    install_count: updated,
   });
 }

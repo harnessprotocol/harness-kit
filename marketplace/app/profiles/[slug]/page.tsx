@@ -142,11 +142,11 @@ export default async function ProfileDetailPage({
       {/* Components in this profile */}
       <section className="mb-10">
         <h2 className="mb-4 text-xl font-bold">
-          Components ({components.length})
+          Plugins ({components.length})
         </h2>
         {components.length === 0 ? (
           <p className="text-sm text-gray-500">
-            No components listed for this profile yet.
+            No plugins listed for this profile yet.
           </p>
         ) : (
           <div className="space-y-3">

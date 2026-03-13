@@ -27,11 +27,11 @@ export async function GET(request: NextRequest) {
       .limit(20);
 
     if (error) {
-      // Fallback to ilike if FTS fails
+      // Fallback to ilike if FTS fails — use parameterized filters
       const { data: fallback, error: fallbackError } = await supabase
         .from("profiles")
         .select("*")
-        .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
+        .or(`name.ilike.%${query.replace(/[,().]/g, "")}%,description.ilike.%${query.replace(/[,().]/g, "")}%`)
         .order("name", { ascending: true })
         .limit(20);
 
@@ -56,11 +56,11 @@ export async function GET(request: NextRequest) {
     .limit(20);
 
   if (error) {
-    // Fallback to ilike if FTS fails
+    // Fallback to ilike if FTS fails — sanitize PostgREST filter metacharacters
     const { data: fallback, error: fallbackError } = await supabase
       .from("components")
       .select("*")
-      .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
+      .or(`name.ilike.%${query.replace(/[,().]/g, "")}%,description.ilike.%${query.replace(/[,().]/g, "")}%`)
       .order("install_count", { ascending: false })
       .limit(20);
 

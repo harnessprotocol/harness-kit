@@ -78,7 +78,47 @@ export default async function PluginsPage({
     }
 
     const { data } = await q;
-    components = (data as Component[]) ?? [];
+    let results = (data as Component[]) ?? [];
+
+    // Apply category filter via join table
+    if (selectedCategory && results.length > 0) {
+      const { data: catRow } = await supabase
+        .from("categories")
+        .select("id")
+        .eq("slug", selectedCategory)
+        .single();
+
+      if (catRow) {
+        const { data: linked } = await supabase
+          .from("component_categories")
+          .select("component_id")
+          .eq("category_id", catRow.id);
+
+        const ids = new Set((linked ?? []).map((r: { component_id: string }) => r.component_id));
+        results = results.filter((c) => ids.has(c.id));
+      }
+    }
+
+    // Apply tag filter via join table
+    if (selectedTag && results.length > 0) {
+      const { data: tagRow } = await supabase
+        .from("tags")
+        .select("id")
+        .eq("slug", selectedTag)
+        .single();
+
+      if (tagRow) {
+        const { data: linked } = await supabase
+          .from("component_tags")
+          .select("component_id")
+          .eq("tag_id", tagRow.id);
+
+        const ids = new Set((linked ?? []).map((r: { component_id: string }) => r.component_id));
+        results = results.filter((c) => ids.has(c.id));
+      }
+    }
+
+    components = results;
   } catch {
     // Supabase not configured yet
   }

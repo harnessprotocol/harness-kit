@@ -121,3 +121,17 @@ create trigger components_updated_at
 create trigger profiles_updated_at
   before update on profiles
   for each row execute function update_updated_at();
+
+-- Atomic install count increment (avoids read-then-write race condition)
+create or replace function increment_install_count(component_slug text)
+returns int as $$
+declare
+  new_count int;
+begin
+  update components
+    set install_count = install_count + 1
+    where slug = component_slug
+    returning install_count into new_count;
+  return new_count;
+end;
+$$ language plpgsql;

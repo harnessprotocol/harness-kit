@@ -30,7 +30,13 @@ async function verifySignature(
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("");
   const expected = `sha256=${digest}`;
-  return signature === expected;
+  // Constant-time comparison to prevent timing attacks
+  if (signature.length !== expected.length) return false;
+  let result = 0;
+  for (let i = 0; i < signature.length; i++) {
+    result |= signature.charCodeAt(i) ^ expected.charCodeAt(i);
+  }
+  return result === 0;
 }
 
 /** Fetch a file from the GitHub repo. */
@@ -71,11 +77,17 @@ export async function POST(request: NextRequest) {
   const body = await request.text();
   const signature = request.headers.get("x-hub-signature-256") ?? "";
 
-  if (GITHUB_WEBHOOK_SECRET) {
-    const valid = await verifySignature(body, signature);
-    if (!valid) {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
-    }
+  if (!GITHUB_WEBHOOK_SECRET) {
+    console.warn("GITHUB_WEBHOOK_SECRET not set — rejecting webhook request");
+    return NextResponse.json(
+      { error: "Webhook secret not configured" },
+      { status: 500 },
+    );
+  }
+
+  const valid = await verifySignature(body, signature);
+  if (!valid) {
+    return NextResponse.json({ error: "Invalid signature" }, { status: 401 });
   }
 
   const event = JSON.parse(body);
