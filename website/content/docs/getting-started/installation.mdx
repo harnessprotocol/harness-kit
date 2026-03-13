@@ -7,8 +7,8 @@ title: Installation
 
 The primary distribution channel is [Claude Code](https://claude.ai/claude-code)'s plugin marketplace. For other tools, see [Using with other tools](#using-with-other-tools) below.
 
-## Plugin Marketplace (Claude Code)
-
+<Tabs items={["Plugin Marketplace", "Install Script"]}>
+<Tab value="Plugin Marketplace">
 Add the marketplace once, then install plugins by name:
 
 ```
@@ -26,9 +26,9 @@ Repeat for any plugin you want:
 /plugin install review@harness-kit
 /plugin install docgen@harness-kit
 ```
+</Tab>
 
-## Fallback: Install Script
-
+<Tab value="Install Script">
 If your Claude Code build doesn't support the plugin marketplace yet:
 
 ```bash
@@ -36,6 +36,8 @@ curl -fsSL https://raw.githubusercontent.com/harnessprotocol/harness-kit/main/in
 ```
 
 This downloads skill files to `~/.claude/skills/` over HTTPS. It installs **only the skill files** — bundled scripts (like the research index rebuilder) require the full marketplace install.
+</Tab>
+</Tabs>
 
 ## Verify
 
@@ -46,7 +48,9 @@ After installing, invoke any skill to confirm it loaded:
 /explain src/main.ts
 ```
 
-If the skill responds with its workflow, you're set.
+<Callout type="success" title="Ready to go">
+  If the skill responds with its workflow, you're set.
+</Callout>
 
 ## Using with other tools
 
@@ -66,4 +70,6 @@ For per-tool setup instructions (Copilot, Cursor, Windsurf, MCP wiring), see [Us
 | review | `gh` CLI (PR review only) |
 | docgen | None |
 
-Some plugins require environment variables for optional features. See the [Secrets Management guide](/docs/guides/secrets-management) for how to configure them.
+<Callout type="warn" title="Environment variables">
+  Some plugins require environment variables for optional features. See the [Secrets Management guide](/docs/guides/secrets-management) for how to configure them.
+</Callout>

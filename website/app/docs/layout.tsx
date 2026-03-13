@@ -27,7 +27,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                 hk
               </text>
             </svg>
-            Harness Kit
+            <span className="font-display">Harness Kit</span>
           </span>
         ),
       }}
