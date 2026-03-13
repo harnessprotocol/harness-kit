@@ -28,6 +28,7 @@ body {
   --color-fd-secondary: 240 8% 95%;
   --color-fd-secondary-foreground: 230 15% 10%;
   --color-fd-ring: 256 80% 58%;
+  --fd-layout-width: 1400px;
 }
 
 /* ── Dark theme — deep, blue-tinted ── */
@@ -75,6 +76,9 @@ body {
 
 .glass {
   backdrop-filter: blur(12px);
+  background: hsla(230, 15%, 92%, 0.7);
+}
+.dark .glass {
   background: hsla(230, 15%, 8%, 0.7);
 }
 
@@ -94,18 +98,20 @@ body {
   animation: fadeInUp 0.5s ease-out both;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-in {
+    animation: none;
+  }
+}
+
 /* ── Heading typography ── */
 h1, h2, h3 {
   letter-spacing: -0.03em;
 }
 
-/* ── Docs layout width ── */
-:root {
-  --fd-layout-width: 1400px;
-}
-
 /* ── Nav bar gradient border ── */
 .dark [data-fumadocs-nav] {
+  position: relative;
   border-bottom: none;
   background: hsla(230, 15%, 4%, 0.85);
   backdrop-filter: blur(16px);
