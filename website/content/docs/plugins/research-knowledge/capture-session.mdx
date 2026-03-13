@@ -84,6 +84,8 @@ The Stop hook automatically summarizes sessions at exit. Add to `~/.claude/hooks
 }
 ```
 
+The `"matcher": ""` field is an empty string, which means the hook fires on every Stop event regardless of context. To restrict it to specific projects, set `matcher` to a glob pattern matching the project path.
+
 After `plugin install capture-session@harness-kit`, the script is at `~/.claude/plugins/capture-session/scripts/session-capture.sh`. For a local clone, use the absolute path to `plugins/capture-session/scripts/session-capture.sh`.
 
 The hook reads the Stop event payload, finds the session transcript, summarizes it, and appends to the staging file. It deduplicates against `<!-- source: manual -->` entries from the same day.
