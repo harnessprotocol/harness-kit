@@ -108,7 +108,7 @@ See [`harness.yaml.example`](harness.yaml.example) for the config format.
 
 harness-kit natively supports Claude Code, Cursor, and GitHub Copilot. Use `/harness-compile` to generate native config files for each tool from a single `harness.yaml`, and `/harness-sync` to keep them aligned as your setup evolves.
 
-SKILL.md files are plain markdown — they work in any tool's instruction system. VS Code Copilot reads `CLAUDE.md` natively via the `chat.useClaudeMdFile` setting, so the conventions guide works without modification. For per-tool setup (Copilot, Cursor, Windsurf, MCP), see the [Cross-Harness setup guide](https://harnesskit.ai/docs/cross-harness/setup-guide).
+SKILL.md files are plain markdown — they work in any tool's instruction system. VS Code Copilot reads `CLAUDE.md` natively via the `chat.useClaudeMdFile` setting, so the conventions guide works without modification. The [Harness Protocol spec](https://harnessprotocol.io) documents the full cross-platform target mapping.
 
 ## Conventions Guide
 

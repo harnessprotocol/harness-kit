@@ -1,6 +1,7 @@
 ---
 name: harness-import
 description: Use when user invokes /harness-import or wants to install plugins from a shared harness.yaml config file. Reads the config, presents each plugin interactively, and generates the Claude Code install commands for the ones the user selects. Handles both Harness Protocol v1 format (version: "1") and the legacy format (version: 1).
+disable-model-invocation: true
 ---
 
 # Import a Harness Configuration

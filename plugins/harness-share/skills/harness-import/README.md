@@ -35,14 +35,14 @@ If other AI tools are detected, a cross-platform setup report is printed after a
 Cross-platform setup complete:
 
   Cursor:
-    Skills:  explain, research  (.cursor/skills/)
-    MCP:     postgres  (.cursor/mcp.json)
-    Instructions:  .cursor/rules/harness.mdc
+    Skills:       explain, research  (.cursor/skills/)
+    MCP:          postgres  (.cursor/mcp.json)
+    Instructions: harness.mdc (operational), behavioral.mdc (behavioral)
 
   GitHub Copilot:
-    Skills:  explain, research  (.github/skills/)
-    MCP:     (none declared in harness.yaml)
-    Instructions:  .github/copilot-instructions.md
+    Skills:       explain, research  (.github/skills/)
+    MCP:          (none declared in harness.yaml)
+    Instructions: copilot-instructions.md (operational)
 ```
 
 ## Shell Alternative
