@@ -49,6 +49,8 @@ Found skills across AI tools:
 
 Use this deduplicated list as your list of installed plugin names for the steps that follow.
 
+If all four directories are empty or missing, tell the user: "No installed skills found in any supported location. Nothing to export." and stop.
+
 ---
 
 ### Step 2: Ask about sources and metadata
@@ -57,9 +59,11 @@ Tell the user what skills you found, then ask:
 
 > "I found these installed skills: [list]. A couple of quick questions:
 >
-> 1. For each plugin, which repo is it from? Format: `owner/repo` — for example `siracusa5/harness-kit`. If a plugin is from harness-kit, just say so and I'll fill it in.
+> 1. For each plugin, which repo is it from? Format: `owner/repo` — for example `harnessprotocol/harness-kit`. If a plugin is from harness-kit, just say so and I'll fill it in.
 > 2. What name and description should I give this harness profile? (optional — press enter to skip)
 > 3. Do you have any MCP servers, env variables, or CLAUDE.md instructions you'd like to include? (optional)
+>
+>    Note: MCP server detection is automatic — Step 2.6 will scan `.mcp.json`, `.cursor/mcp.json`, and `.vscode/mcp.json` and ask you separately. You only need to answer about MCP here if you have MCP servers in a non-standard location not covered by those files.
 >
 > If you've only added harness-kit plugins, just say so."
 
@@ -72,13 +76,15 @@ Wait for the user's response before proceeding.
 Check whether any cross-platform instruction files exist and contain harness-generated marker blocks:
 
 ```bash
-grep -l "BEGIN harness:" .cursor/rules/harness.mdc .github/copilot-instructions.md 2>/dev/null
+grep -l "<!-- BEGIN harness:" .cursor/rules/harness.mdc .github/copilot-instructions.md 2>/dev/null
 ```
 
-If any matching files are found, tell the user what was found and ask:
+Claude Code instruction files (CLAUDE.md, AGENT.md, SOUL.md) are intentionally excluded — they are managed by the user directly and are not cross-platform sources for export.
+
+If any matching files are found, tell the user what was found and ask. List all slots found in each file — a file may contain multiple harness marker blocks:
 
 > "I also found harness-generated instruction content in these files:
->   - `.cursor/rules/harness.mdc` (contains `my-harness:operational` block)
+>   - `.cursor/rules/harness.mdc` (contains `my-harness:operational` and `my-harness:behavioral` blocks)
 >   - `.github/copilot-instructions.md` (contains `my-harness:operational` block)
 >
 > Would you like me to include the `operational` and `behavioral` instruction content in the export?"
@@ -119,9 +125,9 @@ Found MCP servers:
 
   postgres   (in .mcp.json and .cursor/mcp.json — same config)
   filesystem (in .mcp.json only)
-
-  Would you like to include these in the export? (all / pick / none)
 ```
+
+> "Would you like to include these in the export? (all / pick / none)"
 
 If the user selects **all** or **pick** (and picks at least one), store the chosen servers to write to the `mcp-servers:` section in harness.yaml (Step 4). Convert from JSON format back to harness YAML format: JSON key `type` → YAML key `transport`.
 
@@ -133,7 +139,7 @@ If the user selects **none**, or if no MCP config files are found, skip this ste
 
 For each installed skill, determine its source repo:
 
-**Known harness-kit plugins** (source: `siracusa5/harness-kit`):
+**Known harness-kit plugins** (source: `harnessprotocol/harness-kit`):
 | Plugin | Description |
 |--------|-------------|
 | explain | Layered explanations of files, functions, directories, or concepts |
@@ -169,7 +175,7 @@ metadata:
 
 plugins:
   - name: explain
-    source: siracusa5/harness-kit
+    source: harnessprotocol/harness-kit
     description: Layered explanations of files, functions, directories, or concepts
   # additional plugins follow the same structure
 ```
@@ -232,7 +238,7 @@ Tell the user where the file was written:
 | Mistake | Fix |
 |---------|-----|
 | Using `version: 1` (integer) | Must be `version: "1"` (string) — this is what distinguishes the protocol format |
-| Using `marketplace: harness-kit` | Protocol format uses `source: siracusa5/harness-kit` — no `marketplaces:` section |
+| Using `marketplace: harness-kit` | Protocol format uses `source: harnessprotocol/harness-kit` — no `marketplaces:` section |
 | Including `harness-export` and `harness-import` in the output | Only include plugins the user actually uses |
 | Writing to a path without confirming | Write to `./harness.yaml` by default. If user specified a path in the invocation, use that |
 | Adding `mcp-servers:` / `env:` / `instructions:` as empty sections | Only include these sections when the user has actual content to put in them |
