@@ -1,6 +1,7 @@
 ---
 name: harness-validate
 description: Use when user invokes /harness-validate or wants to check whether a harness.yaml file is valid according to the Harness Protocol v1 JSON Schema. Reports validation errors with field paths and helpful fix suggestions.
+disable-model-invocation: true
 ---
 
 # Validate a Harness Configuration
@@ -48,7 +49,7 @@ except ImportError:
     print("ERROR: jsonschema not installed")
     sys.exit(1)
 
-SCHEMA_URL = "https://raw.githubusercontent.com/siracusa5/harness-protocol/spec/v1-foundation/schema/draft/harness.schema.json"
+SCHEMA_URL = "https://raw.githubusercontent.com/harnessprotocol/harness-protocol/spec/v1-foundation/schema/draft/harness.schema.json"
 HARNESS_FILE = "harness.yaml"  # replace with actual path
 
 # Fetch the schema
@@ -118,7 +119,7 @@ Display errors with clear field paths and fix suggestions:
 
   plugins → 0 → source: 'marketplace' is not a valid property
     Fix: Use source: owner/repo instead of marketplace: key.
-    Example: source: siracusa5/harness-kit
+    Example: source: harnessprotocol/harness-kit
 
   env → 0: 'default' is not allowed when sensitive is true
     Fix: Remove the default value — sensitive vars must be set by the user,

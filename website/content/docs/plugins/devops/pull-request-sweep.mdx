@@ -1,0 +1,62 @@
+---
+title: pull-request-sweep
+---
+
+> **[View in Marketplace →](https://marketplace.harnessprotocol.io/plugins/pull-request-sweep)** for install tracking, related plugins, and profiles.
+
+# pull-request-sweep
+
+Cross-repo PR sweep — discover, triage, review, merge, and report on all your open PRs.
+
+## Requirements
+
+- **Claude Code** — required
+- **`gh` CLI** ([GitHub CLI](https://cli.github.com/)) — required for PR discovery, CI checks, merging, and rebasing. `GH_TOKEN` declared as required in `plugin.json` — see [Secrets Management](/docs/guides/secrets-management) for setup.
+- **review plugin** — used for automated code reviews on unreviewed PRs
+
+## Install
+
+```
+/plugin marketplace add harnessprotocol/harness-kit
+/plugin install pull-request-sweep@harness-kit
+```
+
+## What It Does
+
+When you invoke `/pull-request-sweep`:
+
+1. Discovers all open (non-draft) PRs authored by you across all repos
+2. Enriches each PR with CI status and merge state
+3. Triages into categories: MERGE_READY, PENDING_CI, NEEDS_REVIEW, BEHIND_BASE, CI_FAILING, CHANGES_REQUESTED, CONFLICTING, BLOCKED
+4. Shows triage table and waits for your confirmation
+5. Acts: merges ready PRs, rebases behind ones, fixes quick CI failures (lint/format/typo), runs code reviews on unreviewed PRs
+6. Produces a full report
+
+## Usage
+
+```
+/pull-request-sweep
+```
+
+Or use natural language:
+
+```
+Check my PRs.
+What's the status of all my open PRs?
+Sweep my PRs.
+```
+
+## Notes
+
+- Never acts on draft PRs
+- Never auto-resolves CHANGES_REQUESTED — flags for human follow-up
+- Safe to run repeatedly — idempotent, already-merged PRs won't reappear
+- Pairs with `/loop 30m /pull-request-sweep` for ongoing PR babysitting
+
+## Runtime Configuration
+
+{/* @embed plugins/pull-request-sweep/skills/pull-request-sweep/SKILL.md */}
+
+## Plugin Documentation
+
+{/* @embed plugins/pull-request-sweep/skills/pull-request-sweep/README.md */}

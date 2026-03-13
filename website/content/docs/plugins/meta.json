@@ -1,13 +1,4 @@
 {
   "title": "Plugins",
-  "pages": [
-    "overview",
-    "research",
-    "explain",
-    "data-lineage",
-    "orient",
-    "capture-session",
-    "review",
-    "docgen"
-  ]
+  "pages": ["overview", "research-knowledge", "code-quality", "data-engineering", "documentation", "devops", "productivity"]
 }

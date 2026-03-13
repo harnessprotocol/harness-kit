@@ -1,5 +1,7 @@
 {
   "name": "harness-share",
-  "description": "Export, share, and import your harness-kit configuration — capture installed plugins into harness.yaml and restore them on any machine",
-  "version": "0.2.0"
+  "description": "Compile, export, import, and sync harness configurations across Claude Code, Cursor, and GitHub Copilot",
+  "version": "0.3.0",
+  "category": "productivity",
+  "tags": ["configuration", "export", "import", "yaml", "cross-platform"]
 }

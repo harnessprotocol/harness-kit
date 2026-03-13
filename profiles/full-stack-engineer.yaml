@@ -1,0 +1,41 @@
+# Full-Stack Engineer Profile
+# Pre-configured harness-kit setup for full-stack development workflows
+#
+# Install: /plugin marketplace add harnessprotocol/harness-kit
+#          then install this profile's components
+
+name: full-stack-engineer
+description: >
+  Harness configuration for full-stack engineers shipping features
+  end-to-end. Includes code review, PR workflows, documentation
+  generation, and code explanation tools.
+
+author:
+  name: harnessprotocol
+
+components:
+  - name: review
+    version: "0.2.0"
+  - name: ship-pr
+    version: "0.1.0"
+  - name: pull-request-sweep
+    version: "0.1.0"
+  - name: explain
+    version: "0.2.0"
+  - name: docgen
+    version: "0.2.0"
+  - name: harness-share
+    version: "0.3.0"
+
+knowledge:
+  backend: memory-md
+  seed_docs:
+    - topic: architecture
+      description: Project architecture decisions and conventions
+    - topic: testing
+      description: Testing strategies and patterns
+
+rules:
+  - Run tests before opening PRs
+  - Write descriptive commit messages with conventional commit prefixes
+  - Review your own diff before requesting review from others

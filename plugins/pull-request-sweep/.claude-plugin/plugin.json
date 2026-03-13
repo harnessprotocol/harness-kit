@@ -2,6 +2,8 @@
   "name": "pull-request-sweep",
   "description": "Cross-repo PR sweep: triage all open PRs, run code reviews, merge what's ready, fix quick CI blockers",
   "version": "0.1.0",
+  "category": "devops",
+  "tags": ["pull-request", "triage", "ci-cd", "code-review", "multi-repo"],
   "requires": {
     "env": [
       {

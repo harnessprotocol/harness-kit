@@ -2,5 +2,7 @@
   "name": "docgen",
   "description": "Generate or update README, API docs, architecture overview, or changelog — always confirms before writing",
   "version": "0.2.0",
+  "category": "documentation",
+  "tags": ["documentation", "readme", "api-docs", "changelog", "architecture"],
   "developed_with": "claude-sonnet-4"
 }

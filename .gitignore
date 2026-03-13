@@ -9,8 +9,26 @@ venv/
 private/
 docs/plans/
 
-# Docusaurus
-website/node_modules/
+# Node
+node_modules/
+
+# Website (Fumadocs)
 website/build/
 website/.docusaurus/
 website/.cache-loader/
+website/.next/
+website/out/
+website/.source/
+
+# Marketplace
+marketplace/.next/
+marketplace/out/
+
+# Supabase local
+marketplace/supabase/.temp/
+
+# Shared package build output
+packages/shared/dist/
+
+# Playwright MCP
+.playwright-mcp/

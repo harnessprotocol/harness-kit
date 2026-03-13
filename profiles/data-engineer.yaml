@@ -1,0 +1,44 @@
+# Data Engineer Profile
+# Pre-configured harness-kit setup for data engineering workflows
+#
+# Install: /plugin marketplace add harnessprotocol/harness-kit
+#          then install this profile's components
+
+name: data-engineer
+description: >
+  Harness configuration for data engineers working with SQL pipelines,
+  data lineage, and knowledge management. Includes lineage tracing,
+  research tooling for documentation, and session capture for
+  compounding institutional knowledge.
+
+author:
+  name: harnessprotocol
+
+components:
+  - name: data-lineage
+    version: "0.2.0"
+  - name: research
+    version: "0.2.0"
+  - name: orient
+    version: "0.2.0"
+  - name: capture-session
+    version: "0.2.0"
+  - name: explain
+    version: "0.2.0"
+  - name: docgen
+    version: "0.2.0"
+  - name: review
+    version: "0.2.0"
+
+knowledge:
+  backend: memory-md
+  seed_docs:
+    - topic: sql-patterns
+      description: Common SQL patterns and anti-patterns for data pipelines
+    - topic: data-quality
+      description: Data quality checks and validation strategies
+
+rules:
+  - Always trace lineage impact before modifying shared tables
+  - Prefer CTEs over nested subqueries for readability
+  - Document column-level transformations in commit messages

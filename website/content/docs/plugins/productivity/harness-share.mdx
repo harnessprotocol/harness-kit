@@ -1,0 +1,142 @@
+---
+title: harness-share
+---
+
+> **[View in Marketplace →](https://marketplace.harnessprotocol.io/plugins/harness-share)** for install tracking, related plugins, and profiles.
+
+# harness-share
+
+Compile, export, import, and sync harness configurations across Claude Code, Cursor, and GitHub Copilot.
+
+## Requirements
+
+None — works with any AI tool that supports skill files or instruction blocks.
+
+## Install
+
+```
+/plugin marketplace add harnessprotocol/harness-kit
+/plugin install harness-share@harness-kit
+```
+
+## What It Does
+
+harness-share is a multi-skill plugin that manages your AI tool configuration as portable YAML. It includes five skills:
+
+| Skill | What it does |
+|-------|-------------|
+| `/harness-export` | Captures installed plugins into a shareable `harness.yaml` |
+| `/harness-import` | Installs plugins from a shared `harness.yaml` config |
+| `/harness-compile` | Compiles `harness.yaml` into native configs for Claude Code, Cursor, and Copilot |
+| `/harness-sync` | Bidirectional sync of skills, MCP configs, and instructions across platforms |
+| `/harness-validate` | Validates a `harness.yaml` before compiling or sharing |
+
+## Usage
+
+### Export your current setup
+
+```
+/harness-export
+/harness-export ~/dotfiles/harness.yaml
+```
+
+Scans all AI tool directories, deduplicates installed plugins, and writes a `harness.yaml`.
+
+### Import a shared config
+
+```
+/harness-import
+/harness-import path/to/harness.yaml
+```
+
+Presents plugins interactively — install all or pick a subset. Sets up Cursor and Copilot if detected.
+
+### Compile to native formats
+
+```
+/harness-compile
+/harness-compile --target cursor
+/harness-compile --dry-run
+```
+
+One `harness.yaml` produces native config files for every supported tool. Generated content is wrapped in section markers so re-compilation only updates harness-managed sections.
+
+### Sync across platforms
+
+```
+/harness-sync
+/harness-sync --target cursor
+```
+
+Inventories skills, MCP configs, and instruction blocks on each platform, reports divergence, and lets you push or pull changes.
+
+### Validate before sharing
+
+```
+/harness-validate
+/harness-validate path/to/harness.yaml
+```
+
+## Output Format
+
+```yaml
+$schema: https://harnessprotocol.io/schema/v1/harness.schema.json
+version: "1"
+
+metadata:
+  name: my-harness
+  description: My personal harness configuration.
+
+plugins:
+  - name: explain
+    source: harnessprotocol/harness-kit
+    description: Layered explanations of files, functions, directories, or concepts
+```
+
+## Shell Alternative
+
+If you don't have Claude Code, use `harness-restore.sh` instead:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/harnessprotocol/harness-kit/main/harness-restore.sh | bash -s -- harness.yaml
+```
+
+## Runtime Configuration — harness-export
+
+{/* @embed plugins/harness-share/skills/harness-export/SKILL.md */}
+
+## Runtime Configuration — harness-import
+
+{/* @embed plugins/harness-share/skills/harness-import/SKILL.md */}
+
+## Runtime Configuration — harness-compile
+
+{/* @embed plugins/harness-share/skills/harness-compile/SKILL.md */}
+
+## Runtime Configuration — harness-sync
+
+{/* @embed plugins/harness-share/skills/harness-sync/SKILL.md */}
+
+## Runtime Configuration — harness-validate
+
+{/* @embed plugins/harness-share/skills/harness-validate/SKILL.md */}
+
+## Plugin Documentation — harness-export
+
+{/* @embed plugins/harness-share/skills/harness-export/README.md */}
+
+## Plugin Documentation — harness-import
+
+{/* @embed plugins/harness-share/skills/harness-import/README.md */}
+
+## Plugin Documentation — harness-compile
+
+{/* @embed plugins/harness-share/skills/harness-compile/README.md */}
+
+## Plugin Documentation — harness-sync
+
+{/* @embed plugins/harness-share/skills/harness-sync/README.md */}
+
+## Plugin Documentation — harness-validate
+
+{/* @embed plugins/harness-share/skills/harness-validate/README.md */}

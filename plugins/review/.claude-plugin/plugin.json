@@ -2,6 +2,8 @@
   "name": "review",
   "description": "Code review for a branch, PR, or path — structured output with severity labels and cross-file analysis",
   "version": "0.3.0",
+  "category": "code-quality",
+  "tags": ["code-review", "pull-request", "static-analysis", "github"],
   "developed_with": "claude-sonnet-4",
   "requires": {
     "env": [

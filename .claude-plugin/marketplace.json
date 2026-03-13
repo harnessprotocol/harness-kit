@@ -7,6 +7,14 @@
     "description": "Claude Code skills, agents, and configuration — the parts worth sharing.",
     "pluginRoot": "./plugins"
   },
+  "categories": [
+    { "slug": "research-knowledge", "name": "Research & Knowledge", "display_order": 1 },
+    { "slug": "code-quality", "name": "Code Quality", "display_order": 2 },
+    { "slug": "data-engineering", "name": "Data Engineering", "display_order": 3 },
+    { "slug": "documentation", "name": "Documentation", "display_order": 4 },
+    { "slug": "devops", "name": "DevOps & Shipping", "display_order": 5 },
+    { "slug": "productivity", "name": "Productivity", "display_order": 6 }
+  ],
   "plugins": [
     {
       "name": "research",
@@ -14,7 +22,9 @@
       "description": "Process any source into a structured, compounding knowledge base",
       "version": "0.3.0",
       "author": { "name": "harnessprotocol" },
-      "license": "Apache-2.0"
+      "license": "Apache-2.0",
+      "category": "research-knowledge",
+      "tags": ["research", "knowledge-base", "web-scraping", "pdf", "github", "sources"]
     },
     {
       "name": "explain",
@@ -22,7 +32,9 @@
       "description": "Structured code explainer — layered explanations of files, functions, directories, or concepts",
       "version": "0.2.0",
       "author": { "name": "harnessprotocol" },
-      "license": "Apache-2.0"
+      "license": "Apache-2.0",
+      "category": "code-quality",
+      "tags": ["code-explanation", "learning", "walkthrough", "codebase-understanding"]
     },
     {
       "name": "data-lineage",
@@ -30,7 +42,9 @@
       "description": "Trace column-level data lineage through SQL, Kafka, Spark, and JDBC codebases",
       "version": "0.2.0",
       "author": { "name": "harnessprotocol" },
-      "license": "Apache-2.0"
+      "license": "Apache-2.0",
+      "category": "data-engineering",
+      "tags": ["sql", "data-lineage", "kafka", "spark", "jdbc", "column-level"]
     },
     {
       "name": "orient",
@@ -38,7 +52,9 @@
       "description": "Topic-focused session orientation — search graph, knowledge, journal, and research for a specific topic",
       "version": "0.2.0",
       "author": { "name": "harnessprotocol" },
-      "license": "Apache-2.0"
+      "license": "Apache-2.0",
+      "category": "research-knowledge",
+      "tags": ["orientation", "knowledge-graph", "session", "topic-search"]
     },
     {
       "name": "capture-session",
@@ -46,7 +62,9 @@
       "description": "Capture session information into a staging file for later reflection and knowledge graph processing",
       "version": "0.2.0",
       "author": { "name": "harnessprotocol" },
-      "license": "Apache-2.0"
+      "license": "Apache-2.0",
+      "category": "research-knowledge",
+      "tags": ["session-capture", "knowledge-graph", "reflection", "staging"]
     },
     {
       "name": "review",
@@ -54,7 +72,9 @@
       "description": "Code review for a branch, PR, or path — structured output with severity labels and cross-file analysis",
       "version": "0.3.0",
       "author": { "name": "harnessprotocol" },
-      "license": "Apache-2.0"
+      "license": "Apache-2.0",
+      "category": "code-quality",
+      "tags": ["code-review", "pull-request", "static-analysis", "github"]
     },
     {
       "name": "docgen",
@@ -62,15 +82,19 @@
       "description": "Generate or update README, API docs, architecture overview, or changelog — always confirms before writing",
       "version": "0.2.0",
       "author": { "name": "harnessprotocol" },
-      "license": "Apache-2.0"
+      "license": "Apache-2.0",
+      "category": "documentation",
+      "tags": ["documentation", "readme", "api-docs", "changelog", "architecture"]
     },
     {
       "name": "harness-share",
       "source": "./harness-share",
-      "description": "Export, share, and import your harness-kit plugin configuration — capture your setup into harness.yaml and restore it anywhere",
-      "version": "0.2.0",
+      "description": "Compile, export, import, and sync harness configurations across Claude Code, Cursor, and GitHub Copilot",
+      "version": "0.3.0",
       "author": { "name": "harnessprotocol" },
-      "license": "Apache-2.0"
+      "license": "Apache-2.0",
+      "category": "productivity",
+      "tags": ["configuration", "export", "import", "yaml", "cross-platform"]
     },
     {
       "name": "ship-pr",
@@ -78,7 +102,9 @@
       "description": "End-of-task shipping workflow: run tests, open a PR, code review, fix CI, sync base, then squash merge",
       "version": "0.1.0",
       "author": { "name": "harnessprotocol" },
-      "license": "Apache-2.0"
+      "license": "Apache-2.0",
+      "category": "devops",
+      "tags": ["pull-request", "ci-cd", "merge", "testing", "workflow"]
     },
     {
       "name": "pull-request-sweep",
@@ -86,7 +112,9 @@
       "description": "Cross-repo PR sweep: triage all open PRs, run code reviews, merge what's ready, fix quick CI blockers, and report",
       "version": "0.1.0",
       "author": { "name": "harnessprotocol" },
-      "license": "Apache-2.0"
+      "license": "Apache-2.0",
+      "category": "devops",
+      "tags": ["pull-request", "triage", "ci-cd", "code-review", "multi-repo"]
     }
   ]
 }

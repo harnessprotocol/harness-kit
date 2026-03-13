@@ -3,6 +3,8 @@ sidebar_position: 6
 title: capture-session
 ---
 
+> **[View in Marketplace →](https://marketplace.harnessprotocol.io/plugins/capture-session)** for install tracking, related plugins, and profiles.
+
 # capture-session
 
 Capture session information into a staging file for later reflection and knowledge graph processing.
@@ -82,6 +84,8 @@ The Stop hook automatically summarizes sessions at exit. Add to `~/.claude/hooks
 }
 ```
 
+The `"matcher": ""` field is an empty string, which means the hook fires on every Stop event regardless of context. To restrict it to specific projects, set `matcher` to a glob pattern matching the project path.
+
 After `plugin install capture-session@harness-kit`, the script is at `~/.claude/plugins/capture-session/scripts/session-capture.sh`. For a local clone, use the absolute path to `plugins/capture-session/scripts/session-capture.sh`.
 
 The hook reads the Stop event payload, finds the session transcript, summarizes it, and appends to the staging file. It deduplicates against `<!-- source: manual -->` entries from the same day.
@@ -125,3 +129,11 @@ Both sources feed the same staging file, processed uniformly by the daily reflec
 ### Why append-only?
 
 The staging file is a write-ahead log. Modifying existing entries would corrupt the audit trail and break deduplication logic.
+
+## Runtime Configuration
+
+{/* @embed plugins/capture-session/skills/capture-session/SKILL.md */}
+
+## Plugin Documentation
+
+{/* @embed plugins/capture-session/skills/capture-session/README.md */}

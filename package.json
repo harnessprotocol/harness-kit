@@ -1,0 +1,12 @@
+{
+  "name": "harness-kit",
+  "private": true,
+  "packageManager": "pnpm@10.29.1",
+  "scripts": {
+    "dev:website": "pnpm --filter harness-kit-docs dev",
+    "dev:marketplace": "pnpm --filter harness-kit-marketplace dev",
+    "build:website": "pnpm --filter harness-kit-docs build",
+    "build:marketplace": "pnpm --filter harness-kit-marketplace build",
+    "build": "pnpm -r build"
+  }
+}

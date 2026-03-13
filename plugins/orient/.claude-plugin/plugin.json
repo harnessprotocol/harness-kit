@@ -1,5 +1,7 @@
 {
   "name": "orient",
   "description": "Topic-focused session orientation — search graph, knowledge, journal, and research for a specific topic",
-  "version": "0.2.0"
+  "version": "0.2.0",
+  "category": "research-knowledge",
+  "tags": ["orientation", "knowledge-graph", "session", "topic-search"]
 }

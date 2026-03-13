@@ -2,5 +2,7 @@
   "name": "explain",
   "description": "Structured code explainer — layered explanations of files, functions, directories, or concepts",
   "version": "0.2.0",
+  "category": "code-quality",
+  "tags": ["code-explanation", "learning", "walkthrough", "codebase-understanding"],
   "developed_with": "claude-sonnet-4"
 }

@@ -1,0 +1,39 @@
+# Research & Knowledge Profile
+# Pre-configured harness-kit setup for research-heavy workflows
+#
+# Install: /plugin marketplace add harnessprotocol/harness-kit
+#          then install this profile's components
+
+name: research-knowledge
+description: >
+  Harness configuration for roles focused on research, learning, and
+  knowledge management. Ideal for technical writers, analysts, and
+  anyone building a compounding knowledge base from diverse sources.
+
+author:
+  name: harnessprotocol
+
+components:
+  - name: research
+    version: "0.2.0"
+  - name: orient
+    version: "0.2.0"
+  - name: capture-session
+    version: "0.2.0"
+  - name: explain
+    version: "0.2.0"
+  - name: docgen
+    version: "0.2.0"
+
+knowledge:
+  backend: memory-md
+  seed_docs:
+    - topic: research-methodology
+      description: Research workflows and source evaluation criteria
+    - topic: knowledge-taxonomy
+      description: How topics and concepts are organized in the knowledge graph
+
+rules:
+  - Always cite sources when adding to the knowledge base
+  - Capture session insights before ending long research sessions
+  - Orient at the start of each session to build on prior work
