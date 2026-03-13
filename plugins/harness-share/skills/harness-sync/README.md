@@ -51,7 +51,7 @@ Instructions:
 
 **Push** — pick one platform as the source of truth, write its content to the others. Uses harness-compile logic for consistent output (marker blocks, frontmatter, MCP merging).
 
-**Pull** — read native changes from Cursor or Copilot config files, merge them back into `harness.yaml`, then recompile everything. This updates your source of truth file; you'll be asked to confirm before any changes are written.
+**Pull** — read native changes from Cursor or Copilot config files, merge them back into `harness.yaml`, then recompile everything. This modifies your `harness.yaml` source of truth — you'll be asked to confirm before any changes are written.
 
 ## Conflict Handling
 

@@ -29,7 +29,7 @@ Run these in Claude Code:
 /plugin install research@harness-kit
 ```
 
-If other AI tools are detected, a cross-platform setup report is printed after all steps:
+If other AI tools are detected, a cross-platform setup report is printed after all steps. MCP configs declared in `harness.yaml` are also written to each platform's config file (`.cursor/mcp.json`, `.vscode/mcp.json`):
 
 ```
 Cross-platform setup complete:
