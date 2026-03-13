@@ -12,7 +12,7 @@ Requires [Claude Code](https://claude.ai/claude-code)
 
 </div>
 
-Building a good AI setup takes real work. harness-kit makes it portable. Package your plugins, skills, MCP servers, hooks, and conventions into a config you can apply to any harness on any machine — and share with your team in one file. Works with Claude Code today. Designed to travel.
+Building a good AI setup takes real work. harness-kit makes it portable. Package your plugins, skills, MCP servers, hooks, and conventions into a config you can apply to any harness on any machine — and share with your team in one file. Works with Claude Code, Cursor, and GitHub Copilot. Designed to travel.
 
 ## Install
 
@@ -63,7 +63,7 @@ Produces a structured explanation: summary, key components, how it connects, pat
 | [`data-lineage`](plugins/data-lineage/skills/data-lineage/README.md) | Trace column-level data lineage through SQL, Kafka, Spark, and JDBC codebases | `/data-lineage orders.amount` |
 | [`orient`](plugins/orient/skills/orient/README.md) ¹ | Topic-focused session orientation across graph, knowledge, journal, and research | `/orient auth` |
 | [`capture-session`](plugins/capture-session/skills/capture-session/README.md) ¹ | Capture session information into a staging file for later reflection | `/capture-session` |
-| [`harness-share`](plugins/harness-share/skills/harness-export/README.md) | Export your plugin setup to `harness.yaml`, import it anywhere, and validate against the Harness Protocol v1 spec | `/harness-export` · `/harness-import` · `/harness-validate` |
+| [`harness-share`](plugins/harness-share/skills/harness-export/README.md) | Export your plugin setup to `harness.yaml`, compile to native configs for Claude Code, Cursor, and Copilot, and keep them in sync | `/harness-export` · `/harness-import` · `/harness-validate` · `/harness-compile` · `/harness-sync` |
 
 ¹ Personal-workflow plugins designed for projects using the [knowledge graph + journal pattern](docs/claude-md-conventions.md).
 
@@ -88,6 +88,8 @@ Capture your installed plugins into a `harness.yaml` file, commit it to your dot
 /harness-export               # write harness.yaml from your current setup
 /harness-import harness.yaml  # interactive wizard to pick what to install
 /harness-validate             # validate harness.yaml against the Harness Protocol v1 schema
+/harness-compile              # compile harness.yaml to native config files for Claude Code, Cursor, and Copilot
+/harness-sync                 # keep Claude Code, Cursor, and Copilot configuration in sync
 ```
 
 The import wizard shows each plugin with its description and lets you pick a subset — your config is a starting point, not a mandate.
@@ -104,7 +106,9 @@ See [`harness.yaml.example`](harness.yaml.example) for the config format.
 
 ## Using with Other Tools
 
-harness-kit targets Claude Code, but SKILL.md files are plain markdown — copy them into any tool's instruction system. VS Code Copilot reads `CLAUDE.md` natively via the `chat.useClaudeMdFile` setting, so the conventions guide works without modification. For per-tool setup (Copilot, Cursor, Windsurf, MCP), see the [Cross-Harness setup guide](https://harnesskit.ai/docs/cross-harness/setup-guide).
+harness-kit natively supports Claude Code, Cursor, and GitHub Copilot. Use `/harness-compile` to generate native config files for each tool from a single `harness.yaml`, and `/harness-sync` to keep them aligned as your setup evolves.
+
+SKILL.md files are plain markdown — they work in any tool's instruction system. VS Code Copilot reads `CLAUDE.md` natively via the `chat.useClaudeMdFile` setting, so the conventions guide works without modification. For per-tool setup (Copilot, Cursor, Windsurf, MCP), see the [Cross-Harness setup guide](https://harnesskit.ai/docs/cross-harness/setup-guide).
 
 ## Conventions Guide
 
