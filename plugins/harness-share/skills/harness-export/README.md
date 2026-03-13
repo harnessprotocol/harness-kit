@@ -10,23 +10,35 @@ Captures your installed harness-kit plugins into a `harness.yaml` file you can s
 ```
 
 The skill:
-1. Reads `~/.claude/skills/` to detect installed plugins
-2. Asks which marketplaces you've added
-3. Builds entries for each plugin (auto-fills descriptions for known harness-kit plugins)
-4. Writes `harness.yaml` to the current directory or a path you specify
+1. Scans `~/.claude/skills/`, `.cursor/skills/`, `.github/skills/`, and `.agents/skills/` to detect installed plugins across all AI tools — deduplicating by name
+2. Asks which sources the plugins are from and optionally collects a profile name and description
+3. Detects harness-generated instruction content in `.cursor/rules/harness.mdc` and `.github/copilot-instructions.md` and offers to include it
+4. Detects MCP servers from `.mcp.json`, `.cursor/mcp.json`, and `.vscode/mcp.json` and offers to include them
+5. Builds entries for each plugin (auto-fills descriptions for known harness-kit plugins)
+6. Writes `harness.yaml` to the current directory or a path you specify
 
 ## Output Format
 
 ```yaml
-version: 1
+$schema: https://harnessprotocol.io/schema/v1/harness.schema.json
+version: "1"
 
-marketplaces:
-  harness-kit: harnessprotocol/harness-kit
+metadata:
+  name: my-harness
+  description: My personal harness configuration.
 
 plugins:
   - name: explain
-    marketplace: harness-kit
+    source: harnessprotocol/harness-kit
     description: Layered explanations of files, functions, directories, or concepts
+```
+
+## Next Steps
+
+After exporting, compile to Cursor and Copilot config files:
+
+```
+/harness-compile
 ```
 
 ## Sharing Your Config

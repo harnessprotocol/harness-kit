@@ -18,13 +18,36 @@ This file follows the **Harness Protocol v1 format** — the open spec at harnes
 
 ### Step 1: Detect installed skills
 
-Read the `~/.claude/skills/` directory to find installed skills. Each subdirectory is an installed skill:
+Scan all four skill directories. Each subdirectory inside these directories is an installed skill:
+
+- `~/.claude/skills/` — Claude Code global skills
+- `.cursor/skills/` — Cursor project-local skills
+- `.github/skills/` — Copilot project-local skills
+- `.agents/skills/` — agentskills.io standard shared location
 
 ```bash
-ls ~/.claude/skills/
+ls ~/.claude/skills/ 2>/dev/null
+ls .cursor/skills/ 2>/dev/null
+ls .github/skills/ 2>/dev/null
+ls .agents/skills/ 2>/dev/null
 ```
 
-Collect the directory names as your list of installed plugin names.
+Collect the directory names from each location. Deduplicate by skill name across locations — if the same skill name appears in multiple directories, count it once. Track which platforms each skill was found in.
+
+Show the user the combined result:
+
+```
+Found skills across AI tools:
+
+  Claude Code (~/.claude/skills/):  research, explain, orient
+  Cursor (.cursor/skills/):         research, explain
+  Copilot (.github/skills/):        research
+  Shared (.agents/skills/):         (none)
+
+  Unique skills: research, explain, orient
+```
+
+Use this deduplicated list as your list of installed plugin names for the steps that follow.
 
 ---
 
@@ -41,6 +64,68 @@ Tell the user what skills you found, then ask:
 > If you've only added harness-kit plugins, just say so."
 
 Wait for the user's response before proceeding.
+
+---
+
+### Step 2.5: Detect cross-platform instruction content
+
+Check whether any cross-platform instruction files exist and contain harness-generated marker blocks:
+
+```bash
+grep -l "BEGIN harness:" .cursor/rules/harness.mdc .github/copilot-instructions.md 2>/dev/null
+```
+
+If any matching files are found, tell the user what was found and ask:
+
+> "I also found harness-generated instruction content in these files:
+>   - `.cursor/rules/harness.mdc` (contains `my-harness:operational` block)
+>   - `.github/copilot-instructions.md` (contains `my-harness:operational` block)
+>
+> Would you like me to include the `operational` and `behavioral` instruction content in the export?"
+
+(List only the files that actually exist and contain marker blocks — substitute the real profile name from the markers in place of `my-harness`.)
+
+If the user says **yes**:
+- Extract the content between each `<!-- BEGIN harness:{name}:{slot} -->` and `<!-- END harness:{name}:{slot} -->` marker from those files.
+- If the same profile + slot block appears in multiple files with **identical content**, use it once.
+- If the same profile + slot block appears in multiple files with **different content**, show the user both versions and ask which to use.
+- Store the extracted content to include as the `instructions:` section in harness.yaml (Step 4).
+
+If the user says **no**, skip — do not include instruction content from cross-platform files.
+
+If no harness marker blocks are found in any cross-platform file, skip this step silently.
+
+---
+
+### Step 2.6: Detect cross-platform MCP servers
+
+Scan these three files for MCP server definitions:
+
+```bash
+cat .mcp.json 2>/dev/null
+cat .cursor/mcp.json 2>/dev/null
+cat .vscode/mcp.json 2>/dev/null
+```
+
+Each file uses the same JSON structure with a top-level `mcpServers` key. Merge all `mcpServers` entries across all files found. Deduplicate by server name:
+
+- If the same server name appears in multiple files with the **same config**, note that it is shared and count it once.
+- If the same server name appears in multiple files with **different configs**, show the user both configs and ask which to keep.
+
+Show the user a summary:
+
+```
+Found MCP servers:
+
+  postgres   (in .mcp.json and .cursor/mcp.json — same config)
+  filesystem (in .mcp.json only)
+
+  Would you like to include these in the export? (all / pick / none)
+```
+
+If the user selects **all** or **pick** (and picks at least one), store the chosen servers to write to the `mcp-servers:` section in harness.yaml (Step 4). Convert from JSON format back to harness YAML format: JSON key `type` → YAML key `transport`.
+
+If the user selects **none**, or if no MCP config files are found, skip this step.
 
 ---
 
@@ -61,6 +146,8 @@ For each installed skill, determine its source repo:
 | harness-export | Export your installed plugins to a shareable harness.yaml |
 | harness-import | Import a harness.yaml and interactively select plugins to install |
 | harness-validate | Validate a harness.yaml file against the Harness Protocol v1 JSON Schema |
+| harness-compile | Compile harness.yaml to native config files for Claude Code, Cursor, and Copilot |
+| harness-sync | Sync AI tool configuration across Claude Code, Cursor, and Copilot |
 
 For any installed skill **not in this table**, ask the user:
 > "I see `[name]` installed but don't recognize it. What `owner/repo` is it from, and what does it do in one sentence?"
@@ -119,6 +206,8 @@ Rules:
 - `version` must be the string `"1"` (quoted), not the integer `1`
 - `source` is `owner/repo` — no `marketplace:` key, no `marketplaces:` section
 - Only include `mcp-servers`, `env`, `instructions`, and `permissions` sections if the user provided content for them
+- If instruction content was collected in Step 2.5, include it as the `instructions:` section
+- If MCP servers were collected in Step 2.6, include them as the `mcp-servers:` section (using YAML `transport:` key, not JSON `type:`)
 - Omit `metadata` if the user skipped the name/description questions
 - Do NOT include `harness-export` or `harness-import` in the output unless the user explicitly asks
 
@@ -128,7 +217,9 @@ Rules:
 
 Tell the user where the file was written:
 
-> "Saved to `harness.yaml`. Commit it to your dotfiles or share it with a teammate. They can import it with `/harness-import` inside Claude Code, or with the shell fallback:
+> "Saved to `harness.yaml`. To compile it to Cursor and Copilot config files, run `/harness-compile`.
+>
+> To share with teammates: commit it to your dotfiles repo. They can import it with `/harness-import` inside Claude Code, or with the shell fallback:
 >
 > ```bash
 > curl -fsSL https://raw.githubusercontent.com/harnessprotocol/harness-kit/main/harness-restore.sh | bash -s -- harness.yaml
