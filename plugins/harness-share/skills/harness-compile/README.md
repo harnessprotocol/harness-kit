@@ -92,4 +92,4 @@ Cursor and Copilot do not support machine-enforceable permissions. The compiler 
 
 - `/harness-validate` — validate a harness.yaml before compiling
 - `/harness-export` — generate a harness.yaml from your current setup
-- `/harness-import` — install plugins from a harness.yaml (Claude Code only)
+- `/harness-import` — install plugins from a harness.yaml

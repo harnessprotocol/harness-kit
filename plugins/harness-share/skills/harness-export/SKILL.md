@@ -154,6 +154,8 @@ For each installed skill, determine its source repo:
 | harness-validate | Validate a harness.yaml file against the Harness Protocol v1 JSON Schema |
 | harness-compile | Compile harness.yaml to native config files for Claude Code, Cursor, and Copilot |
 | harness-sync | Sync AI tool configuration across Claude Code, Cursor, and Copilot |
+| ship-pr | End-of-task shipping workflow: run tests, open a PR, code review, fix CI, sync base, then squash merge |
+| pull-request-sweep | Cross-repo PR sweep: triage all open PRs, run code reviews, merge what's ready, fix quick CI blockers, and report |
 
 For any installed skill **not in this table**, ask the user:
 > "I see `[name]` installed but don't recognize it. What `owner/repo` is it from, and what does it do in one sentence?"

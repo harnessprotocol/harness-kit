@@ -188,17 +188,24 @@ Create parent directories if they don't exist.
 
 This step only runs if both conditions are true:
 1. The harness has a `plugins:` section
-2. At least one plugin has an installed SKILL.md at `~/.claude/skills/<name>/SKILL.md`
+2. At least one plugin has a SKILL.md discoverable via the source lookup below
 
-For each plugin in `plugins:`, check `~/.claude/skills/<name>/SKILL.md`. Skip any plugin with no SKILL.md file there.
+For each plugin in `plugins:`, locate its SKILL.md by checking these locations in order:
+1. `~/.claude/skills/<name>/SKILL.md` — Claude Code global install
+2. `.cursor/skills/<name>/SKILL.md` — project-local Cursor
+3. `.agents/skills/<name>/SKILL.md` — agentskills.io shared location
+
+Use the first SKILL.md found. If no SKILL.md is found in any of these locations, skip that plugin and note it in the compilation report as: `<name>: skipped (no SKILL.md found in ~/.claude/skills/, .cursor/skills/, or .agents/skills/)`.
 
 For each plugin that has a SKILL.md, copy it to each confirmed target's skill directory:
 
 | Target | Skill directory |
 |---|---|
 | Claude Code | (skip — uses plugin install system, not file copy) |
-| Cursor | `.cursor/skills/<name>/SKILL.md` |
-| Copilot | `.github/skills/<name>/SKILL.md` |
+| Cursor | `.cursor/skills/<name>/SKILL.md` or `.agents/skills/<name>/SKILL.md` |
+| Copilot | `.github/skills/<name>/SKILL.md` or `.agents/skills/<name>/SKILL.md` |
+
+Ask the user which location to write to if multiple are applicable, or write to the platform-specific location by default (`.cursor/skills/<name>/` for Cursor, `.github/skills/<name>/` for Copilot).
 
 **Frontmatter adaptation when copying to Cursor/Copilot:**
 - If the source SKILL.md frontmatter has a `dependencies` field, rename it to `compatibility`

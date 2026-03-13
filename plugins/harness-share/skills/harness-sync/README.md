@@ -40,7 +40,7 @@ Skills:
   ✗ orient    — Claude Code only (missing from Cursor, Copilot)
 
 MCP:
-  ✓ postgres  — Claude Code, Cursor (missing from Copilot)
+  △ postgres  — Claude Code, Cursor (missing from Copilot)
   ✗ filesystem — Claude Code only
 
 Instructions:

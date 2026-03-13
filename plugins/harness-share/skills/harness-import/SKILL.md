@@ -110,7 +110,7 @@ Close with:
 
 After generating the Claude Code install commands, scan the current directory for other AI tool indicators.
 
-**Cursor** is present if any of these exist: `.cursor/`, `.cursor/rules/`, `.cursor/skills/`
+**Cursor** is present if any of these exist: `.cursor/`, `.cursor/rules/`, `.cursor/mcp.json`, `.cursor/skills/`
 **GitHub Copilot** is present if any of these exist: `.github/`, `.github/skills/`, `.vscode/mcp.json`
 
 If `.github/` is the only Copilot indicator present, ask the user: "I found a `.github/` directory but no other Copilot indicators. Are you using GitHub Copilot in this project?" Only include Copilot in the multi-select menu if the user confirms.

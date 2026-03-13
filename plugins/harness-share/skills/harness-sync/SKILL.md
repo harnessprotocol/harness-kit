@@ -46,8 +46,9 @@ For each detected platform, catalog three things:
 - Claude Code: `~/.claude/skills/` (global) and any project-local skill symlinks
 - Cursor: `.cursor/skills/` (project-local), `~/.cursor/skills/` (global if the directory exists)
 - Copilot: `.github/skills/` (project-local)
+- Shared: `.agents/skills/` (agentskills.io shared — available to both Cursor and Copilot)
 
-Distinguish global vs. project-local installs with a `(global)` or `(local)` tag.
+Distinguish global vs. project-local installs with a `(global)` or `(local)` tag. Label skills found in `.agents/skills/` as `(shared)` in the inventory display.
 
 **Instruction files:** Read each platform's instruction files and identify:
 - Harness marker blocks: lines matching `<!-- BEGIN harness:` and `<!-- END harness: -->`
@@ -218,8 +219,13 @@ If the user chooses option 4 (skip), note the skipped conflict and continue reso
 
 Use harness-compile logic to write the source platform's content to all confirmed target platforms. Only update items that are divergent — do not touch content that is already in sync across platforms.
 
+When reading skill SKILL.md files for the push source, locate them as follows:
+- **Push source = Claude Code**: read from `~/.claude/skills/<name>/SKILL.md`
+- **Push source = Cursor**: check `.cursor/skills/<name>/SKILL.md` first; if not found, fall back to `~/.cursor/skills/<name>/SKILL.md`
+- Skills in `.agents/skills/<name>/SKILL.md` are available to both platforms and may be used as a source if neither platform-specific path yields a SKILL.md
+
 For each divergent item:
-- **Skills**: copy the skill's SKILL.md from the source platform's skill directory to each target platform's skill directory (`.cursor/skills/<name>/SKILL.md` for Cursor, `.github/skills/<name>/SKILL.md` for Copilot). Apply frontmatter adaptation rules from harness-compile (rename `dependencies` to `compatibility`, enforce name constraints, truncate description if over 1024 characters).
+- **Skills**: copy the skill's SKILL.md (located via the lookup above) to each target platform's skill directory (`.cursor/skills/<name>/SKILL.md` for Cursor, `.github/skills/<name>/SKILL.md` for Copilot). Apply frontmatter adaptation rules from harness-compile (rename `dependencies` to `compatibility`, enforce name constraints, truncate description if over 1024 characters).
 - **MCP servers**: add missing servers to target MCP config files using the source platform's server definition. Do not overwrite existing server entries in the target — if a server name already exists in the target file, print a warning and skip it.
 - **Instructions**: write the source platform's harness block content into each target platform's instruction file, following the slot mapping and marker format from harness-compile. Follow import-mode rules: if the target file already contains markers for that block, update between the markers; if no markers exist yet, append the block.
 
