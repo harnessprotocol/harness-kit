@@ -108,13 +108,12 @@ Close with:
 
 ### Step 5.5: Offer cross-platform setup
 
-After generating the Claude Code install commands, ask:
-> "Would you like me to also set up these skills for other AI coding tools?"
-
-Scan the working directory for other platform indicators:
+After generating the Claude Code install commands, scan the current directory for other AI tool indicators.
 
 **Cursor** is present if any of these exist: `.cursor/`, `.cursor/rules/`, `.cursor/skills/`
 **GitHub Copilot** is present if any of these exist: `.github/`, `.github/skills/`, `.vscode/mcp.json`
+
+If `.github/` is the only Copilot indicator present, ask the user: "I found a `.github/` directory but no other Copilot indicators. Are you using GitHub Copilot in this project?" Only include Copilot in the multi-select menu if the user confirms.
 
 If neither platform is detected, skip this step silently — do not ask.
 
@@ -128,6 +127,7 @@ If one or more platforms are detected, show them and ask which to include:
 
 For each confirmed platform, copy installed skill SKILL.md files:
 - Only copy skills that have an installed SKILL.md at `~/.claude/skills/<name>/SKILL.md`
+- Only copy skill files for the plugins the user selected in Steps 3–4. Do not copy all installed skills — only the selected subset.
 - Cursor: copy to `.cursor/skills/<name>/SKILL.md`
 - Copilot: copy to `.github/skills/<name>/SKILL.md`
 
@@ -136,7 +136,7 @@ For each confirmed platform, copy installed skill SKILL.md files:
 - Enforce that the `name` field is lowercase letters and hyphens only, max 64 characters. Truncate and slugify if needed.
 - If `description` exceeds 1024 characters, truncate at the last word boundary before 1024 characters and append `…`
 
-Create parent directories before writing (`.cursor/skills/<name>/`, `.github/skills/<name>/`).
+Create parent directories before writing (`.cursor/skills/<name>/`, `.github/skills/<name>/`, `.github/instructions/`).
 
 Record which platforms were confirmed — Steps 6 and 8 will use this.
 
@@ -175,6 +175,7 @@ All three files use the same `mcpServers` JSON structure:
 Warning: <target-config-file> already defines server '<server-name>'. Existing config kept.
   To update it, edit <target-config-file> directly or remove the entry and re-run.
 ```
+For example: `Warning: .cursor/mcp.json already defines server 'postgres'. Existing config kept.`
 
 Create parent directories before writing (`.cursor/`, `.vscode/`).
 
@@ -217,7 +218,7 @@ If Cursor or Copilot was confirmed in Step 5.5, also compile instructions to tho
 <!-- END harness:{name}:{slot} -->
 ```
 
-**Cursor** — write `.cursor/rules/harness.mdc` with mandatory frontmatter before the marker block:
+**Cursor operational** — write `.cursor/rules/harness.mdc` with mandatory frontmatter before the marker block:
 
 ```
 ---
@@ -227,7 +228,19 @@ alwaysApply: true
 ---
 ```
 
-**GitHub Copilot** — write `.github/copilot-instructions.md` with mandatory frontmatter before the marker block:
+**Cursor behavioral** — if `instructions.behavioral` is present in harness.yaml, write `.cursor/rules/behavioral.mdc` with mandatory frontmatter before the marker block:
+
+```
+---
+description: Harness behavioral preferences
+globs: **/*
+alwaysApply: true
+---
+```
+
+Then content from `instructions.behavioral` in section markers `<!-- BEGIN harness:{name}:behavioral -->` / `<!-- END harness:{name}:behavioral -->`.
+
+**GitHub Copilot operational** — write `.github/copilot-instructions.md` with mandatory frontmatter before the marker block:
 
 ```
 ---
@@ -235,12 +248,26 @@ applyTo: "**"
 ---
 ```
 
-Apply the same import-mode behavior for both:
+**GitHub Copilot behavioral** — if `instructions.behavioral` is present in harness.yaml, write `.github/instructions/behavioral.instructions.md` with mandatory frontmatter before the marker block:
+
+```
+---
+applyTo: "**"
+---
+```
+
+Then content from `instructions.behavioral` in section markers `<!-- BEGIN harness:{name}:behavioral -->` / `<!-- END harness:{name}:behavioral -->`.
+
+**Identity slot:** Omit for both Cursor and Copilot — the `identity` slot is Claude Code-only.
+
+Apply the same import-mode behavior for all Cursor and Copilot files:
 - **`merge`** (default): If the file exists and contains matching markers, update the content between them. If no markers exist yet, append the marker block at the end (creating the file if it does not exist).
-- **`replace`**: Warn and require explicit confirmation before overwriting.
+- **`replace`**: Before overwriting any Cursor or Copilot instruction file, warn the user and require confirmation, the same as for CLAUDE.md:
+  > "This config requests full replacement of existing [file]. That will overwrite your current [file] content. Are you sure?"
+  Never apply `replace` without confirmation.
 - **`skip`**: Do not write or modify the file.
 
-Create parent directories before writing (`.cursor/rules/`, `.github/`).
+Create parent directories before writing (`.cursor/rules/`, `.github/`, `.github/instructions/`).
 
 ---
 
@@ -266,12 +293,12 @@ Cross-platform setup complete:
   Cursor:
     Skills:  explain, research  (.cursor/skills/)
     MCP:     postgres  (.cursor/mcp.json)
-    Instructions:  .cursor/rules/harness.mdc
+    Instructions:  harness.mdc (operational), behavioral.mdc (behavioral)
 
   GitHub Copilot:
     Skills:  explain, research  (.github/skills/)
     MCP:     (none declared in harness.yaml)
-    Instructions:  .github/copilot-instructions.md
+    Instructions:  copilot-instructions.md (operational), behavioral.instructions.md (behavioral)
 ```
 
 Omit any row where nothing was written for that category (e.g., omit `MCP:` if the harness has no `mcp-servers:` section). Omit a platform block entirely if that platform was not confirmed or nothing was written for it. If cross-platform setup was skipped (Step 5.5 produced no confirmations), do not print this report.
