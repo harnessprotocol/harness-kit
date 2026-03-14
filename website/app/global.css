@@ -142,8 +142,11 @@ h1, h2, h3 {
 /* ── Code blocks ── */
 .dark pre {
   background: hsl(230, 12%, 6%) !important;
-  border: 1px solid hsla(230, 15%, 20%, 0.3);
+  border: none !important;
   border-radius: 0.75rem;
+}
+pre {
+  border: none !important;
 }
 
 /* ── Blockquotes as callouts ── */
@@ -154,29 +157,53 @@ h1, h2, h3 {
   padding: 0.75rem 1rem;
 }
 
-/* ── Tables ── */
-.dark table {
-  border: 1px solid hsla(230, 15%, 20%, 0.3);
-  border-radius: 0.5rem;
+/* ── Tables — borderless with row tinting ── */
+table {
+  border: none !important;
+  border-collapse: collapse !important;
+  border-radius: 0.75rem;
   overflow: hidden;
+}
+.dark table {
+  border: none !important;
+}
+table thead {
+  background: hsla(230, 10%, 50%, 0.08);
 }
 .dark table thead {
   background: hsla(230, 10%, 10%, 0.8);
 }
+table tbody tr:nth-child(even) {
+  background: hsla(230, 10%, 50%, 0.04);
+}
 .dark table tbody tr:nth-child(even) {
   background: hsla(230, 10%, 8%, 0.5);
 }
-.dark table td,
-.dark table th {
-  border-color: hsla(230, 15%, 20%, 0.2);
+table td,
+table th {
+  border: none !important;
+  padding: 0.75rem 1rem !important;
+  text-align: left;
+}
+
+/* ── Cards — remove default border ── */
+[data-card] {
+  border: none !important;
+  transition: all 0.3s ease;
 }
 
 /* ── Inline code — subtle background, no border ── */
-:not(pre) > code {
+:not(pre) > code,
+code {
   border: none !important;
   background: hsla(230, 10%, 50%, 0.15) !important;
   padding: 0.15em 0.4em !important;
   border-radius: 0.3rem !important;
+}
+pre code {
+  background: transparent !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
 }
 
 /* ── Docs headings — display font ── */
