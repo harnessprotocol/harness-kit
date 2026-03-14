@@ -15,77 +15,92 @@ export default function PluginsPage() {
   }, []);
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold tracking-tight" style={{ color: "var(--fg-base)" }}>
+    <div style={{ padding: "20px 24px" }}>
+      <div style={{ marginBottom: "16px" }}>
+        <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
           Installed Plugins
         </h1>
-        <p className="text-sm mt-1" style={{ color: "var(--fg-muted)" }}>
-          Plugins installed in your <code style={{ fontFamily: "monospace" }}>~/.claude/</code> environment.
+        <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>
+          Plugins in your <code style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>~/.claude/</code> environment.
         </p>
       </div>
 
       {loading && (
-        <p className="text-sm" style={{ color: "var(--fg-subtle)" }}>
-          Loading plugins…
-        </p>
+        <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</p>
       )}
 
       {error && (
-        <div
-          className="rounded-lg p-4 text-sm"
-          style={{ background: "var(--bg-surface)", border: "1px solid var(--border-base)", color: "var(--danger)" }}
-        >
+        <div style={{
+          background: "var(--bg-surface)",
+          border: "1px solid var(--border-base)",
+          borderRadius: "8px",
+          padding: "10px 14px",
+          fontSize: "13px",
+          color: "var(--danger)",
+        }}>
           {error}
         </div>
       )}
 
       {!loading && !error && plugins.length === 0 && (
-        <div
-          className="rounded-lg p-8 text-center"
-          style={{ background: "var(--bg-surface)", border: "1px dashed var(--border-base)" }}
-        >
-          <p className="text-sm" style={{ color: "var(--fg-muted)" }}>
-            No plugins installed yet.
-          </p>
-          <p className="text-xs mt-1" style={{ color: "var(--fg-subtle)" }}>
-            Install plugins from the Marketplace or via <code>/plugin install</code> in Claude Code.
+        <div style={{
+          background: "var(--bg-surface)",
+          border: "1px solid var(--border-base)",
+          borderRadius: "8px",
+          padding: "32px 16px",
+          textAlign: "center",
+        }}>
+          <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0 }}>No plugins installed.</p>
+          <p style={{ fontSize: "11px", color: "var(--fg-subtle)", margin: "4px 0 0" }}>
+            Install via <code style={{ fontFamily: "ui-monospace, monospace" }}>/plugin install</code> in Claude Code.
           </p>
         </div>
       )}
 
       {!loading && !error && plugins.length > 0 && (
-        <div className="flex flex-col gap-2">
+        <div className="row-list">
           {plugins.map((plugin) => (
-            <div
-              key={plugin.name}
-              className="flex items-center justify-between rounded-lg px-4 py-3"
-              style={{
-                background: "var(--bg-surface)",
-                border: "1px solid var(--border-base)",
-              }}
-            >
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-medium text-sm" style={{ color: "var(--fg-base)" }}>
+            <div key={plugin.name} className="row-list-item" style={{ justifyContent: "space-between" }}>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--fg-base)" }}>
                     {plugin.name}
                   </span>
                   {plugin.marketplace && (
-                    <span
-                      className="text-xs px-1.5 py-0.5 rounded"
-                      style={{ background: "var(--accent-light)", color: "var(--accent-fg)" }}
-                    >
+                    <span style={{
+                      fontSize: "10px",
+                      fontWeight: 500,
+                      padding: "1px 6px",
+                      borderRadius: "4px",
+                      background: "var(--accent-light)",
+                      color: "var(--accent-text)",
+                      letterSpacing: "0.01em",
+                    }}>
                       {plugin.marketplace}
                     </span>
                   )}
                 </div>
                 {plugin.description && (
-                  <p className="text-xs mt-0.5" style={{ color: "var(--fg-muted)" }}>
+                  <p style={{
+                    fontSize: "11px",
+                    color: "var(--fg-muted)",
+                    margin: "1px 0 0",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    maxWidth: "320px",
+                  }}>
                     {plugin.description}
                   </p>
                 )}
               </div>
-              <span className="text-xs font-mono" style={{ color: "var(--fg-subtle)" }}>
+              <span style={{
+                fontSize: "11px",
+                fontFamily: "ui-monospace, monospace",
+                color: "var(--fg-subtle)",
+                flexShrink: 0,
+                marginLeft: "12px",
+              }}>
                 {plugin.version}
               </span>
             </div>

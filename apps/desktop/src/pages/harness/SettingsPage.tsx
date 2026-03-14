@@ -14,35 +14,41 @@ export default function SettingsPage() {
   }, []);
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold tracking-tight" style={{ color: "var(--fg-base)" }}>
+    <div style={{ padding: "20px 24px" }}>
+      <div style={{ marginBottom: "16px" }}>
+        <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
           Settings
         </h1>
-        <p className="text-sm mt-1" style={{ color: "var(--fg-muted)" }}>
-          Files and directories in <code style={{ fontFamily: "monospace" }}>~/.claude/</code>.
+        <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>
+          Contents of{" "}
+          <code style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>~/.claude/</code>.
         </p>
       </div>
 
-      {loading && <p className="text-sm" style={{ color: "var(--fg-subtle)" }}>Loading…</p>}
+      {loading && <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</p>}
 
       {error && (
-        <div
-          className="rounded-lg p-4 text-sm"
-          style={{ background: "var(--bg-surface)", border: "1px solid var(--border-base)", color: "var(--danger)" }}
-        >
+        <div style={{
+          background: "var(--bg-surface)",
+          border: "1px solid var(--border-base)",
+          borderRadius: "8px",
+          padding: "10px 14px",
+          fontSize: "13px",
+          color: "var(--danger)",
+        }}>
           {error}
         </div>
       )}
 
       {!loading && !error && (
-        <div
-          className="rounded-lg divide-y"
-          style={{ background: "var(--bg-surface)", border: "1px solid var(--border-base)" }}
-        >
+        <div className="row-list">
           {entries.map((entry) => (
-            <div key={entry} className="px-4 py-2">
-              <span className="text-xs font-mono" style={{ color: "var(--fg-muted)" }}>
+            <div key={entry} className="row-list-item">
+              <span style={{
+                fontFamily: "ui-monospace, monospace",
+                fontSize: "12px",
+                color: "var(--fg-muted)",
+              }}>
                 {entry}
               </span>
             </div>
