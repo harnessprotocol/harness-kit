@@ -102,6 +102,16 @@ body {
   .animate-fade-in {
     animation: none;
   }
+  [data-card],
+  [data-fumadocs-sidebar] a,
+  [data-fumadocs-toc] a,
+  [data-fumadocs-body] a,
+  pre button {
+    transition: none !important;
+  }
+  [data-card]:hover {
+    transform: none;
+  }
 }
 
 /* ── Heading typography ── */
