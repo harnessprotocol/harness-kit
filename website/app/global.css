@@ -12,7 +12,7 @@ body {
 
 /* ── Light theme — warm neutral ── */
 :root {
-  --color-fd-primary: 38 50% 44%;
+  --color-fd-primary: 38 55% 32%;
   --color-fd-primary-foreground: 0 0% 100%;
   --color-fd-background: 40 10% 99%;
   --color-fd-foreground: 30 5% 10%;
@@ -27,7 +27,7 @@ body {
   --color-fd-popover-foreground: 30 5% 10%;
   --color-fd-secondary: 40 4% 95%;
   --color-fd-secondary-foreground: 30 5% 10%;
-  --color-fd-ring: 38 50% 44%;
+  --color-fd-ring: 38 55% 32%;
   --fd-layout-width: 1400px;
 }
 
@@ -195,8 +195,8 @@ h1, h2, h3 {
 /* ── Search — focus glow ── */
 [data-fumadocs-nav] button:focus-visible,
 [data-fumadocs-nav] input:focus-visible {
-  box-shadow: 0 0 0 2px hsla(38, 30%, 50%, 0.25);
-  outline: none;
+  outline: 2px solid hsl(38, 40%, 42%);
+  outline-offset: 2px;
 }
 
 /* ── Code blocks — clean with depth shadow ── */
@@ -237,6 +237,9 @@ pre button:hover {
 }
 [data-fumadocs-body] a:not([data-card]):hover {
   text-decoration-style: solid;
+  text-decoration-color: hsl(38, 35%, 45%);
+}
+.dark [data-fumadocs-body] a:not([data-card]):hover {
   text-decoration-color: hsl(38, 35%, 60%);
   color: hsl(38, 30%, 75%);
 }
@@ -345,7 +348,7 @@ pre code {
 }
 
 /* First H2 on page — no divider (title already separates it) */
-[data-fumadocs-body] h2:first-of-type::before {
+[data-fumadocs-body] > h2:first-of-type::before {
   display: none;
 }
 
