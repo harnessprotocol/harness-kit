@@ -22,7 +22,7 @@ export default function Layout({ children }: { children: ReactNode }) {
                 fontFamily="system-ui, sans-serif"
                 fontWeight="700"
                 fontSize="16"
-                fill="#c4a55a"
+                fill="#8b7aff"
               >
                 hk
               </text>

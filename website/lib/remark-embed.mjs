@@ -1,16 +1,15 @@
 import { visit } from 'unist-util-visit';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fromMarkdown } from 'mdast-util-from-markdown';
 
 // Remark plugin that replaces @embed directives with file contents at build time.
 //
 // Usage in MDX:
 //   {/* @embed plugins/research/skills/research/SKILL.md */}
 //
-// The directive is replaced with the parsed markdown AST of the referenced file.
-// Paths are resolved relative to a configurable root (defaults to the repo root,
-// determined by walking up from process.cwd() to find a .git directory).
+// The directive is replaced with a <MarkdownViewer> component that provides
+// a Raw/Preview toggle for the embedded content. The component must be
+// registered in mdxComponents.
 export function remarkEmbed({ root } = {}) {
   return (tree, file) => {
     const resolvedRoot = root || findRepoRoot(process.cwd());
@@ -51,10 +50,48 @@ export function remarkEmbed({ root } = {}) {
         return;
       }
 
-      // Parse the markdown content into AST nodes
-      const embeddedTree = fromMarkdown(content);
+      const filename = path.basename(absolutePath);
 
-      replacements.push({ parent, index, nodes: embeddedTree.children });
+      // Build a JSX expression attribute with proper ESTree AST
+      // so the MDX compiler can serialize the string literal
+      const escapedContent = JSON.stringify(content);
+
+      const jsxNode = {
+        type: 'mdxJsxFlowElement',
+        name: 'MarkdownViewer',
+        attributes: [
+          {
+            type: 'mdxJsxAttribute',
+            name: 'content',
+            value: {
+              type: 'mdxJsxAttributeValueExpression',
+              value: escapedContent,
+              data: {
+                estree: {
+                  type: 'Program',
+                  sourceType: 'module',
+                  body: [{
+                    type: 'ExpressionStatement',
+                    expression: {
+                      type: 'Literal',
+                      value: content,
+                      raw: escapedContent,
+                    },
+                  }],
+                },
+              },
+            },
+          },
+          {
+            type: 'mdxJsxAttribute',
+            name: 'filename',
+            value: filename,
+          },
+        ],
+        children: [],
+      };
+
+      replacements.push({ parent, index, nodes: [jsxNode] });
     });
 
     // Apply replacements in reverse order to preserve indices

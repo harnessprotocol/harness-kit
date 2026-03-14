@@ -113,4 +113,4 @@ Each sibling key follows the same pattern: plugins declare, users provide, harne
 
 - [Secrets Management Guide](/docs/guides/secrets-management) — step-by-step setup for plugin authors and users
 - [Creating Plugins](/docs/guides/creating-plugins) — how to add `requires.env` to a new plugin
-- [Architecture](/docs/concepts/architecture) — how plugins, skills, and the marketplace fit together
+- [Architecture](/docs/getting-started/architecture) — how plugins, skills, and the marketplace fit together

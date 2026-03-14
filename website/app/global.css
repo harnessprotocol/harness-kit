@@ -10,50 +10,50 @@ body {
   font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
 }
 
-/* ── Light theme — warm neutral ── */
+/* ── Light theme ── */
 :root {
-  --color-fd-primary: 38 55% 32%;
+  --color-fd-primary: 256 80% 58%;
   --color-fd-primary-foreground: 0 0% 100%;
-  --color-fd-background: 40 10% 99%;
-  --color-fd-foreground: 30 5% 10%;
-  --color-fd-card: 40 6% 96%;
-  --color-fd-card-foreground: 30 5% 10%;
-  --color-fd-muted: 40 4% 93%;
-  --color-fd-muted-foreground: 30 3% 42%;
-  --color-fd-border: 40 4% 88%;
-  --color-fd-accent: 38 20% 96%;
-  --color-fd-accent-foreground: 38 45% 38%;
+  --color-fd-background: 240 20% 99%;
+  --color-fd-foreground: 230 15% 10%;
+  --color-fd-card: 240 10% 96%;
+  --color-fd-card-foreground: 230 15% 10%;
+  --color-fd-muted: 240 8% 93%;
+  --color-fd-muted-foreground: 230 8% 42%;
+  --color-fd-border: 240 8% 88%;
+  --color-fd-accent: 256 60% 96%;
+  --color-fd-accent-foreground: 256 80% 44%;
   --color-fd-popover: 0 0% 100%;
-  --color-fd-popover-foreground: 30 5% 10%;
-  --color-fd-secondary: 40 4% 95%;
-  --color-fd-secondary-foreground: 30 5% 10%;
-  --color-fd-ring: 38 55% 32%;
+  --color-fd-popover-foreground: 230 15% 10%;
+  --color-fd-secondary: 240 8% 95%;
+  --color-fd-secondary-foreground: 230 15% 10%;
+  --color-fd-ring: 256 80% 58%;
   --fd-layout-width: 1400px;
 }
 
-/* ── Dark theme — true neutral, barely warm ── */
+/* ── Dark theme — deep, blue-tinted ── */
 .dark {
-  --color-fd-primary: 38 40% 60%;
+  --color-fd-primary: 256 85% 72%;
   --color-fd-primary-foreground: 0 0% 100%;
-  --color-fd-background: 0 0% 4%;
-  --color-fd-foreground: 30 5% 88%;
-  --color-fd-card: 0 0% 7%;
-  --color-fd-card-foreground: 30 5% 88%;
-  --color-fd-muted: 0 0% 13%;
-  --color-fd-muted-foreground: 0 0% 50%;
-  --color-fd-border: 0 0% 14%;
-  --color-fd-accent: 38 10% 12%;
-  --color-fd-accent-foreground: 38 25% 72%;
-  --color-fd-popover: 0 0% 6%;
-  --color-fd-popover-foreground: 30 5% 88%;
-  --color-fd-secondary: 0 0% 10%;
-  --color-fd-secondary-foreground: 30 5% 88%;
-  --color-fd-ring: 38 40% 60%;
+  --color-fd-background: 230 15% 4%;
+  --color-fd-foreground: 0 0% 93%;
+  --color-fd-card: 230 10% 7%;
+  --color-fd-card-foreground: 0 0% 93%;
+  --color-fd-muted: 230 8% 13%;
+  --color-fd-muted-foreground: 230 6% 55%;
+  --color-fd-border: 230 15% 14%;
+  --color-fd-accent: 256 30% 14%;
+  --color-fd-accent-foreground: 256 60% 80%;
+  --color-fd-popover: 230 10% 6%;
+  --color-fd-popover-foreground: 0 0% 93%;
+  --color-fd-secondary: 230 8% 10%;
+  --color-fd-secondary-foreground: 0 0% 93%;
+  --color-fd-ring: 256 85% 72%;
 }
 
 /* ── Utility classes ── */
-.glow-accent {
-  box-shadow: 0 0 40px -10px hsla(38, 40%, 50%, 0.2);
+.glow-purple {
+  box-shadow: 0 0 40px -10px hsla(256, 80%, 60%, 0.3);
 }
 
 .gradient-border {
@@ -76,10 +76,10 @@ body {
 
 .glass {
   backdrop-filter: blur(12px);
-  background: hsla(30, 5%, 92%, 0.7);
+  background: hsla(230, 15%, 92%, 0.7);
 }
 .dark .glass {
-  background: hsla(0, 0%, 8%, 0.7);
+  background: hsla(230, 15%, 8%, 0.7);
 }
 
 /* ── Page fade-in ── */
@@ -145,11 +145,11 @@ h1, h2, h3 {
   margin: 1.5em 0;
 }
 
-/* ── Nav bar — subtle bottom edge ── */
+/* ── Nav bar gradient border ── */
 .dark [data-fumadocs-nav] {
   position: relative;
   border-bottom: none;
-  background: hsla(0, 0%, 4%, 0.9);
+  background: hsla(230, 15%, 4%, 0.85);
   backdrop-filter: blur(16px);
 }
 .dark [data-fumadocs-nav]::after {
@@ -159,7 +159,7 @@ h1, h2, h3 {
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, hsla(0, 0%, 100%, 0.06), transparent);
+  background: linear-gradient(90deg, transparent, hsla(256, 85%, 72%, 0.2), transparent);
 }
 
 /* ── Sidebar — smooth hover + animated active bar ── */
@@ -168,15 +168,15 @@ h1, h2, h3 {
   border-left: 2px solid transparent;
 }
 [data-fumadocs-sidebar] a:hover {
-  background: hsla(0, 0%, 50%, 0.06);
+  background: hsla(230, 10%, 50%, 0.08);
 }
 .dark [data-fumadocs-sidebar] a:hover {
-  background: hsla(0, 0%, 50%, 0.08);
+  background: hsla(230, 10%, 50%, 0.1);
 }
 .dark [data-fumadocs-sidebar] [aria-current="page"],
 .dark [data-fumadocs-sidebar] [data-active="true"] {
-  border-left: 2px solid hsl(38, 40%, 56%);
-  background: hsla(38, 10%, 10%, 0.4);
+  border-left: 2px solid hsl(256, 85%, 72%);
+  background: hsla(256, 30%, 14%, 0.5);
   padding-left: 10px;
   transition: all 0.2s ease;
 }
@@ -188,15 +188,15 @@ h1, h2, h3 {
   padding-left: 0.5rem;
 }
 .dark [data-fumadocs-toc] [data-active="true"] {
-  color: hsl(38, 35%, 68%);
-  border-left-color: hsl(38, 40%, 56%);
+  color: hsl(256, 85%, 72%);
+  border-left-color: hsl(256, 85%, 72%);
 }
 
 /* ── Search — focus glow ── */
 [data-fumadocs-nav] button:focus-visible,
 [data-fumadocs-nav] input:focus-visible {
-  outline: 2px solid hsl(38, 40%, 42%);
-  outline-offset: 2px;
+  box-shadow: 0 0 0 2px hsla(256, 70%, 60%, 0.3);
+  outline: none;
 }
 
 /* ── Code blocks — clean with depth shadow ── */
@@ -209,10 +209,11 @@ pre {
   position: relative;
 }
 .dark pre {
-  background: hsl(0, 0%, 5%) !important;
+  background: hsl(230, 12%, 6%) !important;
   border: none !important;
   border-radius: 0.75rem;
-  box-shadow: 0 2px 12px -4px hsla(0, 0%, 0%, 0.4);
+  box-shadow: 0 -1px 20px -8px hsla(256, 60%, 50%, 0.15),
+              0 4px 16px -4px hsla(230, 15%, 0%, 0.3);
 }
 
 /* Copy button — ghost style, fade on hover */
@@ -232,22 +233,19 @@ pre button:hover {
   text-decoration: underline;
   text-decoration-style: dotted;
   text-underline-offset: 3px;
-  text-decoration-color: hsla(0, 0%, 60%, 0.3);
+  text-decoration-color: hsla(256, 60%, 60%, 0.4);
   transition: text-decoration-color 0.15s ease, color 0.15s ease;
 }
 [data-fumadocs-body] a:not([data-card]):hover {
   text-decoration-style: solid;
-  text-decoration-color: hsl(38, 35%, 45%);
-}
-.dark [data-fumadocs-body] a:not([data-card]):hover {
-  text-decoration-color: hsl(38, 35%, 60%);
-  color: hsl(38, 30%, 75%);
+  text-decoration-color: hsl(256, 80%, 65%);
+  color: hsl(256, 85%, 78%);
 }
 
 /* ── Blockquotes as callouts ── */
 .dark blockquote {
-  border-left: 3px solid hsl(0, 0%, 25%);
-  background: hsla(0, 0%, 8%, 0.5);
+  border-left: 3px solid hsl(256, 85%, 72%);
+  background: hsla(256, 20%, 12%, 0.3);
   border-radius: 0 0.5rem 0.5rem 0;
   padding: 0.75rem 1rem;
 }
@@ -256,9 +254,9 @@ pre button:hover {
 .dark [role="alert"],
 .dark [data-callout] {
   border: none !important;
-  border-left: 3px solid var(--callout-color, hsl(0, 0%, 35%)) !important;
+  border-left: 3px solid var(--callout-color, hsl(256, 85%, 72%)) !important;
   border-radius: 0 0.75rem 0.75rem 0;
-  background: hsla(0, 0%, 7%, 0.6) !important;
+  background: hsla(230, 10%, 8%, 0.5) !important;
   padding: 1rem 1.25rem;
 }
 
@@ -276,13 +274,13 @@ table thead {
   background: hsla(0, 0%, 50%, 0.06);
 }
 .dark table thead {
-  background: hsla(0, 0%, 10%, 0.8);
+  background: hsla(230, 10%, 10%, 0.8);
 }
 table tbody tr:nth-child(even) {
   background: hsla(0, 0%, 50%, 0.03);
 }
 .dark table tbody tr:nth-child(even) {
-  background: hsla(0, 0%, 8%, 0.5);
+  background: hsla(230, 10%, 8%, 0.5);
 }
 table td,
 table th {
@@ -299,26 +297,27 @@ table th {
 }
 [data-card]:hover {
   transform: scale(1.02);
-  border-color: hsla(0, 0%, 50%, 0.2) !important;
-  box-shadow: 0 8px 24px -8px hsla(0, 0%, 0%, 0.3);
+  border-color: hsla(256, 70%, 60%, 0.3) !important;
+  box-shadow: 0 8px 24px -8px hsla(256, 60%, 40%, 0.15),
+              0 0 0 1px hsla(256, 70%, 60%, 0.1);
 }
 
 /* ── Steps — warm accent badges + styled line ── */
 .dark .fd-steps {
-  border-color: hsla(0, 0%, 20%, 0.4) !important;
+  border-color: hsla(256, 60%, 50%, 0.2) !important;
 }
 .dark .fd-step::before {
-  background: hsl(38, 40%, 48%) !important;
-  color: hsl(0, 0%, 5%) !important;
+  background: hsl(256, 70%, 55%) !important;
+  color: white !important;
   font-weight: 600;
-  box-shadow: 0 0 8px -2px hsla(38, 40%, 48%, 0.3);
+  box-shadow: 0 0 12px -2px hsla(256, 70%, 55%, 0.4);
 }
 
 /* ── Inline code — subtle background, no border ── */
 :not(pre) > code,
 code {
   border: none !important;
-  background: hsla(0, 0%, 50%, 0.12) !important;
+  background: hsla(230, 10%, 50%, 0.15) !important;
   padding: 0.15em 0.4em !important;
   border-radius: 0.3rem !important;
 }
@@ -336,7 +335,9 @@ pre code {
   letter-spacing: -0.03em;
 }
 
-/* ── Section dividers — neutral gradient line above H2 ── */
+/* ── Gradient accent moments ── */
+
+/* H2 section dividers — gradient line above */
 [data-fumadocs-body] h2::before {
   content: '';
   position: absolute;
@@ -344,7 +345,7 @@ pre code {
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, hsla(0, 0%, 100%, 0.06), transparent);
+  background: linear-gradient(90deg, transparent, hsla(256, 70%, 60%, 0.2), transparent);
 }
 
 /* First H2 on page — no divider (title already separates it) */
@@ -352,7 +353,7 @@ pre code {
   display: none;
 }
 
-/* Page title area — subtle warm glow */
+/* Page title area — subtle radial glow */
 [data-fumadocs-body]::before {
   content: '';
   position: absolute;
@@ -361,7 +362,153 @@ pre code {
   transform: translateX(-50%);
   width: 500px;
   height: 300px;
-  background: radial-gradient(ellipse, hsla(38, 30%, 50%, 0.03) 0%, transparent 70%);
+  background: radial-gradient(ellipse, hsla(256, 70%, 50%, 0.06) 0%, transparent 70%);
   pointer-events: none;
   z-index: -1;
+}
+
+/* ── MarkdownViewer — raw/preview toggle ── */
+.markdown-viewer {
+  border-radius: 0.75rem;
+  overflow: hidden;
+  margin: 0.5rem 0;
+}
+.mv-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  background: hsla(0, 0%, 50%, 0.06);
+  border-bottom: 1px solid hsla(0, 0%, 50%, 0.08);
+}
+.dark .mv-toolbar {
+  background: hsla(0, 0%, 100%, 0.03);
+  border-bottom-color: hsla(0, 0%, 100%, 0.06);
+}
+.mv-filename {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  color: hsla(0, 0%, 50%, 0.7);
+}
+.mv-toggle {
+  display: flex;
+  gap: 2px;
+  background: hsla(0, 0%, 50%, 0.08);
+  border-radius: 0.375rem;
+  padding: 2px;
+}
+.mv-btn {
+  padding: 0.25rem 0.625rem;
+  border: none;
+  border-radius: 0.3rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  cursor: pointer;
+  background: transparent;
+  color: hsla(0, 0%, 50%, 0.6);
+  transition: all 0.15s ease;
+}
+.mv-btn:hover {
+  color: hsla(0, 0%, 80%, 0.8);
+}
+.mv-btn-active {
+  background: hsla(0, 0%, 50%, 0.12);
+  color: hsla(0, 0%, 90%, 0.9);
+}
+.dark .mv-btn-active {
+  background: hsla(0, 0%, 100%, 0.08);
+  color: hsla(0, 0%, 95%, 0.9);
+}
+.mv-content {
+  max-height: 600px;
+  overflow-y: auto;
+}
+.mv-raw {
+  margin: 0 !important;
+  padding: 1rem !important;
+  background: hsla(0, 0%, 0%, 0.3) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.mv-raw code {
+  background: transparent !important;
+  padding: 0 !important;
+  border: none !important;
+}
+.mv-preview {
+  padding: 1rem 1.25rem;
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+.mv-preview h1, .mv-preview h2, .mv-preview h3 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+}
+.mv-preview h1:first-child, .mv-preview h2:first-child, .mv-preview h3:first-child {
+  margin-top: 0;
+}
+.mv-preview h1 { font-size: 1.4rem; }
+.mv-preview h2 { font-size: 1.15rem; }
+.mv-preview h3 { font-size: 1rem; }
+.mv-preview p {
+  margin: 0.75em 0;
+}
+.mv-preview ul, .mv-preview ol {
+  margin: 0.75em 0;
+  padding-left: 1.5em;
+}
+.mv-preview li {
+  margin: 0.3em 0;
+}
+.mv-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 0.85rem;
+}
+.mv-preview th, .mv-preview td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid hsla(0, 0%, 50%, 0.1);
+}
+.mv-preview th {
+  font-weight: 600;
+  background: hsla(0, 0%, 50%, 0.05);
+}
+.mv-preview pre {
+  margin: 0.75em 0;
+  padding: 0.75rem 1rem;
+  background: hsla(0, 0%, 0%, 0.3) !important;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  font-size: 0.8rem;
+  box-shadow: none !important;
+}
+.mv-preview code {
+  font-size: 0.85em;
+}
+.mv-preview hr {
+  border: none;
+  border-top: 1px solid hsla(0, 0%, 50%, 0.1);
+  margin: 1.5em 0;
+}
+.mv-preview blockquote {
+  border-left: 3px solid hsla(0, 0%, 50%, 0.2);
+  padding: 0.25rem 1rem;
+  margin: 0.75em 0;
+  color: hsla(0, 0%, 70%, 0.8);
+}
+.mv-preview strong {
+  font-weight: 600;
+}
+.mv-preview a {
+  color: hsl(256, 70%, 72%);
+  text-decoration: underline;
+  text-decoration-style: dotted;
 }
