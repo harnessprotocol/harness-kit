@@ -25,6 +25,9 @@ const NAV_SECTIONS: NavSection[] = [
     id: "marketplace",
     label: "Marketplace",
     path: "/marketplace",
+    children: [
+      { label: "Browse", path: "/marketplace" },
+    ],
   },
   {
     id: "observatory",

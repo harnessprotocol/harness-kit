@@ -5,6 +5,8 @@ import HooksPage from "./pages/harness/HooksPage";
 import SettingsPage from "./pages/harness/SettingsPage";
 import ClaudeMdPage from "./pages/harness/ClaudeMdPage";
 import ComingSoonPage from "./pages/ComingSoonPage";
+import BrowsePage from "./pages/marketplace/BrowsePage";
+import PluginDetailPage from "./pages/marketplace/PluginDetailPage";
 
 export default function App() {
   return (
@@ -18,11 +20,9 @@ export default function App() {
           <Route path="harness/claude-md" element={<ClaudeMdPage />} />
           <Route path="harness/settings" element={<SettingsPage />} />
 
-          {/* Other sections — coming soon */}
-          <Route
-            path="marketplace/*"
-            element={<ComingSoonPage title="Marketplace" description="Browse and install plugins from the harness-kit registry." />}
-          />
+          {/* Marketplace */}
+          <Route path="marketplace" element={<BrowsePage />} />
+          <Route path="marketplace/:slug" element={<PluginDetailPage />} />
           <Route
             path="observatory/*"
             element={<ComingSoonPage title="Observatory" description="Visualize your Claude Code usage patterns and token metrics." />}
