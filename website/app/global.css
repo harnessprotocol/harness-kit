@@ -109,6 +109,29 @@ h1, h2, h3 {
   letter-spacing: -0.03em;
 }
 
+/* ── Content spacing — breathing room ── */
+[data-fumadocs-body] {
+  line-height: 1.8;
+}
+[data-fumadocs-body] p {
+  margin-bottom: 1.25em;
+}
+[data-fumadocs-body] h2 {
+  margin-top: 2.5em;
+}
+[data-fumadocs-body] h3 {
+  margin-top: 1.75em;
+}
+[data-fumadocs-body] pre {
+  margin: 1.5em 0;
+}
+[data-fumadocs-body] table {
+  margin: 1.5em 0;
+}
+[data-fumadocs-body] blockquote {
+  margin: 1.5em 0;
+}
+
 /* ── Nav bar gradient border ── */
 .dark [data-fumadocs-nav] {
   position: relative;
