@@ -107,6 +107,30 @@ export interface ProfileYaml {
   rules?: string[];
 }
 
+// ── Desktop app types ────────────────────────────────────────
+
+export interface InstalledPlugin {
+  name: string;
+  version: string;
+  description?: string;
+  marketplace?: string;
+  source?: string;
+  installed_at?: string;
+}
+
+export interface KnownMarketplace {
+  name: string;
+  url: string;
+  description?: string;
+}
+
+export type HookCommand = {
+  type: string;
+  command: string;
+};
+
+export type HooksConfig = Record<string, HookCommand[]>;
+
 // ── Plugin manifest (plugin.json) ───────────────────────────
 
 export interface PluginManifest {

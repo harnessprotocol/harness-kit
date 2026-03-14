@@ -1,0 +1,23 @@
+[package]
+name = "harness-kit-desktop"
+version = "0.1.0"
+description = "Harness Kit Desktop App"
+authors = []
+license = "Apache-2.0"
+edition = "2021"
+rust-version = "1.77.2"
+default-run = "harness-kit-desktop"
+
+[lib]
+name = "harness_kit_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-fs = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+dirs = "5"

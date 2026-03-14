@@ -16,4 +16,8 @@ export type {
   MarketplacePlugin,
   MarketplaceCategory,
   ProfileYaml,
+  InstalledPlugin,
+  KnownMarketplace,
+  HookCommand,
+  HooksConfig,
 } from "./types.js";

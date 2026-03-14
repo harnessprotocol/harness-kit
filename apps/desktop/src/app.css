@@ -1,0 +1,95 @@
+@import "tailwindcss";
+
+/* ── Theme tokens ── */
+:root {
+  /* Backgrounds */
+  --bg-base: #f9f8f6;
+  --bg-surface: #f2f0ec;
+  --bg-elevated: #ffffff;
+  --bg-sidebar: #eeece8;
+
+  /* Foregrounds */
+  --fg-base: #1a1916;
+  --fg-muted: #6b6860;
+  --fg-subtle: #9c9a95;
+
+  /* Borders */
+  --border-base: #dedad4;
+  --border-strong: #c8c4be;
+
+  /* Accent — violet/purple */
+  --accent: #7c3aed;
+  --accent-light: #ede9fe;
+  --accent-fg: #5b21b6;
+
+  /* Status */
+  --success: #15803d;
+  --warning: #b45309;
+  --danger: #b91c1c;
+
+  /* Sidebar width */
+  --sidebar-width: 220px;
+}
+
+.dark {
+  /* Backgrounds */
+  --bg-base: #0a0a0a;
+  --bg-surface: #141414;
+  --bg-elevated: #1a1a1a;
+  --bg-sidebar: #111111;
+
+  /* Foregrounds */
+  --fg-base: #ededed;
+  --fg-muted: #a0a0a0;
+  --fg-subtle: #666666;
+
+  /* Borders */
+  --border-base: #2a2a2a;
+  --border-strong: #3a3a3a;
+
+  /* Accent */
+  --accent: #8b5cf6;
+  --accent-light: #1e1030;
+  --accent-fg: #a78bfa;
+}
+
+/* ── Base ── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg-base);
+  color: var(--fg-base);
+  font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbars ── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 3px;
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

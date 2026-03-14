@@ -1,0 +1,39 @@
+/* Harness Kit UI — shared design tokens */
+/* Inherit / override in consuming app's global CSS */
+
+:root {
+  --hk-bg-base: #f9f8f6;
+  --hk-bg-surface: #f2f0ec;
+  --hk-bg-elevated: #ffffff;
+
+  --hk-fg-base: #1a1916;
+  --hk-fg-muted: #6b6860;
+  --hk-fg-subtle: #9c9a95;
+
+  --hk-border: #dedad4;
+  --hk-border-strong: #c8c4be;
+
+  --hk-accent: #7c3aed;
+  --hk-accent-light: #ede9fe;
+  --hk-accent-fg: #5b21b6;
+
+  --hk-radius: 6px;
+  --hk-radius-lg: 10px;
+}
+
+.dark {
+  --hk-bg-base: #0a0a0a;
+  --hk-bg-surface: #141414;
+  --hk-bg-elevated: #1a1a1a;
+
+  --hk-fg-base: #ededed;
+  --hk-fg-muted: #a0a0a0;
+  --hk-fg-subtle: #666666;
+
+  --hk-border: #2a2a2a;
+  --hk-border-strong: #3a3a3a;
+
+  --hk-accent: #8b5cf6;
+  --hk-accent-light: #1e1030;
+  --hk-accent-fg: #a78bfa;
+}

@@ -32,3 +32,8 @@ packages/shared/dist/
 
 # Playwright MCP
 .playwright-mcp/
+
+# Desktop app
+apps/desktop/src-tauri/target/
+apps/desktop/dist/
+packages/ui/dist/

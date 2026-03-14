@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"Default capability — grants core API and read access to ~/.claude/","local":true,"windows":["main"],"permissions":["core:default","fs:allow-read-text-file","fs:allow-read-dir","fs:allow-exists",{"identifier":"fs:scope","allow":[{"path":"$HOME/.claude"},{"path":"$HOME/.claude/**"}]}]}}
