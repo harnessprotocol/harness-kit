@@ -1,7 +1,6 @@
 {
   "title": "Concepts",
   "pages": [
-    "architecture",
     "plugins-vs-skills",
     "agents",
     "secrets-management",

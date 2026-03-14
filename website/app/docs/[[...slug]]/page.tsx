@@ -11,6 +11,7 @@ import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 import { Callout } from 'fumadocs-ui/components/callout';
 import { Step, Steps } from 'fumadocs-ui/components/steps';
 import { Accordion, Accordions } from 'fumadocs-ui/components/accordion';
+import { MarkdownViewer } from '@/components/markdown-viewer';
 
 const mdxComponents = {
   ...defaultMdxComponents,
@@ -21,6 +22,7 @@ const mdxComponents = {
   Steps,
   Accordion,
   Accordions,
+  MarkdownViewer,
 };
 
 export default async function Page(props: {
