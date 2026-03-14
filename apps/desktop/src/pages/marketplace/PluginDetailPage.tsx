@@ -54,7 +54,7 @@ function renderMarkdown(md: string): string {
     )
     // Paragraphs (skip lines that start with HTML tags)
     .replace(
-      /^(?!<[hluop]|<li|<pre|<code|<strong|<a)(.+)$/gm,
+      /^(?!<[hluop]|<li|<pre|<code|<strong|<a|<br)(.+)$/gm,
       '<p style="margin:0 0 8px;color:var(--fg-muted)">$1</p>',
     );
 

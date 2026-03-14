@@ -39,4 +39,5 @@ BEGIN
     RETURNING install_count INTO new_count;
   RETURN new_count;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER
+   SET search_path = public, pg_temp;
