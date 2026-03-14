@@ -115,6 +115,16 @@
       "license": "Apache-2.0",
       "category": "devops",
       "tags": ["pull-request", "triage", "ci-cd", "code-review", "multi-repo"]
+    },
+    {
+      "name": "usage-stats",
+      "source": "./usage-stats",
+      "description": "Interactive dashboard for Claude Code usage — tokens, sessions, models, and activity patterns",
+      "version": "0.1.0",
+      "author": { "name": "harnessprotocol" },
+      "license": "Apache-2.0",
+      "category": "productivity",
+      "tags": ["usage", "statistics", "tokens", "sessions", "dashboard", "analytics"]
     }
   ]
 }

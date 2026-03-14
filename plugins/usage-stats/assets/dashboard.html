@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Claude Code Usage Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-matrix@2/dist/chartjs-chart-matrix.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #08080a;
+      --surface: #111114;
+      --surface-hover: #19191e;
+      --border: #1e1e24;
+      --border-subtle: #151518;
+      --accent: #8b5cf6;
+      --accent-dim: rgba(139, 92, 246, 0.15);
+      --accent-glow: rgba(139, 92, 246, 0.25);
+      --text-primary: #e8e8f0;
+      --text-secondary: #6b6b7a;
+      --text-muted: #3a3a45;
+      --glass-bg: rgba(8, 8, 10, 0.85);
+      --glass-border: rgba(255, 255, 255, 0.06);
+      --green: #34d399;
+      --amber: #fbbf24;
+      --blue: #60a5fa;
+      --red: #f87171;
+      --purple-light: #a78bfa;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text-primary);
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      font-weight: 300;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      pointer-events: none;
+      opacity: 0.02;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+    }
+
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--glass-border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .header-title {
+      font-size: 20px;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      text-shadow: 0 0 30px var(--accent-glow), 0 0 60px rgba(139, 92, 246, 0.1);
+    }
+
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-dates {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+
+    .header-generated {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .filter-bar {
+      position: sticky;
+      top: 54px;
+      z-index: 99;
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--glass-border);
+      padding: 12px 32px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+
+    .filter-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .filter-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .filter-date {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-primary);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 300;
+      padding: 6px 10px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .filter-date:focus {
+      border-color: var(--accent);
+    }
+
+    .filter-date::-webkit-calendar-picker-indicator {
+      filter: invert(0.5);
+    }
+
+    .pill-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .pill {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 400;
+      padding: 4px 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+      user-select: none;
+    }
+
+    .pill:hover {
+      background: var(--surface-hover);
+      border-color: var(--accent);
+      color: var(--text-primary);
+    }
+
+    .pill.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px 32px 64px;
+    }
+
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .metric-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 500px) {
+      .metric-grid {
+        grid-template-columns: 1fr;
+      }
+      .container {
+        padding: 16px;
+      }
+      .header, .filter-bar {
+        padding: 12px 16px;
+      }
+    }
+
+    .card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 24px;
+    }
+
+    .metric-card {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .metric-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    .metric-value {
+      font-size: 32px;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }
+
+    .metric-sub {
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .chart-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chart-card {
+      min-height: 340px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chart-title {
+      font-size: 14px;
+      font-weight: 400;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+    }
+
+    .chart-wrap {
+      flex: 1;
+      position: relative;
+      min-height: 260px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 400;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      margin-top: 8px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      margin-bottom: 24px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead th {
+      text-align: left;
+      padding: 10px 14px;
+      font-size: 11px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+      transition: color 0.2s;
+    }
+
+    thead th:hover {
+      color: var(--text-secondary);
+    }
+
+    th[data-sort-dir="asc"]::after {
+      content: ' \25B2';
+      color: var(--accent);
+    }
+
+    th[data-sort-dir="desc"]::after {
+      content: ' \25BC';
+      color: var(--accent);
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border-subtle);
+      transition: background 0.15s;
+    }
+
+    tbody tr:nth-child(odd) {
+      background: var(--surface);
+    }
+
+    tbody tr:nth-child(even) {
+      background: var(--bg);
+    }
+
+    tbody tr:hover {
+      background: var(--surface-hover);
+    }
+
+    td {
+      padding: 9px 14px;
+      color: var(--text-secondary);
+    }
+
+    td.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .show-all-btn {
+      display: inline-block;
+      margin-top: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 300;
+      padding: 6px 16px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .show-all-btn:hover {
+      border-color: var(--accent);
+      color: var(--text-primary);
+    }
+
+    .footer {
+      text-align: center;
+      padding: 32px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .footer-link {
+      color: var(--text-secondary);
+    }
+
+    .empty-state {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 60vh;
+      text-align: center;
+    }
+
+    .empty-state p {
+      font-size: 16px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state code {
+      background: var(--surface);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+
+    .doughnut-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -55%);
+      text-align: center;
+      pointer-events: none;
+    }
+
+    .doughnut-center .value {
+      font-size: 24px;
+      font-weight: 500;
+      color: var(--text-primary);
+    }
+
+    .doughnut-center .label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+
+    .chart-full-width {
+      grid-column: 1 / -1;
+    }
+  </style>
+</head>
+<body>
+  <script>
+    const DASHBOARD_DATA = /*__DASHBOARD_DATA__*/ {} /*__END__*/;
+  </script>
+
+  <div id="app"></div>
+
+  <script>
+    // Formatting helpers
+    function fmt(n) { return n.toLocaleString(); }
+    function fmtTokens(n) {
+      if (n >= 1e9) return (n / 1e9).toFixed(2) + 'B';
+      if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+      if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+      return n.toString();
+    }
+
+    function fmtDateRange(start, end) {
+      var s = new Date(start + 'T00:00:00');
+      var e = new Date(end + 'T00:00:00');
+      var sMonth = s.toLocaleDateString('en-US', { month: 'short' });
+      var eMonth = e.toLocaleDateString('en-US', { month: 'short' });
+      var sDay = s.getDate();
+      var eDay = e.getDate();
+      var sYear = s.getFullYear();
+      var eYear = e.getFullYear();
+      if (sYear === eYear && sMonth === eMonth) {
+        return sMonth + ' ' + sDay + ' \u2013 ' + eDay + ', ' + sYear;
+      }
+      if (sYear === eYear) {
+        return sMonth + ' ' + sDay + ' \u2013 ' + eMonth + ' ' + eDay + ', ' + sYear;
+      }
+      return sMonth + ' ' + sDay + ', ' + sYear + ' \u2013 ' + eMonth + ' ' + eDay + ', ' + eYear;
+    }
+
+    function fmtShortDate(dateStr) {
+      var d = new Date(dateStr + 'T00:00:00');
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    function escapeText(str) {
+      var div = document.createElement('div');
+      div.textContent = str;
+      return div.textContent;
+    }
+
+    // Check for empty state
+    var data = DASHBOARD_DATA;
+    var hasData = data && data.daily && data.daily.length > 0;
+
+    if (!hasData) {
+      document.getElementById('app').textContent = '';
+      var header = document.createElement('div');
+      header.className = 'header';
+      var title = document.createElement('div');
+      title.className = 'header-title';
+      title.textContent = 'Claude Code Usage';
+      header.appendChild(title);
+      document.getElementById('app').appendChild(header);
+
+      var empty = document.createElement('div');
+      empty.className = 'empty-state';
+      var emptyInner = document.createElement('div');
+      var p1 = document.createElement('p');
+      p1.textContent = 'No usage data available.';
+      emptyInner.appendChild(p1);
+      var p2 = document.createElement('p');
+      p2.style.marginTop = '8px';
+      p2.textContent = 'Run ';
+      var code = document.createElement('code');
+      code.textContent = '/usage-stats';
+      p2.appendChild(code);
+      var span = document.createTextNode(' to generate a report.');
+      p2.appendChild(span);
+      emptyInner.appendChild(p2);
+      empty.appendChild(emptyInner);
+      document.getElementById('app').appendChild(empty);
+    } else {
+      // Chart.js global defaults
+      Chart.defaults.color = '#6b6b7a';
+      Chart.defaults.borderColor = 'rgba(30,30,36,0.5)';
+      Chart.defaults.font.family = "'SF Pro Display', -apple-system, sans-serif";
+      Chart.defaults.font.weight = 300;
+
+      var CHART_COLORS = ['#8b5cf6', '#34d399', '#fbbf24', '#60a5fa', '#f87171', '#a78bfa'];
+
+      var tooltipConfig = {
+        backgroundColor: '#111114',
+        borderColor: '#1e1e24',
+        borderWidth: 1,
+        titleColor: '#e8e8f0',
+        bodyColor: '#6b6b7a',
+        padding: 12,
+        cornerRadius: 8,
+        displayColors: true
+      };
+
+      // Filter state
+      var filters = {
+        dateStart: null,
+        dateEnd: null,
+        models: new Set(),
+        projects: new Set()
+      };
+
+      // Derive available models and projects
+      var allModels = new Set();
+      data.modelSplit.forEach(function(m) { allModels.add(m.model); });
+      var allProjects = new Set();
+      data.projectSplit.forEach(function(p) { allProjects.add(p.project); });
+
+      // Session display state
+      var showAllSessions = false;
+
+      // Build DOM using safe methods
+      function buildPage() {
+        var app = document.getElementById('app');
+        app.textContent = '';
+
+        // Header
+        var header = document.createElement('div');
+        header.className = 'header';
+        var htitle = document.createElement('div');
+        htitle.className = 'header-title';
+        htitle.textContent = 'Claude Code Usage';
+        header.appendChild(htitle);
+        var hmeta = document.createElement('div');
+        hmeta.className = 'header-meta';
+        var hdates = document.createElement('span');
+        hdates.className = 'header-dates';
+        hdates.id = 'header-dates';
+        hdates.textContent = fmtDateRange(data.meta.startDate, data.meta.endDate);
+        hmeta.appendChild(hdates);
+        var hgen = document.createElement('span');
+        hgen.className = 'header-generated';
+        hgen.textContent = 'Generated ' + (data.meta.generatedAt || '');
+        hmeta.appendChild(hgen);
+        header.appendChild(hmeta);
+        app.appendChild(header);
+
+        // Filter bar
+        var filterBar = document.createElement('div');
+        filterBar.className = 'filter-bar';
+
+        // Date filter group
+        var dateGroup = document.createElement('div');
+        dateGroup.className = 'filter-group';
+        var dateLabel = document.createElement('span');
+        dateLabel.className = 'filter-label';
+        dateLabel.textContent = 'Range';
+        dateGroup.appendChild(dateLabel);
+        var startInput = document.createElement('input');
+        startInput.type = 'date';
+        startInput.className = 'filter-date';
+        startInput.id = 'filter-start';
+        startInput.value = data.meta.startDate;
+        dateGroup.appendChild(startInput);
+        var endInput = document.createElement('input');
+        endInput.type = 'date';
+        endInput.className = 'filter-date';
+        endInput.id = 'filter-end';
+        endInput.value = data.meta.endDate;
+        dateGroup.appendChild(endInput);
+        filterBar.appendChild(dateGroup);
+
+        // Model filter group
+        var modelGroup = document.createElement('div');
+        modelGroup.className = 'filter-group';
+        var modelLabel = document.createElement('span');
+        modelLabel.className = 'filter-label';
+        modelLabel.textContent = 'Models';
+        modelGroup.appendChild(modelLabel);
+        var modelPills = document.createElement('div');
+        modelPills.className = 'pill-group';
+        modelPills.id = 'model-pills';
+        modelGroup.appendChild(modelPills);
+        filterBar.appendChild(modelGroup);
+
+        // Project filter group
+        var projGroup = document.createElement('div');
+        projGroup.className = 'filter-group';
+        var projLabel = document.createElement('span');
+        projLabel.className = 'filter-label';
+        projLabel.textContent = 'Projects';
+        projGroup.appendChild(projLabel);
+        var projPills = document.createElement('div');
+        projPills.className = 'pill-group';
+        projPills.id = 'project-pills';
+        projGroup.appendChild(projPills);
+        filterBar.appendChild(projGroup);
+
+        app.appendChild(filterBar);
+
+        // Container
+        var container = document.createElement('div');
+        container.className = 'container';
+
+        // Metric grid
+        var metricGrid = document.createElement('div');
+        metricGrid.className = 'metric-grid';
+
+        var metricDefs = [
+          { id: 'messages', label: 'Messages' },
+          { id: 'sessions', label: 'Sessions' },
+          { id: 'tokens', label: 'Output Tokens' },
+          { id: 'days', label: 'Days Active' }
+        ];
+        metricDefs.forEach(function(def) {
+          var card = document.createElement('div');
+          card.className = 'card metric-card';
+          var lbl = document.createElement('span');
+          lbl.className = 'metric-label';
+          lbl.textContent = def.label;
+          card.appendChild(lbl);
+          var val = document.createElement('span');
+          val.className = 'metric-value';
+          val.id = 'm-' + def.id;
+          val.textContent = '0';
+          card.appendChild(val);
+          var sub = document.createElement('span');
+          sub.className = 'metric-sub';
+          sub.id = 'm-' + def.id + '-sub';
+          card.appendChild(sub);
+          metricGrid.appendChild(card);
+        });
+        container.appendChild(metricGrid);
+
+        // Chart grid
+        var chartGrid = document.createElement('div');
+        chartGrid.className = 'chart-grid';
+
+        var chartDefs = [
+          { id: 'chart-daily', title: 'Daily Activity', fullWidth: false },
+          { id: 'chart-tokens', title: 'Token Usage Over Time', fullWidth: false },
+          { id: 'chart-models', title: 'Model Distribution', fullWidth: false, hasDoughnut: true },
+          { id: 'chart-hourly', title: 'Hourly Activity', fullWidth: false },
+          { id: 'chart-projects', title: 'Project Breakdown', fullWidth: true }
+        ];
+        chartDefs.forEach(function(def) {
+          var card = document.createElement('div');
+          card.className = 'card chart-card' + (def.fullWidth ? ' chart-full-width' : '');
+          var ctitle = document.createElement('div');
+          ctitle.className = 'chart-title';
+          ctitle.textContent = def.title;
+          card.appendChild(ctitle);
+          var wrap = document.createElement('div');
+          wrap.className = 'chart-wrap';
+          if (def.hasDoughnut) wrap.style.position = 'relative';
+          var canvas = document.createElement('canvas');
+          canvas.id = def.id;
+          wrap.appendChild(canvas);
+          if (def.hasDoughnut) {
+            var dcenter = document.createElement('div');
+            dcenter.className = 'doughnut-center';
+            var dval = document.createElement('div');
+            dval.className = 'value';
+            dval.id = 'doughnut-value';
+            dval.textContent = '0';
+            dcenter.appendChild(dval);
+            var dlbl = document.createElement('div');
+            dlbl.className = 'label';
+            dlbl.textContent = 'output tokens';
+            dcenter.appendChild(dlbl);
+            wrap.appendChild(dcenter);
+          }
+          card.appendChild(wrap);
+          chartGrid.appendChild(card);
+        });
+        container.appendChild(chartGrid);
+
+        // Daily Breakdown section
+        var dailyTitle = document.createElement('h3');
+        dailyTitle.className = 'section-title';
+        dailyTitle.textContent = 'Daily Breakdown';
+        container.appendChild(dailyTitle);
+
+        var dailyWrap = document.createElement('div');
+        dailyWrap.className = 'card table-wrap';
+        var dailyTable = document.createElement('table');
+        dailyTable.id = 'table-daily';
+        var dailyThead = document.createElement('thead');
+        var dailyHeadRow = document.createElement('tr');
+        ['Date', 'Messages', 'Sessions', 'Tool Calls', 'Output Tokens', 'Primary Model'].forEach(function(h) {
+          var th = document.createElement('th');
+          th.textContent = h;
+          dailyHeadRow.appendChild(th);
+        });
+        dailyThead.appendChild(dailyHeadRow);
+        dailyTable.appendChild(dailyThead);
+        var dailyTbody = document.createElement('tbody');
+        dailyTbody.id = 'tbody-daily';
+        dailyTable.appendChild(dailyTbody);
+        dailyWrap.appendChild(dailyTable);
+        container.appendChild(dailyWrap);
+
+        // Sessions section
+        var sessTitle = document.createElement('h3');
+        sessTitle.className = 'section-title';
+        sessTitle.textContent = 'Sessions';
+        container.appendChild(sessTitle);
+
+        var sessWrap = document.createElement('div');
+        sessWrap.className = 'card table-wrap';
+        var sessTable = document.createElement('table');
+        sessTable.id = 'table-sessions';
+        var sessThead = document.createElement('thead');
+        var sessHeadRow = document.createElement('tr');
+        ['Date', 'Project', 'Messages', 'Output Tokens', 'Model', 'Tool Calls'].forEach(function(h) {
+          var th = document.createElement('th');
+          th.textContent = h;
+          sessHeadRow.appendChild(th);
+        });
+        sessThead.appendChild(sessHeadRow);
+        sessTable.appendChild(sessThead);
+        var sessTbody = document.createElement('tbody');
+        sessTbody.id = 'tbody-sessions';
+        sessTable.appendChild(sessTbody);
+        sessWrap.appendChild(sessTable);
+        var toggleWrap = document.createElement('div');
+        toggleWrap.id = 'session-toggle-wrap';
+        toggleWrap.style.display = 'none';
+        var showAllBtn = document.createElement('button');
+        showAllBtn.className = 'show-all-btn';
+        showAllBtn.id = 'btn-show-all';
+        showAllBtn.textContent = 'Show all';
+        toggleWrap.appendChild(showAllBtn);
+        sessWrap.appendChild(toggleWrap);
+        container.appendChild(sessWrap);
+
+        app.appendChild(container);
+
+        // Footer
+        var footer = document.createElement('div');
+        footer.className = 'footer';
+        footer.textContent = 'Generated by usage-stats plugin \u00b7 ';
+        var footerLink = document.createElement('span');
+        footerLink.className = 'footer-link';
+        footerLink.textContent = 'harnessprotocol/harness-kit';
+        footer.appendChild(footerLink);
+        app.appendChild(footer);
+      }
+
+      buildPage();
+
+      // Render filter pills
+      function renderPills() {
+        var modelContainer = document.getElementById('model-pills');
+        modelContainer.textContent = '';
+        allModels.forEach(function(model) {
+          var pill = document.createElement('button');
+          pill.className = 'pill' + (filters.models.size === 0 || filters.models.has(model) ? ' active' : '');
+          pill.textContent = model;
+          pill.addEventListener('click', function() { toggleModelFilter(model); });
+          modelContainer.appendChild(pill);
+        });
+
+        var projectContainer = document.getElementById('project-pills');
+        projectContainer.textContent = '';
+        allProjects.forEach(function(project) {
+          var pill = document.createElement('button');
+          pill.className = 'pill' + (filters.projects.size === 0 || filters.projects.has(project) ? ' active' : '');
+          pill.textContent = project;
+          pill.addEventListener('click', function() { toggleProjectFilter(project); });
+          projectContainer.appendChild(pill);
+        });
+      }
+
+      function toggleModelFilter(model) {
+        if (filters.models.size === 0) {
+          filters.models.add(model);
+        } else if (filters.models.has(model)) {
+          filters.models.delete(model);
+        } else {
+          filters.models.add(model);
+          if (filters.models.size === allModels.size) {
+            filters.models.clear();
+          }
+        }
+        applyFilters();
+      }
+
+      function toggleProjectFilter(project) {
+        if (filters.projects.size === 0) {
+          filters.projects.add(project);
+        } else if (filters.projects.has(project)) {
+          filters.projects.delete(project);
+        } else {
+          filters.projects.add(project);
+          if (filters.projects.size === allProjects.size) {
+            filters.projects.clear();
+          }
+        }
+        applyFilters();
+      }
+
+      // Date filter listeners
+      function bindDateFilters() {
+        document.getElementById('filter-start').addEventListener('change', function(e) {
+          filters.dateStart = e.target.value || null;
+          applyFilters();
+        });
+        document.getElementById('filter-end').addEventListener('change', function(e) {
+          filters.dateEnd = e.target.value || null;
+          applyFilters();
+        });
+      }
+
+      // Session show-all toggle
+      function bindSessionToggle() {
+        document.getElementById('btn-show-all').addEventListener('click', function() {
+          showAllSessions = !showAllSessions;
+          applyFilters();
+        });
+      }
+
+      // Filter logic
+      function getFilteredDaily() {
+        var daily = data.daily;
+        var start = filters.dateStart || data.meta.startDate;
+        var end = filters.dateEnd || data.meta.endDate;
+
+        daily = daily.filter(function(d) { return d.date >= start && d.date <= end; });
+
+        if (filters.models.size > 0) {
+          daily = daily.filter(function(d) {
+            if (!d.tokensByModel) return false;
+            return Object.keys(d.tokensByModel).some(function(m) { return filters.models.has(m); });
+          });
+        }
+
+        return daily;
+      }
+
+      function getFilteredSessions() {
+        var sessions = data.sessions ? data.sessions.slice() : [];
+        var start = filters.dateStart || data.meta.startDate;
+        var end = filters.dateEnd || data.meta.endDate;
+
+        sessions = sessions.filter(function(s) { return s.date >= start && s.date <= end; });
+
+        if (filters.models.size > 0) {
+          sessions = sessions.filter(function(s) { return filters.models.has(s.primaryModel); });
+        }
+
+        if (filters.projects.size > 0) {
+          sessions = sessions.filter(function(s) { return filters.projects.has(s.project); });
+        }
+
+        return sessions;
+      }
+
+      function computeSummary(daily) {
+        var summary = {
+          totalMessages: 0,
+          totalSessions: 0,
+          totalToolCalls: 0,
+          totalOutputTokens: 0,
+          totalInputTokens: 0,
+          totalCacheReadTokens: 0,
+          daysActive: 0,
+          daysInRange: daily.length
+        };
+
+        daily.forEach(function(d) {
+          summary.totalMessages += d.messages || 0;
+          summary.totalSessions += d.sessions || 0;
+          summary.totalToolCalls += d.toolCalls || 0;
+          summary.totalOutputTokens += d.outputTokens || 0;
+          summary.totalInputTokens += d.inputTokens || 0;
+          summary.totalCacheReadTokens += d.cacheReadTokens || 0;
+          if (d.messages > 0) summary.daysActive++;
+        });
+
+        return summary;
+      }
+
+      function computeModelSplit(daily) {
+        var modelMap = {};
+        daily.forEach(function(d) {
+          if (d.tokensByModel) {
+            Object.keys(d.tokensByModel).forEach(function(model) {
+              if (filters.models.size > 0 && !filters.models.has(model)) return;
+              if (!modelMap[model]) modelMap[model] = { model: model, outputTokens: 0, messages: 0 };
+              modelMap[model].outputTokens += d.tokensByModel[model];
+            });
+          }
+        });
+        return Object.values(modelMap).sort(function(a, b) { return b.outputTokens - a.outputTokens; });
+      }
+
+      function computeProjectSplit(sessions) {
+        var projMap = {};
+        sessions.forEach(function(s) {
+          if (!projMap[s.project]) projMap[s.project] = { project: s.project, sessions: 0, outputTokens: 0, messages: 0 };
+          projMap[s.project].sessions++;
+          projMap[s.project].outputTokens += s.outputTokens || 0;
+          projMap[s.project].messages += s.messages || 0;
+        });
+        return Object.values(projMap).sort(function(a, b) { return b.outputTokens - a.outputTokens; });
+      }
+
+      // Chart instances
+      var chartDaily, chartTokens, chartModels, chartHourly, chartProjects;
+
+      function createCharts() {
+        var filteredDaily = getFilteredDaily();
+        var filteredSessions = getFilteredSessions();
+        var summary = computeSummary(filteredDaily);
+        var modelSplit = computeModelSplit(filteredDaily);
+        var projectSplit = computeProjectSplit(filteredSessions);
+
+        // Metric cards
+        updateMetrics(summary, filteredDaily);
+
+        // Chart A: Daily Activity
+        var dailyLabels = filteredDaily.map(function(d) { return fmtShortDate(d.date); });
+        var ctxDaily = document.getElementById('chart-daily').getContext('2d');
+        chartDaily = new Chart(ctxDaily, {
+          type: 'bar',
+          data: {
+            labels: dailyLabels,
+            datasets: [
+              {
+                label: 'Messages',
+                data: filteredDaily.map(function(d) { return d.messages || 0; }),
+                backgroundColor: 'rgba(139, 92, 246, 0.7)',
+                borderRadius: 3
+              },
+              {
+                label: 'Sessions',
+                data: filteredDaily.map(function(d) { return d.sessions || 0; }),
+                backgroundColor: 'rgba(96, 165, 250, 0.7)',
+                borderRadius: 3
+              },
+              {
+                label: 'Tool Calls',
+                data: filteredDaily.map(function(d) { return d.toolCalls || 0; }),
+                backgroundColor: 'rgba(52, 211, 153, 0.7)',
+                borderRadius: 3
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: { stacked: true, grid: { display: false } },
+              y: { stacked: true, grid: { color: 'rgba(30,30,36,0.5)' } }
+            },
+            plugins: {
+              tooltip: tooltipConfig,
+              legend: { labels: { boxWidth: 12, padding: 16 } }
+            }
+          }
+        });
+
+        // Chart B: Token Usage Over Time
+        var ctxTokens = document.getElementById('chart-tokens').getContext('2d');
+        chartTokens = new Chart(ctxTokens, {
+          type: 'line',
+          data: {
+            labels: dailyLabels,
+            datasets: [
+              {
+                label: 'Output Tokens',
+                data: filteredDaily.map(function(d) { return d.outputTokens || 0; }),
+                borderColor: '#8b5cf6',
+                backgroundColor: 'rgba(139, 92, 246, 0.15)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3,
+                pointBackgroundColor: '#8b5cf6',
+                borderWidth: 2
+              },
+              {
+                label: 'Input Tokens',
+                data: filteredDaily.map(function(d) { return d.inputTokens || 0; }),
+                borderColor: 'rgba(107, 107, 122, 0.5)',
+                backgroundColor: 'rgba(107, 107, 122, 0.05)',
+                fill: true,
+                tension: 0.3,
+                pointRadius: 2,
+                pointBackgroundColor: '#6b6b7a',
+                borderWidth: 1.5
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: { grid: { display: false } },
+              y: {
+                grid: { color: 'rgba(30,30,36,0.5)' },
+                ticks: {
+                  callback: function(value) { return fmtTokens(value); }
+                }
+              }
+            },
+            plugins: {
+              tooltip: {
+                backgroundColor: tooltipConfig.backgroundColor,
+                borderColor: tooltipConfig.borderColor,
+                borderWidth: tooltipConfig.borderWidth,
+                titleColor: tooltipConfig.titleColor,
+                bodyColor: tooltipConfig.bodyColor,
+                padding: tooltipConfig.padding,
+                cornerRadius: tooltipConfig.cornerRadius,
+                displayColors: tooltipConfig.displayColors,
+                callbacks: {
+                  label: function(ctx) {
+                    return ctx.dataset.label + ': ' + fmt(ctx.raw);
+                  }
+                }
+              },
+              legend: { labels: { boxWidth: 12, padding: 16 } }
+            }
+          }
+        });
+
+        // Chart C: Model Distribution
+        var ctxModels = document.getElementById('chart-models').getContext('2d');
+        var modelLabels = modelSplit.map(function(m) { return m.model; });
+        var modelData = modelSplit.map(function(m) { return m.outputTokens; });
+        var modelColors = modelSplit.map(function(_, i) { return CHART_COLORS[i % CHART_COLORS.length]; });
+        var totalOutputTokens = modelData.reduce(function(a, b) { return a + b; }, 0);
+        document.getElementById('doughnut-value').textContent = fmtTokens(totalOutputTokens);
+
+        chartModels = new Chart(ctxModels, {
+          type: 'doughnut',
+          data: {
+            labels: modelLabels,
+            datasets: [{
+              data: modelData,
+              backgroundColor: modelColors,
+              borderColor: '#08080a',
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '65%',
+            plugins: {
+              tooltip: {
+                backgroundColor: tooltipConfig.backgroundColor,
+                borderColor: tooltipConfig.borderColor,
+                borderWidth: tooltipConfig.borderWidth,
+                titleColor: tooltipConfig.titleColor,
+                bodyColor: tooltipConfig.bodyColor,
+                padding: tooltipConfig.padding,
+                cornerRadius: tooltipConfig.cornerRadius,
+                displayColors: tooltipConfig.displayColors,
+                callbacks: {
+                  label: function(ctx) {
+                    var total = ctx.dataset.data.reduce(function(a, b) { return a + b; }, 0);
+                    var pct = ((ctx.raw / total) * 100).toFixed(1);
+                    return ctx.label + ': ' + fmtTokens(ctx.raw) + ' (' + pct + '%)';
+                  }
+                }
+              },
+              legend: {
+                position: 'bottom',
+                labels: { boxWidth: 12, padding: 12 }
+              }
+            }
+          }
+        });
+
+        // Chart D: Hourly Activity
+        var hourlyData = data.hourlyDistribution || {};
+        var hourLabels = [];
+        var hourValues = [];
+        for (var h = 0; h < 24; h++) {
+          hourLabels.push(h);
+          hourValues.push(hourlyData[h] || 0);
+        }
+        var peakHour = 0;
+        for (var i = 1; i < 24; i++) {
+          if (hourValues[i] > hourValues[peakHour]) peakHour = i;
+        }
+        var hourColors = hourLabels.map(function(h) {
+          return h === peakHour ? '#8b5cf6' : 'rgba(139, 92, 246, 0.4)';
+        });
+
+        var ctxHourly = document.getElementById('chart-hourly').getContext('2d');
+        chartHourly = new Chart(ctxHourly, {
+          type: 'bar',
+          data: {
+            labels: hourLabels.map(function(h) { return h.toString().padStart(2, '0') + ':00'; }),
+            datasets: [{
+              label: 'Messages',
+              data: hourValues,
+              backgroundColor: hourColors,
+              borderRadius: 3
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: { grid: { display: false } },
+              y: { grid: { color: 'rgba(30,30,36,0.5)' } }
+            },
+            plugins: {
+              tooltip: tooltipConfig,
+              legend: { display: false }
+            }
+          }
+        });
+
+        // Chart E: Project Breakdown
+        var ctxProjects = document.getElementById('chart-projects').getContext('2d');
+        chartProjects = new Chart(ctxProjects, {
+          type: 'bar',
+          data: {
+            labels: projectSplit.map(function(p) { return p.project; }),
+            datasets: [{
+              label: 'Output Tokens',
+              data: projectSplit.map(function(p) { return p.outputTokens; }),
+              backgroundColor: 'rgba(139, 92, 246, 0.7)',
+              borderRadius: 4
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+              x: {
+                grid: { color: 'rgba(30,30,36,0.5)' },
+                ticks: {
+                  callback: function(value) { return fmtTokens(value); }
+                }
+              },
+              y: { grid: { display: false } }
+            },
+            plugins: {
+              tooltip: {
+                backgroundColor: tooltipConfig.backgroundColor,
+                borderColor: tooltipConfig.borderColor,
+                borderWidth: tooltipConfig.borderWidth,
+                titleColor: tooltipConfig.titleColor,
+                bodyColor: tooltipConfig.bodyColor,
+                padding: tooltipConfig.padding,
+                cornerRadius: tooltipConfig.cornerRadius,
+                displayColors: tooltipConfig.displayColors,
+                callbacks: {
+                  label: function(ctx) {
+                    return 'Output Tokens: ' + fmt(ctx.raw);
+                  }
+                }
+              },
+              legend: { display: false }
+            }
+          }
+        });
+
+        // Tables
+        renderDailyTable(filteredDaily);
+        renderSessionTable(filteredSessions);
+
+        // Make tables sortable
+        makeTableSortable(document.getElementById('table-daily'));
+        makeTableSortable(document.getElementById('table-sessions'));
+      }
+
+      // Update metrics
+      function updateMetrics(summary) {
+        document.getElementById('m-messages').textContent = fmt(summary.totalMessages);
+        var avgPerDay = summary.daysActive > 0 ? Math.round(summary.totalMessages / summary.daysActive) : 0;
+        document.getElementById('m-messages-sub').textContent = 'avg ' + fmt(avgPerDay) + '/day';
+
+        document.getElementById('m-sessions').textContent = fmt(summary.totalSessions);
+        var avgSessions = summary.daysActive > 0 ? Math.round(summary.totalSessions / summary.daysActive) : 0;
+        document.getElementById('m-sessions-sub').textContent = 'avg ' + fmt(avgSessions) + '/day';
+
+        document.getElementById('m-tokens').textContent = fmtTokens(summary.totalOutputTokens);
+        document.getElementById('m-tokens-sub').textContent = fmt(summary.totalOutputTokens) + ' total';
+
+        document.getElementById('m-days').textContent = summary.daysActive + ' / ' + summary.daysInRange;
+        var pct = summary.daysInRange > 0 ? Math.round((summary.daysActive / summary.daysInRange) * 100) : 0;
+        document.getElementById('m-days-sub').textContent = pct + '% of range';
+      }
+
+      // Render daily table (safe DOM)
+      function renderDailyTable(daily) {
+        var tbody = document.getElementById('tbody-daily');
+        tbody.textContent = '';
+        daily.forEach(function(d) {
+          var tr = document.createElement('tr');
+
+          var tdDate = document.createElement('td');
+          tdDate.dataset.sort = d.date;
+          tdDate.textContent = fmtShortDate(d.date);
+          tr.appendChild(tdDate);
+
+          var tdMsg = document.createElement('td');
+          tdMsg.className = 'num';
+          tdMsg.dataset.sort = String(d.messages || 0);
+          tdMsg.textContent = fmt(d.messages || 0);
+          tr.appendChild(tdMsg);
+
+          var tdSess = document.createElement('td');
+          tdSess.className = 'num';
+          tdSess.dataset.sort = String(d.sessions || 0);
+          tdSess.textContent = fmt(d.sessions || 0);
+          tr.appendChild(tdSess);
+
+          var tdTool = document.createElement('td');
+          tdTool.className = 'num';
+          tdTool.dataset.sort = String(d.toolCalls || 0);
+          tdTool.textContent = fmt(d.toolCalls || 0);
+          tr.appendChild(tdTool);
+
+          var tdTokens = document.createElement('td');
+          tdTokens.className = 'num';
+          tdTokens.dataset.sort = String(d.outputTokens || 0);
+          tdTokens.textContent = fmt(d.outputTokens || 0);
+          tr.appendChild(tdTokens);
+
+          var tdModel = document.createElement('td');
+          tdModel.textContent = d.primaryModel || '-';
+          tr.appendChild(tdModel);
+
+          tbody.appendChild(tr);
+        });
+      }
+
+      // Render session table (safe DOM)
+      function renderSessionTable(sessions) {
+        var sorted = sessions.slice().sort(function(a, b) { return (b.outputTokens || 0) - (a.outputTokens || 0); });
+        var showToggle = sorted.length > 100;
+        var display = showAllSessions ? sorted : sorted.slice(0, 100);
+
+        var tbody = document.getElementById('tbody-sessions');
+        tbody.textContent = '';
+        display.forEach(function(s) {
+          var tr = document.createElement('tr');
+
+          var tdDate = document.createElement('td');
+          tdDate.dataset.sort = s.date;
+          tdDate.textContent = fmtShortDate(s.date);
+          tr.appendChild(tdDate);
+
+          var tdProj = document.createElement('td');
+          tdProj.textContent = s.project || '-';
+          tr.appendChild(tdProj);
+
+          var tdMsg = document.createElement('td');
+          tdMsg.className = 'num';
+          tdMsg.dataset.sort = String(s.messages || 0);
+          tdMsg.textContent = fmt(s.messages || 0);
+          tr.appendChild(tdMsg);
+
+          var tdTokens = document.createElement('td');
+          tdTokens.className = 'num';
+          tdTokens.dataset.sort = String(s.outputTokens || 0);
+          tdTokens.textContent = fmt(s.outputTokens || 0);
+          tr.appendChild(tdTokens);
+
+          var tdModel = document.createElement('td');
+          tdModel.textContent = s.primaryModel || '-';
+          tr.appendChild(tdModel);
+
+          var tdTool = document.createElement('td');
+          tdTool.className = 'num';
+          tdTool.dataset.sort = String(s.toolCalls || 0);
+          tdTool.textContent = fmt(s.toolCalls || 0);
+          tr.appendChild(tdTool);
+
+          tbody.appendChild(tr);
+        });
+
+        var toggleWrap = document.getElementById('session-toggle-wrap');
+        if (showToggle) {
+          toggleWrap.style.display = 'block';
+          document.getElementById('btn-show-all').textContent = showAllSessions
+            ? 'Show top 100'
+            : 'Show all (' + sorted.length + ')';
+        } else {
+          toggleWrap.style.display = 'none';
+        }
+      }
+
+      // Table sorting
+      function makeTableSortable(table) {
+        var headers = table.querySelectorAll('th');
+        headers.forEach(function(th, idx) {
+          th.style.cursor = 'pointer';
+          th.addEventListener('click', function() {
+            var asc = th.dataset.sortDir !== 'asc';
+            headers.forEach(function(h) { h.dataset.sortDir = ''; });
+            th.dataset.sortDir = asc ? 'asc' : 'desc';
+            sortTable(table, idx, asc);
+          });
+        });
+      }
+
+      function sortTable(table, colIdx, asc) {
+        var tbody = table.querySelector('tbody');
+        var rows = Array.from(tbody.querySelectorAll('tr'));
+        rows.sort(function(a, b) {
+          var aVal = a.children[colIdx].dataset.sort !== undefined ? a.children[colIdx].dataset.sort : a.children[colIdx].textContent.replace(/,/g, '');
+          var bVal = b.children[colIdx].dataset.sort !== undefined ? b.children[colIdx].dataset.sort : b.children[colIdx].textContent.replace(/,/g, '');
+          var numA = parseFloat(aVal), numB = parseFloat(bVal);
+          if (!isNaN(numA) && !isNaN(numB)) return asc ? numA - numB : numB - numA;
+          return asc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+        });
+        rows.forEach(function(r) { tbody.appendChild(r); });
+      }
+
+      // Apply filters
+      function applyFilters() {
+        var filteredDaily = getFilteredDaily();
+        var filteredSessions = getFilteredSessions();
+        var summary = computeSummary(filteredDaily);
+        var modelSplit = computeModelSplit(filteredDaily);
+        var projectSplit = computeProjectSplit(filteredSessions);
+
+        // Update metrics
+        updateMetrics(summary);
+
+        // Update pills
+        renderPills();
+
+        // Update header date range
+        var start = filters.dateStart || data.meta.startDate;
+        var end = filters.dateEnd || data.meta.endDate;
+        document.getElementById('header-dates').textContent = fmtDateRange(start, end);
+
+        // Chart A: Daily Activity
+        var dailyLabels = filteredDaily.map(function(d) { return fmtShortDate(d.date); });
+        chartDaily.data.labels = dailyLabels;
+        chartDaily.data.datasets[0].data = filteredDaily.map(function(d) { return d.messages || 0; });
+        chartDaily.data.datasets[1].data = filteredDaily.map(function(d) { return d.sessions || 0; });
+        chartDaily.data.datasets[2].data = filteredDaily.map(function(d) { return d.toolCalls || 0; });
+        chartDaily.update('none');
+
+        // Chart B: Token Usage
+        chartTokens.data.labels = dailyLabels;
+        chartTokens.data.datasets[0].data = filteredDaily.map(function(d) { return d.outputTokens || 0; });
+        chartTokens.data.datasets[1].data = filteredDaily.map(function(d) { return d.inputTokens || 0; });
+        chartTokens.update('none');
+
+        // Chart C: Model Distribution
+        var mLabels = modelSplit.map(function(m) { return m.model; });
+        var mData = modelSplit.map(function(m) { return m.outputTokens; });
+        var mColors = modelSplit.map(function(_, i) { return CHART_COLORS[i % CHART_COLORS.length]; });
+        var totalOut = mData.reduce(function(a, b) { return a + b; }, 0);
+        chartModels.data.labels = mLabels;
+        chartModels.data.datasets[0].data = mData;
+        chartModels.data.datasets[0].backgroundColor = mColors;
+        chartModels.update('none');
+        document.getElementById('doughnut-value').textContent = fmtTokens(totalOut);
+
+        // Chart E: Project Breakdown
+        chartProjects.data.labels = projectSplit.map(function(p) { return p.project; });
+        chartProjects.data.datasets[0].data = projectSplit.map(function(p) { return p.outputTokens; });
+        chartProjects.update('none');
+
+        // Tables
+        renderDailyTable(filteredDaily);
+        renderSessionTable(filteredSessions);
+        makeTableSortable(document.getElementById('table-daily'));
+        makeTableSortable(document.getElementById('table-sessions'));
+      }
+
+      // Initialize
+      renderPills();
+      bindDateFilters();
+      bindSessionToggle();
+      createCharts();
+    }
+  </script>
+</body>
+</html>

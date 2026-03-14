@@ -64,6 +64,7 @@ Produces a structured explanation: summary, key components, how it connects, pat
 | [`orient`](plugins/orient/skills/orient/README.md) ¹ | Topic-focused session orientation across graph, knowledge, journal, and research | `/orient auth` |
 | [`capture-session`](plugins/capture-session/skills/capture-session/README.md) ¹ | Capture session information into a staging file for later reflection | `/capture-session` |
 | [`harness-share`](plugins/harness-share/skills/harness-export/README.md) | Export your plugin setup to `harness.yaml`, compile to native configs for Claude Code, Cursor, and Copilot, and keep them in sync | `/harness-export` · `/harness-import` · `/harness-validate` · `/harness-compile` · `/harness-sync` |
+| [`usage-stats`](plugins/usage-stats/skills/usage-stats/README.md) | Interactive HTML dashboard for Claude Code usage — tokens, sessions, models, and activity patterns | `/usage-stats` |
 
 ¹ Personal-workflow plugins designed for projects using the [knowledge graph + journal pattern](docs/claude-md-conventions.md).
 
