@@ -1,9 +1,15 @@
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
-import type { Component, Category, ComponentType } from "@harness-kit/shared";
+import type {
+  Component,
+  Category,
+  ComponentType,
+  ComponentCategory,
+} from "@harness-kit/shared";
 
-type ComponentCategory = { component_id: string; category_id: string };
+type ComponentTag = { component_id: string; tag_id: string };
+type TagRow = { id: string; slug: string };
 type SortBy = "installs" | "recent";
 
 const COMPONENT_TYPES: ComponentType[] = [
@@ -56,15 +62,19 @@ function TypeBadge({ type }: { type: ComponentType }) {
 
 export default function BrowsePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedType, setSelectedType] = useState("");
+  const [selectedTag, setSelectedTag] = useState(() => searchParams.get("tag") ?? "");
   const [sortBy, setSortBy] = useState<SortBy>("installs");
 
   const [components, setComponents] = useState<Component[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [componentCategories, setComponentCategories] = useState<ComponentCategory[]>([]);
+  const [componentTags, setComponentTags] = useState<ComponentTag[]>([]);
+  const [tags, setTags] = useState<TagRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,16 +85,22 @@ export default function BrowsePage() {
     }
 
     Promise.all([
-      supabase.from("components").select("*"),
+      supabase.from("components").select("id, slug, name, type, description, trust_tier, version, author, license, install_count, updated_at"),
       supabase.from("categories").select("*").order("display_order"),
       supabase.from("component_categories").select("component_id, category_id"),
+      supabase.from("component_tags").select("component_id, tag_id"),
+      supabase.from("tags").select("id, slug"),
     ])
-      .then(([compRes, catRes, ccRes]) => {
+      .then(([compRes, catRes, ccRes, ctRes, tagRes]) => {
         if (compRes.error) throw compRes.error;
         if (catRes.error) throw catRes.error;
+        if (ccRes.error) throw ccRes.error;
+        if (ctRes.error) throw ctRes.error;
         setComponents((compRes.data ?? []) as Component[]);
         setCategories((catRes.data ?? []) as Category[]);
         setComponentCategories((ccRes.data ?? []) as ComponentCategory[]);
+        setComponentTags((ctRes.data ?? []) as ComponentTag[]);
+        setTags((tagRes.data ?? []) as TagRow[]);
       })
       .catch((e) => setError(String(e?.message ?? e)))
       .finally(() => setLoading(false));
@@ -114,6 +130,18 @@ export default function BrowsePage() {
       }
     }
 
+    if (selectedTag) {
+      const tagObj = tags.find((t) => t.slug === selectedTag);
+      if (tagObj) {
+        const ids = new Set(
+          componentTags
+            .filter((ct) => ct.tag_id === tagObj.id)
+            .map((ct) => ct.component_id),
+        );
+        results = results.filter((c) => ids.has(c.id));
+      }
+    }
+
     if (selectedType) {
       results = results.filter((c) => c.type === selectedType);
     }
@@ -128,7 +156,7 @@ export default function BrowsePage() {
     }
 
     return results;
-  }, [components, categories, componentCategories, query, selectedCategory, selectedType, sortBy]);
+  }, [components, categories, componentCategories, componentTags, tags, query, selectedCategory, selectedTag, selectedType, sortBy]);
 
   function toggleCategory(slug: string) {
     setSelectedCategory((prev) => (prev === slug ? "" : slug));
@@ -138,7 +166,6 @@ export default function BrowsePage() {
     setSelectedType((prev) => (prev === type ? "" : type));
   }
 
-  // ── Pill style helpers ──────────────────────────────────────
   function pillStyle(active: boolean) {
     return {
       fontSize: "11px",
@@ -168,7 +195,6 @@ export default function BrowsePage() {
     };
   }
 
-  // ── Not configured ──────────────────────────────────────────
   if (!supabase) {
     return (
       <div style={{ padding: "20px 24px" }}>
@@ -197,6 +223,42 @@ export default function BrowsePage() {
     <div style={{ padding: "20px 24px" }}>
       <PageHeader />
 
+      {/* Active tag filter banner */}
+      {selectedTag && (
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          marginBottom: "10px",
+          fontSize: "11px",
+          color: "var(--fg-muted)",
+        }}>
+          <span>Filtered by tag:</span>
+          <span style={{
+            padding: "1px 8px",
+            borderRadius: "10px",
+            border: "1px solid var(--accent)",
+            color: "var(--accent-text)",
+            fontSize: "10px",
+          }}>
+            {selectedTag}
+          </span>
+          <button
+            onClick={() => setSelectedTag("")}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontSize: "11px",
+              color: "var(--fg-subtle)",
+              padding: 0,
+            }}
+          >
+            ✕ clear
+          </button>
+        </div>
+      )}
+
       {/* Search */}
       <div style={{ marginBottom: "12px" }}>
         <input
@@ -219,16 +281,12 @@ export default function BrowsePage() {
 
       {/* Category pills */}
       {categories.length > 0 && (
-        <div style={{
-          display: "flex",
-          gap: "6px",
-          flexWrap: "wrap",
-          marginBottom: "8px",
-        }}>
+        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "8px" }}>
           {categories.map((cat) => (
             <button
               key={cat.slug}
               onClick={() => toggleCategory(cat.slug)}
+              aria-pressed={selectedCategory === cat.slug}
               style={pillStyle(selectedCategory === cat.slug)}
             >
               {cat.name}
@@ -238,16 +296,12 @@ export default function BrowsePage() {
       )}
 
       {/* Type pills */}
-      <div style={{
-        display: "flex",
-        gap: "6px",
-        flexWrap: "wrap",
-        marginBottom: "14px",
-      }}>
+      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "14px" }}>
         {COMPONENT_TYPES.map((t) => (
           <button
             key={t}
             onClick={() => toggleType(t)}
+            aria-pressed={selectedType === t}
             style={pillStyle(selectedType === t)}
           >
             {t}
@@ -275,12 +329,10 @@ export default function BrowsePage() {
         </div>
       </div>
 
-      {/* Loading */}
       {loading && (
         <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</p>
       )}
 
-      {/* Error */}
       {error && (
         <div style={{
           background: "var(--bg-surface)",
@@ -294,7 +346,6 @@ export default function BrowsePage() {
         </div>
       )}
 
-      {/* Empty state */}
       {!loading && !error && filtered.length === 0 && (
         <div style={{
           background: "var(--bg-surface)",
@@ -309,7 +360,6 @@ export default function BrowsePage() {
         </div>
       )}
 
-      {/* Plugin list */}
       {!loading && !error && filtered.length > 0 && (
         <div className="row-list">
           {filtered.map((plugin) => (
@@ -348,23 +398,11 @@ export default function BrowsePage() {
                   </p>
                 )}
               </div>
-              <div style={{
-                flexShrink: 0,
-                marginLeft: "12px",
-                textAlign: "right",
-              }}>
-                <div style={{
-                  fontSize: "11px",
-                  fontFamily: "ui-monospace, monospace",
-                  color: "var(--fg-subtle)",
-                }}>
+              <div style={{ flexShrink: 0, marginLeft: "12px", textAlign: "right" }}>
+                <div style={{ fontSize: "11px", fontFamily: "ui-monospace, monospace", color: "var(--fg-subtle)" }}>
                   v{plugin.version}
                 </div>
-                <div style={{
-                  fontSize: "10px",
-                  color: "var(--fg-subtle)",
-                  marginTop: "1px",
-                }}>
+                <div style={{ fontSize: "10px", color: "var(--fg-subtle)", marginTop: "1px" }}>
                   {plugin.install_count.toLocaleString()} installs
                 </div>
               </div>
