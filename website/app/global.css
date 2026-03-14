@@ -171,6 +171,14 @@ h1, h2, h3 {
   border-color: hsla(230, 15%, 20%, 0.2);
 }
 
+/* ── Inline code — subtle background, no border ── */
+:not(pre) > code {
+  border: none !important;
+  background: hsla(230, 10%, 50%, 0.15) !important;
+  padding: 0.15em 0.4em !important;
+  border-radius: 0.3rem !important;
+}
+
 /* ── Docs headings — display font ── */
 .dark [data-fumadocs-body] h1,
 .dark [data-fumadocs-body] h2,
