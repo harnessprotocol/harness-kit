@@ -21,13 +21,13 @@ export default function ClaudeMdPage() {
   }, [selectedPath]);
 
   return (
-    <div className="p-6 flex flex-col h-full">
-      <div className="mb-4 flex items-center justify-between">
+    <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", height: "100%" }}>
+      <div style={{ marginBottom: "16px", display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
         <div>
-          <h1 className="text-xl font-semibold tracking-tight" style={{ color: "var(--fg-base)" }}>
+          <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
             CLAUDE.md
           </h1>
-          <p className="text-sm mt-1" style={{ color: "var(--fg-muted)" }}>
+          <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>
             Your Claude Code instruction files.
           </p>
         </div>
@@ -35,11 +35,15 @@ export default function ClaudeMdPage() {
         <select
           value={selectedPath}
           onChange={(e) => setSelectedPath(e.target.value)}
-          className="text-sm rounded px-2 py-1"
           style={{
+            fontSize: "12px",
+            borderRadius: "6px",
+            padding: "4px 8px",
             background: "var(--bg-surface)",
-            border: "1px solid var(--border-base)",
+            border: "1px solid var(--border-strong)",
             color: "var(--fg-base)",
+            outline: "none",
+            cursor: "pointer",
           }}
         >
           {CLAUDE_MD_PATHS.map((p) => (
@@ -48,31 +52,52 @@ export default function ClaudeMdPage() {
         </select>
       </div>
 
-      {loading && (
-        <p className="text-sm" style={{ color: "var(--fg-subtle)" }}>Loading…</p>
-      )}
+      {loading && <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</p>}
 
       {error && (
-        <div
-          className="rounded-lg p-4 text-sm"
-          style={{ background: "var(--bg-surface)", border: "1px solid var(--border-base)", color: "var(--danger)" }}
-        >
+        <div style={{
+          background: "var(--bg-surface)",
+          border: "1px solid var(--border-base)",
+          borderRadius: "8px",
+          padding: "10px 14px",
+          fontSize: "13px",
+          color: "var(--danger)",
+        }}>
           {error}
         </div>
       )}
 
       {!loading && !error && content !== null && (
-        <div
-          className="flex-1 rounded-lg p-4 overflow-y-auto"
-          style={{
-            background: "var(--bg-surface)",
-            border: "1px solid var(--border-base)",
-          }}
-        >
-          <pre
-            className="text-xs whitespace-pre-wrap"
-            style={{ fontFamily: "monospace", color: "var(--fg-base)", margin: 0 }}
-          >
+        <div style={{
+          flex: 1,
+          borderRadius: "8px",
+          border: "1px solid var(--border-base)",
+          background: "var(--bg-surface)",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+        }}>
+          <div style={{
+            padding: "8px 14px",
+            borderBottom: "1px solid var(--separator)",
+            background: "var(--bg-elevated)",
+          }}>
+            <span style={{ fontSize: "11px", fontFamily: "ui-monospace, monospace", color: "var(--fg-subtle)" }}>
+              {selectedPath}
+            </span>
+          </div>
+          <pre style={{
+            flex: 1,
+            padding: "14px",
+            margin: 0,
+            fontFamily: "ui-monospace, monospace",
+            fontSize: "12px",
+            lineHeight: "1.6",
+            color: "var(--fg-base)",
+            overflowY: "auto",
+            whiteSpace: "pre-wrap",
+            wordBreak: "break-word",
+          }}>
             {content}
           </pre>
         </div>

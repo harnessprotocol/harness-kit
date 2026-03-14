@@ -17,58 +17,71 @@ export default function HooksPage() {
   const hookEntries = hooks ? Object.entries(hooks) : [];
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold tracking-tight" style={{ color: "var(--fg-base)" }}>
+    <div style={{ padding: "20px 24px" }}>
+      <div style={{ marginBottom: "16px" }}>
+        <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
           Hooks
         </h1>
-        <p className="text-sm mt-1" style={{ color: "var(--fg-muted)" }}>
+        <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>
           Claude Code hooks configured in your settings.
         </p>
       </div>
 
       {loading && (
-        <p className="text-sm" style={{ color: "var(--fg-subtle)" }}>Loading hooks…</p>
+        <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</p>
       )}
 
       {error && (
-        <div
-          className="rounded-lg p-4 text-sm"
-          style={{ background: "var(--bg-surface)", border: "1px solid var(--border-base)", color: "var(--danger)" }}
-        >
+        <div style={{
+          background: "var(--bg-surface)",
+          border: "1px solid var(--border-base)",
+          borderRadius: "8px",
+          padding: "10px 14px",
+          fontSize: "13px",
+          color: "var(--danger)",
+        }}>
           {error}
         </div>
       )}
 
       {!loading && !error && hookEntries.length === 0 && (
-        <div
-          className="rounded-lg p-8 text-center"
-          style={{ background: "var(--bg-surface)", border: "1px dashed var(--border-base)" }}
-        >
-          <p className="text-sm" style={{ color: "var(--fg-muted)" }}>No hooks configured.</p>
+        <div style={{
+          background: "var(--bg-surface)",
+          border: "1px solid var(--border-base)",
+          borderRadius: "8px",
+          padding: "32px 16px",
+          textAlign: "center",
+        }}>
+          <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0 }}>No hooks configured.</p>
         </div>
       )}
 
       {!loading && !error && hookEntries.length > 0 && (
-        <div className="flex flex-col gap-3">
+        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
           {hookEntries.map(([event, commands]) => (
-            <div
-              key={event}
-              className="rounded-lg p-4"
-              style={{ background: "var(--bg-surface)", border: "1px solid var(--border-base)" }}
-            >
-              <div className="font-medium text-sm mb-2" style={{ color: "var(--fg-base)" }}>
+            <div key={event}>
+              <div style={{
+                fontSize: "10px",
+                fontWeight: 600,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                color: "var(--fg-subtle)",
+                marginBottom: "4px",
+                padding: "0 2px",
+              }}>
                 {event}
               </div>
-              <div className="flex flex-col gap-1">
+              <div className="row-list">
                 {(commands as HookCommand[]).map((cmd, i) => (
-                  <code
-                    key={i}
-                    className="text-xs px-2 py-1 rounded block"
-                    style={{ background: "var(--bg-elevated)", color: "var(--fg-muted)", fontFamily: "monospace" }}
-                  >
-                    {cmd.command}
-                  </code>
+                  <div key={i} className="row-list-item">
+                    <code style={{
+                      fontFamily: "ui-monospace, monospace",
+                      fontSize: "12px",
+                      color: "var(--fg-base)",
+                    }}>
+                      {cmd.command}
+                    </code>
+                  </div>
                 ))}
               </div>
             </div>
