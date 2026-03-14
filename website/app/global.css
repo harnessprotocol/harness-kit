@@ -187,6 +187,20 @@ pre button:hover {
   opacity: 1 !important;
 }
 
+/* ── Link polish — underline + transitions ── */
+[data-fumadocs-body] a:not([data-card]) {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  text-underline-offset: 3px;
+  text-decoration-color: hsla(256, 60%, 60%, 0.4);
+  transition: text-decoration-color 0.15s ease, color 0.15s ease;
+}
+[data-fumadocs-body] a:not([data-card]):hover {
+  text-decoration-style: solid;
+  text-decoration-color: hsl(256, 80%, 65%);
+  color: hsl(256, 85%, 78%);
+}
+
 /* ── Blockquotes as callouts ── */
 .dark blockquote {
   border-left: 3px solid hsl(256, 85%, 72%);
