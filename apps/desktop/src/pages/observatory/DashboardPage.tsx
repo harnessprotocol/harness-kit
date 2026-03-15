@@ -115,13 +115,16 @@ function Pill({ label, active, onClick }: { label: string; active: boolean; onCl
 // ── Global date control ──────────────────────────────────────
 
 function GlobalDateControl({
-  range, onChange, hasOverrides, onResetOverrides,
+  range, onChange, hasOverrides, onResetOverrides, idPrefix,
 }: {
   range: DateRange;
   onChange: (r: DateRange) => void;
   hasOverrides: boolean;
   onResetOverrides: () => void;
+  idPrefix?: string;
 }) {
+  const startId = idPrefix ? `${idPrefix}-start` : "range-start";
+  const endId = idPrefix ? `${idPrefix}-end` : "range-end";
   const presets: Preset[] = ["1d", "7d", "30d", "1y", "all"];
 
   function selectPreset(p: Preset) {
@@ -144,9 +147,9 @@ function GlobalDateControl({
         />
       ))}
       <div style={{ display: "flex", alignItems: "center", gap: "4px", marginLeft: "4px" }}>
-        <label htmlFor="range-start" style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>Start date</label>
+        <label htmlFor={startId} style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>Start date</label>
         <input
-          id="range-start"
+          id={startId}
           type="date"
           value={range.start}
           onChange={(e) => handleCustomDate("start", e.target.value)}
@@ -159,9 +162,9 @@ function GlobalDateControl({
             color: "var(--fg-base)",
           }}
         />
-        <label htmlFor="range-end" style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>End date</label>
+        <label htmlFor={endId} style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>End date</label>
         <input
-          id="range-end"
+          id={endId}
           type="date"
           value={range.end}
           onChange={(e) => handleCustomDate("end", e.target.value)}
@@ -246,6 +249,7 @@ function ChartCard({
             onChange={(r) => { onOverride(r); setShowPicker(false); }}
             hasOverrides={false}
             onResetOverrides={() => {}}
+            idPrefix={chartId}
           />
         </div>
       )}
@@ -322,13 +326,16 @@ export default function DashboardPage() {
   const cacheHitRate = useMemo(() => {
     if (!data?.modelUsage) return null;
     let totalCacheRead = 0;
+    let totalCacheCreate = 0;
     let totalInput = 0;
     for (const usage of Object.values(data.modelUsage)) {
       totalCacheRead += usage.cacheReadInputTokens ?? 0;
+      totalCacheCreate += usage.cacheCreationInputTokens ?? 0;
       totalInput += usage.inputTokens ?? 0;
     }
-    if (totalInput === 0) return null;
-    return Math.round((totalCacheRead / totalInput) * 100);
+    const total = totalInput + totalCacheRead + totalCacheCreate;
+    if (total === 0) return null;
+    return Math.round((totalCacheRead / total) * 100);
   }, [data]);
 
   const activityChartData = useMemo(() =>
