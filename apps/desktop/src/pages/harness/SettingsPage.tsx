@@ -1,14 +1,34 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { listClaudeDir } from "../../lib/tauri";
 
+const TEXT_EXTENSIONS = new Set([".md", ".json", ".yaml", ".yml", ".sh", ".txt", ".toml", ".mjs"]);
+
+function extOf(name: string): string {
+  const idx = name.lastIndexOf(".");
+  return idx === -1 ? "" : name.slice(idx);
+}
+
+const EXT_LABEL: Record<string, string> = {
+  ".md": "Markdown",
+  ".json": "JSON",
+  ".yaml": "YAML",
+  ".yml": "YAML",
+  ".sh": "Shell",
+  ".txt": "Text",
+  ".toml": "TOML",
+  ".mjs": "JS",
+};
+
 export default function SettingsPage() {
-  const [entries, setEntries] = useState<string[]>([]);
+  const navigate = useNavigate();
+  const [files, setFiles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     listClaudeDir()
-      .then(setEntries)
+      .then((entries) => setFiles(entries.filter((e) => TEXT_EXTENSIONS.has(extOf(e)))))
       .catch((e) => setError(String(e)))
       .finally(() => setLoading(false));
   }, []);
@@ -17,11 +37,11 @@ export default function SettingsPage() {
     <div style={{ padding: "20px 24px" }}>
       <div style={{ marginBottom: "16px" }}>
         <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
-          Settings
+          Config Files
         </h1>
         <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>
-          Contents of{" "}
-          <code style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>~/.claude/</code>.
+          Text files in{" "}
+          <code style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>~/.claude/</code>
         </p>
       </div>
 
@@ -42,17 +62,47 @@ export default function SettingsPage() {
 
       {!loading && !error && (
         <div className="row-list">
-          {entries.map((entry) => (
-            <div key={entry} className="row-list-item">
-              <span style={{
-                fontFamily: "ui-monospace, monospace",
-                fontSize: "12px",
-                color: "var(--fg-muted)",
-              }}>
-                {entry}
-              </span>
-            </div>
-          ))}
+          {files.map((name) => {
+            const ext = extOf(name);
+            const label = EXT_LABEL[ext] ?? ext.slice(1).toUpperCase();
+            return (
+              <button
+                key={name}
+                onClick={() => navigate(`/harness/settings/${encodeURIComponent(name)}`)}
+                className="row-list-item"
+                style={{
+                  width: "100%",
+                  background: "none",
+                  border: "none",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  justifyContent: "space-between",
+                }}
+              >
+                <span style={{
+                  fontFamily: "ui-monospace, monospace",
+                  fontSize: "13px",
+                  fontWeight: 500,
+                  color: "var(--fg-base)",
+                }}>
+                  {name}
+                </span>
+                <span style={{
+                  fontSize: "10px",
+                  fontWeight: 500,
+                  padding: "1px 6px",
+                  borderRadius: "4px",
+                  background: "var(--bg-base)",
+                  color: "var(--fg-subtle)",
+                  border: "1px solid var(--border-base)",
+                  flexShrink: 0,
+                  marginLeft: "12px",
+                }}>
+                  {label}
+                </span>
+              </button>
+            );
+          })}
         </div>
       )}
     </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { readClaudeMd } from "../../lib/tauri";
+import MarkdownPanel from "../../components/MarkdownPanel";
 
 const CLAUDE_MD_PATHS = [
   { label: "Global", path: "~/.claude/CLAUDE.md" },
@@ -22,7 +23,7 @@ export default function ClaudeMdPage() {
 
   return (
     <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ marginBottom: "16px", display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
+      <div style={{ marginBottom: "16px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", flexShrink: 0 }}>
         <div>
           <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
             CLAUDE.md
@@ -68,39 +69,7 @@ export default function ClaudeMdPage() {
       )}
 
       {!loading && !error && content !== null && (
-        <div style={{
-          flex: 1,
-          borderRadius: "8px",
-          border: "1px solid var(--border-base)",
-          background: "var(--bg-surface)",
-          overflow: "hidden",
-          display: "flex",
-          flexDirection: "column",
-        }}>
-          <div style={{
-            padding: "8px 14px",
-            borderBottom: "1px solid var(--separator)",
-            background: "var(--bg-elevated)",
-          }}>
-            <span style={{ fontSize: "11px", fontFamily: "ui-monospace, monospace", color: "var(--fg-subtle)" }}>
-              {selectedPath}
-            </span>
-          </div>
-          <pre style={{
-            flex: 1,
-            padding: "14px",
-            margin: 0,
-            fontFamily: "ui-monospace, monospace",
-            fontSize: "12px",
-            lineHeight: "1.6",
-            color: "var(--fg-base)",
-            overflowY: "auto",
-            whiteSpace: "pre-wrap",
-            wordBreak: "break-word",
-          }}>
-            {content}
-          </pre>
-        </div>
+        <MarkdownPanel content={content} fill defaultView="preview" />
       )}
     </div>
   );

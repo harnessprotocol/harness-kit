@@ -3,6 +3,7 @@ import AppLayout from "./layouts/AppLayout";
 import PluginsPage from "./pages/harness/PluginsPage";
 import HooksPage from "./pages/harness/HooksPage";
 import SettingsPage from "./pages/harness/SettingsPage";
+import FileViewerPage from "./pages/harness/FileViewerPage";
 import ClaudeMdPage from "./pages/harness/ClaudeMdPage";
 import ComingSoonPage from "./pages/ComingSoonPage";
 import BrowsePage from "./pages/marketplace/BrowsePage";
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="harness/hooks" element={<HooksPage />} />
           <Route path="harness/claude-md" element={<ClaudeMdPage />} />
           <Route path="harness/settings" element={<SettingsPage />} />
+          <Route path="harness/settings/:filename" element={<FileViewerPage />} />
 
           {/* Marketplace */}
           <Route path="marketplace" element={<BrowsePage />} />
