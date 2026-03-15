@@ -14,6 +14,7 @@ pub fn run() {
             commands::observatory::list_sessions_summary,
             commands::observatory::read_session_facet,
             commands::observatory::list_active_sessions,
+            commands::observatory::read_live_activity,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application")

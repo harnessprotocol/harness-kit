@@ -230,3 +230,77 @@ pub fn list_active_sessions() -> Result<Vec<ActiveSession>, String> {
 
     Ok(result)
 }
+
+/// Daily activity derived from history.jsonl — always fresh (not stale like stats-cache)
+#[derive(Debug, Serialize, Clone)]
+pub struct LiveDailyActivity {
+    pub date: String,
+    pub message_count: u64,
+    pub session_count: u64,
+}
+
+#[tauri::command]
+pub fn read_live_activity() -> Result<Vec<LiveDailyActivity>, String> {
+    let path = claude_dir()
+        .ok_or_else(|| "Could not resolve home directory".to_string())?
+        .join("history.jsonl");
+
+    if !path.exists() {
+        return Ok(Vec::new());
+    }
+
+    let file = std::fs::File::open(&path)
+        .map_err(|e| format!("Failed to open history.jsonl: {}", e))?;
+
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct HistoryEntry {
+        timestamp: Option<i64>,
+        session_id: Option<String>,
+    }
+
+    // date_str -> (message_count, HashSet<session_id>)
+    let mut buckets: HashMap<String, (u64, std::collections::HashSet<String>)> = HashMap::new();
+
+    for line in std::io::BufReader::new(file).lines() {
+        let line = match line {
+            Ok(l) if !l.trim().is_empty() => l,
+            _ => continue,
+        };
+        let entry: HistoryEntry = match serde_json::from_str(&line) {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+        let ts_ms = match entry.timestamp {
+            Some(t) if t > 0 => t,
+            _ => continue,
+        };
+        // Convert ms timestamp to "YYYY-MM-DD"
+        let secs = ts_ms / 1000;
+        let date = chrono::DateTime::from_timestamp(secs, 0)
+            .map(|dt: chrono::DateTime<chrono::Utc>| dt.format("%Y-%m-%d").to_string())
+            .unwrap_or_default();
+        if date.is_empty() {
+            continue;
+        }
+        let bucket = buckets.entry(date).or_insert_with(|| (0, std::collections::HashSet::new()));
+        bucket.0 += 1;
+        if let Some(sid) = entry.session_id {
+            if !sid.is_empty() {
+                bucket.1.insert(sid);
+            }
+        }
+    }
+
+    let mut result: Vec<LiveDailyActivity> = buckets
+        .into_iter()
+        .map(|(date, (msg_count, sessions))| LiveDailyActivity {
+            date,
+            message_count: msg_count,
+            session_count: sessions.len() as u64,
+        })
+        .collect();
+
+    result.sort_by(|a, b| a.date.cmp(&b.date));
+    Ok(result)
+}
