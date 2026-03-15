@@ -313,17 +313,17 @@ export default function DashboardPage() {
     setAccentColor(getAccentColor());
   }, []);
 
-  const filteredLiveActivity = useMemo(() =>
+  const filteredMessagesActivity = useMemo(() =>
     filterByRange(liveActivity, rangeForChart("messages")),
     [liveActivity, globalRange, chartOverrides]
   );
 
   const activityChartData = useMemo(() =>
-    filteredLiveActivity.map((d) => ({
+    filteredMessagesActivity.map((d) => ({
       date: formatDate(d.date),
       messages: d.messageCount,
     })),
-    [filteredLiveActivity]
+    [filteredMessagesActivity]
   );
 
   const sessionsChartData = useMemo(() => {
@@ -469,7 +469,7 @@ export default function DashboardPage() {
       />
 
       {/* Stats bar */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
+      <div style={{ display: "flex", gap: "10px", marginBottom: "16px", flexWrap: "wrap" }}>
         <StatCard label="Total Sessions" value={formatNumber(data?.totalSessions ?? 0)} />
         <StatCard label="Total Messages" value={formatNumber(data?.totalMessages ?? 0)} />
         <StatCard label="Tool Calls" value={formatNumber(totalToolCalls)} />
