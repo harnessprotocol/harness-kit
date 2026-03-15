@@ -237,3 +237,9 @@ export interface ActiveSession {
   cwd: string;
   startedAt: number;
 }
+
+export interface LiveDailyActivity {
+  date: string;
+  messageCount: number;
+  sessionCount: number;
+}

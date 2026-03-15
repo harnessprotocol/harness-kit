@@ -27,4 +27,5 @@ export type {
   SessionSummary,
   SessionFacet,
   ActiveSession,
+  LiveDailyActivity,
 } from "./types.js";

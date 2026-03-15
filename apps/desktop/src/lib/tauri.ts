@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { InstalledPlugin, KnownMarketplace, HooksConfig, StatsCache, SessionSummary, SessionFacet, ActiveSession } from "@harness-kit/shared";
+import type { InstalledPlugin, KnownMarketplace, HooksConfig, StatsCache, SessionSummary, SessionFacet, ActiveSession, LiveDailyActivity } from "@harness-kit/shared";
 
 // ── Plugin commands ──────────────────────────────────────────
 
@@ -45,4 +45,8 @@ export async function readSessionFacet(sessionId: string): Promise<SessionFacet 
 
 export async function listActiveSessions(): Promise<ActiveSession[]> {
   return invoke<ActiveSession[]>("list_active_sessions");
+}
+
+export async function readLiveActivity(): Promise<LiveDailyActivity[]> {
+  return invoke<LiveDailyActivity[]>("read_live_activity");
 }
