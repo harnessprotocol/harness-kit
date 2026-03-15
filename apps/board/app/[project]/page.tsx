@@ -51,7 +51,7 @@ export default function BoardPage({ params }: { params: Promise<{ project: strin
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [formOpen, setFormOpen] = useState(false);
-  const [formDefaultStatus, setFormDefaultStatus] = useState<string>('backlog');
+  const [formDefaultStatus, setFormDefaultStatus] = useState<TaskStatus>('backlog');
   const [formDefaultEpicId, setFormDefaultEpicId] = useState<number | undefined>();
   const [viewMode, setViewMode] = useState<ViewMode>('columns');
 
@@ -106,7 +106,7 @@ export default function BoardPage({ params }: { params: Promise<{ project: strin
     refetch();
   }
 
-  const openTaskForm = useCallback((status: string, epicId?: number) => {
+  const openTaskForm = useCallback((status: TaskStatus, epicId?: number) => {
     setFormDefaultStatus(status);
     setFormDefaultEpicId(epicId ?? project?.epics[0]?.id);
     setFormOpen(true);
@@ -237,7 +237,7 @@ export default function BoardPage({ params }: { params: Promise<{ project: strin
           <SwimlaneView
             epics={project.epics}
             onTaskClick={task => setSelectedTask(task)}
-            onAddTask={(status, epicId) => openTaskForm(status, epicId)}
+            onAddTask={(status, epicId) => openTaskForm(status as TaskStatus, epicId)}
             repoUrl={project.repo_url}
           />
         )}

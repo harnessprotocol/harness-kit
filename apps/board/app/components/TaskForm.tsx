@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
-import type { Epic } from '../lib/api';
+import type { Epic, TaskStatus } from '../lib/api';
 import { api } from '../lib/api';
 
 interface Props {
@@ -10,7 +10,7 @@ interface Props {
   projectSlug: string;
   epics: Epic[];
   defaultEpicId?: number;
-  defaultStatus?: string;
+  defaultStatus?: TaskStatus;
   onClose: () => void;
   onCreated: () => void;
 }
@@ -55,7 +55,7 @@ export function TaskForm({ open, projectSlug, epics, defaultEpicId, defaultStatu
       });
       // If a specific status was requested (e.g. created from In Progress column), move it
       if (defaultStatus && defaultStatus !== 'backlog') {
-        await api.tasks.update(projectSlug, task.id, { status: defaultStatus as never });
+        await api.tasks.update(projectSlug, task.id, { status: defaultStatus });
       }
       onCreated();
       onClose();

@@ -87,12 +87,12 @@ export function createProject(opts: { name: string; description?: string; color?
 
 export function updateProject(
   slug: string,
-  updates: Partial<Pick<Project, 'name' | 'description' | 'color' | 'repo_url'>>,
+  updates: Partial<Pick<Project, 'description' | 'color' | 'repo_url'>>,
 ): Project {
   const project = readProject(slug);
   if (!project) throw new Error(`Project "${slug}" not found`);
-  // Strip undefined values so we don't wipe existing fields
-  const cleanUpdates = Object.fromEntries(Object.entries(updates).filter(([, v]) => v !== undefined));
+  // Strip undefined and empty-string values
+  const cleanUpdates = Object.fromEntries(Object.entries(updates).filter(([, v]) => v !== undefined && v !== ''));
   Object.assign(project, cleanUpdates);
   project.updated_at = now();
   writeProject(project);

@@ -33,13 +33,12 @@ export function createRouter(): Router {
 
   router.patch('/projects/:slug', (req, res) => {
     try {
-      const { name, description, color, repo_url } = req.body as {
-        name?: string;
+      const { description, color, repo_url } = req.body as {
         description?: string;
         color?: string;
         repo_url?: string;
       };
-      const project = store.updateProject(req.params.slug, { name, description, color, repo_url });
+      const project = store.updateProject(req.params.slug, { description, color, repo_url });
       res.json(project);
     } catch (err) {
       res.status(400).json({ error: String(err) });

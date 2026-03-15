@@ -19,7 +19,7 @@ export const api = {
     get: (slug: string) => apiFetch<Project>(`/projects/${slug}`),
     create: (body: { name: string; description?: string; color?: string; repo_url?: string }) =>
       apiFetch<Project>('/projects', { method: 'POST', body: JSON.stringify(body) }),
-    update: (slug: string, body: Partial<Pick<Project, 'name' | 'description' | 'color' | 'repo_url'>>) =>
+    update: (slug: string, body: Partial<Pick<Project, 'description' | 'color' | 'repo_url'>>) =>
       apiFetch<Project>(`/projects/${slug}`, { method: 'PATCH', body: JSON.stringify(body) }),
   },
   epics: {

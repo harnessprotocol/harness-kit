@@ -33,7 +33,6 @@ export const projectTools = [
       type: 'object' as const,
       properties: {
         slug: { type: 'string', description: 'Project slug' },
-        name: { type: 'string', description: 'New project name' },
         description: { type: 'string', description: 'New project description' },
         color: { type: 'string', description: 'New hex color (e.g. #7c3aed)' },
         repo_url: { type: 'string', description: 'GitHub repository URL' },
@@ -42,12 +41,11 @@ export const projectTools = [
     },
     schema: z.object({
       slug: z.string(),
-      name: z.string().optional(),
       description: z.string().optional(),
       color: z.string().optional(),
       repo_url: z.string().optional(),
     }),
-    handler: async (args: { slug: string; name?: string; description?: string; color?: string; repo_url?: string }) => {
+    handler: async (args: { slug: string; description?: string; color?: string; repo_url?: string }) => {
       const { slug, ...updates } = args;
       const project = store.updateProject(slug, updates);
       return { content: [{ type: 'text' as const, text: JSON.stringify(project, null, 2) }] };
