@@ -10,7 +10,48 @@ import { readStatsCache } from "../../lib/tauri";
 import { formatNumber, formatDate, formatHour, shortModelName, daysBetween } from "../../lib/format";
 import type { StatsCache, DailyActivity } from "@harness-kit/shared";
 
-type TimeRange = "30d" | "90d" | "all";
+// ── Date range types ─────────────────────────────────────────
+
+type Preset = "1d" | "7d" | "30d" | "1y" | "all";
+
+interface DateRange {
+  preset: Preset | "custom";
+  start: string; // "YYYY-MM-DD"
+  end: string;   // "YYYY-MM-DD"
+}
+
+function presetToDates(preset: Preset): { start: string; end: string } {
+  const now = new Date();
+  const today = now.toISOString().slice(0, 10);
+  const daysAgo = (n: number) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() - n);
+    return d.toISOString().slice(0, 10);
+  };
+  if (preset === "1d") return { start: daysAgo(1), end: today };
+  if (preset === "7d") return { start: daysAgo(7), end: today };
+  if (preset === "30d") return { start: daysAgo(30), end: today };
+  if (preset === "1y") return { start: daysAgo(365), end: today };
+  return { start: "", end: "" }; // "all"
+}
+
+function defaultRange(): DateRange {
+  const { start, end } = presetToDates("30d");
+  return { preset: "30d", start, end };
+}
+
+// ── Generic date filter ──────────────────────────────────────
+
+function filterByRange<T extends { date: string }>(items: T[], range: DateRange): T[] {
+  if (range.preset === "all" || (!range.start && !range.end)) return items;
+  return items.filter((d) => {
+    if (range.start && d.date < range.start) return false;
+    if (range.end && d.date > range.end) return false;
+    return true;
+  });
+}
+
+// ── Hooks ────────────────────────────────────────────────────
 
 function useReducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -71,9 +112,105 @@ function Pill({ label, active, onClick }: { label: string; active: boolean; onCl
   );
 }
 
+// ── Global date control ──────────────────────────────────────
+
+function GlobalDateControl({
+  range, onChange, hasOverrides, onResetOverrides,
+}: {
+  range: DateRange;
+  onChange: (r: DateRange) => void;
+  hasOverrides: boolean;
+  onResetOverrides: () => void;
+}) {
+  const presets: Preset[] = ["1d", "7d", "30d", "1y", "all"];
+
+  function selectPreset(p: Preset) {
+    const dates = presetToDates(p);
+    onChange({ preset: p, ...dates });
+  }
+
+  function handleCustomDate(field: "start" | "end", value: string) {
+    onChange({ preset: "custom", ...range, [field]: value });
+  }
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
+      {presets.map((p) => (
+        <Pill
+          key={p}
+          label={p === "all" ? "All" : p}
+          active={range.preset === p}
+          onClick={() => selectPreset(p)}
+        />
+      ))}
+      <div style={{ display: "flex", alignItems: "center", gap: "4px", marginLeft: "4px" }}>
+        <label htmlFor="range-start" style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>Start date</label>
+        <input
+          id="range-start"
+          type="date"
+          value={range.start}
+          onChange={(e) => handleCustomDate("start", e.target.value)}
+          style={{
+            fontSize: "11px",
+            padding: "2px 6px",
+            borderRadius: "5px",
+            border: "1px solid var(--border-base)",
+            background: "var(--bg-surface)",
+            color: "var(--fg-base)",
+          }}
+        />
+        <label htmlFor="range-end" style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>End date</label>
+        <input
+          id="range-end"
+          type="date"
+          value={range.end}
+          onChange={(e) => handleCustomDate("end", e.target.value)}
+          style={{
+            fontSize: "11px",
+            padding: "2px 6px",
+            borderRadius: "5px",
+            border: "1px solid var(--border-base)",
+            background: "var(--bg-surface)",
+            color: "var(--fg-base)",
+          }}
+        />
+      </div>
+      {hasOverrides && (
+        <button
+          onClick={onResetOverrides}
+          style={{
+            fontSize: "10px",
+            padding: "2px 8px",
+            borderRadius: "5px",
+            border: "1px solid var(--border-base)",
+            background: "var(--bg-base)",
+            color: "var(--fg-muted)",
+            cursor: "pointer",
+            marginLeft: "4px",
+          }}
+        >
+          Reset overrides
+        </button>
+      )}
+    </div>
+  );
+}
+
 // ── Chart card wrapper ────────────────────────────────────────
 
-function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
+function ChartCard({
+  title, children, chartId, override, onOverride, onClearOverride, globalRange,
+}: {
+  title: string;
+  children: React.ReactNode;
+  chartId?: string;
+  override?: DateRange | null;
+  onOverride?: (r: DateRange) => void;
+  onClearOverride?: () => void;
+  globalRange?: DateRange;
+}) {
+  const [showPicker, setShowPicker] = useState(false);
+
   return (
     <div style={{
       background: "var(--bg-surface)",
@@ -81,9 +218,37 @@ function ChartCard({ title, children }: { title: string; children: React.ReactNo
       borderRadius: "8px",
       padding: "14px 16px",
     }}>
-      <p style={{ fontSize: "11px", fontWeight: 600, color: "var(--fg-muted)", margin: "0 0 10px", textTransform: "uppercase", letterSpacing: "0.05em" }}>
-        {title}
-      </p>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+        <p style={{ fontSize: "11px", fontWeight: 600, color: "var(--fg-muted)", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+          {title}
+        </p>
+        {chartId && (
+          <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            {override && (
+              <button onClick={onClearOverride} style={{ fontSize: "9px", color: "var(--accent-text)", border: "none", background: "none", cursor: "pointer", padding: "1px 4px" }}>
+                ×reset
+              </button>
+            )}
+            <button
+              onClick={() => setShowPicker((s) => !s)}
+              style={{ fontSize: "9px", color: override ? "var(--accent-text)" : "var(--fg-subtle)", border: "none", background: "none", cursor: "pointer", padding: "1px 4px" }}
+              title="Override date range for this chart"
+            >
+              {override ? `${override.preset !== "custom" ? override.preset : `${override.start}–${override.end}`}` : "range"}
+            </button>
+          </div>
+        )}
+      </div>
+      {showPicker && chartId && globalRange && onOverride && (
+        <div style={{ marginBottom: "8px" }}>
+          <GlobalDateControl
+            range={override ?? globalRange}
+            onChange={(r) => { onOverride(r); setShowPicker(false); }}
+            hasOverrides={false}
+            onResetOverrides={() => {}}
+          />
+        </div>
+      )}
       {children}
     </div>
   );
@@ -108,9 +273,24 @@ export default function DashboardPage() {
   const [data, setData] = useState<StatsCache | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [range, setRange] = useState<TimeRange>("30d");
+  const [globalRange, setGlobalRange] = useState<DateRange>(defaultRange);
+  const [chartOverrides, setChartOverrides] = useState<Record<string, DateRange | null>>({});
   const [accentColor, setAccentColor] = useState(getAccentColor);
   const reducedMotion = useReducedMotion();
+
+  function rangeForChart(chartId: string): DateRange {
+    return chartOverrides[chartId] ?? globalRange;
+  }
+
+  function setChartOverride(chartId: string, range: DateRange) {
+    setChartOverrides((prev) => ({ ...prev, [chartId]: range }));
+  }
+
+  function clearOverride(chartId: string) {
+    setChartOverrides((prev) => ({ ...prev, [chartId]: null }));
+  }
+
+  const hasOverrides = Object.values(chartOverrides).some(Boolean);
 
   useEffect(() => {
     readStatsCache()
@@ -129,14 +309,27 @@ export default function DashboardPage() {
     return daysBetween(data.lastComputedDate) > 3;
   }, [data]);
 
-  const filteredActivity = useMemo((): DailyActivity[] => {
-    if (!data?.dailyActivity) return [];
-    const all = data.dailyActivity;
-    if (range === "all") return all;
-    const cutoff = range === "30d" ? 30 : 90;
-    const threshold = Date.now() - cutoff * 24 * 60 * 60 * 1000;
-    return all.filter((d) => new Date(d.date + "T00:00:00").getTime() >= threshold);
-  }, [data, range]);
+  const filteredActivity = useMemo(() =>
+    filterByRange(data?.dailyActivity ?? [], globalRange),
+    [data, globalRange]
+  );
+
+  const totalToolCalls = useMemo(() => {
+    if (!data?.dailyActivity) return 0;
+    return data.dailyActivity.reduce((sum, d) => sum + (d.toolCallCount ?? 0), 0);
+  }, [data]);
+
+  const cacheHitRate = useMemo(() => {
+    if (!data?.modelUsage) return null;
+    let totalCacheRead = 0;
+    let totalInput = 0;
+    for (const usage of Object.values(data.modelUsage)) {
+      totalCacheRead += usage.cacheReadInputTokens ?? 0;
+      totalInput += usage.inputTokens ?? 0;
+    }
+    if (totalInput === 0) return null;
+    return Math.round((totalCacheRead / totalInput) * 100);
+  }, [data]);
 
   const activityChartData = useMemo(() =>
     filteredActivity.map((d) => ({
@@ -217,37 +410,47 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      {/* Stale warning */}
-      {isStale && data?.lastComputedDate && (
+      {/* Last updated / stale indicator */}
+      {data?.lastComputedDate && (
         <div style={{
-          background: "rgba(217, 119, 6, 0.1)",
-          border: "1px solid rgba(217, 119, 6, 0.3)",
-          borderRadius: "6px",
-          padding: "7px 12px",
           fontSize: "11px",
-          color: "var(--warning)",
+          color: "var(--fg-subtle)",
           marginBottom: "16px",
         }}>
-          Stats cache last updated {daysBetween(data.lastComputedDate)} days ago — data may be incomplete.
+          Last updated {isStale ? `${daysBetween(data.lastComputedDate)} days ago` : formatDate(data.lastComputedDate)}
         </div>
       )}
+
+      {/* Global date range control */}
+      <GlobalDateControl
+        range={globalRange}
+        onChange={(r) => { setGlobalRange(r); setChartOverrides({}); }}
+        hasOverrides={hasOverrides}
+        onResetOverrides={() => setChartOverrides({})}
+      />
 
       {/* Stats bar */}
       <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
         <StatCard label="Total Sessions" value={formatNumber(data?.totalSessions ?? 0)} />
         <StatCard label="Total Messages" value={formatNumber(data?.totalMessages ?? 0)} />
         <StatCard label="Models Used" value={String(modelCount)} />
+        <StatCard label="Tool Calls" value={formatNumber(totalToolCalls)} />
+        {cacheHitRate !== null && (
+          <StatCard label="Cache Hit Rate" value={`${cacheHitRate}%`} />
+        )}
         <StatCard label="First Session" value={firstSessionDate} />
       </div>
 
       {/* Activity chart */}
       <div style={{ marginBottom: "16px" }}>
-        <ChartCard title="Daily Activity">
-          <div style={{ display: "flex", gap: "6px", marginBottom: "10px" }}>
-            {(["30d", "90d", "all"] as TimeRange[]).map((r) => (
-              <Pill key={r} label={r === "all" ? "All" : r} active={range === r} onClick={() => setRange(r)} />
-            ))}
-          </div>
+        <ChartCard
+          title="Daily Activity"
+          chartId="activity"
+          override={chartOverrides["activity"]}
+          onOverride={(r) => setChartOverride("activity", r)}
+          onClearOverride={() => clearOverride("activity")}
+          globalRange={globalRange}
+        >
           {activityChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={140}>
               <AreaChart data={activityChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
@@ -283,7 +486,14 @@ export default function DashboardPage() {
       {/* Model breakdown + hourly distribution */}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
         {/* Model breakdown — horizontal bar chart */}
-        <ChartCard title="Output Tokens by Model">
+        <ChartCard
+          title="Output Tokens by Model"
+          chartId="model-tokens"
+          override={chartOverrides["model-tokens"]}
+          onOverride={(r) => setChartOverride("model-tokens", r)}
+          onClearOverride={() => clearOverride("model-tokens")}
+          globalRange={globalRange}
+        >
           {modelChartData.length > 0 ? (
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={modelChartData} layout="vertical" margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
@@ -300,7 +510,14 @@ export default function DashboardPage() {
         </ChartCard>
 
         {/* Hourly distribution */}
-        <ChartCard title="Activity by Hour of Day">
+        <ChartCard
+          title="Activity by Hour of Day"
+          chartId="hourly"
+          override={chartOverrides["hourly"]}
+          onOverride={(r) => setChartOverride("hourly", r)}
+          onClearOverride={() => clearOverride("hourly")}
+          globalRange={globalRange}
+        >
           {hourlyChartData.some((d) => d.count > 0) ? (
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={hourlyChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
