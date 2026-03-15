@@ -619,14 +619,7 @@ export default function DashboardPage() {
 
       {/* Hourly distribution */}
       <div style={{ marginBottom: "12px" }}>
-        <ChartCard
-          title="Activity by Hour of Day"
-          chartId="hourly"
-          override={chartOverrides["hourly"]}
-          onOverride={(r) => setChartOverride("hourly", r)}
-          onClearOverride={() => clearOverride("hourly")}
-          globalRange={globalRange}
-        >
+        <ChartCard title="Activity by Hour of Day">
           {hourlyChartData.some((d) => d.count > 0) ? (
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={hourlyChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
