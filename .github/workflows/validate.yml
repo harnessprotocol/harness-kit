@@ -113,6 +113,30 @@ jobs:
               print('requires.env schema valid.')
           "
 
+  core-build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build core package
+        run: pnpm --filter @harness-kit/core build
+
+      - name: Run core tests
+        run: pnpm --filter @harness-kit/core test
+
+      - name: Build CLI package
+        run: pnpm --filter @harness-kit/cli build
+
   docs-build:
     runs-on: ubuntu-latest
     steps:

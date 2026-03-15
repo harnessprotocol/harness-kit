@@ -20,6 +20,7 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "paths": {
+      "@harness-kit/core": ["../../packages/core/src/index.ts"],
       "@harness-kit/shared": ["../../packages/shared/src/index.ts"],
       "@harness-kit/ui": ["../../packages/ui/src/index.ts"]
     }

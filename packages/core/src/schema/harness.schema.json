@@ -1,0 +1,219 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://harnessprotocol.ai/schema/v1/harness.schema.json",
+  "title": "Harness Protocol v1",
+  "description": "Schema for harness.yaml profiles following the Harness Protocol v1 specification. Validates both full profiles and partial fragments.",
+  "type": "object",
+  "required": ["version"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema URI for editor tooling."
+    },
+    "version": {
+      "type": "string",
+      "const": "1",
+      "description": "Harness Protocol format version. Must be the string '1'."
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["profile", "fragment"],
+      "default": "profile",
+      "description": "Document type. 'profile' is a complete harness configuration. 'fragment' is a partial piece for composition."
+    },
+    "metadata": {
+      "type": "object",
+      "required": ["name", "description"],
+      "description": "Profile identity and discovery metadata.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "pattern": "^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?$",
+          "description": "Lowercase kebab-case profile identifier. Max 64 characters."
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 256,
+          "description": "Human-readable description. Max 256 characters."
+        },
+        "author": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "url": { "type": "string", "format": "uri" }
+          },
+          "additionalProperties": false
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+          "description": "Semantic version of this profile."
+        },
+        "license": { "type": "string" },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string", "maxLength": 32 },
+          "maxItems": 10,
+          "uniqueItems": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "plugins": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "source"],
+        "properties": {
+          "name": { "type": "string" },
+          "source": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_.-]+/[a-zA-Z0-9_.-]+$"
+          },
+          "version": { "type": "string" },
+          "description": { "type": "string" },
+          "config": { "type": "object", "additionalProperties": true },
+          "integrity": {
+            "type": "object",
+            "properties": {
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "mcp-servers": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "title": "stdio transport",
+            "type": "object",
+            "required": ["transport", "command"],
+            "properties": {
+              "transport": { "type": "string", "const": "stdio" },
+              "command": { "type": "string" },
+              "args": { "type": "array", "items": { "type": "string" } },
+              "env": { "type": "object", "additionalProperties": { "type": "string" } }
+            },
+            "additionalProperties": false
+          },
+          {
+            "title": "HTTP/SSE/WebSocket transport",
+            "type": "object",
+            "required": ["transport", "url"],
+            "properties": {
+              "transport": { "type": "string", "enum": ["http", "sse", "ws"] },
+              "url": { "type": "string", "format": "uri" },
+              "headers": { "type": "object", "additionalProperties": { "type": "string" } }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "env": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "description"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[A-Z_][A-Z0-9_]*$" },
+          "description": { "type": "string" },
+          "required": { "type": "boolean", "default": false },
+          "sensitive": { "type": "boolean", "default": true },
+          "when": { "type": "string" },
+          "default": { "type": "string" }
+        },
+        "if": {
+          "required": ["sensitive"],
+          "properties": { "sensitive": { "const": false } }
+        },
+        "then": {},
+        "else": {
+          "properties": { "default": false }
+        },
+        "additionalProperties": false
+      }
+    },
+    "instructions": {
+      "type": "object",
+      "properties": {
+        "operational": {
+          "oneOf": [{ "type": "string" }, { "type": "null" }]
+        },
+        "behavioral": {
+          "oneOf": [{ "type": "string" }, { "type": "null" }]
+        },
+        "identity": {
+          "oneOf": [{ "type": "string" }, { "type": "null" }]
+        },
+        "import-mode": {
+          "type": "string",
+          "enum": ["merge", "replace", "skip"],
+          "default": "merge"
+        }
+      },
+      "additionalProperties": false
+    },
+    "permissions": {
+      "type": "object",
+      "properties": {
+        "tools": {
+          "type": "object",
+          "properties": {
+            "allow": { "type": "array", "items": { "type": "string" } },
+            "deny": { "type": "array", "items": { "type": "string" } },
+            "ask": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        },
+        "paths": {
+          "type": "object",
+          "properties": {
+            "writable": { "type": "array", "items": { "type": "string" } },
+            "readonly": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        },
+        "network": {
+          "type": "object",
+          "properties": {
+            "allowed-hosts": { "type": "array", "items": { "type": "string" } }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "extends": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["source"],
+        "properties": {
+          "source": { "type": "string" },
+          "version": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "if": {
+    "not": {
+      "required": ["kind"],
+      "properties": { "kind": { "const": "fragment" } }
+    }
+  },
+  "then": {
+    "required": ["version", "metadata"]
+  },
+  "patternProperties": {
+    "^x-": {
+      "description": "Implementation-specific extension field."
+    }
+  },
+  "additionalProperties": false
+}

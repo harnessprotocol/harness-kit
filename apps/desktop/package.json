@@ -13,6 +13,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@harness-kit/core": "workspace:*",
     "@harness-kit/shared": "workspace:*",
     "@harness-kit/ui": "workspace:*",
     "@supabase/supabase-js": "^2",
