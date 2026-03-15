@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import type { StatsCache } from "@harness-kit/shared";
+import type { StatsCache, LiveDailyActivity } from "@harness-kit/shared";
 import DashboardPage from "../DashboardPage";
 
 // ── Recharts mock ─────────────────────────────────────────────
@@ -25,9 +25,11 @@ vi.mock("recharts", () => ({
 // the vi.mock factory (factory runs before module-scope let/const declarations).
 
 let mockReadStatsCache: () => Promise<unknown>;
+let mockReadLiveActivity: () => Promise<unknown>;
 
 vi.mock("../../../lib/tauri", () => ({
   get readStatsCache() { return mockReadStatsCache; },
+  get readLiveActivity() { return mockReadLiveActivity; },
 }));
 
 // ── Fixtures ──────────────────────────────────────────────────
@@ -52,6 +54,11 @@ const staleStats: StatsCache = {
   ...mockStats,
   lastComputedDate: "2026-03-10",
 };
+
+const mockLiveActivity: LiveDailyActivity[] = [
+  { date: "2026-03-14", messageCount: 45, sessionCount: 3 },
+  { date: "2026-03-15", messageCount: 30, sessionCount: 2 },
+];
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -80,6 +87,9 @@ beforeEach(() => {
       dispatchEvent: vi.fn(),
     }),
   });
+
+  mockReadStatsCache = vi.fn().mockResolvedValue(mockStats);
+  mockReadLiveActivity = vi.fn().mockResolvedValue(mockLiveActivity);
 });
 
 // ── Tests ─────────────────────────────────────────────────────
@@ -176,5 +186,54 @@ describe("DashboardPage — charts", () => {
     );
     const barCharts = screen.getAllByTestId("bar-chart");
     expect(barCharts.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("stats bar — new cards", () => {
+  it("shows tool call total", async () => {
+    renderDashboard();
+    // mockStats dailyActivity has toolCallCount: 120 + 80 = 200
+    expect(await screen.findByText("200")).toBeInTheDocument();
+  });
+
+  it("shows cache hit rate", async () => {
+    renderDashboard();
+    // For mockStats with 2 models totaling some cache/input tokens, a % should appear
+    expect(await screen.findByText(/cache hit/i)).toBeInTheDocument();
+  });
+});
+
+describe("date range control", () => {
+  it("renders preset pills", async () => {
+    renderDashboard();
+    await screen.findByText("200"); // wait for load
+    expect(screen.getByRole("button", { name: "1d" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "7d" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "30d" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "1y" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "All" })).toBeInTheDocument();
+  });
+
+  it("renders custom date inputs", async () => {
+    renderDashboard();
+    await screen.findByText("200");
+    expect(screen.getByLabelText(/start date/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/end date/i)).toBeInTheDocument();
+  });
+
+  it("30d pill is active by default", async () => {
+    renderDashboard();
+    await screen.findByText("200");
+    expect(screen.getByRole("button", { name: "30d" })).toHaveAttribute("aria-pressed", "true");
+  });
+});
+
+describe("stale warning replaced by refresh UI", () => {
+  it("shows last-updated label not a warning banner when stale", async () => {
+    mockReadStatsCache = vi.fn().mockResolvedValue(staleStats);
+    renderDashboard();
+    await screen.findByText(/last updated/i);
+    // No orange warning banner text
+    expect(screen.queryByText(/data may be incomplete/i)).not.toBeInTheDocument();
   });
 });
