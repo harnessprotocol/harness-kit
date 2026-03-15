@@ -1,5 +1,5 @@
 import { readFile, writeFile, access, mkdir, readdir } from "node:fs/promises";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import type { FsProvider } from "./fs-provider.js";
 
@@ -37,6 +37,10 @@ export class NodeFsProvider implements FsProvider {
 
   joinPath(...segments: string[]): string {
     return join(...segments);
+  }
+
+  dirname(path: string): string {
+    return dirname(path);
   }
 
   async homedir(): Promise<string> {

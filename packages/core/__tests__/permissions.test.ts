@@ -31,6 +31,7 @@ describe("compilePermissions", () => {
     const parsed = JSON.parse(files[0].content);
     expect(parsed.permissions.allow).toEqual(["Read", "Write"]);
     expect(parsed.permissions.deny).toEqual(["mcp__postgres__drop_table"]);
+    // Only writable paths become additionalDirectories (readonly would gain unintended write access)
     expect(parsed.permissions.additionalDirectories).toEqual(["sql/", "migrations/"]);
   });
 

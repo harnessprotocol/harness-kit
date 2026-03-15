@@ -69,10 +69,9 @@ async function compileClaudeCodePermissions(
     permissionsObj.deny = perms.tools.deny;
   }
   if (perms.paths) {
-    const dirs = [
-      ...(perms.paths.writable ?? []),
-      ...(perms.paths.readonly ?? []),
-    ];
+    // Claude Code's additionalDirectories grants full read+write access.
+    // Only map writable paths; readonly paths would gain unintended write access.
+    const dirs = perms.paths.writable ?? [];
     if (dirs.length > 0) {
       permissionsObj.additionalDirectories = dirs;
     }

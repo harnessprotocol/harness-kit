@@ -49,6 +49,11 @@ export class TauriFsProvider implements FsProvider {
       .replace(/\/$/, "");
   }
 
+  dirname(path: string): string {
+    const lastSlash = path.lastIndexOf("/");
+    return lastSlash > 0 ? path.substring(0, lastSlash) : "/";
+  }
+
   async homedir(): Promise<string> {
     return homeDir();
   }

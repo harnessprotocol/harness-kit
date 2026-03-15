@@ -115,7 +115,7 @@ async function writeFiles(
     }
 
     const fullPath = fs.joinPath(cwd, file.path);
-    const dir = fullPath.substring(0, fullPath.lastIndexOf("/"));
+    const dir = fs.dirname(fullPath);
 
     if (dir) {
       await fs.mkdir(dir, { recursive: true });

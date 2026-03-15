@@ -5,6 +5,7 @@ export interface FsProvider {
   mkdir(path: string, options?: { recursive?: boolean }): Promise<void>;
   readDir(path: string): Promise<string[]>;
   joinPath(...segments: string[]): string;
+  dirname(path: string): string;
   homedir(): Promise<string>;
   cwd(): string;
 }

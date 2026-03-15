@@ -16,17 +16,15 @@ export async function validateCommand(filePath?: string): Promise<void> {
     process.exit(1);
   }
 
-  // Parse YAML first
+  let config;
   try {
-    parseHarness(yamlString);
+    ({ config } = parseHarness(yamlString));
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error(msg);
     process.exit(1);
   }
 
-  // Parse again for raw object (parseHarness returns typed, but we need raw for Ajv)
-  const { config } = parseHarness(yamlString);
   const result = validateHarness(config);
 
   console.log(formatValidationResult(result, resolved));
