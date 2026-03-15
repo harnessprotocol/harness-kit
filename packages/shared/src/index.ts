@@ -20,4 +20,11 @@ export type {
   KnownMarketplace,
   HookCommand,
   HooksConfig,
+  StatsCache,
+  DailyActivity,
+  DailyModelTokens,
+  ModelUsageEntry,
+  SessionSummary,
+  SessionFacet,
+  ActiveSession,
 } from "./types.js";

@@ -38,6 +38,10 @@ const NAV_SECTIONS: NavSection[] = [
     id: "observatory",
     label: "Observatory",
     path: "/observatory",
+    children: [
+      { label: "Dashboard", path: "/observatory" },
+      { label: "Sessions", path: "/observatory/sessions" },
+    ],
   },
   {
     id: "comparator",
