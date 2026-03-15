@@ -37,3 +37,9 @@ packages/shared/dist/
 apps/desktop/src-tauri/target/
 apps/desktop/dist/
 packages/ui/dist/
+
+# Core library
+packages/core/dist/
+
+# CLI
+apps/cli/dist/

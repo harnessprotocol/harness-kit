@@ -1,0 +1,6 @@
+version: 1
+
+plugins:
+  - name: explain
+    marketplace: harness-kit
+    description: This uses the legacy marketplace field

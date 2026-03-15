@@ -1,0 +1,14 @@
+version: 1
+
+metadata:
+  name: legacy-harness
+  description: A legacy format harness file.
+
+marketplaces:
+  harness-kit:
+    url: harnessprotocol/harness-kit
+
+plugins:
+  - name: explain
+    marketplace: harness-kit
+    description: Layered explanations

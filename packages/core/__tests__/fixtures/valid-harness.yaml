@@ -1,0 +1,53 @@
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
+version: "1"
+
+metadata:
+  name: my-harness
+  description: My personal harness configuration.
+
+plugins:
+  - name: explain
+    source: siracusa5/harness-kit
+    description: Layered explanations of files, functions, directories, or concepts
+
+  - name: research
+    source: siracusa5/harness-kit
+    description: Process any source into a structured, compounding knowledge base
+
+instructions:
+  operational: |
+    ## Commands
+    - Build: `pnpm build`
+    - Test: `pnpm test`
+  behavioral: |
+    Be concise. Prefer short answers.
+  import-mode: merge
+
+mcp-servers:
+  postgres:
+    transport: stdio
+    command: uvx
+    args:
+      - mcp-server-postgres
+      - ${DB_CONNECTION_STRING}
+
+env:
+  - name: DB_CONNECTION_STRING
+    description: PostgreSQL connection string.
+    required: true
+    sensitive: true
+
+permissions:
+  tools:
+    allow:
+      - Read
+      - Glob
+      - Grep
+      - Write
+      - Edit
+    deny:
+      - mcp__postgres__drop_table
+  paths:
+    writable:
+      - sql/
+      - migrations/
