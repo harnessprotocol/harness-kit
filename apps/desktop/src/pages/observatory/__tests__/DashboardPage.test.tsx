@@ -173,7 +173,8 @@ describe("DashboardPage — charts", () => {
     await waitFor(() =>
       expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
     );
-    expect(screen.getByTestId("area-chart")).toBeInTheDocument();
+    const areaCharts = screen.getAllByTestId("area-chart");
+    expect(areaCharts.length).toBe(3);
   });
 
   it("renders bar charts after load", async () => {

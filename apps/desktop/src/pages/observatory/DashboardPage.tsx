@@ -275,9 +275,6 @@ const axisStyle = { fontSize: 10, fill: "var(--fg-subtle)" };
 
 export default function DashboardPage() {
   const [data, setData] = useState<StatsCache | null>(null);
-  // liveActivity will be consumed by activity charts (Task 6)
-  // @ts-expect-error liveActivity unused until Task 6 wires it to charts
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [liveActivity, setLiveActivity] = useState<LiveDailyActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -296,6 +293,10 @@ export default function DashboardPage() {
 
   const hasOverrides = Object.values(chartOverrides).some(Boolean);
 
+  function rangeForChart(chartId: string): DateRange {
+    return chartOverrides[chartId] ?? globalRange;
+  }
+
   useEffect(() => {
     Promise.all([
       readStatsCache().then(setData),
@@ -310,10 +311,34 @@ export default function DashboardPage() {
     setAccentColor(getAccentColor());
   }, []);
 
-  const filteredActivity = useMemo(() =>
-    filterByRange(data?.dailyActivity ?? [], globalRange),
-    [data, globalRange]
+  const filteredLiveActivity = useMemo(() =>
+    filterByRange(liveActivity, rangeForChart("messages")),
+    [liveActivity, globalRange, chartOverrides]
   );
+
+  const activityChartData = useMemo(() =>
+    filteredLiveActivity.map((d) => ({
+      date: formatDate(d.date),
+      messages: d.messageCount,
+    })),
+    [filteredLiveActivity]
+  );
+
+  const sessionsChartData = useMemo(() => {
+    const filtered = filterByRange(liveActivity, rangeForChart("sessions"));
+    return filtered.map((d) => ({
+      date: formatDate(d.date),
+      sessions: d.sessionCount,
+    }));
+  }, [liveActivity, globalRange, chartOverrides]);
+
+  const toolCallsChartData = useMemo(() => {
+    const filtered = filterByRange(data?.dailyActivity ?? [], rangeForChart("toolCalls"));
+    return filtered.map((d) => ({
+      date: formatDate(d.date),
+      toolCalls: d.toolCallCount ?? 0,
+    }));
+  }, [data, globalRange, chartOverrides]);
 
   const totalToolCalls = useMemo(() => {
     if (!data?.dailyActivity) return 0;
@@ -335,14 +360,6 @@ export default function DashboardPage() {
       cacheHitRate: total > 0 ? Math.round((cacheRead / total) * 100) : null,
     };
   }, [data]);
-
-  const activityChartData = useMemo(() =>
-    filteredActivity.map((d) => ({
-      date: formatDate(d.date),
-      messages: d.messageCount ?? 0,
-    })),
-    [filteredActivity]
-  );
 
   const modelChartData = useMemo(() => {
     if (!data?.modelUsage) return [];
@@ -438,45 +455,78 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Activity chart */}
-      <div style={{ marginBottom: "16px" }}>
-        <ChartCard
-          title="Daily Activity"
-          chartId="activity"
-          override={chartOverrides["activity"]}
-          onOverride={(r) => setChartOverride("activity", r)}
-          onClearOverride={() => clearOverride("activity")}
-          globalRange={globalRange}
+      {/* Messages chart — full width */}
+      <div style={{ marginBottom: "12px" }}>
+        <ChartCard title="Messages per Day" chartId="messages"
+          override={chartOverrides["messages"]} globalRange={globalRange}
+          onOverride={(r) => setChartOverride("messages", r)}
+          onClearOverride={() => clearOverride("messages")}
         >
-          {activityChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={140}>
-              <AreaChart data={activityChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="activityGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor={accentColor} stopOpacity={0.25} />
-                    <stop offset="95%" stopColor={accentColor} stopOpacity={0.02} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-base)" vertical={false} />
-                <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                <YAxis tick={axisStyle} tickLine={false} axisLine={false} />
-                <Tooltip contentStyle={tooltipStyle} cursor={{ stroke: "var(--border-strong)", strokeWidth: 1 }} />
-                <Area
-                  type="monotone"
-                  dataKey="messages"
-                  stroke={accentColor}
-                  strokeWidth={1.5}
-                  fill="url(#activityGrad)"
-                  dot={false}
-                  isAnimationActive={!reducedMotion}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          ) : (
-            <p style={{ fontSize: "12px", color: "var(--fg-subtle)", textAlign: "center", padding: "20px 0" }}>
-              No activity data in this range.
-            </p>
-          )}
+          <ResponsiveContainer width="100%" height={130}>
+            <AreaChart data={activityChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="msgGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={accentColor} stopOpacity={0.25} />
+                  <stop offset="95%" stopColor={accentColor} stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-base)" vertical={false} />
+              <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+              <YAxis tick={axisStyle} tickLine={false} axisLine={false} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Area type="monotone" dataKey="messages" stroke={accentColor} strokeWidth={1.5}
+                fill="url(#msgGrad)" dot={false} isAnimationActive={!reducedMotion} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </ChartCard>
+      </div>
+
+      {/* Sessions + Tool Calls — side by side */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
+        <ChartCard title="Sessions per Day" chartId="sessions"
+          override={chartOverrides["sessions"]} globalRange={globalRange}
+          onOverride={(r) => setChartOverride("sessions", r)}
+          onClearOverride={() => clearOverride("sessions")}
+        >
+          <ResponsiveContainer width="100%" height={120}>
+            <AreaChart data={sessionsChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="sessGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={accentColor} stopOpacity={0.2} />
+                  <stop offset="95%" stopColor={accentColor} stopOpacity={0.01} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-base)" vertical={false} />
+              <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+              <YAxis tick={axisStyle} tickLine={false} axisLine={false} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Area type="monotone" dataKey="sessions" stroke={accentColor} strokeWidth={1.5}
+                fill="url(#sessGrad)" dot={false} isAnimationActive={!reducedMotion} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Tool Calls per Day" chartId="toolCalls"
+          override={chartOverrides["toolCalls"]} globalRange={globalRange}
+          onOverride={(r) => setChartOverride("toolCalls", r)}
+          onClearOverride={() => clearOverride("toolCalls")}
+        >
+          <ResponsiveContainer width="100%" height={120}>
+            <AreaChart data={toolCallsChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="tcGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={accentColor} stopOpacity={0.2} />
+                  <stop offset="95%" stopColor={accentColor} stopOpacity={0.01} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-base)" vertical={false} />
+              <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+              <YAxis tick={axisStyle} tickLine={false} axisLine={false} />
+              <Tooltip contentStyle={tooltipStyle} />
+              <Area type="monotone" dataKey="toolCalls" stroke={accentColor} strokeWidth={1.5}
+                fill="url(#tcGrad)" dot={false} isAnimationActive={!reducedMotion} />
+            </AreaChart>
+          </ResponsiveContainer>
         </ChartCard>
       </div>
 
