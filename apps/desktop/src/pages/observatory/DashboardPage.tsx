@@ -6,9 +6,9 @@ import {
   CartesianGrid, Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import { readStatsCache } from "../../lib/tauri";
-import { formatNumber, formatDate, formatHour, shortModelName, daysBetween } from "../../lib/format";
-import type { StatsCache, DailyActivity } from "@harness-kit/shared";
+import { readStatsCache, readLiveActivity } from "../../lib/tauri";
+import { formatNumber, formatDate, formatHour, shortModelName } from "../../lib/format";
+import type { StatsCache, LiveDailyActivity } from "@harness-kit/shared";
 
 // ── Date range types ─────────────────────────────────────────
 
@@ -133,7 +133,7 @@ function GlobalDateControl({
   }
 
   function handleCustomDate(field: "start" | "end", value: string) {
-    onChange({ preset: "custom", ...range, [field]: value });
+    onChange({ ...range, preset: "custom", [field]: value });
   }
 
   return (
@@ -275,16 +275,16 @@ const axisStyle = { fontSize: 10, fill: "var(--fg-subtle)" };
 
 export default function DashboardPage() {
   const [data, setData] = useState<StatsCache | null>(null);
+  // liveActivity will be consumed by activity charts (Task 6)
+  // @ts-expect-error liveActivity unused until Task 6 wires it to charts
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const [liveActivity, setLiveActivity] = useState<LiveDailyActivity[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [globalRange, setGlobalRange] = useState<DateRange>(defaultRange);
   const [chartOverrides, setChartOverrides] = useState<Record<string, DateRange | null>>({});
   const [accentColor, setAccentColor] = useState(getAccentColor);
   const reducedMotion = useReducedMotion();
-
-  function rangeForChart(chartId: string): DateRange {
-    return chartOverrides[chartId] ?? globalRange;
-  }
 
   function setChartOverride(chartId: string, range: DateRange) {
     setChartOverrides((prev) => ({ ...prev, [chartId]: range }));
@@ -297,8 +297,10 @@ export default function DashboardPage() {
   const hasOverrides = Object.values(chartOverrides).some(Boolean);
 
   useEffect(() => {
-    readStatsCache()
-      .then(setData)
+    Promise.all([
+      readStatsCache().then(setData),
+      readLiveActivity().then(setLiveActivity),
+    ])
       .catch((e) => setError(String(e)))
       .finally(() => setLoading(false));
   }, []);
@@ -307,11 +309,6 @@ export default function DashboardPage() {
   useEffect(() => {
     setAccentColor(getAccentColor());
   }, []);
-
-  const isStale = useMemo(() => {
-    if (!data?.lastComputedDate) return false;
-    return daysBetween(data.lastComputedDate) > 3;
-  }, [data]);
 
   const filteredActivity = useMemo(() =>
     filterByRange(data?.dailyActivity ?? [], globalRange),
@@ -323,19 +320,20 @@ export default function DashboardPage() {
     return data.dailyActivity.reduce((sum, d) => sum + (d.toolCallCount ?? 0), 0);
   }, [data]);
 
-  const cacheHitRate = useMemo(() => {
-    if (!data?.modelUsage) return null;
-    let totalCacheRead = 0;
-    let totalCacheCreate = 0;
-    let totalInput = 0;
-    for (const usage of Object.values(data.modelUsage)) {
-      totalCacheRead += usage.cacheReadInputTokens ?? 0;
-      totalCacheCreate += usage.cacheCreationInputTokens ?? 0;
-      totalInput += usage.inputTokens ?? 0;
+  const { totalOutputTokens, cacheHitRate } = useMemo(() => {
+    if (!data?.modelUsage) return { totalOutputTokens: 0, cacheHitRate: null };
+    let outTokens = 0, cacheRead = 0, input = 0, cacheCreate = 0;
+    for (const m of Object.values(data.modelUsage)) {
+      outTokens += m.outputTokens ?? 0;
+      cacheRead += m.cacheReadInputTokens ?? 0;
+      input += m.inputTokens ?? 0;
+      cacheCreate += m.cacheCreationInputTokens ?? 0;
     }
-    const total = totalInput + totalCacheRead + totalCacheCreate;
-    if (total === 0) return null;
-    return Math.round((totalCacheRead / total) * 100);
+    const total = input + cacheRead + cacheCreate;
+    return {
+      totalOutputTokens: outTokens,
+      cacheHitRate: total > 0 ? Math.round((cacheRead / total) * 100) : null,
+    };
   }, [data]);
 
   const activityChartData = useMemo(() =>
@@ -362,17 +360,6 @@ export default function DashboardPage() {
       hour: formatHour(i),
       count: data.hourCounts?.[String(i)] ?? 0,
     }));
-  }, [data]);
-
-  const modelCount = useMemo(() => {
-    if (!data?.modelUsage) return 0;
-    return Object.keys(data.modelUsage).length;
-  }, [data]);
-
-  const firstSessionDate = useMemo(() => {
-    if (!data?.dailyActivity?.length) return "—";
-    const dates = data.dailyActivity.map((d) => d.date).sort();
-    return formatDate(dates[0]);
   }, [data]);
 
   if (loading) {
@@ -409,24 +396,18 @@ export default function DashboardPage() {
     <div style={{ padding: "20px 24px" }}>
       {/* Header */}
       <div style={{ marginBottom: "16px" }}>
-        <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
+        <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0, display: "inline" }}>
           Observatory
         </h1>
+        {data?.lastComputedDate && (
+          <span style={{ fontSize: "10px", color: "var(--fg-subtle)", marginLeft: "8px" }}>
+            last updated {formatDate(data.lastComputedDate)}
+          </span>
+        )}
         <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>
           Claude Code usage patterns and activity trends
         </p>
       </div>
-
-      {/* Last updated / stale indicator */}
-      {data?.lastComputedDate && (
-        <div style={{
-          fontSize: "11px",
-          color: "var(--fg-subtle)",
-          marginBottom: "16px",
-        }}>
-          Last updated {isStale ? `${daysBetween(data.lastComputedDate)} days ago` : formatDate(data.lastComputedDate)}
-        </div>
-      )}
 
       {/* Global date range control */}
       <GlobalDateControl
@@ -440,12 +421,21 @@ export default function DashboardPage() {
       <div style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
         <StatCard label="Total Sessions" value={formatNumber(data?.totalSessions ?? 0)} />
         <StatCard label="Total Messages" value={formatNumber(data?.totalMessages ?? 0)} />
-        <StatCard label="Models Used" value={String(modelCount)} />
         <StatCard label="Tool Calls" value={formatNumber(totalToolCalls)} />
-        {cacheHitRate !== null && (
-          <StatCard label="Cache Hit Rate" value={`${cacheHitRate}%`} />
-        )}
-        <StatCard label="First Session" value={firstSessionDate} />
+        <StatCard label="Output Tokens" value={
+          totalOutputTokens >= 1_000_000
+            ? `${(totalOutputTokens / 1_000_000).toFixed(1)}M`
+            : formatNumber(totalOutputTokens)
+        } />
+        <StatCard
+          label="Cache Hit Rate"
+          value={cacheHitRate !== null ? `${cacheHitRate}%` : "\u2014"}
+          sub="cache read / total input"
+        />
+        <StatCard
+          label="Time Saved"
+          value="\u2014"
+        />
       </div>
 
       {/* Activity chart */}

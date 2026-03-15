@@ -127,10 +127,10 @@ describe("DashboardPage — stats bar", () => {
     expect(await screen.findByText("2,814")).toBeInTheDocument();
   });
 
-  it("shows 2 models used", async () => {
+  it("shows output tokens total", async () => {
     renderDashboard();
-    // The Models Used stat card renders the count as a plain string
-    expect(await screen.findByText("2")).toBeInTheDocument();
+    // mockStats modelUsage: 2000 + 1000 = 3,000 output tokens
+    expect(await screen.findByText("3,000")).toBeInTheDocument();
   });
 });
 
@@ -150,19 +150,16 @@ describe("DashboardPage — error state", () => {
 });
 
 describe("DashboardPage — stale warning", () => {
-  it("shows stale warning when lastComputedDate is 5 days old", async () => {
+  it("shows last-updated label when lastComputedDate is 5 days old", async () => {
     mockReadStatsCache = () => Promise.resolve(staleStats);
     renderDashboard();
-    expect(await screen.findByText(/days ago/)).toBeInTheDocument();
+    expect(await screen.findByText(/last updated/i)).toBeInTheDocument();
   });
 
-  it("does NOT show stale warning when lastComputedDate is today", async () => {
+  it("shows last-updated label when lastComputedDate is today", async () => {
     mockReadStatsCache = () => Promise.resolve(mockStats);
     renderDashboard();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
-    );
-    expect(screen.queryByText(/days ago/)).not.toBeInTheDocument();
+    expect(await screen.findByText(/last updated/i)).toBeInTheDocument();
   });
 });
 
