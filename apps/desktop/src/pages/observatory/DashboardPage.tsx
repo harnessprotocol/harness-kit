@@ -3,12 +3,14 @@ import {
   AreaChart, Area,
   BarChart, Bar,
   XAxis, YAxis,
-  CartesianGrid, Tooltip,
+  CartesianGrid, Tooltip, Legend,
   ResponsiveContainer,
 } from "recharts";
 import { readStatsCache, readLiveActivity } from "../../lib/tauri";
 import { formatNumber, formatDate, formatHour, shortModelName } from "../../lib/format";
 import type { StatsCache, LiveDailyActivity } from "@harness-kit/shared";
+
+const MODEL_COLORS = ["#5b50e8", "#0d9488", "#ea580c", "#16a34a", "#2563eb", "#e11d48"];
 
 // ── Date range types ─────────────────────────────────────────
 
@@ -361,15 +363,47 @@ export default function DashboardPage() {
     };
   }, [data]);
 
-  const modelChartData = useMemo(() => {
+  const { dailyTokensChartData, allModelNames } = useMemo(() => {
+    if (!data?.dailyModelTokens?.length) return { dailyTokensChartData: [], allModelNames: [] };
+
+    const modelSet = new Set<string>();
+    data.dailyModelTokens.forEach((d) => {
+      Object.keys(d.tokensByModel ?? {}).forEach((m) => modelSet.add(m));
+    });
+    const models = Array.from(modelSet);
+
+    const filtered = filterByRange(data.dailyModelTokens, rangeForChart("dailyTokens"));
+    const chartData = filtered.map((d) => {
+      const row: Record<string, unknown> = { date: formatDate(d.date) };
+      models.forEach((m) => {
+        row[shortModelName(m)] = d.tokensByModel?.[m] ?? 0;
+      });
+      return row;
+    });
+
+    return {
+      dailyTokensChartData: chartData,
+      allModelNames: models.map(shortModelName),
+    };
+  }, [data, globalRange, chartOverrides]);
+
+  const tokenTypeData = useMemo(() => {
     if (!data?.modelUsage) return [];
-    return Object.entries(data.modelUsage)
-      .map(([model, usage]) => ({
-        name: shortModelName(model),
-        tokens: (usage.outputTokens ?? 0),
-      }))
-      .sort((a, b) => b.tokens - a.tokens);
+    return Object.entries(data.modelUsage).map(([model, usage]) => ({
+      name: shortModelName(model),
+      Input: usage.inputTokens ?? 0,
+      Output: usage.outputTokens ?? 0,
+      "Cache Read": usage.cacheReadInputTokens ?? 0,
+      "Cache Create": usage.cacheCreationInputTokens ?? 0,
+    })).sort((a, b) => (b.Output) - (a.Output));
   }, [data]);
+
+  const TOKEN_TYPE_COLORS: Record<string, string> = {
+    Input: "var(--fg-subtle)",
+    Output: accentColor,
+    "Cache Read": "#0d9488",
+    "Cache Create": "#636366",
+  };
 
   const hourlyChartData = useMemo(() => {
     if (!data?.hourCounts) return [];
@@ -530,33 +564,61 @@ export default function DashboardPage() {
         </ChartCard>
       </div>
 
-      {/* Model breakdown + hourly distribution */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
-        {/* Model breakdown — horizontal bar chart */}
-        <ChartCard
-          title="Output Tokens by Model"
-          chartId="model-tokens"
-          override={chartOverrides["model-tokens"]}
-          onOverride={(r) => setChartOverride("model-tokens", r)}
-          onClearOverride={() => clearOverride("model-tokens")}
-          globalRange={globalRange}
-        >
-          {modelChartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={160}>
-              <BarChart data={modelChartData} layout="vertical" margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                <XAxis type="number" tick={axisStyle} tickLine={false} axisLine={false} tickFormatter={(v) => v >= 1_000_000 ? `${(v/1_000_000).toFixed(1)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)} />
-                <YAxis type="category" dataKey="name" tick={axisStyle} tickLine={false} axisLine={false} width={70} />
+      {/* Daily tokens by model — stacked area */}
+      {dailyTokensChartData.length > 0 && (
+        <div style={{ marginBottom: "12px" }}>
+          <ChartCard title="Daily Tokens by Model" chartId="dailyTokens"
+            override={chartOverrides["dailyTokens"]} globalRange={globalRange}
+            onOverride={(r) => setChartOverride("dailyTokens", r)}
+            onClearOverride={() => clearOverride("dailyTokens")}
+          >
+            <ResponsiveContainer width="100%" height={150}>
+              <AreaChart data={dailyTokensChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-base)" vertical={false} />
+                <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                <YAxis tick={axisStyle} tickLine={false} axisLine={false}
+                  tickFormatter={(v: number) => v >= 1_000_000 ? `${(v/1_000_000).toFixed(1)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)} />
                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                <Tooltip contentStyle={tooltipStyle} formatter={((v: any) => formatNumber(v)) as any} />
-                <Bar dataKey="tokens" fill={accentColor} radius={[0, 3, 3, 0]} isAnimationActive={!reducedMotion} />
+                <Tooltip contentStyle={tooltipStyle} formatter={((v: number) => formatNumber(v)) as any} />
+                <Legend wrapperStyle={{ fontSize: "10px" }} />
+                {allModelNames.map((name, i) => (
+                  <Area key={name} type="monotone" dataKey={name} stackId="a"
+                    stroke={MODEL_COLORS[i % MODEL_COLORS.length]}
+                    fill={MODEL_COLORS[i % MODEL_COLORS.length]}
+                    fillOpacity={0.5} strokeWidth={1}
+                    isAnimationActive={!reducedMotion} />
+                ))}
+              </AreaChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </div>
+      )}
+
+      {/* Token type breakdown — stacked horizontal bars (no range filter — totals only) */}
+      {tokenTypeData.length > 0 && (
+        <div style={{ marginBottom: "12px" }}>
+          <ChartCard title="Token Type Breakdown by Model">
+            <ResponsiveContainer width="100%" height={Math.max(120, tokenTypeData.length * 36)}>
+              <BarChart data={tokenTypeData} layout="vertical" margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+                <XAxis type="number" tick={axisStyle} tickLine={false} axisLine={false}
+                  tickFormatter={(v: number) => v >= 1_000_000 ? `${(v/1_000_000).toFixed(1)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)} />
+                <YAxis type="category" dataKey="name" tick={axisStyle} tickLine={false} axisLine={false} width={80} />
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                <Tooltip contentStyle={tooltipStyle} formatter={((v: number) => formatNumber(v)) as any} />
+                <Legend wrapperStyle={{ fontSize: "10px" }} />
+                {(["Input", "Output", "Cache Read", "Cache Create"] as const).map((type) => (
+                  <Bar key={type} dataKey={type} stackId="a"
+                    fill={TOKEN_TYPE_COLORS[type]}
+                    isAnimationActive={!reducedMotion} />
+                ))}
               </BarChart>
             </ResponsiveContainer>
-          ) : (
-            <p style={{ fontSize: "12px", color: "var(--fg-subtle)", textAlign: "center", padding: "20px 0" }}>No model data.</p>
-          )}
-        </ChartCard>
+          </ChartCard>
+        </div>
+      )}
 
-        {/* Hourly distribution */}
+      {/* Hourly distribution */}
+      <div style={{ marginBottom: "12px" }}>
         <ChartCard
           title="Activity by Hour of Day"
           chartId="hourly"
