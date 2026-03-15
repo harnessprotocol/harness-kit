@@ -37,33 +37,27 @@ export async function detectPlatforms(
   const results: DetectedPlatform[] = [];
 
   for (const indicator of INDICATORS) {
-    const foundIndicators: string[] = [];
-    const foundAmbiguous: string[] = [];
+    const allPaths = [...indicator.paths, ...indicator.ambiguousPaths];
+    const ambiguousSet = new Set(indicator.ambiguousPaths);
 
-    for (const p of indicator.paths) {
-      const fullPath = fs.joinPath(cwd, p);
-      if (await fs.exists(fullPath)) {
-        foundIndicators.push(p);
-      }
-    }
+    // Check all paths for this platform in parallel
+    const checks = await Promise.all(
+      allPaths.map(async (p) => ({
+        path: p,
+        exists: await fs.exists(fs.joinPath(cwd, p)),
+        ambiguous: ambiguousSet.has(p),
+      })),
+    );
 
-    for (const p of indicator.ambiguousPaths) {
-      const fullPath = fs.joinPath(cwd, p);
-      if (await fs.exists(fullPath)) {
-        foundAmbiguous.push(p);
-      }
-    }
-
+    const foundIndicators = checks.filter((c) => c.exists && !c.ambiguous).map((c) => c.path);
+    const foundAmbiguous = checks.filter((c) => c.exists && c.ambiguous).map((c) => c.path);
     const allFound = [...foundIndicators, ...foundAmbiguous];
-    if (allFound.length > 0) {
-      // Only ambiguous paths found → needs confirmation
-      const needsConfirmation =
-        foundIndicators.length === 0 && foundAmbiguous.length > 0;
 
+    if (allFound.length > 0) {
       results.push({
         platform: indicator.platform,
         indicators: allFound,
-        needsConfirmation,
+        needsConfirmation: foundIndicators.length === 0 && foundAmbiguous.length > 0,
       });
     }
   }

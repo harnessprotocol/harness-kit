@@ -5,6 +5,7 @@ import type {
   McpServer,
   TargetPlatform,
 } from "../types.js";
+import { readJsonOrDefault } from "../utils/read-json.js";
 
 const MCP_FILE_MAP: Record<TargetPlatform, string> = {
   "claude-code": ".mcp.json",
@@ -64,16 +65,9 @@ export async function compileMcpServers(
     const filePath = MCP_FILE_MAP[target];
     const fullPath = fs.joinPath(cwd, filePath);
 
-    // Read existing config
-    let existing: Record<string, Record<string, unknown>> = {};
-    if (await fs.exists(fullPath)) {
-      try {
-        const raw = await fs.readFile(fullPath);
-        existing = JSON.parse(raw);
-      } catch {
-        // Malformed JSON — start fresh
-      }
-    }
+    const { data: existing, existed } = await readJsonOrDefault<Record<string, Record<string, unknown>>>(
+      fs, fullPath, {},
+    );
 
     const existingServers =
       (existing.mcpServers as Record<string, unknown> | undefined) ?? {};
@@ -99,7 +93,7 @@ export async function compileMcpServers(
     files.push({
       path: filePath,
       content,
-      action: (await fs.exists(fullPath)) ? "update" : "create",
+      action: existed ? "update" : "create",
       platform: target,
       slot: "mcp-servers",
       linesAdded: serverCount,

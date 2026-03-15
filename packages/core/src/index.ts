@@ -36,7 +36,7 @@ export { detectPlatforms } from "./detect/detect-platforms.js";
 
 // Compile
 export { compile } from "./compile/compile.js";
-export { compileInstructions } from "./compile/instructions.js";
+export { compileInstructions, getAllInstructionFilePaths } from "./compile/instructions.js";
 export { compileMcpServers } from "./compile/mcp-servers.js";
 export { compileSkills } from "./compile/skills.js";
 export { compilePermissions, buildPermissionsText } from "./compile/permissions.js";
@@ -53,3 +53,7 @@ export {
 
 // Report
 export { buildReport } from "./report/report.js";
+
+// Utilities
+export { posixJoin, posixDirname } from "./utils/posix-path.js";
+export { isLegacyFormat } from "./utils/legacy.js";

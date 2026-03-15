@@ -6,12 +6,13 @@ import {
   compile,
   detectPlatforms,
   findOrphanedMarkerBlocks,
+  getAllInstructionFilePaths,
   parseHarness,
   removeOrphanedBlocks,
   validateHarness,
 } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
-import type { TargetPlatform } from "@harness-kit/core";
+import type { OrphanedBlock, TargetPlatform } from "@harness-kit/core";
 import { formatCompileReport, formatDryRunFile } from "../formatters/report.js";
 import { formatValidationResult } from "../formatters/validation.js";
 
@@ -156,25 +157,22 @@ async function handleClean(
   targets: TargetPlatform[],
   fs: NodeFsProvider,
 ): Promise<void> {
-  // Files that could contain harness marker blocks
-  const filesToScan = [
-    "CLAUDE.md",
-    "AGENT.md",
-    "SOUL.md",
-    ".cursor/rules/harness.mdc",
-    ".cursor/rules/behavioral.mdc",
-    ".github/copilot-instructions.md",
-    ".github/instructions/behavioral.instructions.md",
-  ];
-
+  // Derive scannable files from the canonical slot mappings
+  const filesToScan = [...new Set(getAllInstructionFilePaths())];
   const cwd = fs.cwd();
-  const allOrphans: import("@harness-kit/core").OrphanedBlock[] = [];
+  const allOrphans: OrphanedBlock[] = [];
+  const contentCache = new Map<string, string>();
 
   for (const filePath of filesToScan) {
     const fullPath = fs.joinPath(cwd, filePath);
-    if (!(await fs.exists(fullPath))) continue;
+    let content: string;
+    try {
+      content = await fs.readFile(fullPath);
+    } catch {
+      continue; // File doesn't exist
+    }
 
-    const content = await fs.readFile(fullPath);
+    contentCache.set(filePath, content);
     const orphans = findOrphanedMarkerBlocks(content, harnessName, filePath);
     allOrphans.push(...orphans);
   }
@@ -201,8 +199,8 @@ async function handleClean(
     return;
   }
 
-  // Group orphans by file and remove
-  const byFile = new Map<string, import("@harness-kit/core").OrphanedBlock[]>();
+  // Group orphans by file and remove using cached content
+  const byFile = new Map<string, OrphanedBlock[]>();
   for (const orphan of allOrphans) {
     const existing = byFile.get(orphan.file) ?? [];
     existing.push(orphan);
@@ -211,7 +209,7 @@ async function handleClean(
 
   for (const [filePath, orphans] of byFile) {
     const fullPath = fs.joinPath(cwd, filePath);
-    const content = await fs.readFile(fullPath);
+    const content = contentCache.get(filePath)!;
     const cleaned = removeOrphanedBlocks(content, orphans);
     await fs.writeFile(fullPath, cleaned);
   }

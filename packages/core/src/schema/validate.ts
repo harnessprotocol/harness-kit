@@ -3,6 +3,7 @@ import addFormats from "ajv-formats";
 import { parse as parseYaml } from "yaml";
 import harnessSchema from "./harness.schema.json" with { type: "json" };
 import type { ValidationError, ValidationResult } from "../types.js";
+import { isLegacyFormat } from "../utils/legacy.js";
 
 const ajv = new Ajv2020({ allErrors: true, verbose: true });
 addFormats(ajv);
@@ -53,13 +54,12 @@ function formatPath(instancePath: string): string {
 
 export function validateHarness(config: unknown): ValidationResult {
   const doc = config as Record<string, unknown>;
-  const isLegacyFormat =
-    "version" in doc && typeof doc.version === "number" && doc.version === 1;
+  const legacy = isLegacyFormat(doc);
 
   const valid = validate(config);
 
   if (valid) {
-    return { valid: true, errors: [], isLegacyFormat };
+    return { valid: true, errors: [], isLegacyFormat: legacy };
   }
 
   const errors: ValidationError[] = (validate.errors ?? []).map((err) => ({
@@ -72,7 +72,7 @@ export function validateHarness(config: unknown): ValidationResult {
     ),
   }));
 
-  return { valid: false, errors, isLegacyFormat };
+  return { valid: false, errors, isLegacyFormat: legacy };
 }
 
 export function validateHarnessYaml(yamlString: string): ValidationResult {

@@ -5,6 +5,7 @@ import type {
   HarnessPermissions,
   TargetPlatform,
 } from "../types.js";
+import { readJsonOrDefault } from "../utils/read-json.js";
 
 export async function compilePermissions(
   config: HarnessConfig,
@@ -50,15 +51,9 @@ async function compileClaudeCodePermissions(
 ): Promise<FileAction> {
   const settingsPath = fs.joinPath(cwd, ".claude/settings.json");
 
-  let existing: Record<string, unknown> = {};
-  if (await fs.exists(settingsPath)) {
-    try {
-      const raw = await fs.readFile(settingsPath);
-      existing = JSON.parse(raw);
-    } catch {
-      // Malformed JSON — start fresh
-    }
-  }
+  const { data: existing, existed } = await readJsonOrDefault<Record<string, unknown>>(
+    fs, settingsPath, {},
+  );
 
   const permissionsObj: Record<string, unknown> = {};
 
@@ -86,7 +81,7 @@ async function compileClaudeCodePermissions(
   return {
     path: ".claude/settings.json",
     content,
-    action: (await fs.exists(settingsPath)) ? "update" : "create",
+    action: existed ? "update" : "create",
     platform: "claude-code",
     slot: "permissions",
     linesAdded: allowCount + denyCount,

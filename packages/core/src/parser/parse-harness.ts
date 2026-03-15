@@ -1,5 +1,6 @@
 import { parse } from "yaml";
 import type { HarnessConfig } from "../types.js";
+import { isLegacyFormat } from "../utils/legacy.js";
 
 export interface ParseResult {
   config: HarnessConfig;
@@ -25,12 +26,8 @@ export function parseHarness(yamlString: string): ParseResult {
 
   const doc = raw as Record<string, unknown>;
 
-  // Detect legacy format: version is integer 1 instead of string "1"
-  const isLegacyFormat =
-    "version" in doc && typeof doc.version === "number" && doc.version === 1;
-
   return {
     config: doc as unknown as HarnessConfig,
-    isLegacyFormat,
+    isLegacyFormat: isLegacyFormat(doc),
   };
 }

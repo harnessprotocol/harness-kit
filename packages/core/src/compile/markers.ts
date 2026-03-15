@@ -49,14 +49,25 @@ export function replaceMarkerBlock(
   slot: string,
   newContent: string,
 ): string {
-  const location = findMarkerBlock(fileContent, name, slot);
-  if (!location) {
-    return fileContent;
+  const beginTag = `<!-- BEGIN harness:${name}:${slot} -->`;
+  const endTag = `<!-- END harness:${name}:${slot} -->`;
+  const lines = fileContent.split("\n");
+
+  let startLine = -1;
+  let endLine = -1;
+  for (let i = 0; i < lines.length; i++) {
+    if (lines[i].trim() === beginTag) {
+      startLine = i;
+    } else if (lines[i].trim() === endTag && startLine >= 0) {
+      endLine = i;
+      break;
+    }
   }
 
-  const lines = fileContent.split("\n");
-  const before = lines.slice(0, location.startLine);
-  const after = lines.slice(location.endLine + 1);
+  if (startLine < 0 || endLine < 0) return fileContent;
+
+  const before = lines.slice(0, startLine);
+  const after = lines.slice(endLine + 1);
   const block = buildMarkerBlock(name, slot, newContent);
   return [...before, block, ...after].join("\n");
 }

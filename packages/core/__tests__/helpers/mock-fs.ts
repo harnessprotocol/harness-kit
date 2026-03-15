@@ -1,4 +1,5 @@
 import type { FsProvider } from "../../src/fs-provider.js";
+import { posixJoin, posixDirname } from "../../src/utils/posix-path.js";
 
 export class MockFsProvider implements FsProvider {
   private files: Map<string, string>;
@@ -56,16 +57,11 @@ export class MockFsProvider implements FsProvider {
   }
 
   joinPath(...segments: string[]): string {
-    // Simple path join without node:path
-    return segments
-      .join("/")
-      .replace(/\/+/g, "/")
-      .replace(/\/$/, "");
+    return posixJoin(...segments);
   }
 
   dirname(path: string): string {
-    const lastSlash = path.lastIndexOf("/");
-    return lastSlash > 0 ? path.substring(0, lastSlash) : "/";
+    return posixDirname(path);
   }
 
   async homedir(): Promise<string> {

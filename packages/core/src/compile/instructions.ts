@@ -7,6 +7,7 @@ import type {
 } from "../types.js";
 import {
   appendMarkerBlock,
+  buildMarkerBlock,
   findMarkerBlock,
   replaceMarkerBlock,
 } from "./markers.js";
@@ -115,9 +116,10 @@ export async function compileInstructions(
       const frontmatter = buildFrontmatter(target, mapping.slot);
 
       if (importMode === "replace") {
+        const markerBlock = buildMarkerBlock(harnessName, mapping.slot, slotContent);
         const fullContent = frontmatter
-          ? `${frontmatter}\n\n${buildMarkerContent(harnessName, mapping.slot, slotContent)}`
-          : buildMarkerContent(harnessName, mapping.slot, slotContent);
+          ? `${frontmatter}\n\n${markerBlock}`
+          : markerBlock;
 
         files.push({
           path: filePath,
@@ -130,10 +132,13 @@ export async function compileInstructions(
         continue;
       }
 
-      // merge mode
-      const existingContent = (await fs.exists(fullPath))
-        ? await fs.readFile(fullPath)
-        : "";
+      // merge mode — read directly, default to empty on missing file
+      let existingContent = "";
+      try {
+        existingContent = await fs.readFile(fullPath);
+      } catch {
+        // File doesn't exist yet — start empty
+      }
 
       const existing = findMarkerBlock(existingContent, harnessName, mapping.slot);
       let newFileContent: string;
@@ -148,7 +153,7 @@ export async function compileInstructions(
         );
       } else if (existingContent.trim() === "") {
         // New file — include frontmatter if needed
-        const markerBlock = buildMarkerContent(harnessName, mapping.slot, slotContent);
+        const markerBlock = buildMarkerBlock(harnessName, mapping.slot, slotContent);
         newFileContent = frontmatter
           ? `${frontmatter}\n\n${markerBlock}\n`
           : `${markerBlock}\n`;
@@ -177,6 +182,13 @@ export async function compileInstructions(
   return { files, warnings };
 }
 
-function buildMarkerContent(name: string, slot: string, content: string): string {
-  return `<!-- BEGIN harness:${name}:${slot} -->\n${content}\n<!-- END harness:${name}:${slot} -->`;
+/** All instruction file paths across all platforms (for --clean scanning). */
+export function getAllInstructionFilePaths(): string[] {
+  const paths: string[] = [];
+  for (const mapping of SLOT_MAPPINGS) {
+    for (const filePath of Object.values(mapping.file)) {
+      if (filePath) paths.push(filePath);
+    }
+  }
+  return paths;
 }

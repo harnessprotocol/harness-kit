@@ -7,6 +7,7 @@ import {
 } from "@tauri-apps/plugin-fs";
 import { join, homeDir } from "@tauri-apps/api/path";
 import type { FsProvider } from "@harness-kit/core";
+import { posixJoin, posixDirname } from "@harness-kit/core";
 
 /**
  * FsProvider implementation for Tauri desktop apps.
@@ -41,17 +42,11 @@ export class TauriFsProvider implements FsProvider {
   }
 
   joinPath(...segments: string[]): string {
-    // Tauri's join is async, but FsProvider.joinPath is sync.
-    // Use a simple POSIX join for paths — Tauri normalizes on the backend.
-    return segments
-      .join("/")
-      .replace(/\/+/g, "/")
-      .replace(/\/$/, "");
+    return posixJoin(...segments);
   }
 
   dirname(path: string): string {
-    const lastSlash = path.lastIndexOf("/");
-    return lastSlash > 0 ? path.substring(0, lastSlash) : "/";
+    return posixDirname(path);
   }
 
   async homedir(): Promise<string> {
