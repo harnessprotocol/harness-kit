@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::io::BufRead;
 
 // ── Stats cache types ─────────────────────────────────────────
@@ -233,6 +234,7 @@ pub fn list_active_sessions() -> Result<Vec<ActiveSession>, String> {
 
 /// Daily activity derived from history.jsonl — always fresh (not stale like stats-cache)
 #[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct LiveDailyActivity {
     pub date: String,
     pub message_count: u64,
@@ -260,7 +262,7 @@ pub fn read_live_activity() -> Result<Vec<LiveDailyActivity>, String> {
     }
 
     // date_str -> (message_count, HashSet<session_id>)
-    let mut buckets: HashMap<String, (u64, std::collections::HashSet<String>)> = HashMap::new();
+    let mut buckets: HashMap<String, (u64, HashSet<String>)> = HashMap::new();
 
     for line in std::io::BufReader::new(file).lines() {
         let line = match line {
@@ -277,13 +279,13 @@ pub fn read_live_activity() -> Result<Vec<LiveDailyActivity>, String> {
         };
         // Convert ms timestamp to "YYYY-MM-DD"
         let secs = ts_ms / 1000;
-        let date = chrono::DateTime::from_timestamp(secs, 0)
+        let date = chrono::DateTime::<chrono::Utc>::from_timestamp_secs(secs)
             .map(|dt: chrono::DateTime<chrono::Utc>| dt.format("%Y-%m-%d").to_string())
             .unwrap_or_default();
         if date.is_empty() {
             continue;
         }
-        let bucket = buckets.entry(date).or_insert_with(|| (0, std::collections::HashSet::new()));
+        let bucket = buckets.entry(date).or_insert_with(|| (0, HashSet::new()));
         bucket.0 += 1;
         if let Some(sid) = entry.session_id {
             if !sid.is_empty() {
