@@ -1,0 +1,14 @@
+{
+  "name": "board",
+  "description": "Harness Board — a lightweight Kanban board with real-time Claude ↔ web UI two-way sync",
+  "version": "0.1.0",
+  "category": "project-management",
+  "tags": ["kanban", "tasks", "project-management", "mcp", "board"],
+  "mcp": {
+    "server": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/../../packages/board-server/dist/mcp/server.js"],
+      "transport": "stdio"
+    }
+  }
+}
