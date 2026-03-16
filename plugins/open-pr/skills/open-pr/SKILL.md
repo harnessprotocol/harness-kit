@@ -1,6 +1,6 @@
 ---
 name: open-pr
-description: Use when wrapping up a development task and getting a PR ready — runs local tests, creates a PR (if one doesn't exist) with a structured description template, conducts a code review via subagent, and checks CI status with quick fixes. Trigger when the user says they're done with a feature, want to open a PR, wrap up, finalize their work, or push their branch for review. Also invoke proactively after completing all tasks in an implementation plan. Does NOT merge — suggests /merge-pr when the PR is ready to land.
+description: Use when wrapping up a development task and getting a PR ready — runs local tests, creates a PR (if one doesn't exist) with a structured description template, conducts a code review via the review skill, and checks CI status with quick fixes. Trigger when the user says they're done with a feature, want to open a PR, wrap up, finalize their work, or push their branch for review. Also invoke proactively after completing all tasks in an implementation plan. Does NOT merge — suggests /merge-pr when the PR is ready to land.
 ---
 
 # Open PR
