@@ -35,13 +35,23 @@ harness-kit/
 │   │       └── lineage/
 │   │           ├── SKILL.md
 │   │           └── README.md
-│   └── orient/
+│   ├── orient/
+│   │   ├── .claude-plugin/
+│   │   │   └── plugin.json
+│   │   └── skills/
+│   │       └── orient/
+│   │           ├── SKILL.md
+│   │           └── README.md
+│   └── iterm-notify/
 │       ├── .claude-plugin/
 │       │   └── plugin.json
+│       ├── scripts/
+│       │   └── notify.sh         ← hook script (wire manually in settings.json)
 │       └── skills/
-│           └── orient/
+│           └── iterm-notify/
 │               ├── SKILL.md
 │               └── README.md
+├── harness.yaml                  ← dogfooding config (plugins used to develop this repo)
 ├── install.sh                    ← script fallback for users without plugin marketplace
 ├── CLAUDE.md                     ← this file
 └── README.md

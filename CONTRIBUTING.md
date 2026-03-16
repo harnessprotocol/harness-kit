@@ -18,6 +18,20 @@ The full step-by-step guide lives in [CLAUDE.md](CLAUDE.md) — directory layout
 
 ---
 
+## Naming convention
+
+Plugin and skill names follow these rules:
+
+- **Lowercase kebab-case** — `ship-pr`, not `ShipPR` or `ship_pr`
+- **Verb-first for actions** — `ship-pr` (ships), `review` (reviews), `capture` (captures)
+- **Noun for modes/tools** — `research`, `explain`, `notify`
+- **Max 2 words** — `pr-sweep`, not `pull-request-sweep`
+- **Prefer shorter names** — `capture` over `capture-session`, `stats` over `usage-stats`
+
+The plugin directory name, skill directory name, SKILL.md `name:` field, and `plugin.json` `name` field must all match exactly.
+
+---
+
 ## Writing SKILL.md
 
 Skill quality is the primary review criterion. Get this right.

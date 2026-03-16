@@ -277,6 +277,41 @@ Use the Agent tool with agent `code-explorer` to map the directory structure.
 
 See [Understanding Agents](/docs/concepts/agents) for the full frontmatter field reference.
 
+## 5b. Add Hook Scripts (Optional)
+
+If your plugin includes lifecycle hooks (scripts that fire on Claude Code events like `Stop` or `Notification`), place them under `scripts/`:
+
+```
+plugins/<plugin-name>/
+├── scripts/
+│   └── my-hook.sh
+```
+
+Hooks are NOT auto-configured on install. Users must manually wire them in `~/.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "Stop": [{
+      "hooks": [{
+        "type": "command",
+        "command": "${CLAUDE_PLUGIN_ROOT}/scripts/my-hook.sh"
+      }]
+    }]
+  }
+}
+```
+
+Document the wiring in your plugin's README.
+
+### Hook best practices
+
+- Read hook input from stdin (JSON with `session_id`, `transcript_path`, `cwd`)
+- Exit 0 quickly — hooks block Claude Code's lifecycle
+- Use anti-recursion guards if your hook spawns `claude -p`
+- Make all paths configurable via environment variables
+- Never hardcode personal paths or PII
+
 ## 6. Add to Root README
 
 Under the `## Plugins` table in the repo root `README.md`, add a row linking to your plugin's README.

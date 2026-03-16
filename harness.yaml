@@ -1,0 +1,23 @@
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
+version: "1"
+
+metadata:
+  name: harness-kit
+  description: Dogfooding config — plugins used to develop harness-kit itself.
+
+plugins:
+  - name: review
+    source: harnessprotocol/harness-kit
+    description: Code review for branches and PRs
+
+  - name: ship-pr
+    source: harnessprotocol/harness-kit
+    description: End-of-task shipping workflow
+
+  - name: docgen
+    source: harnessprotocol/harness-kit
+    description: Generate or update documentation
+
+  - name: explain
+    source: harnessprotocol/harness-kit
+    description: Structured code explanations
