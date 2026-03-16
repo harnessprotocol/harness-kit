@@ -1,0 +1,7 @@
+{
+  "name": "iterm-notify",
+  "description": "macOS desktop notifications and iTerm2 badge management for Claude Code lifecycle events.",
+  "version": "0.1.0",
+  "category": "productivity",
+  "tags": ["notifications", "macos", "iterm2", "hooks"]
+}

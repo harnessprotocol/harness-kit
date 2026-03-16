@@ -1,10 +1,10 @@
-# Capture Session Plugin
+# Capture Plugin
 
-A Claude Code plugin for capturing session information into a staging file mid-conversation. Feeds the same pipeline as the automated Stop hook — manual control over what gets remembered.
+A Claude Code plugin for capturing session information into a staging file mid-conversation. Pairs with the automated `session-end.sh` hook for hands-off capture at session end.
 
 ## What It Does
 
-When you invoke `/capture-session`, the skill:
+When you invoke `/capture`, the skill:
 
 1. Parses your argument to determine what to capture
 2. Resolves the staging file (`scripts/session-staging.md` → `~/.claude/session-staging.md`)
@@ -16,7 +16,7 @@ When you invoke `/capture-session`, the skill:
 ### Auto-extract (no argument)
 
 ```
-/capture-session
+/capture
 ```
 
 Scans the conversation and extracts 3-8 most important facts — decisions, technical details, status changes, new entities.
@@ -24,8 +24,8 @@ Scans the conversation and extracts 3-8 most important facts — decisions, tech
 ### Stage specific facts
 
 ```
-/capture-session SQLite chosen over Postgres for local-first storage
-/capture-session harness-kit domain purchased at harnesskit.ai, 3-year registration
+/capture SQLite chosen over Postgres for local-first storage
+/capture harness-kit domain purchased at harnesskit.ai, 3-year registration
 ```
 
 Stages the facts you provide, formatted as clean bullets.
@@ -33,7 +33,7 @@ Stages the facts you provide, formatted as clean bullets.
 ### Filter to decisions only
 
 ```
-/capture-session decisions
+/capture decisions
 ```
 
 Extracts only explicit decisions made this session — architectural choices, plans confirmed, approaches selected.
@@ -41,7 +41,7 @@ Extracts only explicit decisions made this session — architectural choices, pl
 ### Filter to technical facts only
 
 ```
-/capture-session technical
+/capture technical
 ```
 
 Extracts only technical facts — implementation details, file paths, APIs, schemas, commands.
@@ -50,36 +50,33 @@ Extracts only technical facts — implementation details, file paths, APIs, sche
 
 | Component | Purpose |
 |-----------|---------|
-| `/capture-session` skill | Manual, on-demand staging from within a conversation |
-| `session-capture.sh` | Automated Stop hook that summarizes sessions at exit |
+| `/capture` skill | Manual, on-demand staging from within a conversation |
+| `session-end.sh` | Automated Stop hook that runs a reflection prompt at session end |
 
 ## Setup
 
 ### Wire the Stop hook
 
-Add to `~/.claude/hooks.json`:
+Add to `~/.claude/settings.json`:
 
 ```json
 {
   "hooks": {
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/path/to/plugins/capture-session/scripts/session-capture.sh"
-          }
-        ]
-      }
-    ]
+    "Stop": [{
+      "hooks": [{
+        "type": "command",
+        "command": "${CLAUDE_PLUGIN_ROOT}/scripts/session-end.sh"
+      }]
+    }]
   }
 }
 ```
 
-After `plugin install capture-session@harness-kit`, the script will be at `~/.claude/plugins/capture-session/scripts/session-capture.sh`. For a local clone, use the absolute path to `plugins/capture-session/scripts/session-capture.sh` within the repo.
+After `plugin install capture@harness-kit`, `${CLAUDE_PLUGIN_ROOT}` resolves to the installed plugin directory.
 
-The hook reads from stdin (the Stop event payload), finds the session transcript, summarizes it, and appends to the staging file. It checks for `<!-- source: manual -->` entries from today and skips facts already captured manually.
+The hook reads the session transcript, runs a reflection prompt via `claude -p`, and writes a staging file to `~/.claude/capture/staging/<session-id>.md`. See `scripts/session-reflection-prompt.md` for the prompt — replace it with your own to customize what gets extracted.
+
+See `scripts/session-end.sh` for configurable environment variables (`HARNESS_CAPTURE_DIR`, `HARNESS_CAPTURE_CWD_FILTER`, etc.).
 
 ## Staging File Format
 
@@ -104,7 +101,7 @@ Facts staged here are consumed by the daily reflection and written to the knowle
 ## Pipeline
 
 ```
-Manual /capture-session  ──┐
+Manual /capture  ──┐
                   ├──▶  session-staging.md  ──▶  daily reflection  ──▶  knowledge graph
 Auto Stop hook ──┘
 ```
@@ -115,7 +112,7 @@ The Stop hook deduplicates against manual entries: if `<!-- source: manual -->` 
 
 ### Why manual staging?
 
-The Stop hook auto-summarizes at session end — useful, but it misses nuance. You might know mid-session that a particular decision is worth capturing precisely. `/capture-session decisions` or `/capture-session specific text` lets you control what gets remembered while the context is fresh.
+The Stop hook auto-summarizes at session end — useful, but it misses nuance. You might know mid-session that a particular decision is worth capturing precisely. `/capture decisions` or `/capture specific text` lets you control what gets remembered while the context is fresh.
 
 ### Why the same pipeline?
 

@@ -60,7 +60,7 @@
       "name": "capture",
       "source": "./capture",
       "description": "Capture session information into a staging file for later reflection and knowledge graph processing",
-      "version": "0.3.0",
+      "version": "0.4.0",
       "author": { "name": "harnessprotocol" },
       "license": "Apache-2.0",
       "category": "research-knowledge",
@@ -125,6 +125,16 @@
       "license": "Apache-2.0",
       "category": "productivity",
       "tags": ["usage", "statistics", "tokens", "sessions", "dashboard", "analytics"]
+    },
+    {
+      "name": "iterm-notify",
+      "source": "./iterm-notify",
+      "description": "macOS desktop notifications and iTerm2 badge management for Claude Code lifecycle events.",
+      "version": "0.1.0",
+      "author": { "name": "harnessprotocol" },
+      "license": "Apache-2.0",
+      "category": "productivity",
+      "tags": ["notifications", "macos", "iterm2", "hooks"]
     }
   ]
 }
