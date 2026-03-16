@@ -13,6 +13,9 @@ import ComparatorSetupPage from "./pages/comparator/ComparatorSetupPage";
 import ComparatorRunPage from "./pages/comparator/ComparatorRunPage";
 import ComparatorHistoryPage from "./pages/comparator/ComparatorHistoryPage";
 import ComparatorAnalyticsPage from "./pages/comparator/ComparatorAnalyticsPage";
+import PermissionsPage from "./pages/security/PermissionsPage";
+import SecretsPage from "./pages/security/SecretsPage";
+import AuditLogPage from "./pages/security/AuditLogPage";
 
 export default function App() {
   return (
@@ -39,6 +42,11 @@ export default function App() {
           <Route path="comparator/history" element={<ComparatorHistoryPage />} />
           <Route path="comparator/analytics" element={<ComparatorAnalyticsPage />} />
           <Route path="comparator/review/:comparisonId" element={<ComparatorRunPage />} />
+
+          {/* Security */}
+          <Route path="security/permissions" element={<PermissionsPage />} />
+          <Route path="security/secrets" element={<SecretsPage />} />
+          <Route path="security/audit" element={<AuditLogPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

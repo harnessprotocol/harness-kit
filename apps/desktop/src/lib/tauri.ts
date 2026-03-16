@@ -5,6 +5,8 @@ import type {
   HarnessInfo, ComparisonRequest, GitRepoInfo, ComparisonSummary,
   ComparisonDetail, PanelDiffs, ReplaySetup, SaveEvaluationRequest,
   EvaluationScores, AnalyticsData, FileDiffEntry,
+  PermissionsState, SecurityPreset, KeychainSecretInfo,
+  EnvConfigEntry, AuditEntry,
 } from "@harness-kit/shared";
 
 // ── Plugin commands ──────────────────────────────────────────
@@ -174,4 +176,52 @@ export async function exportComparisonJson(comparisonId: string): Promise<string
 
 export async function getComparatorAnalytics(): Promise<AnalyticsData> {
   return invoke<AnalyticsData>("get_comparator_analytics");
+}
+
+// ── Security commands ───────────────────────────────────────
+
+export async function readPermissions(): Promise<PermissionsState> {
+  return invoke<PermissionsState>("read_permissions");
+}
+
+export async function updatePermissions(permissions: PermissionsState): Promise<void> {
+  return invoke<void>("update_permissions", { permissions });
+}
+
+export async function listSecurityPresets(): Promise<SecurityPreset[]> {
+  return invoke<SecurityPreset[]>("list_security_presets");
+}
+
+export async function applySecurityPreset(presetId: string): Promise<void> {
+  return invoke<void>("apply_security_preset", { presetId });
+}
+
+export async function listRequiredEnv(): Promise<KeychainSecretInfo[]> {
+  return invoke<KeychainSecretInfo[]>("list_required_env");
+}
+
+export async function setKeychainSecret(name: string, value: string): Promise<void> {
+  return invoke<void>("set_keychain_secret", { name, value });
+}
+
+export async function deleteKeychainSecret(name: string): Promise<void> {
+  return invoke<void>("delete_keychain_secret", { name });
+}
+
+export async function readEnvConfig(): Promise<EnvConfigEntry[]> {
+  return invoke<EnvConfigEntry[]>("read_env_config");
+}
+
+export async function writeEnvConfig(entries: EnvConfigEntry[]): Promise<void> {
+  return invoke<void>("write_env_config", { entries });
+}
+
+export async function listAuditEntries(
+  limit: number, offset: number, category?: string,
+): Promise<AuditEntry[]> {
+  return invoke<AuditEntry[]>("list_audit_entries", { limit, offset, category });
+}
+
+export async function clearAuditEntries(beforeDate: string): Promise<void> {
+  return invoke<void>("clear_audit_entries", { beforeDate });
 }

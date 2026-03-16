@@ -53,6 +53,16 @@ const NAV_SECTIONS: NavSection[] = [
       { label: "Analytics", path: "/comparator/analytics" },
     ],
   },
+  {
+    id: "security",
+    label: "Security",
+    path: "/security/permissions",
+    children: [
+      { label: "Permissions", path: "/security/permissions" },
+      { label: "Secrets", path: "/security/secrets" },
+      { label: "Audit Log", path: "/security/audit" },
+    ],
+  },
 ];
 
 export default function AppLayout() {

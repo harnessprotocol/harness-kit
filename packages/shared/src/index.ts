@@ -50,4 +50,9 @@ export type {
   HarnessWinRate,
   ModelWinRate,
   DimensionAvg,
+  PermissionsState,
+  SecurityPreset,
+  KeychainSecretInfo,
+  EnvConfigEntry,
+  AuditEntry,
 } from "./types.js";
