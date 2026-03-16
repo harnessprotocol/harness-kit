@@ -22,8 +22,8 @@ The full step-by-step guide lives in [CLAUDE.md](CLAUDE.md) — directory layout
 
 Plugin and skill names follow these rules:
 
-- **Lowercase kebab-case** — `ship-pr`, not `ShipPR` or `ship_pr`
-- **Verb-first for actions** — `ship-pr` (ships), `review` (reviews), `capture` (captures)
+- **Lowercase kebab-case** — `merge-pr`, not `MergePR` or `merge_pr`
+- **Verb-first for actions** — `merge-pr` (merges), `review` (reviews), `capture` (captures)
 - **Noun for modes/tools** — `research`, `explain`, `notify`
 - **Max 2 words** — `pr-sweep`, not `pull-request-sweep`
 - **Prefer shorter names** — `capture` over `capture-session`, `stats` over `usage-stats`

@@ -1,13 +1,13 @@
 ---
-name: ship-pr
-description: Use when wrapping up a development task and ready to ship — runs local tests, creates a PR (if one doesn't exist) with a structured description template, conducts a code review via subagent, checks CI status and attempts quick fixes if failing, verifies the branch is up-to-date with base, then squash merges and cleans up. Trigger when the user says they're done with a feature, want to ship, wrap up, open a PR, finalize their work, or merge their branch. Also invoke proactively after completing all tasks in an implementation plan.
+name: open-pr
+description: Use when wrapping up a development task and getting a PR ready — runs local tests, creates a PR (if one doesn't exist) with a structured description template, conducts a code review via subagent, and checks CI status with quick fixes. Trigger when the user says they're done with a feature, want to open a PR, wrap up, finalize their work, or push their branch for review. Also invoke proactively after completing all tasks in an implementation plan. Does NOT merge — suggests /merge-pr when the PR is ready to land.
 ---
 
-# Ship PR
+# Open PR
 
-A structured end-of-task workflow: create PR → code review → CI → base sync → squash merge.
+A structured PR preparation workflow: tests → create PR → code review → CI → hand off to merge.
 
-**Announce at start:** "I'm using the ship-pr skill to wrap up this work."
+**Announce at start:** "I'm using the open-pr skill to get this PR ready."
 
 ---
 
@@ -141,76 +141,29 @@ gh pr checks
 3. **Complex failure** (logic error, architecture issue, flaky infra): Stop and report clearly:
    > "CI is failing due to [X]. This needs a dedicated fix before merging — let's plan it out."
 
-Never merge with failing CI.
+Never proceed to merge with failing CI.
 
 ---
 
-## Step 6: Base Branch Sync
+## Step 6: Report and Hand Off
 
-Check whether the base branch has moved since branching:
-
-```bash
-BASE=$(gh pr view --json baseRefName --jq '.baseRefName')
-git fetch origin $BASE
-git log HEAD..origin/$BASE --oneline
-```
-
-**New commits exist:** Rebase and force-push:
-
-```bash
-git rebase origin/$BASE
-git push --force-with-lease
-```
-
-If rebase has conflicts, resolve them, then `git rebase --continue`.
-
-After rebasing and pushing, wait for CI to pass on the rebased code:
-
-```bash
-gh pr checks --watch --fail-fast
-```
-
-If CI fails after rebase: treat as a Step 5 failure — diagnose and fix.
-
-**No new commits:** Skip.
-
----
-
-## Step 7: Confirm and Squash Merge
-
-First, verify no reviews are blocking:
-
-```bash
-gh pr view --json reviewDecision --jq '.reviewDecision'
-```
-
-- **`CHANGES_REQUESTED`:** Stop. Report: "This PR has changes requested by a reviewer. Address their feedback before merging." Do not proceed.
-- **`APPROVED` or empty (no required reviews):** Continue.
-
-Before merging, confirm with the user unless they've already said to proceed automatically:
+Once tests, review, and CI are all green, report the PR status and suggest the next step:
 
 ```
-Ready to squash merge PR #<N> ("<title>") into <base>.
-All checks passed. Proceed?
+PR #<N> is ready to merge.
+──────────────────────────
+Title:  <title>
+Branch: <branch> → <base>
+URL:    <url>
+
+✓ Local tests pass
+✓ Code review clean (or: N suggestions noted for follow-up)
+✓ CI passing
+
+Run /merge-pr to squash merge and clean up.
 ```
 
-Wait for confirmation. If the user says to always proceed without asking (e.g. "just ship it", "auto-merge", "no need to confirm"), skip this prompt for the rest of the session.
-
-Once confirmed:
-
-```bash
-gh pr merge --squash --delete-branch
-```
-
-After merge, sync locally:
-
-```bash
-git checkout $BASE
-git pull
-git branch -d <feature-branch> 2>/dev/null || true
-```
-
-Report: "PR merged. Branch cleaned up. Done."
+Do not merge, rebase, or push anything further. Hand off cleanly.
 
 ---
 
@@ -222,21 +175,18 @@ Report: "PR merged. Branch cleaned up. Done."
 | 2. PR check | Exists? | Skip to review |
 | 3. Create PR | Push + `gh pr create` | — |
 | 4. Code review | `review` skill | Yes for MUST FIX |
-| 5. CI | `gh pr checks` | Yes — fix or plan |
-| 6. Base sync | Rebase if behind + re-verify CI | Yes — resolve conflicts, fix CI |
-| 7. Merge | Check reviews → confirm → squash | Yes — address CHANGES_REQUESTED |
+| 5. CI | `gh pr checks` | Yes — fix or stop |
+| 6. Report | PR summary + `/merge-pr` suggestion | — |
 
 ## Rules
 
 **Never:**
-- Merge with failing CI
-- Merge with CHANGES_REQUESTED reviews outstanding
-- Force-push to main/master
+- Proceed with failing tests or CI
+- Merge, rebase, or force-push anything
 - Use `--no-verify` to bypass hooks
 - Leave PR template sections unfilled
 - Set reviewer or assignee
 
 **Always:**
-- Squash merge
-- Delete the branch after merge
-- Address MUST FIX review items before merging
+- Address MUST FIX review items before handing off
+- Suggest `/merge-pr` at the end

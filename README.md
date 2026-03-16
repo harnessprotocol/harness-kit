@@ -65,7 +65,8 @@ Produces a structured explanation: summary, key components, how it connects, pat
 | [`lineage`](plugins/lineage/skills/lineage/README.md) | Trace column-level data lineage through SQL, Kafka, Spark, and JDBC codebases | `/lineage orders.amount` |
 | [`orient`](plugins/orient/skills/orient/README.md) ¹ | Topic-focused session orientation across graph, knowledge, journal, and research | `/orient auth` |
 | [`capture`](plugins/capture/skills/capture/README.md) ¹ | Capture session information into a staging file for later reflection | `/capture` |
-| [`ship-pr`](plugins/ship-pr/skills/ship-pr/README.md) | End-of-task shipping: tests, PR, review, CI, merge | `/ship-pr` |
+| [`open-pr`](plugins/open-pr/skills/open-pr/README.md) | Pre-flight checks and PR creation: tests, PR, review, CI | `/open-pr` |
+| [`merge-pr`](plugins/merge-pr/skills/merge-pr/README.md) | Merge a ready PR: verify CI, sync base, squash merge, clean up | `/merge-pr` |
 | [`pr-sweep`](plugins/pr-sweep/skills/pr-sweep/README.md) | Cross-repo PR sweep: triage, review, merge, report | `/pr-sweep` |
 | [`harness-share`](plugins/harness-share/skills/harness-export/README.md) | Export your plugin setup to `harness.yaml`, compile to native configs for Claude Code, Cursor, and Copilot, and keep them in sync | `/harness-export` · `/harness-import` · `/harness-validate` · `/harness-compile` · `/harness-sync` |
 | [`stats`](plugins/stats/skills/stats/README.md) | Interactive HTML dashboard for Claude Code usage — tokens, sessions, models, and activity patterns | `/stats` |

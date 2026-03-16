@@ -1,0 +1,72 @@
+---
+title: open-pr
+---
+
+> **[View in Marketplace →](https://marketplace.harnessprotocol.io/plugins/open-pr)** for install tracking, related plugins, and profiles.
+
+# open-pr
+
+Pre-flight checks and PR creation — run tests, open a PR, code review, check CI, and hand off to merge.
+
+## Requirements
+
+- **Claude Code** — required
+- **`gh` CLI** ([GitHub CLI](https://cli.github.com/)) — required for PR creation and CI status checks. `GH_TOKEN` declared as required in `plugin.json` — see [Secrets Management](/docs/guides/secrets-management) for setup.
+- **review plugin** — used for automated code review
+
+## Install
+
+```
+/plugin marketplace add harnessprotocol/harness-kit
+/plugin install open-pr@harness-kit
+```
+
+## What It Does
+
+When you invoke `/open-pr`:
+
+1. Runs local tests
+2. Creates a PR with a structured description (summary, changes, test plan)
+3. Runs a code review via the `review` plugin — flags MUST FIX issues before proceeding
+4. Checks CI — attempts quick fixes (lint, format, typos) if failing
+5. Reports PR status and hands off to `/merge-pr`
+
+## Usage
+
+```
+/open-pr
+```
+
+Or use natural language:
+
+```
+I'm done with this feature, open a PR.
+Wrap this up and push for review.
+```
+
+## Pipeline
+
+```
+Development ─→ /open-pr ─→ /merge-pr ─→ /deploy-preview ─→ /go-live
+                 ▲ you are here
+```
+
+## Notes
+
+- Does NOT merge — use `/merge-pr` when the PR is ready to land
+- Uses the `review` plugin for code review — install it alongside this plugin
+
+## Source Files
+
+<Accordions>
+<Accordion title="SKILL.md — Runtime Configuration">
+
+{/* @embed plugins/open-pr/skills/open-pr/SKILL.md */}
+
+</Accordion>
+<Accordion title="README.md — Plugin Documentation">
+
+{/* @embed plugins/open-pr/skills/open-pr/README.md */}
+
+</Accordion>
+</Accordions>

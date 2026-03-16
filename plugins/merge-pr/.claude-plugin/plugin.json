@@ -1,0 +1,18 @@
+{
+  "name": "merge-pr",
+  "description": "PR merge workflow: verify CI and review status, sync with base branch, confirm, squash merge, and clean up",
+  "version": "0.1.0",
+  "category": "devops",
+  "tags": ["pull-request", "ci-cd", "merge", "workflow"],
+  "requires": {
+    "env": [
+      {
+        "name": "GH_TOKEN",
+        "description": "GitHub personal access token — used by gh CLI for CI status checks and merging",
+        "required": true,
+        "sensitive": true,
+        "when": "All merge-pr operations require GitHub access"
+      }
+    ]
+  }
+}

@@ -18,7 +18,8 @@ harness-kit ships 10 plugins across 6 categories. Each packages a proven workflo
 | [explain](code-quality/explain) | Layered explanations of files, functions, directories, or concepts | None |
 | [data-lineage](data-engineering/data-lineage) | Column-level lineage tracing through SQL, Kafka, Spark, JDBC | None |
 | [docgen](documentation/docgen) | Generate or update README, API docs, architecture overview, or changelog | None |
-| [ship-pr](devops/ship-pr) | End-of-task workflow: open a PR, code review, fix CI, squash merge | `gh` CLI |
+| [open-pr](devops/open-pr) | Pre-flight checks and PR creation: tests, PR, review, CI | `gh` CLI |
+| [merge-pr](devops/merge-pr) | Merge a ready PR: verify CI, sync base, squash merge, clean up | `gh` CLI |
 | [pull-request-sweep](devops/pull-request-sweep) | Cross-repo PR sweep: triage, review, merge, fix CI | `gh` CLI |
 | [harness-share](productivity/harness-share) | Compile, export, import, and sync harness configs across AI tools | None |
 
@@ -60,6 +61,6 @@ Profiles are pre-configured collections of plugins for specific roles. Each prof
 |---------|-------------|-----------------|
 | [research-knowledge](/profiles/research-knowledge) | Research-focused roles | research, orient, capture-session, explain, docgen |
 | [data-engineer](/profiles/data-engineer) | Data engineers with SQL pipelines | data-lineage, research, orient, capture-session, explain, docgen, review |
-| [full-stack-engineer](/profiles/full-stack-engineer) | Full-stack feature shipping | review, ship-pr, pull-request-sweep, explain, docgen, harness-share |
+| [full-stack-engineer](/profiles/full-stack-engineer) | Full-stack feature shipping | review, open-pr, merge-pr, pull-request-sweep, explain, docgen, harness-share |
 
 Install a profile's plugins individually, or use `/harness-import` with the profile's YAML to install them all at once.
