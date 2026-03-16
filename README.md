@@ -14,6 +14,8 @@ Works with [Claude Code](https://claude.ai/claude-code), [Cursor](https://cursor
 
 Building a good AI setup takes real work. harness-kit makes it portable. Package your plugins, skills, MCP servers, hooks, and conventions into a config you can apply to any harness on any machine — and share with your team in one file. Works with Claude Code, Cursor, and GitHub Copilot. Designed to travel.
 
+The harness concept is gaining industry adoption — LangChain's [deepagents](https://blog.langchain.com/the-anatomy-of-an-agent-harness/) is built around the same idea.
+
 ## Install
 
 ```
