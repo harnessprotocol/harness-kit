@@ -5,7 +5,7 @@ title: Plugin Overview
 
 # Plugins
 
-harness-kit ships 10 plugins across 6 categories. Each packages a proven workflow as a portable prompt template, currently distributed through Claude Code's plugin marketplace.
+harness-kit ships 11 plugins across 6 categories. Each packages a proven workflow as a portable prompt template, currently distributed through Claude Code's plugin marketplace.
 
 ## At a Glance
 
