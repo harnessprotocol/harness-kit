@@ -61,6 +61,9 @@ export default function ComparatorHistoryPage() {
             fontSize: "13px",
           }}
         >
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ color: "var(--fg-subtle)", marginBottom: "10px" }}>
+            <path d="M12 3v18M5 7l7-4 7 4M5 7l4 8H1L5 7zM19 7l4 8h-8l4-8z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"/>
+          </svg>
           <p style={{ marginBottom: "8px" }}>No comparisons yet</p>
           <button
             onClick={() => navigate("/comparator")}

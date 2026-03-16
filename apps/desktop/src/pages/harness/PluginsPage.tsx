@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { listInstalledPlugins } from "../../lib/tauri";
 import type { InstalledPlugin } from "@harness-kit/shared";
 
 export default function PluginsPage() {
+  const navigate = useNavigate();
   const [plugins, setPlugins] = useState<InstalledPlugin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -47,13 +49,33 @@ export default function PluginsPage() {
           background: "var(--bg-surface)",
           border: "1px solid var(--border-base)",
           borderRadius: "8px",
-          padding: "32px 16px",
+          padding: "40px 16px",
           textAlign: "center",
         }}>
-          <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0 }}>No plugins installed.</p>
-          <p style={{ fontSize: "11px", color: "var(--fg-subtle)", margin: "4px 0 0" }}>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ color: "var(--fg-subtle)", marginBottom: "10px" }}>
+            <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+            <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+            <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
+            <path d="M17.5 14v7M14 17.5h7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
+          <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: "0 0 4px" }}>No plugins installed.</p>
+          <p style={{ fontSize: "11px", color: "var(--fg-subtle)", margin: "0 0 12px" }}>
             Install via <code style={{ fontFamily: "ui-monospace, monospace" }}>/plugin install</code> in Claude Code.
           </p>
+          <button
+            onClick={() => navigate("/marketplace")}
+            style={{
+              fontSize: "11px",
+              color: "var(--accent-text)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontWeight: 500,
+              padding: 0,
+            }}
+          >
+            Browse Marketplace →
+          </button>
         </div>
       )}
 

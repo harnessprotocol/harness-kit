@@ -215,6 +215,10 @@ export default function SessionsPage() {
           padding: "32px 16px",
           textAlign: "center",
         }}>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ color: "var(--fg-subtle)", marginBottom: "10px" }}>
+            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5"/>
+            <path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
           <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0 }}>No sessions found.</p>
           <p style={{ fontSize: "11px", color: "var(--fg-subtle)", margin: "4px 0 0" }}>
             Sessions are read from <code style={{ fontFamily: "ui-monospace, monospace", fontSize: "10px" }}>~/.claude/history.jsonl</code>

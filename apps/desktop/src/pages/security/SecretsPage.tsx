@@ -156,6 +156,10 @@ export default function SecretsPage() {
 
         {secrets.length === 0 ? (
           <div style={{ padding: "24px 16px", textAlign: "center" }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ color: "var(--fg-subtle)", marginBottom: "10px" }}>
+              <circle cx="9" cy="12" r="4" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M13 12h7M17 12v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
             <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0 }}>
               No plugins require secrets.
             </p>

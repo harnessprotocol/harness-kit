@@ -211,6 +211,9 @@ export default function AuditLogPage() {
           </div>
         ) : entries.length === 0 ? (
           <div style={{ padding: "24px 16px", textAlign: "center" }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ color: "var(--fg-subtle)", marginBottom: "10px" }}>
+              <path d="M12 3L4 6v6c0 4.418 3.582 8 8 9 4.418-1 8-4.582 8-9V6l-8-3z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+            </svg>
             <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0 }}>
               No audit entries found.
             </p>
