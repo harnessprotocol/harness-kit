@@ -43,3 +43,6 @@ packages/core/dist/
 
 # CLI
 apps/cli/dist/
+
+# devlaunch (local project config)
+.devlaunch.yml

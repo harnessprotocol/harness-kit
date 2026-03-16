@@ -5,6 +5,8 @@ pub mod settings;
 pub mod observatory;
 pub mod comparator;
 pub mod comparator_db;
+pub mod security;
+pub mod security_db;
 pub mod git;
 pub mod evaluation;
 pub mod export;
