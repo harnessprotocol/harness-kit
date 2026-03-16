@@ -2,6 +2,7 @@ import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import Tooltip from "../components/Tooltip";
 import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
+import { useArrowNavigation } from "../hooks/useArrowNavigation";
 import {
   initTheme, getTheme, setTheme,
   getAccent, setAccent,
@@ -71,6 +72,31 @@ const NAV_SECTIONS: NavSection[] = [
     path: "/board",
   },
 ];
+
+function SidebarSubnav({ children }: { children: { label: string; path: string }[] }) {
+  const navigate = useNavigate();
+  const { focusedIndex, onKeyDown } = useArrowNavigation({
+    count: children.length,
+    onActivate: (i) => navigate(children[i].path),
+  });
+
+  return (
+    <div className="mt-0.5 mb-1" tabIndex={0} onKeyDown={onKeyDown} style={{ outline: "none" }}>
+      {children.map((child, idx) => (
+        <NavLink
+          key={child.path}
+          to={child.path}
+          className={({ isActive: childActive }) =>
+            `sidebar-subitem${childActive ? " active" : ""}`
+          }
+          style={focusedIndex === idx ? { outline: "2px solid var(--accent)", outlineOffset: "-2px", borderRadius: "5px" } : undefined}
+        >
+          {child.label}
+        </NavLink>
+      ))}
+    </div>
+  );
+}
 
 export default function AppLayout() {
   const location = useLocation();
@@ -150,36 +176,7 @@ export default function AppLayout() {
                 </NavLink>
 
                 {active && section.children && (
-                  <div
-                    className="mt-0.5 mb-1"
-                    data-section={section.id}
-                    onKeyDown={(e) => {
-                      const allLinks = Array.from(document.querySelectorAll(".sidebar-subitem"));
-                      const activeLinks = allLinks.filter(el => el.closest("[data-section]")?.getAttribute("data-section") === section.id);
-                      const focused = document.activeElement;
-                      const currentIdx = activeLinks.indexOf(focused as HTMLElement);
-
-                      if (e.key === "ArrowDown" && currentIdx < activeLinks.length - 1) {
-                        e.preventDefault();
-                        (activeLinks[currentIdx + 1] as HTMLElement).focus();
-                      } else if (e.key === "ArrowUp" && currentIdx > 0) {
-                        e.preventDefault();
-                        (activeLinks[currentIdx - 1] as HTMLElement).focus();
-                      }
-                    }}
-                  >
-                    {section.children.map((child) => (
-                      <NavLink
-                        key={child.path}
-                        to={child.path}
-                        className={({ isActive: childActive }) =>
-                          `sidebar-subitem${childActive ? " active" : ""}`
-                        }
-                      >
-                        {child.label}
-                      </NavLink>
-                    ))}
-                  </div>
+                  <SidebarSubnav children={section.children} />
                 )}
               </div>
             );

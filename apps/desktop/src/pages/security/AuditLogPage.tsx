@@ -72,7 +72,10 @@ export default function AuditLogPage() {
 
   const { focusedIndex: auditFocusedIndex, onKeyDown: onAuditKeyDown } = useArrowNavigation({
     count: entries.length,
-    onActivate: (i) => setExpandedId(expandedId === entries[i].id ? null : entries[i].id),
+    onActivate: (i) => {
+      const entry = entries[i];
+      if (entry?.details) setExpandedId(expandedId === entry.id ? null : entry.id);
+    },
   });
 
   const fetchEntries = useCallback(async () => {

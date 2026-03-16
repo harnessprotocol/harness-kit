@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 interface UseArrowNavigationOptions {
   count: number;
@@ -7,6 +7,11 @@ interface UseArrowNavigationOptions {
 
 export function useArrowNavigation({ count, onActivate }: UseArrowNavigationOptions) {
   const [focusedIndex, setFocusedIndex] = useState(-1);
+
+  // Reset when list changes
+  useEffect(() => {
+    setFocusedIndex(-1);
+  }, [count]);
 
   const onKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (count === 0) return;
