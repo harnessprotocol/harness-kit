@@ -1,6 +1,6 @@
 ---
-name: usage-stats
-description: Use when user invokes /usage-stats or asks about Claude Code usage, token consumption, session history, model distribution, or activity patterns. Generates an interactive HTML dashboard with charts and tables, auto-opens in browser. Also triggers on "how much have I used Claude", "show my usage", "token usage", "session stats", "usage report", "usage dashboard". Do NOT use for API billing or cost estimation — token counts are not costs.
+name: stats
+description: Use when user invokes /stats or asks about Claude Code usage, token consumption, session history, model distribution, or activity patterns. Generates an interactive HTML dashboard with charts and tables, auto-opens in browser. Also triggers on "how much have I used Claude", "show my usage", "token usage", "session stats", "usage report", "usage dashboard". Do NOT use for API billing or cost estimation — token counts are not costs.
 ---
 
 # Claude Code Usage Dashboard
@@ -22,7 +22,7 @@ Map the user's request to CLI flags:
 
 | User says | Flags |
 |-----------|-------|
-| `/usage-stats` (no args) | `--range 14d` |
+| `/stats` (no args) | `--range 14d` |
 | "last week" | `--range week` |
 | "last month" | `--range month` |
 | "last 30 days" | `--range 30d` |

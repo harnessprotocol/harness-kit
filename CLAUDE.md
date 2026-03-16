@@ -28,11 +28,11 @@ harness-kit/
 │   │       └── explain/
 │   │           ├── SKILL.md
 │   │           └── README.md
-│   ├── data-lineage/
+│   ├── lineage/
 │   │   ├── .claude-plugin/
 │   │   │   └── plugin.json
 │   │   └── skills/
-│   │       └── data-lineage/
+│   │       └── lineage/
 │   │           ├── SKILL.md
 │   │           └── README.md
 │   └── orient/

@@ -1,7 +1,7 @@
 {
-  "name": "capture-session",
+  "name": "capture",
   "description": "Capture session information into a staging file for later reflection and knowledge graph processing",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "category": "research-knowledge",
   "tags": ["session-capture", "knowledge-graph", "reflection", "staging"]
 }

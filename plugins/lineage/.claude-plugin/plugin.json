@@ -1,7 +1,7 @@
 {
-  "name": "data-lineage",
+  "name": "lineage",
   "description": "Trace column-level data lineage through SQL, Kafka, Spark, and JDBC codebases",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "category": "data-engineering",
   "tags": ["sql", "data-lineage", "kafka", "spark", "jdbc", "column-level"]
 }

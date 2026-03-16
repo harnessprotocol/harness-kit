@@ -1,6 +1,6 @@
 ---
-name: data-lineage
-description: Use when user invokes /data-lineage with a column name (optionally qualified with table/schema). Also triggers on "trace this column", "where does X come from", "what reads from Y table". Traces column-level data lineage through SQL, Kafka, Spark, JDBC, and ORM codebases. Produces a structured lineage path with confidence ratings and an SVG or ASCII diagram. Do NOT use for general code explanation — use /explain instead.
+name: lineage
+description: Use when user invokes /lineage with a column name (optionally qualified with table/schema). Also triggers on "trace this column", "where does X come from", "what reads from Y table". Traces column-level data lineage through SQL, Kafka, Spark, JDBC, and ORM codebases. Produces a structured lineage path with confidence ratings and an SVG or ASCII diagram. Do NOT use for general code explanation — use /explain instead.
 ---
 
 # Data Lineage Tracer
@@ -17,7 +17,7 @@ Trace column-level data lineage through heterogeneous data stacks — SQL views,
 
 ## When to Use
 
-User types `/data-lineage` followed by:
+User types `/lineage` followed by:
 - **Column name** → `total_amount` (searches all tables for this column)
 - **Qualified column** → `schema.table.column` or `table.column`
 - **Column with context** → `customer_id in reporting.daily_summary`
@@ -25,10 +25,10 @@ User types `/data-lineage` followed by:
 ## Invocation Examples
 
 ```
-/data-lineage orders.total_amount
-/data-lineage schema.table.column
-/data-lineage customer_id in reporting.daily_summary
-/data-lineage revenue
+/lineage orders.total_amount
+/lineage schema.table.column
+/lineage customer_id in reporting.daily_summary
+/lineage revenue
 ```
 
 ## Workflow Order (MANDATORY)

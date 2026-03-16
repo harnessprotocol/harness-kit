@@ -37,10 +37,10 @@
       "tags": ["code-explanation", "learning", "walkthrough", "codebase-understanding"]
     },
     {
-      "name": "data-lineage",
-      "source": "./data-lineage",
+      "name": "lineage",
+      "source": "./lineage",
       "description": "Trace column-level data lineage through SQL, Kafka, Spark, and JDBC codebases",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "author": { "name": "harnessprotocol" },
       "license": "Apache-2.0",
       "category": "data-engineering",
@@ -57,10 +57,10 @@
       "tags": ["orientation", "knowledge-graph", "session", "topic-search"]
     },
     {
-      "name": "capture-session",
-      "source": "./capture-session",
+      "name": "capture",
+      "source": "./capture",
       "description": "Capture session information into a staging file for later reflection and knowledge graph processing",
-      "version": "0.2.0",
+      "version": "0.3.0",
       "author": { "name": "harnessprotocol" },
       "license": "Apache-2.0",
       "category": "research-knowledge",
@@ -107,20 +107,20 @@
       "tags": ["pull-request", "ci-cd", "merge", "testing", "workflow"]
     },
     {
-      "name": "pull-request-sweep",
-      "source": "./pull-request-sweep",
+      "name": "pr-sweep",
+      "source": "./pr-sweep",
       "description": "Cross-repo PR sweep: triage all open PRs, run code reviews, merge what's ready, fix quick CI blockers, and report",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "author": { "name": "harnessprotocol" },
       "license": "Apache-2.0",
       "category": "devops",
       "tags": ["pull-request", "triage", "ci-cd", "code-review", "multi-repo"]
     },
     {
-      "name": "usage-stats",
-      "source": "./usage-stats",
+      "name": "stats",
+      "source": "./stats",
       "description": "Interactive dashboard for Claude Code usage — tokens, sessions, models, and activity patterns",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "author": { "name": "harnessprotocol" },
       "license": "Apache-2.0",
       "category": "productivity",

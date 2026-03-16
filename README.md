@@ -62,11 +62,11 @@ Produces a structured explanation: summary, key components, how it connects, pat
 | [`review`](plugins/review/skills/review/README.md) | Code review for a branch, PR, or path — structured output with severity labels | `/review` |
 | [`docgen`](plugins/docgen/skills/docgen/README.md) | Generate or update README, API docs, architecture overview, or changelog | `/docgen readme` |
 | [`research`](plugins/research/skills/research/README.md) | Process any source into a structured, compounding knowledge base | `/research https://...` |
-| [`data-lineage`](plugins/data-lineage/skills/data-lineage/README.md) | Trace column-level data lineage through SQL, Kafka, Spark, and JDBC codebases | `/data-lineage orders.amount` |
+| [`lineage`](plugins/lineage/skills/lineage/README.md) | Trace column-level data lineage through SQL, Kafka, Spark, and JDBC codebases | `/lineage orders.amount` |
 | [`orient`](plugins/orient/skills/orient/README.md) ¹ | Topic-focused session orientation across graph, knowledge, journal, and research | `/orient auth` |
-| [`capture-session`](plugins/capture-session/skills/capture-session/README.md) ¹ | Capture session information into a staging file for later reflection | `/capture-session` |
+| [`capture`](plugins/capture/skills/capture/README.md) ¹ | Capture session information into a staging file for later reflection | `/capture` |
 | [`harness-share`](plugins/harness-share/skills/harness-export/README.md) | Export your plugin setup to `harness.yaml`, compile to native configs for Claude Code, Cursor, and Copilot, and keep them in sync | `/harness-export` · `/harness-import` · `/harness-validate` · `/harness-compile` · `/harness-sync` |
-| [`usage-stats`](plugins/usage-stats/skills/usage-stats/README.md) | Interactive HTML dashboard for Claude Code usage — tokens, sessions, models, and activity patterns | `/usage-stats` |
+| [`stats`](plugins/stats/skills/stats/README.md) | Interactive HTML dashboard for Claude Code usage — tokens, sessions, models, and activity patterns | `/stats` |
 
 ¹ Personal-workflow plugins designed for projects using the [knowledge graph + journal pattern](docs/claude-md-conventions.md).
 

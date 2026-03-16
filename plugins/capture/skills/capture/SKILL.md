@@ -1,6 +1,6 @@
 ---
-name: capture-session
-description: Use when user invokes /capture-session to capture information from the current conversation into a staging file for later reflection and knowledge graph processing. Accepts no arguments (auto-extract), specific facts as text, or filter keywords like "decisions" or "technical". Do NOT use when the user wants to write directly to knowledge files — use direct file editing instead.
+name: capture
+description: Use when user invokes /capture to capture information from the current conversation into a staging file for later reflection and knowledge graph processing. Accepts no arguments (auto-extract), specific facts as text, or filter keywords like "decisions" or "technical". Do NOT use when the user wants to write directly to knowledge files — use direct file editing instead.
 disable-model-invocation: true
 ---
 

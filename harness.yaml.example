@@ -27,32 +27,32 @@ metadata:
 # source: owner/repo (resolved via GitHub by default)
 plugins:
   - name: explain
-    source: siracusa5/harness-kit
+    source: harnessprotocol/harness-kit
     description: Layered explanations of files, functions, directories, or concepts
 
   - name: research
-    source: siracusa5/harness-kit
+    source: harnessprotocol/harness-kit
     description: Process any source into a structured, compounding knowledge base
 
   - name: review
-    source: siracusa5/harness-kit
+    source: harnessprotocol/harness-kit
     description: Code review for a branch, PR, or path — severity labels and cross-file analysis
 
   # Uncomment to include additional harness-kit plugins:
   # - name: docgen
-  #   source: siracusa5/harness-kit
+  #   source: harnessprotocol/harness-kit
   #   description: Generate or update README, API docs, architecture overview, or changelog
 
-  # - name: data-lineage
-  #   source: siracusa5/harness-kit
+  # - name: lineage
+  #   source: harnessprotocol/harness-kit
   #   description: Column-level lineage tracing through SQL, Kafka, Spark, and JDBC
 
   # - name: orient
-  #   source: siracusa5/harness-kit
+  #   source: harnessprotocol/harness-kit
   #   description: Topic-focused session orientation across graph, knowledge, and research
 
-  # - name: stage
-  #   source: siracusa5/harness-kit
+  # - name: capture
+  #   source: harnessprotocol/harness-kit
   #   description: Capture session information into a staging file for later reflection
 
   # Example third-party plugin:
