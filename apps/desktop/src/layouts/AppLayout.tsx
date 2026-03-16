@@ -47,6 +47,11 @@ const NAV_SECTIONS: NavSection[] = [
     id: "comparator",
     label: "Comparator",
     path: "/comparator",
+    children: [
+      { label: "New Comparison", path: "/comparator" },
+      { label: "History", path: "/comparator/history" },
+      { label: "Analytics", path: "/comparator/analytics" },
+    ],
   },
 ];
 

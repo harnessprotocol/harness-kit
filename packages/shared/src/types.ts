@@ -243,3 +243,223 @@ export interface LiveDailyActivity {
   messageCount: number;
   sessionCount: number;
 }
+
+// ── Comparator types ────────────────────────────────────────
+
+export interface HarnessInfo {
+  id: string;
+  name: string;
+  command: string;
+  available: boolean;
+  version?: string;
+  mode?: string; // "supported" | "unsupported"
+}
+
+export interface PanelConfig {
+  panelId: string;
+  harnessId: string;
+  model?: string;
+  workingDir?: string;
+}
+
+export interface ComparisonRequest {
+  comparisonId: string;
+  prompt: string;
+  workingDir: string;
+  pinnedCommit?: string;
+  panels: PanelConfig[];
+}
+
+export interface PanelOutput {
+  comparisonId: string;
+  panelId: string;
+  stream: "stdout" | "stderr";
+  data: string;
+}
+
+export interface PanelComplete {
+  comparisonId: string;
+  panelId: string;
+  exitCode: number | null;
+  durationMs: number;
+}
+
+// ── Git types ───────────────────────────────────────────────
+
+export interface GitRepoInfo {
+  isGitRepo: boolean;
+  currentCommit: string | null;
+  branch: string | null;
+}
+
+export interface WorktreeResult {
+  panelId: string;
+  worktreePath: string;
+}
+
+export interface FileDiffEntry {
+  filePath: string;
+  diffText: string;
+  changeType: string;
+}
+
+// ── Persistence types ───────────────────────────────────────
+
+export interface ComparisonSummary {
+  id: string;
+  prompt: string;
+  workingDir: string;
+  pinnedCommit: string | null;
+  createdAt: string;
+  status: string;
+  panels: PanelSummary[];
+}
+
+export interface PanelSummary {
+  id: string;
+  harnessId: string;
+  harnessName: string;
+  model: string | null;
+  exitCode: number | null;
+  durationMs: number | null;
+  status: string;
+}
+
+export interface ComparisonDetail extends ComparisonSummary {
+  panels: PanelDetail[];
+}
+
+export interface PanelDetail extends PanelSummary {
+  outputText: string | null;
+  diffs: FileDiff[];
+  evaluation: EvaluationScores | null;
+}
+
+export interface FileDiff {
+  filePath: string;
+  diffText: string;
+  changeType: string;
+}
+
+export interface EvaluationScores {
+  id: string;
+  panelId: string;
+  correctness: number | null;
+  completeness: number | null;
+  codeQuality: number | null;
+  efficiency: number | null;
+  reasoning: number | null;
+  speed: number | null;
+  safety: number | null;
+  contextAwareness: number | null;
+  autonomy: number | null;
+  adherence: number | null;
+  overallScore: number | null;
+  notes: string | null;
+}
+
+export interface PanelDiffs {
+  panelId: string;
+  harnessName: string;
+  diffs: FileDiff[];
+}
+
+export interface ReplaySetup {
+  prompt: string;
+  workingDir: string;
+  pinnedCommit: string | null;
+  panels: ReplayPanel[];
+}
+
+export interface ReplayPanel {
+  harnessId: string;
+  harnessName: string;
+  model: string | null;
+}
+
+export interface SaveEvaluationRequest {
+  id: string;
+  comparisonId: string;
+  panelId: string;
+  correctness: number | null;
+  completeness: number | null;
+  codeQuality: number | null;
+  efficiency: number | null;
+  reasoning: number | null;
+  speed: number | null;
+  safety: number | null;
+  contextAwareness: number | null;
+  autonomy: number | null;
+  adherence: number | null;
+  overallScore: number | null;
+  notes: string | null;
+}
+
+export interface AnalyticsData {
+  totalComparisons: number;
+  winRates: HarnessWinRate[];
+  modelWinRates: ModelWinRate[];
+  dimensionAverages: DimensionAvg[];
+}
+
+export interface HarnessWinRate {
+  harnessId: string;
+  harnessName: string;
+  wins: number;
+  total: number;
+  rate: number;
+}
+
+export interface ModelWinRate {
+  model: string;
+  wins: number;
+  total: number;
+  rate: number;
+}
+
+export interface DimensionAvg {
+  harnessId: string;
+  harnessName: string;
+  dimension: string;
+  avg: number;
+}
+
+// ── Security types ──────────────────────────────────────────
+
+export interface PermissionsState {
+  tools: { allow: string[]; deny: string[]; ask: string[] };
+  paths: { writable: string[]; readonly: string[] };
+  network: { allowedHosts: string[] };
+}
+
+export interface SecurityPreset {
+  id: string;
+  name: string;
+  description: string;
+  permissions: PermissionsState;
+}
+
+export interface KeychainSecretInfo {
+  name: string;
+  description: string;
+  required: boolean;
+  isSet: boolean;
+  pluginName?: string;
+}
+
+export interface EnvConfigEntry {
+  name: string;
+  description: string;
+  value: string;
+  pluginName?: string;
+}
+
+export interface AuditEntry {
+  id: string;
+  timestamp: string;
+  eventType: string;
+  category: string;
+  summary: string;
+  details: string | null;
+  source: string;
+}
