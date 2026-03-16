@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type {
-  InstalledPlugin, KnownMarketplace, HooksConfig, StatsCache,
+  InstalledPlugin, KnownMarketplace, PluginUpdateInfo, HooksConfig, StatsCache,
   SessionSummary, SessionFacet, ActiveSession, LiveDailyActivity,
   HarnessInfo, ComparisonRequest, GitRepoInfo, ComparisonSummary,
   ComparisonDetail, PanelDiffs, ReplaySetup, SaveEvaluationRequest,
@@ -17,6 +17,10 @@ export async function listInstalledPlugins(): Promise<InstalledPlugin[]> {
 
 export async function listMarketplaces(): Promise<KnownMarketplace[]> {
   return invoke<KnownMarketplace[]>("list_marketplaces");
+}
+
+export async function checkPluginUpdates(): Promise<PluginUpdateInfo[]> {
+  return invoke<PluginUpdateInfo[]>("check_plugin_updates");
 }
 
 // ── Hook commands ────────────────────────────────────────────

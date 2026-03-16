@@ -51,7 +51,9 @@ export function TaskDetailPanel({ task, projectSlug, onClose, onTaskUpdated, rep
             style={{
               position: 'fixed',
               inset: 0,
-              background: 'rgba(0,0,0,0.4)',
+              background: 'rgba(0,0,0,0.55)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
               zIndex: 40,
             }}
           />
@@ -99,7 +101,7 @@ export function TaskDetailPanel({ task, projectSlug, onClose, onTaskUpdated, rep
                         fontSize: 11,
                         color: 'var(--text-muted)',
                         background: 'var(--bg-elevated)',
-                        borderRadius: 4,
+                        borderRadius: 10,
                         padding: '1px 6px',
                         border: '1px solid var(--border-subtle)',
                       }}

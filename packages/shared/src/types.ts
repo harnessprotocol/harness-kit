@@ -116,6 +116,15 @@ export interface InstalledPlugin {
   marketplace?: string;
   source?: string;
   installed_at?: string;
+  category?: string;
+  tags?: string[];
+}
+
+export interface PluginUpdateInfo {
+  name: string;
+  installed_version: string;
+  latest_version: string;
+  marketplace: string;
 }
 
 export interface KnownMarketplace {

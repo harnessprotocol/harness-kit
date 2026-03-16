@@ -18,6 +18,7 @@ export type {
   ProfileYaml,
   InstalledPlugin,
   KnownMarketplace,
+  PluginUpdateInfo,
   HookCommand,
   HooksConfig,
   StatsCache,

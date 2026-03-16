@@ -20,6 +20,7 @@ pub fn run() {
             // Plugins
             commands::plugins::list_installed_plugins,
             commands::plugins::list_marketplaces,
+            commands::plugins::check_plugin_updates,
             // Hooks
             commands::hooks::read_hooks,
             // Claude.md
