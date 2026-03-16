@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useBoardServerReady } from '../useBoardServerReady';
+import { BOARD_SERVER_BASE } from '../../lib/board-api';
 
-const HEALTH_URL = 'http://localhost:4800/health';
+const HEALTH_URL = `${BOARD_SERVER_BASE}/health`;
 
 beforeEach(() => {
   vi.useFakeTimers();

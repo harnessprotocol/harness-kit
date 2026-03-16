@@ -15,15 +15,16 @@ export function useBoardServerReady(): { ready: boolean } {
     // which clears the interval via the cleanup return below.
     if (ready) return;
 
+    let mounted = true;
     const check = () => {
       fetchWithTimeout(`${BOARD_SERVER_BASE}/health`, 1500)
-        .then(res => { if (res.ok) setReady(true); })
+        .then(res => { if (mounted && res.ok) setReady(true); })
         .catch(() => { /* not yet ready — next poll will retry */ });
     };
 
     check();
     const id = setInterval(check, 2000);
-    return () => clearInterval(id);
+    return () => { mounted = false; clearInterval(id); };
   }, [ready]);
 
   return { ready };
