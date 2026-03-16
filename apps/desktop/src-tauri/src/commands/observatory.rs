@@ -164,7 +164,7 @@ pub fn list_sessions_summary() -> Result<Vec<SessionSummary>, String> {
             let project_short = std::path::Path::new(&project)
                 .file_name()
                 .and_then(|n| n.to_str())
-                .unwrap_or_else(|| project.as_str())
+                .unwrap_or(project.as_str())
                 .to_string();
             SessionSummary {
                 session_id,

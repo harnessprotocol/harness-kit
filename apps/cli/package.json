@@ -12,11 +12,12 @@
   },
   "dependencies": {
     "@harness-kit/core": "workspace:*",
-    "commander": "^13",
     "@inquirer/prompts": "^7",
-    "chalk": "^5"
+    "chalk": "^5",
+    "commander": "^13"
   },
   "devDependencies": {
+    "@types/node": "^25.5.0",
     "tsup": "^8",
     "typescript": "^5"
   }

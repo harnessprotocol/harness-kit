@@ -5,6 +5,12 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  release:
+    types: [published]
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate:
@@ -55,6 +61,31 @@ jobs:
               for plugin in marketplace['plugins']:
                   print(f\"{plugin['name']}: v{plugin['version']}\")
               print('All versions aligned.')
+          "
+
+      - name: Check all plugins registered
+        run: |
+          python3 -c "
+          import json, sys, os, glob
+
+          marketplace = json.load(open('.claude-plugin/marketplace.json'))
+          registered = {p['name'] for p in marketplace['plugins']}
+
+          on_disk = {os.path.basename(d) for d in glob.glob('plugins/*') if os.path.isdir(d)}
+
+          errors = []
+          for name in sorted(on_disk - registered):
+              errors.append(f'{name}: directory exists but not registered in marketplace.json')
+          for name in sorted(registered - on_disk):
+              errors.append(f'{name}: registered in marketplace.json but directory not found')
+
+          if errors:
+              print('Plugin registration mismatch:')
+              for e in errors:
+                  print(f'  {e}')
+              sys.exit(1)
+          else:
+              print(f'All {len(on_disk)} plugins registered: {sorted(on_disk)}')
           "
 
       - name: Validate developed_with field
@@ -137,6 +168,12 @@ jobs:
       - name: Build CLI package
         run: pnpm --filter @harness-kit/cli build
 
+      - name: TypeScript check (shared)
+        run: pnpm --filter @harness-kit/shared exec tsc --noEmit
+
+      - name: TypeScript check (cli)
+        run: pnpm --filter @harness-kit/cli exec tsc --noEmit
+
   desktop-build-test:
     runs-on: ubuntu-latest
     steps:
@@ -162,6 +199,10 @@ jobs:
 
       - name: Rust check (desktop backend)
         run: cargo check
+        working-directory: apps/desktop/src-tauri
+
+      - name: Rust clippy (desktop backend)
+        run: cargo clippy -- -D warnings
         working-directory: apps/desktop/src-tauri
 
       - name: Install dependencies

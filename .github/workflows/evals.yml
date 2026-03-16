@@ -10,6 +10,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
 
@@ -35,10 +36,20 @@ jobs:
       - name: Render compatibility page
         run: python evals/render_results.py
 
-      - name: Commit results
+      - name: Open PR with results
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add evals/results/latest.json website/docs/evals/compatibility.md
-          git diff --staged --quiet || git commit -m "chore: update eval results $(date -u +%Y-%m-%d)"
-          git push
+          if git diff --staged --quiet; then
+            echo "No eval result changes — skipping PR"
+            exit 0
+          fi
+          DATE=$(date -u +%Y-%m-%d)
+          BRANCH="chore/eval-results-${DATE}"
+          git checkout -b "$BRANCH"
+          git commit -m "chore: update eval results ${DATE}"
+          git push origin "$BRANCH"
+          gh pr create --title "chore: update eval results ${DATE}" --body "Automated eval results from release run. Merge after reviewing the compatibility page." --base main --head "$BRANCH"
