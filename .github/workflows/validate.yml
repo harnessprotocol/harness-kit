@@ -165,11 +165,11 @@ jobs:
       - name: Run core tests
         run: pnpm --filter @harness-kit/core test
 
-      - name: Build CLI package
-        run: pnpm --filter @harness-kit/cli build
-
       - name: TypeScript check (shared)
         run: pnpm --filter @harness-kit/shared exec tsc --noEmit
+
+      - name: Build CLI package
+        run: pnpm --filter @harness-kit/cli build
 
       - name: TypeScript check (cli)
         run: pnpm --filter @harness-kit/cli exec tsc --noEmit

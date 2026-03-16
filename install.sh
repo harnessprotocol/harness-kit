@@ -39,13 +39,13 @@ else
   echo "Remote install: downloading from ${REPO}"
 
   MARKETPLACE_JSON=$(curl -fsSL "${RAW_BASE}/.claude-plugin/marketplace.json")
-  PLUGINS=$(python3 -c "
+  mapfile -t PLUGINS < <(python3 -c "
 import json, sys
 data = json.loads(sys.stdin.read())
-print(' '.join(p['name'] for p in data['plugins']))
+print('\n'.join(p['name'] for p in data['plugins']))
 " <<< "$MARKETPLACE_JSON")
 
-  for plugin in $PLUGINS; do
+  for plugin in "${PLUGINS[@]}"; do
     dest="${SKILLS_DEST}/${plugin}"
     mkdir -p "$dest"
     skill_url="${RAW_BASE}/plugins/${plugin}/skills/${plugin}/SKILL.md"

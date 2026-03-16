@@ -5,6 +5,10 @@ on:
     types: [published]
   workflow_dispatch:
 
+concurrency:
+  group: evals-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   run-evals:
     runs-on: ubuntu-latest
@@ -48,7 +52,7 @@ jobs:
             exit 0
           fi
           DATE=$(date -u +%Y-%m-%d)
-          BRANCH="chore/eval-results-${DATE}"
+          BRANCH="chore/eval-results-${DATE}-${{ github.run_id }}"
           git checkout -b "$BRANCH"
           git commit -m "chore: update eval results ${DATE}"
           git push origin "$BRANCH"
