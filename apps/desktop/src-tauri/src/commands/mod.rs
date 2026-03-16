@@ -8,3 +8,4 @@ pub mod comparator_db;
 pub mod git;
 pub mod evaluation;
 pub mod export;
+pub mod types;

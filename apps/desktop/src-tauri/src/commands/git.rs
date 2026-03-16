@@ -2,6 +2,8 @@ use serde::Serialize;
 use tauri::AppHandle;
 use tauri_plugin_shell::ShellExt;
 
+pub use super::types::FileDiffEntry;
+
 // ── Types ───────────────────────────────────────────────────
 
 #[derive(Debug, Serialize, Clone)]
@@ -17,14 +19,6 @@ pub struct GitRepoInfo {
 pub struct WorktreeResult {
     pub panel_id: String,
     pub worktree_path: String,
-}
-
-#[derive(Debug, Serialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct FileDiffEntry {
-    pub file_path: String,
-    pub diff_text: String,
-    pub change_type: String,
 }
 
 // ── Commands ────────────────────────────────────────────────

@@ -44,34 +44,11 @@ export default function OutputPanel({ panel, onKill }: OutputPanelProps) {
           <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--fg-base)" }}>
             {panel.harnessName}
           </span>
-          {panel.model && (
-            <span
-              style={{
-                fontSize: "10px",
-                padding: "1px 6px",
-                borderRadius: "4px",
-                background: "var(--accent-light)",
-                color: "var(--accent-text)",
-              }}
-            >
-              {panel.model}
-            </span>
-          )}
+          {panel.model && <span className="badge badge-accent">{panel.model}</span>}
         </div>
 
         {panel.status === "running" && (
-          <button
-            onClick={() => onKill(panel.panelId)}
-            style={{
-              fontSize: "11px",
-              padding: "3px 10px",
-              borderRadius: "5px",
-              border: "1px solid var(--danger)",
-              background: "transparent",
-              color: "var(--danger)",
-              cursor: "pointer",
-            }}
-          >
+          <button className="btn btn-sm btn-danger" onClick={() => onKill(panel.panelId)}>
             Stop
           </button>
         )}

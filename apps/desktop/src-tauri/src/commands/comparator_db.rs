@@ -1,6 +1,9 @@
+use std::collections::HashMap;
 use crate::db::Db;
 use serde::{Deserialize, Serialize};
 use tauri::State;
+
+use super::types::{FileDiffEntry, Evaluation};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -58,35 +61,8 @@ pub struct PanelDetail {
     pub duration_ms: Option<i64>,
     pub status: String,
     pub output_text: Option<String>,
-    pub diffs: Vec<FileDiffRow>,
-    pub evaluation: Option<EvaluationRow>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct FileDiffRow {
-    pub file_path: String,
-    pub diff_text: String,
-    pub change_type: String,
-}
-
-#[derive(Debug, Serialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct EvaluationRow {
-    pub id: String,
-    pub panel_id: String,
-    pub correctness: Option<f64>,
-    pub completeness: Option<f64>,
-    pub code_quality: Option<f64>,
-    pub efficiency: Option<f64>,
-    pub reasoning: Option<f64>,
-    pub speed: Option<f64>,
-    pub safety: Option<f64>,
-    pub context_awareness: Option<f64>,
-    pub autonomy: Option<f64>,
-    pub adherence: Option<f64>,
-    pub overall_score: Option<f64>,
-    pub notes: Option<String>,
+    pub diffs: Vec<FileDiffEntry>,
+    pub evaluation: Option<Evaluation>,
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -94,7 +70,7 @@ pub struct EvaluationRow {
 pub struct PanelDiffs {
     pub panel_id: String,
     pub harness_name: String,
-    pub diffs: Vec<FileDiffRow>,
+    pub diffs: Vec<FileDiffEntry>,
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -195,7 +171,7 @@ pub fn list_comparisons(
         .prepare("SELECT id, prompt, working_dir, pinned_commit, created_at, status FROM comparisons ORDER BY created_at DESC LIMIT ?1 OFFSET ?2")
         .map_err(|e| e.to_string())?;
 
-    let comparisons: Vec<ComparisonSummary> = stmt
+    let mut comparisons: Vec<ComparisonSummary> = stmt
         .query_map(rusqlite::params![limit, offset], |row| {
             Ok(ComparisonSummary {
                 id: row.get(0)?,
@@ -211,33 +187,49 @@ pub fn list_comparisons(
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;
 
-    // Load panels for each comparison
-    let mut result = Vec::new();
-    for mut comp in comparisons {
-        let mut panel_stmt = conn
-            .prepare("SELECT id, harness_id, harness_name, model, exit_code, duration_ms, status FROM panels WHERE comparison_id = ?1")
-            .map_err(|e| e.to_string())?;
-
-        comp.panels = panel_stmt
-            .query_map(rusqlite::params![comp.id], |row| {
-                Ok(PanelSummary {
-                    id: row.get(0)?,
-                    harness_id: row.get(1)?,
-                    harness_name: row.get(2)?,
-                    model: row.get(3)?,
-                    exit_code: row.get(4)?,
-                    duration_ms: row.get(5)?,
-                    status: row.get(6)?,
-                })
-            })
-            .map_err(|e| e.to_string())?
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| e.to_string())?;
-
-        result.push(comp);
+    if comparisons.is_empty() {
+        return Ok(comparisons);
     }
 
-    Ok(result)
+    // Load all panels in a single query instead of N+1
+    let comp_ids: Vec<&str> = comparisons.iter().map(|c| c.id.as_str()).collect();
+    let placeholders = comp_ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
+    let sql = format!(
+        "SELECT id, comparison_id, harness_id, harness_name, model, exit_code, duration_ms, status FROM panels WHERE comparison_id IN ({}) ORDER BY comparison_id",
+        placeholders
+    );
+    let mut panel_stmt = conn.prepare(&sql).map_err(|e| e.to_string())?;
+    let params = rusqlite::params_from_iter(comp_ids.iter());
+    let all_panels: Vec<(String, PanelSummary)> = panel_stmt
+        .query_map(params, |row| {
+            Ok((
+                row.get::<_, String>(1)?,
+                PanelSummary {
+                    id: row.get(0)?,
+                    harness_id: row.get(2)?,
+                    harness_name: row.get(3)?,
+                    model: row.get(4)?,
+                    exit_code: row.get(5)?,
+                    duration_ms: row.get(6)?,
+                    status: row.get(7)?,
+                },
+            ))
+        })
+        .map_err(|e| e.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| e.to_string())?;
+
+    // Group panels by comparison_id
+    let mut panel_map: HashMap<String, Vec<PanelSummary>> = HashMap::new();
+    for (comp_id, panel) in all_panels {
+        panel_map.entry(comp_id).or_default().push(panel);
+    }
+
+    for comp in &mut comparisons {
+        comp.panels = panel_map.remove(&comp.id).unwrap_or_default();
+    }
+
+    Ok(comparisons)
 }
 
 #[tauri::command]
@@ -297,7 +289,7 @@ pub fn get_comparison(
 
         panel.diffs = diff_stmt
             .query_map(rusqlite::params![comparison_id, panel.id], |row| {
-                Ok(FileDiffRow {
+                Ok(FileDiffEntry {
                     file_path: row.get(0)?,
                     diff_text: row.get(1)?,
                     change_type: row.get(2)?,
@@ -312,7 +304,7 @@ pub fn get_comparison(
             "SELECT id, panel_id, correctness, completeness, code_quality, efficiency, reasoning, speed, safety, context_awareness, autonomy, adherence, overall_score, notes FROM evaluations WHERE comparison_id = ?1 AND panel_id = ?2 LIMIT 1",
             rusqlite::params![comparison_id, panel.id],
             |row| {
-                Ok(EvaluationRow {
+                Ok(Evaluation {
                     id: row.get(0)?,
                     panel_id: row.get(1)?,
                     correctness: row.get(2)?,
@@ -354,17 +346,27 @@ pub fn save_file_diffs(
     db: State<'_, Db>,
     comparison_id: String,
     panel_id: String,
-    diffs: Vec<FileDiffRow>,
+    diffs: Vec<FileDiffEntry>,
 ) -> Result<(), String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
-    for diff in &diffs {
-        conn.execute(
-            "INSERT INTO file_diffs (comparison_id, panel_id, file_path, diff_text, change_type) VALUES (?1, ?2, ?3, ?4, ?5)",
-            rusqlite::params![comparison_id, panel_id, diff.file_path, diff.diff_text, diff.change_type],
-        )
-        .map_err(|e| e.to_string())?;
+    conn.execute_batch("BEGIN").map_err(|e| e.to_string())?;
+    let result = (|| {
+        for diff in &diffs {
+            conn.execute(
+                "INSERT INTO file_diffs (comparison_id, panel_id, file_path, diff_text, change_type) VALUES (?1, ?2, ?3, ?4, ?5)",
+                rusqlite::params![comparison_id, panel_id, diff.file_path, diff.diff_text, diff.change_type],
+            )
+            .map_err(|e| e.to_string())?;
+        }
+        Ok::<(), String>(())
+    })();
+    match result {
+        Ok(()) => conn.execute_batch("COMMIT").map_err(|e| e.to_string()),
+        Err(e) => {
+            let _ = conn.execute_batch("ROLLBACK");
+            Err(e)
+        }
     }
-    Ok(())
 }
 
 #[tauri::command]
@@ -396,7 +398,7 @@ pub fn get_comparison_diffs(
 
         let diffs = diff_stmt
             .query_map(rusqlite::params![comparison_id, panel_id], |row| {
-                Ok(FileDiffRow {
+                Ok(FileDiffEntry {
                     file_path: row.get(0)?,
                     diff_text: row.get(1)?,
                     change_type: row.get(2)?,

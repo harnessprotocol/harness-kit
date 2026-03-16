@@ -35,66 +35,19 @@ export default function PanelStatusBar({ panel }: PanelStatusBarProps) {
     >
       <span style={{ fontWeight: 500, color: "var(--fg-muted)" }}>{panel.harnessName}</span>
 
-      {panel.model && (
-        <span
-          style={{
-            fontSize: "10px",
-            padding: "1px 6px",
-            borderRadius: "4px",
-            background: "var(--accent-light)",
-            color: "var(--accent-text)",
-          }}
-        >
-          {panel.model}
-        </span>
-      )}
+      {panel.model && <span className="badge badge-accent">{panel.model}</span>}
 
       <span style={{ marginLeft: "auto" }}>{seconds}s</span>
 
       {panel.status === "complete" && panel.exitCode !== null && (
-        <span
-          style={{
-            fontSize: "10px",
-            fontWeight: 600,
-            padding: "1px 6px",
-            borderRadius: "4px",
-            background: panel.exitCode === 0 ? "var(--success)" : "var(--danger)",
-            color: "#fff",
-          }}
-        >
+        <span className={`badge ${panel.exitCode === 0 ? "badge-success" : "badge-danger"}`}>
           exit {panel.exitCode}
         </span>
       )}
 
-      {panel.status === "killed" && (
-        <span
-          style={{
-            fontSize: "10px",
-            fontWeight: 600,
-            padding: "1px 6px",
-            borderRadius: "4px",
-            background: "var(--warning)",
-            color: "#fff",
-          }}
-        >
-          killed
-        </span>
-      )}
+      {panel.status === "killed" && <span className="badge badge-warning">killed</span>}
 
-      {panel.status === "running" && (
-        <span
-          style={{
-            fontSize: "10px",
-            fontWeight: 500,
-            padding: "1px 6px",
-            borderRadius: "4px",
-            background: "var(--accent-light)",
-            color: "var(--accent-text)",
-          }}
-        >
-          running
-        </span>
-      )}
+      {panel.status === "running" && <span className="badge badge-accent">running</span>}
     </div>
   );
 }

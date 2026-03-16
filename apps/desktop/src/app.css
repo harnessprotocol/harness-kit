@@ -351,6 +351,271 @@ body {
   color: var(--fg-base);
 }
 
+/* ── Badges ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 500;
+  padding: 1px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+  line-height: 1.6;
+}
+
+.badge-accent {
+  background: var(--accent-light);
+  color: var(--accent-text);
+}
+
+.badge-success {
+  background: var(--success);
+  color: #fff;
+  font-weight: 600;
+}
+
+.badge-danger {
+  background: var(--danger);
+  color: #fff;
+  font-weight: 600;
+}
+
+.badge-warning {
+  background: var(--warning);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 20px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.btn-primary {
+  font-weight: 600;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+}
+
+.btn-secondary {
+  border-color: var(--border-base);
+  color: var(--fg-muted);
+}
+
+.btn-secondary:hover {
+  background: var(--hover-bg);
+}
+
+.btn-accent {
+  border-color: var(--accent);
+  color: var(--accent-text);
+}
+
+.btn-accent:hover {
+  background: var(--accent-light);
+}
+
+.btn-danger {
+  border-color: var(--danger);
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.btn-danger:hover {
+  background: rgba(220, 38, 38, 0.06);
+}
+
+.btn-sm {
+  font-size: 11px;
+  padding: 4px 12px;
+}
+
+.btn-disabled,
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.btn-primary:disabled {
+  background: var(--border-base);
+  color: var(--fg-subtle);
+}
+
+/* ── Tabs ── */
+.tab-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border-base);
+  flex-shrink: 0;
+}
+
+.tab {
+  font-size: 12px;
+  font-weight: 400;
+  padding: 8px 20px;
+  border: none;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--fg-muted);
+  cursor: pointer;
+  text-transform: capitalize;
+  transition: color 0.1s;
+}
+
+.tab:hover {
+  color: var(--fg-base);
+}
+
+.tab.active {
+  font-weight: 600;
+  border-bottom-color: var(--accent);
+  color: var(--accent-text);
+}
+
+/* ── Cards — harness selector ── */
+.harness-card {
+  padding: 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border-base);
+  background: var(--bg-surface);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  min-width: 0;
+}
+
+.harness-card:hover {
+  border-color: var(--border-strong);
+}
+
+.harness-card.selected {
+  border-color: var(--accent);
+  background: var(--accent-light);
+}
+
+.harness-card.unavailable {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.harness-card.at-max {
+  cursor: not-allowed;
+}
+
+/* ── Form elements ── */
+.form-input {
+  width: 100%;
+  font-size: 12px;
+  font-family: ui-monospace, monospace;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border-base);
+  background: var(--bg-surface);
+  color: var(--fg-base);
+  transition: border-color 0.15s;
+}
+
+.form-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.form-textarea {
+  width: 100%;
+  font-size: 12px;
+  font-family: ui-monospace, monospace;
+  line-height: 1.6;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-base);
+  background: var(--bg-surface);
+  color: var(--fg-base);
+  resize: vertical;
+  transition: border-color 0.15s;
+}
+
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.form-select {
+  width: 100%;
+  font-size: 11px;
+  padding: 4px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--border-base);
+  background: var(--bg-elevated);
+  color: var(--fg-base);
+  cursor: pointer;
+}
+
+/* ── Evaluation table ── */
+.eval-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.eval-table th {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-base);
+  color: var(--fg-subtle);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.eval-table th.panel-header {
+  text-align: center;
+  color: var(--fg-base);
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 140px;
+}
+
+.eval-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--separator);
+}
+
+.eval-table td.score-cell {
+  padding: 4px 10px;
+  text-align: center;
+}
+
+.eval-table tr.overall-row td {
+  padding: 8px 10px;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--accent-text);
+  border-top: 2px solid var(--border-strong);
+  text-align: center;
+}
+
+.eval-table tr.overall-row td:first-child {
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--fg-base);
+  text-align: left;
+}
+
 /* ── Comparator panels ── */
 .comparator-panel {
   display: flex;

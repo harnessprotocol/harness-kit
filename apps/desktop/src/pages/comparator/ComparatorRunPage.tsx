@@ -298,53 +298,17 @@ export default function ComparatorRunPage() {
           {isComplete && comparisonId && <ExportMenu comparisonId={comparisonId} />}
 
           {isComplete && (
-            <button
-              onClick={handleRerun}
-              style={{
-                fontSize: "11px",
-                fontWeight: 500,
-                padding: "4px 12px",
-                borderRadius: "6px",
-                border: "1px solid var(--accent)",
-                background: "transparent",
-                color: "var(--accent-text)",
-                cursor: "pointer",
-              }}
-            >
+            <button className="btn btn-sm btn-accent" onClick={handleRerun}>
               Re-run
             </button>
           )}
 
           {hasRunning && (
-            <button
-              onClick={handleStopAll}
-              style={{
-                fontSize: "11px",
-                fontWeight: 600,
-                padding: "4px 12px",
-                borderRadius: "6px",
-                border: "1px solid var(--danger)",
-                background: "transparent",
-                color: "var(--danger)",
-                cursor: "pointer",
-              }}
-            >
+            <button className="btn btn-sm btn-danger" onClick={handleStopAll}>
               Stop All
             </button>
           )}
-          <button
-            onClick={() => navigate("/comparator")}
-            style={{
-              fontSize: "11px",
-              fontWeight: 500,
-              padding: "4px 12px",
-              borderRadius: "6px",
-              border: "1px solid var(--border-base)",
-              background: "transparent",
-              color: "var(--fg-muted)",
-              cursor: "pointer",
-            }}
-          >
+          <button className="btn btn-sm btn-secondary" onClick={() => navigate("/comparator")}>
             New
           </button>
         </div>
@@ -352,29 +316,12 @@ export default function ComparatorRunPage() {
 
       {/* Tabs (shown when complete) */}
       {isComplete && (
-        <div
-          style={{
-            display: "flex",
-            gap: "0",
-            borderBottom: "1px solid var(--border-base)",
-            flexShrink: 0,
-          }}
-        >
+        <div className="tab-bar">
           {(["output", "diffs", "evaluate"] as Tab[]).map((tab) => (
             <button
               key={tab}
+              className={`tab${activeTab === tab ? " active" : ""}`}
               onClick={() => setActiveTab(tab)}
-              style={{
-                fontSize: "12px",
-                fontWeight: activeTab === tab ? 600 : 400,
-                padding: "8px 20px",
-                border: "none",
-                borderBottom: activeTab === tab ? "2px solid var(--accent)" : "2px solid transparent",
-                background: "transparent",
-                color: activeTab === tab ? "var(--accent-text)" : "var(--fg-muted)",
-                cursor: "pointer",
-                textTransform: "capitalize",
-              }}
             >
               {tab === "evaluate" ? "Evaluate" : tab === "diffs" ? "Diffs" : "Output"}
             </button>

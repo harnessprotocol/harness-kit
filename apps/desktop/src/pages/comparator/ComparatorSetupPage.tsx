@@ -154,19 +154,10 @@ export default function ComparatorSetupPage() {
         </label>
         <input
           type="text"
+          className="form-input"
           value={workingDir}
           onChange={(e) => setWorkingDir(e.target.value)}
           placeholder="/path/to/project"
-          style={{
-            width: "100%",
-            fontSize: "12px",
-            fontFamily: "ui-monospace, monospace",
-            padding: "8px 10px",
-            borderRadius: "6px",
-            border: "1px solid var(--border-base)",
-            background: "var(--bg-surface)",
-            color: "var(--fg-base)",
-          }}
         />
         <p className="text-caption" style={{ marginTop: "4px" }}>
           Optional. The directory each tool runs in.
@@ -236,6 +227,7 @@ export default function ComparatorSetupPage() {
           Prompt
         </label>
         <textarea
+          className="form-textarea"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => {
@@ -243,18 +235,6 @@ export default function ComparatorSetupPage() {
           }}
           placeholder="Enter the prompt to send to each tool..."
           rows={6}
-          style={{
-            width: "100%",
-            fontSize: "12px",
-            fontFamily: "ui-monospace, monospace",
-            lineHeight: "1.6",
-            padding: "10px 12px",
-            borderRadius: "8px",
-            border: "1px solid var(--border-base)",
-            background: "var(--bg-surface)",
-            color: "var(--fg-base)",
-            resize: "vertical",
-          }}
         />
         <p className="text-caption" style={{ marginTop: "4px" }}>
           Cmd+Enter to run
@@ -263,19 +243,10 @@ export default function ComparatorSetupPage() {
 
       {/* Run button */}
       <button
+        className="btn btn-primary"
         onClick={handleRun}
         disabled={!canRun}
-        style={{
-          fontSize: "13px",
-          fontWeight: 600,
-          padding: "8px 24px",
-          borderRadius: "8px",
-          border: "none",
-          background: canRun ? "var(--accent)" : "var(--border-base)",
-          color: canRun ? "#fff" : "var(--fg-subtle)",
-          cursor: canRun ? "pointer" : "not-allowed",
-          transition: "background 0.15s",
-        }}
+        style={{ fontSize: "13px", padding: "8px 24px", borderRadius: "8px" }}
       >
         Run Comparison
       </button>

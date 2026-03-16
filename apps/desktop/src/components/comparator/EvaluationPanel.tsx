@@ -135,34 +135,12 @@ export default function EvaluationPanel({
       {/* Score table */}
       <div style={{ padding: "16px", flex: 1 }}>
         <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
+          <table className="eval-table">
             <thead>
               <tr>
-                <th
-                  style={{
-                    textAlign: "left",
-                    padding: "6px 10px",
-                    borderBottom: "1px solid var(--border-base)",
-                    color: "var(--fg-subtle)",
-                    fontSize: "11px",
-                    fontWeight: 500,
-                  }}
-                >
-                  Dimension
-                </th>
+                <th>Dimension</th>
                 {panels.map((p) => (
-                  <th
-                    key={p.panelId}
-                    style={{
-                      textAlign: "center",
-                      padding: "6px 10px",
-                      borderBottom: "1px solid var(--border-base)",
-                      color: "var(--fg-base)",
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      minWidth: "140px",
-                    }}
-                  >
+                  <th key={p.panelId} className="panel-header">
                     {p.harnessName}
                     {p.model && (
                       <div style={{ fontSize: "10px", fontWeight: 400, color: "var(--fg-subtle)" }}>
@@ -176,27 +154,11 @@ export default function EvaluationPanel({
             <tbody>
               {DIMENSIONS.map((dim) => (
                 <tr key={dim.key}>
-                  <td
-                    style={{
-                      padding: "6px 10px",
-                      borderBottom: "1px solid var(--separator)",
-                      color: "var(--fg-muted)",
-                      fontSize: "12px",
-                    }}
-                  >
-                    {dim.label}
-                  </td>
+                  <td style={{ color: "var(--fg-muted)" }}>{dim.label}</td>
                   {panels.map((p) => {
                     const val = scores[p.panelId]?.[dim.key] ?? null;
                     return (
-                      <td
-                        key={p.panelId}
-                        style={{
-                          padding: "4px 10px",
-                          borderBottom: "1px solid var(--separator)",
-                          textAlign: "center",
-                        }}
-                      >
+                      <td key={p.panelId} className="score-cell">
                         {readOnly ? (
                           <span style={{ fontSize: "12px", color: "var(--fg-base)" }}>
                             {val != null ? val.toFixed(1) : "--"}
@@ -243,32 +205,12 @@ export default function EvaluationPanel({
                 </tr>
               ))}
               {/* Overall score row */}
-              <tr>
-                <td
-                  style={{
-                    padding: "8px 10px",
-                    fontWeight: 600,
-                    color: "var(--fg-base)",
-                    fontSize: "12px",
-                    borderTop: "2px solid var(--border-strong)",
-                  }}
-                >
-                  Overall
-                </td>
+              <tr className="overall-row">
+                <td>Overall</td>
                 {panels.map((p) => {
                   const overall = computeOverall(scores[p.panelId] || {});
                   return (
-                    <td
-                      key={p.panelId}
-                      style={{
-                        padding: "8px 10px",
-                        textAlign: "center",
-                        fontWeight: 700,
-                        fontSize: "14px",
-                        color: "var(--accent-text)",
-                        borderTop: "2px solid var(--border-strong)",
-                      }}
-                    >
+                    <td key={p.panelId}>
                       {overall != null ? overall.toFixed(1) : "--"}
                     </td>
                   );
@@ -282,37 +224,18 @@ export default function EvaluationPanel({
         {!readOnly && (
           <div style={{ display: "flex", gap: "8px", marginTop: "16px" }}>
             <button
+              className="btn btn-primary"
               onClick={handleSave}
               disabled={saving}
-              style={{
-                fontSize: "12px",
-                fontWeight: 600,
-                padding: "6px 20px",
-                borderRadius: "6px",
-                border: "none",
-                background: "var(--accent)",
-                color: "#fff",
-                cursor: saving ? "wait" : "pointer",
-                opacity: saving ? 0.7 : 1,
-              }}
+              style={saving ? { cursor: "wait" } : undefined}
             >
               {saving ? "Saving..." : "Save Scores"}
             </button>
 
             <button
+              className="btn btn-secondary btn-disabled"
               disabled
               title="Coming soon"
-              style={{
-                fontSize: "12px",
-                fontWeight: 500,
-                padding: "6px 20px",
-                borderRadius: "6px",
-                border: "1px solid var(--border-base)",
-                background: "transparent",
-                color: "var(--fg-subtle)",
-                cursor: "not-allowed",
-                opacity: 0.5,
-              }}
             >
               Score with AI
             </button>

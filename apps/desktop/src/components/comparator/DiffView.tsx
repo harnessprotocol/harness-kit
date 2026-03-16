@@ -21,7 +21,7 @@ function DiffDetail({ diff }: { diff: FileDiff }) {
   return (
     <div
       style={{
-        fontFamily: "ui-monospace, SFMono-Regular, monospace",
+        fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
         fontSize: "11px",
         lineHeight: "1.6",
         background: "var(--bg-surface)",
