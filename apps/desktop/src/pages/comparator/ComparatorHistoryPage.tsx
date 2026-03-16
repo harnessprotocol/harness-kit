@@ -2,11 +2,17 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { listComparisons, deleteComparison } from "../../lib/tauri";
 import type { ComparisonSummary } from "@harness-kit/shared";
+import { useArrowNavigation } from "../../hooks/useArrowNavigation";
 
 export default function ComparatorHistoryPage() {
   const navigate = useNavigate();
   const [comparisons, setComparisons] = useState<ComparisonSummary[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const { focusedIndex: histFocusedIndex, onKeyDown: onHistKeyDown } = useArrowNavigation({
+    count: comparisons.length,
+    onActivate: (i) => navigate(`/comparator/review/${comparisons[i].id}`),
+  });
 
   const load = () => {
     setLoading(true);
@@ -75,13 +81,13 @@ export default function ComparatorHistoryPage() {
       )}
 
       {!loading && comparisons.length > 0 && (
-        <div className="row-list">
-          {comparisons.map((comp) => (
+        <div className="row-list" tabIndex={0} onKeyDown={onHistKeyDown}>
+          {comparisons.map((comp, idx) => (
             <div
               key={comp.id}
               className="row-list-item"
               onClick={() => navigate(`/comparator/review/${comp.id}`)}
-              style={{ cursor: "pointer", gap: "12px" }}
+              style={{ cursor: "pointer", gap: "12px", outline: histFocusedIndex === idx ? "2px solid var(--accent)" : "none", outlineOffset: "-2px" }}
             >
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div

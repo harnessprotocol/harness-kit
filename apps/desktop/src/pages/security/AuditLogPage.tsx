@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { listAuditEntries, clearAuditEntries } from "../../lib/tauri";
 import type { AuditEntry } from "@harness-kit/shared";
+import { useArrowNavigation } from "../../hooks/useArrowNavigation";
 
 const PAGE_SIZE = 25;
 
@@ -68,6 +69,11 @@ export default function AuditLogPage() {
   const [page, setPage] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+
+  const { focusedIndex: auditFocusedIndex, onKeyDown: onAuditKeyDown } = useArrowNavigation({
+    count: entries.length,
+    onActivate: (i) => setExpandedId(expandedId === entries[i].id ? null : entries[i].id),
+  });
 
   const fetchEntries = useCallback(async () => {
     setLoading(true);
@@ -175,10 +181,14 @@ export default function AuditLogPage() {
       </div>
 
       {/* Table */}
-      <div style={{
-        background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-        borderRadius: "8px", overflow: "hidden",
-      }}>
+      <div
+        tabIndex={0}
+        onKeyDown={onAuditKeyDown}
+        style={{
+          background: "var(--bg-surface)", border: "1px solid var(--border-base)",
+          borderRadius: "8px", overflow: "hidden",
+        }}
+      >
         {/* Header row */}
         <div style={{
           display: "grid", gridTemplateColumns: "140px 130px 1fr 80px",
@@ -206,7 +216,7 @@ export default function AuditLogPage() {
             </p>
           </div>
         ) : (
-          entries.map((entry) => (
+          entries.map((entry, idx) => (
             <div key={entry.id}>
               <div
                 onClick={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
@@ -215,6 +225,8 @@ export default function AuditLogPage() {
                   padding: "7px 16px", borderBottom: "1px solid var(--separator)",
                   cursor: entry.details ? "pointer" : "default",
                   transition: "background 0.1s",
+                  outline: auditFocusedIndex === idx ? "2px solid var(--accent)" : "none",
+                  outlineOffset: "-2px",
                 }}
                 onMouseEnter={(e) => { if (entry.details) e.currentTarget.style.background = "var(--hover-bg)"; }}
                 onMouseLeave={(e) => { if (entry.details) e.currentTarget.style.background = "transparent"; }}

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { listSessionsSummary, readSessionFacet } from "../../lib/tauri";
 import { formatTimestamp, formatDuration, formatNumber } from "../../lib/format";
 import type { SessionSummary, SessionFacet } from "@harness-kit/shared";
+import { useArrowNavigation } from "../../hooks/useArrowNavigation";
 
 // ── Outcome badge ──────────────────────────────────────────────
 
@@ -168,6 +169,11 @@ export default function SessionsPage() {
       .finally(() => setFacetLoading(false));
   }
 
+  const { focusedIndex, onKeyDown: onListKeyDown } = useArrowNavigation({
+    count: sessions.length,
+    onActivate: (i) => handleRowClick(sessions[i].sessionId),
+  });
+
   const projectCount = new Set(sessions.map((s) => s.projectShort).filter(Boolean)).size;
 
   return (
@@ -217,8 +223,8 @@ export default function SessionsPage() {
       )}
 
       {!loading && !error && sessions.length > 0 && (
-        <div className="row-list">
-          {sessions.map((session) => {
+        <div className="row-list" tabIndex={0} onKeyDown={onListKeyDown}>
+          {sessions.map((session, idx) => {
             const isExpanded = expandedId === session.sessionId;
             const duration = session.lastTimestamp - session.firstTimestamp;
 
@@ -234,6 +240,8 @@ export default function SessionsPage() {
                     cursor: "pointer",
                     border: "none",
                     textAlign: "left",
+                    outline: focusedIndex === idx ? "2px solid var(--accent)" : "none",
+                    outlineOffset: "-2px",
                   }}
                 >
                   {/* Left: timestamp */}

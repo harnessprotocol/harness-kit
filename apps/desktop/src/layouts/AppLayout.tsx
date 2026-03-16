@@ -150,7 +150,24 @@ export default function AppLayout() {
                 </NavLink>
 
                 {active && section.children && (
-                  <div className="mt-0.5 mb-1">
+                  <div
+                    className="mt-0.5 mb-1"
+                    data-section={section.id}
+                    onKeyDown={(e) => {
+                      const allLinks = Array.from(document.querySelectorAll(".sidebar-subitem"));
+                      const activeLinks = allLinks.filter(el => el.closest("[data-section]")?.getAttribute("data-section") === section.id);
+                      const focused = document.activeElement;
+                      const currentIdx = activeLinks.indexOf(focused as HTMLElement);
+
+                      if (e.key === "ArrowDown" && currentIdx < activeLinks.length - 1) {
+                        e.preventDefault();
+                        (activeLinks[currentIdx + 1] as HTMLElement).focus();
+                      } else if (e.key === "ArrowUp" && currentIdx > 0) {
+                        e.preventDefault();
+                        (activeLinks[currentIdx - 1] as HTMLElement).focus();
+                      }
+                    }}
+                  >
                     {section.children.map((child) => (
                       <NavLink
                         key={child.path}
