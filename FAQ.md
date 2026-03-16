@@ -8,6 +8,8 @@ harness-kit is a plugin collection for Claude Code. Each plugin packages a speci
 
 Your harness is the configuration that tells Claude how to work in a given session — files like `CLAUDE.md` and `AGENT.md`, plus any installed plugins. harness-kit helps you build and share that setup so it's not stuck on one machine.
 
+The term has become standard across the industry in 2026. LangChain published "The Anatomy of an Agent Harness" and ships `deepagents`, which they explicitly call a harness. They showed that harness changes alone moved a coding agent from Top 30 to Top 5 on Terminal Bench 2.0 — evidence that the configuration layer is a first-class concern, not an afterthought.
+
 ## Why do I need this? Can't I just write prompts myself?
 
 You can. The issue is that good prompts tend to disappear — scattered across projects, left behind when you move to a new machine. Plugins give them a stable home with a version number.
@@ -76,6 +78,16 @@ They operate at different layers and don't overlap.
 MCP gives your agent tools. A2A lets agents delegate tasks to each other at runtime. The Claude Agent SDK is for building agent-powered applications. harness-kit describes the complete environment, plugins, MCP servers, instructions, permissions, so you can reproduce it on another machine or share it with a teammate. They compose well: a `harness.yaml` can declare MCP servers, the agent runs on the Claude SDK, and could speak A2A to other agents.
 
 See [Where harness-kit fits](https://harnesskit.ai/docs/concepts/comparison) for the full breakdown.
+
+## How does harness-kit compare to LangChain's deepagents?
+
+They work at different layers and complement each other.
+
+**deepagents** is a harness runtime — you build agents with it. It's Python, built on LangGraph, and opinionated about the execution environment. Think of it as an OS distribution for agents.
+
+**harness-kit** is a harness configuration framework — you configure any harness with it. It works across Claude Code, Cursor, and Copilot without coupling you to a specific runtime or language. Think of it as dotfiles that work across distributions.
+
+You could use a harness-kit profile to configure a deepagents-based harness. They don't compete — one builds agents, the other makes agent configuration portable.
 
 ## What is the Harness Protocol?
 
