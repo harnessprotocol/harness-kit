@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 
 interface TooltipProps {
   content: string;
@@ -18,6 +18,13 @@ export default function Tooltip({ content, delay = 500, position = "top", childr
   const hide = useCallback(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
     setVisible(false);
+  }, []);
+
+  // Cancel pending timer on unmount to avoid setState after unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
   }, []);
 
   return (

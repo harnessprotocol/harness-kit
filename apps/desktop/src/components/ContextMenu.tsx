@@ -31,7 +31,10 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
-  }, [onClose]);
+    // onClose is always () => setContextMenu(null) — stable by contract.
+    // Omitting it from deps prevents listener churn on every parent render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div
