@@ -117,7 +117,9 @@ export default function AppLayout() {
         className="flex flex-col shrink-0 overflow-y-auto"
         style={{
           width: "var(--sidebar-width)",
-          background: "var(--bg-sidebar-solid)",
+          background: "var(--bg-sidebar)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
           borderRight: "1px solid var(--border-base)",
           position: "relative",
         }}
