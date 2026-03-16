@@ -82,6 +82,7 @@ pub fn init(data_dir: &Path) -> Result<Db, String> {
         );
         CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_log(timestamp);
         CREATE INDEX IF NOT EXISTS idx_audit_type ON audit_log(event_type);
+        CREATE INDEX IF NOT EXISTS idx_audit_category ON audit_log(category);
     ",
     )
     .map_err(|e| format!("Failed to run schema: {}", e))?;

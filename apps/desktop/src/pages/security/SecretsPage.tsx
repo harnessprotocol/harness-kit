@@ -347,7 +347,7 @@ export default function SecretsPage() {
                 <input
                   value={entry.value}
                   onChange={(e) => updateEnvValue(index, e.target.value)}
-                  onBlur={handleSaveEnv}
+                  onBlur={() => { if (envDirty) handleSaveEnv(); }}
                   style={{
                     fontSize: "11px", padding: "3px 6px", borderRadius: "4px",
                     border: "1px solid var(--border-base)",

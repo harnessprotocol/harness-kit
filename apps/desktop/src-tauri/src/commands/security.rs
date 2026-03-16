@@ -60,6 +60,18 @@ pub struct EnvConfigEntry {
     pub plugin_name: Option<String>,
 }
 
+// ── Validation ──────────────────────────────────────────────
+
+fn validate_secret_name(name: &str) -> Result<(), String> {
+    if name.is_empty() || name.len() > 128 {
+        return Err("Secret name must be 1-128 characters".to_string());
+    }
+    if !name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.') {
+        return Err("Secret name may only contain alphanumeric characters, underscores, hyphens, and dots".to_string());
+    }
+    Ok(())
+}
+
 // ── Helpers ─────────────────────────────────────────────────
 
 fn settings_path() -> Result<std::path::PathBuf, String> {
@@ -142,8 +154,9 @@ fn extract_string_array(value: &serde_json::Value, keys: &[&str]) -> Vec<String>
 fn apply_permissions_to_settings(
     settings: &mut serde_json::Value,
     perms: &PermissionsState,
-) {
-    let obj = settings.as_object_mut().unwrap();
+) -> Result<(), String> {
+    let obj = settings.as_object_mut()
+        .ok_or("settings.json root is not a JSON object")?;
 
     // Tools permissions
     let permissions = obj
@@ -171,6 +184,8 @@ fn apply_permissions_to_settings(
     if let Some(n) = network.as_object_mut() {
         n.insert("allowedHosts".to_string(), serde_json::json!(perms.network.allowed_hosts));
     }
+
+    Ok(())
 }
 
 fn log_audit(
@@ -276,7 +291,7 @@ pub fn update_permissions(
 ) -> Result<(), String> {
     let mut settings = read_settings_json()?;
     let old_perms = extract_permissions(&settings);
-    apply_permissions_to_settings(&mut settings, &permissions);
+    apply_permissions_to_settings(&mut settings, &permissions)?;
     write_settings_json(&settings)?;
 
     let details = serde_json::json!({
@@ -313,7 +328,7 @@ pub fn apply_security_preset(
 
     let mut settings = read_settings_json()?;
     let old_perms = extract_permissions(&settings);
-    apply_permissions_to_settings(&mut settings, &preset.permissions);
+    apply_permissions_to_settings(&mut settings, &preset.permissions)?;
     write_settings_json(&settings)?;
 
     let details = serde_json::json!({
@@ -334,7 +349,7 @@ pub fn apply_security_preset(
 }
 
 #[tauri::command]
-pub fn list_required_env() -> Result<Vec<KeychainSecretInfo>, String> {
+pub async fn list_required_env(app: AppHandle) -> Result<Vec<KeychainSecretInfo>, String> {
     // Scan installed plugin manifests for requires.env
     let home = dirs::home_dir().ok_or("No home directory")?;
     let plugins_dir = home.join(".claude").join("plugins");
@@ -388,12 +403,26 @@ pub fn list_required_env() -> Result<Vec<KeychainSecretInfo>, String> {
                         required: env_entry.get("required")
                             .and_then(|v| v.as_bool())
                             .unwrap_or(false),
-                        is_set: false, // Will be checked via keychain
+                        is_set: false,
                         plugin_name: Some(plugin_name.clone()),
                     });
                 }
             }
         }
+    }
+
+    // Check keychain for each secret
+    let shell = app.shell();
+    for secret in &mut secrets {
+        if secret.name.is_empty() {
+            continue;
+        }
+        let output = shell
+            .command("security")
+            .args(["find-generic-password", "-a", "harness-kit", "-s", &secret.name])
+            .output()
+            .await;
+        secret.is_set = output.map(|o| o.status.success()).unwrap_or(false);
     }
 
     Ok(secrets)
@@ -406,6 +435,8 @@ pub async fn set_keychain_secret(
     name: String,
     value: String,
 ) -> Result<(), String> {
+    validate_secret_name(&name)?;
+
     let shell = app.shell();
     let output = shell
         .command("security")
@@ -437,6 +468,8 @@ pub async fn delete_keychain_secret(
     db: State<'_, Db>,
     name: String,
 ) -> Result<(), String> {
+    validate_secret_name(&name)?;
+
     let shell = app.shell();
     let output = shell
         .command("security")

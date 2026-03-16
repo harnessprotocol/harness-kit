@@ -73,10 +73,31 @@ pub fn clear_audit_entries(
     before_date: String,
 ) -> Result<(), String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let deleted: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM audit_log WHERE timestamp < ?1",
+            rusqlite::params![before_date],
+            |row| row.get(0),
+        )
+        .map_err(|e| e.to_string())?;
+
     conn.execute(
         "DELETE FROM audit_log WHERE timestamp < ?1",
         rusqlite::params![before_date],
     )
     .map_err(|e| e.to_string())?;
+
+    // Record that the audit log was cleared
+    let id = uuid::Uuid::new_v4().to_string();
+    let timestamp = chrono::Utc::now().to_rfc3339();
+    let _ = conn.execute(
+        "INSERT INTO audit_log (id, timestamp, event_type, category, summary, details, source) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+        rusqlite::params![
+            id, timestamp, "audit_clear", "permissions",
+            format!("Cleared {} audit entries older than {}", deleted, before_date),
+            Option::<String>::None, "user"
+        ],
+    );
+
     Ok(())
 }
