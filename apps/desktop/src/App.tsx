@@ -5,11 +5,14 @@ import HooksPage from "./pages/harness/HooksPage";
 import SettingsPage from "./pages/harness/SettingsPage";
 import FileViewerPage from "./pages/harness/FileViewerPage";
 import ClaudeMdPage from "./pages/harness/ClaudeMdPage";
-import ComingSoonPage from "./pages/ComingSoonPage";
 import BrowsePage from "./pages/marketplace/BrowsePage";
 import PluginDetailPage from "./pages/marketplace/PluginDetailPage";
 import DashboardPage from "./pages/observatory/DashboardPage";
 import SessionsPage from "./pages/observatory/SessionsPage";
+import ComparatorSetupPage from "./pages/comparator/ComparatorSetupPage";
+import ComparatorRunPage from "./pages/comparator/ComparatorRunPage";
+import ComparatorHistoryPage from "./pages/comparator/ComparatorHistoryPage";
+import ComparatorAnalyticsPage from "./pages/comparator/ComparatorAnalyticsPage";
 
 export default function App() {
   return (
@@ -29,10 +32,13 @@ export default function App() {
           <Route path="marketplace/:slug" element={<PluginDetailPage />} />
           <Route path="observatory" element={<DashboardPage />} />
           <Route path="observatory/sessions" element={<SessionsPage />} />
-          <Route
-            path="comparator/*"
-            element={<ComingSoonPage title="Comparator" description="Run side-by-side comparisons of AI tools and models on real tasks." />}
-          />
+
+          {/* Comparator */}
+          <Route path="comparator" element={<ComparatorSetupPage />} />
+          <Route path="comparator/run/:comparisonId" element={<ComparatorRunPage />} />
+          <Route path="comparator/history" element={<ComparatorHistoryPage />} />
+          <Route path="comparator/analytics" element={<ComparatorAnalyticsPage />} />
+          <Route path="comparator/review/:comparisonId" element={<ComparatorRunPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

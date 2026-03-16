@@ -1,17 +1,41 @@
 {
   "identifier": "default",
-  "description": "Default capability — grants core API and read access to ~/.claude/",
+  "description": "Default capability — grants core API, read access to ~/.claude/, and shell spawn for comparator",
   "windows": ["main"],
   "permissions": [
     "core:default",
+    "core:event:allow-listen",
+    "core:event:allow-emit",
     "fs:allow-read-text-file",
     "fs:allow-read-dir",
     "fs:allow-exists",
+    "fs:allow-write-text-file",
     {
       "identifier": "fs:scope",
       "allow": [
         { "path": "$HOME/.claude" },
         { "path": "$HOME/.claude/**" }
+      ]
+    },
+    {
+      "identifier": "fs:write-scope",
+      "allow": [
+        { "path": "$HOME/.claude/settings.json" },
+        { "path": "$HOME/.harness-kit/**" }
+      ]
+    },
+    "shell:default",
+    "shell:allow-spawn",
+    "shell:allow-stdin-write",
+    "shell:allow-kill",
+    {
+      "identifier": "shell:allow-execute",
+      "allow": [
+        { "name": "claude", "cmd": "claude", "args": true },
+        { "name": "cursor", "cmd": "cursor", "args": true },
+        { "name": "gh", "cmd": "gh", "args": true },
+        { "name": "git", "cmd": "git", "args": true },
+        { "name": "security", "cmd": "security", "args": true }
       ]
     }
   ]

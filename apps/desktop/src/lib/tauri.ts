@@ -1,5 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { InstalledPlugin, KnownMarketplace, HooksConfig, StatsCache, SessionSummary, SessionFacet, ActiveSession, LiveDailyActivity } from "@harness-kit/shared";
+import type {
+  InstalledPlugin, KnownMarketplace, HooksConfig, StatsCache,
+  SessionSummary, SessionFacet, ActiveSession, LiveDailyActivity,
+  HarnessInfo, ComparisonRequest, GitRepoInfo, ComparisonSummary,
+  ComparisonDetail, PanelDiffs, ReplaySetup, SaveEvaluationRequest,
+  EvaluationScores, AnalyticsData, FileDiffEntry,
+} from "@harness-kit/shared";
 
 // ── Plugin commands ──────────────────────────────────────────
 
@@ -43,11 +49,129 @@ export async function readSessionFacet(sessionId: string): Promise<SessionFacet 
   return invoke<SessionFacet | null>("read_session_facet", { sessionId });
 }
 
-/** Reserved for future "active sessions" indicator in the Observatory sidebar */
 export async function listActiveSessions(): Promise<ActiveSession[]> {
   return invoke<ActiveSession[]>("list_active_sessions");
 }
 
 export async function readLiveActivity(): Promise<LiveDailyActivity[]> {
   return invoke<LiveDailyActivity[]>("read_live_activity");
+}
+
+// ── Comparator commands ─────────────────────────────────────
+
+export async function detectHarnesses(): Promise<HarnessInfo[]> {
+  return invoke<HarnessInfo[]>("detect_harnesses");
+}
+
+export async function startComparison(request: ComparisonRequest): Promise<void> {
+  return invoke<void>("start_comparison", { request });
+}
+
+export async function killPanel(comparisonId: string, panelId: string): Promise<void> {
+  return invoke<void>("kill_panel", { comparisonId, panelId });
+}
+
+// ── Git commands ────────────────────────────────────────────
+
+export async function checkGitRepo(dir: string): Promise<GitRepoInfo> {
+  return invoke<GitRepoInfo>("check_git_repo", { dir });
+}
+
+export async function createWorktrees(
+  repoDir: string, comparisonId: string, panelIds: string[], commit: string,
+): Promise<Array<{ panelId: string; worktreePath: string }>> {
+  return invoke("create_worktrees", { repoDir, comparisonId, panelIds, commit });
+}
+
+export async function removeWorktrees(repoDir: string, comparisonId: string): Promise<void> {
+  return invoke<void>("remove_worktrees", { repoDir, comparisonId });
+}
+
+export async function getDiffAgainstCommit(
+  worktreePath: string, baseCommit: string,
+): Promise<FileDiffEntry[]> {
+  return invoke("get_diff_against_commit", { worktreePath, baseCommit });
+}
+
+// ── Persistence commands ────────────────────────────────────
+
+interface SavePanelRequest {
+  id: string;
+  harnessId: string;
+  harnessName: string;
+  model?: string;
+}
+
+export async function saveComparison(
+  id: string, prompt: string, workingDir: string,
+  pinnedCommit: string | null, panels: SavePanelRequest[],
+): Promise<void> {
+  return invoke<void>("save_comparison", { id, prompt, workingDir, pinnedCommit, panels });
+}
+
+export async function savePanelResult(
+  comparisonId: string, panelId: string,
+  exitCode: number | null, durationMs: number | null,
+  status: string, outputText: string | null,
+): Promise<void> {
+  return invoke<void>("save_panel_result", {
+    comparisonId, panelId, exitCode, durationMs, status, outputText,
+  });
+}
+
+export async function listComparisons(
+  limit?: number, offset?: number,
+): Promise<ComparisonSummary[]> {
+  return invoke<ComparisonSummary[]>("list_comparisons", { limit, offset });
+}
+
+export async function getComparison(comparisonId: string): Promise<ComparisonDetail> {
+  return invoke<ComparisonDetail>("get_comparison", { comparisonId });
+}
+
+export async function deleteComparison(comparisonId: string): Promise<void> {
+  return invoke<void>("delete_comparison", { comparisonId });
+}
+
+export async function saveFileDiffs(
+  comparisonId: string, panelId: string,
+  diffs: Array<{ filePath: string; diffText: string; changeType: string }>,
+): Promise<void> {
+  return invoke<void>("save_file_diffs", { comparisonId, panelId, diffs });
+}
+
+export async function getComparisonDiffs(comparisonId: string): Promise<PanelDiffs[]> {
+  return invoke<PanelDiffs[]>("get_comparison_diffs", { comparisonId });
+}
+
+export async function getComparisonSetup(comparisonId: string): Promise<ReplaySetup> {
+  return invoke<ReplaySetup>("get_comparison_setup", { comparisonId });
+}
+
+// ── Evaluation commands ─────────────────────────────────────
+
+export async function saveEvaluation(evaluation: SaveEvaluationRequest): Promise<void> {
+  return invoke<void>("save_evaluation", { ...evaluation });
+}
+
+export async function getEvaluations(comparisonId: string): Promise<EvaluationScores[]> {
+  return invoke<EvaluationScores[]>("get_evaluations", { comparisonId });
+}
+
+export async function updateEvaluationScore(
+  evaluationId: string, dimension: string, score: number,
+): Promise<void> {
+  return invoke<void>("update_evaluation_score", { evaluationId, dimension, score });
+}
+
+// ── Export commands ──────────────────────────────────────────
+
+export async function exportComparisonJson(comparisonId: string): Promise<string> {
+  return invoke<string>("export_comparison_json", { comparisonId });
+}
+
+// ── Analytics commands ──────────────────────────────────────
+
+export async function getComparatorAnalytics(): Promise<AnalyticsData> {
+  return invoke<AnalyticsData>("get_comparator_analytics");
 }

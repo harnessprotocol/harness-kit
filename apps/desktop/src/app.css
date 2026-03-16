@@ -351,6 +351,38 @@ body {
   color: var(--fg-base);
 }
 
+/* ── Comparator panels ── */
+.comparator-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.comparator-output {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 14px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #1a1a2e;
+  color: #e0e0e8;
+}
+
+.dark .comparator-output {
+  background: #0d0d1a;
+  color: #d0d0dc;
+}
+
+.comparator-status-bar {
+  flex-shrink: 0;
+}
+
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
