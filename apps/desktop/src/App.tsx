@@ -8,6 +8,8 @@ import ClaudeMdPage from "./pages/harness/ClaudeMdPage";
 import ComingSoonPage from "./pages/ComingSoonPage";
 import BrowsePage from "./pages/marketplace/BrowsePage";
 import PluginDetailPage from "./pages/marketplace/PluginDetailPage";
+import DashboardPage from "./pages/observatory/DashboardPage";
+import SessionsPage from "./pages/observatory/SessionsPage";
 
 export default function App() {
   return (
@@ -25,10 +27,8 @@ export default function App() {
           {/* Marketplace */}
           <Route path="marketplace" element={<BrowsePage />} />
           <Route path="marketplace/:slug" element={<PluginDetailPage />} />
-          <Route
-            path="observatory/*"
-            element={<ComingSoonPage title="Observatory" description="Visualize your Claude Code usage patterns and token metrics." />}
-          />
+          <Route path="observatory" element={<DashboardPage />} />
+          <Route path="observatory/sessions" element={<SessionsPage />} />
           <Route
             path="comparator/*"
             element={<ComingSoonPage title="Comparator" description="Run side-by-side comparisons of AI tools and models on real tasks." />}

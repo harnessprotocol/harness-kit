@@ -10,6 +10,11 @@ pub fn run() {
             commands::hooks::read_hooks,
             commands::claude_md::read_claude_md,
             commands::settings::list_claude_dir,
+            commands::observatory::read_stats_cache,
+            commands::observatory::list_sessions_summary,
+            commands::observatory::read_session_facet,
+            commands::observatory::list_active_sessions,
+            commands::observatory::read_live_activity,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application")
