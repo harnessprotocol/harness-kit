@@ -54,30 +54,40 @@ description: Use when user invokes /my-skill with [argument types]. [One sentenc
 
 | Section | Required when |
 |---------|--------------|
-| `## Overview` with core principles | Always |
-| `## Workflow` with numbered steps | Always (even 1-step skills) |
-| `## Common Mistakes` table | Any skill with 3+ steps or file writes |
-| `## Scope Controls` | Any skill that touches files |
+| Numbered steps (`## Step N: …`) | Always — one action per step |
+| `## Quick Reference` table | Any skill with 3+ steps |
+| `## Rules` with Never/Always lists | Any skill with safety constraints or merge/write operations |
 | `## Argument Types` table | Any parameterized skill |
 
-### Workflow conventions
+### Step conventions
 
-- Number all steps. Label them mandatory when order matters: `## Workflow (MANDATORY — follow in order)`
-- Each step: one action, concrete command where applicable. Never vague ("process the file" → tell it exactly how).
+- Number all steps. Prefix with `## Step N:` and a short label.
+- Each step: one action, one concrete command where applicable. Never vague ("process the file" → tell it exactly how).
 - Use Bash blocks for exact commands Claude should run.
-- If a step requires stopping to verify before continuing, say so explicitly: `**STOP HERE until file is written.**`
+- If a step requires stopping to verify before continuing, say so explicitly: `**STOP HERE until verified.**`
+- Mark the full workflow mandatory when order matters: `## Steps (MANDATORY — follow in order)`
 
-### Common Mistakes table format
+### Quick Reference table format
 
 ```markdown
-## Common Mistakes
+## Quick Reference
 
-| Mistake | Fix |
-|---------|-----|
-| Did X wrong | Do Y instead |
+| Step | Action | Block on failure? |
+|------|--------|-------------------|
+| 1. Name | What it does | Yes — fix first |
 ```
 
-Two columns, two sentences max per row. Prefer concrete over general.
+### Rules section format
+
+```markdown
+## Rules
+
+**Never:**
+- [constraint]
+
+**Always:**
+- [invariant]
+```
 
 ### What not to add
 
@@ -158,14 +168,17 @@ chore: set initial version to v0.1.0
 
 ## CI
 
-Two checks run on every PR:
+Five checks run on every PR via `validate.yml`:
 
 | Check | What it validates |
 |-------|------------------|
 | JSON manifests valid | `marketplace.json` and all `plugin.json` files parse without error |
 | Version alignment | `version` in `plugin.json` and `marketplace.json` must match exactly |
+| All plugins registered | Every `plugins/<name>/` directory has a matching `marketplace.json` entry |
+| `developed_with` field | Must be a non-empty string if present (optional field) |
+| `requires.env` schema | Each env entry has `name`, `description`, and valid `required`/`sensitive` booleans |
 
-Both must pass before merge. If they fail: fix manifests, push, CI re-runs automatically.
+Plus four build jobs: `core-build-test`, `desktop-build-test`, `board-build`, `docs-build`. All must pass before merge. If they fail: fix manifests or source, push, CI re-runs automatically.
 
 ---
 
