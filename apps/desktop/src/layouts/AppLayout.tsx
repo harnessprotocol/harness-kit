@@ -1,6 +1,7 @@
-import { Outlet, NavLink, useLocation } from "react-router-dom";
+import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import Tooltip from "../components/Tooltip";
+import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
 import {
   initTheme, getTheme, setTheme,
   getAccent, setAccent,
@@ -73,10 +74,13 @@ const NAV_SECTIONS: NavSection[] = [
 
 export default function AppLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [theme, setThemeState] = useState(getTheme);
   const [accent, setAccentState] = useState(getAccent);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
+
+  useGlobalShortcuts({ setSettingsOpen, navigate });
 
   useEffect(() => {
     initTheme();

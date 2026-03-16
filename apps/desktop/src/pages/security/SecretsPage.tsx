@@ -42,6 +42,18 @@ export default function SecretsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (!modalSecret) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setModalSecret(null);
+        setSecretValue("");
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [modalSecret]);
+
   async function handleSetSecret() {
     if (!modalSecret || !secretValue) return;
     setSavingSecret(true);
