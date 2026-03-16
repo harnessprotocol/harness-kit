@@ -164,11 +164,28 @@ git push --force-with-lease
 
 If rebase has conflicts, resolve them, then `git rebase --continue`.
 
+After rebasing and pushing, wait for CI to pass on the rebased code:
+
+```bash
+gh pr checks --watch --fail-fast
+```
+
+If CI fails after rebase: treat as a Step 5 failure — diagnose and fix.
+
 **No new commits:** Skip.
 
 ---
 
 ## Step 7: Confirm and Squash Merge
+
+First, verify no reviews are blocking:
+
+```bash
+gh pr view --json reviewDecision --jq '.reviewDecision'
+```
+
+- **`CHANGES_REQUESTED`:** Stop. Report: "This PR has changes requested by a reviewer. Address their feedback before merging." Do not proceed.
+- **`APPROVED` or empty (no required reviews):** Continue.
 
 Before merging, confirm with the user unless they've already said to proceed automatically:
 
@@ -206,13 +223,14 @@ Report: "PR merged. Branch cleaned up. Done."
 | 3. Create PR | Push + `gh pr create` | — |
 | 4. Code review | `review` skill | Yes for MUST FIX |
 | 5. CI | `gh pr checks` | Yes — fix or plan |
-| 6. Base sync | Rebase if behind | Yes — resolve conflicts |
-| 7. Merge | `gh pr merge --squash` | — |
+| 6. Base sync | Rebase if behind + re-verify CI | Yes — resolve conflicts, fix CI |
+| 7. Merge | Check reviews → confirm → squash | Yes — address CHANGES_REQUESTED |
 
 ## Rules
 
 **Never:**
 - Merge with failing CI
+- Merge with CHANGES_REQUESTED reviews outstanding
 - Force-push to main/master
 - Use `--no-verify` to bypass hooks
 - Leave PR template sections unfilled

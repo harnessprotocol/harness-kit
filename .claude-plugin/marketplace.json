@@ -100,7 +100,7 @@
       "name": "ship-pr",
       "source": "./ship-pr",
       "description": "End-of-task shipping workflow: run tests, open a PR, code review, fix CI, sync base, then squash merge",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "author": { "name": "harnessprotocol" },
       "license": "Apache-2.0",
       "category": "devops",
