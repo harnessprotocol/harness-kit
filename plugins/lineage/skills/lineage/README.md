@@ -1,10 +1,10 @@
-# Data Lineage Plugin
+# Lineage Plugin
 
 A Claude Code plugin that traces column-level data lineage through heterogeneous data stacks. Point it at a column and get a full upstream/downstream trace with confidence ratings and a visual diagram.
 
 ## What It Does
 
-When you invoke `/data-lineage` with a column name, the skill:
+When you invoke `/lineage` with a column name, the skill:
 
 1. Searches for SQL definitions (tables, views, migrations) containing the column
 2. Traces view chains recursively to find source tables
@@ -27,25 +27,25 @@ Each trace produces two outputs:
 ### Trace a qualified column
 
 ```
-/data-lineage orders.total_amount
+/lineage orders.total_amount
 ```
 
 ### Trace with full qualification
 
 ```
-/data-lineage reporting.daily_summary.total_amount
+/lineage reporting.daily_summary.total_amount
 ```
 
 ### Trace with context
 
 ```
-/data-lineage customer_id in reporting.daily_summary
+/lineage customer_id in reporting.daily_summary
 ```
 
 ### Trace an unqualified column
 
 ```
-/data-lineage revenue
+/lineage revenue
 ```
 
 If the column exists in multiple tables, you'll be asked which one to trace.

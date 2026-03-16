@@ -1,15 +1,15 @@
-# usage-stats
+# stats
 
 Generate an interactive HTML dashboard for your Claude Code usage.
 
 ## Usage
 
 ```
-/usage-stats                    # last 14 days (default)
-/usage-stats last week          # last 7 days
-/usage-stats last month         # last 30 days
-/usage-stats all time           # everything since first session
-/usage-stats Mar 1 to Mar 10   # specific date range
+/stats                    # last 14 days (default)
+/stats last week          # last 7 days
+/stats last month         # last 30 days
+/stats all time           # everything since first session
+/stats Mar 1 to Mar 10   # specific date range
 ```
 
 ## What You Get

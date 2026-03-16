@@ -1,6 +1,6 @@
 ---
 name: explain
-description: Use when user invokes /explain with a file path, directory path, function/class name, or natural language concept. Also triggers on "explain this", "how does X work", "walk me through". Produces a structured, layered explanation of what the code does, how it connects, and where to start if you need to change it. Do NOT use when the user wants to trace data flow through a pipeline — use /data-lineage instead.
+description: Use when user invokes /explain with a file path, directory path, function/class name, or natural language concept. Also triggers on "explain this", "how does X work", "walk me through". Produces a structured, layered explanation of what the code does, how it connects, and where to start if you need to change it. Do NOT use when the user wants to trace data flow through a pipeline — use /lineage instead.
 ---
 
 # Structured Code Explainer

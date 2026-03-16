@@ -1,17 +1,17 @@
-# pull-request-sweep
+# pr-sweep
 
 Cross-repo PR sweep — discover, triage, review, merge, and report on all your open PRs.
 
 ## Usage
 
 ```
-/plugin install pull-request-sweep@harness-kit
+/plugin install pr-sweep@harness-kit
 ```
 
 Then:
 
 ```
-/pull-request-sweep
+/pr-sweep
 ```
 
 Or:
@@ -36,4 +36,4 @@ Or:
 - Never acts on draft PRs
 - Never auto-resolves CHANGES_REQUESTED — flags for human follow-up
 - Safe to run repeatedly — idempotent, already-merged PRs won't reappear
-- Pairs with `/loop 30m /pull-request-sweep` for ongoing PR babysitting
+- Pairs with `/loop 30m /pr-sweep` for ongoing PR babysitting

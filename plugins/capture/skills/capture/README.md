@@ -94,7 +94,7 @@ Facts staged here are consumed by the daily reflection and written to the knowle
 
 ## 2026-03-08 23:59
 <!-- source: hook -->
-- Implemented capture-session plugin with 4 argument types
+- Implemented capture plugin with 4 argument types
 - Updated marketplace.json and install.sh
 ```
 

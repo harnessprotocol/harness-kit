@@ -144,9 +144,9 @@ For each installed skill, determine its source repo:
 |--------|-------------|
 | explain | Layered explanations of files, functions, directories, or concepts |
 | research | Process any source into a structured, compounding knowledge base |
-| data-lineage | Column-level lineage tracing through SQL, Kafka, Spark, and JDBC |
+| lineage | Column-level lineage tracing through SQL, Kafka, Spark, and JDBC |
 | orient | Topic-focused session orientation across graph, knowledge, and research |
-| capture-session | Capture session information into a staging file for later reflection |
+| capture | Capture session information into a staging file for later reflection |
 | review | Code review for a branch, PR, or path — severity labels and cross-file analysis |
 | docgen | Generate or update README, API docs, architecture overview, or changelog |
 | harness-export | Export your installed plugins to a shareable harness.yaml |
@@ -155,7 +155,7 @@ For each installed skill, determine its source repo:
 | harness-compile | Compile harness.yaml to native config files for Claude Code, Cursor, and Copilot |
 | harness-sync | Sync AI tool configuration across Claude Code, Cursor, and Copilot |
 | ship-pr | End-of-task shipping workflow: run tests, open a PR, code review, fix CI, sync base, then squash merge |
-| pull-request-sweep | Cross-repo PR sweep: triage all open PRs, run code reviews, merge what's ready, fix quick CI blockers, and report |
+| pr-sweep | Cross-repo PR sweep: triage all open PRs, run code reviews, merge what's ready, fix quick CI blockers, and report |
 
 For any installed skill **not in this table**, ask the user:
 > "I see `[name]` installed but don't recognize it. What `owner/repo` is it from, and what does it do in one sentence?"
