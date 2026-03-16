@@ -17,7 +17,7 @@ type NavSection = {
   children?: { label: string; path: string }[];
 };
 
-const NAV_SECTIONS: NavSection[] = [
+export const NAV_SECTIONS: NavSection[] = [
   {
     id: "harness",
     label: "Harness",
@@ -152,7 +152,11 @@ export default function AppLayout() {
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
           borderRight: "1px solid var(--border-base)",
-          position: "relative",
+          position: "fixed",
+          top: 0,
+          left: 0,
+          bottom: 0,
+          zIndex: 30,
         }}
       >
         {/* App name */}
@@ -290,7 +294,7 @@ export default function AppLayout() {
       </aside>
 
       {/* Main content */}
-      <main className="flex-1 overflow-y-auto" style={{ background: "var(--bg-base)" }}>
+      <main className="flex-1 overflow-y-auto" style={{ background: "var(--bg-base)", paddingLeft: "var(--sidebar-width)" }}>
         <Outlet />
       </main>
     </div>

@@ -1,12 +1,13 @@
 import { useEffect } from "react";
 import type { NavigateFunction } from "react-router-dom";
 
-const NAV_PATHS = [
+export const NAV_PATHS = [
   "/harness/plugins",
   "/marketplace",
   "/observatory",
   "/comparator",
   "/security/permissions",
+  "/board",
 ] as const;
 
 interface Options {
@@ -32,9 +33,9 @@ export function useGlobalShortcuts({ setSettingsOpen, navigate }: Options) {
         return;
       }
 
-      // ⌘1–⌘5 — navigate to sections
+      // ⌘1–⌘6 — navigate to sections
       const num = parseInt(e.key, 10);
-      if (num >= 1 && num <= 5) {
+      if (num >= 1 && num <= NAV_PATHS.length) {
         e.preventDefault();
         navigate(NAV_PATHS[num - 1]);
       }

@@ -6,7 +6,7 @@
   --bg-base: #f4f2ef;
   --bg-surface: #faf9f7;
   --bg-elevated: #ffffff;
-  --bg-sidebar: rgba(236, 234, 230, 0.92);
+  --bg-sidebar: rgba(228, 226, 222, 0.82);
   --bg-sidebar-solid: #ece9e5;
 
   /* Foregrounds */
@@ -50,7 +50,7 @@
   --bg-base: #1c1c1e;
   --bg-surface: #242426;
   --bg-elevated: #2c2c2e;
-  --bg-sidebar: rgba(28, 28, 30, 0.85);
+  --bg-sidebar: rgba(44, 44, 48, 0.78);
   --bg-sidebar-solid: #1e1e20;
 
   /* Foregrounds */
