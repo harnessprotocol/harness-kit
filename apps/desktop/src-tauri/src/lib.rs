@@ -56,6 +56,19 @@ pub fn run() {
             // Export + Analytics
             commands::export::export_comparison_json,
             commands::export::get_comparator_analytics,
+            // Security
+            commands::security::read_permissions,
+            commands::security::update_permissions,
+            commands::security::list_security_presets,
+            commands::security::apply_security_preset,
+            commands::security::list_required_env,
+            commands::security::set_keychain_secret,
+            commands::security::delete_keychain_secret,
+            commands::security::read_env_config,
+            commands::security::write_env_config,
+            // Security — audit log
+            commands::security_db::list_audit_entries,
+            commands::security_db::clear_audit_entries,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application")
