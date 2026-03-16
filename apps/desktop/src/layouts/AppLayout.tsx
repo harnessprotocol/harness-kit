@@ -63,6 +63,11 @@ const NAV_SECTIONS: NavSection[] = [
       { label: "Audit Log", path: "/security/audit" },
     ],
   },
+  {
+    id: "board",
+    label: "Board",
+    path: "/board",
+  },
 ];
 
 export default function AppLayout() {

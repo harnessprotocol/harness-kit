@@ -648,6 +648,29 @@ body {
   flex-shrink: 0;
 }
 
+/* ── Board scope — aliases desktop vars → board vars ── */
+.board-scope {
+  /* Text */
+  --text-primary: var(--fg-base);
+  --text-secondary: var(--fg-muted);
+  --text-muted: var(--fg-subtle);
+  /* Backgrounds */
+  --bg-hover: var(--hover-bg);
+  --bg-surface: var(--bg-surface);
+  --bg-elevated: var(--bg-elevated);
+  /* Borders */
+  --border: var(--border-base);
+  --border-subtle: var(--separator);
+  /* Accent */
+  --accent-dim: var(--accent-light);
+  /* Status colors */
+  --status-backlog: var(--fg-subtle);
+  --status-in-progress: #2563eb;
+  --status-review: var(--warning);
+  --status-done: var(--success);
+  --blocked: var(--danger);
+}
+
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
