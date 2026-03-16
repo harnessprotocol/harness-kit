@@ -7,9 +7,9 @@ type BoardEvent =
   | { type: 'project_updated'; slug: string; project: Project }
   | { type: 'connected'; message: string };
 
-export function useBoardData(slug: string) {
+export function useBoardData(slug: string, ready = true) {
   const [project, setProject] = useState<Project | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchProject = useCallback(() => {
@@ -20,9 +20,10 @@ export function useBoardData(slug: string) {
   }, [slug]);
 
   useEffect(() => {
+    if (!ready) return;
     setLoading(true);
     fetchProject();
-  }, [fetchProject]);
+  }, [ready, fetchProject]);
 
   useWebSocket((evt) => {
     try {
