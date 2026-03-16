@@ -27,7 +27,7 @@ export default function MarkdownPanel({
     background: active ? "var(--bg-elevated)" : "transparent",
     color: active ? "var(--fg-base)" : "var(--fg-subtle)",
     cursor: "pointer",
-    boxShadow: active ? "0 1px 2px rgba(0,0,0,0.08)" : "none",
+    boxShadow: active ? "var(--shadow-sm)" : "none",
     transition: "all 0.1s",
   });
 

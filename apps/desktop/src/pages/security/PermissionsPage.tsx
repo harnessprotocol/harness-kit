@@ -175,7 +175,7 @@ function SuggestInput({
           background: "var(--bg-elevated)",
           border: "1px solid var(--border-base)",
           borderRadius: "6px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.12)",
+          boxShadow: "var(--shadow-md)",
           maxHeight: "180px", overflowY: "auto",
         }}>
           {filtered.map((s, i) => (
