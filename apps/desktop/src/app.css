@@ -541,6 +541,7 @@ body {
   border: 1px solid var(--border-base);
   background: var(--bg-surface);
   color: var(--fg-base);
+  cursor: text;
   transition: border-color 0.15s;
 }
 
@@ -559,6 +560,7 @@ body {
   border: 1px solid var(--border-base);
   background: var(--bg-surface);
   color: var(--fg-base);
+  cursor: text;
   resize: vertical;
   transition: border-color 0.15s;
 }

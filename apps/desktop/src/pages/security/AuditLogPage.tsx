@@ -216,8 +216,8 @@ export default function AuditLogPage() {
                   cursor: entry.details ? "pointer" : "default",
                   transition: "background 0.1s",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover-bg)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                onMouseEnter={(e) => { if (entry.details) e.currentTarget.style.background = "var(--hover-bg)"; }}
+                onMouseLeave={(e) => { if (entry.details) e.currentTarget.style.background = "transparent"; }}
               >
                 <span style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>
                   {formatTimestamp(entry.timestamp)}
