@@ -2,12 +2,14 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { listInstalledPlugins } from "../../lib/tauri";
 import type { InstalledPlugin } from "@harness-kit/shared";
+import ContextMenu from "../../components/ContextMenu";
 
 export default function PluginsPage() {
   const navigate = useNavigate();
   const [plugins, setPlugins] = useState<InstalledPlugin[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; plugin: InstalledPlugin } | null>(null);
 
   useEffect(() => {
     listInstalledPlugins()
@@ -82,7 +84,15 @@ export default function PluginsPage() {
       {!loading && !error && plugins.length > 0 && (
         <div className="row-list">
           {plugins.map((plugin) => (
-            <div key={plugin.name} className="row-list-item" style={{ justifyContent: "space-between" }}>
+            <div
+              key={plugin.name}
+              className="row-list-item"
+              style={{ justifyContent: "space-between" }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setContextMenu({ x: e.clientX, y: e.clientY, plugin });
+              }}
+            >
               <div style={{ minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                   <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--fg-base)" }}>
@@ -128,6 +138,17 @@ export default function PluginsPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={[
+            { label: "Copy name", onClick: () => navigator.clipboard.writeText(contextMenu.plugin.name) },
+          ]}
+          onClose={() => setContextMenu(null)}
+        />
       )}
     </div>
   );

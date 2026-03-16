@@ -3,6 +3,7 @@ import { listSessionsSummary, readSessionFacet } from "../../lib/tauri";
 import { formatTimestamp, formatDuration, formatNumber } from "../../lib/format";
 import type { SessionSummary, SessionFacet } from "@harness-kit/shared";
 import { useArrowNavigation } from "../../hooks/useArrowNavigation";
+import ContextMenu from "../../components/ContextMenu";
 
 // ── Outcome badge ──────────────────────────────────────────────
 
@@ -146,6 +147,7 @@ export default function SessionsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [facet, setFacet] = useState<SessionFacet | null>(null);
   const [facetLoading, setFacetLoading] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; session: SessionSummary } | null>(null);
 
   useEffect(() => {
     listSessionsSummary()
@@ -237,6 +239,10 @@ export default function SessionsPage() {
                 <button
                   className="row-list-item"
                   onClick={() => handleRowClick(session.sessionId)}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setContextMenu({ x: e.clientX, y: e.clientY, session });
+                  }}
                   style={{
                     width: "100%",
                     justifyContent: "space-between",
@@ -288,6 +294,18 @@ export default function SessionsPage() {
             );
           })}
         </div>
+      )}
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={[
+            { label: "View details", onClick: () => handleRowClick(contextMenu.session.sessionId) },
+            { label: "Copy session ID", onClick: () => navigator.clipboard.writeText(contextMenu.session.sessionId) },
+          ]}
+          onClose={() => setContextMenu(null)}
+        />
       )}
     </div>
   );

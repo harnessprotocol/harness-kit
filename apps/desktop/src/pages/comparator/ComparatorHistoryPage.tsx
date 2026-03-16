@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { listComparisons, deleteComparison } from "../../lib/tauri";
 import type { ComparisonSummary } from "@harness-kit/shared";
 import { useArrowNavigation } from "../../hooks/useArrowNavigation";
+import ContextMenu from "../../components/ContextMenu";
 
 export default function ComparatorHistoryPage() {
   const navigate = useNavigate();
   const [comparisons, setComparisons] = useState<ComparisonSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; comp: ComparisonSummary } | null>(null);
 
   const { focusedIndex: histFocusedIndex, onKeyDown: onHistKeyDown } = useArrowNavigation({
     count: comparisons.length,
@@ -90,6 +92,10 @@ export default function ComparatorHistoryPage() {
               key={comp.id}
               className="row-list-item"
               onClick={() => navigate(`/comparator/review/${comp.id}`)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setContextMenu({ x: e.clientX, y: e.clientY, comp });
+              }}
               style={{ cursor: "pointer", gap: "12px", outline: histFocusedIndex === idx ? "2px solid var(--accent)" : "none", outlineOffset: "-2px" }}
             >
               <div style={{ flex: 1, minWidth: 0 }}>
@@ -161,6 +167,25 @@ export default function ComparatorHistoryPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={[
+            { label: "Review", onClick: () => navigate(`/comparator/review/${contextMenu.comp.id}`) },
+            { label: "Delete", danger: true, onClick: async () => {
+              try {
+                await deleteComparison(contextMenu.comp.id);
+                setComparisons((prev) => prev.filter((c) => c.id !== contextMenu.comp.id));
+              } catch (err) {
+                console.error("Failed to delete:", err);
+              }
+            }},
+          ]}
+          onClose={() => setContextMenu(null)}
+        />
       )}
     </div>
   );

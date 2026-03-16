@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { listAuditEntries, clearAuditEntries } from "../../lib/tauri";
 import type { AuditEntry } from "@harness-kit/shared";
 import { useArrowNavigation } from "../../hooks/useArrowNavigation";
+import ContextMenu from "../../components/ContextMenu";
 
 const PAGE_SIZE = 25;
 
@@ -69,6 +70,7 @@ export default function AuditLogPage() {
   const [page, setPage] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entry: AuditEntry } | null>(null);
 
   const { focusedIndex: auditFocusedIndex, onKeyDown: onAuditKeyDown } = useArrowNavigation({
     count: entries.length,
@@ -226,6 +228,10 @@ export default function AuditLogPage() {
             <div key={entry.id}>
               <div
                 onClick={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setContextMenu({ x: e.clientX, y: e.clientY, entry });
+                }}
                 style={{
                   display: "grid", gridTemplateColumns: "140px 130px 1fr 80px",
                   padding: "7px 16px", borderBottom: "1px solid var(--separator)",
@@ -306,6 +312,18 @@ export default function AuditLogPage() {
             Next
           </button>
         </div>
+      )}
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={[
+            ...(contextMenu.entry.details ? [{ label: "Copy details", onClick: () => navigator.clipboard.writeText(contextMenu.entry.details!) }] : []),
+            { label: "Copy summary", onClick: () => navigator.clipboard.writeText(contextMenu.entry.summary) },
+          ]}
+          onClose={() => setContextMenu(null)}
+        />
       )}
     </div>
   );
