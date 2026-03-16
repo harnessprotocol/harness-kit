@@ -2,7 +2,6 @@ import type { FsProvider } from "../fs-provider.js";
 import type {
   FileAction,
   HarnessConfig,
-  HarnessInstructions,
   TargetPlatform,
 } from "../types.js";
 import {

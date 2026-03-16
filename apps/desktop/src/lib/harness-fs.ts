@@ -5,7 +5,7 @@ import {
   mkdir,
   readDir,
 } from "@tauri-apps/plugin-fs";
-import { join, homeDir } from "@tauri-apps/api/path";
+import { homeDir } from "@tauri-apps/api/path";
 import type { FsProvider } from "@harness-kit/core";
 import { posixJoin, posixDirname } from "@harness-kit/core";
 
