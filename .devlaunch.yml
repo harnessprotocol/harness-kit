@@ -1,0 +1,25 @@
+name: harness-kit
+description: Build & launch the Harness Kit desktop app
+path: ~/repos/harness-kit
+
+commands:
+  dev:
+    label: Dev server
+    description: Start Tauri dev mode with HMR
+    run: pnpm dev:desktop
+  build:
+    label: Build desktop
+    description: Build Tauri release bundle
+    run: pnpm build:desktop
+  logs:
+    label: Open logs
+    description: Tail Claude debug logs
+    run: tail -f ~/.claude/debug/*.log
+  terminal:
+    label: Terminal here
+    description: Open iTerm in project root
+    run: open -a iTerm .
+  claude:
+    label: Claude Code
+    description: Start Claude Code session
+    run: claude
