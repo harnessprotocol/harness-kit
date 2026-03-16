@@ -1,5 +1,6 @@
 // Board API client — talks directly to board-server on :4800
-const BASE = 'http://localhost:4800/api/v1';
+export const BOARD_SERVER_BASE = 'http://localhost:4800';
+const BASE = `${BOARD_SERVER_BASE}/api/v1`;
 
 export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {

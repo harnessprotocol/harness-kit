@@ -36,7 +36,7 @@ export function TaskDetailPanel({ task, projectSlug, onClose, onTaskUpdated, rep
   return (
     <AnimatePresence>
       {task && (
-        <>
+        <div className="board-scope">
           {/* Backdrop */}
           <motion.div
             key="backdrop"
@@ -368,7 +368,7 @@ export function TaskDetailPanel({ task, projectSlug, onClose, onTaskUpdated, rep
               </div>
             </div>
           </motion.aside>
-        </>
+        </div>
       )}
     </AnimatePresence>
   );

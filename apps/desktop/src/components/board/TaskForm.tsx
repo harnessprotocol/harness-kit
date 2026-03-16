@@ -80,7 +80,7 @@ export function TaskForm({ open, projectSlug, epics, defaultEpicId, defaultStatu
   return (
     <AnimatePresence>
       {open && (
-        <>
+        <div className="board-scope">
           <motion.div
             key="backdrop"
             initial={{ opacity: 0 }}
@@ -195,7 +195,7 @@ export function TaskForm({ open, projectSlug, epics, defaultEpicId, defaultStatu
               </div>
             </form>
           </motion.div>
-        </>
+        </div>
       )}
     </AnimatePresence>
   );
