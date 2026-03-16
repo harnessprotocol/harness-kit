@@ -3,6 +3,7 @@ import {
   formatNumber,
   formatDuration,
   formatDate,
+  formatTimestamp,
   formatHour,
   shortModelName,
   daysBetween,
@@ -158,5 +159,27 @@ describe("daysBetween", () => {
 
   it("returns 1 for yesterday", () => {
     expect(daysBetween("2026-03-14", new Date("2026-03-15T12:00:00"))).toBe(1);
+  });
+});
+
+// ── formatTimestamp ────────────────────────────────────────────
+
+describe("formatTimestamp", () => {
+  it("formats a Unix ms timestamp to a readable date string", () => {
+    const result = formatTimestamp(1741824600000);
+    // Month and year should appear regardless of timezone
+    expect(result).toMatch(/Mar/);
+    expect(result).toMatch(/20(25|26)/);
+  });
+
+  it("includes time component", () => {
+    const result = formatTimestamp(1741824600000);
+    expect(result).toMatch(/\d{1,2}:\d{2}/);
+  });
+
+  it("returns a non-empty string for epoch", () => {
+    const result = formatTimestamp(0);
+    expect(result.length).toBeGreaterThan(0);
+    expect(result).toMatch(/\d{4}/); // contains a year
   });
 });

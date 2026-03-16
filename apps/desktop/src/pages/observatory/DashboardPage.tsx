@@ -56,7 +56,16 @@ function filterByRange<T extends { date: string }>(items: T[], range: DateRange)
 // ── Hooks ────────────────────────────────────────────────────
 
 function useReducedMotion() {
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const [reduced, setReduced] = useState(() =>
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+  useEffect(() => {
+    const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const handler = (e: MediaQueryListEvent) => setReduced(e.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, []);
+  return reduced;
 }
 
 function getAccentColor() {

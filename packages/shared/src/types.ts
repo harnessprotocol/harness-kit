@@ -185,21 +185,21 @@ export interface MarketplaceManifest {
 
 export interface DailyActivity {
   date: string;
-  messageCount: number;
-  sessionCount: number;
-  toolCallCount: number;
+  messageCount?: number;
+  sessionCount?: number;
+  toolCallCount?: number;
 }
 
 export interface DailyModelTokens {
   date: string;
-  tokensByModel: Record<string, number>;
+  tokensByModel?: Record<string, number>;
 }
 
 export interface ModelUsageEntry {
-  inputTokens: number;
-  outputTokens: number;
-  cacheReadInputTokens: number;
-  cacheCreationInputTokens: number;
+  inputTokens?: number;
+  outputTokens?: number;
+  cacheReadInputTokens?: number;
+  cacheCreationInputTokens?: number;
 }
 
 export interface StatsCache {
@@ -213,12 +213,12 @@ export interface StatsCache {
 }
 
 export interface SessionSummary {
-  session_id: string;
+  sessionId: string;
   project: string;
-  project_short: string;
-  first_timestamp: number;
-  last_timestamp: number;
-  message_count: number;
+  projectShort: string;
+  firstTimestamp: number;
+  lastTimestamp: number;
+  messageCount: number;
 }
 
 export interface SessionFacet {

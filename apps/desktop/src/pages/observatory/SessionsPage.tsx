@@ -168,7 +168,7 @@ export default function SessionsPage() {
       .finally(() => setFacetLoading(false));
   }
 
-  const projectCount = new Set(sessions.map((s) => s.project_short).filter(Boolean)).size;
+  const projectCount = new Set(sessions.map((s) => s.projectShort).filter(Boolean)).size;
 
   return (
     <div style={{ padding: "20px 24px" }}>
@@ -219,14 +219,14 @@ export default function SessionsPage() {
       {!loading && !error && sessions.length > 0 && (
         <div className="row-list">
           {sessions.map((session) => {
-            const isExpanded = expandedId === session.session_id;
-            const duration = session.last_timestamp - session.first_timestamp;
+            const isExpanded = expandedId === session.sessionId;
+            const duration = session.lastTimestamp - session.firstTimestamp;
 
             return (
-              <div key={session.session_id}>
+              <div key={session.sessionId}>
                 <button
                   className="row-list-item"
-                  onClick={() => handleRowClick(session.session_id)}
+                  onClick={() => handleRowClick(session.sessionId)}
                   style={{
                     width: "100%",
                     justifyContent: "space-between",
@@ -239,19 +239,19 @@ export default function SessionsPage() {
                   {/* Left: timestamp */}
                   <div style={{ minWidth: "160px" }}>
                     <span style={{ fontSize: "12px", color: "var(--fg-muted)", fontVariantNumeric: "tabular-nums" }}>
-                      {formatTimestamp(session.first_timestamp)}
+                      {formatTimestamp(session.firstTimestamp)}
                     </span>
                   </div>
 
                   {/* Middle: project */}
                   <div style={{ flex: 1, padding: "0 12px" }}>
-                    {session.project_short && <ProjectPill name={session.project_short} />}
+                    {session.projectShort && <ProjectPill name={session.projectShort} />}
                   </div>
 
                   {/* Right: count + duration */}
                   <div style={{ display: "flex", gap: "10px", alignItems: "center", flexShrink: 0 }}>
                     <span style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>
-                      {formatNumber(session.message_count)} msgs
+                      {formatNumber(session.messageCount)} msgs
                     </span>
                     {duration > 60_000 && (
                       <span style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>

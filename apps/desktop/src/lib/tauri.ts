@@ -43,6 +43,7 @@ export async function readSessionFacet(sessionId: string): Promise<SessionFacet 
   return invoke<SessionFacet | null>("read_session_facet", { sessionId });
 }
 
+/** Reserved for future "active sessions" indicator in the Observatory sidebar */
 export async function listActiveSessions(): Promise<ActiveSession[]> {
   return invoke<ActiveSession[]>("list_active_sessions");
 }

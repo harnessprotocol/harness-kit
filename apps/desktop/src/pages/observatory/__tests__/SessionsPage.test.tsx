@@ -20,20 +20,20 @@ vi.mock("../../../lib/tauri", () => ({
 
 const mockSessions: SessionSummary[] = [
   {
-    session_id: "sess-1",
+    sessionId: "sess-1",
     project: "/Users/john/repos/my-project",
-    project_short: "my-project",
-    first_timestamp: 1741824600000,  // 2026-03-13 06:50 UTC
-    last_timestamp: 1741824600000 + 2 * 3_600_000 + 15 * 60_000,
-    message_count: 142,
+    projectShort: "my-project",
+    firstTimestamp: 1741824600000,  // 2026-03-13 06:50 UTC
+    lastTimestamp: 1741824600000 + 2 * 3_600_000 + 15 * 60_000,
+    messageCount: 142,
   },
   {
-    session_id: "sess-2",
+    sessionId: "sess-2",
     project: "/Users/john/repos/other-app",
-    project_short: "other-app",
-    first_timestamp: 1741738200000,
-    last_timestamp: 1741738200000 + 45 * 60_000,
-    message_count: 23,
+    projectShort: "other-app",
+    firstTimestamp: 1741738200000,
+    lastTimestamp: 1741738200000 + 45 * 60_000,
+    messageCount: 23,
   },
 ];
 

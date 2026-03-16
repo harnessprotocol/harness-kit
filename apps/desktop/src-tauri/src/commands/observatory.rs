@@ -46,6 +46,7 @@ pub struct StatsCache {
 
 /// Built from history.jsonl grouping — not deserialized directly
 #[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
 pub struct SessionSummary {
     pub session_id: String,
     pub project: String,
@@ -55,8 +56,8 @@ pub struct SessionSummary {
     pub message_count: u64,
 }
 
+/// Facet JSON files on disk use snake_case — no rename needed
 #[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
 pub struct SessionFacet {
     pub session_id: String,
     pub underlying_goal: Option<String>,
@@ -182,6 +183,10 @@ pub fn list_sessions_summary() -> Result<Vec<SessionSummary>, String> {
 
 #[tauri::command]
 pub fn read_session_facet(session_id: String) -> Result<Option<SessionFacet>, String> {
+    if session_id.contains('/') || session_id.contains('\\') || session_id.contains("..") {
+        return Err("Invalid session ID".to_string());
+    }
+
     let path = claude_dir()
         .ok_or_else(|| "Could not resolve home directory".to_string())?
         .join("usage-data")
