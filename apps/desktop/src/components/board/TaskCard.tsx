@@ -48,9 +48,10 @@ export function TaskCard({ task, onClick, repoUrl }: Props) {
             fontSize: 11,
             color: 'var(--text-muted)',
             background: 'var(--bg-surface)',
-            borderRadius: 4,
+            borderRadius: 10,
             padding: '1px 6px',
             border: '1px solid var(--border-subtle)',
+            alignSelf: 'flex-start',
           }}
         >
           {task.epic_name}

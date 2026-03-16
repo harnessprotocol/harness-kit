@@ -48,7 +48,9 @@ export function TaskDetailPanel({ task, projectSlug, onClose, onTaskUpdated, rep
             style={{
               position: 'fixed',
               inset: 0,
-              background: 'rgba(0,0,0,0.4)',
+              background: 'rgba(0,0,0,0.55)',
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
               zIndex: 40,
             }}
           />
