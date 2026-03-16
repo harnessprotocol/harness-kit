@@ -11,6 +11,7 @@ import {
   type DragEndEvent,
 } from '@dnd-kit/core';
 import { useBoardData } from '../../hooks/useBoardData';
+import { useBoardServerReady } from '../../hooks/useBoardServerReady';
 import { DroppableColumn } from '../../components/board/DroppableColumn';
 import { SwimlaneView } from '../../components/board/SwimlaneView';
 import { ViewToggle, type ViewMode } from '../../components/board/ViewToggle';
@@ -45,7 +46,8 @@ function resolveTargetStatus(overId: string, allTasks: Task[]): TaskStatus | nul
 export default function BoardKanbanPage() {
   const { slug } = useParams<{ slug: string }>();
   const projectSlug = slug!;
-  const { project, loading, error, refetch } = useBoardData(projectSlug);
+  const { ready } = useBoardServerReady();
+  const { project, loading, error, refetch } = useBoardData(projectSlug, ready);
 
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -119,10 +121,12 @@ export default function BoardKanbanPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project]);
 
-  if (loading) {
+  if (!ready || loading) {
     return (
       <div className="board-scope" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-        <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>Loading board...</span>
+        <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+          {!ready ? 'Connecting to board server...' : 'Loading board...'}
+        </span>
       </div>
     );
   }
@@ -134,7 +138,6 @@ export default function BoardKanbanPage() {
         <span style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
           {error ?? `Project "${projectSlug}" not found`}
         </span>
-        <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>Is the board server running on :4800?</span>
       </div>
     );
   }

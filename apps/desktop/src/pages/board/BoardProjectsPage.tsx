@@ -2,14 +2,19 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/board-api';
 import type { Project } from '../../lib/board-api';
+import { useBoardServerReady } from '../../hooks/useBoardServerReady';
 
 export default function BoardProjectsPage() {
   const navigate = useNavigate();
+  const { ready } = useBoardServerReady();
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!ready) return;
+    setLoading(true);
+    setError(null);
     api.projects.list()
       .then(list => {
         if (list.length === 1) {
@@ -26,12 +31,14 @@ export default function BoardProjectsPage() {
         setError(String(err));
         setLoading(false);
       });
-  }, [navigate]);
+  }, [ready, navigate]);
 
-  if (loading) {
+  if (!ready || loading) {
     return (
       <div className="board-scope" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-        <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>Loading...</span>
+        <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>
+          {!ready ? 'Connecting to board server...' : 'Loading...'}
+        </span>
       </div>
     );
   }
@@ -41,11 +48,9 @@ export default function BoardProjectsPage() {
       <div className="board-scope" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: 12 }}>
         <span style={{ fontSize: 32 }}>{'\u26A0\uFE0F'}</span>
         <span style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
-          Could not connect to board server
+          Could not load projects
         </span>
-        <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>
-          Start it with: pnpm --filter board-server dev
-        </span>
+        <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{error}</span>
       </div>
     );
   }
