@@ -47,6 +47,13 @@ struct RawInstalledPlugins {
 // Shape of .claude-plugin/plugin.json (only fields we need)
 #[derive(Debug, Deserialize)]
 struct RawPluginManifest {
+    description: Option<String>,
+    category: Option<String>,
+    tags: Option<Vec<String>>,
+}
+
+struct PluginManifestFields {
+    description: Option<String>,
     category: Option<String>,
     tags: Option<Vec<String>>,
 }
@@ -69,17 +76,18 @@ fn claude_dir() -> Option<std::path::PathBuf> {
     dirs::home_dir().map(|h| h.join(".claude"))
 }
 
-fn read_plugin_category_tags(install_path: &str) -> (Option<String>, Option<Vec<String>>) {
+fn read_plugin_manifest_fields(install_path: &str) -> PluginManifestFields {
+    let empty = PluginManifestFields { description: None, category: None, tags: None };
     let manifest_path = std::path::Path::new(install_path)
         .join(".claude-plugin")
         .join("plugin.json");
     let contents = match std::fs::read_to_string(&manifest_path) {
         Ok(c) => c,
-        Err(_) => return (None, None),
+        Err(_) => return empty,
     };
     match serde_json::from_str::<RawPluginManifest>(&contents) {
-        Ok(m) => (m.category, m.tags),
-        Err(_) => (None, None),
+        Ok(m) => PluginManifestFields { description: m.description, category: m.category, tags: m.tags },
+        Err(_) => empty,
     }
 }
 
@@ -109,18 +117,18 @@ pub fn list_installed_plugins() -> Result<Vec<InstalledPlugin>, String> {
                 Some(idx) => (key[..idx].to_string(), Some(key[idx + 1..].to_string())),
                 None => (key, None),
             };
-            let (category, tags) = record.install_path.as_deref()
-                .map(read_plugin_category_tags)
-                .unwrap_or((None, None));
+            let fields = record.install_path.as_deref()
+                .map(read_plugin_manifest_fields)
+                .unwrap_or(PluginManifestFields { description: None, category: None, tags: None });
             Some(InstalledPlugin {
                 name,
                 version: record.version,
-                description: None,
+                description: fields.description,
                 marketplace,
                 source: record.install_path,
                 installed_at: record.installed_at,
-                category,
-                tags,
+                category: fields.category,
+                tags: fields.tags,
             })
         })
         .collect();

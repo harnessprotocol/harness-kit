@@ -101,7 +101,7 @@ export function TaskDetailPanel({ task, projectSlug, onClose, onTaskUpdated, rep
                         fontSize: 11,
                         color: 'var(--text-muted)',
                         background: 'var(--bg-elevated)',
-                        borderRadius: 4,
+                        borderRadius: 10,
                         padding: '1px 6px',
                         border: '1px solid var(--border-subtle)',
                       }}

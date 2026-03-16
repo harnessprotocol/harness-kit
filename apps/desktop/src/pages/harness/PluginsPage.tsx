@@ -98,11 +98,13 @@ export default function PluginsPage() {
         </div>
         {hasUpdates && (
           <button
+            disabled
+            title="Run /plugin update in Claude Code to apply updates"
             style={{
               fontSize: "12px", fontWeight: 500, padding: "5px 12px",
-              borderRadius: "6px", border: "1px solid var(--accent-border, var(--border-base))",
-              background: "var(--accent-light)", color: "var(--accent-text)",
-              cursor: "pointer",
+              borderRadius: "6px", border: "1px solid var(--border-base)",
+              background: "var(--bg-elevated)", color: "var(--fg-muted)",
+              cursor: "not-allowed", opacity: 0.7,
             }}
           >
             Update All ({Object.keys(updates).length})
