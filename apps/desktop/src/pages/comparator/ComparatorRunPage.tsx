@@ -3,6 +3,7 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import {
   startComparison, killPanel, saveComparison, savePanelResult,
   getComparison, getComparisonDiffs,
+  createWorktrees, removeWorktrees, getDiffAgainstCommit, saveFileDiffs,
 } from "../../lib/tauri";
 import { useComparison, type PanelState } from "../../hooks/useComparison";
 import OutputPanel from "../../components/comparator/OutputPanel";
@@ -28,6 +29,7 @@ export default function ComparatorRunPage() {
   const startedRef = useRef(false);
   const [promptExpanded, setPromptExpanded] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>("output");
+  const worktreeMapRef = useRef<Record<string, string>>({});
 
   // Review mode: load from DB instead of live events
   const isReviewMode = location.pathname.startsWith("/comparator/review/");
@@ -83,8 +85,9 @@ export default function ComparatorRunPage() {
     if (startedRef.current || !comparisonId || !prompt || !selected?.length) return;
     startedRef.current = true;
 
+    const panelIds = selected.map((_, i) => `panel-${i}`);
     const panels: PanelState[] = selected.map((s, i) => ({
-      panelId: `panel-${i}`,
+      panelId: panelIds[i],
       harnessId: s.harnessId,
       harnessName: HARNESS_NAMES[s.harnessId] || s.harnessId,
       model: s.model,
@@ -104,35 +107,59 @@ export default function ComparatorRunPage() {
       workingDir || "",
       pinnedCommit ?? null,
       selected.map((s, i) => ({
-        id: `panel-${i}`,
+        id: panelIds[i],
         harnessId: s.harnessId,
         harnessName: HARNESS_NAMES[s.harnessId] || s.harnessId,
         model: s.model,
       })),
     ).catch((err) => console.error("Failed to save comparison:", err));
 
-    requestAnimationFrame(() => {
-      startComparison({
+    const launchComparison = async () => {
+      const dir = workingDir || "";
+
+      // Create worktrees if pinned to a commit
+      let panelWorkingDirs: Record<string, string> = {};
+      if (pinnedCommit && dir) {
+        try {
+          const worktrees = await createWorktrees(dir, comparisonId, panelIds, pinnedCommit);
+          for (const wt of worktrees) {
+            panelWorkingDirs[wt.panelId] = wt.worktreePath;
+          }
+          worktreeMapRef.current = panelWorkingDirs;
+        } catch (err) {
+          console.error("Failed to create worktrees, falling back to shared dir:", err);
+        }
+      }
+
+      await startComparison({
         comparisonId,
         prompt,
-        workingDir: workingDir || "",
+        workingDir: dir,
         pinnedCommit: pinnedCommit ?? undefined,
         panels: selected.map((s, i) => ({
-          panelId: `panel-${i}`,
+          panelId: panelIds[i],
           harnessId: s.harnessId,
           model: s.model,
+          workingDir: panelWorkingDirs[panelIds[i]] || undefined,
         })),
       }).catch((err: unknown) => {
         console.error("Failed to start comparison:", err);
       });
-    });
+    };
+
+    requestAnimationFrame(() => { launchComparison(); });
   }, [comparisonId, prompt, workingDir, selected, pinnedCommit, start, isReviewMode]);
 
-  // Save panel results when they complete (live mode)
+  // Save panel results exactly once per panel completion (live mode)
+  const savedPanelsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
     if (isReviewMode) return;
     for (const panel of compState.panels) {
-      if (panel.status === "complete" || panel.status === "killed") {
+      if (
+        (panel.status === "complete" || panel.status === "killed") &&
+        !savedPanelsRef.current.has(panel.panelId)
+      ) {
+        savedPanelsRef.current.add(panel.panelId);
         savePanelResult(
           compState.comparisonId,
           panel.panelId,
@@ -145,19 +172,52 @@ export default function ComparatorRunPage() {
     }
   }, [compState.panels, compState.comparisonId, isReviewMode]);
 
-  // Load diffs from DB when complete (live mode)
+  // Collect diffs and clean up worktrees when all panels complete (live mode)
+  const diffsCollectedRef = useRef(false);
   useEffect(() => {
-    if (isReviewMode || compState.phase !== "complete" || !comparisonId) return;
-    // Small delay to let diffs be persisted by the backend
-    const timeout = setTimeout(() => {
-      getComparisonDiffs(comparisonId).then((panelDiffs) => {
-        for (const pd of panelDiffs) {
-          loadDiffs(pd.panelId, pd.diffs);
+    if (isReviewMode || compState.phase !== "complete" || !comparisonId || diffsCollectedRef.current) return;
+    diffsCollectedRef.current = true;
+
+    const dir = workingDir || "";
+    const commit = pinnedCommit;
+    const wtMap = worktreeMapRef.current;
+    const hasWorktrees = commit && Object.keys(wtMap).length > 0;
+
+    const collectAndCleanup = async () => {
+      if (hasWorktrees) {
+        for (const panel of compState.panels) {
+          const wtPath = wtMap[panel.panelId];
+          if (!wtPath) continue;
+          try {
+            const diffs = await getDiffAgainstCommit(wtPath, commit);
+            const fileDiffs = diffs.map((d) => ({
+              filePath: d.filePath,
+              diffText: d.diffText,
+              changeType: d.changeType,
+            }));
+            if (fileDiffs.length > 0) {
+              await saveFileDiffs(comparisonId, panel.panelId, fileDiffs);
+              loadDiffs(panel.panelId, fileDiffs);
+            }
+          } catch (err) {
+            console.error(`Failed to collect diffs for ${panel.panelId}:`, err);
+          }
         }
-      }).catch(() => {});
-    }, 500);
-    return () => clearTimeout(timeout);
-  }, [compState.phase, comparisonId, isReviewMode, loadDiffs]);
+
+        removeWorktrees(dir, comparisonId).catch((err) =>
+          console.error("Failed to remove worktrees:", err),
+        );
+      } else {
+        getComparisonDiffs(comparisonId).then((panelDiffs) => {
+          for (const pd of panelDiffs) {
+            loadDiffs(pd.panelId, pd.diffs);
+          }
+        }).catch(() => {});
+      }
+    };
+
+    collectAndCleanup();
+  }, [compState.phase, comparisonId, isReviewMode, loadDiffs, compState.panels, pinnedCommit, workingDir]);
 
   const handleKill = async (panelId: string) => {
     if (!comparisonId) return;

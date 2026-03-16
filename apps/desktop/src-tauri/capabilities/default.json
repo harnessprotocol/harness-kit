@@ -9,19 +9,11 @@
     "fs:allow-read-text-file",
     "fs:allow-read-dir",
     "fs:allow-exists",
-    "fs:allow-write-text-file",
     {
       "identifier": "fs:scope",
       "allow": [
         { "path": "$HOME/.claude" },
         { "path": "$HOME/.claude/**" }
-      ]
-    },
-    {
-      "identifier": "fs:write-scope",
-      "allow": [
-        { "path": "$HOME/.claude/settings.json" },
-        { "path": "$HOME/.harness-kit/**" }
       ]
     },
     "shell:default",
@@ -34,8 +26,7 @@
         { "name": "claude", "cmd": "claude", "args": true },
         { "name": "cursor", "cmd": "cursor", "args": true },
         { "name": "gh", "cmd": "gh", "args": true },
-        { "name": "git", "cmd": "git", "args": true },
-        { "name": "security", "cmd": "security", "args": true }
+        { "name": "git", "cmd": "git", "args": true }
       ]
     }
   ]

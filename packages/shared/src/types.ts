@@ -259,6 +259,7 @@ export interface PanelConfig {
   panelId: string;
   harnessId: string;
   model?: string;
+  workingDir?: string;
 }
 
 export interface ComparisonRequest {

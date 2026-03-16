@@ -25,6 +25,7 @@ pub struct PanelConfig {
     pub panel_id: String,
     pub harness_id: String,
     pub model: Option<String>,
+    pub working_dir: Option<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -165,10 +166,11 @@ pub async fn start_comparison(
         )?;
 
         let shell = app.shell();
+        let cwd = panel.working_dir.as_deref().unwrap_or(&request.working_dir);
         let command = shell
             .command(cmd_name)
             .args(args)
-            .current_dir(&request.working_dir);
+            .current_dir(cwd);
 
         let (mut rx, child) = command
             .spawn()

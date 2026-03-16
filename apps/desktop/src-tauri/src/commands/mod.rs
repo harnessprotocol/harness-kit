@@ -8,5 +8,3 @@ pub mod comparator_db;
 pub mod git;
 pub mod evaluation;
 pub mod export;
-pub mod security;
-pub mod security_db;
