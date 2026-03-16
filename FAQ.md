@@ -8,7 +8,7 @@ harness-kit is a plugin collection for Claude Code. Each plugin packages a speci
 
 Your harness is the configuration that tells Claude how to work in a given session — files like `CLAUDE.md` and `AGENT.md`, plus any installed plugins. harness-kit helps you build and share that setup so it's not stuck on one machine.
 
-The term has become standard across the industry in 2026. LangChain published "The Anatomy of an Agent Harness" and ships `deepagents`, which they explicitly call a harness. They showed that harness changes alone moved a coding agent from Top 30 to Top 5 on Terminal Bench 2.0 — evidence that the configuration layer is a first-class concern, not an afterthought.
+The term is gaining traction — LangChain published ["The Anatomy of an Agent Harness"](https://blog.langchain.com/the-anatomy-of-an-agent-harness/) and ships `deepagents`, which they explicitly call a harness.
 
 ## Why do I need this? Can't I just write prompts myself?
 
@@ -83,11 +83,11 @@ See [Where harness-kit fits](https://harnesskit.ai/docs/concepts/comparison) for
 
 They work at different layers and complement each other.
 
-**deepagents** is a harness runtime — you build agents with it. It's Python, built on LangGraph, and opinionated about the execution environment. Think of it as an OS distribution for agents.
+**deepagents** is an agent harness framework — you build agents with it. It's Python, built on LangGraph, and opinionated about the execution environment.
 
-**harness-kit** is a harness configuration framework — you configure any harness with it. It works across Claude Code, Cursor, and Copilot without coupling you to a specific runtime or language. Think of it as dotfiles that work across distributions.
+**harness-kit** is a harness configuration framework — you configure any harness with it. It works across Claude Code, Cursor, and Copilot without coupling you to a specific runtime or language. Think of it as dotfiles that work across tools.
 
-You could use a harness-kit profile to configure a deepagents-based harness. They don't compete — one builds agents, the other makes agent configuration portable.
+LangChain demonstrated that harness changes alone moved a coding agent from Top 30 to Top 5 on Terminal Bench 2.0 — evidence that the configuration layer is a first-class performance variable. In principle, you could use a harness-kit profile to configure a deepagents-based harness. They don't compete — one builds agents, the other makes agent configuration portable.
 
 ## What is the Harness Protocol?
 
