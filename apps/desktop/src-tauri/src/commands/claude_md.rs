@@ -4,8 +4,8 @@ pub fn read_claude_md(path: String) -> Result<String, String> {
         .ok_or_else(|| "Could not resolve home directory".to_string())?;
 
     // Expand ~ to home directory
-    let expanded = if path.starts_with("~/") {
-        home.join(&path[2..])
+    let expanded = if let Some(stripped) = path.strip_prefix("~/") {
+        home.join(stripped)
     } else {
         std::path::PathBuf::from(&path)
     };

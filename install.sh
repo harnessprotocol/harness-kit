@@ -38,12 +38,23 @@ if [[ -n "$LOCAL_PLUGINS" ]]; then
 else
   echo "Remote install: downloading from ${REPO}"
 
-  for plugin in research explain lineage orient capture review docgen; do
+  MARKETPLACE_JSON=$(curl -fsSL "${RAW_BASE}/.claude-plugin/marketplace.json")
+  mapfile -t PLUGINS < <(python3 -c "
+import json, sys
+data = json.loads(sys.stdin.read())
+print('\n'.join(p['name'] for p in data['plugins']))
+" <<< "$MARKETPLACE_JSON")
+
+  for plugin in "${PLUGINS[@]}"; do
     dest="${SKILLS_DEST}/${plugin}"
     mkdir -p "$dest"
-    curl -fsSL "${RAW_BASE}/plugins/${plugin}/skills/${plugin}/SKILL.md"  -o "${dest}/SKILL.md"
-    curl -fsSL "${RAW_BASE}/plugins/${plugin}/skills/${plugin}/README.md" -o "${dest}/README.md"
-    echo "  ~/.claude/skills/${plugin}/"
+    skill_url="${RAW_BASE}/plugins/${plugin}/skills/${plugin}/SKILL.md"
+    if curl -fsSL "$skill_url" -o "${dest}/SKILL.md"; then
+      curl -fsSL "${RAW_BASE}/plugins/${plugin}/skills/${plugin}/README.md" -o "${dest}/README.md" || true
+      echo "  ~/.claude/skills/${plugin}/"
+    else
+      rmdir "$dest" 2>/dev/null || true
+    fi
   done
 
   echo "Installed all skills."

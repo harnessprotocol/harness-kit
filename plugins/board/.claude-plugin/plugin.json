@@ -2,7 +2,7 @@
   "name": "board",
   "description": "Harness Board — a lightweight Kanban board with real-time Claude ↔ web UI two-way sync",
   "version": "0.1.0",
-  "category": "project-management",
+  "category": "productivity",
   "tags": ["kanban", "tasks", "project-management", "mcp", "board"],
   "mcp": {
     "server": {

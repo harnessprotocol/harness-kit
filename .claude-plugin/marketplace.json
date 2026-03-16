@@ -135,6 +135,16 @@
       "license": "Apache-2.0",
       "category": "productivity",
       "tags": ["notifications", "macos", "iterm2", "hooks"]
+    },
+    {
+      "name": "board",
+      "source": "./board",
+      "description": "Lightweight Kanban board with real-time Claude ↔ web UI two-way sync via MCP.",
+      "version": "0.1.0",
+      "author": { "name": "harnessprotocol" },
+      "license": "Apache-2.0",
+      "category": "productivity",
+      "tags": ["kanban", "tasks", "project-management", "mcp", "board"]
     }
   ]
 }

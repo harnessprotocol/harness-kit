@@ -4,6 +4,7 @@ use tauri::State;
 pub use super::types::Evaluation;
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub fn save_evaluation(
     db: State<'_, Db>,
     id: String,
