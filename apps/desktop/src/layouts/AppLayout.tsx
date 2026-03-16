@@ -1,5 +1,6 @@
 import { Outlet, NavLink, useLocation } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
+import Tooltip from "../components/Tooltip";
 import {
   initTheme, getTheme, setTheme,
   getAccent, setAccent,
@@ -219,22 +220,22 @@ export default function AppLayout() {
             </p>
             <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
               {(Object.entries(ACCENT_PRESETS) as [AccentName, typeof ACCENT_PRESETS[AccentName]][]).map(([name, preset]) => (
-                <button
-                  key={name}
-                  title={preset.label}
-                  onClick={() => handleSetAccent(name)}
-                  style={{
-                    width: "22px",
-                    height: "22px",
-                    borderRadius: "50%",
-                    background: preset.swatch,
-                    border: accent === name ? "2px solid var(--fg-base)" : "2px solid transparent",
-                    cursor: "pointer",
-                    outline: accent === name ? "2px solid var(--accent)" : "none",
-                    outlineOffset: "1px",
-                    padding: 0,
-                  }}
-                />
+                <Tooltip key={name} content={preset.label}>
+                  <button
+                    onClick={() => handleSetAccent(name)}
+                    style={{
+                      width: "22px",
+                      height: "22px",
+                      borderRadius: "50%",
+                      background: preset.swatch,
+                      border: accent === name ? "2px solid var(--fg-base)" : "2px solid transparent",
+                      cursor: "pointer",
+                      outline: accent === name ? "2px solid var(--accent)" : "none",
+                      outlineOffset: "1px",
+                      padding: 0,
+                    }}
+                  />
+                </Tooltip>
               ))}
             </div>
           </div>
