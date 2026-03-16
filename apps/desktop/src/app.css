@@ -37,6 +37,12 @@
   /* Interactive hover */
   --hover-bg: rgba(0, 0, 0, 0.04);
   --active-bg: rgba(0, 0, 0, 0.07);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.10), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.06);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.14), 0 4px 8px rgba(0,0,0,0.08);
+  --shadow-popover: 0 8px 24px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10);
 }
 
 .dark {
@@ -67,6 +73,12 @@
   /* Interactive hover */
   --hover-bg: rgba(255, 255, 255, 0.05);
   --active-bg: rgba(255, 255, 255, 0.09);
+
+  /* Shadows — stronger in dark mode */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.30), 0 1px 2px rgba(0,0,0,0.20);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.40), 0 2px 4px rgba(0,0,0,0.20);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.50), 0 4px 8px rgba(0,0,0,0.30);
+  --shadow-popover: 0 8px 24px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.35);
 }
 
 /* ── Base ── */
@@ -198,6 +210,7 @@ body {
   border: 1px solid var(--border-base);
   border-radius: 8px;
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 
 .row-list-item {
@@ -528,6 +541,7 @@ body {
   border: 1px solid var(--border-base);
   background: var(--bg-surface);
   color: var(--fg-base);
+  cursor: text;
   transition: border-color 0.15s;
 }
 
@@ -546,6 +560,7 @@ body {
   border: 1px solid var(--border-base);
   background: var(--bg-surface);
   color: var(--fg-base);
+  cursor: text;
   resize: vertical;
   transition: border-color 0.15s;
 }

@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { listSessionsSummary, readSessionFacet } from "../../lib/tauri";
 import { formatTimestamp, formatDuration, formatNumber } from "../../lib/format";
 import type { SessionSummary, SessionFacet } from "@harness-kit/shared";
+import { useArrowNavigation } from "../../hooks/useArrowNavigation";
+import ContextMenu from "../../components/ContextMenu";
 
 // ── Outcome badge ──────────────────────────────────────────────
 
@@ -145,6 +147,7 @@ export default function SessionsPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [facet, setFacet] = useState<SessionFacet | null>(null);
   const [facetLoading, setFacetLoading] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; session: SessionSummary } | null>(null);
 
   useEffect(() => {
     listSessionsSummary()
@@ -167,6 +170,11 @@ export default function SessionsPage() {
       .catch(() => setFacet(null))
       .finally(() => setFacetLoading(false));
   }
+
+  const { focusedIndex, onKeyDown: onListKeyDown } = useArrowNavigation({
+    count: sessions.length,
+    onActivate: (i) => handleRowClick(sessions[i].sessionId),
+  });
 
   const projectCount = new Set(sessions.map((s) => s.projectShort).filter(Boolean)).size;
 
@@ -209,6 +217,10 @@ export default function SessionsPage() {
           padding: "32px 16px",
           textAlign: "center",
         }}>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ color: "var(--fg-subtle)", marginBottom: "10px" }}>
+            <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.5"/>
+            <path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
           <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0 }}>No sessions found.</p>
           <p style={{ fontSize: "11px", color: "var(--fg-subtle)", margin: "4px 0 0" }}>
             Sessions are read from <code style={{ fontFamily: "ui-monospace, monospace", fontSize: "10px" }}>~/.claude/history.jsonl</code>
@@ -217,8 +229,8 @@ export default function SessionsPage() {
       )}
 
       {!loading && !error && sessions.length > 0 && (
-        <div className="row-list">
-          {sessions.map((session) => {
+        <div className="row-list" tabIndex={0} onKeyDown={onListKeyDown}>
+          {sessions.map((session, idx) => {
             const isExpanded = expandedId === session.sessionId;
             const duration = session.lastTimestamp - session.firstTimestamp;
 
@@ -227,6 +239,10 @@ export default function SessionsPage() {
                 <button
                   className="row-list-item"
                   onClick={() => handleRowClick(session.sessionId)}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setContextMenu({ x: e.clientX, y: e.clientY, session });
+                  }}
                   style={{
                     width: "100%",
                     justifyContent: "space-between",
@@ -234,6 +250,8 @@ export default function SessionsPage() {
                     cursor: "pointer",
                     border: "none",
                     textAlign: "left",
+                    outline: focusedIndex === idx ? "2px solid var(--accent)" : "none",
+                    outlineOffset: "-2px",
                   }}
                 >
                   {/* Left: timestamp */}
@@ -276,6 +294,18 @@ export default function SessionsPage() {
             );
           })}
         </div>
+      )}
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={[
+            { label: "View details", onClick: () => handleRowClick(contextMenu.session.sessionId) },
+            { label: "Copy session ID", onClick: () => navigator.clipboard.writeText(contextMenu.session.sessionId) },
+          ]}
+          onClose={() => setContextMenu(null)}
+        />
       )}
     </div>
   );

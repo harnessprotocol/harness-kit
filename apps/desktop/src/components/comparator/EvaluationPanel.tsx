@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { saveEvaluation, getEvaluations } from "../../lib/tauri";
 import ScoreRadar from "./ScoreRadar";
+import Tooltip from "../Tooltip";
 
 const DIMENSIONS = [
   { key: "correctness", label: "Correctness" },
@@ -232,13 +233,14 @@ export default function EvaluationPanel({
               {saving ? "Saving..." : "Save Scores"}
             </button>
 
-            <button
-              className="btn btn-secondary btn-disabled"
-              disabled
-              title="Coming soon"
-            >
-              Score with AI
-            </button>
+            <Tooltip content="Coming soon" position="top">
+              <button
+                className="btn btn-secondary btn-disabled"
+                disabled
+              >
+                Score with AI
+              </button>
+            </Tooltip>
           </div>
         )}
 

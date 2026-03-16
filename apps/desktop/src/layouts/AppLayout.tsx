@@ -1,5 +1,8 @@
-import { Outlet, NavLink, useLocation } from "react-router-dom";
+import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
+import Tooltip from "../components/Tooltip";
+import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
+import { useArrowNavigation } from "../hooks/useArrowNavigation";
 import {
   initTheme, getTheme, setTheme,
   getAccent, setAccent,
@@ -70,12 +73,40 @@ const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
+function SidebarSubnav({ children }: { children: { label: string; path: string }[] }) {
+  const navigate = useNavigate();
+  const { focusedIndex, onKeyDown } = useArrowNavigation({
+    count: children.length,
+    onActivate: (i) => navigate(children[i].path),
+  });
+
+  return (
+    <div className="mt-0.5 mb-1" tabIndex={0} onKeyDown={onKeyDown} style={{ outline: "none" }}>
+      {children.map((child, idx) => (
+        <NavLink
+          key={child.path}
+          to={child.path}
+          className={({ isActive: childActive }) =>
+            `sidebar-subitem${childActive ? " active" : ""}`
+          }
+          style={focusedIndex === idx ? { outline: "2px solid var(--accent)", outlineOffset: "-2px", borderRadius: "5px" } : undefined}
+        >
+          {child.label}
+        </NavLink>
+      ))}
+    </div>
+  );
+}
+
 export default function AppLayout() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [theme, setThemeState] = useState(getTheme);
   const [accent, setAccentState] = useState(getAccent);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const settingsRef = useRef<HTMLDivElement>(null);
+
+  useGlobalShortcuts({ setSettingsOpen, navigate });
 
   useEffect(() => {
     initTheme();
@@ -117,7 +148,9 @@ export default function AppLayout() {
         className="flex flex-col shrink-0 overflow-y-auto"
         style={{
           width: "var(--sidebar-width)",
-          background: "var(--bg-sidebar-solid)",
+          background: "var(--bg-sidebar)",
+          backdropFilter: "blur(20px)",
+          WebkitBackdropFilter: "blur(20px)",
           borderRight: "1px solid var(--border-base)",
           position: "relative",
         }}
@@ -143,19 +176,7 @@ export default function AppLayout() {
                 </NavLink>
 
                 {active && section.children && (
-                  <div className="mt-0.5 mb-1">
-                    {section.children.map((child) => (
-                      <NavLink
-                        key={child.path}
-                        to={child.path}
-                        className={({ isActive: childActive }) =>
-                          `sidebar-subitem${childActive ? " active" : ""}`
-                        }
-                      >
-                        {child.label}
-                      </NavLink>
-                    ))}
-                  </div>
+                  <SidebarSubnav children={section.children} />
                 )}
               </div>
             );
@@ -174,7 +195,7 @@ export default function AppLayout() {
               background: "var(--bg-elevated)",
               border: "1px solid var(--border-base)",
               borderRadius: "10px",
-              boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+              boxShadow: "var(--shadow-popover)",
               padding: "14px",
               zIndex: 50,
             }}
@@ -217,22 +238,22 @@ export default function AppLayout() {
             </p>
             <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
               {(Object.entries(ACCENT_PRESETS) as [AccentName, typeof ACCENT_PRESETS[AccentName]][]).map(([name, preset]) => (
-                <button
-                  key={name}
-                  title={preset.label}
-                  onClick={() => handleSetAccent(name)}
-                  style={{
-                    width: "22px",
-                    height: "22px",
-                    borderRadius: "50%",
-                    background: preset.swatch,
-                    border: accent === name ? "2px solid var(--fg-base)" : "2px solid transparent",
-                    cursor: "pointer",
-                    outline: accent === name ? "2px solid var(--accent)" : "none",
-                    outlineOffset: "1px",
-                    padding: 0,
-                  }}
-                />
+                <Tooltip key={name} content={preset.label}>
+                  <button
+                    onClick={() => handleSetAccent(name)}
+                    style={{
+                      width: "22px",
+                      height: "22px",
+                      borderRadius: "50%",
+                      background: preset.swatch,
+                      border: accent === name ? "2px solid var(--fg-base)" : "2px solid transparent",
+                      cursor: "pointer",
+                      outline: accent === name ? "2px solid var(--accent)" : "none",
+                      outlineOffset: "1px",
+                      padding: 0,
+                    }}
+                  />
+                </Tooltip>
               ))}
             </div>
           </div>

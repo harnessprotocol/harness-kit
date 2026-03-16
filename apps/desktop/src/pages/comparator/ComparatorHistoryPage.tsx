@@ -2,11 +2,19 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { listComparisons, deleteComparison } from "../../lib/tauri";
 import type { ComparisonSummary } from "@harness-kit/shared";
+import { useArrowNavigation } from "../../hooks/useArrowNavigation";
+import ContextMenu from "../../components/ContextMenu";
 
 export default function ComparatorHistoryPage() {
   const navigate = useNavigate();
   const [comparisons, setComparisons] = useState<ComparisonSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; comp: ComparisonSummary } | null>(null);
+
+  const { focusedIndex: histFocusedIndex, onKeyDown: onHistKeyDown } = useArrowNavigation({
+    count: comparisons.length,
+    onActivate: (i) => navigate(`/comparator/review/${comparisons[i].id}`),
+  });
 
   const load = () => {
     setLoading(true);
@@ -55,6 +63,9 @@ export default function ComparatorHistoryPage() {
             fontSize: "13px",
           }}
         >
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ color: "var(--fg-subtle)", marginBottom: "10px" }}>
+            <path d="M12 3v18M5 7l7-4 7 4M5 7l4 8H1L5 7zM19 7l4 8h-8l4-8z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" strokeLinecap="round"/>
+          </svg>
           <p style={{ marginBottom: "8px" }}>No comparisons yet</p>
           <button
             onClick={() => navigate("/comparator")}
@@ -75,13 +86,17 @@ export default function ComparatorHistoryPage() {
       )}
 
       {!loading && comparisons.length > 0 && (
-        <div className="row-list">
-          {comparisons.map((comp) => (
+        <div className="row-list" tabIndex={0} onKeyDown={onHistKeyDown}>
+          {comparisons.map((comp, idx) => (
             <div
               key={comp.id}
               className="row-list-item"
               onClick={() => navigate(`/comparator/review/${comp.id}`)}
-              style={{ cursor: "pointer", gap: "12px" }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setContextMenu({ x: e.clientX, y: e.clientY, comp });
+              }}
+              style={{ cursor: "pointer", gap: "12px", outline: histFocusedIndex === idx ? "2px solid var(--accent)" : "none", outlineOffset: "-2px" }}
             >
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div
@@ -152,6 +167,25 @@ export default function ComparatorHistoryPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={[
+            { label: "Review", onClick: () => navigate(`/comparator/review/${contextMenu.comp.id}`) },
+            { label: "Delete", danger: true, onClick: async () => {
+              try {
+                await deleteComparison(contextMenu.comp.id);
+                setComparisons((prev) => prev.filter((c) => c.id !== contextMenu.comp.id));
+              } catch (err) {
+                console.error("Failed to delete:", err);
+              }
+            }},
+          ]}
+          onClose={() => setContextMenu(null)}
+        />
       )}
     </div>
   );

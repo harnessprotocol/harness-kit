@@ -6,6 +6,7 @@ import {
   CartesianGrid, Tooltip, Legend,
   ResponsiveContainer,
 } from "recharts";
+import HKTooltip from "../../components/Tooltip";
 import { readStatsCache, readLiveActivity } from "../../lib/tauri";
 import { formatNumber, formatDate, formatHour, shortModelName } from "../../lib/format";
 import type { StatsCache, LiveDailyActivity } from "@harness-kit/shared";
@@ -243,13 +244,14 @@ function ChartCard({
                 ×reset
               </button>
             )}
-            <button
-              onClick={() => setShowPicker((s) => !s)}
-              style={{ fontSize: "9px", color: override ? "var(--accent-text)" : "var(--fg-subtle)", border: "none", background: "none", cursor: "pointer", padding: "1px 4px" }}
-              title="Override date range for this chart"
-            >
-              {override ? `${override.preset !== "custom" ? override.preset : `${override.start}–${override.end}`}` : "range"}
-            </button>
+            <HKTooltip content="Override date range for this chart">
+              <button
+                onClick={() => setShowPicker((s) => !s)}
+                style={{ fontSize: "9px", color: override ? "var(--accent-text)" : "var(--fg-subtle)", border: "none", background: "none", cursor: "pointer", padding: "1px 4px" }}
+              >
+                {override ? `${override.preset !== "custom" ? override.preset : `${override.start}–${override.end}`}` : "range"}
+              </button>
+            </HKTooltip>
           </div>
         )}
       </div>

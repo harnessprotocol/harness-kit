@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { listAuditEntries, clearAuditEntries } from "../../lib/tauri";
 import type { AuditEntry } from "@harness-kit/shared";
+import { useArrowNavigation } from "../../hooks/useArrowNavigation";
+import ContextMenu from "../../components/ContextMenu";
 
 const PAGE_SIZE = 25;
 
@@ -68,6 +70,15 @@ export default function AuditLogPage() {
   const [page, setPage] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entry: AuditEntry } | null>(null);
+
+  const { focusedIndex: auditFocusedIndex, onKeyDown: onAuditKeyDown } = useArrowNavigation({
+    count: entries.length,
+    onActivate: (i) => {
+      const entry = entries[i];
+      if (entry?.details) setExpandedId(expandedId === entry.id ? null : entry.id);
+    },
+  });
 
   const fetchEntries = useCallback(async () => {
     setLoading(true);
@@ -175,10 +186,14 @@ export default function AuditLogPage() {
       </div>
 
       {/* Table */}
-      <div style={{
-        background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-        borderRadius: "8px", overflow: "hidden",
-      }}>
+      <div
+        tabIndex={0}
+        onKeyDown={onAuditKeyDown}
+        style={{
+          background: "var(--bg-surface)", border: "1px solid var(--border-base)",
+          borderRadius: "8px", overflow: "hidden",
+        }}
+      >
         {/* Header row */}
         <div style={{
           display: "grid", gridTemplateColumns: "140px 130px 1fr 80px",
@@ -198,6 +213,9 @@ export default function AuditLogPage() {
           </div>
         ) : entries.length === 0 ? (
           <div style={{ padding: "24px 16px", textAlign: "center" }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ color: "var(--fg-subtle)", marginBottom: "10px" }}>
+              <path d="M12 3L4 6v6c0 4.418 3.582 8 8 9 4.418-1 8-4.582 8-9V6l-8-3z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+            </svg>
             <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0 }}>
               No audit entries found.
             </p>
@@ -206,18 +224,24 @@ export default function AuditLogPage() {
             </p>
           </div>
         ) : (
-          entries.map((entry) => (
+          entries.map((entry, idx) => (
             <div key={entry.id}>
               <div
                 onClick={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setContextMenu({ x: e.clientX, y: e.clientY, entry });
+                }}
                 style={{
                   display: "grid", gridTemplateColumns: "140px 130px 1fr 80px",
                   padding: "7px 16px", borderBottom: "1px solid var(--separator)",
                   cursor: entry.details ? "pointer" : "default",
                   transition: "background 0.1s",
+                  outline: auditFocusedIndex === idx ? "2px solid var(--accent)" : "none",
+                  outlineOffset: "-2px",
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--hover-bg)")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                onMouseEnter={(e) => { if (entry.details) e.currentTarget.style.background = "var(--hover-bg)"; }}
+                onMouseLeave={(e) => { if (entry.details) e.currentTarget.style.background = "transparent"; }}
               >
                 <span style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>
                   {formatTimestamp(entry.timestamp)}
@@ -288,6 +312,18 @@ export default function AuditLogPage() {
             Next
           </button>
         </div>
+      )}
+
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          items={[
+            ...(contextMenu.entry.details ? [{ label: "Copy details", onClick: () => navigator.clipboard.writeText(contextMenu.entry.details!) }] : []),
+            { label: "Copy summary", onClick: () => navigator.clipboard.writeText(contextMenu.entry.summary) },
+          ]}
+          onClose={() => setContextMenu(null)}
+        />
       )}
     </div>
   );

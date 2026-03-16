@@ -42,6 +42,18 @@ export default function SecretsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    if (!modalSecret) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setModalSecret(null);
+        setSecretValue("");
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [modalSecret]);
+
   async function handleSetSecret() {
     if (!modalSecret || !secretValue) return;
     setSavingSecret(true);
@@ -144,6 +156,10 @@ export default function SecretsPage() {
 
         {secrets.length === 0 ? (
           <div style={{ padding: "24px 16px", textAlign: "center" }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ color: "var(--fg-subtle)", marginBottom: "10px" }}>
+              <circle cx="9" cy="12" r="4" stroke="currentColor" strokeWidth="1.5"/>
+              <path d="M13 12h7M17 12v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            </svg>
             <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0 }}>
               No plugins require secrets.
             </p>
@@ -220,13 +236,15 @@ export default function SecretsPage() {
       {modalSecret && (
         <div style={{
           position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
+          backdropFilter: "blur(8px)",
+          WebkitBackdropFilter: "blur(8px)",
           display: "flex", alignItems: "center", justifyContent: "center",
           zIndex: 100,
         }}>
           <div style={{
             background: "var(--bg-elevated)", border: "1px solid var(--border-base)",
             borderRadius: "10px", padding: "20px", width: "380px",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
+            boxShadow: "var(--shadow-popover)",
           }}>
             <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)", margin: "0 0 12px" }}>
               Set secret: {modalSecret}

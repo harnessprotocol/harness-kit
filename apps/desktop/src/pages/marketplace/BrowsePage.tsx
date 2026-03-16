@@ -355,6 +355,10 @@ export default function BrowsePage() {
           padding: "32px 16px",
           textAlign: "center",
         }}>
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ color: "var(--fg-subtle)", marginBottom: "10px" }}>
+            <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.5"/>
+            <path d="M16.5 16.5L21 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+          </svg>
           <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0 }}>
             No plugins found.
           </p>

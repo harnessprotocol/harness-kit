@@ -81,7 +81,7 @@ export default function ExportMenu({ comparisonId }: ExportMenuProps) {
             background: "var(--bg-elevated)",
             border: "1px solid var(--border-base)",
             borderRadius: "8px",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+            boxShadow: "var(--shadow-md)",
             minWidth: "160px",
             zIndex: 50,
             overflow: "hidden",
