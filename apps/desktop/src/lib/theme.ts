@@ -120,7 +120,8 @@ export const ACCENT_PRESETS: Record<AccentName, AccentPreset> = {
 };
 
 export function getAccent(): AccentName {
-  return (localStorage.getItem(ACCENT_KEY) as AccentName | null) ?? "purple";
+  const raw = localStorage.getItem(ACCENT_KEY);
+  return (raw && raw in ACCENT_PRESETS) ? raw as AccentName : "purple";
 }
 
 export function setAccent(name: AccentName) {
