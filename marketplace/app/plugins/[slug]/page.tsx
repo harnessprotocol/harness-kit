@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import sanitizeHtml from "sanitize-html";
 import { supabase } from "@/lib/supabase";
 import type { Component, Profile, TrustTier } from "@/lib/types";
 
@@ -19,8 +20,23 @@ function TrustBadge({ tier }: { tier: TrustTier }) {
 }
 
 /**
+ * Allowed tags and attributes for sanitizeHtml.
+ * Permits the Tailwind classes emitted by renderMarkdown while blocking all
+ * event handlers and javascript: URLs.
+ */
+const SANITIZE_OPTIONS: sanitizeHtml.IOptions = {
+  allowedTags: ["h1", "h2", "h3", "h4", "p", "pre", "code", "strong", "a", "li", "ul"],
+  allowedAttributes: {
+    "*": ["class"],
+    a: ["href", "target", "rel"],
+  },
+  allowedSchemes: ["http", "https", "mailto"],
+};
+
+/**
  * Minimal server-side markdown-to-HTML renderer.
- * Content is trusted (from our own Supabase database, not user input).
+ * Output is sanitized via sanitizeHtml before rendering — community plugins
+ * store arbitrary markdown from GitHub repos which is untrusted content.
  */
 function renderMarkdown(md: string): string {
   const html = md
@@ -138,12 +154,11 @@ export default async function PluginDetailPage({
     notFound();
   }
 
-  // Trusted content from our own database -- see renderMarkdown comment above
   const skillHtml = component.skill_md
-    ? renderMarkdown(component.skill_md)
+    ? sanitizeHtml(renderMarkdown(component.skill_md), SANITIZE_OPTIONS)
     : null;
   const readmeHtml = component.readme_md
-    ? renderMarkdown(component.readme_md)
+    ? sanitizeHtml(renderMarkdown(component.readme_md), SANITIZE_OPTIONS)
     : null;
 
   const updatedDate = component.updated_at
@@ -220,7 +235,7 @@ export default async function PluginDetailPage({
             </div>
           )}
 
-          {/* SKILL.md content -- trusted content from our own Supabase database */}
+          {/* SKILL.md content */}
           {skillHtml && (
             <section className="mb-10">
               <h2 className="mb-4 text-xl font-bold">Skill Definition</h2>
@@ -231,7 +246,7 @@ export default async function PluginDetailPage({
             </section>
           )}
 
-          {/* README.md content -- trusted content from our own Supabase database */}
+          {/* README.md content */}
           {readmeHtml && (
             <section className="mb-10">
               <h2 className="mb-4 text-xl font-bold">Documentation</h2>

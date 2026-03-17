@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 function getServiceSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -30,6 +31,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: "Missing required field: slug" },
       { status: 400 },
+    );
+  }
+
+  // 5 installs per slug per IP per hour
+  const ip = getClientIp(request);
+  const { allowed, retryAfter } = checkRateLimit(`install:${ip}:${slug}`, {
+    maxRequests: 5,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: { "Retry-After": String(retryAfter) } },
     );
   }
 
