@@ -12,9 +12,10 @@ export const NAV_PATHS = [
 
 interface Options {
   navigate: NavigateFunction;
+  toggleSidebar?: () => void;
 }
 
-export function useGlobalShortcuts({ navigate }: Options) {
+export function useGlobalShortcuts({ navigate, toggleSidebar }: Options) {
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (!e.metaKey) return;
@@ -23,6 +24,27 @@ export function useGlobalShortcuts({ navigate }: Options) {
       if (e.key === ",") {
         e.preventDefault();
         navigate("/preferences");
+        return;
+      }
+
+      // ⌘\ — toggle sidebar
+      if (e.key === "\\") {
+        e.preventDefault();
+        toggleSidebar?.();
+        return;
+      }
+
+      // ⌘[ — navigate back
+      if (e.key === "[") {
+        e.preventDefault();
+        navigate(-1);
+        return;
+      }
+
+      // ⌘] — navigate forward
+      if (e.key === "]") {
+        e.preventDefault();
+        navigate(1);
         return;
       }
 
@@ -36,5 +58,5 @@ export function useGlobalShortcuts({ navigate }: Options) {
 
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [navigate]);
+  }, [navigate, toggleSidebar]);
 }

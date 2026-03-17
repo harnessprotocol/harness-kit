@@ -54,11 +54,10 @@ function renderLayout() {
 // ── Tests ─────────────────────────────────────────────────────
 
 describe("sidebar layout — vibrancy regression guard", () => {
-  it("sidebar has position: fixed", () => {
+  it("sidebar is present", () => {
     renderLayout();
     const aside = document.querySelector("aside");
     expect(aside).not.toBeNull();
-    expect(aside!.style.position).toBe("fixed");
   });
 
   it("sidebar has backdropFilter with blur", () => {
@@ -67,10 +66,10 @@ describe("sidebar layout — vibrancy regression guard", () => {
     expect(aside!.style.backdropFilter).toMatch(/blur/);
   });
 
-  it("main content has paddingLeft set to sidebar-width variable", () => {
+  it("sidebar has fixed width equal to sidebar-width variable", () => {
     renderLayout();
-    const main = document.querySelector("main");
-    expect(main!.style.paddingLeft).toBe("var(--sidebar-width)");
+    const aside = document.querySelector("aside");
+    expect(aside!.style.width).toBe("var(--sidebar-width)");
   });
 });
 

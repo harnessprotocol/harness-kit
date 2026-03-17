@@ -85,10 +85,10 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub?: s
       borderRadius: "8px",
       padding: "12px 16px",
     }}>
-      <div style={{ fontSize: "20px", fontWeight: 600, letterSpacing: "-0.5px", color: "var(--fg-base)", lineHeight: 1.1 }}>
+      <div style={{ fontSize: "20px", fontWeight: 600, letterSpacing: "-0.5px", color: "var(--fg-base)", lineHeight: 1.1, fontVariantNumeric: "tabular-nums" }}>
         {value}
       </div>
-      <div style={{ fontSize: "10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em", color: "var(--fg-subtle)", marginTop: "4px" }}>
+      <div style={{ fontSize: "11px", fontWeight: 500, fontVariantCaps: "all-small-caps", letterSpacing: "0.03em", color: "var(--fg-subtle)", marginTop: "4px" }}>
         {label}
       </div>
       {sub && (
@@ -234,7 +234,7 @@ function ChartCard({
       padding: "14px 16px",
     }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-        <p style={{ fontSize: "11px", fontWeight: 600, color: "var(--fg-muted)", margin: 0, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+        <p style={{ fontSize: "12px", fontWeight: 500, fontVariantCaps: "all-small-caps", letterSpacing: "0.03em", color: "var(--fg-muted)", margin: 0 }}>
           {title}
         </p>
         {chartId && (
@@ -511,11 +511,11 @@ export default function DashboardPage() {
             <AreaChart data={activityChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="msgGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={accentColor} stopOpacity={0.25} />
-                  <stop offset="95%" stopColor={accentColor} stopOpacity={0.02} />
+                  <stop offset="5%" stopColor={accentColor} stopOpacity={0.12} />
+                  <stop offset="95%" stopColor={accentColor} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-base)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--separator)" vertical={false} />
               <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} interval="preserveStartEnd" />
               <YAxis tick={axisStyle} tickLine={false} axisLine={false} />
               <Tooltip contentStyle={tooltipStyle} />
@@ -537,11 +537,11 @@ export default function DashboardPage() {
             <AreaChart data={sessionsChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="sessGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={accentColor} stopOpacity={0.2} />
-                  <stop offset="95%" stopColor={accentColor} stopOpacity={0.01} />
+                  <stop offset="5%" stopColor={accentColor} stopOpacity={0.10} />
+                  <stop offset="95%" stopColor={accentColor} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-base)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--separator)" vertical={false} />
               <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} interval="preserveStartEnd" />
               <YAxis tick={axisStyle} tickLine={false} axisLine={false} />
               <Tooltip contentStyle={tooltipStyle} />
@@ -560,11 +560,11 @@ export default function DashboardPage() {
             <AreaChart data={toolCallsChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="tcGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={accentColor} stopOpacity={0.2} />
-                  <stop offset="95%" stopColor={accentColor} stopOpacity={0.01} />
+                  <stop offset="5%" stopColor={accentColor} stopOpacity={0.10} />
+                  <stop offset="95%" stopColor={accentColor} stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--border-base)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--separator)" vertical={false} />
               <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} interval="preserveStartEnd" />
               <YAxis tick={axisStyle} tickLine={false} axisLine={false} />
               <Tooltip contentStyle={tooltipStyle} />
@@ -585,7 +585,7 @@ export default function DashboardPage() {
           >
             <ResponsiveContainer width="100%" height={150}>
               <AreaChart data={dailyTokensChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-base)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--separator)" vertical={false} />
                 <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} interval="preserveStartEnd" />
                 <YAxis tick={axisStyle} tickLine={false} axisLine={false}
                   tickFormatter={(v: number) => v >= 1_000_000 ? `${(v/1_000_000).toFixed(1)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)} />
@@ -634,7 +634,7 @@ export default function DashboardPage() {
           {hourlyChartData.some((d) => d.count > 0) ? (
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={hourlyChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-base)" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--separator)" vertical={false} />
                 <XAxis dataKey="hour" tick={axisStyle} tickLine={false} axisLine={false} interval={3} />
                 <YAxis tick={axisStyle} tickLine={false} axisLine={false} />
                 <Tooltip contentStyle={tooltipStyle} />

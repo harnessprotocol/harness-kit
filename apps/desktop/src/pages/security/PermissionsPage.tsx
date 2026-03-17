@@ -208,6 +208,12 @@ function SuggestInput({
   );
 }
 
+const PRESET_COLORS: Record<string, string> = {
+  Strict: "#16a34a",
+  Standard: "#3b82f6",
+  Permissive: "#d97706",
+};
+
 export default function PermissionsPage() {
   const [permissions, setPermissions] = useState<PermissionsState | null>(null);
   const [presets, setPresets] = useState<SecurityPreset[]>([]);
@@ -290,6 +296,7 @@ export default function PermissionsPage() {
   }
 
   async function handleApplyPreset(preset: SecurityPreset) {
+    setSaving(true);
     try {
       await applySecurityPreset(preset.id);
       setPermissions(preset.permissions);
@@ -297,6 +304,8 @@ export default function PermissionsPage() {
       setConfirmPreset(null);
     } catch (e) {
       setError(String(e));
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -323,38 +332,46 @@ export default function PermissionsPage() {
   }
 
   return (
-    <div style={{ padding: "20px 24px" }}>
+    <div style={{ padding: "20px 24px", maxWidth: "680px" }}>
       {/* Header */}
-      <div style={{ marginBottom: "16px" }}>
+      <div style={{ marginBottom: "20px" }}>
         <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
           Permissions
         </h1>
         <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>
-          Manage tool access, file paths, and network rules from ~/.claude/settings.json
+          Tool access, file paths, and network rules — written to ~/.claude/settings.json
         </p>
       </div>
 
-      {/* Preset bar */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "20px", flexWrap: "wrap" }}>
-        {presets.map((preset) => (
-          <button
-            key={preset.id}
-            onClick={() => setConfirmPreset(preset)}
-            style={{
-              flex: 1, minWidth: "140px", padding: "12px 14px",
-              background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-              borderRadius: "8px", cursor: "pointer", textAlign: "left",
-            }}
-          >
-            <div style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)", marginBottom: "2px" }}>
-              {preset.name}
-            </div>
-            <div style={{ fontSize: "11px", color: "var(--fg-muted)", lineHeight: 1.3 }}>
-              {preset.description}
-            </div>
-          </button>
-        ))}
-      </div>
+      {/* Presets */}
+      {presets.length > 0 && (
+        <div style={{ marginBottom: "20px" }}>
+          <p style={{ fontSize: "11px", fontWeight: 500, fontVariantCaps: "all-small-caps", letterSpacing: "0.03em", color: "var(--fg-subtle)", margin: "0 0 8px" }}>
+            Quick preset
+          </p>
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+            {presets.map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => setConfirmPreset(preset)}
+                className="preset-card"
+                style={{
+                  padding: "8px 12px",
+                  background: "var(--bg-surface)",
+                  border: "1px solid var(--border-base)",
+                  borderLeft: `3px solid ${PRESET_COLORS[preset.name] ?? "var(--border-base)"}`,
+                  borderRadius: "6px",
+                  cursor: "pointer",
+                  textAlign: "left",
+                }}
+              >
+                <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--fg-base)" }}>{preset.name}</div>
+                <div style={{ fontSize: "10px", color: "var(--fg-subtle)", marginTop: "2px", lineHeight: 1.3 }}>{preset.description}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Confirm dialog */}
       {confirmPreset && (
@@ -368,13 +385,15 @@ export default function PermissionsPage() {
           <div style={{ display: "flex", gap: "8px" }}>
             <button
               onClick={() => handleApplyPreset(confirmPreset)}
+              disabled={saving}
               style={{
                 fontSize: "12px", padding: "5px 14px", borderRadius: "6px",
                 border: "none", background: "var(--accent)", color: "#fff",
-                cursor: "pointer", fontWeight: 500,
+                cursor: saving ? "default" : "pointer", fontWeight: 500,
+                opacity: saving ? 0.6 : 1,
               }}
             >
-              Apply
+              {saving ? "Applying…" : "Apply"}
             </button>
             <button
               onClick={() => setConfirmPreset(null)}
@@ -392,105 +411,110 @@ export default function PermissionsPage() {
 
       {permissions && (
         <>
-          {/* Tools */}
+          {/* Unified card */}
           <div style={{
-            background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-            borderRadius: "8px", padding: "14px 16px", marginBottom: "12px",
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-base)",
+            borderRadius: "10px",
+            overflow: "hidden",
+            marginBottom: "16px",
           }}>
-            <p style={{ fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--fg-subtle)", margin: "0 0 10px" }}>
-              Tools
-            </p>
-            {(() => {
-              const allTools = [...permissions.tools.allow, ...permissions.tools.deny, ...permissions.tools.ask];
-              return (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "16px" }}>
-                  {/* Allow */}
-                  <div>
-                    <p style={{ fontSize: "11px", fontWeight: 600, color: "#16a34a", margin: "0 0 6px" }}>Allow</p>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-                      {permissions.tools.allow.map((t) => (
-                        <Chip key={t} label={t} color="green" onRemove={() => removeFromList("allow", t)} />
-                      ))}
-                    </div>
-                    <SuggestInput onAdd={(v) => addToList("allow", v)} placeholder="Tool name" suggestions={TOOL_SUGGESTIONS} existing={allTools} />
+            {/* Tools */}
+            <div style={{ padding: "14px 16px" }}>
+              <p style={{ fontSize: "11px", fontWeight: 500, fontVariantCaps: "all-small-caps", letterSpacing: "0.03em", color: "var(--fg-subtle)", margin: "0 0 12px" }}>
+                Tools
+              </p>
+              {(() => {
+                const allTools = [...permissions.tools.allow, ...permissions.tools.deny, ...permissions.tools.ask];
+                const rows: { key: "allow" | "deny" | "ask"; label: string; color: string; chipColor: "green" | "red" | "amber" }[] = [
+                  { key: "allow", label: "Allow", color: "#16a34a", chipColor: "green" },
+                  { key: "deny",  label: "Deny",  color: "#dc2626", chipColor: "red"   },
+                  { key: "ask",   label: "Ask",   color: "#d97706", chipColor: "amber" },
+                ];
+                return (
+                  <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    {rows.map(({ key, label, color, chipColor }) => (
+                      <div key={key} style={{ display: "flex", gap: "10px" }}>
+                        <span style={{ fontSize: "11px", fontWeight: 600, color, minWidth: "38px", paddingTop: "5px" }}>{label}</span>
+                        <div style={{ flex: 1 }}>
+                          {permissions.tools[key].length > 0 && (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "4px" }}>
+                              {permissions.tools[key].map((t) => (
+                                <Chip key={t} label={t} color={chipColor} onRemove={() => removeFromList(key, t)} />
+                              ))}
+                            </div>
+                          )}
+                          <SuggestInput
+                            onAdd={(v) => addToList(key, v)}
+                            placeholder={`Add ${label.toLowerCase()} rule…`}
+                            suggestions={TOOL_SUGGESTIONS}
+                            existing={allTools}
+                          />
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  {/* Deny */}
-                  <div>
-                    <p style={{ fontSize: "11px", fontWeight: 600, color: "#dc2626", margin: "0 0 6px" }}>Deny</p>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-                      {permissions.tools.deny.map((t) => (
-                        <Chip key={t} label={t} color="red" onRemove={() => removeFromList("deny", t)} />
-                      ))}
-                    </div>
-                    <SuggestInput onAdd={(v) => addToList("deny", v)} placeholder="Tool name" suggestions={TOOL_SUGGESTIONS} existing={allTools} />
-                  </div>
-                  {/* Ask */}
-                  <div>
-                    <p style={{ fontSize: "11px", fontWeight: 600, color: "#d97706", margin: "0 0 6px" }}>Ask</p>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-                      {permissions.tools.ask.map((t) => (
-                        <Chip key={t} label={t} color="amber" onRemove={() => removeFromList("ask", t)} />
-                      ))}
-                    </div>
-                    <SuggestInput onAdd={(v) => addToList("ask", v)} placeholder="Tool name" suggestions={TOOL_SUGGESTIONS} existing={allTools} />
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-
-          {/* Paths */}
-          <div style={{
-            background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-            borderRadius: "8px", padding: "14px 16px", marginBottom: "12px",
-          }}>
-            <p style={{ fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--fg-subtle)", margin: "0 0 10px" }}>
-              Paths
-            </p>
-            {(() => {
-              const allPaths = [...permissions.paths.writable, ...permissions.paths.readonly];
-              return (
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-                  <div>
-                    <p style={{ fontSize: "11px", fontWeight: 600, color: "#16a34a", margin: "0 0 6px" }}>Writable</p>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-                      {permissions.paths.writable.map((p) => (
-                        <Chip key={p} label={p} color="green" onRemove={() => removeFromList("writable", p)} />
-                      ))}
-                    </div>
-                    <SuggestInput onAdd={(v) => addToList("writable", v)} placeholder="Path" suggestions={PATH_SUGGESTIONS} existing={allPaths} />
-                  </div>
-                  <div>
-                    <p style={{ fontSize: "11px", fontWeight: 600, color: "#d97706", margin: "0 0 6px" }}>Read-only</p>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-                      {permissions.paths.readonly.map((p) => (
-                        <Chip key={p} label={p} color="amber" onRemove={() => removeFromList("readonly", p)} />
-                      ))}
-                    </div>
-                    <SuggestInput onAdd={(v) => addToList("readonly", v)} placeholder="Path" suggestions={PATH_SUGGESTIONS} existing={allPaths} />
-                  </div>
-                </div>
-              );
-            })()}
-          </div>
-
-          {/* Network */}
-          <div style={{
-            background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-            borderRadius: "8px", padding: "14px 16px", marginBottom: "16px",
-          }}>
-            <p style={{ fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--fg-subtle)", margin: "0 0 10px" }}>
-              Network — Allowed Hosts
-            </p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-              {permissions.network.allowedHosts.map((h) => (
-                <Chip key={h} label={h} color="green" onRemove={() => removeFromList("allowedHosts", h)} />
-              ))}
+                );
+              })()}
             </div>
-            <SuggestInput onAdd={(v) => addToList("allowedHosts", v)} placeholder="Hostname" suggestions={HOST_SUGGESTIONS} existing={permissions.network.allowedHosts} />
+
+            <div style={{ height: "1px", background: "var(--separator)", margin: "0 16px" }} />
+
+            {/* Paths */}
+            <div style={{ padding: "14px 16px" }}>
+              <p style={{ fontSize: "11px", fontWeight: 500, fontVariantCaps: "all-small-caps", letterSpacing: "0.03em", color: "var(--fg-subtle)", margin: "0 0 12px" }}>
+                Paths
+              </p>
+              {(() => {
+                const allPaths = [...permissions.paths.writable, ...permissions.paths.readonly];
+                return (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
+                    <div>
+                      <p style={{ fontSize: "11px", fontWeight: 600, color: "#16a34a", margin: "0 0 6px" }}>Writable</p>
+                      {permissions.paths.writable.length > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "4px" }}>
+                          {permissions.paths.writable.map((p) => (
+                            <Chip key={p} label={p} color="green" onRemove={() => removeFromList("writable", p)} />
+                          ))}
+                        </div>
+                      )}
+                      <SuggestInput onAdd={(v) => addToList("writable", v)} placeholder="Add path…" suggestions={PATH_SUGGESTIONS} existing={allPaths} />
+                    </div>
+                    <div>
+                      <p style={{ fontSize: "11px", fontWeight: 600, color: "#d97706", margin: "0 0 6px" }}>Read-only</p>
+                      {permissions.paths.readonly.length > 0 && (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "4px" }}>
+                          {permissions.paths.readonly.map((p) => (
+                            <Chip key={p} label={p} color="amber" onRemove={() => removeFromList("readonly", p)} />
+                          ))}
+                        </div>
+                      )}
+                      <SuggestInput onAdd={(v) => addToList("readonly", v)} placeholder="Add path…" suggestions={PATH_SUGGESTIONS} existing={allPaths} />
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <div style={{ height: "1px", background: "var(--separator)", margin: "0 16px" }} />
+
+            {/* Network */}
+            <div style={{ padding: "14px 16px" }}>
+              <p style={{ fontSize: "11px", fontWeight: 500, fontVariantCaps: "all-small-caps", letterSpacing: "0.03em", color: "var(--fg-subtle)", margin: "0 0 12px" }}>
+                Network — Allowed Hosts
+              </p>
+              {permissions.network.allowedHosts.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "4px" }}>
+                  {permissions.network.allowedHosts.map((h) => (
+                    <Chip key={h} label={h} color="green" onRemove={() => removeFromList("allowedHosts", h)} />
+                  ))}
+                </div>
+              )}
+              <SuggestInput onAdd={(v) => addToList("allowedHosts", v)} placeholder="Add host…" suggestions={HOST_SUGGESTIONS} existing={permissions.network.allowedHosts} />
+            </div>
           </div>
 
-          {/* Save button */}
+          {/* Save */}
           <button
             onClick={handleSave}
             disabled={!dirty || saving}
@@ -503,7 +527,7 @@ export default function PermissionsPage() {
               opacity: saving ? 0.6 : 1,
             }}
           >
-            {saving ? "Saving..." : "Save Permissions"}
+            {saving ? "Saving…" : "Save Permissions"}
           </button>
         </>
       )}

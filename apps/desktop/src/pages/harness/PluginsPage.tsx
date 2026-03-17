@@ -24,8 +24,8 @@ function SourceBadge({ marketplace }: { marketplace?: string }) {
     return (
       <span style={{
         fontSize: "10px", fontWeight: 500, padding: "1px 7px", borderRadius: "10px",
-        background: "var(--bg-elevated)", color: "var(--fg-muted)",
-        border: "1px solid var(--border-base)", whiteSpace: "nowrap",
+        background: "rgba(217,119,6,0.10)", color: "var(--warning)",
+        border: "1px solid rgba(217,119,6,0.25)", whiteSpace: "nowrap",
       }}>
         local
       </span>
@@ -35,7 +35,7 @@ function SourceBadge({ marketplace }: { marketplace?: string }) {
     return (
       <span style={{
         fontSize: "10px", fontWeight: 500, padding: "1px 7px", borderRadius: "10px",
-        background: "rgba(59,130,246,0.12)", color: "var(--accent-text)",
+        background: "rgba(59,130,246,0.12)", color: "#3b82f6",
         border: "1px solid rgba(59,130,246,0.25)", whiteSpace: "nowrap",
       }}>
         official
@@ -45,8 +45,8 @@ function SourceBadge({ marketplace }: { marketplace?: string }) {
   return (
     <span style={{
       fontSize: "10px", fontWeight: 500, padding: "1px 7px", borderRadius: "10px",
-      background: "var(--accent-light)", color: "var(--accent-text)",
-      border: "1px solid var(--accent-border, var(--border-base))", whiteSpace: "nowrap",
+      background: "var(--bg-elevated)", color: "var(--fg-muted)",
+      border: "1px solid var(--border-base)", whiteSpace: "nowrap",
     }}>
       {marketplace}
     </span>
@@ -162,8 +162,8 @@ export default function PluginsPage() {
             display: "flex", alignItems: "center", gap: "12px",
             padding: "7px 14px",
             borderBottom: "1px solid var(--border-base)",
-            fontSize: "10px", fontWeight: 600, color: "var(--fg-subtle)",
-            textTransform: "uppercase", letterSpacing: "0.05em",
+            fontSize: "11px", fontWeight: 500, color: "var(--fg-subtle)",
+            fontVariantCaps: "all-small-caps", letterSpacing: "0.03em",
           }}>
             <span style={COL_NAME}>Plugin</span>
             <span style={COL_SOURCE}>Source</span>
@@ -216,7 +216,7 @@ export default function PluginsPage() {
                 </div>
 
                 {/* Version */}
-                <div style={{ ...COL_VERSION, fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
+                <div style={{ ...COL_VERSION, fontFamily: "ui-monospace, monospace", fontSize: "11px", fontVariantNumeric: "tabular-nums" }}>
                   {update ? (
                     <span>
                       <span style={{ color: "var(--fg-subtle)", textDecoration: "line-through" }}>
