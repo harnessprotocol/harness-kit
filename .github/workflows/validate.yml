@@ -205,6 +205,10 @@ jobs:
         run: cargo clippy -- -D warnings
         working-directory: apps/desktop/src-tauri
 
+      - name: Rust test (desktop backend)
+        run: cargo test
+        working-directory: apps/desktop/src-tauri
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
@@ -239,6 +243,26 @@ jobs:
 
       - name: Build board-server
         run: pnpm --filter board-server build
+
+      - name: Start board-server (smoke test)
+        run: node packages/board-server/dist/index.js &
+        working-directory: .
+
+      - name: Wait for board-server to be ready
+        run: |
+          for i in $(seq 1 10); do
+            if curl -sf http://localhost:4800/health; then
+              echo "board-server is up"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "board-server did not start in time"
+          exit 1
+
+      - name: Kill board-server
+        if: always()
+        run: kill $(lsof -ti:4800) 2>/dev/null || true
 
       - name: Build board app
         run: pnpm --filter harness-board build

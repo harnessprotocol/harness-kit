@@ -18,4 +18,10 @@ process.on('SIGINT', () => {
   process.exit(0);
 });
 
+process.on('SIGTERM', () => {
+  hub.close();
+  httpServer.close();
+  process.exit(0);
+});
+
 export { hub };
