@@ -1,16 +1,11 @@
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { open } from "@tauri-apps/plugin-shell";
-import Tooltip from "../components/Tooltip";
 import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
 import { useArrowNavigation } from "../hooks/useArrowNavigation";
 import { useSidebarResize } from "../hooks/useSidebarResize";
-import {
-  initTheme, getTheme, setTheme,
-  getAccent, setAccent,
-  ACCENT_PRESETS,
-  type AccentName,
-} from "../lib/theme";
+import { initTheme } from "../lib/theme";
+import { initPreferences } from "../lib/preferences";
 
 type NavSection = {
   id: string;
@@ -103,39 +98,16 @@ function SidebarSubnav({ children }: { children: { label: string; path: string }
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [theme, setThemeState] = useState(getTheme);
-  const [accent, setAccentState] = useState(getAccent);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const settingsRef = useRef<HTMLDivElement>(null);
 
-  useGlobalShortcuts({ setSettingsOpen, navigate });
+  useGlobalShortcuts({ navigate });
   const { onMouseDown: onResizeMouseDown } = useSidebarResize();
 
   useEffect(() => {
     initTheme();
+    initPreferences();
   }, []);
 
-  // Close settings panel on outside click
-  useEffect(() => {
-    if (!settingsOpen) return;
-    function onPointerDown(e: PointerEvent) {
-      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) {
-        setSettingsOpen(false);
-      }
-    }
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [settingsOpen]);
-
-  function handleSetTheme(t: "light" | "dark" | "system") {
-    setTheme(t);
-    setThemeState(t);
-  }
-
-  function handleSetAccent(name: AccentName) {
-    setAccent(name);
-    setAccentState(name);
-  }
+  const prefsActive = location.pathname === "/preferences";
 
   function isActive(section: NavSection) {
     return location.pathname.startsWith(`/${section.id}`);
@@ -190,82 +162,6 @@ export default function AppLayout() {
           })}
         </nav>
 
-        {/* Preferences panel (floats above gear button) */}
-        {settingsOpen && (
-          <div
-            ref={settingsRef}
-            style={{
-              position: "absolute",
-              bottom: "48px",
-              left: "8px",
-              right: "8px",
-              background: "var(--bg-elevated)",
-              border: "1px solid var(--border-base)",
-              borderRadius: "10px",
-              boxShadow: "var(--shadow-popover)",
-              padding: "14px",
-              zIndex: 50,
-            }}
-          >
-            <p style={{ fontSize: "11px", fontWeight: 700, color: "var(--fg-base)", margin: "0 0 12px", letterSpacing: "-0.1px" }}>
-              Preferences
-            </p>
-
-            {/* Theme */}
-            <p style={{ fontSize: "10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--fg-subtle)", margin: "0 0 6px" }}>
-              Appearance
-            </p>
-            <div style={{ display: "flex", gap: "4px", marginBottom: "14px" }}>
-              {(["light", "system", "dark"] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => handleSetTheme(t)}
-                  style={{
-                    flex: 1,
-                    fontSize: "11px",
-                    padding: "5px 0",
-                    borderRadius: "5px",
-                    border: "1px solid",
-                    borderColor: theme === t ? "var(--accent)" : "var(--border-base)",
-                    background: theme === t ? "var(--accent-light)" : "transparent",
-                    color: theme === t ? "var(--accent-text)" : "var(--fg-muted)",
-                    cursor: "pointer",
-                    textTransform: "capitalize",
-                    fontWeight: theme === t ? 600 : 400,
-                  }}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
-
-            {/* Accent color */}
-            <p style={{ fontSize: "10px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--fg-subtle)", margin: "0 0 6px" }}>
-              Accent Color
-            </p>
-            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-              {(Object.entries(ACCENT_PRESETS) as [AccentName, typeof ACCENT_PRESETS[AccentName]][]).map(([name, preset]) => (
-                <Tooltip key={name} content={preset.label}>
-                  <button
-                    onClick={() => handleSetAccent(name)}
-                    style={{
-                      width: "22px",
-                      height: "22px",
-                      borderRadius: "50%",
-                      background: preset.swatch,
-                      border: accent === name ? "2px solid var(--fg-base)" : "2px solid transparent",
-                      cursor: "pointer",
-                      outline: accent === name ? "2px solid var(--accent)" : "none",
-                      outlineOffset: "1px",
-                      padding: 0,
-                    }}
-                  />
-                </Tooltip>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Docs link — always visible */}
         <div className="px-2 pb-1">
           <button
@@ -302,7 +198,7 @@ export default function AppLayout() {
           style={{ borderTop: "1px solid var(--separator)" }}
         >
           <button
-            onClick={() => setSettingsOpen((o) => !o)}
+            onClick={() => navigate("/preferences")}
             style={{
               display: "flex",
               alignItems: "center",
@@ -311,8 +207,8 @@ export default function AppLayout() {
               padding: "6px 8px",
               borderRadius: "6px",
               border: "none",
-              background: settingsOpen ? "var(--accent-light)" : "transparent",
-              color: settingsOpen ? "var(--accent-text)" : "var(--fg-subtle)",
+              background: prefsActive ? "var(--accent-light)" : "transparent",
+              color: prefsActive ? "var(--accent-text)" : "var(--fg-subtle)",
               cursor: "pointer",
               fontSize: "11px",
               textAlign: "left",
