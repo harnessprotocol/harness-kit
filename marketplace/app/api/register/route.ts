@@ -50,6 +50,20 @@ async function fetchGitHubFile(
 }
 
 export async function POST(request: NextRequest) {
+  // Rate limit before auth so brute-force attempts are counted regardless of
+  // whether the key is correct. 10 requests per hour per IP.
+  const ip = getClientIp(request);
+  const { allowed, retryAfter } = checkRateLimit(`register:${ip}`, {
+    maxRequests: 10,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: { "Retry-After": String(retryAfter) } },
+    );
+  }
+
   // Require API key for registration to prevent spam
   const apiKey = process.env.REGISTER_API_KEY;
   if (!apiKey) {
@@ -64,19 +78,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: "Invalid or missing API key" },
       { status: 401 },
-    );
-  }
-
-  // 10 registrations per hour per IP
-  const ip = getClientIp(request);
-  const { allowed, retryAfter } = checkRateLimit(`register:${ip}`, {
-    maxRequests: 10,
-    windowMs: 60 * 60 * 1000,
-  });
-  if (!allowed) {
-    return NextResponse.json(
-      { error: "Too many requests" },
-      { status: 429, headers: { "Retry-After": String(retryAfter) } },
     );
   }
 
