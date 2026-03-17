@@ -27,8 +27,8 @@ export function useGlobalShortcuts({ navigate, toggleSidebar }: Options) {
         return;
       }
 
-      // ⌘\ or ⌘B — toggle sidebar
-      if (e.key === "\\" || e.key === "b") {
+      // ⌘\ — toggle sidebar
+      if (e.key === "\\") {
         e.preventDefault();
         toggleSidebar?.();
         return;

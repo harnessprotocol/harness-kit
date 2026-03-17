@@ -296,6 +296,7 @@ export default function PermissionsPage() {
   }
 
   async function handleApplyPreset(preset: SecurityPreset) {
+    setSaving(true);
     try {
       await applySecurityPreset(preset.id);
       setPermissions(preset.permissions);
@@ -303,6 +304,8 @@ export default function PermissionsPage() {
       setConfirmPreset(null);
     } catch (e) {
       setError(String(e));
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -382,13 +385,15 @@ export default function PermissionsPage() {
           <div style={{ display: "flex", gap: "8px" }}>
             <button
               onClick={() => handleApplyPreset(confirmPreset)}
+              disabled={saving}
               style={{
                 fontSize: "12px", padding: "5px 14px", borderRadius: "6px",
                 border: "none", background: "var(--accent)", color: "#fff",
-                cursor: "pointer", fontWeight: 500,
+                cursor: saving ? "default" : "pointer", fontWeight: 500,
+                opacity: saving ? 0.6 : 1,
               }}
             >
-              Apply
+              {saving ? "Applying…" : "Apply"}
             </button>
             <button
               onClick={() => setConfirmPreset(null)}
