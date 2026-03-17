@@ -38,7 +38,10 @@ export function getFontSize(): number {
 export function setFontSize(size: number) {
   const clamped = clamp(size, FONT_SIZE_MIN, FONT_SIZE_MAX);
   localStorage.setItem(KEY_FONT_SIZE, String(clamped));
-  document.documentElement.style.setProperty("--font-size-base", `${clamped}px`);
+  // Use zoom on #root — scales everything (text, spacing, icons) uniformly,
+  // even when components use hardcoded px in inline styles.
+  const root = document.getElementById("root");
+  if (root) root.style.zoom = String(clamped / FONT_SIZE_DEFAULT);
 }
 
 // ── Density ──────────────────────────────────────────────────

@@ -94,6 +94,51 @@
   --density-padding: 8px;
 }
 
+[data-density="compact"] .sidebar-item {
+  padding: 2px 10px;
+}
+
+[data-density="compact"] .sidebar-subitem {
+  padding: 1px 10px 1px 28px;
+}
+
+[data-density="compact"] .row-list-item {
+  padding: 4px 14px;
+}
+
+[data-density="compact"] main > div {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+[data-density="compact"] .badge {
+  padding: 0px 5px;
+}
+
+[data-density="compact"] .btn {
+  padding: 4px 16px;
+}
+
+[data-density="compact"] .btn-sm {
+  padding: 2px 10px;
+}
+
+[data-density="compact"] .tab {
+  padding: 5px 16px;
+}
+
+[data-density="compact"] .harness-card {
+  padding: 8px;
+}
+
+[data-density="compact"] .form-input {
+  padding: 5px 8px;
+}
+
+[data-density="compact"] .form-textarea {
+  padding: 6px 10px;
+}
+
 /* ── Base ── */
 *, *::before, *::after {
   box-sizing: border-box;

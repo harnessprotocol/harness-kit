@@ -28,6 +28,14 @@ beforeEach(() => {
   localStorage.clear();
   document.documentElement.style.cssText = "";
   document.documentElement.removeAttribute("data-density");
+  // Ensure #root exists for zoom-based font scaling
+  let root = document.getElementById("root");
+  if (!root) {
+    root = document.createElement("div");
+    root.id = "root";
+    document.body.appendChild(root);
+  }
+  root.style.zoom = "";
 });
 
 // ── Font Size ────────────────────────────────────────────────
@@ -53,9 +61,10 @@ describe("getFontSize / setFontSize", () => {
     expect(getFontSize()).toBe(FONT_SIZE_MAX);
   });
 
-  it("applies --font-size-base CSS variable", () => {
+  it("applies zoom on #root element", () => {
     setFontSize(15);
-    expect(document.documentElement.style.getPropertyValue("--font-size-base")).toBe("15px");
+    const root = document.getElementById("root")!;
+    expect(root.style.zoom).toBe(String(15 / FONT_SIZE_DEFAULT));
   });
 });
 
@@ -227,7 +236,8 @@ describe("corrupted localStorage resilience", () => {
 describe("initPreferences", () => {
   it("applies defaults when nothing is stored", () => {
     initPreferences();
-    expect(document.documentElement.style.getPropertyValue("--font-size-base")).toBe("13px");
+    const root = document.getElementById("root")!;
+    expect(root.style.zoom).toBe("1");
     expect(document.documentElement.style.getPropertyValue("--sidebar-width")).toBe("208px");
     expect(document.documentElement.getAttribute("data-density")).toBe("comfortable");
   });
@@ -239,7 +249,8 @@ describe("initPreferences", () => {
 
     initPreferences();
 
-    expect(document.documentElement.style.getPropertyValue("--font-size-base")).toBe("16px");
+    const root = document.getElementById("root")!;
+    expect(root.style.zoom).toBe(String(16 / FONT_SIZE_DEFAULT));
     expect(document.documentElement.getAttribute("data-density")).toBe("compact");
     expect(document.documentElement.style.getPropertyValue("--sidebar-width")).toBe("300px");
   });
@@ -250,7 +261,8 @@ describe("initPreferences", () => {
 
     initPreferences();
 
-    expect(document.documentElement.style.getPropertyValue("--font-size-base")).toBe("18px");
+    const root = document.getElementById("root")!;
+    expect(root.style.zoom).toBe(String(FONT_SIZE_MAX / FONT_SIZE_DEFAULT));
     expect(document.documentElement.style.getPropertyValue("--sidebar-width")).toBe("160px");
   });
 });
