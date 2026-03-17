@@ -8,7 +8,12 @@
     "build": "tsc",
     "dev": "tsx watch src/index.ts",
     "start": "node dist/index.js",
-    "mcp": "tsx src/mcp/server.ts"
+    "mcp": "tsx src/mcp/server.ts",
+    "launchd:install": "bash scripts/launchd-ctl.sh install",
+    "launchd:uninstall": "bash scripts/launchd-ctl.sh uninstall",
+    "launchd:status": "bash scripts/launchd-ctl.sh status",
+    "launchd:logs": "bash scripts/launchd-ctl.sh logs",
+    "launchd:restart": "bash scripts/launchd-ctl.sh restart"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",

@@ -26,10 +26,11 @@ A lightweight Kanban board with real-time two-way sync between Claude and a web 
 ## Usage Patterns
 
 ### `/board` — Open the board UI
-Start the board server if not running, then open the web UI:
+Open the board web UI (requires the board server to be running as a background service):
 ```bash
 bash ${CLAUDE_PLUGIN_ROOT}/scripts/start-board.sh
 ```
+If the server is not running, the script prints instructions to install it as a persistent launchd service with `pnpm board:install`.
 
 ### `/board create <title>` — Create a task
 1. Call `list_tasks` to find the active project and epic

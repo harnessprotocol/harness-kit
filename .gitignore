@@ -44,3 +44,6 @@ packages/core/dist/
 
 # CLI
 apps/cli/dist/
+
+# Board server
+packages/board-server/dist/
