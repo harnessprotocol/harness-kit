@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 type SearchType = "component" | "profile";
 
@@ -12,6 +13,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       { error: "Missing required query parameter: q" },
       { status: 400 },
+    );
+  }
+
+  // 60 searches per minute per IP
+  const ip = getClientIp(request);
+  const { allowed, retryAfter } = checkRateLimit(`search:${ip}`, {
+    maxRequests: 60,
+    windowMs: 60 * 1000,
+  });
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Too many requests" },
+      { status: 429, headers: { "Retry-After": String(retryAfter) } },
     );
   }
 

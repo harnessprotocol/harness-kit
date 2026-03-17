@@ -23,6 +23,7 @@ website/.source/
 # Marketplace
 marketplace/.next/
 marketplace/out/
+*.tsbuildinfo
 
 # Supabase local
 marketplace/supabase/.temp/
