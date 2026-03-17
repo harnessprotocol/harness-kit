@@ -349,7 +349,7 @@ Expected output: `Rebuilt INDEX.md: N entries`
 
 If the script fails, fall back to manually appending or updating a row in `research/INDEX.md`:
 ```
-| [Name] | [category] | YYYY-MM-DD | [URL] | `tag1`, `tag2` | `research/[category]/[name].md` |
+| [Name] | [category] | YYYY-MM-DD | [URL] | `tag1`, `tag2` | [source_type] | [last_checked] | `research/[category]/[name].md` |
 ```
 
 **Do NOT skip this step.** It is the final required action of every research protocol run.

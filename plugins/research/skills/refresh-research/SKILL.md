@@ -211,10 +211,11 @@ If an `### Update Log` section already exists, append to it.
 
 **Update frontmatter:**
 ```yaml
-date: 2026-03-16          # update to today
 last_checked: 2026-03-16  # update to today
 refresh_status: changed   # set to changed
 ```
+
+Leave `date` unchanged — it records when the topic was first researched, not when it was last refreshed.
 
 Keep `source` and `tags` unchanged unless the refresh reveals new relevant tags.
 
@@ -242,7 +243,7 @@ Do NOT remove existing raw source entries — they form the version history.
 
 ```
 Cross-reference alert:
-- research/agent-memory/membrain-vs-cognee-comparison.md references Cognee v0.5.0
+- research/agent-memory/tool-comparison.md references Cognee v0.5.0
   → Cognee is now v0.6.2, comparison may need updating
 ```
 
