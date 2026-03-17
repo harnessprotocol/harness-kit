@@ -19,6 +19,7 @@ describe('useBoardServerReady', () => {
     vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})));
     const { result } = renderHook(() => useBoardServerReady());
     expect(result.current.ready).toBe(false);
+    expect(result.current.timedOut).toBe(false);
   });
 
   it('sets ready=true when /health returns ok', async () => {
@@ -28,6 +29,7 @@ describe('useBoardServerReady', () => {
     await act(async () => { await Promise.resolve(); });
 
     expect(result.current.ready).toBe(true);
+    expect(result.current.timedOut).toBe(false);
     expect(fetch).toHaveBeenCalledWith(HEALTH_URL, expect.objectContaining({ signal: expect.any(AbortSignal) }));
   });
 
@@ -38,6 +40,7 @@ describe('useBoardServerReady', () => {
     await act(async () => { await Promise.resolve(); });
 
     expect(result.current.ready).toBe(false);
+    expect(result.current.timedOut).toBe(false);
   });
 
   it('retries every 2 seconds until server is ready', async () => {
@@ -52,14 +55,17 @@ describe('useBoardServerReady', () => {
     // First call (immediate)
     await act(async () => { await Promise.resolve(); });
     expect(result.current.ready).toBe(false);
+    expect(result.current.timedOut).toBe(false);
 
     // After 2s
     await act(async () => { vi.advanceTimersByTime(2000); await Promise.resolve(); });
     expect(result.current.ready).toBe(false);
+    expect(result.current.timedOut).toBe(false);
 
     // After another 2s — now ok
     await act(async () => { vi.advanceTimersByTime(2000); await Promise.resolve(); });
     expect(result.current.ready).toBe(true);
+    expect(result.current.timedOut).toBe(false);
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
@@ -70,6 +76,7 @@ describe('useBoardServerReady', () => {
     const { result } = renderHook(() => useBoardServerReady());
     await act(async () => { await Promise.resolve(); });
     expect(result.current.ready).toBe(true);
+    expect(result.current.timedOut).toBe(false);
 
     const callCount = fetchMock.mock.calls.length;
     await act(async () => { vi.advanceTimersByTime(10000); await Promise.resolve(); });
@@ -84,5 +91,38 @@ describe('useBoardServerReady', () => {
     unmount();
 
     expect(clearIntervalSpy).toHaveBeenCalled();
+  });
+
+  it('sets timedOut=true after 5 failed polls and stops polling', async () => {
+    const fetchMock = vi.fn().mockRejectedValue(new Error('refused'));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { result } = renderHook(() => useBoardServerReady());
+
+    // Poll 1 (immediate)
+    await act(async () => { await Promise.resolve(); });
+    expect(result.current.timedOut).toBe(false);
+
+    // Poll 2
+    await act(async () => { vi.advanceTimersByTime(2000); await Promise.resolve(); });
+    expect(result.current.timedOut).toBe(false);
+
+    // Poll 3
+    await act(async () => { vi.advanceTimersByTime(2000); await Promise.resolve(); });
+    expect(result.current.timedOut).toBe(false);
+
+    // Poll 4
+    await act(async () => { vi.advanceTimersByTime(2000); await Promise.resolve(); });
+    expect(result.current.timedOut).toBe(false);
+
+    // Poll 5 — timedOut flips
+    await act(async () => { vi.advanceTimersByTime(2000); await Promise.resolve(); });
+    expect(result.current.timedOut).toBe(true);
+    expect(result.current.ready).toBe(false);
+
+    const callCount = fetchMock.mock.calls.length;
+    // Polling should stop after timedOut
+    await act(async () => { vi.advanceTimersByTime(10000); await Promise.resolve(); });
+    expect(fetchMock.mock.calls.length).toBe(callCount);
   });
 });

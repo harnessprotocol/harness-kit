@@ -1,26 +1,25 @@
 #!/usr/bin/env bash
-# start-board.sh — Start the Harness Board server if not running, then open the UI
+# start-board.sh — Open the board UI (board server runs as a launchd service)
 set -euo pipefail
 
 BOARD_PORT="${BOARD_PORT:-4800}"
 BOARD_UI_PORT="${BOARD_UI_PORT:-3002}"
-SERVER_DIR="$(cd "$(dirname "$0")/../../../packages/board-server" && pwd)"
 
 # Check if server is already running
 if curl -sf "http://localhost:${BOARD_PORT}/health" > /dev/null 2>&1; then
-  echo "Board server already running on :${BOARD_PORT}"
+  echo "Board server running on :${BOARD_PORT}"
 else
-  echo "Starting board server on :${BOARD_PORT}..."
-  cd "$SERVER_DIR"
-  node dist/index.js &
-  # Wait up to 5 seconds for server to come up
-  for i in $(seq 1 10); do
-    if curl -sf "http://localhost:${BOARD_PORT}/health" > /dev/null 2>&1; then
-      echo "Board server ready"
-      break
-    fi
-    sleep 0.5
-  done
+  echo ""
+  echo "Board server is not running on :${BOARD_PORT}."
+  echo ""
+  echo "To install it as a persistent background service (starts at login):"
+  echo ""
+  echo "  pnpm board:install"
+  echo ""
+  echo "This registers a macOS Launch Agent that runs automatically and restarts"
+  echo "on crash. Run it once — it will persist across reboots."
+  echo ""
+  exit 1
 fi
 
 # Open the board UI in the default browser

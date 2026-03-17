@@ -150,7 +150,7 @@
       "name": "board",
       "source": "./plugins/board",
       "description": "Lightweight Kanban board with real-time Claude ↔ web UI two-way sync via MCP.",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "author": { "name": "harnessprotocol" },
       "license": "Apache-2.0",
       "category": "productivity",

@@ -16,6 +16,11 @@
     "build": "pnpm -r build",
     "build:core": "pnpm --filter @harness-kit/core build",
     "build:cli": "pnpm --filter @harness-kit/cli build",
-    "test:core": "pnpm --filter @harness-kit/core test"
+    "test:core": "pnpm --filter @harness-kit/core test",
+    "board:install": "pnpm --filter board-server launchd:install",
+    "board:uninstall": "pnpm --filter board-server launchd:uninstall",
+    "board:status": "pnpm --filter board-server launchd:status",
+    "board:logs": "pnpm --filter board-server launchd:logs",
+    "board:restart": "pnpm --filter board-server launchd:restart"
   }
 }

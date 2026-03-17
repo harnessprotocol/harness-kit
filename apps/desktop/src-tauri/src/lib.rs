@@ -78,15 +78,14 @@ pub fn run() {
         ])
         .setup(|app| {
             let state = app.state::<BoardServerState>();
-            state.start();
+            if state.check() {
+                eprintln!("[board-server] running on :{}", 4800);
+            } else {
+                eprintln!("[board-server] not running — install with: pnpm board:install");
+            }
             Ok(())
         })
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|handle, event| {
-            if let tauri::RunEvent::Exit = event {
-                let state = handle.state::<BoardServerState>();
-                state.stop();
-            }
-        });
+        .run(|_handle, _event| {});
 }

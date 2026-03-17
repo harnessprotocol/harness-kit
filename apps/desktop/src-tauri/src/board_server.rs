@@ -1,60 +1,17 @@
 use std::net::TcpListener;
-use std::process::{Child, Command};
-use std::sync::Mutex;
 
-const BOARD_SERVER_DIR: &str = env!("BOARD_SERVER_DIR");
 const PORT: u16 = 4800;
 
-pub struct BoardServerState {
-    child: Mutex<Option<Child>>,
-}
+pub struct BoardServerState;
 
 impl BoardServerState {
     pub fn new() -> Self {
-        Self {
-            child: Mutex::new(None),
-        }
+        Self
     }
 
-    pub fn start(&self) {
-        if port_in_use(PORT) {
-            eprintln!("[board-server] port {} already in use — skipping spawn", PORT);
-            return;
-        }
-
-        let dist = std::path::Path::new(BOARD_SERVER_DIR)
-            .join("dist")
-            .join("index.js");
-
-        if !dist.exists() {
-            eprintln!(
-                "[board-server] dist/index.js not found at {:?} — skipping spawn",
-                dist
-            );
-            return;
-        }
-
-        match Command::new("node")
-            .arg(&dist)
-            .current_dir(BOARD_SERVER_DIR)
-            .spawn()
-        {
-            Ok(child) => {
-                eprintln!("[board-server] spawned (pid {})", child.id());
-                *self.child.lock().unwrap() = Some(child);
-            }
-            Err(e) => {
-                eprintln!("[board-server] failed to spawn node: {}", e);
-            }
-        }
-    }
-
-    pub fn stop(&self) {
-        if let Some(mut child) = self.child.lock().unwrap().take() {
-            let _ = child.kill();
-            let _ = child.wait();
-            eprintln!("[board-server] stopped");
-        }
+    /// Returns true if the board server appears to be running.
+    pub fn check(&self) -> bool {
+        port_in_use(PORT)
     }
 }
 

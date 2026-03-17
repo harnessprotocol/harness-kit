@@ -6,6 +6,16 @@ const PORT = Number(process.env.BOARD_PORT ?? 4800);
 
 const app = createHttpApp();
 const httpServer = http.createServer(app);
+
+// Register before WsHub so this listener fires before ws re-emits on WebSocketServer
+httpServer.on('error', (err: NodeJS.ErrnoException) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`[board-server] port ${PORT} already in use — exiting cleanly`);
+    process.exit(0); // Clean exit so launchd KeepAlive does NOT restart
+  }
+  throw err;
+});
+
 const hub = new WsHub(httpServer);
 
 httpServer.listen(PORT, () => {

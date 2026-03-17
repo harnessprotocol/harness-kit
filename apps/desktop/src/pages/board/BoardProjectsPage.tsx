@@ -6,7 +6,7 @@ import { useBoardServerReady } from '../../hooks/useBoardServerReady';
 
 export default function BoardProjectsPage() {
   const navigate = useNavigate();
-  const { ready } = useBoardServerReady();
+  const { ready, timedOut } = useBoardServerReady();
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -32,6 +32,30 @@ export default function BoardProjectsPage() {
         setLoading(false);
       });
   }, [ready, navigate]);
+
+  if (timedOut) {
+    return (
+      <div className="board-scope" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: 12 }}>
+        <span style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 600 }}>
+          Board server is not running
+        </span>
+        <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>
+          Install the background service to get started:
+        </span>
+        <code style={{
+          background: 'var(--bg-elevated)',
+          border: '1px solid var(--border)',
+          borderRadius: 6,
+          padding: '8px 16px',
+          fontSize: 13,
+          color: 'var(--text-secondary)',
+          fontFamily: 'monospace',
+        }}>
+          pnpm board:install
+        </code>
+      </div>
+    );
+  }
 
   if (!ready || loading) {
     return (
