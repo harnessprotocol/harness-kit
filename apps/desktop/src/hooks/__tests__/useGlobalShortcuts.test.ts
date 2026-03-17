@@ -14,18 +14,15 @@ function metaKey(key: string) {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyMock = ReturnType<typeof vi.fn<any>>;
 
-function renderShortcuts(overrides?: { navigate?: AnyMock; setSettingsOpen?: AnyMock }) {
+function renderShortcuts(overrides?: { navigate?: AnyMock }) {
   const navigate = overrides?.navigate ?? vi.fn();
-  const setSettingsOpen = overrides?.setSettingsOpen ?? vi.fn();
   renderHook(() =>
     useGlobalShortcuts({
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       navigate: navigate as any,
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      setSettingsOpen: setSettingsOpen as any,
     }),
   );
-  return { navigate, setSettingsOpen };
+  return { navigate };
 }
 
 // ── Tests ─────────────────────────────────────────────────────
@@ -61,25 +58,18 @@ describe("out-of-bounds key does nothing", () => {
   });
 });
 
-describe("⌘, toggles preferences", () => {
-  it("calls setSettingsOpen with toggle function", () => {
-    const setSettingsOpen = vi.fn();
-    renderShortcuts({ setSettingsOpen });
+describe("⌘, opens preferences", () => {
+  it("navigates to /preferences", () => {
+    const { navigate } = renderShortcuts();
     fireEvent.keyDown(document, metaKey(","));
-    expect(setSettingsOpen).toHaveBeenCalledTimes(1);
-    // The argument should be a function (toggler)
-    const arg = setSettingsOpen.mock.calls[0][0];
-    expect(typeof arg).toBe("function");
-    expect(arg(false)).toBe(true);
-    expect(arg(true)).toBe(false);
+    expect(navigate).toHaveBeenCalledWith("/preferences");
   });
 });
 
-describe("Escape closes preferences", () => {
-  it("calls setSettingsOpen(false) on Escape", () => {
-    const setSettingsOpen = vi.fn();
-    renderShortcuts({ setSettingsOpen });
+describe("Escape does nothing", () => {
+  it("does not call navigate on Escape", () => {
+    const { navigate } = renderShortcuts();
     fireEvent.keyDown(document, { key: "Escape" });
-    expect(setSettingsOpen).toHaveBeenCalledWith(false);
+    expect(navigate).not.toHaveBeenCalled();
   });
 });

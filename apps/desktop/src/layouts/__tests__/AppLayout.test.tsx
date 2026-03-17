@@ -18,6 +18,15 @@ vi.mock("../../lib/theme", () => ({
   },
 }));
 
+vi.mock("../../lib/preferences", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/preferences")>();
+  return {
+    ...actual,
+    initPreferences: vi.fn(),
+    getHiddenSections: vi.fn(() => new Set()),
+  };
+});
+
 beforeEach(() => {
   Object.defineProperty(window, "matchMedia", {
     writable: true,

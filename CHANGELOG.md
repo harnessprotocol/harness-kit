@@ -2,6 +2,14 @@
 
 ## 0.2.1 — Unreleased
 
+### Added
+
+- **Desktop: Preferences page** — dedicated `/preferences` route replaces the old popover. Settings: font size (11–18px), density (comfortable/compact), default landing section, hidden sidebar sections, observatory auto-refresh interval, markdown font (sans/mono). All persisted in localStorage with `harness-kit-` prefix.
+- **Desktop: Keyboard shortcut** — `Cmd+,` navigates to preferences (standard macOS convention).
+- **Desktop: Docs link** — sidebar footer now includes a persistent link to harnesskit.ai/docs (opens in external browser).
+- **Desktop: Draggable sidebar resize** — sidebar width is adjustable by dragging and persists across sessions (160–320px range).
+- **Desktop: Muted accent colors** — 5 new accent presets: Slate, Sage, Stone, Mauve, Steel.
+
 ### Changed
 
 - Renamed `stage` plugin to `capture-session` for clarity — the slash command is now `/capture-session`. The staging file (`session-staging.md`) keeps its name.

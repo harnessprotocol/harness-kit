@@ -42,7 +42,9 @@ export function toggleTheme() {
 
 // ── Accent colors ─────────────────────────────────────────────
 
-export type AccentName = "purple" | "blue" | "teal" | "green" | "orange" | "rose";
+export type AccentName =
+  | "purple" | "blue" | "teal" | "green" | "orange" | "rose"
+  | "slate" | "sage" | "stone" | "mauve" | "steel";
 
 type AccentTokens = { accent: string; light: string; text: string };
 type AccentPreset = { dark: AccentTokens; light: AccentTokens; swatch: string; label: string };
@@ -84,10 +86,42 @@ export const ACCENT_PRESETS: Record<AccentName, AccentPreset> = {
     dark:  { accent: "#e11d48", light: "rgba(225,29,72,0.15)",   text: "#fb7185" },
     light: { accent: "#e11d48", light: "rgba(225,29,72,0.10)",   text: "#be123c" },
   },
+  // ── Muted / toned-down ─────────────────────────────────────
+  slate: {
+    swatch: "#64748b",
+    label: "Slate",
+    dark:  { accent: "#64748b", light: "rgba(100,116,139,0.15)", text: "#94a3b8" },
+    light: { accent: "#64748b", light: "rgba(100,116,139,0.10)", text: "#475569" },
+  },
+  sage: {
+    swatch: "#6b8f71",
+    label: "Sage",
+    dark:  { accent: "#6b8f71", light: "rgba(107,143,113,0.15)", text: "#95b99a" },
+    light: { accent: "#6b8f71", light: "rgba(107,143,113,0.10)", text: "#4e6e53" },
+  },
+  stone: {
+    swatch: "#78716c",
+    label: "Stone",
+    dark:  { accent: "#78716c", light: "rgba(120,113,108,0.15)", text: "#a8a29e" },
+    light: { accent: "#78716c", light: "rgba(120,113,108,0.10)", text: "#57534e" },
+  },
+  mauve: {
+    swatch: "#8b7fa8",
+    label: "Mauve",
+    dark:  { accent: "#8b7fa8", light: "rgba(139,127,168,0.15)", text: "#b0a5c8" },
+    light: { accent: "#8b7fa8", light: "rgba(139,127,168,0.10)", text: "#6b5e88" },
+  },
+  steel: {
+    swatch: "#5b7a99",
+    label: "Steel",
+    dark:  { accent: "#5b7a99", light: "rgba(91,122,153,0.15)",  text: "#8aadc4" },
+    light: { accent: "#5b7a99", light: "rgba(91,122,153,0.10)",  text: "#456180" },
+  },
 };
 
 export function getAccent(): AccentName {
-  return (localStorage.getItem(ACCENT_KEY) as AccentName | null) ?? "purple";
+  const raw = localStorage.getItem(ACCENT_KEY);
+  return (raw && raw in ACCENT_PRESETS) ? raw as AccentName : "purple";
 }
 
 export function setAccent(name: AccentName) {

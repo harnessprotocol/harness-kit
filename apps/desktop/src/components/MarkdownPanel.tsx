@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { getMarkdownFont } from "../lib/preferences";
 
 interface MarkdownPanelProps {
   content: string;
@@ -17,6 +18,15 @@ export default function MarkdownPanel({
   fill = false,
 }: MarkdownPanelProps) {
   const [view, setView] = useState<"preview" | "raw">(defaultView);
+  const [mdFont, setMdFont] = useState(getMarkdownFont);
+
+  useEffect(() => {
+    function onPrefsChanged() {
+      setMdFont(getMarkdownFont());
+    }
+    window.addEventListener("harness-kit-prefs-changed", onPrefsChanged);
+    return () => window.removeEventListener("harness-kit-prefs-changed", onPrefsChanged);
+  }, []);
 
   const tabBtn = (active: boolean): React.CSSProperties => ({
     fontSize: "10px",
@@ -95,7 +105,9 @@ export default function MarkdownPanel({
         }}
       >
         {view === "preview" ? (
-          <div className="markdown-body">
+          <div className="markdown-body" style={mdFont === "mono" ? {
+            fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
+          } : undefined}>
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
           </div>
         ) : (

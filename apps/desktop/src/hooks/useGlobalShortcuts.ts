@@ -11,25 +11,18 @@ export const NAV_PATHS = [
 ] as const;
 
 interface Options {
-  setSettingsOpen: React.Dispatch<React.SetStateAction<boolean>>;
   navigate: NavigateFunction;
 }
 
-export function useGlobalShortcuts({ setSettingsOpen, navigate }: Options) {
+export function useGlobalShortcuts({ navigate }: Options) {
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      // Escape (with or without meta) closes preferences panel
-      if (e.key === "Escape") {
-        setSettingsOpen(false);
-        return;
-      }
-
       if (!e.metaKey) return;
 
-      // ⌘, — toggle preferences
+      // ⌘, — open preferences
       if (e.key === ",") {
         e.preventDefault();
-        setSettingsOpen((o) => !o);
+        navigate("/preferences");
         return;
       }
 
@@ -43,5 +36,5 @@ export function useGlobalShortcuts({ setSettingsOpen, navigate }: Options) {
 
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [setSettingsOpen, navigate]);
+  }, [navigate]);
 }

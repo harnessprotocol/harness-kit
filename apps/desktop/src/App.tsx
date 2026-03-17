@@ -1,5 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AppLayout from "./layouts/AppLayout";
+import PreferencesPage from "./pages/PreferencesPage";
+import { getDefaultSection } from "./lib/preferences";
 import PluginsPage from "./pages/harness/PluginsPage";
 import HooksPage from "./pages/harness/HooksPage";
 import SettingsPage from "./pages/harness/SettingsPage";
@@ -19,13 +21,18 @@ import AuditLogPage from "./pages/security/AuditLogPage";
 import BoardProjectsPage from "./pages/board/BoardProjectsPage";
 import BoardKanbanPage from "./pages/board/BoardKanbanPage";
 
+function DefaultRedirect() {
+  const defaultSection = getDefaultSection();
+  return <Navigate to={defaultSection} replace />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<AppLayout />}>
           {/* Harness Manager */}
-          <Route index element={<Navigate to="/harness/plugins" replace />} />
+          <Route index element={<DefaultRedirect />} />
           <Route path="harness/plugins" element={<PluginsPage />} />
           <Route path="harness/hooks" element={<HooksPage />} />
           <Route path="harness/claude-md" element={<ClaudeMdPage />} />
@@ -53,6 +60,9 @@ export default function App() {
           {/* Board */}
           <Route path="board" element={<BoardProjectsPage />} />
           <Route path="board/:slug" element={<BoardKanbanPage />} />
+
+          {/* Preferences */}
+          <Route path="preferences" element={<PreferencesPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
