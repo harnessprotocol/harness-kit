@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "pnpm --filter board-server dev & pnpm dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm build",
+    "beforeBuildCommand": "pnpm build:board-server && pnpm build",
     "frontendDist": "../dist"
   },
   "app": {

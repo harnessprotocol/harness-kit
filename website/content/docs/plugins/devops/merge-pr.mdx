@@ -1,0 +1,73 @@
+---
+title: merge-pr
+---
+
+> **[View in Marketplace →](https://marketplace.harnessprotocol.io/plugins/merge-pr)** for install tracking, related plugins, and profiles.
+
+# merge-pr
+
+Merge a ready PR — verify CI, sync with base, confirm, squash merge, and clean up.
+
+## Requirements
+
+- **Claude Code** — required
+- **`gh` CLI** ([GitHub CLI](https://cli.github.com/)) — required for CI status checks and merging. `GH_TOKEN` declared as required in `plugin.json` — see [Secrets Management](/docs/guides/secrets-management) for setup.
+
+## Install
+
+```
+/plugin marketplace add harnessprotocol/harness-kit
+/plugin install merge-pr@harness-kit
+```
+
+## What It Does
+
+When you invoke `/merge-pr`:
+
+1. Identifies the open PR on the current branch (or accepts a PR number)
+2. Verifies CI is passing and no CHANGES_REQUESTED reviews are outstanding
+3. Syncs with the base branch — rebases if it's fallen behind, re-verifies CI
+4. Confirms with you before merging
+5. Squash merges, deletes the remote branch, and syncs your local checkout
+
+## Usage
+
+```
+/merge-pr
+```
+
+Or use natural language:
+
+```
+Merge this PR.
+Squash merge and clean up.
+Merge it.
+```
+
+## Pipeline
+
+```
+Development ─→ /open-pr ─→ /merge-pr ─→ /deploy-preview ─→ /go-live
+                              ▲ you are here
+```
+
+## Notes
+
+- Works on any open PR — does not require `/open-pr` to have created it
+- Does NOT deploy to any environment — use `/deploy-preview` or `/go-live` after merging
+- Pairs naturally with [open-pr](open-pr) — use `/open-pr` first, then `/merge-pr` when it's ready to land
+
+## Source Files
+
+<Accordions>
+<Accordion title="SKILL.md — Runtime Configuration">
+
+{/* @embed plugins/merge-pr/skills/merge-pr/SKILL.md */}
+
+</Accordion>
+<Accordion title="README.md — Plugin Documentation">
+
+{/* @embed plugins/merge-pr/skills/merge-pr/README.md */}
+
+</Accordion>
+</Accordions>

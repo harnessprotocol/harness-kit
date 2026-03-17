@@ -10,9 +10,13 @@ plugins:
     source: harnessprotocol/harness-kit
     description: Code review for branches and PRs
 
-  - name: ship-pr
+  - name: open-pr
     source: harnessprotocol/harness-kit
-    description: End-of-task shipping workflow
+    description: Pre-flight checks and PR creation workflow
+
+  - name: merge-pr
+    source: harnessprotocol/harness-kit
+    description: Verify CI, sync base, squash merge, and clean up
 
   - name: docgen
     source: harnessprotocol/harness-kit

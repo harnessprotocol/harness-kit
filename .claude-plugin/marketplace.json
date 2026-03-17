@@ -97,14 +97,24 @@
       "tags": ["configuration", "export", "import", "yaml", "cross-platform"]
     },
     {
-      "name": "ship-pr",
-      "source": "./ship-pr",
-      "description": "End-of-task shipping workflow: run tests, open a PR, code review, fix CI, sync base, then squash merge",
-      "version": "0.2.0",
+      "name": "open-pr",
+      "source": "./open-pr",
+      "description": "Pre-flight checks and PR creation workflow: run tests, open a PR, code review, and check CI",
+      "version": "0.1.0",
       "author": { "name": "harnessprotocol" },
       "license": "Apache-2.0",
       "category": "devops",
-      "tags": ["pull-request", "ci-cd", "merge", "testing", "workflow"]
+      "tags": ["pull-request", "ci-cd", "testing", "workflow"]
+    },
+    {
+      "name": "merge-pr",
+      "source": "./merge-pr",
+      "description": "PR merge workflow: verify CI and review status, sync with base branch, confirm, squash merge, and clean up",
+      "version": "0.1.0",
+      "author": { "name": "harnessprotocol" },
+      "license": "Apache-2.0",
+      "category": "devops",
+      "tags": ["pull-request", "ci-cd", "merge", "workflow"]
     },
     {
       "name": "pr-sweep",

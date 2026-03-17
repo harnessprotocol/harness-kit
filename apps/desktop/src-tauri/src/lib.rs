@@ -1,7 +1,10 @@
 mod commands;
 mod db;
+mod board_server;
 
+use tauri::Manager;
 use commands::comparator::ComparatorState;
+use board_server::BoardServerState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -16,6 +19,7 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .manage(ComparatorState::default())
         .manage(database)
+        .manage(BoardServerState::new())
         .invoke_handler(tauri::generate_handler![
             // Plugins
             commands::plugins::list_installed_plugins,
@@ -72,6 +76,17 @@ pub fn run() {
             commands::security_db::list_audit_entries,
             commands::security_db::clear_audit_entries,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application")
+        .setup(|app| {
+            let state = app.state::<BoardServerState>();
+            state.start();
+            Ok(())
+        })
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|handle, event| {
+            if let tauri::RunEvent::Exit = event {
+                let state = handle.state::<BoardServerState>();
+                state.stop();
+            }
+        });
 }

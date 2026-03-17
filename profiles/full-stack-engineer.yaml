@@ -16,9 +16,11 @@ author:
 components:
   - name: review
     version: "0.2.0"
-  - name: ship-pr
+  - name: open-pr
     version: "0.1.0"
-  - name: pull-request-sweep
+  - name: merge-pr
+    version: "0.1.0"
+  - name: pr-sweep
     version: "0.1.0"
   - name: explain
     version: "0.2.0"
