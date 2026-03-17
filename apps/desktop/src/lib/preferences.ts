@@ -80,6 +80,7 @@ export function getHiddenSections(): Set<string> {
 
 export function setHiddenSections(sections: Set<string>) {
   localStorage.setItem(KEY_HIDDEN_SECTIONS, JSON.stringify([...sections]));
+  window.dispatchEvent(new CustomEvent("harness-kit-prefs-changed"));
 }
 
 // ── Observatory Refresh ──────────────────────────────────────
@@ -106,6 +107,7 @@ export function getMarkdownFont(): MarkdownFont {
 
 export function setMarkdownFont(font: MarkdownFont) {
   localStorage.setItem(KEY_MARKDOWN_FONT, font);
+  window.dispatchEvent(new CustomEvent("harness-kit-prefs-changed"));
 }
 
 // ── Sidebar Width ────────────────────────────────────────────

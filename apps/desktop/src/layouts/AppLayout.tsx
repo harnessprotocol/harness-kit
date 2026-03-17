@@ -1,11 +1,11 @@
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { open } from "@tauri-apps/plugin-shell";
 import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
 import { useArrowNavigation } from "../hooks/useArrowNavigation";
 import { useSidebarResize } from "../hooks/useSidebarResize";
 import { initTheme } from "../lib/theme";
-import { initPreferences } from "../lib/preferences";
+import { initPreferences, getHiddenSections } from "../lib/preferences";
 
 type NavSection = {
   id: string;
@@ -102,10 +102,22 @@ export default function AppLayout() {
   useGlobalShortcuts({ navigate });
   const { onMouseDown: onResizeMouseDown } = useSidebarResize();
 
+  const [hiddenSections, setHiddenSectionsState] = useState(getHiddenSections);
+
   useEffect(() => {
     initTheme();
     initPreferences();
   }, []);
+
+  useEffect(() => {
+    function onPrefsChanged() {
+      setHiddenSectionsState(getHiddenSections());
+    }
+    window.addEventListener("harness-kit-prefs-changed", onPrefsChanged);
+    return () => window.removeEventListener("harness-kit-prefs-changed", onPrefsChanged);
+  }, []);
+
+  const visibleSections = NAV_SECTIONS.filter((s) => !hiddenSections.has(s.id));
 
   const prefsActive = location.pathname === "/preferences";
 
@@ -146,7 +158,7 @@ export default function AppLayout() {
 
         {/* Nav */}
         <nav className="flex-1 py-2 px-2">
-          {NAV_SECTIONS.map((section) => {
+          {visibleSections.map((section) => {
             const active = isActive(section);
             return (
               <div key={section.id} className="mb-0.5">
