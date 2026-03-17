@@ -118,6 +118,10 @@ def scan_synthesis_files() -> list[dict]:
         tags = fm.get("tags", [])
         if isinstance(tags, str):
             tags = [t.strip() for t in tags.split(",")]
+        source_type = fm.get("source_type", "")
+        last_checked = fm.get("last_checked", "")
+        if last_checked:
+            last_checked = str(last_checked)
         synthesis_path = get_relative_synthesis_path(md_file)
 
         rows.append({
@@ -126,6 +130,8 @@ def scan_synthesis_files() -> list[dict]:
             "date": date_str,
             "source": source,
             "tags": tags,
+            "source_type": source_type,
+            "last_checked": last_checked,
             "synthesis": synthesis_path,
             "filepath": md_file,
         })
@@ -141,8 +147,8 @@ def _escape_pipes(s: str) -> str:
 def build_index(rows: list[dict]) -> str:
     lines = [
         "# Research Index\n",
-        "| Name | Category | Date | Source | Tags | Synthesis |",
-        "|------|----------|------|--------|------|-----------|",
+        "| Name | Category | Date | Source | Tags | Type | Last Checked | Synthesis |",
+        "|------|----------|------|--------|------|------|--------------|-----------|",
     ]
     for row in rows:
         name = row["name"]
@@ -150,8 +156,10 @@ def build_index(rows: list[dict]) -> str:
         d = row["date"]
         src = row["source"]
         tags_str = format_tags(row["tags"])
+        stype = row.get("source_type", "")
+        checked = row.get("last_checked", "")
         synth = row["synthesis"]
-        lines.append(f"| {_escape_pipes(name)} | {cat} | {d} | {_escape_pipes(src)} | {tags_str} | {synth} |")
+        lines.append(f"| {_escape_pipes(name)} | {cat} | {d} | {_escape_pipes(src)} | {tags_str} | {stype} | {checked} | {synth} |")
     return "\n".join(lines) + "\n"
 
 

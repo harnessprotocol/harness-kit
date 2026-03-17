@@ -252,11 +252,13 @@ Extract KEY CONCEPTS. Don't invent content.
    tags: [tag1, tag2, tag3]
    date: YYYY-MM-DD
    source: https://original-url
+   source_type: docs
    ---
    ```
    - Tags: lowercase, hyphenated for multi-word (`vector-search`, `open-source`)
    - Target 3–8 tags per entry
    - Reuse existing tags before creating new ones — check INDEX.md tags column for vocabulary
+   - `source_type`: auto-classify from URL — `github.com` → `repo`; contains "docs" or `.io`/`.dev`/`.ai` → `docs`; `arxiv` or `.pdf` → `paper`; `blog`/`medium`/`substack` → `blog`; `youtube`/`youtu.be` → `video`; no URL → `internal`; else → `blog`
 
 **Tag Taxonomy (reuse aggressively):**
 
@@ -322,13 +324,14 @@ Write the synthesis file. It MUST start with a YAML frontmatter block:
 tags: [tag1, tag2, tag3]
 date: YYYY-MM-DD
 source: https://original-url
+source_type: docs
 ---
 
 # Title
 ...
 ```
 
-Tags were determined in Step 4. `date` is the extraction date. `source` is the original URL or path.
+Tags were determined in Step 4. `date` is the extraction date. `source` is the original URL or path. `source_type` was classified in Step 4.
 
 When **updating** an existing synthesis, ensure its frontmatter is present and tags are current — add any new tags the new source warrants.
 
@@ -346,7 +349,7 @@ Expected output: `Rebuilt INDEX.md: N entries`
 
 If the script fails, fall back to manually appending or updating a row in `research/INDEX.md`:
 ```
-| [Name] | [category] | YYYY-MM-DD | [URL] | `tag1`, `tag2` | `research/[category]/[name].md` |
+| [Name] | [category] | YYYY-MM-DD | [URL] | `tag1`, `tag2` | [source_type] | [last_checked] | `research/[category]/[name].md` |
 ```
 
 **Do NOT skip this step.** It is the final required action of every research protocol run.
