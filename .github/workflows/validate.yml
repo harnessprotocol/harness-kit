@@ -223,6 +223,9 @@ jobs:
       - name: Run desktop tests
         run: pnpm --filter harness-kit-desktop test
 
+      - name: Build board-server (mirrors tauri beforeBuildCommand)
+        run: pnpm --filter board-server build
+
       - name: Build desktop frontend
         run: pnpm --filter harness-kit-desktop exec vite build
 
