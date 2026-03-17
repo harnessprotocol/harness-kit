@@ -5,7 +5,8 @@ A Claude Code plugin for systematically processing and indexing research materia
 ## Components
 
 - **`/research` skill** — the main workflow. Point it at a source, it extracts, preserves, and synthesizes.
-- **`rebuild-research-index.py`** — regenerates `research/INDEX.md` from synthesis file frontmatter. The skill runs this automatically after each session. You can also run it manually if files get out of sync.
+- **`/refresh-research` skill** — re-fetch refreshable sources (repos, docs), detect changes, and surgically update syntheses. Supports staleness thresholds, backfill, and audit-only dry runs.
+- **`rebuild-research-index.py`** — regenerates `research/INDEX.md` from synthesis file frontmatter. Both skills run this automatically. You can also run it manually if files get out of sync.
 
 ## Requirements
 
@@ -89,6 +90,18 @@ Scans `resources/` and `research/` to find raw files without syntheses, synthese
 python3 "${CLAUDE_PLUGIN_ROOT}/scripts/rebuild-research-index.py"
 ```
 
+### Keep sources fresh
+
+```
+/refresh-research --audit                      # See staleness report (no modifications)
+/refresh-research --backfill                   # One-time: classify sources by type
+/refresh-research --stale 30                   # Refresh entries not checked in 30+ days
+/refresh-research research/agent-memory/cognee.md  # Refresh a specific file
+/refresh-research agent-memory                 # Refresh all in a category
+```
+
+See the [refresh-research README](../refresh-research/README.md) for full details.
+
 ## Output Structure
 
 ```
@@ -97,7 +110,7 @@ your-project/
 │   ├── temporal-docs-2026-03-06.md        # Raw extracted content, preserved verbatim
 │   └── temporal-video-2026-03-06.md       # Raw content from YouTube video
 └── research/
-    ├── INDEX.md                           # Master index — all synthesized research
+    ├── INDEX.md                           # Master index — includes Type and Last Checked columns
     ├── ai-routing/
     │   └── temporal.md                    # One synthesis per topic, updated as sources accumulate
     ├── agent-memory/
@@ -134,6 +147,8 @@ Each synthesis is structured based on content type:
 - **Reference/Directory** (curated lists, tool indexes): what it is, curated contents, directly relevant items, references
 
 The "Bridge to Practical Application" section in non-technical syntheses makes connections explicit — how does this psychological insight or philosophical framework connect to what you're building? If no connection exists, that's stated rather than fabricated.
+
+**Synthesis frontmatter** includes `source_type` (auto-classified: `repo`, `docs`, `blog`, `paper`, `internal`, `video`) to support the `/refresh-research` workflow. After a refresh, `last_checked` and `refresh_status` fields are also present.
 
 **Length targets:** 2-5x the original source, not 200x. The goal is extracted insight, not padded summaries.
 
