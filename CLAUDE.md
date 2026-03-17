@@ -96,7 +96,7 @@ Add an entry to `.claude-plugin/marketplace.json` under `plugins`:
 ```json
 {
   "name": "<plugin-name>",
-  "source": "./<plugin-name>",
+  "source": "./plugins/<plugin-name>",
   "description": "One sentence describing what this plugin does.",
   "version": "0.1.0",
   "author": { "name": "your-github-handle" },
@@ -104,7 +104,7 @@ Add an entry to `.claude-plugin/marketplace.json` under `plugins`:
 }
 ```
 
-Note: `source` is relative to `pluginRoot` (`./plugins`), so `"./research"` resolves to `./plugins/research`.
+Note: `source` is relative to the **repo root**, not `pluginRoot`. Always use the full path from root (e.g., `"./plugins/research"`).
 
 ### 4. Add a section to README.md
 
