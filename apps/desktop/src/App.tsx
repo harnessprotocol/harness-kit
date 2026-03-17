@@ -21,13 +21,18 @@ import AuditLogPage from "./pages/security/AuditLogPage";
 import BoardProjectsPage from "./pages/board/BoardProjectsPage";
 import BoardKanbanPage from "./pages/board/BoardKanbanPage";
 
+function DefaultRedirect() {
+  const defaultSection = getDefaultSection();
+  return <Navigate to={defaultSection} replace />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<AppLayout />}>
           {/* Harness Manager */}
-          <Route index element={<Navigate to={getDefaultSection()} replace />} />
+          <Route index element={<DefaultRedirect />} />
           <Route path="harness/plugins" element={<PluginsPage />} />
           <Route path="harness/hooks" element={<HooksPage />} />
           <Route path="harness/claude-md" element={<ClaudeMdPage />} />

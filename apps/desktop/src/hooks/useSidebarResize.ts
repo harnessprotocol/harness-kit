@@ -1,12 +1,11 @@
 // apps/desktop/src/hooks/useSidebarResize.ts
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import {
-  getSidebarWidth, setSidebarWidth,
+  setSidebarWidth,
   SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX,
 } from "../lib/preferences";
 
 export function useSidebarResize() {
-  const [width, setWidth] = useState(getSidebarWidth);
   const dragging = useRef(false);
 
   const onMouseDown = useCallback((e: React.MouseEvent) => {
@@ -20,7 +19,6 @@ export function useSidebarResize() {
     function onMouseMove(e: MouseEvent) {
       if (!dragging.current) return;
       const clamped = Math.min(SIDEBAR_WIDTH_MAX, Math.max(SIDEBAR_WIDTH_MIN, e.clientX));
-      setWidth(clamped);
       document.documentElement.style.setProperty("--sidebar-width", `${clamped}px`);
     }
 
@@ -44,5 +42,5 @@ export function useSidebarResize() {
     };
   }, []);
 
-  return { width, onMouseDown };
+  return { onMouseDown };
 }

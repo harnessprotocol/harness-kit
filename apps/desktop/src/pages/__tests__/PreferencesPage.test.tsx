@@ -9,6 +9,10 @@ vi.mock("@tauri-apps/plugin-shell", () => ({
   open: vi.fn(),
 }));
 
+vi.mock("@tauri-apps/api/app", () => ({
+  getVersion: vi.fn(() => Promise.resolve("1.2.3")),
+}));
+
 vi.mock("../../lib/theme", () => ({
   getTheme: vi.fn(() => "system"),
   setTheme: vi.fn(),
@@ -82,9 +86,9 @@ describe("PreferencesPage", () => {
     expect(screen.getByText("13px")).toBeInTheDocument();
   });
 
-  it("renders version text containing v0.1.0", () => {
+  it("renders dynamic version from Tauri", async () => {
     renderPage();
-    expect(screen.getByText("v0.1.0")).toBeInTheDocument();
+    expect(await screen.findByText("v1.2.3")).toBeInTheDocument();
   });
 
   it('renders "Release notes" and "GitHub" links', () => {

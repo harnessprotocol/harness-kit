@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-shell";
+import { getVersion } from "@tauri-apps/api/app";
 import Tooltip from "../components/Tooltip";
 import { NAV_SECTIONS } from "../layouts/AppLayout";
 import {
@@ -109,6 +110,12 @@ function Segmented<T extends string | number>({
 // ── Main component ──────────────────────────────────────────────
 
 export default function PreferencesPage() {
+  const [appVersion, setAppVersion] = useState("0.0.0");
+
+  useEffect(() => {
+    getVersion().then(setAppVersion).catch(() => {});
+  }, []);
+
   const [theme, setThemeState] = useState(getTheme);
   const [accent, setAccentState] = useState(getAccent);
   const [fontSize, setFontSizeState] = useState(getFontSize);
@@ -140,7 +147,7 @@ export default function PreferencesPage() {
     setDensityState(d);
   }
 
-  function handleSetDefaultSection(path: string) {
+  function handleDefaultSection(path: string) {
     setDefaultSection(path);
     setDefaultSectionState(path);
   }
@@ -150,10 +157,15 @@ export default function PreferencesPage() {
     if (next.has(sectionId)) {
       next.delete(sectionId);
     } else {
-      // Prevent hiding the last visible section
-      const visibleCount = NAV_SECTIONS.filter((s) => !next.has(s.id)).length;
+      const visibleCount = NAV_SECTIONS.length - next.size;
       if (visibleCount <= 1) return;
       next.add(sectionId);
+      // Reset default section if it was just hidden
+      const hiddenSection = NAV_SECTIONS.find(s => s.id === sectionId);
+      if (hiddenSection && defaultSection === hiddenSection.path) {
+        const firstVisible = NAV_SECTIONS.find(s => !next.has(s.id));
+        if (firstVisible) handleDefaultSection(firstVisible.path);
+      }
     }
     setHiddenSections(next);
     setHiddenSectionsState(next);
@@ -309,10 +321,10 @@ export default function PreferencesPage() {
           <select
             className="form-select"
             value={defaultSection}
-            onChange={(e) => handleSetDefaultSection(e.target.value)}
+            onChange={(e) => handleDefaultSection(e.target.value)}
             style={{ width: "auto", minWidth: "140px" }}
           >
-            {NAV_SECTIONS.map((s) => (
+            {NAV_SECTIONS.filter(s => !hiddenSections.has(s.id)).map((s) => (
               <option key={s.id} value={s.path}>
                 {s.label}
               </option>
@@ -400,7 +412,7 @@ export default function PreferencesPage() {
             harness-kit
           </span>
           <span style={{ fontSize: "12px", color: "var(--fg-muted)", marginLeft: "6px" }}>
-            v0.1.0
+            v{appVersion}
           </span>
         </div>
 
