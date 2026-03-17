@@ -1,0 +1,8 @@
+{
+  "name": "frontend-design",
+  "description": "Production-grade frontend design skill that avoids AI slop — specific rules for typography, color (OKLCH), layout, motion, interaction, and UX writing.",
+  "version": "0.1.0",
+  "category": "design",
+  "tags": ["design", "frontend", "css", "typography", "color", "ui", "ux"],
+  "developed_with": "claude-sonnet-4-6"
+}

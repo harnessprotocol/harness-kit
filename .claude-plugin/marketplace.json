@@ -13,7 +13,8 @@
     { "slug": "data-engineering", "name": "Data Engineering", "display_order": 3 },
     { "slug": "documentation", "name": "Documentation", "display_order": 4 },
     { "slug": "devops", "name": "DevOps & Shipping", "display_order": 5 },
-    { "slug": "productivity", "name": "Productivity", "display_order": 6 }
+    { "slug": "productivity", "name": "Productivity", "display_order": 6 },
+    { "slug": "design", "name": "Design", "display_order": 7 }
   ],
   "plugins": [
     {
@@ -155,6 +156,16 @@
       "license": "Apache-2.0",
       "category": "productivity",
       "tags": ["kanban", "tasks", "project-management", "mcp", "board"]
+    },
+    {
+      "name": "frontend-design",
+      "source": "./plugins/frontend-design",
+      "description": "Production-grade frontend design skill that avoids AI slop — specific rules for typography, color (OKLCH), layout, motion, interaction, and UX writing.",
+      "version": "0.1.0",
+      "author": { "name": "harnessprotocol" },
+      "license": "Apache-2.0",
+      "category": "design",
+      "tags": ["design", "frontend", "css", "typography", "color", "ui", "ux"]
     }
   ]
 }
