@@ -9,9 +9,13 @@
 - **Desktop: Docs link** — sidebar footer now includes a persistent link to harnesskit.ai/docs (opens in external browser).
 - **Desktop: Draggable sidebar resize** — sidebar width is adjustable by dragging and persists across sessions (160–320px range).
 - **Desktop: Muted accent colors** — 5 new accent presets: Slate, Sage, Stone, Mauve, Steel.
+- **Desktop: Custom title bar** — macOS overlay title bar with collapsible sidebar toggle and back/forward navigation. Traffic lights overlay the web content; the entire bar is a drag region. Keyboard shortcuts: `Cmd+\` toggles the sidebar, `Cmd+[` navigates back, `Cmd+]` navigates forward. Sidebar collapsed state persists across sessions.
+- **Desktop: Comparator two-column layout** — setup form now fills available width in a responsive two-column grid (harness selector + directory on the left, prompt on the right). Maximum concurrent harnesses raised from 3 to 4.
 
 ### Changed
 
+- **Desktop: Observatory typography** — stat and chart card headers use `font-variant-caps: all-small-caps` instead of `text-transform: uppercase`, matching the sidebar and other labels. Area chart fill gradients are subtler (top stop halved); grid lines use `--separator` instead of `--border-base` so data pops more.
+- **Desktop: Permissions layout** — Tools, Paths, and Network sections merged into a single unified card with inset section dividers. Allow/Deny/Ask tool rows are stacked vertically with color-coded labels. Preset cards display a colored left border (green for Strict, blue for Standard, amber for Permissive) for at-a-glance identity.
 - Renamed `stage` plugin to `capture-session` for clarity — the slash command is now `/capture-session`. The staging file (`session-staging.md`) keeps its name.
 
 ---

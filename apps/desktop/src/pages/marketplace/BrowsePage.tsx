@@ -404,10 +404,10 @@ export default function BrowsePage() {
                 )}
               </div>
               <div style={{ flexShrink: 0, marginLeft: "12px", textAlign: "right" }}>
-                <div style={{ fontSize: "11px", fontFamily: "ui-monospace, monospace", color: "var(--fg-subtle)" }}>
+                <div style={{ fontSize: "11px", fontFamily: "ui-monospace, monospace", color: "var(--fg-subtle)", fontVariantNumeric: "tabular-nums" }}>
                   v{plugin.version}
                 </div>
-                <div style={{ fontSize: "10px", color: "var(--fg-subtle)", marginTop: "1px" }}>
+                <div style={{ fontSize: "10px", color: "var(--fg-subtle)", marginTop: "1px", fontVariantNumeric: "tabular-nums" }}>
                   {plugin.install_count.toLocaleString()} installs
                 </div>
               </div>

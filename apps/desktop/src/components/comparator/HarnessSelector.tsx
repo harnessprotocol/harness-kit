@@ -32,7 +32,7 @@ export default function HarnessSelector({
         const isSelected = selectedIds.has(h.id);
         const sel = selected.find((s) => s.harnessId === h.id);
         const models = MODEL_OPTIONS[h.id] || [];
-        const atMax = selected.length >= 3 && !isSelected;
+        const atMax = selected.length >= 4 && !isSelected;
 
         const cardClass = [
           "harness-card",

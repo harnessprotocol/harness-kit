@@ -81,7 +81,7 @@ export default function ComparatorSetupPage() {
       setSelected((prev) => {
         const exists = prev.find((s) => s.harnessId === harnessId);
         if (exists) return prev.filter((s) => s.harnessId !== harnessId);
-        if (prev.length >= 3) return prev;
+        if (prev.length >= 4) return prev;
         return [...prev, { harnessId, model: MODEL_DEFAULTS[harnessId] || "" }];
       });
     },
@@ -112,7 +112,7 @@ export default function ComparatorSetupPage() {
   const canRun = prompt.trim().length > 0 && selected.length > 0;
 
   return (
-    <div style={{ padding: "20px 24px", maxWidth: "720px" }}>
+    <div style={{ padding: "20px 24px" }}>
       {/* Header */}
       <h1 className="text-title" style={{ margin: "0 0 4px" }}>
         New Comparison
@@ -137,119 +137,128 @@ export default function ComparatorSetupPage() {
         </div>
       )}
 
-      {/* Harness selector */}
-      <div style={{ marginBottom: "24px" }}>
-        <label className="text-label" style={{ display: "block", marginBottom: "8px" }}>
-          Select Tools (1-3)
-        </label>
-        {loading && <p className="text-caption">Detecting available tools...</p>}
-        {error && <p style={{ color: "var(--danger)", fontSize: "12px" }}>{error}</p>}
-        {!loading && <HarnessSelector harnesses={harnesses} selected={selected} onToggle={handleToggle} onModelChange={handleModelChange} />}
-      </div>
+      {/* Two-column form grid */}
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(280px, 2fr) minmax(300px, 3fr)", gap: "32px", alignItems: "start" }}>
+        {/* Left: Harness selector + Working directory */}
+        <div>
+          {/* Harness selector */}
+          <div style={{ marginBottom: "24px" }}>
+            <label className="text-label" style={{ display: "block", marginBottom: "8px" }}>
+              Select Tools (1–4)
+            </label>
+            {loading && <p className="text-caption">Detecting available tools...</p>}
+            {error && <p style={{ color: "var(--danger)", fontSize: "12px" }}>{error}</p>}
+            {!loading && <HarnessSelector harnesses={harnesses} selected={selected} onToggle={handleToggle} onModelChange={handleModelChange} />}
+          </div>
 
-      {/* Working directory */}
-      <div style={{ marginBottom: "24px" }}>
-        <label className="text-label" style={{ display: "block", marginBottom: "8px" }}>
-          Working Directory
-        </label>
-        <input
-          type="text"
-          className="form-input"
-          value={workingDir}
-          onChange={(e) => setWorkingDir(e.target.value)}
-          placeholder="/path/to/project"
-        />
-        <p className="text-caption" style={{ marginTop: "4px" }}>
-          Optional. The directory each tool runs in.
-        </p>
+          {/* Working directory */}
+          <div style={{ marginBottom: "24px" }}>
+            <label className="text-label" style={{ display: "block", marginBottom: "8px" }}>
+              Working Directory
+            </label>
+            <input
+              type="text"
+              className="form-input"
+              value={workingDir}
+              onChange={(e) => setWorkingDir(e.target.value)}
+              placeholder="/path/to/project"
+            />
+            <p className="text-caption" style={{ marginTop: "4px" }}>
+              Optional. The directory each tool runs in.
+            </p>
 
-        {/* Git info */}
-        {gitChecking && (
-          <p className="text-caption" style={{ marginTop: "6px" }}>
-            Checking git status...
-          </p>
-        )}
-        {gitInfo && !gitChecking && (
-          <div style={{ marginTop: "8px" }}>
-            {gitInfo.isGitRepo ? (
-              <div
-                style={{
-                  padding: "8px 12px",
-                  borderRadius: "6px",
-                  background: "var(--bg-surface)",
-                  border: "1px solid var(--border-base)",
-                  fontSize: "11px",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
-                  <span style={{ color: "var(--success)", fontWeight: 600 }}>Git repo</span>
-                  {gitInfo.branch && (
-                    <span style={{ color: "var(--fg-muted)" }}>
-                      branch: <code style={{ fontFamily: "ui-monospace, monospace" }}>{gitInfo.branch}</code>
-                    </span>
-                  )}
-                  {gitInfo.currentCommit && (
-                    <span style={{ color: "var(--fg-subtle)", fontFamily: "ui-monospace, monospace" }}>
-                      {gitInfo.currentCommit.slice(0, 8)}
-                    </span>
-                  )}
-                </div>
-                <label
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "6px",
-                    cursor: "pointer",
-                    color: "var(--fg-muted)",
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={pinToCommit}
-                    onChange={(e) => setPinToCommit(e.target.checked)}
-                    style={{ accentColor: "var(--accent)" }}
-                  />
-                  Pin to current commit (each tool runs in an isolated worktree)
-                </label>
-              </div>
-            ) : (
-              <p style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>
-                Not a git repo — tools will share the working directory.
+            {/* Git info */}
+            {gitChecking && (
+              <p className="text-caption" style={{ marginTop: "6px" }}>
+                Checking git status...
               </p>
             )}
+            {gitInfo && !gitChecking && (
+              <div style={{ marginTop: "8px" }}>
+                {gitInfo.isGitRepo ? (
+                  <div
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: "6px",
+                      background: "var(--bg-surface)",
+                      border: "1px solid var(--border-base)",
+                      fontSize: "11px",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                      <span style={{ color: "var(--success)", fontWeight: 600 }}>Git repo</span>
+                      {gitInfo.branch && (
+                        <span style={{ color: "var(--fg-muted)" }}>
+                          branch: <code style={{ fontFamily: "ui-monospace, monospace" }}>{gitInfo.branch}</code>
+                        </span>
+                      )}
+                      {gitInfo.currentCommit && (
+                        <span style={{ color: "var(--fg-subtle)", fontFamily: "ui-monospace, monospace" }}>
+                          {gitInfo.currentCommit.slice(0, 8)}
+                        </span>
+                      )}
+                    </div>
+                    <label
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        cursor: "pointer",
+                        color: "var(--fg-muted)",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={pinToCommit}
+                        onChange={(e) => setPinToCommit(e.target.checked)}
+                        style={{ accentColor: "var(--accent)" }}
+                      />
+                      Pin to current commit (each tool runs in an isolated worktree)
+                    </label>
+                  </div>
+                ) : (
+                  <p style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>
+                    Not a git repo — tools will share the working directory.
+                  </p>
+                )}
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </div>
 
-      {/* Prompt */}
-      <div style={{ marginBottom: "24px" }}>
-        <label className="text-label" style={{ display: "block", marginBottom: "8px" }}>
-          Prompt
-        </label>
-        <textarea
-          className="form-textarea"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && e.metaKey && canRun) handleRun();
-          }}
-          placeholder="Enter the prompt to send to each tool..."
-          rows={6}
-        />
-        <p className="text-caption" style={{ marginTop: "4px" }}>
-          Cmd+Enter to run
-        </p>
-      </div>
+        {/* Right: Prompt + Run button */}
+        <div>
+          {/* Prompt */}
+          <div style={{ marginBottom: "24px" }}>
+            <label className="text-label" style={{ display: "block", marginBottom: "8px" }}>
+              Prompt
+            </label>
+            <textarea
+              className="form-textarea"
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && e.metaKey && canRun) handleRun();
+              }}
+              placeholder="Enter the prompt to send to each tool..."
+              rows={6}
+            />
+            <p className="text-caption" style={{ marginTop: "4px" }}>
+              Cmd+Enter to run
+            </p>
+          </div>
 
-      {/* Run button */}
-      <button
-        className="btn btn-primary"
-        onClick={handleRun}
-        disabled={!canRun}
-        style={{ fontSize: "13px", padding: "8px 24px", borderRadius: "8px" }}
-      >
-        Run Comparison
-      </button>
+          {/* Run button */}
+          <button
+            className="btn btn-primary"
+            onClick={handleRun}
+            disabled={!canRun}
+            style={{ fontSize: "13px", padding: "8px 24px", borderRadius: "8px" }}
+          >
+            Run Comparison
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
