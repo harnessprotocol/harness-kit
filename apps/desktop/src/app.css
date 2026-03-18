@@ -279,6 +279,15 @@ body {
   background: var(--hover-bg);
 }
 
+.row-list-item.selected {
+  background: var(--accent-light);
+  box-shadow: inset 2px 0 0 var(--accent-text);
+}
+
+.row-list-item.selected:hover {
+  background: var(--accent-light);
+}
+
 /* ── Markdown body ── */
 .markdown-body {
   font-size: 12px;

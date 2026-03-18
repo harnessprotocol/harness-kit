@@ -8,8 +8,7 @@ import HooksPage from "./pages/harness/HooksPage";
 import SettingsPage from "./pages/harness/SettingsPage";
 import FileViewerPage from "./pages/harness/FileViewerPage";
 import ClaudeMdPage from "./pages/harness/ClaudeMdPage";
-import BrowsePage from "./pages/marketplace/BrowsePage";
-import PluginDetailPage from "./pages/marketplace/PluginDetailPage";
+import MarketplacePage from "./pages/marketplace/MarketplacePage";
 import DashboardPage from "./pages/observatory/DashboardPage";
 import SessionsPage from "./pages/observatory/SessionsPage";
 import ComparatorSetupPage from "./pages/comparator/ComparatorSetupPage";
@@ -42,8 +41,7 @@ export default function App() {
           <Route path="harness/settings/:filename" element={<FileViewerPage />} />
 
           {/* Marketplace */}
-          <Route path="marketplace" element={<BrowsePage />} />
-          <Route path="marketplace/:slug" element={<PluginDetailPage />} />
+          <Route path="marketplace/:slug?" element={<MarketplacePage />} />
           <Route path="observatory" element={<DashboardPage />} />
           <Route path="observatory/sessions" element={<SessionsPage />} />
 
