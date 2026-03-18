@@ -1,6 +1,7 @@
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
 import { open } from "@tauri-apps/plugin-shell";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
 import { useArrowNavigation } from "../hooks/useArrowNavigation";
 import { useSidebarResize } from "../hooks/useSidebarResize";
@@ -137,6 +138,11 @@ export default function AppLayout() {
     return location.pathname.startsWith(`/${section.id}`);
   }
 
+  function handleTitlebarMouseDown(e: React.MouseEvent) {
+    if ((e.target as HTMLElement).closest("button")) return;
+    getCurrentWindow().startDragging();
+  }
+
   return (
     <div
       className="flex flex-col h-screen overflow-hidden"
@@ -145,15 +151,27 @@ export default function AppLayout() {
       {/* Title bar */}
       <div
         className="titlebar"
+        data-tauri-drag-region
+        onMouseDown={handleTitlebarMouseDown}
         style={{
           paddingLeft: "78px",
           gap: "4px",
-          background: "var(--bg-sidebar)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
           borderBottom: "1px solid var(--separator)",
+          position: "relative",
         }}
       >
+        {/* Frosted glass layer — kept separate from the drag region to avoid WebKit compositing interference */}
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "var(--bg-sidebar)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            pointerEvents: "none",
+          }}
+        />
         <button className="titlebar-btn" onClick={toggleSidebar} title="Toggle sidebar (⌘\)">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
             <rect x="1" y="1" width="14" height="14" rx="2" />

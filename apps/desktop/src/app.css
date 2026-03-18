@@ -600,6 +600,7 @@ body {
 }
 
 .titlebar-btn {
+  position: relative;
   width: 24px;
   height: 24px;
   display: flex;
