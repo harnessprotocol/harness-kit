@@ -186,6 +186,24 @@ export default function BrowsePage() {
     };
   }
 
+  function typeChipStyle(active: boolean) {
+    return {
+      fontSize: "10px",
+      fontWeight: active ? 500 : 400,
+      padding: "2px 7px",
+      borderRadius: "4px",
+      border: "1px solid var(--border-base)",
+      background: active ? "var(--accent-light)" : "transparent",
+      color: active ? "var(--accent-text)" : "var(--fg-subtle)",
+      cursor: "pointer",
+      transition: "background 0.1s, color 0.1s",
+      whiteSpace: "nowrap" as const,
+      flexShrink: 0,
+      letterSpacing: "0.04em",
+      textTransform: "uppercase" as const,
+    };
+  }
+
   function sortTabStyle(active: boolean) {
     return {
       fontSize: "11px",
@@ -299,14 +317,14 @@ export default function BrowsePage() {
         </div>
       )}
 
-      {/* Type pills */}
-      <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "14px" }}>
+      {/* Type chips */}
+      <div style={{ display: "flex", gap: "5px", flexWrap: "wrap", marginBottom: "14px" }}>
         {COMPONENT_TYPES.map((t) => (
           <button
             key={t}
             onClick={() => toggleType(t)}
             aria-pressed={selectedType === t}
-            style={pillStyle(selectedType === t)}
+            style={typeChipStyle(selectedType === t)}
           >
             {t}
           </button>

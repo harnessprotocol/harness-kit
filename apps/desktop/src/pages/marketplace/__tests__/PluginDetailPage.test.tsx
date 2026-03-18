@@ -275,7 +275,7 @@ describe("PluginDetailPage — configured", () => {
       mockSupabase = makeMockClient();
     });
 
-    it("renders SKILL.md section heading", async () => {
+    it("renders SKILL.md section heading for single-skill package", async () => {
       renderDetail();
       expect(await screen.findByText("Skill Definition")).toBeInTheDocument();
     });
@@ -303,6 +303,27 @@ describe("PluginDetailPage — configured", () => {
       });
       renderDetail();
       await screen.findByText("Research");
+      expect(screen.queryByText("Skill Definition")).not.toBeInTheDocument();
+    });
+
+    it("renders TOC and named sections for multi-skill packages", async () => {
+      const multiSkillMd = [
+        "---\nname: harness-compile\ndescription: Compile stuff.\n---\n\n# Harness Compile\n\nCompile content.",
+        "---\nname: harness-export\ndescription: Export stuff.\n---\n\n# Harness Export\n\nExport content.",
+      ].join("\n\n---\n\n");
+
+      mockSupabase = makeMockClient({
+        component: { ...mockComponent, skill_md: multiSkillMd },
+      });
+      renderDetail();
+      await screen.findByText("Research");
+
+      // TOC Contents label and skill links
+      expect(screen.getByText("Contents")).toBeInTheDocument();
+      expect(screen.getAllByText("Harness Compile").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Harness Export").length).toBeGreaterThan(0);
+
+      // Single-skill heading should not appear
       expect(screen.queryByText("Skill Definition")).not.toBeInTheDocument();
     });
 

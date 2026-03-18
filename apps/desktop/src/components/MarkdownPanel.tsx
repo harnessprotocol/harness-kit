@@ -101,6 +101,7 @@ export default function MarkdownPanel({
           borderRadius: "8px",
           padding: "14px 16px",
           overflow: fill ? "auto" : undefined,
+          overflowX: "auto",
           minHeight: 0,
         }}
       >
