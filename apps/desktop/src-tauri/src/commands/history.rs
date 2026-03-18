@@ -20,6 +20,10 @@ fn history_dir() -> Result<PathBuf, String> {
 }
 
 fn history_file_path(plugin_name: &str, file_path: &str) -> Result<PathBuf, String> {
+    // Validate plugin_name contains no path traversal characters
+    if plugin_name.contains('/') || plugin_name.contains('\\') || plugin_name.contains("..") {
+        return Err("Invalid plugin name".to_string());
+    }
     let dir = history_dir()?.join(plugin_name);
     // Encode the file path to a safe filename
     let encoded = file_path.replace(['/', '\\'], "__");

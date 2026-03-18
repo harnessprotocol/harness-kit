@@ -61,7 +61,10 @@ fn validate_plugin_write_path(file_path: &str) -> Result<PathBuf, String> {
         return Err("Access denied: path outside plugins directory".to_string());
     }
 
-    Ok(target.to_path_buf())
+    // Return canonical path to prevent any remaining traversal
+    let file_name = target.file_name()
+        .ok_or("Invalid file path: no file name")?;
+    Ok(canonical_parent.join(file_name))
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -295,7 +298,9 @@ pub fn import_plugin_from_zip(zip_path: String) -> Result<super::plugins::Instal
 
 #[tauri::command]
 pub fn export_plugin_as_zip(plugin_path: String, save_path: String) -> Result<(), String> {
-    let source = Path::new(&plugin_path);
+    // Validate plugin_path is within the plugins directory
+    let validated = validate_plugin_path(&plugin_path)?;
+    let source = validated.as_path();
     if !source.is_dir() {
         return Err(format!("Not a directory: {}", plugin_path));
     }
@@ -347,7 +352,9 @@ pub fn export_plugin_as_zip(plugin_path: String, save_path: String) -> Result<()
 
 #[tauri::command]
 pub fn export_plugin_to_folder(plugin_path: String, dest: String) -> Result<(), String> {
-    let source = Path::new(&plugin_path);
+    // Validate plugin_path is within the plugins directory
+    let validated = validate_plugin_path(&plugin_path)?;
+    let source = validated.as_path();
     if !source.is_dir() {
         return Err(format!("Not a directory: {}", plugin_path));
     }
@@ -451,7 +458,8 @@ fn update_installed_plugins_json(name: &str, version: &str, install_path: &str) 
 
     let mut file = fs::File::create(&path)
         .map_err(|e| format!("Failed to write installed_plugins.json: {}", e))?;
-    file.write_all(serde_json::to_string_pretty(&data).unwrap().as_bytes())
+    file.write_all(serde_json::to_string_pretty(&data)
+        .map_err(|e| format!("Failed to serialize plugins data: {}", e))?.as_bytes())
         .map_err(|e| format!("Failed to write: {}", e))?;
 
     Ok(())
