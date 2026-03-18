@@ -75,6 +75,7 @@ export function useBoardServerReady(): BoardServerReadyState {
     pollCount.current = 0;
     setTimedOut(false);
     setReady(false);
+    setStarting(false);
     setError(null);
   }, []);
 
