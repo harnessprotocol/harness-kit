@@ -494,11 +494,13 @@ fn update_installed_plugins_json(name: &str, version: &str, install_path: &str) 
             .map_err(|e| format!("Failed to create plugins directory: {}", e))?;
     }
 
-    let mut file = fs::File::create(&path)
+    let serialized = serde_json::to_string_pretty(&data)
+        .map_err(|e| format!("Failed to serialize plugins data: {}", e))?;
+    let tmp_path = path.with_extension("json.tmp");
+    fs::write(&tmp_path, &serialized)
         .map_err(|e| format!("Failed to write installed_plugins.json: {}", e))?;
-    file.write_all(serde_json::to_string_pretty(&data)
-        .map_err(|e| format!("Failed to serialize plugins data: {}", e))?.as_bytes())
-        .map_err(|e| format!("Failed to write: {}", e))?;
+    fs::rename(&tmp_path, &path)
+        .map_err(|e| format!("Failed to finalize installed_plugins.json: {}", e))?;
 
     Ok(())
 }

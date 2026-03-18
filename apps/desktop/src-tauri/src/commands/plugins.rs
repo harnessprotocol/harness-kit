@@ -251,10 +251,17 @@ pub fn uninstall_plugin(name: String) -> Result<(), String> {
         .ok_or_else(|| "Could not resolve home directory".to_string())?
         .join("plugins");
 
-    // Remove plugin directory
+    // Remove plugin directory — canonicalize before removal to block symlink traversal
     let plugin_dir = plugins_dir.join(&name);
     if plugin_dir.exists() {
-        std::fs::remove_dir_all(&plugin_dir)
+        let canonical = plugin_dir.canonicalize()
+            .map_err(|e| format!("Invalid plugin path: {}", e))?;
+        let canonical_plugins = plugins_dir.canonicalize()
+            .map_err(|e| format!("Invalid plugins dir: {}", e))?;
+        if !canonical.starts_with(&canonical_plugins) {
+            return Err("Access denied: plugin path outside plugins directory".to_string());
+        }
+        std::fs::remove_dir_all(&canonical)
             .map_err(|e| format!("Failed to remove plugin directory: {}", e))?;
     }
 
@@ -281,8 +288,12 @@ pub fn uninstall_plugin(name: String) -> Result<(), String> {
             }
         }
 
-        std::fs::write(&json_path, serde_json::to_string_pretty(&data).unwrap())
-            .map_err(|e| format!("Failed to update installed_plugins.json: {}", e))?;
+        let serialized = serde_json::to_string_pretty(&data).unwrap();
+        let tmp_path = json_path.with_extension("json.tmp");
+        std::fs::write(&tmp_path, &serialized)
+            .map_err(|e| format!("Failed to write installed_plugins.json: {}", e))?;
+        std::fs::rename(&tmp_path, &json_path)
+            .map_err(|e| format!("Failed to finalize installed_plugins.json: {}", e))?;
     }
 
     Ok(())
