@@ -139,8 +139,12 @@ export default function AppLayout() {
   }
 
   function handleTitlebarMouseDown(e: React.MouseEvent) {
-    if ((e.target as HTMLElement).closest("button")) return;
-    getCurrentWindow().startDragging();
+    // Guard covers all interactive elements — extend if non-button interactives are added to the titlebar
+    if ((e.target as HTMLElement).closest("button, a, input, [role='button']")) return;
+    e.preventDefault();
+    getCurrentWindow().startDragging().catch((err) => {
+      console.error("[titlebar] startDragging failed:", err);
+    });
   }
 
   return (
