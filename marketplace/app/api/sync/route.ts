@@ -151,8 +151,8 @@ export async function POST(request: NextRequest) {
   const results: Array<{ name: string; status: string }> = [];
 
   for (const plugin of manifest.plugins) {
-    // Resolve source path: "./research" -> "plugins/research"
-    const pluginDir = `plugins/${plugin.source.replace("./", "")}`;
+    // Resolve source path: "./plugins/research" -> "plugins/research"
+    const pluginDir = plugin.source.replace("./", "");
 
     // Try to fetch SKILL.md and README.md
     const skillMd = await fetchRepoFile(

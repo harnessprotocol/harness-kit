@@ -363,6 +363,19 @@ describe("BrowsePage — configured", () => {
       expect(screen.getByText("Data Lineage")).toBeInTheDocument();
     });
 
+    it("filters to plugin-type components when plugin pill is clicked", async () => {
+      renderBrowse();
+      await screen.findByText("Research");
+
+      fireEvent.click(screen.getByRole("button", { name: "plugin" }));
+
+      await waitFor(() => {
+        expect(screen.queryByText("Explain")).not.toBeInTheDocument();
+        expect(screen.queryByText("Data Lineage")).not.toBeInTheDocument();
+      });
+      expect(screen.getByText("Research")).toBeInTheDocument();
+    });
+
     it("clears type filter on second click", async () => {
       renderBrowse();
       await screen.findByText("Research");
