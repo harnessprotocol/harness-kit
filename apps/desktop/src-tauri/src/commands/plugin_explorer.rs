@@ -94,6 +94,14 @@ fn build_tree(dir: &Path, depth: usize) -> Result<Vec<FileTreeNode>, String> {
             continue;
         }
 
+        // Skip symlinks to prevent traversing outside the plugin boundary
+        if path.symlink_metadata()
+            .map(|m| m.file_type().is_symlink())
+            .unwrap_or(false)
+        {
+            continue;
+        }
+
         if path.is_dir() {
             let children = build_tree(&path, depth + 1)?;
             dirs.push(FileTreeNode {
@@ -210,6 +218,15 @@ pub fn import_plugin_from_path(source_path: String) -> Result<super::plugins::In
     let manifest: Manifest = serde_json::from_str(&manifest_contents)
         .map_err(|e| format!("Failed to parse plugin manifest: {}", e))?;
 
+    // Validate manifest.name to prevent path traversal
+    if manifest.name.is_empty()
+        || manifest.name.contains('/')
+        || manifest.name.contains('\\')
+        || manifest.name.contains("..")
+    {
+        return Err("Invalid plugin name: must be a simple directory name".to_string());
+    }
+
     let plugins_dir = dirs::home_dir()
         .ok_or("Could not resolve home directory")?
         .join(".claude")
@@ -257,6 +274,16 @@ pub fn import_plugin_from_zip(zip_path: String) -> Result<super::plugins::Instal
     fs::create_dir_all(&temp_dir)
         .map_err(|e| format!("Failed to create temp directory: {}", e))?;
 
+    const MAX_EXTRACTED_BYTES: u64 = 100 * 1024 * 1024; // 100MB
+    const MAX_ENTRIES: usize = 10_000;
+
+    if archive.len() > MAX_ENTRIES {
+        let _ = fs::remove_dir_all(&temp_dir);
+        return Err(format!("Zip archive has too many entries ({})", archive.len()));
+    }
+
+    let mut total_extracted: u64 = 0;
+
     for i in 0..archive.len() {
         let mut file = archive.by_index(i)
             .map_err(|e| format!("Failed to read zip entry: {}", e))?;
@@ -279,8 +306,13 @@ pub fn import_plugin_from_zip(zip_path: String) -> Result<super::plugins::Instal
             }
             let mut outfile = fs::File::create(&out_path)
                 .map_err(|e| format!("Failed to create file: {}", e))?;
-            std::io::copy(&mut file, &mut outfile)
+            let bytes_written = std::io::copy(&mut file, &mut outfile)
                 .map_err(|e| format!("Failed to extract file: {}", e))?;
+            total_extracted += bytes_written;
+            if total_extracted > MAX_EXTRACTED_BYTES {
+                let _ = fs::remove_dir_all(&temp_dir);
+                return Err("Zip archive too large when extracted (>100MB limit)".to_string());
+            }
         }
     }
 
@@ -384,6 +416,12 @@ fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), String> {
     }) {
         let entry = entry.map_err(|e| format!("Walk error: {}", e))?;
         let path = entry.path();
+
+        // Skip symlinks to prevent pulling external content into the plugin directory
+        if entry.path_is_symlink() {
+            continue;
+        }
+
         let relative = path
             .strip_prefix(src)
             .map_err(|e| format!("Strip prefix error: {}", e))?;
