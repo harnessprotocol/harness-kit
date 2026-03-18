@@ -39,6 +39,8 @@ pub fn run() {
             commands::hooks::read_hooks,
             // Claude.md
             commands::claude_md::read_claude_md,
+            // Harness File
+            commands::harness_file::read_harness_file,
             // Settings
             commands::settings::list_claude_dir,
             // Observatory

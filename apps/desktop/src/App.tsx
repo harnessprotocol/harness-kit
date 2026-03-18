@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AppLayout from "./layouts/AppLayout";
 import PreferencesPage from "./pages/PreferencesPage";
 import { getDefaultSection } from "./lib/preferences";
+import HarnessFilePage from "./pages/harness/HarnessFilePage";
 import PluginsPage from "./pages/harness/PluginsPage";
 import HooksPage from "./pages/harness/HooksPage";
 import SettingsPage from "./pages/harness/SettingsPage";
@@ -33,6 +34,7 @@ export default function App() {
         <Route path="/" element={<AppLayout />}>
           {/* Harness Manager */}
           <Route index element={<DefaultRedirect />} />
+          <Route path="harness/file" element={<HarnessFilePage />} />
           <Route path="harness/plugins" element={<PluginsPage />} />
           <Route path="harness/hooks" element={<HooksPage />} />
           <Route path="harness/claude-md" element={<ClaudeMdPage />} />

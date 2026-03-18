@@ -88,6 +88,18 @@ export async function readClaudeMd(path: string): Promise<string> {
   return invoke<string>("read_claude_md", { path });
 }
 
+// ── Harness File commands ─────────────────────────────────────
+
+export interface HarnessFileResult {
+  found: boolean;
+  content: string | null;
+  path: string | null;
+}
+
+export async function readHarnessFile(): Promise<HarnessFileResult> {
+  return invoke<HarnessFileResult>("read_harness_file");
+}
+
 // ── Settings / directory commands ────────────────────────────
 
 export async function listClaudeDir(): Promise<string[]> {

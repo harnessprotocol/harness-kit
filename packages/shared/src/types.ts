@@ -2,6 +2,7 @@
 
 export type ComponentType =
   | "skill"
+  | "plugin"
   | "agent"
   | "hook"
   | "script"

@@ -6,6 +6,31 @@ import type { Component } from "@harness-kit/shared";
 
 type RelatedComponent = Pick<Component, "id" | "slug" | "name" | "install_count">;
 
+interface SkillSection {
+  id: string;
+  name: string;
+  content: string;
+}
+
+function parseSkillSections(skillMd: string): SkillSection[] {
+  // Split only where the separator is followed by frontmatter (---\n), not a markdown hr
+  const sections = skillMd.split(/\n\n---\n\n(?=---\n)/);
+  return sections.map((content, i) => {
+    let name = `Skill ${i + 1}`;
+    const fmMatch = content.match(/^---\n([\s\S]*?)\n---/);
+    if (fmMatch) {
+      const nameMatch = fmMatch[1].match(/^name:\s*(.+)$/m);
+      if (nameMatch) {
+        name = nameMatch[1].trim()
+          .split(/[-_]/)
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(" ");
+      }
+    }
+    return { id: `skill-section-${i}`, name, content };
+  });
+}
+
 function TrustBadge({ tier }: { tier: Component["trust_tier"] }) {
   const colors: Record<Component["trust_tier"], { bg: string; color: string }> = {
     official: { bg: "rgba(59,130,246,0.12)", color: "#3b82f6" },
@@ -169,6 +194,8 @@ export default function PluginDetailPage() {
       })
     : null;
 
+  const skillSections = component.skill_md ? parseSkillSections(component.skill_md) : [];
+
 
   return (
     <div style={{ padding: "20px 24px" }}>
@@ -235,9 +262,14 @@ export default function PluginDetailPage() {
             </div>
           )}
 
-          {component.skill_md && (
-            <MarkdownPanel content={component.skill_md} title="Skill Definition" />
+          {skillSections.length === 1 && (
+            <MarkdownPanel content={skillSections[0].content} title="Skill Definition" />
           )}
+          {skillSections.length > 1 && skillSections.map((sec) => (
+            <div key={sec.id} id={sec.id}>
+              <MarkdownPanel content={sec.content} title={sec.name} />
+            </div>
+          ))}
 
           {component.readme_md && (
             <MarkdownPanel content={component.readme_md} title="Documentation" />
@@ -245,8 +277,36 @@ export default function PluginDetailPage() {
         </div>
 
         {/* ── Sidebar ── */}
-        <aside style={{ width: "200px", flexShrink: 0 }}>
+        <aside style={{ width: "200px", flexShrink: 0, position: "sticky", top: "20px", alignSelf: "flex-start" }}>
           <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {/* TOC — only for multi-skill packages */}
+            {skillSections.length > 1 && (
+              <SidebarCard>
+                <SidebarLabel>Contents</SidebarLabel>
+                <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "2px" }}>
+                  {skillSections.map((sec) => (
+                    <li key={sec.id}>
+                      <button
+                        onClick={() => document.getElementById(sec.id)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          padding: "2px 0",
+                          cursor: "pointer",
+                          fontSize: "12px",
+                          color: "var(--accent-text)",
+                          textAlign: "left",
+                          width: "100%",
+                        }}
+                      >
+                        {sec.name}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </SidebarCard>
+            )}
+
             {/* Install command */}
             <SidebarCard>
               <SidebarLabel>Install</SidebarLabel>

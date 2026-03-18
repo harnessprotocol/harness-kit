@@ -11,7 +11,7 @@ const mockComponents: Component[] = [
     id: "comp-1",
     slug: "research",
     name: "Research",
-    type: "skill",
+    type: "plugin",
     description: "Process any source into a knowledge base",
     trust_tier: "official",
     version: "0.3.0",
@@ -242,7 +242,8 @@ describe("BrowsePage — configured", () => {
     it("shows type badges", async () => {
       renderBrowse();
       await screen.findByText("Research");
-      // "skill" appears as a badge (multiple — badge + pill)
+      // "plugin" badge appears for Research (comp-1), "skill" badge for Explain (comp-2)
+      expect(screen.getAllByText("plugin").length).toBeGreaterThan(0);
       expect(screen.getAllByText("skill").length).toBeGreaterThan(0);
       expect(screen.getAllByText("agent").length).toBeGreaterThan(0);
     });
@@ -360,6 +361,19 @@ describe("BrowsePage — configured", () => {
         expect(screen.queryByText("Explain")).not.toBeInTheDocument();
       });
       expect(screen.getByText("Data Lineage")).toBeInTheDocument();
+    });
+
+    it("filters to plugin-type components when plugin pill is clicked", async () => {
+      renderBrowse();
+      await screen.findByText("Research");
+
+      fireEvent.click(screen.getByRole("button", { name: "plugin" }));
+
+      await waitFor(() => {
+        expect(screen.queryByText("Explain")).not.toBeInTheDocument();
+        expect(screen.queryByText("Data Lineage")).not.toBeInTheDocument();
+      });
+      expect(screen.getByText("Research")).toBeInTheDocument();
     });
 
     it("clears type filter on second click", async () => {
