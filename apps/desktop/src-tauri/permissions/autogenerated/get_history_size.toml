@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-history-size"
+description = "Enables the get_history_size command without any pre-configured scope."
+commands.allow = ["get_history_size"]
+
+[[permission]]
+identifier = "deny-get-history-size"
+description = "Denies the get_history_size command without any pre-configured scope."
+commands.deny = ["get_history_size"]

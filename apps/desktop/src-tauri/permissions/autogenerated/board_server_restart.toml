@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-board-server-restart"
+description = "Enables the board_server_restart command without any pre-configured scope."
+commands.allow = ["board_server_restart"]
+
+[[permission]]
+identifier = "deny-board-server-restart"
+description = "Denies the board_server_restart command without any pre-configured scope."
+commands.deny = ["board_server_restart"]

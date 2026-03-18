@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/board-api';
 import type { Project } from '../../lib/board-api';
 import { useBoardServerReady } from '../../hooks/useBoardServerReady';
+import { BoardServerOffline } from '../../components/board/BoardServerOffline';
 
 export default function BoardProjectsPage() {
   const navigate = useNavigate();
-  const { ready, timedOut } = useBoardServerReady();
+  const serverState = useBoardServerReady();
+  const { ready, timedOut } = serverState;
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState<Project[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -34,27 +36,7 @@ export default function BoardProjectsPage() {
   }, [ready, navigate]);
 
   if (timedOut) {
-    return (
-      <div className="board-scope" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: 12 }}>
-        <span style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 600 }}>
-          Board server is not running
-        </span>
-        <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-          Install the background service to get started:
-        </span>
-        <code style={{
-          background: 'var(--bg-elevated)',
-          border: '1px solid var(--border)',
-          borderRadius: 6,
-          padding: '8px 16px',
-          fontSize: 13,
-          color: 'var(--text-secondary)',
-          fontFamily: 'monospace',
-        }}>
-          pnpm board:install
-        </code>
-      </div>
-    );
+    return <BoardServerOffline serverState={serverState} />;
   }
 
   if (!ready || loading) {

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-push-file-history"
+description = "Enables the push_file_history command without any pre-configured scope."
+commands.allow = ["push_file_history"]
+
+[[permission]]
+identifier = "deny-push-file-history"
+description = "Denies the push_file_history command without any pre-configured scope."
+commands.deny = ["push_file_history"]

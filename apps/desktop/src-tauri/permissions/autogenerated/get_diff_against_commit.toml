@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-diff-against-commit"
+description = "Enables the get_diff_against_commit command without any pre-configured scope."
+commands.allow = ["get_diff_against_commit"]
+
+[[permission]]
+identifier = "deny-get-diff-against-commit"
+description = "Denies the get_diff_against_commit command without any pre-configured scope."
+commands.deny = ["get_diff_against_commit"]

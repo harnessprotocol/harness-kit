@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-read-claude-md"
+description = "Enables the read_claude_md command without any pre-configured scope."
+commands.allow = ["read_claude_md"]
+
+[[permission]]
+identifier = "deny-read-claude-md"
+description = "Denies the read_claude_md command without any pre-configured scope."
+commands.deny = ["read_claude_md"]

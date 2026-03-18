@@ -282,3 +282,21 @@ export async function listAuditEntries(
 export async function clearAuditEntries(beforeDate: string): Promise<void> {
   return invoke<void>("clear_audit_entries", { beforeDate });
 }
+
+// ── Board server commands ──────────────────────────────────
+
+export async function boardServerCheckInstalled(): Promise<boolean> {
+  return invoke<boolean>("board_server_check_installed");
+}
+
+export async function boardServerInstall(): Promise<string> {
+  return invoke<string>("board_server_install");
+}
+
+export async function boardServerStart(): Promise<string> {
+  return invoke<string>("board_server_start");
+}
+
+export async function boardServerRestart(): Promise<string> {
+  return invoke<string>("board_server_restart");
+}

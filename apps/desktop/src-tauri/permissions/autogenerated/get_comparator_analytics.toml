@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-comparator-analytics"
+description = "Enables the get_comparator_analytics command without any pre-configured scope."
+commands.allow = ["get_comparator_analytics"]
+
+[[permission]]
+identifier = "deny-get-comparator-analytics"
+description = "Denies the get_comparator_analytics command without any pre-configured scope."
+commands.deny = ["get_comparator_analytics"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-remove-worktrees"
+description = "Enables the remove_worktrees command without any pre-configured scope."
+commands.allow = ["remove_worktrees"]
+
+[[permission]]
+identifier = "deny-remove-worktrees"
+description = "Denies the remove_worktrees command without any pre-configured scope."
+commands.deny = ["remove_worktrees"]

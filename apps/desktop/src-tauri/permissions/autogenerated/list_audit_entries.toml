@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-list-audit-entries"
+description = "Enables the list_audit_entries command without any pre-configured scope."
+commands.allow = ["list_audit_entries"]
+
+[[permission]]
+identifier = "deny-list-audit-entries"
+description = "Denies the list_audit_entries command without any pre-configured scope."
+commands.deny = ["list_audit_entries"]

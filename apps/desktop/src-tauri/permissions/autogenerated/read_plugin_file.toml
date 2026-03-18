@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-read-plugin-file"
+description = "Enables the read_plugin_file command without any pre-configured scope."
+commands.allow = ["read_plugin_file"]
+
+[[permission]]
+identifier = "deny-read-plugin-file"
+description = "Denies the read_plugin_file command without any pre-configured scope."
+commands.deny = ["read_plugin_file"]

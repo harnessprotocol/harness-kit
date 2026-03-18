@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-read-stats-cache"
+description = "Enables the read_stats_cache command without any pre-configured scope."
+commands.allow = ["read_stats_cache"]
+
+[[permission]]
+identifier = "deny-read-stats-cache"
+description = "Denies the read_stats_cache command without any pre-configured scope."
+commands.deny = ["read_stats_cache"]

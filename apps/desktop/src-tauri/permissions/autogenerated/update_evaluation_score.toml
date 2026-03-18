@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-update-evaluation-score"
+description = "Enables the update_evaluation_score command without any pre-configured scope."
+commands.allow = ["update_evaluation_score"]
+
+[[permission]]
+identifier = "deny-update-evaluation-score"
+description = "Denies the update_evaluation_score command without any pre-configured scope."
+commands.deny = ["update_evaluation_score"]

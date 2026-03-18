@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-list-comparisons"
+description = "Enables the list_comparisons command without any pre-configured scope."
+commands.allow = ["list_comparisons"]
+
+[[permission]]
+identifier = "deny-list-comparisons"
+description = "Denies the list_comparisons command without any pre-configured scope."
+commands.deny = ["list_comparisons"]

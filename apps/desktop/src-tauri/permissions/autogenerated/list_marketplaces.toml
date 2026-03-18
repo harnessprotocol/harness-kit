@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-list-marketplaces"
+description = "Enables the list_marketplaces command without any pre-configured scope."
+commands.allow = ["list_marketplaces"]
+
+[[permission]]
+identifier = "deny-list-marketplaces"
+description = "Denies the list_marketplaces command without any pre-configured scope."
+commands.deny = ["list_marketplaces"]
