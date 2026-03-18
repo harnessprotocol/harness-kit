@@ -11,7 +11,7 @@ const mockComponents: Component[] = [
     id: "comp-1",
     slug: "research",
     name: "Research",
-    type: "skill",
+    type: "plugin",
     description: "Process any source into a knowledge base",
     trust_tier: "official",
     version: "0.3.0",
@@ -242,7 +242,8 @@ describe("BrowsePage — configured", () => {
     it("shows type badges", async () => {
       renderBrowse();
       await screen.findByText("Research");
-      // "skill" appears as a badge (multiple — badge + pill)
+      // "plugin" badge appears for Research (comp-1), "skill" badge for Explain (comp-2)
+      expect(screen.getAllByText("plugin").length).toBeGreaterThan(0);
       expect(screen.getAllByText("skill").length).toBeGreaterThan(0);
       expect(screen.getAllByText("agent").length).toBeGreaterThan(0);
     });

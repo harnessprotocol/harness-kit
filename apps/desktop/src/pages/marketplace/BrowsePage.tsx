@@ -14,6 +14,7 @@ type SortBy = "installs" | "recent";
 
 const COMPONENT_TYPES: ComponentType[] = [
   "skill",
+  "plugin",
   "agent",
   "hook",
   "script",
@@ -45,14 +46,16 @@ function TrustBadge({ tier }: { tier: Component["trust_tier"] }) {
 }
 
 function TypeBadge({ type }: { type: ComponentType }) {
+  const isPlugin = type === "plugin";
   return (
     <span style={{
       fontSize: "10px",
       fontWeight: 400,
       padding: "1px 6px",
       borderRadius: "10px",
-      border: "1px solid var(--border-base)",
-      color: "var(--fg-subtle)",
+      background: isPlugin ? "rgba(139,92,246,0.08)" : undefined,
+      border: isPlugin ? "1px solid rgba(139,92,246,0.2)" : "1px solid var(--border-base)",
+      color: isPlugin ? "#a78bfa" : "var(--fg-subtle)",
       textTransform: "capitalize",
     }}>
       {type}
@@ -373,7 +376,8 @@ export default function BrowsePage() {
               className="row-list-item"
               onClick={() => navigate(`/marketplace/${plugin.slug}`)}
               style={{
-                justifyContent: "space-between",
+                display: "flex",
+                alignItems: "center",
                 width: "100%",
                 background: "none",
                 border: "none",
@@ -382,13 +386,9 @@ export default function BrowsePage() {
               }}
             >
               <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                  <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--fg-base)" }}>
-                    {plugin.name}
-                  </span>
-                  <TrustBadge tier={plugin.trust_tier} />
-                  <TypeBadge type={plugin.type} />
-                </div>
+                <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--fg-base)" }}>
+                  {plugin.name}
+                </span>
                 {plugin.description && (
                   <p style={{
                     fontSize: "11px",
@@ -402,6 +402,10 @@ export default function BrowsePage() {
                     {plugin.description}
                   </p>
                 )}
+              </div>
+              <div style={{ flexShrink: 0, display: "flex", gap: "6px", minWidth: "120px", justifyContent: "flex-end", alignItems: "center" }}>
+                <TrustBadge tier={plugin.trust_tier} />
+                <TypeBadge type={plugin.type} />
               </div>
               <div style={{ flexShrink: 0, marginLeft: "12px", textAlign: "right" }}>
                 <div style={{ fontSize: "11px", fontFamily: "ui-monospace, monospace", color: "var(--fg-subtle)", fontVariantNumeric: "tabular-nums" }}>

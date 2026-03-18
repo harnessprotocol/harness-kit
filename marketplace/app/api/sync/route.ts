@@ -39,6 +39,45 @@ async function verifySignature(
   return result === 0;
 }
 
+/** List the top-level entries in a repo directory. Returns null on failure. */
+async function fetchRepoDirEntries(
+  dirPath: string,
+): Promise<{ name: string; type: string }[] | null> {
+  const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${dirPath}`;
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github.v3+json",
+    "User-Agent": "harness-kit-marketplace",
+  };
+  const token = process.env.GITHUB_TOKEN;
+  if (token) headers.Authorization = `Bearer ${token}`;
+  const res = await fetch(url, { headers });
+  if (!res.ok) return null;
+  const data = await res.json();
+  return Array.isArray(data) ? data : null;
+}
+
+/** Derive "skill" vs "plugin" by inspecting the plugin directory on GitHub. */
+async function derivePluginType(
+  pluginDir: string,
+): Promise<"skill" | "plugin"> {
+  const entries = await fetchRepoDirEntries(pluginDir);
+  if (!entries) return "skill";
+
+  const topNames = new Set(entries.filter((e) => e.type === "dir").map((e) => e.name));
+  if (topNames.has("agents") || topNames.has("scripts") || topNames.has("hooks")) {
+    return "plugin";
+  }
+
+  // Count skill subdirectories
+  const skillsEntries = await fetchRepoDirEntries(`${pluginDir}/skills`);
+  if (skillsEntries) {
+    const skillDirCount = skillsEntries.filter((e) => e.type === "dir").length;
+    if (skillDirCount > 1) return "plugin";
+  }
+
+  return "skill";
+}
+
 /** Fetch a file from the GitHub repo. */
 async function fetchRepoFile(path: string): Promise<string | null> {
   const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}`;
@@ -123,10 +162,11 @@ export async function POST(request: NextRequest) {
       `${pluginDir}/skills/${plugin.name}/README.md`,
     );
 
+    const componentType = await derivePluginType(pluginDir);
+
     // Auto-extract tags from plugin manifest + description
     const autoTags = new Set(plugin.tags ?? []);
-    // Add type-based tag
-    autoTags.add("skill");
+    autoTags.add(componentType);
 
     // Upsert component
     const { error } = await supabase
@@ -135,7 +175,7 @@ export async function POST(request: NextRequest) {
         {
           slug: plugin.name,
           name: plugin.name,
-          type: "skill",
+          type: componentType,
           description: plugin.description,
           trust_tier: "official",
           version: plugin.version,

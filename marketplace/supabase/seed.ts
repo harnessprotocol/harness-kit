@@ -85,6 +85,31 @@ function readSkillMds(pluginName: string): string | null {
 }
 
 /**
+ * Derives whether a plugin should be classified as "skill" or "plugin".
+ * A plugin is a "skill" only if it has exactly one skill directory and no agents,
+ * scripts, or hooks directories. Everything else is a "plugin".
+ */
+function derivePluginType(pluginName: string): "skill" | "plugin" {
+  const pluginDir = path.join(PLUGINS_DIR, pluginName);
+  const skillsDir = path.join(pluginDir, "skills");
+
+  let skillCount = 0;
+  if (fs.existsSync(skillsDir)) {
+    skillCount = fs
+      .readdirSync(skillsDir, { withFileTypes: true })
+      .filter((d) => d.isDirectory()).length;
+  }
+
+  const hasAgents = fs.existsSync(path.join(pluginDir, "agents"));
+  const hasScripts = fs.existsSync(path.join(pluginDir, "scripts"));
+  const hasHooks = fs.existsSync(path.join(pluginDir, "hooks"));
+
+  return skillCount > 1 || hasAgents || hasScripts || hasHooks
+    ? "plugin"
+    : "skill";
+}
+
+/**
  * Reads and concatenates all README.md files found under a plugin's skills/ directory.
  */
 function readReadmeMds(pluginName: string): string | null {
@@ -175,7 +200,7 @@ async function seedComponents(
     const component = {
       slug: plugin.name,
       name: displayName,
-      type: "skill" as const,
+      type: derivePluginType(plugin.name),
       description: plugin.description,
       trust_tier: "official" as const,
       version: plugin.version,
