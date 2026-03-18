@@ -19,8 +19,9 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: "harness",
     label: "Harness",
-    path: "/harness/plugins",
+    path: "/harness/file",
     children: [
+      { label: "Harness File", path: "/harness/file" },
       { label: "Plugins", path: "/harness/plugins" },
       { label: "Hooks", path: "/harness/hooks" },
       { label: "CLAUDE.md", path: "/harness/claude-md" },
