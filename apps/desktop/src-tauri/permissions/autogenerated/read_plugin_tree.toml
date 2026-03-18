@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-read-plugin-tree"
+description = "Enables the read_plugin_tree command without any pre-configured scope."
+commands.allow = ["read_plugin_tree"]
+
+[[permission]]
+identifier = "deny-read-plugin-tree"
+description = "Denies the read_plugin_tree command without any pre-configured scope."
+commands.deny = ["read_plugin_tree"]

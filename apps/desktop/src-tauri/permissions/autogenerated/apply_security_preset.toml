@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-apply-security-preset"
+description = "Enables the apply_security_preset command without any pre-configured scope."
+commands.allow = ["apply_security_preset"]
+
+[[permission]]
+identifier = "deny-apply-security-preset"
+description = "Denies the apply_security_preset command without any pre-configured scope."
+commands.deny = ["apply_security_preset"]

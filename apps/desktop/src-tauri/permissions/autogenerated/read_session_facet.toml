@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-read-session-facet"
+description = "Enables the read_session_facet command without any pre-configured scope."
+commands.allow = ["read_session_facet"]
+
+[[permission]]
+identifier = "deny-read-session-facet"
+description = "Denies the read_session_facet command without any pre-configured scope."
+commands.deny = ["read_session_facet"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-save-evaluation"
+description = "Enables the save_evaluation command without any pre-configured scope."
+commands.allow = ["save_evaluation"]
+
+[[permission]]
+identifier = "deny-save-evaluation"
+description = "Denies the save_evaluation command without any pre-configured scope."
+commands.deny = ["save_evaluation"]

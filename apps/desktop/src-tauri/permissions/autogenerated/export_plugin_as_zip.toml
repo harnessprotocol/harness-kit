@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-export-plugin-as-zip"
+description = "Enables the export_plugin_as_zip command without any pre-configured scope."
+commands.allow = ["export_plugin_as_zip"]
+
+[[permission]]
+identifier = "deny-export-plugin-as-zip"
+description = "Denies the export_plugin_as_zip command without any pre-configured scope."
+commands.deny = ["export_plugin_as_zip"]

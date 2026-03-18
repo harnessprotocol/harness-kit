@@ -6,6 +6,15 @@ fn main() {
                 "list_installed_plugins",
                 "list_marketplaces",
                 "check_plugin_updates",
+                "uninstall_plugin",
+                // Plugin Explorer
+                "read_plugin_tree",
+                "read_plugin_file",
+                "write_plugin_file",
+                "import_plugin_from_path",
+                "import_plugin_from_zip",
+                "export_plugin_as_zip",
+                "export_plugin_to_folder",
                 // Hooks
                 "read_hooks",
                 // Claude.md
@@ -56,6 +65,10 @@ fn main() {
                 // Security — audit log
                 "list_audit_entries",
                 "clear_audit_entries",
+                // File history
+                "read_file_history",
+                "push_file_history",
+                "get_history_size",
                 // Board server
                 "board_server_check_installed",
                 "board_server_install",

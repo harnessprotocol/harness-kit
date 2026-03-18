@@ -2187,6 +2187,690 @@
       "description": "Permission identifier",
       "oneOf": [
         {
+          "description": "Enables the apply_security_preset command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-apply-security-preset",
+          "markdownDescription": "Enables the apply_security_preset command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the board_server_check_installed command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-board-server-check-installed",
+          "markdownDescription": "Enables the board_server_check_installed command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the board_server_install command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-board-server-install",
+          "markdownDescription": "Enables the board_server_install command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the board_server_restart command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-board-server-restart",
+          "markdownDescription": "Enables the board_server_restart command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the board_server_start command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-board-server-start",
+          "markdownDescription": "Enables the board_server_start command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the check_git_repo command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-check-git-repo",
+          "markdownDescription": "Enables the check_git_repo command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the check_plugin_updates command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-check-plugin-updates",
+          "markdownDescription": "Enables the check_plugin_updates command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the clear_audit_entries command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-clear-audit-entries",
+          "markdownDescription": "Enables the clear_audit_entries command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the create_worktrees command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-create-worktrees",
+          "markdownDescription": "Enables the create_worktrees command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the delete_comparison command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-delete-comparison",
+          "markdownDescription": "Enables the delete_comparison command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the delete_keychain_secret command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-delete-keychain-secret",
+          "markdownDescription": "Enables the delete_keychain_secret command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the detect_harnesses command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-detect-harnesses",
+          "markdownDescription": "Enables the detect_harnesses command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the export_comparison_json command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-export-comparison-json",
+          "markdownDescription": "Enables the export_comparison_json command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the export_plugin_as_zip command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-export-plugin-as-zip",
+          "markdownDescription": "Enables the export_plugin_as_zip command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the export_plugin_to_folder command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-export-plugin-to-folder",
+          "markdownDescription": "Enables the export_plugin_to_folder command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_comparator_analytics command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-comparator-analytics",
+          "markdownDescription": "Enables the get_comparator_analytics command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_comparison command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-comparison",
+          "markdownDescription": "Enables the get_comparison command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_comparison_diffs command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-comparison-diffs",
+          "markdownDescription": "Enables the get_comparison_diffs command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_comparison_setup command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-comparison-setup",
+          "markdownDescription": "Enables the get_comparison_setup command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_diff_against_commit command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-diff-against-commit",
+          "markdownDescription": "Enables the get_diff_against_commit command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_evaluations command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-evaluations",
+          "markdownDescription": "Enables the get_evaluations command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_history_size command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-history-size",
+          "markdownDescription": "Enables the get_history_size command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the import_plugin_from_path command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-import-plugin-from-path",
+          "markdownDescription": "Enables the import_plugin_from_path command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the import_plugin_from_zip command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-import-plugin-from-zip",
+          "markdownDescription": "Enables the import_plugin_from_zip command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the kill_panel command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-kill-panel",
+          "markdownDescription": "Enables the kill_panel command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the list_active_sessions command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-list-active-sessions",
+          "markdownDescription": "Enables the list_active_sessions command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the list_audit_entries command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-list-audit-entries",
+          "markdownDescription": "Enables the list_audit_entries command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the list_claude_dir command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-list-claude-dir",
+          "markdownDescription": "Enables the list_claude_dir command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the list_comparisons command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-list-comparisons",
+          "markdownDescription": "Enables the list_comparisons command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the list_installed_plugins command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-list-installed-plugins",
+          "markdownDescription": "Enables the list_installed_plugins command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the list_marketplaces command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-list-marketplaces",
+          "markdownDescription": "Enables the list_marketplaces command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the list_required_env command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-list-required-env",
+          "markdownDescription": "Enables the list_required_env command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the list_security_presets command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-list-security-presets",
+          "markdownDescription": "Enables the list_security_presets command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the list_sessions_summary command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-list-sessions-summary",
+          "markdownDescription": "Enables the list_sessions_summary command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the push_file_history command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-push-file-history",
+          "markdownDescription": "Enables the push_file_history command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the read_claude_md command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-read-claude-md",
+          "markdownDescription": "Enables the read_claude_md command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the read_env_config command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-read-env-config",
+          "markdownDescription": "Enables the read_env_config command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the read_file_history command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-read-file-history",
+          "markdownDescription": "Enables the read_file_history command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the read_hooks command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-read-hooks",
+          "markdownDescription": "Enables the read_hooks command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the read_live_activity command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-read-live-activity",
+          "markdownDescription": "Enables the read_live_activity command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the read_permissions command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-read-permissions",
+          "markdownDescription": "Enables the read_permissions command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the read_plugin_file command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-read-plugin-file",
+          "markdownDescription": "Enables the read_plugin_file command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the read_plugin_tree command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-read-plugin-tree",
+          "markdownDescription": "Enables the read_plugin_tree command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the read_session_facet command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-read-session-facet",
+          "markdownDescription": "Enables the read_session_facet command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the read_stats_cache command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-read-stats-cache",
+          "markdownDescription": "Enables the read_stats_cache command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the remove_worktrees command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-remove-worktrees",
+          "markdownDescription": "Enables the remove_worktrees command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the save_comparison command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-save-comparison",
+          "markdownDescription": "Enables the save_comparison command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the save_evaluation command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-save-evaluation",
+          "markdownDescription": "Enables the save_evaluation command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the save_file_diffs command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-save-file-diffs",
+          "markdownDescription": "Enables the save_file_diffs command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the save_panel_result command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-save-panel-result",
+          "markdownDescription": "Enables the save_panel_result command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the set_keychain_secret command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-keychain-secret",
+          "markdownDescription": "Enables the set_keychain_secret command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the start_comparison command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-start-comparison",
+          "markdownDescription": "Enables the start_comparison command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the uninstall_plugin command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-uninstall-plugin",
+          "markdownDescription": "Enables the uninstall_plugin command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the update_evaluation_score command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-update-evaluation-score",
+          "markdownDescription": "Enables the update_evaluation_score command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the update_permissions command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-update-permissions",
+          "markdownDescription": "Enables the update_permissions command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the write_env_config command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-write-env-config",
+          "markdownDescription": "Enables the write_env_config command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the write_plugin_file command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-write-plugin-file",
+          "markdownDescription": "Enables the write_plugin_file command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the apply_security_preset command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-apply-security-preset",
+          "markdownDescription": "Denies the apply_security_preset command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the board_server_check_installed command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-board-server-check-installed",
+          "markdownDescription": "Denies the board_server_check_installed command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the board_server_install command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-board-server-install",
+          "markdownDescription": "Denies the board_server_install command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the board_server_restart command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-board-server-restart",
+          "markdownDescription": "Denies the board_server_restart command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the board_server_start command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-board-server-start",
+          "markdownDescription": "Denies the board_server_start command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the check_git_repo command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-check-git-repo",
+          "markdownDescription": "Denies the check_git_repo command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the check_plugin_updates command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-check-plugin-updates",
+          "markdownDescription": "Denies the check_plugin_updates command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the clear_audit_entries command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-clear-audit-entries",
+          "markdownDescription": "Denies the clear_audit_entries command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the create_worktrees command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-create-worktrees",
+          "markdownDescription": "Denies the create_worktrees command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the delete_comparison command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-delete-comparison",
+          "markdownDescription": "Denies the delete_comparison command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the delete_keychain_secret command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-delete-keychain-secret",
+          "markdownDescription": "Denies the delete_keychain_secret command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the detect_harnesses command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-detect-harnesses",
+          "markdownDescription": "Denies the detect_harnesses command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the export_comparison_json command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-export-comparison-json",
+          "markdownDescription": "Denies the export_comparison_json command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the export_plugin_as_zip command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-export-plugin-as-zip",
+          "markdownDescription": "Denies the export_plugin_as_zip command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the export_plugin_to_folder command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-export-plugin-to-folder",
+          "markdownDescription": "Denies the export_plugin_to_folder command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_comparator_analytics command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-comparator-analytics",
+          "markdownDescription": "Denies the get_comparator_analytics command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_comparison command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-comparison",
+          "markdownDescription": "Denies the get_comparison command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_comparison_diffs command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-comparison-diffs",
+          "markdownDescription": "Denies the get_comparison_diffs command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_comparison_setup command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-comparison-setup",
+          "markdownDescription": "Denies the get_comparison_setup command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_diff_against_commit command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-diff-against-commit",
+          "markdownDescription": "Denies the get_diff_against_commit command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_evaluations command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-evaluations",
+          "markdownDescription": "Denies the get_evaluations command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_history_size command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-history-size",
+          "markdownDescription": "Denies the get_history_size command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the import_plugin_from_path command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-import-plugin-from-path",
+          "markdownDescription": "Denies the import_plugin_from_path command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the import_plugin_from_zip command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-import-plugin-from-zip",
+          "markdownDescription": "Denies the import_plugin_from_zip command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the kill_panel command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-kill-panel",
+          "markdownDescription": "Denies the kill_panel command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the list_active_sessions command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-list-active-sessions",
+          "markdownDescription": "Denies the list_active_sessions command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the list_audit_entries command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-list-audit-entries",
+          "markdownDescription": "Denies the list_audit_entries command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the list_claude_dir command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-list-claude-dir",
+          "markdownDescription": "Denies the list_claude_dir command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the list_comparisons command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-list-comparisons",
+          "markdownDescription": "Denies the list_comparisons command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the list_installed_plugins command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-list-installed-plugins",
+          "markdownDescription": "Denies the list_installed_plugins command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the list_marketplaces command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-list-marketplaces",
+          "markdownDescription": "Denies the list_marketplaces command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the list_required_env command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-list-required-env",
+          "markdownDescription": "Denies the list_required_env command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the list_security_presets command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-list-security-presets",
+          "markdownDescription": "Denies the list_security_presets command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the list_sessions_summary command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-list-sessions-summary",
+          "markdownDescription": "Denies the list_sessions_summary command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the push_file_history command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-push-file-history",
+          "markdownDescription": "Denies the push_file_history command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the read_claude_md command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-read-claude-md",
+          "markdownDescription": "Denies the read_claude_md command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the read_env_config command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-read-env-config",
+          "markdownDescription": "Denies the read_env_config command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the read_file_history command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-read-file-history",
+          "markdownDescription": "Denies the read_file_history command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the read_hooks command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-read-hooks",
+          "markdownDescription": "Denies the read_hooks command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the read_live_activity command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-read-live-activity",
+          "markdownDescription": "Denies the read_live_activity command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the read_permissions command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-read-permissions",
+          "markdownDescription": "Denies the read_permissions command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the read_plugin_file command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-read-plugin-file",
+          "markdownDescription": "Denies the read_plugin_file command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the read_plugin_tree command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-read-plugin-tree",
+          "markdownDescription": "Denies the read_plugin_tree command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the read_session_facet command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-read-session-facet",
+          "markdownDescription": "Denies the read_session_facet command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the read_stats_cache command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-read-stats-cache",
+          "markdownDescription": "Denies the read_stats_cache command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the remove_worktrees command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-remove-worktrees",
+          "markdownDescription": "Denies the remove_worktrees command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the save_comparison command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-save-comparison",
+          "markdownDescription": "Denies the save_comparison command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the save_evaluation command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-save-evaluation",
+          "markdownDescription": "Denies the save_evaluation command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the save_file_diffs command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-save-file-diffs",
+          "markdownDescription": "Denies the save_file_diffs command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the save_panel_result command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-save-panel-result",
+          "markdownDescription": "Denies the save_panel_result command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_keychain_secret command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-keychain-secret",
+          "markdownDescription": "Denies the set_keychain_secret command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the start_comparison command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-start-comparison",
+          "markdownDescription": "Denies the start_comparison command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the uninstall_plugin command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-uninstall-plugin",
+          "markdownDescription": "Denies the uninstall_plugin command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the update_evaluation_score command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-update-evaluation-score",
+          "markdownDescription": "Denies the update_evaluation_score command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the update_permissions command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-update-permissions",
+          "markdownDescription": "Denies the update_permissions command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the write_env_config command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-write-env-config",
+          "markdownDescription": "Denies the write_env_config command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the write_plugin_file command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-write-plugin-file",
+          "markdownDescription": "Denies the write_plugin_file command without any pre-configured scope."
+        },
+        {
           "description": "Default core plugins set.\n#### This default permission set includes:\n\n- `core:path:default`\n- `core:event:default`\n- `core:window:default`\n- `core:webview:default`\n- `core:app:default`\n- `core:image:default`\n- `core:resources:default`\n- `core:menu:default`\n- `core:tray:default`",
           "type": "string",
           "const": "core:default",

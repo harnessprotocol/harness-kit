@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-comparison"
+description = "Enables the get_comparison command without any pre-configured scope."
+commands.allow = ["get_comparison"]
+
+[[permission]]
+identifier = "deny-get-comparison"
+description = "Denies the get_comparison command without any pre-configured scope."
+commands.deny = ["get_comparison"]

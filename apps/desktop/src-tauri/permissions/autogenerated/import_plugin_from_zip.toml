@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-import-plugin-from-zip"
+description = "Enables the import_plugin_from_zip command without any pre-configured scope."
+commands.allow = ["import_plugin_from_zip"]
+
+[[permission]]
+identifier = "deny-import-plugin-from-zip"
+description = "Denies the import_plugin_from_zip command without any pre-configured scope."
+commands.deny = ["import_plugin_from_zip"]

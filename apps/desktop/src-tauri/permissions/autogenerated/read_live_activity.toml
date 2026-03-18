@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-read-live-activity"
+description = "Enables the read_live_activity command without any pre-configured scope."
+commands.allow = ["read_live_activity"]
+
+[[permission]]
+identifier = "deny-read-live-activity"
+description = "Denies the read_live_activity command without any pre-configured scope."
+commands.deny = ["read_live_activity"]

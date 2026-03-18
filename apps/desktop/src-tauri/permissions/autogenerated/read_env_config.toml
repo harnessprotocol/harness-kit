@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-read-env-config"
+description = "Enables the read_env_config command without any pre-configured scope."
+commands.allow = ["read_env_config"]
+
+[[permission]]
+identifier = "deny-read-env-config"
+description = "Denies the read_env_config command without any pre-configured scope."
+commands.deny = ["read_env_config"]

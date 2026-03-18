@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-list-security-presets"
+description = "Enables the list_security_presets command without any pre-configured scope."
+commands.allow = ["list_security_presets"]
+
+[[permission]]
+identifier = "deny-list-security-presets"
+description = "Denies the list_security_presets command without any pre-configured scope."
+commands.deny = ["list_security_presets"]
