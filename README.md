@@ -71,6 +71,7 @@ Produces a structured explanation: summary, key components, how it connects, pat
 | [`harness-share`](plugins/harness-share/skills/harness-export/README.md) | Export your plugin setup to `harness.yaml`, compile to native configs for Claude Code, Cursor, and Copilot, and keep them in sync | `/harness-export` · `/harness-import` · `/harness-validate` · `/harness-compile` · `/harness-sync` |
 | [`stats`](plugins/stats/skills/stats/README.md) | Interactive HTML dashboard for Claude Code usage — tokens, sessions, models, and activity patterns | `/stats` |
 | [`iterm-notify`](plugins/iterm-notify/skills/iterm-notify/README.md) | macOS desktop notifications and iTerm2 badges for Claude Code hooks | _(hook-based)_ |
+| [`frontend-design`](plugins/frontend-design/skills/frontend-design/README.md) | Production-grade frontend design skill — avoids AI slop with specific rules for typography, OKLCH color, layout, motion, interaction, and UX writing | _(auto-triggered)_ |
 
 ¹ Personal-workflow plugins designed for projects using the [knowledge graph + journal pattern](docs/claude-md-conventions.md).
 

@@ -1,10 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import AppLayout, { NAV_SECTIONS } from "../AppLayout";
 import { NAV_PATHS } from "../../hooks/useGlobalShortcuts";
 
 // ── Mocks ─────────────────────────────────────────────────────
+
+const mockStartDragging = vi.fn().mockResolvedValue(undefined);
+vi.mock("@tauri-apps/api/window", () => ({
+  getCurrentWindow: vi.fn(() => ({ startDragging: mockStartDragging })),
+}));
 
 // Tauri APIs used by theme lib must not throw in jsdom
 vi.mock("../../lib/theme", () => ({
@@ -85,5 +90,24 @@ describe("sidebar renders all nav sections", () => {
     for (const section of NAV_SECTIONS) {
       expect(screen.getByText(section.label)).toBeInTheDocument();
     }
+  });
+});
+
+describe("titlebar drag", () => {
+  it("calls startDragging on mousedown in the drag region", async () => {
+    mockStartDragging.mockClear();
+    renderLayout();
+    const titlebar = document.querySelector(".titlebar") as HTMLElement;
+    fireEvent.mouseDown(titlebar);
+    await vi.waitFor(() => expect(mockStartDragging).toHaveBeenCalledTimes(1));
+  });
+
+  it("does not call startDragging when mousedown is on a button", async () => {
+    mockStartDragging.mockClear();
+    renderLayout();
+    const buttons = document.querySelectorAll(".titlebar-btn");
+    fireEvent.mouseDown(buttons[0]);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mockStartDragging).not.toHaveBeenCalled();
   });
 });
