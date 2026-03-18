@@ -4,6 +4,7 @@ use std::path::PathBuf;
 
 const PORT: u16 = 4800;
 const PLIST_LABEL: &str = "com.harness-kit.board-server";
+const MAX_TRAVERSAL_DEPTH: usize = 10;
 
 pub struct BoardServerState;
 
@@ -37,7 +38,7 @@ fn find_node() -> Result<String, String> {
     let output = Command::new("which")
         .arg("node")
         .output()
-        .map_err(|e| format!("Failed to locate node: {e}"))?;
+        .map_err(|_| "Could not locate node — install Node.js first".to_string())?;
     if !output.status.success() {
         return Err("node not found — install Node.js first".to_string());
     }
@@ -45,20 +46,36 @@ fn find_node() -> Result<String, String> {
 }
 
 fn find_server_dir() -> Result<PathBuf, String> {
-    // Traverse up from the executable to locate packages/board-server
-    let exe = std::env::current_exe().map_err(|e| format!("Cannot find executable path: {e}"))?;
+    // Traverse up from the executable to locate packages/board-server (capped depth)
+    let exe = std::env::current_exe()
+        .map_err(|_| "Could not determine application location".to_string())?;
     let mut dir = exe.parent().map(|p| p.to_path_buf());
+    let mut depth = 0;
     while let Some(d) = dir {
+        if depth >= MAX_TRAVERSAL_DEPTH {
+            break;
+        }
         let candidate = d.join("packages/board-server/dist/index.js");
         if candidate.exists() {
             return Ok(d.join("packages/board-server"));
         }
         dir = d.parent().map(|p| p.to_path_buf());
+        depth += 1;
     }
     Err("Board server not found — run `pnpm build:board-server` first".to_string())
 }
 
+fn xml_escape(s: &str) -> String {
+    s.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
+        .replace('"', "&quot;")
+}
+
 fn generate_plist(node_path: &str, server_dir: &str, log_dir: &str) -> String {
+    let node_path = xml_escape(node_path);
+    let server_dir = xml_escape(server_dir);
+    let log_dir = xml_escape(log_dir);
     format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -119,14 +136,21 @@ pub fn board_server_install() -> Result<String, String> {
         .expect("No home directory")
         .join(".harness-kit/logs");
     std::fs::create_dir_all(&log_dir)
-        .map_err(|e| format!("Failed to create log directory: {e}"))?;
+        .map_err(|_| "Failed to create log directory".to_string())?;
     let log_dir_str = log_dir.to_string_lossy().to_string();
 
     let plist_content = generate_plist(&node_path, &server_dir_str, &log_dir_str);
     let plist = plist_path();
 
-    std::fs::write(&plist, plist_content)
-        .map_err(|e| format!("Failed to write plist: {e}"))?;
+    std::fs::write(&plist, &plist_content)
+        .map_err(|_| "Failed to write service configuration".to_string())?;
+
+    // Restrict plist to owner-only access
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let _ = std::fs::set_permissions(&plist, std::fs::Permissions::from_mode(0o600));
+    }
 
     let uid = current_uid();
     let domain = format!("gui/{uid}");
@@ -145,7 +169,7 @@ pub fn board_server_install() -> Result<String, String> {
     Command::new("launchctl")
         .args(["kickstart", &format!("{domain}/{PLIST_LABEL}")])
         .output()
-        .map_err(|e| format!("Failed to kickstart service: {e}"))?;
+        .map_err(|_| "Failed to start the board server service".to_string())?;
 
     Ok("Board server installed and started".to_string())
 }
@@ -165,7 +189,7 @@ pub fn board_server_start() -> Result<String, String> {
     Command::new("launchctl")
         .args(["kickstart", &format!("{domain}/{PLIST_LABEL}")])
         .output()
-        .map_err(|e| format!("Failed to start board server: {e}"))?;
+        .map_err(|_| "Failed to start the board server service".to_string())?;
 
     Ok("Board server started".to_string())
 }
@@ -179,7 +203,7 @@ pub fn board_server_restart() -> Result<String, String> {
     Command::new("launchctl")
         .args(["kickstart", "-k", &format!("{domain}/{PLIST_LABEL}")])
         .output()
-        .map_err(|e| format!("Failed to restart board server: {e}"))?;
+        .map_err(|_| "Failed to restart the board server service".to_string())?;
 
     Ok("Board server restarted".to_string())
 }
