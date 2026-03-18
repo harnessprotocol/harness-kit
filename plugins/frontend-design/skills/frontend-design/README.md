@@ -73,3 +73,7 @@ Create a landing page hero section
 ```
 
 Claude will ask for design context (audience, tone) if none is available, then apply the full skill.
+
+## Attribution
+
+Based on [Impeccable](https://github.com/pbakaus/impeccable) by [Paul Bakaus](https://github.com/pbakaus), an expanded version of Anthropic's original frontend-design skill. Adapted for the harness-kit plugin format.
