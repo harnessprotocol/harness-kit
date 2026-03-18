@@ -12,6 +12,7 @@ import {
 } from '@dnd-kit/core';
 import { useBoardData } from '../../hooks/useBoardData';
 import { useBoardServerReady } from '../../hooks/useBoardServerReady';
+import { BoardServerOffline } from '../../components/board/BoardServerOffline';
 import { DroppableColumn } from '../../components/board/DroppableColumn';
 import { SwimlaneView } from '../../components/board/SwimlaneView';
 import { ViewToggle, type ViewMode } from '../../components/board/ViewToggle';
@@ -46,7 +47,8 @@ function resolveTargetStatus(overId: string, allTasks: Task[]): TaskStatus | nul
 export default function BoardKanbanPage() {
   const { slug } = useParams<{ slug: string }>();
   const projectSlug = slug!;
-  const { ready, timedOut } = useBoardServerReady();
+  const serverState = useBoardServerReady();
+  const { ready, timedOut } = serverState;
   const { project, loading, error, refetch } = useBoardData(projectSlug, ready);
 
   const [activeTask, setActiveTask] = useState<Task | null>(null);
@@ -122,27 +124,7 @@ export default function BoardKanbanPage() {
   }, [project]);
 
   if (timedOut) {
-    return (
-      <div className="board-scope" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: 12 }}>
-        <span style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 600 }}>
-          Board server is not running
-        </span>
-        <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>
-          Install the background service to get started:
-        </span>
-        <code style={{
-          background: 'var(--bg-elevated)',
-          border: '1px solid var(--border)',
-          borderRadius: 6,
-          padding: '8px 16px',
-          fontSize: 13,
-          color: 'var(--text-secondary)',
-          fontFamily: 'monospace',
-        }}>
-          pnpm board:install
-        </code>
-      </div>
-    );
+    return <BoardServerOffline serverState={serverState} />;
   }
 
   if (!ready || loading) {
@@ -223,9 +205,37 @@ export default function BoardKanbanPage() {
           {allTasks.length} task{allTasks.length !== 1 ? 's' : ''}
         </span>
 
-        {/* View toggle */}
-        <div style={{ marginLeft: 'auto' }}>
+        {/* View toggle + restart */}
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
           <ViewToggle mode={viewMode} onChange={handleViewChange} />
+          <button
+            onClick={serverState.restart}
+            disabled={serverState.starting}
+            title="Restart board server"
+            style={{
+              fontSize: 11,
+              padding: '3px 8px',
+              borderRadius: 5,
+              border: '1px solid var(--border-subtle)',
+              background: 'transparent',
+              color: 'var(--text-muted)',
+              cursor: serverState.starting ? 'not-allowed' : 'pointer',
+              opacity: serverState.starting ? 0.5 : 1,
+              transition: 'color 0.1s, border-color 0.1s',
+            }}
+            onMouseEnter={e => {
+              if (!serverState.starting) {
+                (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)';
+                (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
+              }
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)';
+              (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-subtle)';
+            }}
+          >
+            {serverState.starting ? 'Restarting...' : 'Restart'}
+          </button>
         </div>
       </div>
 

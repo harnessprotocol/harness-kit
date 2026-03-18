@@ -89,6 +89,11 @@ pub fn run() {
             commands::history::read_file_history,
             commands::history::push_file_history,
             commands::history::get_history_size,
+            // Board server
+            board_server::board_server_check_installed,
+            board_server::board_server_install,
+            board_server::board_server_start,
+            board_server::board_server_restart,
         ])
         .setup(|app| {
             let state = app.state::<BoardServerState>();

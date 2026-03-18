@@ -75,7 +75,17 @@ function getAccentColor() {
 
 // ── Stat card ────────────────────────────────────────────────
 
-function StatCard({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function StatCard({ label, value, sub, tooltip }: { label: string; value: string; sub?: string; tooltip?: string }) {
+  const labelEl = (
+    <span style={{
+      fontSize: "11px", fontWeight: 500, fontVariantCaps: "all-small-caps",
+      letterSpacing: "0.03em", color: "var(--fg-subtle)",
+      ...(tooltip ? { borderBottom: "1px dotted var(--fg-subtle)", cursor: "help" } : {}),
+    }}>
+      {label}
+    </span>
+  );
+
   return (
     <div style={{
       flex: 1,
@@ -88,8 +98,8 @@ function StatCard({ label, value, sub }: { label: string; value: string; sub?: s
       <div style={{ fontSize: "20px", fontWeight: 600, letterSpacing: "-0.5px", color: "var(--fg-base)", lineHeight: 1.1, fontVariantNumeric: "tabular-nums" }}>
         {value}
       </div>
-      <div style={{ fontSize: "11px", fontWeight: 500, fontVariantCaps: "all-small-caps", letterSpacing: "0.03em", color: "var(--fg-subtle)", marginTop: "4px" }}>
-        {label}
+      <div style={{ marginTop: "4px" }}>
+        {tooltip ? <HKTooltip content={tooltip} position="bottom">{labelEl}</HKTooltip> : labelEl}
       </div>
       {sub && (
         <div style={{ fontSize: "10px", color: "var(--fg-subtle)", marginTop: "2px" }}>
@@ -214,7 +224,7 @@ function GlobalDateControl({
 // ── Chart card wrapper ────────────────────────────────────────
 
 function ChartCard({
-  title, children, chartId, override, onOverride, onClearOverride, globalRange,
+  title, children, chartId, override, onOverride, onClearOverride, globalRange, sourceNote,
 }: {
   title: string;
   children: React.ReactNode;
@@ -223,6 +233,7 @@ function ChartCard({
   onOverride?: (r: DateRange) => void;
   onClearOverride?: () => void;
   globalRange?: DateRange;
+  sourceNote?: string;
 }) {
   const [showPicker, setShowPicker] = useState(false);
 
@@ -236,6 +247,11 @@ function ChartCard({
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
         <p style={{ fontSize: "12px", fontWeight: 500, fontVariantCaps: "all-small-caps", letterSpacing: "0.03em", color: "var(--fg-muted)", margin: 0 }}>
           {title}
+          {sourceNote && (
+            <span style={{ fontSize: "9px", fontVariantCaps: "normal", color: "var(--fg-subtle)", marginLeft: "6px", fontWeight: 400 }}>
+              {sourceNote}
+            </span>
+          )}
         </p>
         {chartId && (
           <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
@@ -424,6 +440,27 @@ export default function DashboardPage() {
     }));
   }, [data]);
 
+  // Compute effective "last updated" from both data sources
+  const effectiveLastUpdated = useMemo(() => {
+    const dates: string[] = [];
+    if (data?.lastComputedDate) dates.push(data.lastComputedDate);
+    if (liveActivity.length > 0) {
+      const latestLive = liveActivity[liveActivity.length - 1]?.date;
+      if (latestLive) dates.push(latestLive);
+    }
+    return dates.length > 0 ? dates.sort().pop()! : null;
+  }, [data, liveActivity]);
+
+  const cacheIsStale = useMemo(() => {
+    if (!data?.lastComputedDate) return false;
+    const today = new Date().toISOString().slice(0, 10);
+    return data.lastComputedDate < today;
+  }, [data]);
+
+  const cacheSourceNote = cacheIsStale && data?.lastComputedDate
+    ? `cached \u00B7 ${formatDate(data.lastComputedDate)}`
+    : undefined;
+
   if (loading) {
     return (
       <div style={{ padding: "20px 24px" }}>
@@ -461,9 +498,9 @@ export default function DashboardPage() {
         <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0, display: "inline" }}>
           Observatory
         </h1>
-        {data?.lastComputedDate && (
+        {effectiveLastUpdated && (
           <span style={{ fontSize: "10px", color: "var(--fg-subtle)", marginLeft: "8px" }}>
-            last updated {formatDate(data.lastComputedDate)}
+            last updated {formatDate(effectiveLastUpdated)}
           </span>
         )}
         <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>
@@ -481,22 +518,19 @@ export default function DashboardPage() {
 
       {/* Stats bar */}
       <div style={{ display: "flex", gap: "10px", marginBottom: "16px", flexWrap: "wrap" }}>
-        <StatCard label="Total Sessions" value={formatNumber(data?.totalSessions ?? 0)} />
-        <StatCard label="Total Messages" value={formatNumber(data?.totalMessages ?? 0)} />
-        <StatCard label="Tool Calls" value={formatNumber(totalToolCalls)} />
+        <StatCard label="Total Sessions" value={formatNumber(data?.totalSessions ?? 0)} tooltip="Unique Claude Code sessions" />
+        <StatCard label="Total Messages" value={formatNumber(data?.totalMessages ?? 0)} tooltip="Total user messages across all sessions" />
+        <StatCard label="Tool Calls" value={formatNumber(totalToolCalls)} tooltip="Total tool invocations (Read, Edit, Bash, etc.)" />
         <StatCard label="Output Tokens" value={
           totalOutputTokens >= 1_000_000
             ? `${(totalOutputTokens / 1_000_000).toFixed(1)}M`
             : formatNumber(totalOutputTokens)
-        } />
+        } tooltip="Total tokens generated by Claude across all models" />
         <StatCard
           label="Cache Hit Rate"
           value={cacheHitRate !== null ? `${cacheHitRate}%` : "\u2014"}
           sub="cache read / total input"
-        />
-        <StatCard
-          label="Time Saved"
-          value="\u2014"
+          tooltip="Cache read tokens as a percentage of total input tokens"
         />
       </div>
 
@@ -555,6 +589,7 @@ export default function DashboardPage() {
           override={chartOverrides["toolCalls"]} globalRange={globalRange}
           onOverride={(r) => setChartOverride("toolCalls", r)}
           onClearOverride={() => clearOverride("toolCalls")}
+          sourceNote={cacheSourceNote}
         >
           <ResponsiveContainer width="100%" height={120}>
             <AreaChart data={toolCallsChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
@@ -582,6 +617,7 @@ export default function DashboardPage() {
             override={chartOverrides["dailyTokens"]} globalRange={globalRange}
             onOverride={(r) => setChartOverride("dailyTokens", r)}
             onClearOverride={() => clearOverride("dailyTokens")}
+            sourceNote={cacheSourceNote}
           >
             <ResponsiveContainer width="100%" height={150}>
               <AreaChart data={dailyTokensChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
@@ -608,7 +644,7 @@ export default function DashboardPage() {
       {/* Token type breakdown — stacked horizontal bars (no range filter — totals only) */}
       {tokenTypeData.length > 0 && (
         <div style={{ marginBottom: "12px" }}>
-          <ChartCard title="Token Type Breakdown by Model">
+          <ChartCard title="Token Type Breakdown by Model" sourceNote={cacheSourceNote}>
             <ResponsiveContainer width="100%" height={Math.max(120, tokenTypeData.length * 36)}>
               <BarChart data={tokenTypeData} layout="vertical" margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                 <XAxis type="number" tick={axisStyle} tickLine={false} axisLine={false}
@@ -630,7 +666,7 @@ export default function DashboardPage() {
 
       {/* Hourly distribution */}
       <div style={{ marginBottom: "12px" }}>
-        <ChartCard title="Activity by Hour of Day">
+        <ChartCard title="Activity by Hour of Day" sourceNote={cacheSourceNote}>
           {hourlyChartData.some((d) => d.count > 0) ? (
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={hourlyChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
