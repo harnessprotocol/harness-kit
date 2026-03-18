@@ -19,24 +19,25 @@ pub fn read_harness_file() -> Result<HarnessFileResult, String> {
     ];
 
     for path in &candidates {
-        if path.exists() {
-            let canonical = path
-                .canonicalize()
-                .map_err(|e| format!("Invalid path: {}", e))?;
-            if !canonical.starts_with(&home) {
-                return Err("Access denied: path is outside home directory".to_string());
-            }
-            let content = std::fs::read_to_string(&canonical)
-                .map_err(|e| format!("Failed to read {}: {}", canonical.display(), e))?;
-            // Return a ~-relative path so the frontend can display it cross-platform
-            let relative = canonical.strip_prefix(&home).unwrap_or(&canonical);
-            let path_str = format!("~/{}", relative.to_string_lossy());
-            return Ok(HarnessFileResult {
-                found: true,
-                content: Some(content),
-                path: Some(path_str),
-            });
+        // Use canonicalize() as the existence check — eliminates the TOCTOU
+        // window that would exist between a separate exists() call and read.
+        let canonical = match path.canonicalize() {
+            Ok(p) => p,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => continue,
+            Err(e) => return Err(format!("Invalid path: {}", e)),
+        };
+        if !canonical.starts_with(&home) {
+            return Err("Access denied: path is outside home directory".to_string());
         }
+        let relative = canonical.strip_prefix(&home).unwrap_or(&canonical);
+        let display_path = format!("~/{}", relative.to_string_lossy());
+        let content = std::fs::read_to_string(&canonical)
+            .map_err(|e| format!("Failed to read {}: {}", display_path, e))?;
+        return Ok(HarnessFileResult {
+            found: true,
+            content: Some(content),
+            path: Some(display_path),
+        });
     }
 
     Ok(HarnessFileResult {

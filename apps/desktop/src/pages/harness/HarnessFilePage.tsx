@@ -49,13 +49,13 @@ export default function HarnessFilePage() {
   }, [content]);
 
   const validation = useMemo<ValidationResult | null>(() => {
-    if (!content) return null;
+    if (!content || parsed.parseError) return null;
     try {
       return validateHarnessYaml(content);
     } catch {
       return null;
     }
-  }, [content]);
+  }, [content, parsed.parseError]);
 
   const tabBtn = (active: boolean): React.CSSProperties => ({
     fontSize: "10px",

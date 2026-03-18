@@ -13,8 +13,12 @@ harness-kit is the **reference implementation** of the Harness Protocol. The rel
 
 Conformance does not require harness-kit. Any tool that correctly validates and applies `harness.yaml` according to the specification is a conformant implementation.
 
+## Desktop App
+
+The harness-kit desktop app treats `harness.yaml` as a first-class element. The **Harness File** page (the default landing page under the Harness section) reads `~/.claude/harness.yaml` or `~/harness.yaml` and displays a structured, annotated breakdown of each section — plugins, MCP servers, env declarations, instructions, permissions, and extends — with a raw YAML toggle.
+
 ## Links
 
 - [Harness Protocol spec](https://harnessprotocol.io) — full specification, including architecture, field reference, security model, and plugin manifest format
-- [JSON Schema](https://harnessprotocol.io) — machine-readable validation schema
+- [JSON Schema](https://harnessprotocol.ai/schema/v1/harness.schema.json) — machine-readable validation schema
 - [harness-kit](https://github.com/harnessprotocol/harness-kit) — reference implementation

@@ -48,14 +48,16 @@ export default function EnvSection({ env }: EnvSectionProps) {
                   <span style={sensitiveBadgeStyle}>sensitive</span>
                 )}
               </div>
-              <p style={{
-                fontSize: "11px",
-                color: "var(--fg-muted)",
-                margin: "2px 0 0",
-              }}>
-                {decl.description}
-              </p>
-              {decl.default !== undefined && (
+              {decl.description && (
+                <p style={{
+                  fontSize: "11px",
+                  color: "var(--fg-muted)",
+                  margin: "2px 0 0",
+                }}>
+                  {decl.description}
+                </p>
+              )}
+              {decl.default !== undefined && !decl.sensitive && (
                 <p style={{
                   fontSize: "11px",
                   fontStyle: "italic",

@@ -65,15 +65,11 @@ export default function PermissionsSection({ permissions }: PermissionsSectionPr
   const hasTools = tools && (tools.allow?.length || tools.deny?.length || tools.ask?.length);
   const hasPaths = paths && (paths.writable?.length || paths.readonly?.length);
   const hasNetwork = network?.["allowed-hosts"]?.length;
-  let isFirst = true;
 
-  const getSubLabelStyle = () => {
-    if (isFirst) {
-      isFirst = false;
-      return firstSubLabelStyle;
-    }
-    return subLabelStyle;
-  };
+  // Determine which sub-section renders first so we can zero its top margin.
+  const firstSection = hasTools ? "tools" : hasPaths ? "paths" : "network";
+  const labelStyle = (section: string): CSSProperties =>
+    section === firstSection ? firstSubLabelStyle : subLabelStyle;
 
   return (
     <SectionCard
@@ -82,7 +78,7 @@ export default function PermissionsSection({ permissions }: PermissionsSectionPr
     >
       {hasTools && (
         <div>
-          <div style={getSubLabelStyle()}>Tools</div>
+          <div style={labelStyle("tools")}>Tools</div>
           {tools?.allow && tools.allow.length > 0 && (
             <div style={pillRowStyle}>
               {tools.allow.map((t) => (
@@ -109,7 +105,7 @@ export default function PermissionsSection({ permissions }: PermissionsSectionPr
 
       {hasPaths && (
         <div>
-          <div style={getSubLabelStyle()}>Paths</div>
+          <div style={labelStyle("paths")}>Paths</div>
           {paths?.writable && paths.writable.length > 0 && (
             <div style={{ marginBottom: "6px" }}>
               {paths.writable.map((p) => (
@@ -129,7 +125,7 @@ export default function PermissionsSection({ permissions }: PermissionsSectionPr
 
       {hasNetwork && (
         <div>
-          <div style={getSubLabelStyle()}>Network</div>
+          <div style={labelStyle("network")}>Network</div>
           {network?.["allowed-hosts"]?.map((host) => (
             <code key={host} style={monoPathStyle}>{host}</code>
           ))}
