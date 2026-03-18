@@ -56,4 +56,6 @@ export type {
   KeychainSecretInfo,
   EnvConfigEntry,
   AuditEntry,
+  ComponentCounts,
+  FileTreeNode,
 } from "./types.js";

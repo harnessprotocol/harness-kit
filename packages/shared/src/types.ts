@@ -109,6 +109,12 @@ export interface ProfileYaml {
 
 // ── Desktop app types ────────────────────────────────────────
 
+export interface ComponentCounts {
+  skills: number;
+  agents: number;
+  scripts: number;
+}
+
 export interface InstalledPlugin {
   name: string;
   version: string;
@@ -118,6 +124,14 @@ export interface InstalledPlugin {
   installed_at?: string;
   category?: string;
   tags?: string[];
+  component_counts?: ComponentCounts;
+}
+
+export interface FileTreeNode {
+  name: string;
+  path: string;
+  kind: "file" | "directory";
+  children?: FileTreeNode[];
 }
 
 export interface PluginUpdateInfo {

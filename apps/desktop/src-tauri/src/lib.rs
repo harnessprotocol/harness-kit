@@ -17,6 +17,7 @@ pub fn run() {
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
+        .plugin(tauri_plugin_dialog::init())
         .manage(ComparatorState::default())
         .manage(database)
         .manage(BoardServerState::new())
@@ -25,6 +26,15 @@ pub fn run() {
             commands::plugins::list_installed_plugins,
             commands::plugins::list_marketplaces,
             commands::plugins::check_plugin_updates,
+            commands::plugins::uninstall_plugin,
+            // Plugin Explorer
+            commands::plugin_explorer::read_plugin_tree,
+            commands::plugin_explorer::read_plugin_file,
+            commands::plugin_explorer::write_plugin_file,
+            commands::plugin_explorer::import_plugin_from_path,
+            commands::plugin_explorer::import_plugin_from_zip,
+            commands::plugin_explorer::export_plugin_as_zip,
+            commands::plugin_explorer::export_plugin_to_folder,
             // Hooks
             commands::hooks::read_hooks,
             // Claude.md

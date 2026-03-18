@@ -1,10 +1,8 @@
 import { useEffect, useRef } from "react";
 
-export interface ContextMenuItem {
-  label: string;
-  onClick: () => void;
-  danger?: boolean;
-}
+export type ContextMenuItem =
+  | { label: string; onClick: () => void; danger?: boolean }
+  | { separator: true };
 
 interface ContextMenuProps {
   x: number;
@@ -53,28 +51,39 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
         padding: "3px",
       }}
     >
-      {items.map((item, i) => (
-        <button
-          key={i}
-          onClick={() => { item.onClick(); onClose(); }}
-          style={{
-            display: "block",
-            width: "100%",
-            textAlign: "left",
-            padding: "6px 10px",
-            fontSize: "12px",
-            border: "none",
-            borderRadius: "5px",
-            background: "transparent",
-            color: item.danger ? "var(--danger)" : "var(--fg-base)",
-            cursor: "pointer",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = item.danger ? "rgba(220,38,38,0.08)" : "var(--hover-bg)")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-        >
-          {item.label}
-        </button>
-      ))}
+      {items.map((item, i) =>
+        "separator" in item ? (
+          <div
+            key={`sep-${i}`}
+            style={{
+              height: "1px",
+              background: "var(--border-subtle)",
+              margin: "3px 6px",
+            }}
+          />
+        ) : (
+          <button
+            key={i}
+            onClick={() => { item.onClick(); onClose(); }}
+            style={{
+              display: "block",
+              width: "100%",
+              textAlign: "left",
+              padding: "6px 10px",
+              fontSize: "12px",
+              border: "none",
+              borderRadius: "5px",
+              background: "transparent",
+              color: item.danger ? "var(--danger)" : "var(--fg-base)",
+              cursor: "pointer",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = item.danger ? "rgba(220,38,38,0.08)" : "var(--hover-bg)")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          >
+            {item.label}
+          </button>
+        )
+      )}
     </div>
   );
 }
