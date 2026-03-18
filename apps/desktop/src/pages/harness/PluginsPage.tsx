@@ -203,7 +203,7 @@ export default function PluginsPage() {
           try {
             const { open } = await import("@tauri-apps/plugin-dialog");
             const dest = await open({ directory: true, title: "Export plugin to folder" });
-            if (dest) await exportPluginToFolder(plugin.source, typeof dest === "string" ? dest : dest);
+            if (dest) await exportPluginToFolder(plugin.source, dest as string);
           } catch { /* cancelled */ }
         },
       },

@@ -18,6 +18,7 @@
   /* Borders */
   --border-base: rgba(0, 0, 0, 0.08);
   --border-strong: rgba(0, 0, 0, 0.14);
+  --border-subtle: rgba(0, 0, 0, 0.05);
   --separator: rgba(0, 0, 0, 0.07);
 
   /* Accent — refined blue-violet */
@@ -62,6 +63,7 @@
   /* Borders — warm off-white base */
   --border-base: rgba(255, 248, 230, 0.09);
   --border-strong: rgba(255, 248, 230, 0.15);
+  --border-subtle: rgba(255, 248, 230, 0.05);
   --separator: rgba(255, 248, 230, 0.07);
 
   /* Accent */

@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback } from "react";
-import Editor, { type OnMount } from "@monaco-editor/react";
+import Editor, { type OnMount, type Monaco } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
 
 const EXT_TO_LANGUAGE: Record<string, string> = {
@@ -52,10 +52,12 @@ interface MonacoEditorProps {
 
 export default function MonacoEditor({ filePath, content, onChange, onSave }: MonacoEditorProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const monacoRef = useRef<Monaco | null>(null);
   const themeRef = useRef(getMonacoTheme());
 
   const handleMount: OnMount = useCallback((editor, monaco) => {
     editorRef.current = editor;
+    monacoRef.current = monaco;
 
     // Register Cmd+S save action
     editor.addAction({
@@ -75,9 +77,9 @@ export default function MonacoEditor({ filePath, content, onChange, onSave }: Mo
       const newTheme = getMonacoTheme();
       if (newTheme !== themeRef.current) {
         themeRef.current = newTheme;
-        import("monaco-editor").then((monaco) => {
-          monaco.editor.setTheme(newTheme);
-        }).catch(() => {});
+        if (monacoRef.current) {
+          monacoRef.current.editor.setTheme(newTheme);
+        }
       }
     });
 

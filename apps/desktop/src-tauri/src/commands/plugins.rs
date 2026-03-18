@@ -242,6 +242,11 @@ pub fn check_plugin_updates() -> Result<Vec<PluginUpdateInfo>, String> {
 
 #[tauri::command]
 pub fn uninstall_plugin(name: String) -> Result<(), String> {
+    // Validate name doesn't contain path traversal characters
+    if name.contains('/') || name.contains('\\') || name.contains("..") {
+        return Err("Invalid plugin name".to_string());
+    }
+
     let plugins_dir = claude_dir()
         .ok_or_else(|| "Could not resolve home directory".to_string())?
         .join("plugins");

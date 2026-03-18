@@ -33,6 +33,12 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
 
   const dirty = fileContent !== null && originalContent !== null && fileContent !== originalContent;
   const currentPathRef = useRef<string | null>(null);
+  const fileContentRef = useRef<string | null>(null);
+  const originalContentRef = useRef<string | null>(null);
+
+  // Keep refs in sync with state for use in callbacks
+  useEffect(() => { fileContentRef.current = fileContent; }, [fileContent]);
+  useEffect(() => { originalContentRef.current = originalContent; }, [originalContent]);
 
   // Load tree when opened
   useEffect(() => {
@@ -52,20 +58,22 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
       .finally(() => setLoading(false));
   }, [open, plugin?.source]);
 
-  // Save current file before switching
+  // Save current file before switching — uses refs to avoid stale closure
   const saveCurrent = useCallback(async () => {
-    if (currentPathRef.current && fileContent !== null && originalContent !== null && fileContent !== originalContent) {
+    const content = fileContentRef.current;
+    const original = originalContentRef.current;
+    if (currentPathRef.current && content !== null && original !== null && content !== original) {
       try {
         setSaving(true);
-        await writePluginFile(currentPathRef.current, fileContent);
-        setOriginalContent(fileContent);
+        await writePluginFile(currentPathRef.current, content);
+        setOriginalContent(content);
       } catch {
         // Silent fail on auto-save; user can retry manually
       } finally {
         setSaving(false);
       }
     }
-  }, [fileContent, originalContent]);
+  }, []);
 
   const selectFile = useCallback(async (path: string) => {
     // Auto-save dirty file before switching
@@ -74,6 +82,7 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
     setSelectedPath(path);
     currentPathRef.current = path;
     setFileLoading(true);
+    setError(null);
     try {
       const content = await readPluginFile(path);
       setFileContent(content);
@@ -121,7 +130,7 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
     try {
       const { open } = await import("@tauri-apps/plugin-dialog");
       const dest = await open({ directory: true, title: "Export plugin to folder" });
-      if (dest) await exportPluginToFolder(plugin.source, typeof dest === "string" ? dest : dest);
+      if (dest) await exportPluginToFolder(plugin.source, dest as string);
     } catch { /* cancelled */ }
   }, [plugin?.source]);
 

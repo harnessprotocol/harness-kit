@@ -29,7 +29,7 @@ function ShimmerSkeleton() {
             height: "14px",
             borderRadius: "4px",
             background: "var(--bg-elevated)",
-            width: `${60 + Math.random() * 35}%`,
+            width: `${60 + ((i * 17) % 35)}%`,
             animation: "shimmer 1.5s ease-in-out infinite",
             animationDelay: `${i * 0.05}s`,
             opacity: 0.5,

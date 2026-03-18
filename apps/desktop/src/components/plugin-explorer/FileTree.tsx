@@ -53,7 +53,7 @@ function FileTreeItem({ node, selectedPath, onSelectFile, depth = 0, defaultExpa
           color: "var(--fg-base)",
           cursor: "pointer",
           borderRadius: "4px",
-          background: isSelected ? "rgba(91,80,232,0.1)" : "transparent",
+          background: isSelected ? "var(--accent-light)" : "transparent",
           position: "relative",
         }}
         onMouseEnter={(e) => {
