@@ -325,7 +325,7 @@ pub fn export_plugin_as_zip(plugin_path: String, save_path: String) -> Result<()
 
         if path.is_dir() {
             zip_writer
-                .add_directory(&format!("{}/", rel_str), options)
+                .add_directory(format!("{}/", rel_str), options)
                 .map_err(|e| format!("Failed to add directory to zip: {}", e))?;
         } else {
             zip_writer

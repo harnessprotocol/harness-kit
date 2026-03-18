@@ -22,9 +22,7 @@ fn history_dir() -> Result<PathBuf, String> {
 fn history_file_path(plugin_name: &str, file_path: &str) -> Result<PathBuf, String> {
     let dir = history_dir()?.join(plugin_name);
     // Encode the file path to a safe filename
-    let encoded = file_path
-        .replace('/', "__")
-        .replace('\\', "__");
+    let encoded = file_path.replace(['/', '\\'], "__");
     Ok(dir.join(format!("{}.history.json", encoded)))
 }
 
