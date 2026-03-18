@@ -1,6 +1,6 @@
 use serde::Serialize;
 use std::fs;
-use std::io::{Read, Write};
+use std::io::Read;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
 
