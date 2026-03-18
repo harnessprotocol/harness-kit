@@ -21,6 +21,8 @@ import {
   setMarkdownFont,
   getSidebarWidth,
   setSidebarWidth,
+  getConfirmSave,
+  setConfirmSave,
   initPreferences,
 } from "../preferences";
 
@@ -194,6 +196,30 @@ describe("getSidebarWidth / setSidebarWidth", () => {
   it("applies --sidebar-width CSS variable", () => {
     setSidebarWidth(280);
     expect(document.documentElement.style.getPropertyValue("--sidebar-width")).toBe("280px");
+  });
+});
+
+// ── Confirm Save ────────────────────────────────────────────
+
+describe("getConfirmSave / setConfirmSave", () => {
+  it("returns true when unset", () => {
+    expect(getConfirmSave()).toBe(true);
+  });
+
+  it("stores and retrieves false", () => {
+    setConfirmSave(false);
+    expect(getConfirmSave()).toBe(false);
+  });
+
+  it("stores and retrieves true", () => {
+    setConfirmSave(false);
+    setConfirmSave(true);
+    expect(getConfirmSave()).toBe(true);
+  });
+
+  it("falls back to true for invalid string", () => {
+    localStorage.setItem("harness-kit-confirm-save", "garbage");
+    expect(getConfirmSave()).toBe(true);
   });
 });
 

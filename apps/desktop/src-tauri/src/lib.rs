@@ -85,6 +85,10 @@ pub fn run() {
             // Security — audit log
             commands::security_db::list_audit_entries,
             commands::security_db::clear_audit_entries,
+            // File history
+            commands::history::read_file_history,
+            commands::history::push_file_history,
+            commands::history::get_history_size,
         ])
         .setup(|app| {
             let state = app.state::<BoardServerState>();

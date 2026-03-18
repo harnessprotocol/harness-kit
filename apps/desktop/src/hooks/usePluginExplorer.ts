@@ -3,7 +3,10 @@ import type { InstalledPlugin, FileTreeNode } from "@harness-kit/shared";
 import {
   readPluginTree, readPluginFile, writePluginFile,
   exportPluginAsZip, exportPluginToFolder,
+  readFileHistory, pushFileHistory, type HistoryEntry,
 } from "../lib/tauri";
+import { isCriticalFile } from "../lib/criticalFiles";
+import { getConfirmSave } from "../lib/preferences";
 
 export interface PluginExplorerState {
   tree: FileTreeNode | null;
@@ -14,14 +17,24 @@ export interface PluginExplorerState {
   fileLoading: boolean;
   dirty: boolean;
   saving: boolean;
+  savedRecently: boolean;
   selectFile: (path: string) => void;
   updateContent: (content: string) => void;
   saveFile: () => Promise<void>;
+  revertFile: () => void;
   exportAsZip: () => Promise<void>;
   exportToFolder: () => Promise<void>;
+  confirmState: "idle" | "pending" | "critical";
+  requestSave: () => void;
+  confirmSave: () => void;
+  cancelSave: () => void;
+  historyEntries: HistoryEntry[];
+  historyLoading: boolean;
+  restoreVersion: (content: string) => void;
 }
 
 export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean): PluginExplorerState {
+  const pluginName = plugin?.name ?? "";
   const [tree, setTree] = useState<FileTreeNode | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,6 +43,11 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
   const [originalContent, setOriginalContent] = useState<string | null>(null);
   const [fileLoading, setFileLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [savedRecently, setSavedRecently] = useState(false);
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [confirmState, setConfirmState] = useState<"idle" | "pending" | "critical">("idle");
+  const [historyEntries, setHistoryEntries] = useState<HistoryEntry[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const dirty = fileContent !== null && originalContent !== null && fileContent !== originalContent;
   const currentPathRef = useRef<string | null>(null);
@@ -96,6 +114,19 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
     }
   }, [saveCurrent]);
 
+  // Load history when file changes
+  useEffect(() => {
+    if (!selectedPath || !pluginName) {
+      setHistoryEntries([]);
+      return;
+    }
+    setHistoryLoading(true);
+    readFileHistory(pluginName, selectedPath)
+      .then(setHistoryEntries)
+      .catch(() => setHistoryEntries([]))
+      .finally(() => setHistoryLoading(false));
+  }, [selectedPath, pluginName]);
+
   const updateContent = useCallback((content: string) => {
     setFileContent(content);
   }, []);
@@ -104,14 +135,58 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
     if (!selectedPath || fileContent === null) return;
     setSaving(true);
     try {
+      // Push previous content to history before overwriting
+      if (originalContent !== null && pluginName) {
+        await pushFileHistory(pluginName, selectedPath, originalContent).catch(() => {});
+      }
       await writePluginFile(selectedPath, fileContent);
       setOriginalContent(fileContent);
+      setSavedRecently(true);
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = setTimeout(() => setSavedRecently(false), 2000);
+      // Refresh history
+      if (pluginName) {
+        readFileHistory(pluginName, selectedPath)
+          .then(setHistoryEntries)
+          .catch(() => {});
+      }
     } catch (e) {
       setError(String(e));
     } finally {
       setSaving(false);
     }
-  }, [selectedPath, fileContent]);
+  }, [selectedPath, fileContent, originalContent, pluginName]);
+
+  const requestSave = useCallback(() => {
+    if (!selectedPath || fileContent === null || !dirty) return;
+    const critical = isCriticalFile(selectedPath);
+    if (critical) {
+      setConfirmState("critical");
+    } else if (getConfirmSave()) {
+      setConfirmState("pending");
+    } else {
+      saveFile();
+    }
+  }, [selectedPath, fileContent, dirty, saveFile]);
+
+  const confirmSave = useCallback(() => {
+    setConfirmState("idle");
+    saveFile();
+  }, [saveFile]);
+
+  const cancelSave = useCallback(() => {
+    setConfirmState("idle");
+  }, []);
+
+  const restoreVersion = useCallback((content: string) => {
+    setFileContent(content);
+  }, []);
+
+  const revertFile = useCallback(() => {
+    if (originalContent !== null) {
+      setFileContent(originalContent);
+    }
+  }, [originalContent]);
 
   const exportAsZip = useCallback(async () => {
     if (!plugin?.source) return;
@@ -134,11 +209,20 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
     } catch { /* cancelled */ }
   }, [plugin?.source]);
 
+  // Clean up savedRecently timer on unmount
+  useEffect(() => {
+    return () => {
+      if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
+    };
+  }, []);
+
   return {
     tree, loading, error,
     selectedPath, fileContent, fileLoading,
-    dirty, saving,
-    selectFile, updateContent, saveFile,
+    dirty, saving, savedRecently,
+    confirmState, requestSave, confirmSave, cancelSave,
+    historyEntries, historyLoading, restoreVersion,
+    selectFile, updateContent, saveFile, revertFile,
     exportAsZip, exportToFolder,
   };
 }

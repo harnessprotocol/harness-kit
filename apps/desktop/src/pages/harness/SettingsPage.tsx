@@ -20,6 +20,16 @@ const EXT_LABEL: Record<string, string> = {
   ".mjs": "JS",
 };
 
+const HIDDEN_PATTERNS: RegExp[] = [
+  /^security_warnings_state_/,
+  /^statsig-/,
+  /^stats-cache\.json$/,
+];
+
+function isHiddenFile(name: string): boolean {
+  return HIDDEN_PATTERNS.some((p) => p.test(name));
+}
+
 export default function SettingsPage() {
   const navigate = useNavigate();
   const [files, setFiles] = useState<string[]>([]);
@@ -28,7 +38,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     listClaudeDir()
-      .then((entries) => setFiles(entries.filter((e) => TEXT_EXTENSIONS.has(extOf(e)))))
+      .then((entries) => setFiles(entries.filter((e) => TEXT_EXTENSIONS.has(extOf(e)) && !isHiddenFile(e))))
       .catch((e) => setError(String(e)))
       .finally(() => setLoading(false));
   }, []);

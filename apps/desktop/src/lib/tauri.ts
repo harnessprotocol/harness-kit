@@ -57,6 +57,25 @@ export async function exportPluginToFolder(pluginPath: string, dest: string): Pr
   return invoke<void>("export_plugin_to_folder", { pluginPath, dest });
 }
 
+// ── File History commands ───────────────────────────────────
+
+export interface HistoryEntry {
+  timestamp: string;
+  content: string;
+}
+
+export async function readFileHistory(pluginName: string, filePath: string): Promise<HistoryEntry[]> {
+  return invoke<HistoryEntry[]>("read_file_history", { pluginName, filePath });
+}
+
+export async function pushFileHistory(pluginName: string, filePath: string, content: string): Promise<void> {
+  return invoke<void>("push_file_history", { pluginName, filePath, content });
+}
+
+export async function getHistorySize(): Promise<number> {
+  return invoke<number>("get_history_size");
+}
+
 // ── Hook commands ────────────────────────────────────────────
 
 export async function readHooks(): Promise<HooksConfig> {

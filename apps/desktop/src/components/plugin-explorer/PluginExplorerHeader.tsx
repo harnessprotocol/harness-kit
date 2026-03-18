@@ -1,18 +1,33 @@
+import { AnimatePresence, motion } from "framer-motion";
 import type { InstalledPlugin } from "@harness-kit/shared";
+import type { HistoryEntry } from "../../lib/tauri";
 import ExportMenu from "./ExportMenu";
+import SaveConfirmPopover from "./SaveConfirmPopover";
+import VersionHistoryPopover from "./VersionHistoryPopover";
 
 interface PluginExplorerHeaderProps {
   plugin: InstalledPlugin;
   dirty: boolean;
   saving: boolean;
+  savedRecently: boolean;
+  confirmState: "idle" | "pending" | "critical";
+  onRequestSave: () => void;
+  onConfirmSave: () => void;
+  onCancelSave: () => void;
+  onRevert: () => void;
   onExportZip: () => void;
   onExportFolder: () => void;
   onClose: () => void;
+  historyEntries: HistoryEntry[];
+  historyLoading: boolean;
+  onRestoreVersion: (content: string) => void;
 }
 
 export default function PluginExplorerHeader({
-  plugin, dirty, saving,
+  plugin, dirty, saving, savedRecently,
+  confirmState, onRequestSave, onConfirmSave, onCancelSave, onRevert,
   onExportZip, onExportFolder, onClose,
+  historyEntries, historyLoading, onRestoreVersion,
 }: PluginExplorerHeaderProps) {
   return (
     <div style={{
@@ -45,16 +60,72 @@ export default function PluginExplorerHeader({
         )}
       </div>
 
-      {/* Right: status + actions */}
+      {/* Right: save/revert + status + actions */}
       <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-        {/* Save indicator */}
-        {(dirty || saving) && (
-          <div style={{
-            width: 8, height: 8, borderRadius: "50%",
-            background: saving ? "var(--fg-subtle)" : "var(--accent)",
-            animation: dirty && !saving ? "pulse 1.5s ease-in-out infinite" : undefined,
-          }} title={saving ? "Saving..." : "Unsaved changes"} />
-        )}
+        {/* Save/Revert/Confirm controls */}
+        <AnimatePresence mode="wait">
+          {confirmState !== "idle" ? (
+            <motion.div
+              key="confirm"
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 8 }}
+              transition={{ duration: 0.15 }}
+            >
+              <SaveConfirmPopover
+                variant={confirmState === "critical" ? "critical" : "inline"}
+                onConfirm={onConfirmSave}
+                onCancel={onCancelSave}
+              />
+            </motion.div>
+          ) : dirty ? (
+            <motion.div
+              key="save-controls"
+              initial={{ opacity: 0, x: 8 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 8 }}
+              transition={{ duration: 0.15 }}
+              style={{ display: "flex", alignItems: "center", gap: "6px" }}
+            >
+              <button
+                className="btn btn-sm btn-accent"
+                onClick={onRequestSave}
+                disabled={saving}
+              >
+                {saving ? "Saving..." : "Save"}
+              </button>
+              <button
+                className="btn btn-sm btn-secondary"
+                onClick={onRevert}
+                disabled={saving}
+              >
+                Revert
+              </button>
+            </motion.div>
+          ) : savedRecently ? (
+            <motion.span
+              key="saved-indicator"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              style={{
+                fontSize: "11px",
+                color: "var(--success, #22c55e)",
+                fontWeight: 500,
+              }}
+            >
+              Saved
+            </motion.span>
+          ) : null}
+        </AnimatePresence>
+
+        {/* Version history */}
+        <VersionHistoryPopover
+          entries={historyEntries}
+          loading={historyLoading}
+          onRestore={onRestoreVersion}
+        />
 
         <ExportMenu onExportZip={onExportZip} onExportFolder={onExportFolder} />
 

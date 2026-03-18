@@ -32,7 +32,7 @@ export default function PluginExplorerModal({ plugin, onClose }: PluginExplorerM
       }
       if ((e.metaKey || e.ctrlKey) && e.key === "s") {
         e.preventDefault();
-        explorer.saveFile();
+        explorer.requestSave();
       }
     }
     window.addEventListener("keydown", onKey);
@@ -42,22 +42,23 @@ export default function PluginExplorerModal({ plugin, onClose }: PluginExplorerM
   return (
     <AnimatePresence>
       {open && plugin && (
-        <>
-          {/* Backdrop */}
+          /* Full-overlay container — covers the content area, not the viewport */
           <motion.div
-            key="explorer-backdrop"
+            key="explorer-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             onClick={handleClose}
             style={{
-              position: "fixed", inset: 0,
+              position: "absolute", inset: 0,
               background: "rgba(0,0,0,0.5)",
               zIndex: 200,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
-          />
-
+          >
           {/* Modal */}
           <motion.div
             key="explorer-modal"
@@ -65,12 +66,10 @@ export default function PluginExplorerModal({ plugin, onClose }: PluginExplorerM
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 12 }}
             transition={{ type: "spring", stiffness: 420, damping: 36 }}
+            onClick={(e) => e.stopPropagation()}
             style={{
-              position: "fixed",
-              top: "50%", left: "50%",
-              transform: "translate(-50%, -50%)",
-              width: "min(90vw, 1200px)",
-              height: "85vh",
+              width: "min(90%, 1200px)",
+              height: "85%",
               background: "var(--bg-surface)",
               border: "1px solid var(--border-base)",
               borderRadius: "12px",
@@ -85,9 +84,18 @@ export default function PluginExplorerModal({ plugin, onClose }: PluginExplorerM
               plugin={plugin}
               dirty={explorer.dirty}
               saving={explorer.saving}
+              savedRecently={explorer.savedRecently}
+              confirmState={explorer.confirmState}
+              onRequestSave={explorer.requestSave}
+              onConfirmSave={explorer.confirmSave}
+              onCancelSave={explorer.cancelSave}
+              onRevert={explorer.revertFile}
               onExportZip={explorer.exportAsZip}
               onExportFolder={explorer.exportToFolder}
               onClose={handleClose}
+              historyEntries={explorer.historyEntries}
+              historyLoading={explorer.historyLoading}
+              onRestoreVersion={explorer.restoreVersion}
             />
 
             {/* Body */}
@@ -139,7 +147,7 @@ export default function PluginExplorerModal({ plugin, onClose }: PluginExplorerM
               </div>
             )}
           </motion.div>
-        </>
+          </motion.div>
       )}
     </AnimatePresence>
   );

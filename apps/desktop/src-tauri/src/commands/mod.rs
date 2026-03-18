@@ -12,3 +12,4 @@ pub mod git;
 pub mod evaluation;
 pub mod export;
 pub mod types;
+pub mod history;

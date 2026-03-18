@@ -10,6 +10,7 @@ import {
   getHiddenSections, setHiddenSections,
   getObservatoryRefresh, setObservatoryRefresh,
   getMarkdownFont, setMarkdownFont,
+  getConfirmSave, setConfirmSave,
   type Density,
   type MarkdownFont,
 } from "../lib/preferences";
@@ -72,7 +73,7 @@ function SettingRow({
   );
 }
 
-function Segmented<T extends string | number>({
+function Segmented<T extends string | number | boolean>({
   options,
   value,
   onChange,
@@ -124,6 +125,7 @@ export default function PreferencesPage() {
   const [hiddenSections, setHiddenSectionsState] = useState(getHiddenSections);
   const [observatoryRefresh, setObservatoryRefreshState] = useState(getObservatoryRefresh);
   const [markdownFont, setMarkdownFontState] = useState(getMarkdownFont);
+  const [confirmSave, setConfirmSaveState] = useState(getConfirmSave);
 
   function handleSetTheme(t: "light" | "dark" | "system") {
     setTheme(t);
@@ -179,6 +181,11 @@ export default function PreferencesPage() {
   function handleSetMarkdownFont(font: MarkdownFont) {
     setMarkdownFont(font);
     setMarkdownFontState(font);
+  }
+
+  function handleSetConfirmSave(value: boolean) {
+    setConfirmSave(value);
+    setConfirmSaveState(value);
   }
 
   // Compute whether each section pill should be disabled (last visible)
@@ -380,6 +387,20 @@ export default function PreferencesPage() {
             ]}
             value={observatoryRefresh}
             onChange={handleSetObservatoryRefresh}
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Confirm before saving"
+          description="Critical config files always require confirmation"
+        >
+          <Segmented
+            options={[
+              { value: true, label: "On" },
+              { value: false, label: "Off" },
+            ]}
+            value={confirmSave}
+            onChange={handleSetConfirmSave}
           />
         </SettingRow>
       </div>

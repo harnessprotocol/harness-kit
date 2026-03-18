@@ -19,6 +19,7 @@ const KEY_HIDDEN_SECTIONS = "harness-kit-hidden-sections";
 const KEY_OBSERVATORY_REFRESH = "harness-kit-observatory-refresh";
 const KEY_MARKDOWN_FONT = "harness-kit-markdown-font";
 const KEY_SIDEBAR_WIDTH = "harness-kit-sidebar-width";
+const KEY_CONFIRM_SAVE = "harness-kit-confirm-save";
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -111,6 +112,17 @@ export function getMarkdownFont(): MarkdownFont {
 export function setMarkdownFont(font: MarkdownFont) {
   localStorage.setItem(KEY_MARKDOWN_FONT, font);
   window.dispatchEvent(new CustomEvent("harness-kit-prefs-changed"));
+}
+
+// ── Confirm Save ────────────────────────────────────────────
+
+export function getConfirmSave(): boolean {
+  const raw = localStorage.getItem(KEY_CONFIRM_SAVE);
+  return raw === "false" ? false : true;
+}
+
+export function setConfirmSave(confirm: boolean) {
+  localStorage.setItem(KEY_CONFIRM_SAVE, String(confirm));
 }
 
 // ── Sidebar Width ────────────────────────────────────────────
