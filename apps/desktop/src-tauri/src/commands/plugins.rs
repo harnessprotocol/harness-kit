@@ -2,6 +2,13 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ComponentCounts {
+    pub skills: u32,
+    pub agents: u32,
+    pub scripts: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct InstalledPlugin {
     pub name: String,
     pub version: String,
@@ -11,6 +18,7 @@ pub struct InstalledPlugin {
     pub installed_at: Option<String>,
     pub category: Option<String>,
     pub tags: Option<Vec<String>>,
+    pub component_counts: Option<ComponentCounts>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -76,6 +84,22 @@ fn claude_dir() -> Option<std::path::PathBuf> {
     dirs::home_dir().map(|h| h.join(".claude"))
 }
 
+fn count_subdirectory_entries(install_path: &str, subdir: &str) -> u32 {
+    let path = std::path::Path::new(install_path).join(subdir);
+    match std::fs::read_dir(path) {
+        Ok(entries) => entries.filter_map(|e| e.ok()).count() as u32,
+        Err(_) => 0,
+    }
+}
+
+fn count_components(install_path: &str) -> ComponentCounts {
+    ComponentCounts {
+        skills: count_subdirectory_entries(install_path, "skills"),
+        agents: count_subdirectory_entries(install_path, "agents"),
+        scripts: count_subdirectory_entries(install_path, "scripts"),
+    }
+}
+
 fn read_plugin_manifest_fields(install_path: &str) -> PluginManifestFields {
     let empty = PluginManifestFields { description: None, category: None, tags: None };
     let manifest_path = std::path::Path::new(install_path)
@@ -120,6 +144,7 @@ pub fn list_installed_plugins() -> Result<Vec<InstalledPlugin>, String> {
             let fields = record.install_path.as_deref()
                 .map(read_plugin_manifest_fields)
                 .unwrap_or(PluginManifestFields { description: None, category: None, tags: None });
+            let counts = record.install_path.as_deref().map(count_components);
             Some(InstalledPlugin {
                 name,
                 version: record.version,
@@ -129,6 +154,7 @@ pub fn list_installed_plugins() -> Result<Vec<InstalledPlugin>, String> {
                 installed_at: record.installed_at,
                 category: fields.category,
                 tags: fields.tags,
+                component_counts: counts,
             })
         })
         .collect();
@@ -212,4 +238,52 @@ pub fn check_plugin_updates() -> Result<Vec<PluginUpdateInfo>, String> {
         .collect();
 
     Ok(updates)
+}
+
+#[tauri::command]
+pub fn uninstall_plugin(name: String) -> Result<(), String> {
+    // Validate name doesn't contain path traversal characters
+    if name.contains('/') || name.contains('\\') || name.contains("..") {
+        return Err("Invalid plugin name".to_string());
+    }
+
+    let plugins_dir = claude_dir()
+        .ok_or_else(|| "Could not resolve home directory".to_string())?
+        .join("plugins");
+
+    // Remove plugin directory
+    let plugin_dir = plugins_dir.join(&name);
+    if plugin_dir.exists() {
+        std::fs::remove_dir_all(&plugin_dir)
+            .map_err(|e| format!("Failed to remove plugin directory: {}", e))?;
+    }
+
+    // Remove from installed_plugins.json
+    let json_path = plugins_dir.join("installed_plugins.json");
+    if json_path.exists() {
+        let contents = std::fs::read_to_string(&json_path)
+            .map_err(|e| format!("Failed to read installed_plugins.json: {}", e))?;
+        let mut data: serde_json::Value = serde_json::from_str(&contents)
+            .map_err(|e| format!("Failed to parse installed_plugins.json: {}", e))?;
+
+        if let Some(plugins) = data.get_mut("plugins").and_then(|p| p.as_object_mut()) {
+            // Remove any key matching the name (with or without @marketplace suffix)
+            let keys_to_remove: Vec<String> = plugins
+                .keys()
+                .filter(|k| {
+                    let base = k.find('@').map_or(k.as_str(), |i| &k[..i]);
+                    base == name
+                })
+                .cloned()
+                .collect();
+            for key in keys_to_remove {
+                plugins.remove(&key);
+            }
+        }
+
+        std::fs::write(&json_path, serde_json::to_string_pretty(&data).unwrap())
+            .map_err(|e| format!("Failed to update installed_plugins.json: {}", e))?;
+    }
+
+    Ok(())
 }

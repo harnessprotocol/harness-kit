@@ -6,7 +6,7 @@ import type {
   ComparisonDetail, PanelDiffs, ReplaySetup, SaveEvaluationRequest,
   EvaluationScores, AnalyticsData, FileDiffEntry,
   PermissionsState, SecurityPreset, KeychainSecretInfo,
-  EnvConfigEntry, AuditEntry,
+  EnvConfigEntry, AuditEntry, FileTreeNode,
 } from "@harness-kit/shared";
 
 // ── Plugin commands ──────────────────────────────────────────
@@ -21,6 +21,59 @@ export async function listMarketplaces(): Promise<KnownMarketplace[]> {
 
 export async function checkPluginUpdates(): Promise<PluginUpdateInfo[]> {
   return invoke<PluginUpdateInfo[]>("check_plugin_updates");
+}
+
+export async function uninstallPlugin(name: string): Promise<void> {
+  return invoke<void>("uninstall_plugin", { name });
+}
+
+// ── Plugin Explorer commands ────────────────────────────────
+
+export async function readPluginTree(pluginPath: string): Promise<FileTreeNode> {
+  return invoke<FileTreeNode>("read_plugin_tree", { pluginPath });
+}
+
+export async function readPluginFile(filePath: string): Promise<string> {
+  return invoke<string>("read_plugin_file", { filePath });
+}
+
+export async function writePluginFile(filePath: string, content: string): Promise<void> {
+  return invoke<void>("write_plugin_file", { filePath, content });
+}
+
+export async function importPluginFromPath(sourcePath: string): Promise<InstalledPlugin> {
+  return invoke<InstalledPlugin>("import_plugin_from_path", { sourcePath });
+}
+
+export async function importPluginFromZip(zipPath: string): Promise<InstalledPlugin> {
+  return invoke<InstalledPlugin>("import_plugin_from_zip", { zipPath });
+}
+
+export async function exportPluginAsZip(pluginPath: string, savePath: string): Promise<void> {
+  return invoke<void>("export_plugin_as_zip", { pluginPath, savePath });
+}
+
+export async function exportPluginToFolder(pluginPath: string, dest: string): Promise<void> {
+  return invoke<void>("export_plugin_to_folder", { pluginPath, dest });
+}
+
+// ── File History commands ───────────────────────────────────
+
+export interface HistoryEntry {
+  timestamp: string;
+  content: string;
+}
+
+export async function readFileHistory(pluginName: string, filePath: string): Promise<HistoryEntry[]> {
+  return invoke<HistoryEntry[]>("read_file_history", { pluginName, filePath });
+}
+
+export async function pushFileHistory(pluginName: string, filePath: string, content: string): Promise<void> {
+  return invoke<void>("push_file_history", { pluginName, filePath, content });
+}
+
+export async function getHistorySize(): Promise<number> {
+  return invoke<number>("get_history_size");
 }
 
 // ── Hook commands ────────────────────────────────────────────

@@ -18,6 +18,7 @@
   /* Borders */
   --border-base: rgba(0, 0, 0, 0.08);
   --border-strong: rgba(0, 0, 0, 0.14);
+  --border-subtle: rgba(0, 0, 0, 0.05);
   --separator: rgba(0, 0, 0, 0.07);
 
   /* Accent — refined blue-violet */
@@ -62,6 +63,7 @@
   /* Borders — warm off-white base */
   --border-base: rgba(255, 248, 230, 0.09);
   --border-strong: rgba(255, 248, 230, 0.15);
+  --border-subtle: rgba(255, 248, 230, 0.05);
   --separator: rgba(255, 248, 230, 0.07);
 
   /* Accent */
@@ -774,6 +776,18 @@ body {
   --status-review: var(--warning);
   --status-done: var(--success);
   --blocked: var(--danger);
+}
+
+/* ── Plugin explorer animations ── */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@keyframes shimmer {
+  0% { opacity: 0.3; }
+  50% { opacity: 0.6; }
+  100% { opacity: 0.3; }
 }
 
 /* ── Reduced motion ── */
