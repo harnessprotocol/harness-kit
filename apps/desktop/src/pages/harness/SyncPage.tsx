@@ -12,7 +12,10 @@ import {
 import type { BackupManifest } from "../../lib/tauri";
 import { SyncFsProvider } from "../../lib/sync-fs";
 import { generateHarnessYaml, HARNESS_TEMPLATE } from "../../lib/harness-generator";
+import type { GenerateSummary } from "../../lib/harness-generator";
 import HarnessEditorModal from "../../components/HarnessEditorModal";
+import ProfilePickerModal from "../../components/ProfilePickerModal";
+import type { HarnessProfile } from "../../lib/profiles";
 import SyncPreview from "./sync/SyncPreview";
 import BackupHistory from "./sync/BackupHistory";
 
@@ -74,6 +77,11 @@ export default function SyncPage() {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editorContent, setEditorContent] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [generateSummary, setGenerateSummary] = useState<GenerateSummary | null>(null);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+
+  // Profile picker modal
+  const [profilePickerOpen, setProfilePickerOpen] = useState(false);
 
   // Project dir
   const [projectDir, setProjectDir] = useState("");
@@ -131,21 +139,27 @@ export default function SyncPage() {
   // Generate harness from Claude Code config
   async function handleGenerate() {
     setGenerating(true);
+    setGenerateError(null);
+    setGenerateSummary(null);
     try {
       const scan = await scanClaudeConfig();
-      const yaml = generateHarnessYaml(scan);
+      const { yaml, summary } = generateHarnessYaml(scan);
+      setGenerateSummary(summary);
       setEditorContent(yaml);
-    } catch {
+      setEditorOpen(true);
+    } catch (e) {
+      setGenerateError(String(e));
       setEditorContent(HARNESS_TEMPLATE);
+      setEditorOpen(true);
     } finally {
       setGenerating(false);
-      setEditorOpen(true);
     }
   }
 
-  // Open blank template
-  function handleStartBlank() {
-    setEditorContent(HARNESS_TEMPLATE);
+  // Profile picker
+  function handleProfileSelect(profile: HarnessProfile) {
+    setProfilePickerOpen(false);
+    setEditorContent(profile.yaml);
     setEditorOpen(true);
   }
 
@@ -291,7 +305,7 @@ export default function SyncPage() {
         {/* No harness.yaml — empty state */}
         {!harnessLoading && !harnessContent && (
           <Card>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px", padding: "20px 0 8px", textAlign: "center" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "14px", padding: "20px 0 8px", textAlign: "center" }}>
               <div style={{
                 width: "40px", height: "40px", borderRadius: "10px",
                 background: "var(--bg-elevated)", border: "1px solid var(--border-base)",
@@ -304,11 +318,34 @@ export default function SyncPage() {
                 <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)", margin: "0 0 4px" }}>
                   No harness.yaml found
                 </p>
-                <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: 0, maxWidth: "380px", lineHeight: "1.5" }}>
+                <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: 0, maxWidth: "400px", lineHeight: "1.5" }}>
                   harness.yaml is the single source of truth for your AI assistant configuration —
                   MCP servers, instructions, permissions, and more.
                 </p>
               </div>
+
+              {/* Generate summary (shown after scan) */}
+              {generateSummary && (
+                <div style={{
+                  padding: "8px 14px", borderRadius: "6px",
+                  background: "var(--bg-elevated)", border: "1px solid var(--border-base)",
+                  fontSize: "11px", color: "var(--fg-muted)", textAlign: "left",
+                }}>
+                  {generateSummary.mcpSource
+                    ? <span>Found <strong style={{ color: "var(--fg-base)" }}>{generateSummary.mcpServerCount} MCP server{generateSummary.mcpServerCount !== 1 ? "s" : ""}</strong> from <code style={{ fontFamily: "ui-monospace, monospace" }}>{generateSummary.mcpSource}</code></span>
+                    : <span style={{ color: "var(--fg-subtle)" }}>No MCP config found</span>
+                  }
+                  {" · "}
+                  {generateSummary.settingsSource
+                    ? <span><strong style={{ color: "var(--fg-base)" }}>{generateSummary.allowCount}</strong> allowed tools from <code style={{ fontFamily: "ui-monospace, monospace" }}>{generateSummary.settingsSource}</code></span>
+                    : <span style={{ color: "var(--fg-subtle)" }}>No settings found</span>
+                  }
+                </div>
+              )}
+              {generateError && (
+                <p style={{ margin: 0, fontSize: "11px", color: "var(--danger)" }}>{generateError}</p>
+              )}
+
               <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "center" }}>
                 <button
                   onClick={handleGenerate}
@@ -319,10 +356,10 @@ export default function SyncPage() {
                     fontSize: "12px", fontWeight: 600, cursor: generating ? "not-allowed" : "pointer",
                   }}
                 >
-                  {generating ? "Scanning…" : "Generate from current Claude Code setup"}
+                  {generating ? "Scanning…" : "Generate from Claude Code setup"}
                 </button>
                 <button
-                  onClick={handleStartBlank}
+                  onClick={() => setProfilePickerOpen(true)}
                   style={{
                     padding: "7px 14px", borderRadius: "6px",
                     border: "1px solid var(--border-base)",
@@ -330,7 +367,7 @@ export default function SyncPage() {
                     fontSize: "12px", cursor: "pointer",
                   }}
                 >
-                  Start from template
+                  Start from a profile
                 </button>
               </div>
             </div>
@@ -534,6 +571,13 @@ export default function SyncPage() {
         )}
 
       </div>
+
+      {/* Profile picker modal */}
+      <ProfilePickerModal
+        open={profilePickerOpen}
+        onClose={() => setProfilePickerOpen(false)}
+        onSelect={handleProfileSelect}
+      />
 
       {/* Editor modal — rendered over everything */}
       <HarnessEditorModal

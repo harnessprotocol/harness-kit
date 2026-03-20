@@ -68,12 +68,21 @@ pub fn write_harness_file(content: String) -> Result<String, String> {
 }
 
 /// Scan ~/.claude/ for existing Claude Code configuration that can be used
-/// to generate a harness.yaml: MCP servers (.mcp.json), settings (settings.json).
+/// to generate a harness.yaml.
+///
+/// Claude Code stores MCP servers in mcp.json (no dot prefix) and
+/// permissions in settings.local.json under the `permissions` key.
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ClaudeConfigScan {
+    /// Raw content of mcp.json / .mcp.json — whichever was found first.
     pub mcp_servers_json: Option<String>,
+    /// Raw content of settings.local.json or settings.json — whichever was found first.
     pub settings_json: Option<String>,
+    /// Which MCP file was found, for display in the UI.
+    pub mcp_source: Option<String>,
+    /// Which settings file was found, for display in the UI.
+    pub settings_source: Option<String>,
 }
 
 #[tauri::command]
@@ -82,8 +91,28 @@ pub fn scan_claude_config() -> Result<ClaudeConfigScan, String> {
         .ok_or_else(|| "Could not resolve home directory".to_string())?;
     let claude_dir = home.join(".claude");
 
-    let mcp_servers_json = std::fs::read_to_string(claude_dir.join(".mcp.json")).ok();
-    let settings_json = std::fs::read_to_string(claude_dir.join("settings.json")).ok();
+    // MCP servers: mcp.json is the current Claude Code location; .mcp.json is a legacy fallback.
+    let (mcp_servers_json, mcp_source) = [
+        (claude_dir.join("mcp.json"), "~/.claude/mcp.json"),
+        (claude_dir.join(".mcp.json"), "~/.claude/.mcp.json"),
+    ]
+    .into_iter()
+    .find_map(|(path, label)| {
+        std::fs::read_to_string(&path).ok().map(|c| (Some(c), Some(label.to_string())))
+    })
+    .unwrap_or((None, None));
 
-    Ok(ClaudeConfigScan { mcp_servers_json, settings_json })
+    // Permissions: settings.local.json has per-user overrides (allow/deny/ask);
+    // fall back to settings.json for users without a local file.
+    let (settings_json, settings_source) = [
+        (claude_dir.join("settings.local.json"), "~/.claude/settings.local.json"),
+        (claude_dir.join("settings.json"), "~/.claude/settings.json"),
+    ]
+    .into_iter()
+    .find_map(|(path, label)| {
+        std::fs::read_to_string(&path).ok().map(|c| (Some(c), Some(label.to_string())))
+    })
+    .unwrap_or((None, None));
+
+    Ok(ClaudeConfigScan { mcp_servers_json, settings_json, mcp_source, settings_source })
 }

@@ -107,6 +107,8 @@ export async function writeHarnessFile(content: string): Promise<string> {
 export interface ClaudeConfigScan {
   mcpServersJson: string | null;
   settingsJson: string | null;
+  mcpSource: string | null;
+  settingsSource: string | null;
 }
 
 export async function scanClaudeConfig(): Promise<ClaudeConfigScan> {
