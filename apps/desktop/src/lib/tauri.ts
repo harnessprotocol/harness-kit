@@ -100,6 +100,19 @@ export async function readHarnessFile(): Promise<HarnessFileResult> {
   return invoke<HarnessFileResult>("read_harness_file");
 }
 
+export async function writeHarnessFile(content: string): Promise<string> {
+  return invoke<string>("write_harness_file", { content });
+}
+
+export interface ClaudeConfigScan {
+  mcpServersJson: string | null;
+  settingsJson: string | null;
+}
+
+export async function scanClaudeConfig(): Promise<ClaudeConfigScan> {
+  return invoke<ClaudeConfigScan>("scan_claude_config");
+}
+
 // ── Settings / directory commands ────────────────────────────
 
 export async function listClaudeDir(): Promise<string[]> {

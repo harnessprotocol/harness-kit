@@ -41,6 +41,8 @@ pub fn run() {
             commands::claude_md::read_claude_md,
             // Harness File
             commands::harness_file::read_harness_file,
+            commands::harness_file::write_harness_file,
+            commands::harness_file::scan_claude_config,
             // Settings
             commands::settings::list_claude_dir,
             // Observatory
