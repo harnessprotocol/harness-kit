@@ -295,6 +295,61 @@ export async function clearAuditEntries(beforeDate: string): Promise<void> {
   return invoke<void>("clear_audit_entries", { beforeDate });
 }
 
+// ── Sync commands ────────────────────────────────────────────
+
+export interface SyncFileWrite {
+  relativePath: string;
+  content: string;
+}
+
+export interface BackupFileEntry {
+  relativePath: string;
+  existed: boolean;
+  sizeBytes: number;
+}
+
+export interface BackupManifest {
+  id: string;
+  timestamp: string;
+  projectDir: string;
+  harnessName: string;
+  platforms: string[];
+  files: BackupFileEntry[];
+}
+
+export async function syncReadFile(projectDir: string, filePath: string): Promise<string> {
+  return invoke<string>("sync_read_file", { projectDir, filePath });
+}
+
+export async function syncFileExists(projectDir: string, filePath: string): Promise<boolean> {
+  return invoke<boolean>("sync_file_exists", { projectDir, filePath });
+}
+
+export async function syncReadDir(projectDir: string, dirPath: string): Promise<string[]> {
+  return invoke<string[]>("sync_read_dir", { projectDir, dirPath });
+}
+
+export async function syncWriteFiles(projectDir: string, files: SyncFileWrite[]): Promise<void> {
+  return invoke<void>("sync_write_files", { projectDir, files });
+}
+
+export async function syncCreateBackup(
+  projectDir: string,
+  harnessName: string,
+  platforms: string[],
+  filePaths: string[],
+): Promise<BackupManifest> {
+  return invoke<BackupManifest>("sync_create_backup", { projectDir, harnessName, platforms, filePaths });
+}
+
+export async function syncListBackups(): Promise<BackupManifest[]> {
+  return invoke<BackupManifest[]>("sync_list_backups");
+}
+
+export async function syncRestoreBackup(backupId: string): Promise<void> {
+  return invoke<void>("sync_restore_backup", { backupId });
+}
+
 // ── Board server commands ──────────────────────────────────
 
 export async function boardServerCheckInstalled(): Promise<boolean> {

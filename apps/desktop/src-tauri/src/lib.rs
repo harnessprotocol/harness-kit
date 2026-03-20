@@ -91,6 +91,14 @@ pub fn run() {
             commands::history::read_file_history,
             commands::history::push_file_history,
             commands::history::get_history_size,
+            // Sync
+            commands::sync::sync_read_file,
+            commands::sync::sync_file_exists,
+            commands::sync::sync_read_dir,
+            commands::sync::sync_write_files,
+            commands::sync::sync_create_backup,
+            commands::sync::sync_list_backups,
+            commands::sync::sync_restore_backup,
             // Board server
             board_server::board_server_check_installed,
             board_server::board_server_install,

@@ -25,6 +25,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "Plugins", path: "/harness/plugins" },
       { label: "Hooks", path: "/harness/hooks" },
       { label: "CLAUDE.md", path: "/harness/claude-md" },
+      { label: "Sync", path: "/harness/sync" },
       { label: "Config Files", path: "/harness/settings" },
     ],
   },

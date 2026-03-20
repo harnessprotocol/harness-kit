@@ -8,6 +8,7 @@ import HooksPage from "./pages/harness/HooksPage";
 import SettingsPage from "./pages/harness/SettingsPage";
 import FileViewerPage from "./pages/harness/FileViewerPage";
 import ClaudeMdPage from "./pages/harness/ClaudeMdPage";
+import SyncPage from "./pages/harness/SyncPage";
 import MarketplacePage from "./pages/marketplace/MarketplacePage";
 import DashboardPage from "./pages/observatory/DashboardPage";
 import SessionsPage from "./pages/observatory/SessionsPage";
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="harness/plugins" element={<PluginsPage />} />
           <Route path="harness/hooks" element={<HooksPage />} />
           <Route path="harness/claude-md" element={<ClaudeMdPage />} />
+          <Route path="harness/sync" element={<SyncPage />} />
           <Route path="harness/settings" element={<SettingsPage />} />
           <Route path="harness/settings/:filename" element={<FileViewerPage />} />
 
