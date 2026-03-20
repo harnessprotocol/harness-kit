@@ -18,6 +18,10 @@
 - **Desktop: Permissions layout** — Tools, Paths, and Network sections merged into a single unified card with inset section dividers. Allow/Deny/Ask tool rows are stacked vertically with color-coded labels. Preset cards display a colored left border (green for Strict, blue for Standard, amber for Permissive) for at-a-glance identity.
 - Renamed `stage` plugin to `capture-session` for clarity — the slash command is now `/capture-session`. The staging file (`session-staging.md`) keeps its name.
 
+### Security
+
+- **Dependencies** — Resolved 8 Dependabot medium-severity alerts: Next.js upgraded to 16.1.7 (fixes HTTP request smuggling in rewrites and unbounded `next/image` disk cache growth), DOMPurify upgraded to 3.3.3 in the desktop app (fixes XSS bypass). Website fumadocs stack updated to core/ui v16.6.17 and mdx v14.2.10 to satisfy Next 16 peer deps.
+
 ---
 
 ## 0.2.0 — 2026-03-09
