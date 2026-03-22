@@ -1,0 +1,4 @@
+[test]
+# Tests mutate the HOME env var (via with_home helper) — must run single-threaded
+# to avoid races across test threads in the same process.
+threads = 1
