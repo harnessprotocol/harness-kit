@@ -12,7 +12,7 @@ vi.mock("../../../lib/tauri", () => ({
 
 // @harness-kit/core may not build cleanly in jsdom — mock the whole module
 vi.mock("@harness-kit/core", () => ({
-  parseHarness: vi.fn((content: string) => ({
+  parseHarness: vi.fn((_content: string) => ({
     config: { version: "1", metadata: { name: "test" } },
   })),
   validateHarnessYaml: vi.fn(() => ({

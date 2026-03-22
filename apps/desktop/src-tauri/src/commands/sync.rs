@@ -2,6 +2,20 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+// ── Path helpers ───────────────────────────────────────────────
+
+/// Expand a leading `~/` to the user's home directory.
+/// Rust's std::path does not expand tildes, so manual text input like
+/// `~/repos/foo` would otherwise fail silently.
+fn expand_tilde(path: &str) -> String {
+    if let Some(rest) = path.strip_prefix("~/") {
+        if let Some(home) = dirs::home_dir() {
+            return home.join(rest).to_string_lossy().into_owned();
+        }
+    }
+    path.to_string()
+}
+
 // ── Path validation ───────────────────────────────────────────
 
 /// Validate that `relative` is safely within `project_dir`.
@@ -89,6 +103,7 @@ pub struct BackupManifest {
 /// Read a file from a project directory.
 #[tauri::command]
 pub fn sync_read_file(project_dir: String, file_path: String) -> Result<String, String> {
+    let project_dir = expand_tilde(&project_dir);
     let canonical = validate_project_path(&project_dir, &file_path)?;
     fs::read_to_string(&canonical)
         .map_err(|e| format!("Failed to read {}: {}", file_path, e))
@@ -98,6 +113,7 @@ pub fn sync_read_file(project_dir: String, file_path: String) -> Result<String, 
 /// Pass "." to check if the project directory itself exists.
 #[tauri::command]
 pub fn sync_file_exists(project_dir: String, file_path: String) -> Result<bool, String> {
+    let project_dir = expand_tilde(&project_dir);
     if file_path == "." {
         return Ok(Path::new(&project_dir).exists());
     }
@@ -111,6 +127,7 @@ pub fn sync_file_exists(project_dir: String, file_path: String) -> Result<bool, 
 /// List file names in a directory within a project directory.
 #[tauri::command]
 pub fn sync_read_dir(project_dir: String, dir_path: String) -> Result<Vec<String>, String> {
+    let project_dir = expand_tilde(&project_dir);
     let canonical = validate_project_path(&project_dir, &dir_path)?;
     let entries = fs::read_dir(&canonical)
         .map_err(|e| format!("Failed to read directory {}: {}", dir_path, e))?;
@@ -126,6 +143,7 @@ pub fn sync_read_dir(project_dir: String, dir_path: String) -> Result<Vec<String
 /// Write compiled output files into a project directory.
 #[tauri::command]
 pub fn sync_write_files(project_dir: String, files: Vec<SyncFileWrite>) -> Result<(), String> {
+    let project_dir = expand_tilde(&project_dir);
     for file in &files {
         let dest = validate_project_path(&project_dir, &file.relative_path)?;
         if let Some(parent) = dest.parent() {
@@ -147,6 +165,7 @@ pub fn sync_create_backup(
     platforms: Vec<String>,
     file_paths: Vec<String>,
 ) -> Result<BackupManifest, String> {
+    let project_dir = expand_tilde(&project_dir);
     let backup_id = uuid::Uuid::new_v4().to_string();
     let timestamp = chrono::Utc::now().to_rfc3339();
 

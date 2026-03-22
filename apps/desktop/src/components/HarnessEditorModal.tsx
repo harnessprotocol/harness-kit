@@ -9,7 +9,7 @@ interface HarnessEditorModalProps {
   initialContent: string;
   filePath: string;
   onClose: () => void;
-  onSaved: (newContent: string) => void;
+  onSaved: (newContent: string, savedPath: string) => void;
 }
 
 export default function HarnessEditorModal({
@@ -44,9 +44,9 @@ export default function HarnessEditorModal({
     setSaving(true);
     setSaveError(null);
     try {
-      await writeHarnessFile(content);
+      const savedPath = await writeHarnessFile(content);
       setDirty(false);
-      onSaved(content);
+      onSaved(content, savedPath);
     } catch (e) {
       setSaveError(String(e));
     } finally {

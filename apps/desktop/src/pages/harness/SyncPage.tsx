@@ -163,10 +163,10 @@ export default function SyncPage() {
     setEditorOpen(true);
   }
 
-  // After editor saves, reload harness + close modal
-  function handleEditorSaved(newContent: string) {
+  // After editor saves, update state with the saved path returned by the modal
+  function handleEditorSaved(newContent: string, savedPath: string) {
     setHarnessContent(newContent);
-    setHarnessPath("~/.claude/harness.yaml");
+    setHarnessPath(savedPath);
     try {
       const { config } = parseHarness(newContent);
       setHarnessName(config.metadata?.name ?? "default");
