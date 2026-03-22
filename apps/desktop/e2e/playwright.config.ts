@@ -14,7 +14,7 @@
 import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
-  testDir: "./tests",
+  testDir: "./e2e/tests",
   timeout: 30_000,
   use: {
     baseURL: "http://localhost:1420",
