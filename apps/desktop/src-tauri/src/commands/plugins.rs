@@ -298,3 +298,61 @@ pub fn uninstall_plugin(name: String) -> Result<(), String> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+    use tempfile::TempDir;
+
+    fn with_home(dir: &TempDir, f: impl FnOnce()) {
+        let old = env::var("HOME").ok();
+        env::set_var("HOME", dir.path());
+        f();
+        match old {
+            Some(v) => env::set_var("HOME", v),
+            None => env::remove_var("HOME"),
+        }
+    }
+
+    #[test]
+    fn list_installed_plugins_returns_empty_when_file_absent() {
+        let dir = TempDir::new().unwrap();
+        with_home(&dir, || {
+            let result = list_installed_plugins().unwrap();
+            assert_eq!(result.len(), 0);
+        });
+    }
+
+    #[test]
+    fn list_installed_plugins_returns_correct_count_when_file_exists() {
+        let dir = TempDir::new().unwrap();
+        let plugins_dir = dir.path().join(".claude").join("plugins");
+        std::fs::create_dir_all(&plugins_dir).unwrap();
+        let json = r#"{
+            "plugins": {
+                "research@harness-kit": [
+                    {"version": "0.3.0", "installedAt": "2024-01-01T00:00:00Z", "installPath": null}
+                ],
+                "explain@harness-kit": [
+                    {"version": "0.1.0", "installedAt": "2024-01-02T00:00:00Z", "installPath": null}
+                ],
+                "orient@harness-kit": [
+                    {"version": "0.2.0", "installedAt": "2024-01-03T00:00:00Z", "installPath": null}
+                ]
+            }
+        }"#;
+        std::fs::write(plugins_dir.join("installed_plugins.json"), json).unwrap();
+        with_home(&dir, || {
+            let result = list_installed_plugins().unwrap();
+            assert_eq!(result.len(), 3);
+            // Results are sorted by name
+            assert_eq!(result[0].name, "explain");
+            assert_eq!(result[0].version, "0.1.0");
+            assert_eq!(result[0].marketplace.as_deref(), Some("harness-kit"));
+            assert_eq!(result[1].name, "orient");
+            assert_eq!(result[2].name, "research");
+            assert_eq!(result[2].version, "0.3.0");
+        });
+    }
+}
