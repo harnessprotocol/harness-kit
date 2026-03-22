@@ -7,8 +7,11 @@ pub struct HarnessFileResult {
 
 #[tauri::command]
 pub fn read_harness_file() -> Result<HarnessFileResult, String> {
-    let home = dirs::home_dir()
+    let home_raw = dirs::home_dir()
         .ok_or_else(|| "Could not resolve home directory".to_string())?;
+    // Canonicalize home so symlink-heavy temp paths (e.g. macOS /tmp → /private/tmp)
+    // compare correctly against the canonicalized candidate paths below.
+    let home = home_raw.canonicalize().unwrap_or(home_raw);
 
     // Search priority:
     // 1. ~/.claude/harness.yaml
@@ -115,4 +118,96 @@ pub fn scan_claude_config() -> Result<ClaudeConfigScan, String> {
     .unwrap_or((None, None));
 
     Ok(ClaudeConfigScan { mcp_servers_json, settings_json, mcp_source, settings_source })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+    use tempfile::TempDir;
+
+    fn with_home(dir: &TempDir, f: impl FnOnce()) {
+        // Override HOME so dirs::home_dir() returns the temp dir
+        let old = env::var("HOME").ok();
+        env::set_var("HOME", dir.path());
+        f();
+        match old {
+            Some(v) => env::set_var("HOME", v),
+            None => env::remove_var("HOME"),
+        }
+    }
+
+    #[test]
+    fn read_harness_file_returns_not_found_when_absent() {
+        let dir = TempDir::new().unwrap();
+        with_home(&dir, || {
+            let result = read_harness_file().unwrap();
+            assert!(!result.found);
+            assert!(result.content.is_none());
+            assert!(result.path.is_none());
+        });
+    }
+
+    #[test]
+    fn read_harness_file_reads_from_claude_dir() {
+        let dir = TempDir::new().unwrap();
+        let claude = dir.path().join(".claude");
+        std::fs::create_dir(&claude).unwrap();
+        std::fs::write(claude.join("harness.yaml"), "version: \"1\"\n").unwrap();
+        with_home(&dir, || {
+            let result = read_harness_file().unwrap();
+            assert!(result.found);
+            assert_eq!(result.content.unwrap(), "version: \"1\"\n");
+            assert_eq!(result.path.unwrap(), "~/.claude/harness.yaml");
+        });
+    }
+
+    #[test]
+    fn read_harness_file_falls_back_to_home_root() {
+        let dir = TempDir::new().unwrap();
+        std::fs::write(dir.path().join("harness.yaml"), "version: \"1\"\n").unwrap();
+        with_home(&dir, || {
+            let result = read_harness_file().unwrap();
+            assert!(result.found);
+            assert_eq!(result.path.unwrap(), "~/harness.yaml");
+        });
+    }
+
+    #[test]
+    fn write_harness_file_creates_claude_dir_and_file() {
+        let dir = TempDir::new().unwrap();
+        with_home(&dir, || {
+            let path = write_harness_file("content: test".to_string()).unwrap();
+            assert_eq!(path, "~/.claude/harness.yaml");
+            let written = std::fs::read_to_string(dir.path().join(".claude/harness.yaml")).unwrap();
+            assert_eq!(written, "content: test");
+        });
+    }
+
+    #[test]
+    fn scan_claude_config_returns_none_when_files_absent() {
+        let dir = TempDir::new().unwrap();
+        std::fs::create_dir(dir.path().join(".claude")).unwrap();
+        with_home(&dir, || {
+            let result = scan_claude_config().unwrap();
+            assert!(result.mcp_servers_json.is_none());
+            assert!(result.settings_json.is_none());
+        });
+    }
+
+    #[test]
+    fn scan_claude_config_reads_mcp_and_settings() {
+        let dir = TempDir::new().unwrap();
+        let claude = dir.path().join(".claude");
+        std::fs::create_dir(&claude).unwrap();
+        std::fs::write(claude.join("mcp.json"), r#"{"mcpServers":{}}"#).unwrap();
+        std::fs::write(claude.join("settings.local.json"), r#"{"permissions":{"allow":[]}}"#).unwrap();
+        with_home(&dir, || {
+            let result = scan_claude_config().unwrap();
+            assert!(result.mcp_servers_json.is_some());
+            assert_eq!(result.mcp_source.unwrap(), "~/.claude/mcp.json");
+            assert!(result.settings_json.is_some());
+            assert_eq!(result.settings_source.unwrap(), "~/.claude/settings.local.json");
+        });
+    }
 }
