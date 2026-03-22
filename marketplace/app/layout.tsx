@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -51,12 +50,6 @@ export default function RootLayout({
           </div>
         </nav>
         <main className="mx-auto max-w-7xl px-6 py-12">{children}</main>
-        <Script
-          defer
-          src="https://static.cloudflareinsights.com/beacon.min.js"
-          data-cf-beacon={`{"token": "REPLACE_WITH_CF_TOKEN"}`}
-          strategy="afterInteractive"
-        />
       </body>
     </html>
   );

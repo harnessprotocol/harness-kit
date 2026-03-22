@@ -1,7 +1,6 @@
 import './global.css';
 import { RootProvider } from 'fumadocs-ui/provider/next';
 import { Inter, Space_Grotesk } from 'next/font/google';
-import Script from 'next/script';
 import type { ReactNode } from 'react';
 
 const inter = Inter({
@@ -38,12 +37,6 @@ export default function Layout({ children }: { children: ReactNode }) {
         >
           {children}
         </RootProvider>
-        <Script
-          defer
-          src="https://static.cloudflareinsights.com/beacon.min.js"
-          data-cf-beacon={`{"token": "REPLACE_WITH_CF_TOKEN"}`}
-          strategy="afterInteractive"
-        />
       </body>
     </html>
   );
