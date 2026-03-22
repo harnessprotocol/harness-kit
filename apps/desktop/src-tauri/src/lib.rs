@@ -106,6 +106,12 @@ pub fn run() {
             board_server::board_server_install,
             board_server::board_server_start,
             board_server::board_server_restart,
+            // Parity
+            commands::parity::run_parity_scan,
+            commands::parity::get_parity_snapshot,
+            commands::parity::get_parity_drift,
+            commands::parity::acknowledge_drift,
+            commands::parity::get_parity_history,
         ])
         .setup(|app| {
             let state = app.state::<BoardServerState>();

@@ -21,6 +21,7 @@ import SecretsPage from "./pages/security/SecretsPage";
 import AuditLogPage from "./pages/security/AuditLogPage";
 import BoardProjectsPage from "./pages/board/BoardProjectsPage";
 import BoardKanbanPage from "./pages/board/BoardKanbanPage";
+import ParityDashboardPage from "./pages/parity/ParityDashboardPage";
 
 function DefaultRedirect() {
   const defaultSection = getDefaultSection();
@@ -58,6 +59,9 @@ export default function App() {
           <Route path="security/permissions" element={<PermissionsPage />} />
           <Route path="security/secrets" element={<SecretsPage />} />
           <Route path="security/audit" element={<AuditLogPage />} />
+
+          {/* Parity */}
+          <Route path="parity" element={<ParityDashboardPage />} />
 
           {/* Board */}
           <Route path="board" element={<BoardProjectsPage />} />

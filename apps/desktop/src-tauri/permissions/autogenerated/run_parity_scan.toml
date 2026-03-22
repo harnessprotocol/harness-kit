@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-run-parity-scan"
+description = "Enables the run_parity_scan command without any pre-configured scope."
+commands.allow = ["run_parity_scan"]
+
+[[permission]]
+identifier = "deny-run-parity-scan"
+description = "Denies the run_parity_scan command without any pre-configured scope."
+commands.deny = ["run_parity_scan"]

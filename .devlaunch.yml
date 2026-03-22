@@ -3,10 +3,21 @@ description: Build & launch the Harness Kit desktop app
 path: ~/repos/harness-kit
 
 commands:
+  dev-swift:
+    label: Dev (Swift)
+    description: Build native shell + React dev server
+    run: pnpm dev:swift
+    open_in: iterm
+  dev-swift-fast:
+    label: Dev (Swift, fast)
+    description: Skip xcodebuild, reuse last build
+    run: pnpm dev:swift:fast
+    open_in: iterm
   dev:
-    label: Dev server
+    label: Dev (Tauri)
     description: Start Tauri dev mode with HMR
     run: pnpm dev:desktop
+    open_in: iterm
   build:
     label: Build desktop
     description: Build Tauri release bundle
@@ -15,6 +26,7 @@ commands:
     label: Open logs
     description: Tail Claude debug logs
     run: tail -f ~/.claude/debug/*.log
+    open_in: iterm
   terminal:
     label: Terminal here
     description: Open iTerm in project root

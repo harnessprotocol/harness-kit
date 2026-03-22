@@ -365,6 +365,73 @@ export async function syncRestoreBackup(backupId: string): Promise<void> {
   return invoke<void>("sync_restore_backup", { backupId });
 }
 
+// ── Parity commands ──────────────────────────────────────────
+
+export interface ParityFeature {
+  name: string;
+  category: string;
+  value: string | null;
+  knownToHarness: boolean;
+}
+
+export interface ParityDriftItem {
+  id: number;
+  category: string;
+  featureName: string;
+  driftType: string;
+  details: string | null;
+  detectedAt: string;
+  acknowledged: boolean;
+}
+
+export interface ParityScanResult {
+  snapshotId: string;
+  ccVersion: string | null;
+  ccInstalled: boolean;
+  featuresDetected: number;
+  driftCount: number;
+  driftItems: ParityDriftItem[];
+  scannedAt: string;
+}
+
+export interface ParitySnapshot {
+  id: string;
+  timestamp: string;
+  ccVersion: string | null;
+  ccInstalled: boolean;
+  categories: Record<string, ParityFeature[]>;
+}
+
+export interface ParitySnapshotSummary {
+  id: string;
+  timestamp: string;
+  ccVersion: string | null;
+  featuresDetected: number;
+  driftCount: number;
+}
+
+export async function runParityScan(): Promise<ParityScanResult> {
+  return invoke<ParityScanResult>("run_parity_scan");
+}
+
+export async function getParitySnapshot(): Promise<ParitySnapshot | null> {
+  return invoke<ParitySnapshot | null>("get_parity_snapshot");
+}
+
+export async function getParityDrift(includeAcknowledged?: boolean): Promise<ParityDriftItem[]> {
+  return invoke<ParityDriftItem[]>("get_parity_drift", {
+    includeAcknowledged: includeAcknowledged ?? false,
+  });
+}
+
+export async function acknowledgeDrift(driftId: number): Promise<void> {
+  return invoke<void>("acknowledge_drift", { driftId });
+}
+
+export async function getParityHistory(limit?: number): Promise<ParitySnapshotSummary[]> {
+  return invoke<ParitySnapshotSummary[]>("get_parity_history", { limit });
+}
+
 // ── Board server commands ──────────────────────────────────
 
 export async function boardServerCheckInstalled(): Promise<boolean> {

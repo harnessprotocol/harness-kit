@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-scan-claude-config"
+description = "Enables the scan_claude_config command without any pre-configured scope."
+commands.allow = ["scan_claude_config"]
+
+[[permission]]
+identifier = "deny-scan-claude-config"
+description = "Denies the scan_claude_config command without any pre-configured scope."
+commands.deny = ["scan_claude_config"]

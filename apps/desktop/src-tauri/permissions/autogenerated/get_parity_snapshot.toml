@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-parity-snapshot"
+description = "Enables the get_parity_snapshot command without any pre-configured scope."
+commands.allow = ["get_parity_snapshot"]
+
+[[permission]]
+identifier = "deny-get-parity-snapshot"
+description = "Denies the get_parity_snapshot command without any pre-configured scope."
+commands.deny = ["get_parity_snapshot"]

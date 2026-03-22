@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-parity-drift"
+description = "Enables the get_parity_drift command without any pre-configured scope."
+commands.allow = ["get_parity_drift"]
+
+[[permission]]
+identifier = "deny-get-parity-drift"
+description = "Denies the get_parity_drift command without any pre-configured scope."
+commands.deny = ["get_parity_drift"]

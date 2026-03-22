@@ -67,6 +67,14 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    id: "parity",
+    label: "Parity",
+    path: "/parity",
+    children: [
+      { label: "Dashboard", path: "/parity" },
+    ],
+  },
+  {
     id: "board",
     label: "Board",
     path: "/board",

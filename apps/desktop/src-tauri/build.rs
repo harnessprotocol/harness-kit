@@ -74,6 +74,24 @@ fn main() {
                 "board_server_install",
                 "board_server_start",
                 "board_server_restart",
+                // Parity
+                "run_parity_scan",
+                "get_parity_snapshot",
+                "get_parity_drift",
+                "acknowledge_drift",
+                "get_parity_history",
+                // Sync
+                "sync_read_file",
+                "sync_file_exists",
+                "sync_read_dir",
+                "sync_write_files",
+                "sync_create_backup",
+                "sync_list_backups",
+                "sync_restore_backup",
+                // Harness file
+                "read_harness_file",
+                "write_harness_file",
+                "scan_claude_config",
             ]),
         ),
     )

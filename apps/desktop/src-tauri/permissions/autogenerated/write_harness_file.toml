@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-write-harness-file"
+description = "Enables the write_harness_file command without any pre-configured scope."
+commands.allow = ["write_harness_file"]
+
+[[permission]]
+identifier = "deny-write-harness-file"
+description = "Denies the write_harness_file command without any pre-configured scope."
+commands.deny = ["write_harness_file"]

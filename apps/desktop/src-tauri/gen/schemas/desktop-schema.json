@@ -2187,6 +2187,12 @@
       "description": "Permission identifier",
       "oneOf": [
         {
+          "description": "Enables the acknowledge_drift command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-acknowledge-drift",
+          "markdownDescription": "Enables the acknowledge_drift command without any pre-configured scope."
+        },
+        {
           "description": "Enables the apply_security_preset command without any pre-configured scope.",
           "type": "string",
           "const": "allow-apply-security-preset",
@@ -2319,6 +2325,24 @@
           "markdownDescription": "Enables the get_history_size command without any pre-configured scope."
         },
         {
+          "description": "Enables the get_parity_drift command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-parity-drift",
+          "markdownDescription": "Enables the get_parity_drift command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_parity_history command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-parity-history",
+          "markdownDescription": "Enables the get_parity_history command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_parity_snapshot command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-parity-snapshot",
+          "markdownDescription": "Enables the get_parity_snapshot command without any pre-configured scope."
+        },
+        {
           "description": "Enables the import_plugin_from_path command without any pre-configured scope.",
           "type": "string",
           "const": "allow-import-plugin-from-path",
@@ -2415,6 +2439,12 @@
           "markdownDescription": "Enables the read_file_history command without any pre-configured scope."
         },
         {
+          "description": "Enables the read_harness_file command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-read-harness-file",
+          "markdownDescription": "Enables the read_harness_file command without any pre-configured scope."
+        },
+        {
           "description": "Enables the read_hooks command without any pre-configured scope.",
           "type": "string",
           "const": "allow-read-hooks",
@@ -2463,6 +2493,12 @@
           "markdownDescription": "Enables the remove_worktrees command without any pre-configured scope."
         },
         {
+          "description": "Enables the run_parity_scan command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-run-parity-scan",
+          "markdownDescription": "Enables the run_parity_scan command without any pre-configured scope."
+        },
+        {
           "description": "Enables the save_comparison command without any pre-configured scope.",
           "type": "string",
           "const": "allow-save-comparison",
@@ -2487,6 +2523,12 @@
           "markdownDescription": "Enables the save_panel_result command without any pre-configured scope."
         },
         {
+          "description": "Enables the scan_claude_config command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-scan-claude-config",
+          "markdownDescription": "Enables the scan_claude_config command without any pre-configured scope."
+        },
+        {
           "description": "Enables the set_keychain_secret command without any pre-configured scope.",
           "type": "string",
           "const": "allow-set-keychain-secret",
@@ -2497,6 +2539,48 @@
           "type": "string",
           "const": "allow-start-comparison",
           "markdownDescription": "Enables the start_comparison command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the sync_create_backup command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-sync-create-backup",
+          "markdownDescription": "Enables the sync_create_backup command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the sync_file_exists command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-sync-file-exists",
+          "markdownDescription": "Enables the sync_file_exists command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the sync_list_backups command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-sync-list-backups",
+          "markdownDescription": "Enables the sync_list_backups command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the sync_read_dir command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-sync-read-dir",
+          "markdownDescription": "Enables the sync_read_dir command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the sync_read_file command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-sync-read-file",
+          "markdownDescription": "Enables the sync_read_file command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the sync_restore_backup command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-sync-restore-backup",
+          "markdownDescription": "Enables the sync_restore_backup command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the sync_write_files command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-sync-write-files",
+          "markdownDescription": "Enables the sync_write_files command without any pre-configured scope."
         },
         {
           "description": "Enables the uninstall_plugin command without any pre-configured scope.",
@@ -2523,10 +2607,22 @@
           "markdownDescription": "Enables the write_env_config command without any pre-configured scope."
         },
         {
+          "description": "Enables the write_harness_file command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-write-harness-file",
+          "markdownDescription": "Enables the write_harness_file command without any pre-configured scope."
+        },
+        {
           "description": "Enables the write_plugin_file command without any pre-configured scope.",
           "type": "string",
           "const": "allow-write-plugin-file",
           "markdownDescription": "Enables the write_plugin_file command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the acknowledge_drift command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-acknowledge-drift",
+          "markdownDescription": "Denies the acknowledge_drift command without any pre-configured scope."
         },
         {
           "description": "Denies the apply_security_preset command without any pre-configured scope.",
@@ -2661,6 +2757,24 @@
           "markdownDescription": "Denies the get_history_size command without any pre-configured scope."
         },
         {
+          "description": "Denies the get_parity_drift command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-parity-drift",
+          "markdownDescription": "Denies the get_parity_drift command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_parity_history command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-parity-history",
+          "markdownDescription": "Denies the get_parity_history command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_parity_snapshot command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-parity-snapshot",
+          "markdownDescription": "Denies the get_parity_snapshot command without any pre-configured scope."
+        },
+        {
           "description": "Denies the import_plugin_from_path command without any pre-configured scope.",
           "type": "string",
           "const": "deny-import-plugin-from-path",
@@ -2757,6 +2871,12 @@
           "markdownDescription": "Denies the read_file_history command without any pre-configured scope."
         },
         {
+          "description": "Denies the read_harness_file command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-read-harness-file",
+          "markdownDescription": "Denies the read_harness_file command without any pre-configured scope."
+        },
+        {
           "description": "Denies the read_hooks command without any pre-configured scope.",
           "type": "string",
           "const": "deny-read-hooks",
@@ -2805,6 +2925,12 @@
           "markdownDescription": "Denies the remove_worktrees command without any pre-configured scope."
         },
         {
+          "description": "Denies the run_parity_scan command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-run-parity-scan",
+          "markdownDescription": "Denies the run_parity_scan command without any pre-configured scope."
+        },
+        {
           "description": "Denies the save_comparison command without any pre-configured scope.",
           "type": "string",
           "const": "deny-save-comparison",
@@ -2829,6 +2955,12 @@
           "markdownDescription": "Denies the save_panel_result command without any pre-configured scope."
         },
         {
+          "description": "Denies the scan_claude_config command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-scan-claude-config",
+          "markdownDescription": "Denies the scan_claude_config command without any pre-configured scope."
+        },
+        {
           "description": "Denies the set_keychain_secret command without any pre-configured scope.",
           "type": "string",
           "const": "deny-set-keychain-secret",
@@ -2839,6 +2971,48 @@
           "type": "string",
           "const": "deny-start-comparison",
           "markdownDescription": "Denies the start_comparison command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the sync_create_backup command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-sync-create-backup",
+          "markdownDescription": "Denies the sync_create_backup command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the sync_file_exists command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-sync-file-exists",
+          "markdownDescription": "Denies the sync_file_exists command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the sync_list_backups command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-sync-list-backups",
+          "markdownDescription": "Denies the sync_list_backups command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the sync_read_dir command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-sync-read-dir",
+          "markdownDescription": "Denies the sync_read_dir command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the sync_read_file command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-sync-read-file",
+          "markdownDescription": "Denies the sync_read_file command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the sync_restore_backup command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-sync-restore-backup",
+          "markdownDescription": "Denies the sync_restore_backup command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the sync_write_files command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-sync-write-files",
+          "markdownDescription": "Denies the sync_write_files command without any pre-configured scope."
         },
         {
           "description": "Denies the uninstall_plugin command without any pre-configured scope.",
@@ -2863,6 +3037,12 @@
           "type": "string",
           "const": "deny-write-env-config",
           "markdownDescription": "Denies the write_env_config command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the write_harness_file command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-write-harness-file",
+          "markdownDescription": "Denies the write_harness_file command without any pre-configured scope."
         },
         {
           "description": "Denies the write_plugin_file command without any pre-configured scope.",
