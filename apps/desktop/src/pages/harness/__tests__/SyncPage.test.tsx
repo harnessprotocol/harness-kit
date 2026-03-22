@@ -92,8 +92,9 @@ describe("SyncPage", () => {
 
   it("renders without crashing", async () => {
     renderPage();
+    // Verify the page reaches its loaded empty-state (not just that the DOM exists)
     await waitFor(() => {
-      expect(document.body).toBeTruthy();
+      expect(screen.getByText(/Generate from Claude Code setup/i)).toBeInTheDocument();
     });
   });
 
