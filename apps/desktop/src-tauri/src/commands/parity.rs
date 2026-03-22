@@ -1,0 +1,770 @@
+use crate::db::Db;
+use serde::{Deserialize, Serialize};
+use serde_json::Value;
+use std::collections::{HashMap, HashSet};
+use tauri::{AppHandle, State};
+use tauri_plugin_shell::ShellExt;
+use tokio::time::{timeout, Duration};
+
+// ── Baseline manifest ────────────────────────────────────────
+
+const KNOWN_FEATURES_JSON: &str = include_str!("../parity/known_features.json");
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct KnownFeatures {
+    config_files: HashMap<String, Value>,
+    settings_keys: HashMap<String, bool>,
+    mcp_transports: Vec<String>,
+    cli_flags: Vec<String>,
+    plugin_types: Vec<String>,
+}
+
+fn load_known_features() -> KnownFeatures {
+    serde_json::from_str(KNOWN_FEATURES_JSON).expect("Invalid known_features.json")
+}
+
+// ── Types ─────────────────────────────────────────────────────
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ParityScanResult {
+    pub snapshot_id: String,
+    pub cc_version: Option<String>,
+    pub cc_installed: bool,
+    pub features_detected: usize,
+    pub drift_count: usize,
+    pub drift_items: Vec<ParityDriftItem>,
+    pub scanned_at: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ParitySnapshot {
+    pub id: String,
+    pub timestamp: String,
+    pub cc_version: Option<String>,
+    pub cc_installed: bool,
+    pub categories: HashMap<String, Vec<ParityFeature>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ParityFeature {
+    pub name: String,
+    pub category: String,
+    pub value: Option<String>,
+    pub known_to_harness: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ParityDriftItem {
+    pub id: i64,
+    pub category: String,
+    pub feature_name: String,
+    pub drift_type: String,
+    pub details: Option<String>,
+    pub detected_at: String,
+    pub acknowledged: bool,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ParitySnapshotSummary {
+    pub id: String,
+    pub timestamp: String,
+    pub cc_version: Option<String>,
+    pub features_detected: usize,
+    pub drift_count: usize,
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+
+fn now_iso() -> String {
+    chrono::Utc::now().to_rfc3339()
+}
+
+// ── Probes ────────────────────────────────────────────────────
+
+/// Probe 1: run `claude --version` (5s timeout)
+async fn probe_cli_version(app: &AppHandle) -> (bool, Option<String>) {
+    let shell = app.shell();
+    let result = timeout(
+        Duration::from_secs(5),
+        shell.command("claude").args(["--version"]).output(),
+    )
+    .await;
+    match result {
+        Ok(Ok(out)) if out.status.success() => {
+            let version = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            (true, if version.is_empty() { None } else { Some(version) })
+        }
+        _ => (false, None),
+    }
+}
+
+/// Probe 2: parse `claude --help` for flags and subcommands (8s timeout)
+async fn probe_cli_help(app: &AppHandle) -> (Vec<String>, Vec<String>) {
+    let shell = app.shell();
+    let result = timeout(
+        Duration::from_secs(8),
+        shell.command("claude").args(["--help"]).output(),
+    )
+    .await;
+    let output = match result {
+        Ok(Ok(out)) => out,
+        _ => return (vec![], vec![]),
+    };
+
+    // Some CLIs write help to stderr
+    let text = if !output.stdout.is_empty() {
+        String::from_utf8_lossy(&output.stdout).to_string()
+    } else {
+        String::from_utf8_lossy(&output.stderr).to_string()
+    };
+
+    let mut flags: Vec<String> = Vec::new();
+    let mut subcommands: Vec<String> = Vec::new();
+    let mut in_commands_section = false;
+
+    for line in text.lines() {
+        let trimmed = line.trim();
+
+        // Track Commands: section
+        let lower = trimmed.to_lowercase();
+        if lower == "commands:" || lower == "subcommands:" || lower == "available commands:" {
+            in_commands_section = true;
+            continue;
+        }
+        // A new section header resets subcommand tracking
+        if trimmed.ends_with(':') && !trimmed.starts_with('-') && !trimmed.is_empty() {
+            in_commands_section = false;
+        }
+
+        // Extract --flag patterns from any line
+        if let Some(flag) = extract_first_flag(trimmed) {
+            if !flags.contains(&flag) {
+                flags.push(flag);
+            }
+        }
+
+        // Extract subcommands from Commands section
+        if in_commands_section {
+            if let Some(sub) = extract_subcommand(trimmed) {
+                if !subcommands.contains(&sub) {
+                    subcommands.push(sub);
+                }
+            }
+        }
+    }
+
+    (flags, subcommands)
+}
+
+fn extract_first_flag(line: &str) -> Option<String> {
+    let mut i = 0;
+    let chars: Vec<char> = line.chars().collect();
+    while i + 2 < chars.len() {
+        if chars[i] == '-' && chars[i + 1] == '-' {
+            let start = i;
+            let rest: String = chars[start..].iter().collect();
+            let end = rest
+                .find(|c: char| !c.is_alphanumeric() && c != '-')
+                .unwrap_or(rest.len());
+            let flag = &rest[..end];
+            if flag.len() > 2 {
+                return Some(flag.to_string());
+            }
+        }
+        i += 1;
+    }
+    None
+}
+
+fn extract_subcommand(line: &str) -> Option<String> {
+    if line.starts_with('-') || line.is_empty() {
+        return None;
+    }
+    let word: String = line.chars().take_while(|c| c.is_ascii_lowercase()).collect();
+    if word.len() >= 3 && word.len() <= 20 {
+        let rest = &line[word.len()..];
+        if rest.starts_with(|c: char| c.is_whitespace()) || rest.is_empty() {
+            return Some(word);
+        }
+    }
+    None
+}
+
+/// Probe 3: enumerate all dotted-path keys from settings JSON files
+fn probe_settings_keys() -> Vec<String> {
+    let mut keys = Vec::new();
+    let home = match dirs::home_dir() {
+        Some(h) => h,
+        None => return keys,
+    };
+    let claude = home.join(".claude");
+    for filename in &["settings.json", "settings.local.json"] {
+        let path = claude.join(filename);
+        if !path.exists() {
+            continue;
+        }
+        if let Ok(content) = std::fs::read_to_string(&path) {
+            if let Ok(value) = serde_json::from_str::<Value>(&content) {
+                collect_keys(&value, "", &mut keys);
+            }
+        }
+    }
+    keys.sort();
+    keys.dedup();
+    keys
+}
+
+fn collect_keys(value: &Value, prefix: &str, out: &mut Vec<String>) {
+    if let Some(obj) = value.as_object() {
+        for (key, val) in obj {
+            let full_key = if prefix.is_empty() {
+                key.clone()
+            } else {
+                format!("{}.{}", prefix, key)
+            };
+            out.push(full_key.clone());
+            if val.is_object() {
+                collect_keys(val, &full_key, out);
+            }
+        }
+    }
+}
+
+/// Probe 4: read MCP config files and extract server names + transport types
+fn probe_mcp_config() -> (Vec<String>, Vec<String>) {
+    let mut servers = Vec::new();
+    let mut transports = Vec::new();
+    let home = match dirs::home_dir() {
+        Some(h) => h,
+        None => return (servers, transports),
+    };
+    let claude = home.join(".claude");
+
+    let candidates = vec![
+        claude.join("mcp.json"),
+        claude.join(".mcp.json"),
+        home.join(".mcp.json"),
+    ];
+
+    for path in candidates {
+        if !path.exists() {
+            continue;
+        }
+        if let Ok(content) = std::fs::read_to_string(&path) {
+            if let Ok(value) = serde_json::from_str::<Value>(&content) {
+                if let Some(mcp_servers) = value.get("mcpServers").and_then(|v| v.as_object()) {
+                    for (name, config) in mcp_servers {
+                        if !servers.contains(name) {
+                            servers.push(name.clone());
+                        }
+                        // Transport type may be in "type" or "transport" field
+                        for field in &["type", "transport"] {
+                            if let Some(t) = config.get(field).and_then(|v| v.as_str()) {
+                                let transport = t.to_string();
+                                if !transports.contains(&transport) {
+                                    transports.push(transport);
+                                }
+                            }
+                        }
+                        // Default transport for stdio-style configs (no type field)
+                        if config.get("command").is_some() && !transports.contains(&"stdio".to_string()) {
+                            transports.push("stdio".to_string());
+                        }
+                        if config.get("url").is_some() {
+                            let t = "http".to_string();
+                            if !transports.contains(&t) {
+                                transports.push(t);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    (servers, transports)
+}
+
+/// Probe 5: enumerate installed plugins and their component types
+fn probe_plugins() -> Vec<(String, Vec<String>)> {
+    let mut plugins = Vec::new();
+    let home = match dirs::home_dir() {
+        Some(h) => h,
+        None => return plugins,
+    };
+    let plugins_dir = home.join(".claude").join("plugins");
+    if !plugins_dir.exists() {
+        return plugins;
+    }
+
+    let entries = match std::fs::read_dir(&plugins_dir) {
+        Ok(e) => e,
+        Err(_) => return plugins,
+    };
+
+    for entry in entries.flatten() {
+        let manifest_path = entry.path().join(".claude-plugin").join("plugin.json");
+        if !manifest_path.exists() {
+            continue;
+        }
+        let content = match std::fs::read_to_string(&manifest_path) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+        let manifest: Value = match serde_json::from_str(&content) {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+
+        let plugin_name = manifest
+            .get("name")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown")
+            .to_string();
+
+        let mut types = Vec::new();
+        let plugin_dir = entry.path();
+        for component_type in &["skills", "agents", "hooks", "commands", "scripts"] {
+            if plugin_dir.join(component_type).exists() {
+                types.push(component_type.to_string());
+            }
+        }
+
+        plugins.push((plugin_name, types));
+    }
+
+    plugins
+}
+
+/// Probe 6: check existence of standard config files
+fn probe_config_files() -> HashMap<String, bool> {
+    let mut found = HashMap::new();
+    let home = match dirs::home_dir() {
+        Some(h) => h,
+        None => return found,
+    };
+
+    let checks: &[(&str, std::path::PathBuf)] = &[
+        ("CLAUDE.md", home.join("CLAUDE.md")),
+        ("AGENT.md", home.join("AGENT.md")),
+        ("SOUL.md", home.join("SOUL.md")),
+        (".mcp.json", home.join(".mcp.json")),
+        (".claude/settings.json", home.join(".claude").join("settings.json")),
+        (".claude/settings.local.json", home.join(".claude").join("settings.local.json")),
+        (".claude/hooks/", home.join(".claude").join("hooks")),
+    ];
+
+    for (name, path) in checks {
+        found.insert(name.to_string(), path.exists());
+    }
+
+    found
+}
+
+// ── Drift detection ───────────────────────────────────────────
+
+type DriftTuple = (String, String, String, Option<String>);
+
+fn detect_drift(
+    known: &KnownFeatures,
+    categories: &HashMap<String, Vec<ParityFeature>>,
+) -> Vec<DriftTuple> {
+    let mut drift: Vec<DriftTuple> = Vec::new();
+
+    // Settings keys: new keys not in baseline
+    if let Some(features) = categories.get("settings_key") {
+        for f in features {
+            if !f.known_to_harness {
+                drift.push((
+                    "settings_key".to_string(),
+                    f.name.clone(),
+                    "new_feature".to_string(),
+                    Some(format!(
+                        "Key '{}' found in settings.json but not tracked in Harness baseline",
+                        f.name
+                    )),
+                ));
+            }
+        }
+    }
+
+    // CLI flags: new flags not in baseline
+    if let Some(features) = categories.get("cli_flag") {
+        for f in features {
+            if !f.known_to_harness {
+                drift.push((
+                    "cli_flag".to_string(),
+                    f.name.clone(),
+                    "new_feature".to_string(),
+                    Some(format!(
+                        "CLI flag '{}' found in --help output but not tracked in Harness baseline",
+                        f.name
+                    )),
+                ));
+            }
+        }
+    }
+
+    // MCP transports: new transport types not in baseline
+    if let Some(features) = categories.get("mcp_transport") {
+        for f in features {
+            if !f.known_to_harness {
+                drift.push((
+                    "mcp_transport".to_string(),
+                    f.name.clone(),
+                    "new_feature".to_string(),
+                    Some(format!(
+                        "MCP transport type '{}' detected but not tracked in Harness baseline",
+                        f.name
+                    )),
+                ));
+            }
+        }
+    }
+
+    // Plugin types: new component types not in baseline
+    if let Some(features) = categories.get("plugin_type") {
+        for f in features {
+            if !f.known_to_harness {
+                drift.push((
+                    "plugin_type".to_string(),
+                    f.name.clone(),
+                    "new_feature".to_string(),
+                    Some(format!(
+                        "Plugin component type '{}' found but not tracked in Harness baseline",
+                        f.name
+                    )),
+                ));
+            }
+        }
+    }
+
+    // Drop duplicate drift items already acknowledged in the DB — handled at query time
+    let _ = known; // suppress unused warning; used above via known.settings_keys etc.
+    drift
+}
+
+// ── Commands ──────────────────────────────────────────────────
+
+#[tauri::command]
+pub async fn run_parity_scan(
+    app: AppHandle,
+    db: State<'_, Db>,
+) -> Result<ParityScanResult, String> {
+    let known = load_known_features();
+    let snapshot_id = uuid::Uuid::new_v4().to_string();
+    let scanned_at = now_iso();
+
+    // Run all probes concurrently where possible
+    let (cc_installed, cc_version) = probe_cli_version(&app).await;
+    let (cli_flags, cli_subcommands) = probe_cli_help(&app).await;
+    let settings_keys = probe_settings_keys();
+    let (mcp_servers, mcp_transports) = probe_mcp_config();
+    let plugins = probe_plugins();
+    let config_file_presence = probe_config_files();
+
+    let mut categories: HashMap<String, Vec<ParityFeature>> = HashMap::new();
+
+    // Config files — merge detected + baseline entries
+    let mut cf_features: Vec<ParityFeature> = Vec::new();
+    for (name, exists) in &config_file_presence {
+        let known_supported = known.config_files.contains_key(name.as_str());
+        cf_features.push(ParityFeature {
+            name: name.clone(),
+            category: "config_file".to_string(),
+            value: Some(if *exists { "detected" } else { "not_found" }.to_string()),
+            known_to_harness: known_supported,
+        });
+    }
+    // Add baseline entries not checked on-disk
+    for name in known.config_files.keys() {
+        if !cf_features.iter().any(|f| &f.name == name) {
+            cf_features.push(ParityFeature {
+                name: name.clone(),
+                category: "config_file".to_string(),
+                value: Some("not_found".to_string()),
+                known_to_harness: true,
+            });
+        }
+    }
+    cf_features.sort_by(|a, b| a.name.cmp(&b.name));
+    categories.insert("config_file".to_string(), cf_features);
+
+    // Settings keys
+    let sk_features: Vec<ParityFeature> = settings_keys
+        .iter()
+        .map(|key| ParityFeature {
+            name: key.clone(),
+            category: "settings_key".to_string(),
+            value: None,
+            known_to_harness: known.settings_keys.contains_key(key.as_str()),
+        })
+        .collect();
+    categories.insert("settings_key".to_string(), sk_features);
+
+    // CLI flags
+    let flag_features: Vec<ParityFeature> = cli_flags
+        .iter()
+        .map(|flag| ParityFeature {
+            name: flag.clone(),
+            category: "cli_flag".to_string(),
+            value: None,
+            known_to_harness: known.cli_flags.contains(flag),
+        })
+        .collect();
+    categories.insert("cli_flag".to_string(), flag_features);
+
+    // CLI subcommands (informational)
+    let sub_features: Vec<ParityFeature> = cli_subcommands
+        .iter()
+        .map(|sub| ParityFeature {
+            name: sub.clone(),
+            category: "cli_subcommand".to_string(),
+            value: None,
+            known_to_harness: false,
+        })
+        .collect();
+    categories.insert("cli_subcommand".to_string(), sub_features);
+
+    // MCP transports
+    let transport_features: Vec<ParityFeature> = mcp_transports
+        .iter()
+        .map(|t| ParityFeature {
+            name: t.clone(),
+            category: "mcp_transport".to_string(),
+            value: None,
+            known_to_harness: known.mcp_transports.contains(t),
+        })
+        .collect();
+    categories.insert("mcp_transport".to_string(), transport_features);
+
+    // MCP servers (informational)
+    let server_features: Vec<ParityFeature> = mcp_servers
+        .iter()
+        .map(|s| ParityFeature {
+            name: s.clone(),
+            category: "mcp_server".to_string(),
+            value: None,
+            known_to_harness: false,
+        })
+        .collect();
+    categories.insert("mcp_server".to_string(), server_features);
+
+    // Plugin component types (deduplicated across plugins)
+    let mut seen_types: HashSet<String> = HashSet::new();
+    let mut plugin_type_features: Vec<ParityFeature> = Vec::new();
+    for (_name, types) in &plugins {
+        for t in types {
+            if seen_types.insert(t.clone()) {
+                plugin_type_features.push(ParityFeature {
+                    name: t.clone(),
+                    category: "plugin_type".to_string(),
+                    value: None,
+                    known_to_harness: known.plugin_types.contains(t),
+                });
+            }
+        }
+    }
+    categories.insert("plugin_type".to_string(), plugin_type_features);
+
+    let features_detected: usize = categories.values().map(|v| v.len()).sum();
+
+    // Detect drift
+    let drift_tuples = detect_drift(&known, &categories);
+
+    // Persist snapshot and drift
+    let raw_data = serde_json::to_string(&categories)
+        .map_err(|e| format!("Failed to serialize categories: {}", e))?;
+
+    {
+        let conn = db.conn.lock().map_err(|e| e.to_string())?;
+        conn.execute(
+            "INSERT INTO parity_snapshots (id, timestamp, cc_version, cc_installed, raw_data, features_count, drift_count) \
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            rusqlite::params![
+                snapshot_id,
+                scanned_at,
+                cc_version,
+                cc_installed,
+                raw_data,
+                features_detected as i64,
+                drift_tuples.len() as i64,
+            ],
+        )
+        .map_err(|e| format!("Failed to insert snapshot: {}", e))?;
+
+        for (category, feature_name, drift_type, details) in &drift_tuples {
+            conn.execute(
+                "INSERT INTO parity_drift (snapshot_id, category, feature_name, drift_type, details, detected_at, acknowledged) \
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0)",
+                rusqlite::params![
+                    snapshot_id,
+                    category,
+                    feature_name,
+                    drift_type,
+                    details,
+                    scanned_at,
+                ],
+            )
+            .map_err(|e| format!("Failed to insert drift item: {}", e))?;
+        }
+    }
+
+    let drift_items = load_drift_by_snapshot(&db, &snapshot_id)?;
+
+    Ok(ParityScanResult {
+        snapshot_id,
+        cc_version,
+        cc_installed,
+        features_detected,
+        drift_count: drift_items.len(),
+        drift_items,
+        scanned_at,
+    })
+}
+
+fn load_drift_by_snapshot(db: &Db, snapshot_id: &str) -> Result<Vec<ParityDriftItem>, String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, category, feature_name, drift_type, details, detected_at, acknowledged \
+             FROM parity_drift WHERE snapshot_id = ?1",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let items = stmt
+        .query_map(rusqlite::params![snapshot_id], |row| {
+            Ok(ParityDriftItem {
+                id: row.get(0)?,
+                category: row.get(1)?,
+                feature_name: row.get(2)?,
+                drift_type: row.get(3)?,
+                details: row.get(4)?,
+                detected_at: row.get(5)?,
+                acknowledged: row.get::<_, bool>(6)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    Ok(items)
+}
+
+#[tauri::command]
+pub fn get_parity_snapshot(db: State<'_, Db>) -> Result<Option<ParitySnapshot>, String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let result = conn.query_row(
+        "SELECT id, timestamp, cc_version, cc_installed, raw_data \
+         FROM parity_snapshots ORDER BY timestamp DESC LIMIT 1",
+        [],
+        |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, Option<String>>(2)?,
+                row.get::<_, bool>(3)?,
+                row.get::<_, String>(4)?,
+            ))
+        },
+    );
+
+    match result {
+        Ok((id, timestamp, cc_version, cc_installed, raw_data)) => {
+            let categories: HashMap<String, Vec<ParityFeature>> =
+                serde_json::from_str(&raw_data).unwrap_or_default();
+            Ok(Some(ParitySnapshot {
+                id,
+                timestamp,
+                cc_version,
+                cc_installed,
+                categories,
+            }))
+        }
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(e.to_string()),
+    }
+}
+
+#[tauri::command]
+pub fn get_parity_drift(
+    db: State<'_, Db>,
+    include_acknowledged: bool,
+) -> Result<Vec<ParityDriftItem>, String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let sql = if include_acknowledged {
+        "SELECT id, category, feature_name, drift_type, details, detected_at, acknowledged \
+         FROM parity_drift ORDER BY detected_at DESC"
+    } else {
+        "SELECT id, category, feature_name, drift_type, details, detected_at, acknowledged \
+         FROM parity_drift WHERE acknowledged = 0 ORDER BY detected_at DESC"
+    };
+
+    let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
+    let items = stmt
+        .query_map([], |row| {
+            Ok(ParityDriftItem {
+                id: row.get(0)?,
+                category: row.get(1)?,
+                feature_name: row.get(2)?,
+                drift_type: row.get(3)?,
+                details: row.get(4)?,
+                detected_at: row.get(5)?,
+                acknowledged: row.get::<_, bool>(6)?,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    Ok(items)
+}
+
+#[tauri::command]
+pub fn acknowledge_drift(db: State<'_, Db>, drift_id: i64) -> Result<(), String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let acknowledged_at = now_iso();
+    conn.execute(
+        "UPDATE parity_drift SET acknowledged = 1, acknowledged_at = ?1 WHERE id = ?2",
+        rusqlite::params![acknowledged_at, drift_id],
+    )
+    .map_err(|e| format!("Failed to acknowledge drift item: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_parity_history(
+    db: State<'_, Db>,
+    limit: Option<i64>,
+) -> Result<Vec<ParitySnapshotSummary>, String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let limit = limit.unwrap_or(20);
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, timestamp, cc_version, features_count, drift_count \
+             FROM parity_snapshots ORDER BY timestamp DESC LIMIT ?1",
+        )
+        .map_err(|e| e.to_string())?;
+
+    let items = stmt
+        .query_map(rusqlite::params![limit], |row| {
+            Ok(ParitySnapshotSummary {
+                id: row.get(0)?,
+                timestamp: row.get(1)?,
+                cc_version: row.get(2)?,
+                features_detected: row.get::<_, i64>(3)? as usize,
+                drift_count: row.get::<_, i64>(4)? as usize,
+            })
+        })
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .collect();
+
+    Ok(items)
+}
