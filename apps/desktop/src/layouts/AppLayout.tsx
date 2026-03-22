@@ -25,6 +25,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "Plugins", path: "/harness/plugins" },
       { label: "Hooks", path: "/harness/hooks" },
       { label: "CLAUDE.md", path: "/harness/claude-md" },
+      { label: "Sync", path: "/harness/sync" },
       { label: "Config Files", path: "/harness/settings" },
     ],
   },
@@ -63,6 +64,14 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "Permissions", path: "/security/permissions" },
       { label: "Secrets", path: "/security/secrets" },
       { label: "Audit Log", path: "/security/audit" },
+    ],
+  },
+  {
+    id: "parity",
+    label: "Parity",
+    path: "/parity",
+    children: [
+      { label: "Dashboard", path: "/parity" },
     ],
   },
   {

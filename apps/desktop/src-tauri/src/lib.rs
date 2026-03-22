@@ -41,6 +41,8 @@ pub fn run() {
             commands::claude_md::read_claude_md,
             // Harness File
             commands::harness_file::read_harness_file,
+            commands::harness_file::write_harness_file,
+            commands::harness_file::scan_claude_config,
             // Settings
             commands::settings::list_claude_dir,
             // Observatory
@@ -91,11 +93,25 @@ pub fn run() {
             commands::history::read_file_history,
             commands::history::push_file_history,
             commands::history::get_history_size,
+            // Sync
+            commands::sync::sync_read_file,
+            commands::sync::sync_file_exists,
+            commands::sync::sync_read_dir,
+            commands::sync::sync_write_files,
+            commands::sync::sync_create_backup,
+            commands::sync::sync_list_backups,
+            commands::sync::sync_restore_backup,
             // Board server
             board_server::board_server_check_installed,
             board_server::board_server_install,
             board_server::board_server_start,
             board_server::board_server_restart,
+            // Parity
+            commands::parity::run_parity_scan,
+            commands::parity::get_parity_snapshot,
+            commands::parity::get_parity_drift,
+            commands::parity::acknowledge_drift,
+            commands::parity::get_parity_history,
         ])
         .setup(|app| {
             let state = app.state::<BoardServerState>();

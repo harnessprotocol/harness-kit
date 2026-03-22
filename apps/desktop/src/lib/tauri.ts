@@ -100,6 +100,21 @@ export async function readHarnessFile(): Promise<HarnessFileResult> {
   return invoke<HarnessFileResult>("read_harness_file");
 }
 
+export async function writeHarnessFile(content: string): Promise<string> {
+  return invoke<string>("write_harness_file", { content });
+}
+
+export interface ClaudeConfigScan {
+  mcpServersJson: string | null;
+  settingsJson: string | null;
+  mcpSource: string | null;
+  settingsSource: string | null;
+}
+
+export async function scanClaudeConfig(): Promise<ClaudeConfigScan> {
+  return invoke<ClaudeConfigScan>("scan_claude_config");
+}
+
 // ── Settings / directory commands ────────────────────────────
 
 export async function listClaudeDir(): Promise<string[]> {
@@ -293,6 +308,128 @@ export async function listAuditEntries(
 
 export async function clearAuditEntries(beforeDate: string): Promise<void> {
   return invoke<void>("clear_audit_entries", { beforeDate });
+}
+
+// ── Sync commands ────────────────────────────────────────────
+
+export interface SyncFileWrite {
+  relativePath: string;
+  content: string;
+}
+
+export interface BackupFileEntry {
+  relativePath: string;
+  existed: boolean;
+  sizeBytes: number;
+}
+
+export interface BackupManifest {
+  id: string;
+  timestamp: string;
+  projectDir: string;
+  harnessName: string;
+  platforms: string[];
+  files: BackupFileEntry[];
+}
+
+export async function syncReadFile(projectDir: string, filePath: string): Promise<string> {
+  return invoke<string>("sync_read_file", { projectDir, filePath });
+}
+
+export async function syncFileExists(projectDir: string, filePath: string): Promise<boolean> {
+  return invoke<boolean>("sync_file_exists", { projectDir, filePath });
+}
+
+export async function syncReadDir(projectDir: string, dirPath: string): Promise<string[]> {
+  return invoke<string[]>("sync_read_dir", { projectDir, dirPath });
+}
+
+export async function syncWriteFiles(projectDir: string, files: SyncFileWrite[]): Promise<void> {
+  return invoke<void>("sync_write_files", { projectDir, files });
+}
+
+export async function syncCreateBackup(
+  projectDir: string,
+  harnessName: string,
+  platforms: string[],
+  filePaths: string[],
+): Promise<BackupManifest> {
+  return invoke<BackupManifest>("sync_create_backup", { projectDir, harnessName, platforms, filePaths });
+}
+
+export async function syncListBackups(): Promise<BackupManifest[]> {
+  return invoke<BackupManifest[]>("sync_list_backups");
+}
+
+export async function syncRestoreBackup(backupId: string): Promise<void> {
+  return invoke<void>("sync_restore_backup", { backupId });
+}
+
+// ── Parity commands ──────────────────────────────────────────
+
+export interface ParityFeature {
+  name: string;
+  category: string;
+  value: string | null;
+  knownToHarness: boolean;
+}
+
+export interface ParityDriftItem {
+  id: number;
+  category: string;
+  featureName: string;
+  driftType: string;
+  details: string | null;
+  detectedAt: string;
+  acknowledged: boolean;
+}
+
+export interface ParityScanResult {
+  snapshotId: string;
+  ccVersion: string | null;
+  ccInstalled: boolean;
+  featuresDetected: number;
+  driftCount: number;
+  driftItems: ParityDriftItem[];
+  scannedAt: string;
+}
+
+export interface ParitySnapshot {
+  id: string;
+  timestamp: string;
+  ccVersion: string | null;
+  ccInstalled: boolean;
+  categories: Record<string, ParityFeature[]>;
+}
+
+export interface ParitySnapshotSummary {
+  id: string;
+  timestamp: string;
+  ccVersion: string | null;
+  featuresDetected: number;
+  driftCount: number;
+}
+
+export async function runParityScan(): Promise<ParityScanResult> {
+  return invoke<ParityScanResult>("run_parity_scan");
+}
+
+export async function getParitySnapshot(): Promise<ParitySnapshot | null> {
+  return invoke<ParitySnapshot | null>("get_parity_snapshot");
+}
+
+export async function getParityDrift(includeAcknowledged?: boolean): Promise<ParityDriftItem[]> {
+  return invoke<ParityDriftItem[]>("get_parity_drift", {
+    includeAcknowledged: includeAcknowledged ?? false,
+  });
+}
+
+export async function acknowledgeDrift(driftId: number): Promise<void> {
+  return invoke<void>("acknowledge_drift", { driftId });
+}
+
+export async function getParityHistory(limit?: number): Promise<ParitySnapshotSummary[]> {
+  return invoke<ParitySnapshotSummary[]>("get_parity_history", { limit });
 }
 
 // ── Board server commands ──────────────────────────────────

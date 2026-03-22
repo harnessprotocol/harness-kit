@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "configFiles": {
+    "CLAUDE.md": { "supported": true, "compileSlot": "instructions.operational" },
+    "AGENT.md": { "supported": true, "compileSlot": "instructions.behavioral" },
+    "SOUL.md": { "supported": true, "compileSlot": "instructions.identity" },
+    ".mcp.json": { "supported": true, "compileSlot": "mcp-servers" },
+    ".claude/settings.json": { "supported": true, "compileSlot": "permissions" }
+  },
+  "settingsKeys": {
+    "permissions.allow": true,
+    "permissions.deny": true,
+    "permissions.ask": true,
+    "additionalDirectories": true
+  },
+  "mcpTransports": ["stdio", "http", "sse", "ws"],
+  "tools": ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch", "Agent"],
+  "cliFlags": ["--version", "--help", "-p", "--model", "--print"],
+  "pluginTypes": ["skills", "agents", "hooks", "commands"]
+}

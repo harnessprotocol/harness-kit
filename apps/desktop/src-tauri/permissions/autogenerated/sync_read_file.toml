@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-sync-read-file"
+description = "Enables the sync_read_file command without any pre-configured scope."
+commands.allow = ["sync_read_file"]
+
+[[permission]]
+identifier = "deny-sync-read-file"
+description = "Denies the sync_read_file command without any pre-configured scope."
+commands.deny = ["sync_read_file"]

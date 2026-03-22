@@ -83,6 +83,30 @@ pub fn init(data_dir: &Path) -> Result<Db, String> {
         CREATE INDEX IF NOT EXISTS idx_audit_ts ON audit_log(timestamp);
         CREATE INDEX IF NOT EXISTS idx_audit_type ON audit_log(event_type);
         CREATE INDEX IF NOT EXISTS idx_audit_category ON audit_log(category);
+
+        CREATE TABLE IF NOT EXISTS parity_snapshots (
+            id              TEXT PRIMARY KEY,
+            timestamp       TEXT NOT NULL,
+            cc_version      TEXT,
+            cc_installed    BOOLEAN NOT NULL DEFAULT 0,
+            raw_data        TEXT NOT NULL,
+            features_count  INTEGER NOT NULL DEFAULT 0,
+            drift_count     INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE INDEX IF NOT EXISTS idx_parity_snap_ts ON parity_snapshots(timestamp);
+
+        CREATE TABLE IF NOT EXISTS parity_drift (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            snapshot_id     TEXT NOT NULL REFERENCES parity_snapshots(id) ON DELETE CASCADE,
+            category        TEXT NOT NULL,
+            feature_name    TEXT NOT NULL,
+            drift_type      TEXT NOT NULL,
+            details         TEXT,
+            detected_at     TEXT NOT NULL DEFAULT '',
+            acknowledged    BOOLEAN NOT NULL DEFAULT 0,
+            acknowledged_at TEXT
+        );
+        CREATE INDEX IF NOT EXISTS idx_parity_drift_ack ON parity_drift(acknowledged);
     ",
     )
     .map_err(|e| format!("Failed to run schema: {}", e))?;

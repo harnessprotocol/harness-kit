@@ -8,6 +8,7 @@ import HooksPage from "./pages/harness/HooksPage";
 import SettingsPage from "./pages/harness/SettingsPage";
 import FileViewerPage from "./pages/harness/FileViewerPage";
 import ClaudeMdPage from "./pages/harness/ClaudeMdPage";
+import SyncPage from "./pages/harness/SyncPage";
 import MarketplacePage from "./pages/marketplace/MarketplacePage";
 import DashboardPage from "./pages/observatory/DashboardPage";
 import SessionsPage from "./pages/observatory/SessionsPage";
@@ -20,6 +21,7 @@ import SecretsPage from "./pages/security/SecretsPage";
 import AuditLogPage from "./pages/security/AuditLogPage";
 import BoardProjectsPage from "./pages/board/BoardProjectsPage";
 import BoardKanbanPage from "./pages/board/BoardKanbanPage";
+import ParityDashboardPage from "./pages/parity/ParityDashboardPage";
 
 function DefaultRedirect() {
   const defaultSection = getDefaultSection();
@@ -37,6 +39,7 @@ export default function App() {
           <Route path="harness/plugins" element={<PluginsPage />} />
           <Route path="harness/hooks" element={<HooksPage />} />
           <Route path="harness/claude-md" element={<ClaudeMdPage />} />
+          <Route path="harness/sync" element={<SyncPage />} />
           <Route path="harness/settings" element={<SettingsPage />} />
           <Route path="harness/settings/:filename" element={<FileViewerPage />} />
 
@@ -56,6 +59,9 @@ export default function App() {
           <Route path="security/permissions" element={<PermissionsPage />} />
           <Route path="security/secrets" element={<SecretsPage />} />
           <Route path="security/audit" element={<AuditLogPage />} />
+
+          {/* Parity */}
+          <Route path="parity" element={<ParityDashboardPage />} />
 
           {/* Board */}
           <Route path="board" element={<BoardProjectsPage />} />

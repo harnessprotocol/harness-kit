@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-sync-create-backup"
+description = "Enables the sync_create_backup command without any pre-configured scope."
+commands.allow = ["sync_create_backup"]
+
+[[permission]]
+identifier = "deny-sync-create-backup"
+description = "Denies the sync_create_backup command without any pre-configured scope."
+commands.deny = ["sync_create_backup"]

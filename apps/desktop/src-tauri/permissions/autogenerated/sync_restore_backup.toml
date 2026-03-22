@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-sync-restore-backup"
+description = "Enables the sync_restore_backup command without any pre-configured scope."
+commands.allow = ["sync_restore_backup"]
+
+[[permission]]
+identifier = "deny-sync-restore-backup"
+description = "Denies the sync_restore_backup command without any pre-configured scope."
+commands.deny = ["sync_restore_backup"]
