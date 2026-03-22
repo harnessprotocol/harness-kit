@@ -40,7 +40,7 @@ export const MOCK_RESPONSES: Record<string, unknown> = {
   list_required_env: [],
   list_audit_entries: [],
   board_server_check_installed: false,
-  read_env_config: {},
+  read_env_config: [],
   get_comparator_analytics: { totalComparisons: 0, totalPanels: 0 },
   sync_list_backups: [],
 };
