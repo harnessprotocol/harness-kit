@@ -33,6 +33,8 @@
     "allow-get-parity-drift",
     "allow-acknowledge-drift",
     "allow-get-parity-history",
+    "allow-create-config-file",
+    "allow-add-to-parity-baseline",
     {
       "identifier": "shell:allow-execute",
       "allow": [

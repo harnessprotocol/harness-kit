@@ -942,6 +942,9 @@ pub fn create_config_file(name: String) -> Result<String, String> {
 /// Stored at ~/.harness-kit/parity-baseline.json and merged on each scan.
 #[tauri::command]
 pub fn add_to_parity_baseline(category: String, feature_name: String) -> Result<(), String> {
+    if feature_name.len() > 256 || feature_name.contains('\0') {
+        return Err("Invalid feature_name".to_string());
+    }
     let home = dirs::home_dir().ok_or("Cannot determine home directory")?;
     let path = home.join(".harness-kit").join("parity-baseline.json");
 
