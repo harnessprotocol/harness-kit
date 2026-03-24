@@ -432,6 +432,14 @@ export async function getParityHistory(limit?: number): Promise<ParitySnapshotSu
   return invoke<ParitySnapshotSummary[]>("get_parity_history", { limit });
 }
 
+export async function createConfigFile(name: string): Promise<string> {
+  return invoke<string>("create_config_file", { name });
+}
+
+export async function addToParityBaseline(category: string, featureName: string): Promise<void> {
+  return invoke<void>("add_to_parity_baseline", { category, featureName });
+}
+
 // ── Board server commands ──────────────────────────────────
 
 export async function boardServerCheckInstalled(): Promise<boolean> {

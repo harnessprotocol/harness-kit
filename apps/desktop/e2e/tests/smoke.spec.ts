@@ -57,6 +57,14 @@ test.describe("Navigation smoke tests", () => {
     const text = await appPage.locator("body").textContent();
     expect(text).not.toContain("command not found");
   });
+
+  test("Parity dashboard renders without error", async ({ appPage }) => {
+    await appPage.goto("/parity");
+    await appPage.waitForLoadState("networkidle");
+    const text = await appPage.locator("body").textContent();
+    expect(text).not.toContain("command not found");
+    expect(text).not.toContain("Mock: no response");
+  });
 });
 
 test.describe("Harness File page — content validation", () => {

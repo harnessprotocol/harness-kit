@@ -2193,6 +2193,12 @@
           "markdownDescription": "Enables the acknowledge_drift command without any pre-configured scope."
         },
         {
+          "description": "Enables the add_to_parity_baseline command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-add-to-parity-baseline",
+          "markdownDescription": "Enables the add_to_parity_baseline command without any pre-configured scope."
+        },
+        {
           "description": "Enables the apply_security_preset command without any pre-configured scope.",
           "type": "string",
           "const": "allow-apply-security-preset",
@@ -2239,6 +2245,12 @@
           "type": "string",
           "const": "allow-clear-audit-entries",
           "markdownDescription": "Enables the clear_audit_entries command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the create_config_file command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-create-config-file",
+          "markdownDescription": "Enables the create_config_file command without any pre-configured scope."
         },
         {
           "description": "Enables the create_worktrees command without any pre-configured scope.",
@@ -2625,6 +2637,12 @@
           "markdownDescription": "Denies the acknowledge_drift command without any pre-configured scope."
         },
         {
+          "description": "Denies the add_to_parity_baseline command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-add-to-parity-baseline",
+          "markdownDescription": "Denies the add_to_parity_baseline command without any pre-configured scope."
+        },
+        {
           "description": "Denies the apply_security_preset command without any pre-configured scope.",
           "type": "string",
           "const": "deny-apply-security-preset",
@@ -2671,6 +2689,12 @@
           "type": "string",
           "const": "deny-clear-audit-entries",
           "markdownDescription": "Denies the clear_audit_entries command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the create_config_file command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-create-config-file",
+          "markdownDescription": "Denies the create_config_file command without any pre-configured scope."
         },
         {
           "description": "Denies the create_worktrees command without any pre-configured scope.",

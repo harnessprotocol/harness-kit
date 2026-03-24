@@ -28,6 +28,11 @@
     "shell:allow-stdin-write",
     "shell:allow-kill",
     "shell:allow-open",
+    "allow-run-parity-scan",
+    "allow-get-parity-snapshot",
+    "allow-get-parity-drift",
+    "allow-acknowledge-drift",
+    "allow-get-parity-history",
     {
       "identifier": "shell:allow-execute",
       "allow": [

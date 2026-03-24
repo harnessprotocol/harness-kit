@@ -21,7 +21,52 @@ struct KnownFeatures {
 }
 
 fn load_known_features() -> KnownFeatures {
-    serde_json::from_str(KNOWN_FEATURES_JSON).expect("Invalid known_features.json")
+    let mut known: KnownFeatures =
+        serde_json::from_str(KNOWN_FEATURES_JSON).expect("Invalid known_features.json");
+
+    // Merge user-level baseline additions from ~/.harness-kit/parity-baseline.json
+    if let Some(home) = dirs::home_dir() {
+        let user_path = home.join(".harness-kit").join("parity-baseline.json");
+        if user_path.exists() {
+            if let Ok(content) = std::fs::read_to_string(&user_path) {
+                if let Ok(value) = serde_json::from_str::<Value>(&content) {
+                    if let Some(keys) = value.get("settingsKeys").and_then(|v| v.as_object()) {
+                        for (k, _) in keys {
+                            known.settings_keys.insert(k.clone(), true);
+                        }
+                    }
+                    if let Some(flags) = value.get("cliFlags").and_then(|v| v.as_array()) {
+                        for f in flags.iter().filter_map(|v| v.as_str()) {
+                            let s = f.to_string();
+                            if !known.cli_flags.contains(&s) {
+                                known.cli_flags.push(s);
+                            }
+                        }
+                    }
+                    if let Some(transports) =
+                        value.get("mcpTransports").and_then(|v| v.as_array())
+                    {
+                        for t in transports.iter().filter_map(|v| v.as_str()) {
+                            let s = t.to_string();
+                            if !known.mcp_transports.contains(&s) {
+                                known.mcp_transports.push(s);
+                            }
+                        }
+                    }
+                    if let Some(types) = value.get("pluginTypes").and_then(|v| v.as_array()) {
+                        for t in types.iter().filter_map(|v| v.as_str()) {
+                            let s = t.to_string();
+                            if !known.plugin_types.contains(&s) {
+                                known.plugin_types.push(s);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    known
 }
 
 // ── Types ─────────────────────────────────────────────────────
@@ -445,8 +490,24 @@ fn detect_drift(
         }
     }
 
-    // Drop duplicate drift items already acknowledged in the DB — handled at query time
-    let _ = known; // suppress unused warning; used above via known.settings_keys etc.
+    // Config files: surface missing files that Harness knows about
+    if let Some(features) = categories.get("config_file") {
+        for f in features {
+            if f.known_to_harness && f.value.as_deref() == Some("not_found") {
+                drift.push((
+                    "config_file".to_string(),
+                    f.name.clone(),
+                    "missing_file".to_string(),
+                    Some(format!(
+                        "{} is expected but not found at its default location",
+                        f.name
+                    )),
+                ));
+            }
+        }
+    }
+
+    let _ = known;
     drift
 }
 
@@ -582,8 +643,20 @@ pub async fn run_parity_scan(
     let raw_data = serde_json::to_string(&categories)
         .map_err(|e| format!("Failed to serialize categories: {}", e))?;
 
+    // Carry forward acknowledged state from all previous scans so re-scanning
+    // doesn't resurface items the user already acknowledged.
+    let prev_acked = load_prev_acknowledged(&db)?;
+
     {
         let conn = db.conn.lock().map_err(|e| e.to_string())?;
+
+        let active_drift_count = drift_tuples
+            .iter()
+            .filter(|(cat, name, dtype, _)| {
+                !prev_acked.contains(&(cat.clone(), name.clone(), dtype.clone()))
+            })
+            .count();
+
         conn.execute(
             "INSERT INTO parity_snapshots (id, timestamp, cc_version, cc_installed, raw_data, features_count, drift_count) \
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
@@ -594,15 +667,22 @@ pub async fn run_parity_scan(
                 cc_installed,
                 raw_data,
                 features_detected as i64,
-                drift_tuples.len() as i64,
+                active_drift_count as i64,
             ],
         )
         .map_err(|e| format!("Failed to insert snapshot: {}", e))?;
 
         for (category, feature_name, drift_type, details) in &drift_tuples {
+            let pre_ack = prev_acked.contains(&(
+                category.clone(),
+                feature_name.clone(),
+                drift_type.clone(),
+            ));
+            let ack_at = pre_ack.then(|| scanned_at.as_str());
             conn.execute(
-                "INSERT INTO parity_drift (snapshot_id, category, feature_name, drift_type, details, detected_at, acknowledged) \
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, 0)",
+                "INSERT INTO parity_drift \
+                 (snapshot_id, category, feature_name, drift_type, details, detected_at, acknowledged, acknowledged_at) \
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
                 rusqlite::params![
                     snapshot_id,
                     category,
@@ -610,23 +690,48 @@ pub async fn run_parity_scan(
                     drift_type,
                     details,
                     scanned_at,
+                    pre_ack as i64,
+                    ack_at,
                 ],
             )
             .map_err(|e| format!("Failed to insert drift item: {}", e))?;
         }
     }
 
-    let drift_items = load_drift_by_snapshot(&db, &snapshot_id)?;
+    let all_drift = load_drift_by_snapshot(&db, &snapshot_id)?;
+    let active_drift: Vec<ParityDriftItem> = all_drift.into_iter().filter(|d| !d.acknowledged).collect();
 
     Ok(ParityScanResult {
         snapshot_id,
         cc_version,
         cc_installed,
         features_detected,
-        drift_count: drift_items.len(),
-        drift_items,
+        drift_count: active_drift.len(),
+        drift_items: active_drift,
         scanned_at,
     })
+}
+
+fn load_prev_acknowledged(db: &Db) -> Result<HashSet<(String, String, String)>, String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT DISTINCT category, feature_name, drift_type \
+             FROM parity_drift WHERE acknowledged = 1",
+        )
+        .map_err(|e| e.to_string())?;
+    let items = stmt
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+            ))
+        })
+        .map_err(|e| e.to_string())?
+        .filter_map(|r| r.ok())
+        .collect();
+    Ok(items)
 }
 
 fn load_drift_by_snapshot(db: &Db, snapshot_id: &str) -> Result<Vec<ParityDriftItem>, String> {
@@ -698,17 +803,34 @@ pub fn get_parity_drift(
     include_acknowledged: bool,
 ) -> Result<Vec<ParityDriftItem>, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
+
+    // Scope to the latest snapshot only — prevents items from accumulating across scans.
+    let latest_id: Option<String> = match conn.query_row(
+        "SELECT id FROM parity_snapshots ORDER BY timestamp DESC LIMIT 1",
+        [],
+        |row| row.get(0),
+    ) {
+        Ok(id) => Some(id),
+        Err(rusqlite::Error::QueryReturnedNoRows) => None,
+        Err(e) => return Err(e.to_string()),
+    };
+
+    let snapshot_id = match latest_id {
+        Some(id) => id,
+        None => return Ok(vec![]),
+    };
+
     let sql = if include_acknowledged {
         "SELECT id, category, feature_name, drift_type, details, detected_at, acknowledged \
-         FROM parity_drift ORDER BY detected_at DESC"
+         FROM parity_drift WHERE snapshot_id = ?1 ORDER BY detected_at DESC"
     } else {
         "SELECT id, category, feature_name, drift_type, details, detected_at, acknowledged \
-         FROM parity_drift WHERE acknowledged = 0 ORDER BY detected_at DESC"
+         FROM parity_drift WHERE snapshot_id = ?1 AND acknowledged = 0 ORDER BY detected_at DESC"
     };
 
     let mut stmt = conn.prepare(sql).map_err(|e| e.to_string())?;
     let items = stmt
-        .query_map([], |row| {
+        .query_map(rusqlite::params![snapshot_id], |row| {
             Ok(ParityDriftItem {
                 id: row.get(0)?,
                 category: row.get(1)?,
@@ -767,4 +889,114 @@ pub fn get_parity_history(
         .collect();
 
     Ok(items)
+}
+
+// ── Action commands ────────────────────────────────────────────
+
+/// Create a config file at its canonical location with a sensible default template.
+/// Returns the absolute path of the created file.
+#[tauri::command]
+pub fn create_config_file(name: String) -> Result<String, String> {
+    let home = dirs::home_dir().ok_or("Cannot determine home directory")?;
+
+    let (path, content) = match name.as_str() {
+        "CLAUDE.md" => (
+            home.join("CLAUDE.md"),
+            "# Global Instructions\n\n## Commands\n\n<!-- build, test, dev commands -->\n\n## Architecture\n\n<!-- entry points, package layout, key files -->\n\n## Gotchas\n\n<!-- non-obvious patterns and common mistakes -->\n".to_string(),
+        ),
+        "AGENT.md" => (
+            home.join("AGENT.md"),
+            "# Behavioral Configuration\n\n## Tone\n\nDirect and concise. No filler words.\n\n## Autonomy\n\nAsk before destructive or hard-to-reverse operations.\n\n## Workflow\n\nWork in focused sessions. Commit changes incrementally.\n".to_string(),
+        ),
+        "SOUL.md" => (
+            home.join("SOUL.md"),
+            "# Identity\n\n## Values\n\n<!-- Your collaboration values and preferences -->\n\n## Relationship Context\n\n<!-- How you prefer to work with Claude across sessions -->\n".to_string(),
+        ),
+        ".mcp.json" => (
+            home.join(".mcp.json"),
+            "{\n  \"mcpServers\": {}\n}\n".to_string(),
+        ),
+        ".claude/settings.json" => (
+            home.join(".claude").join("settings.json"),
+            "{\n  \"permissions\": {\n    \"allow\": [],\n    \"deny\": []\n  }\n}\n".to_string(),
+        ),
+        _ => return Err(format!("Unknown config file: {}", name)),
+    };
+
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create directory: {}", e))?;
+    }
+
+    if path.exists() {
+        return Err(format!("{} already exists at {}", name, path.display()));
+    }
+
+    std::fs::write(&path, &content)
+        .map_err(|e| format!("Failed to create {}: {}", name, e))?;
+
+    Ok(path.display().to_string())
+}
+
+/// Add a feature to the user-level parity baseline so it is no longer flagged as drift.
+/// Stored at ~/.harness-kit/parity-baseline.json and merged on each scan.
+#[tauri::command]
+pub fn add_to_parity_baseline(category: String, feature_name: String) -> Result<(), String> {
+    let home = dirs::home_dir().ok_or("Cannot determine home directory")?;
+    let path = home.join(".harness-kit").join("parity-baseline.json");
+
+    let mut baseline: Value = if path.exists() {
+        let content = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+        serde_json::from_str(&content).unwrap_or(serde_json::json!({}))
+    } else {
+        serde_json::json!({})
+    };
+
+    match category.as_str() {
+        "settings_key" => {
+            if baseline.get("settingsKeys").is_none() {
+                baseline["settingsKeys"] = serde_json::json!({});
+            }
+            if let Some(obj) = baseline["settingsKeys"].as_object_mut() {
+                obj.insert(feature_name, Value::Bool(true));
+            }
+        }
+        "cli_flag" => {
+            if baseline.get("cliFlags").is_none() {
+                baseline["cliFlags"] = serde_json::json!([]);
+            }
+            if let Some(arr) = baseline["cliFlags"].as_array_mut() {
+                let val = Value::String(feature_name);
+                if !arr.contains(&val) { arr.push(val); }
+            }
+        }
+        "mcp_transport" => {
+            if baseline.get("mcpTransports").is_none() {
+                baseline["mcpTransports"] = serde_json::json!([]);
+            }
+            if let Some(arr) = baseline["mcpTransports"].as_array_mut() {
+                let val = Value::String(feature_name);
+                if !arr.contains(&val) { arr.push(val); }
+            }
+        }
+        "plugin_type" => {
+            if baseline.get("pluginTypes").is_none() {
+                baseline["pluginTypes"] = serde_json::json!([]);
+            }
+            if let Some(arr) = baseline["pluginTypes"].as_array_mut() {
+                let val = Value::String(feature_name);
+                if !arr.contains(&val) { arr.push(val); }
+            }
+        }
+        _ => return Err(format!("Unknown category: {}", category)),
+    }
+
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+
+    let json = serde_json::to_string_pretty(&baseline).map_err(|e| e.to_string())?;
+    std::fs::write(&path, json).map_err(|e| e.to_string())?;
+
+    Ok(())
 }

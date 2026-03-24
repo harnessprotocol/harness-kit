@@ -112,6 +112,8 @@ pub fn run() {
             commands::parity::get_parity_drift,
             commands::parity::acknowledge_drift,
             commands::parity::get_parity_history,
+            commands::parity::create_config_file,
+            commands::parity::add_to_parity_baseline,
         ])
         .setup(|app| {
             let state = app.state::<BoardServerState>();
