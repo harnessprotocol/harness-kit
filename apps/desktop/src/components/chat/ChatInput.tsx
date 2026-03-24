@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useChat } from "../../context/ChatContext";
 
 export default function ChatInput() {
@@ -9,12 +9,19 @@ export default function ChatInput() {
 
   const isDisabled = state.status !== "in_room";
 
+  useEffect(() => {
+    return () => {
+      if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
+    };
+  }, []);
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
-        if (value.trim()) {
-          sendChat(value);
+        const inputValue = e.currentTarget.value;
+        if (inputValue.trim()) {
+          sendChat(inputValue);
           setValue("");
           // Stop typing indicator
           if (typingTimerRef.current) clearTimeout(typingTimerRef.current);
@@ -37,7 +44,7 @@ export default function ChatInput() {
         isTypingRef.current = false;
       }, 3000);
     },
-    [value, sendChat, sendTyping],
+    [sendChat, sendTyping],
   );
 
   return (

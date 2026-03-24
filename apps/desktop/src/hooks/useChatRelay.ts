@@ -68,6 +68,7 @@ export function useChatRelay(): UseChatRelayReturn {
   const wsRef = useRef<WebSocket | null>(null);
   const mountedRef = useRef(true);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const connIdRef = useRef(0);
 
   // Refs for values needed inside WS callbacks without triggering re-renders
   const isOpenRef = useRef(false);
@@ -115,11 +116,12 @@ export function useChatRelay(): UseChatRelayReturn {
 
   // ── Server message handler ───────────────────────────────
 
-  const handleServerMessage = useCallback(async (raw: string) => {
+  const handleServerMessage = useCallback((raw: string, connId: number) => {
     let msg: ServerMessage;
     try {
       msg = JSON.parse(raw) as ServerMessage;
-    } catch {
+    } catch (err) {
+      console.warn("[chat] failed to parse server message:", err);
       return;
     }
 
@@ -145,73 +147,81 @@ export function useChatRelay(): UseChatRelayReturn {
           return storedNick;
         })();
 
-        // Load local scrollback
-        let localMessages: AnyMessage[] = [];
-        try {
-          const rows = await chatLoadMessages(msg.code, 200);
-          localMessages = rows.map((r) => {
-            const base = { id: r.id, roomCode: r.roomCode, nickname: r.nickname, timestamp: r.timestamp };
-            if (r.msgType === "chat") {
-              return { ...base, type: "chat" as const, body: r.body ?? "" };
-            } else if (r.msgType === "share") {
-              return {
-                ...base,
-                type: "share" as const,
-                action: r.action as import("@harness-kit/shared").ShareAction,
-                target: r.target ?? "",
-                detail: r.detail ?? null,
-                diff: null,
-                pullable: false,
-              };
-            } else {
-              return {
-                ...base,
-                type: "system" as const,
-                event: (r.eventType ?? "join") as import("@harness-kit/shared").SystemMessage["event"],
-                detail: r.detail ?? null,
-              };
-            }
-          });
-        } catch { /* ignore */ }
-
-        // Merge: relay history wins; dedupe by id
+        const roomCode = msg.code;
+        const roomName = msg.name ?? null;
         const relayMessages = msg.history ?? [];
-        const merged = new Map<string, AnyMessage>();
-        for (const m of localMessages) merged.set(m.id, m);
-        for (const m of relayMessages) merged.set(m.id, m);
-        const messages = Array.from(merged.values()).sort(
-          (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
-        );
-
-        // Persist to SQLite
-        if (messages.length > 0) {
-          chatSaveMessages(messages.map((m) => {
-            const base = { id: m.id, roomCode: m.roomCode, nickname: m.nickname, timestamp: m.timestamp };
-            if (m.type === "chat") {
-              return { ...base, msgType: "chat", body: m.body, action: null, target: null, detail: null, eventType: null };
-            } else if (m.type === "share") {
-              return { ...base, msgType: "share", body: null, action: m.action, target: m.target, detail: m.detail, eventType: null };
-            } else {
-              return { ...base, msgType: "system", body: null, action: null, target: null, detail: m.detail, eventType: m.event };
-            }
-          })).catch(() => {});
-        }
-
-        // Save room to SQLite
+        const members = msg.members;
         const urlToSave = serverUrl;
-        chatSaveRoom(msg.code, msg.name ?? null, myNick, urlToSave).catch(() => {});
 
-        setState({
-          status: "in_room",
-          serverUrl: urlToSave,
-          roomCode: msg.code,
-          roomName: msg.name ?? null,
-          nickname: myNick,
-          members: msg.members,
-          messages,
-        });
+        // Load local scrollback in an async IIFE; guard against stale connection
+        void (async () => {
+          let localMessages: AnyMessage[] = [];
+          try {
+            const rows = await chatLoadMessages(roomCode, 200);
+            // Guard: if connection changed while we were awaiting, bail out
+            if (connIdRef.current !== connId) return;
+            localMessages = rows.map((r) => {
+              const base = { id: r.id, roomCode: r.roomCode, nickname: r.nickname, timestamp: r.timestamp };
+              if (r.msgType === "chat") {
+                return { ...base, type: "chat" as const, body: r.body ?? "" };
+              } else if (r.msgType === "share") {
+                return {
+                  ...base,
+                  type: "share" as const,
+                  action: r.action as import("@harness-kit/shared").ShareAction,
+                  target: r.target ?? "",
+                  detail: r.detail ?? null,
+                  diff: null,
+                  pullable: false,
+                };
+              } else {
+                return {
+                  ...base,
+                  type: "system" as const,
+                  event: (r.eventType ?? "join") as import("@harness-kit/shared").SystemMessage["event"],
+                  detail: r.detail ?? null,
+                };
+              }
+            });
+          } catch { /* ignore */ }
 
-        refreshRooms();
+          // Merge: relay history wins; dedupe by id
+          const merged = new Map<string, AnyMessage>();
+          for (const m of localMessages) merged.set(m.id, m);
+          for (const m of relayMessages) merged.set(m.id, m);
+          const messages = Array.from(merged.values()).sort(
+            (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+          );
+
+          // Persist to SQLite
+          if (messages.length > 0) {
+            chatSaveMessages(messages.map((m) => {
+              const base = { id: m.id, roomCode: m.roomCode, nickname: m.nickname, timestamp: m.timestamp };
+              if (m.type === "chat") {
+                return { ...base, msgType: "chat", body: m.body, action: null, target: null, detail: null, eventType: null };
+              } else if (m.type === "share") {
+                return { ...base, msgType: "share", body: null, action: m.action, target: m.target, detail: m.detail, eventType: null };
+              } else {
+                return { ...base, msgType: "system", body: null, action: null, target: null, detail: m.detail, eventType: m.event };
+              }
+            })).catch(err => console.warn("[chat] failed to save messages:", err));
+          }
+
+          // Save room to SQLite
+          chatSaveRoom(roomCode, roomName, myNick, urlToSave).catch(err => console.warn("[chat] failed to save room:", err));
+
+          setState({
+            status: "in_room",
+            serverUrl: urlToSave,
+            roomCode,
+            roomName,
+            nickname: myNick,
+            members,
+            messages,
+          });
+
+          refreshRooms();
+        })();
         break;
       }
 
@@ -248,7 +258,7 @@ export function useChatRelay(): UseChatRelayReturn {
             return { ...base, msgType: "system", body: null, action: null, target: null, detail: incoming.detail, eventType: incoming.event };
           }
         })();
-        chatSaveMessages([row]).catch(() => {});
+        chatSaveMessages([row]).catch(err => console.warn("[chat] failed to save messages:", err));
         break;
       }
 
@@ -282,6 +292,9 @@ export function useChatRelay(): UseChatRelayReturn {
       reconnectTimerRef.current = null;
     }
 
+    // Bump connection ID so stale callbacks can detect they're obsolete
+    const connId = ++connIdRef.current;
+
     saveServer(serverUrl);
     setState({ status: "connecting" });
 
@@ -290,15 +303,18 @@ export function useChatRelay(): UseChatRelayReturn {
       wsRef.current = ws;
 
       ws.onopen = () => {
+        if (connIdRef.current !== connId) { ws.close(); return; }
         if (!mountedRef.current) return;
         setState({ status: "connected", serverUrl });
       };
 
       ws.onmessage = (evt) => {
-        handleServerMessage(evt.data as string);
+        if (connIdRef.current !== connId) return;
+        handleServerMessage(evt.data as string, connId);
       };
 
       ws.onclose = () => {
+        if (connIdRef.current !== connId) return;
         if (!mountedRef.current) return;
         // If we were in a room, drop back to connected-but-not-in-room
         const cur = stateRef.current;
