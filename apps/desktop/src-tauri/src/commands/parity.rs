@@ -915,7 +915,7 @@ pub fn get_parity_history(
     limit: Option<i64>,
 ) -> Result<Vec<ParitySnapshotSummary>, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
-    let limit = limit.unwrap_or(20).max(1).min(100);
+    let limit = limit.unwrap_or(20).clamp(1, 100);
     let mut stmt = conn
         .prepare(
             "SELECT id, timestamp, cc_version, features_count, drift_count \
