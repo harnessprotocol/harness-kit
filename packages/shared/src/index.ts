@@ -59,3 +59,15 @@ export type {
   ComponentCounts,
   FileTreeNode,
 } from "./types.js";
+
+export type {
+  ChatMessageType,
+  ShareAction,
+  ChatMessage,
+  ShareMessage,
+  SystemMessage,
+  AnyMessage,
+  Member,
+  ClientMessage,
+  ServerMessage,
+} from "./chat-types.js";
