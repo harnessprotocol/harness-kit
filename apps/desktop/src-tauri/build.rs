@@ -80,6 +80,8 @@ fn main() {
                 "get_parity_drift",
                 "acknowledge_drift",
                 "get_parity_history",
+                "create_config_file",
+                "add_to_parity_baseline",
                 // Sync
                 "sync_read_file",
                 "sync_file_exists",

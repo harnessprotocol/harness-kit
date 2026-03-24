@@ -43,6 +43,20 @@ export const MOCK_RESPONSES: Record<string, unknown> = {
   read_env_config: [],
   get_comparator_analytics: { totalComparisons: 0, totalPanels: 0 },
   sync_list_backups: [],
+  // Parity
+  get_parity_snapshot: null,
+  get_parity_drift: [],
+  run_parity_scan: {
+    snapshotId: "mock-snapshot-1",
+    ccVersion: "1.0.0",
+    ccInstalled: true,
+    featuresDetected: 3,
+    driftCount: 0,
+    driftItems: [],
+    scannedAt: new Date().toISOString(),
+  },
+  get_parity_history: [],
+  acknowledge_drift: null,
 };
 
 /**
