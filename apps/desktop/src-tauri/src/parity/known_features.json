@@ -1,5 +1,4 @@
 {
-  "version": 1,
   "configFiles": {
     "CLAUDE.md": { "supported": true, "compileSlot": "instructions.operational" },
     "AGENT.md": { "supported": true, "compileSlot": "instructions.behavioral" },
@@ -14,7 +13,6 @@
     "additionalDirectories": true
   },
   "mcpTransports": ["stdio", "http", "sse", "ws"],
-  "tools": ["Bash", "Read", "Write", "Edit", "Glob", "Grep", "WebFetch", "WebSearch", "Agent"],
   "cliFlags": ["--version", "--help", "-p", "--model", "--print"],
   "pluginTypes": ["skills", "agents", "hooks", "commands"]
 }

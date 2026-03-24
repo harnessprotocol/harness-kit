@@ -195,6 +195,54 @@ const DRIFT_DESCRIPTIONS: Record<
   },
 };
 
+// ── Tooltip ──────────────────────────────────────────────────
+
+function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  if (!text) return <>{children}</>;
+  return (
+    <span
+      style={{ position: "relative", display: "inline" }}
+      onMouseEnter={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        setPos({ x: rect.left, y: rect.bottom + 6 });
+      }}
+      onMouseLeave={() => setPos(null)}
+    >
+      <span
+        style={{
+          borderBottom: "1px dotted var(--fg-subtle)",
+          cursor: "help",
+        }}
+      >
+        {children}
+      </span>
+      {pos && (
+        <div
+          style={{
+            position: "fixed",
+            left: pos.x,
+            top: pos.y,
+            zIndex: 9999,
+            background: "var(--bg-base)",
+            border: "1px solid var(--border-base)",
+            borderRadius: "6px",
+            padding: "7px 10px",
+            fontSize: "11px",
+            color: "var(--fg-base)",
+            maxWidth: "280px",
+            lineHeight: 1.45,
+            boxShadow: "0 4px 14px rgba(0,0,0,0.18)",
+            pointerEvents: "none",
+          }}
+        >
+          {text}
+        </div>
+      )}
+    </span>
+  );
+}
+
 // ── Stat card ────────────────────────────────────────────────
 
 function StatCard({
@@ -323,7 +371,6 @@ function FeatureSection({
     >
       <button
         onClick={() => setOpen((v) => !v)}
-        title={categoryDesc}
         style={{
           width: "100%",
           display: "flex",
@@ -353,7 +400,9 @@ function FeatureSection({
         >
           <path d="M3 2l4 3-4 3V2z" />
         </svg>
-        <span style={{ flex: 1 }}>{label}</span>
+        <span style={{ flex: 1 }}>
+          {categoryDesc ? <Tooltip text={categoryDesc}>{label}</Tooltip> : label}
+        </span>
         <span style={{ color: "var(--fg-subtle)", fontWeight: 400, fontSize: "11px" }}>
           {features.length} {features.length === 1 ? "item" : "items"}
         </span>
@@ -442,15 +491,11 @@ function FeatureSection({
                           fontSize: "11px",
                         }}
                       >
-                        <span
-                          title={desc || undefined}
-                          style={{
-                            borderBottom: desc ? "1px dotted var(--fg-subtle)" : "none",
-                            cursor: desc ? "help" : "default",
-                          }}
-                        >
-                          {feature.name}
-                        </span>
+                        {desc ? (
+                          <Tooltip text={desc}>{feature.name}</Tooltip>
+                        ) : (
+                          feature.name
+                        )}
                       </td>
                       <td style={{ padding: "7px 14px", color: "var(--fg-subtle)" }}>
                         {feature.knownToHarness ? "Tracked" : "—"}
@@ -523,7 +568,8 @@ function DriftRow({
   const color = CATEGORY_COLORS[item.category] ?? "#64748b";
 
   const descFn = DRIFT_DESCRIPTIONS[item.driftType];
-  const description = descFn ? descFn(item) : (item.details ?? "");
+  const driftDescription = descFn ? descFn(item) : (item.details ?? "");
+  const featureDescription = getFeatureDescription(item.category, item.featureName);
 
   const template = item.driftType === "missing_file"
     ? CONFIG_FILE_TEMPLATES[item.featureName]
@@ -620,9 +666,29 @@ function DriftRow({
             paddingLeft: "14px",
           }}
         >
-          {/* Description */}
+          {/* What is this feature */}
+          {featureDescription && (
+            <div
+              style={{
+                marginBottom: "10px",
+                padding: "8px 10px",
+                background: "var(--bg-base)",
+                borderRadius: "5px",
+                border: "1px solid var(--border-base)",
+              }}
+            >
+              <div style={{ fontSize: "10px", fontWeight: 600, color: "var(--fg-subtle)", marginBottom: "3px", fontVariantCaps: "all-small-caps", letterSpacing: "0.04em" }}>
+                About this {CATEGORY_LABELS[item.category]?.replace(/s$/, "").toLowerCase() ?? "feature"}
+              </div>
+              <div style={{ fontSize: "12px", color: "var(--fg-base)", lineHeight: 1.45 }}>
+                {featureDescription}
+              </div>
+            </div>
+          )}
+
+          {/* Why it's drifting */}
           <p style={{ margin: "0 0 12px", fontSize: "12px", color: "var(--fg-subtle)", lineHeight: 1.5 }}>
-            {description}
+            {driftDescription}
           </p>
 
           {/* Template preview for missing files */}
@@ -734,6 +800,8 @@ export default function ParityDashboardPage() {
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Load snapshot and drift separately so the UI can render cached data immediately
+  // while a background scan runs if needed. Both queries are fast (SQLite reads).
   const loadData = useCallback(async () => {
     try {
       const [snap, drift] = await Promise.all([getParitySnapshot(), getParityDrift(false)]);
@@ -759,6 +827,8 @@ export default function ParityDashboardPage() {
     }
   }, [loadData]);
 
+  // Auto-scan on mount if: no snapshot exists, or last scan is >24 h old.
+  // The 24 h threshold balances freshness against the ~2 s probe latency.
   useEffect(() => {
     loadData().then((snap) => {
       if (!snap || isOlderThan24h(snap.timestamp)) triggerScan();

@@ -1,3 +1,37 @@
+//! Parity scanner — detects Claude Code features installed on the user's machine and compares
+//! them against Harness Kit's known-feature baseline to surface drift.
+//!
+//! # Baselines
+//!
+//! Two files define what Harness Kit "knows" about Claude Code:
+//!
+//! ## Compiled baseline — `src/parity/known_features.json`
+//! Embedded at compile time via `include_str!()`. Lists the config files, settings keys,
+//! CLI flags, MCP transports, and plugin component types that Harness Kit explicitly supports.
+//! **Update this file** whenever you add support for a new Claude Code feature in the
+//! compile pipeline (packages/core/). Changing it clears existing drift for that feature.
+//!
+//! ## User baseline — `~/.harness-kit/parity-baseline.json`
+//! Created automatically when the user clicks "Mark as Known" in the dashboard.
+//! Augments the compiled baseline for features the user intentionally uses but that
+//! aren't (yet) in Harness Kit's compiled support. Schema:
+//! ```json
+//! {
+//!   "settingsKeys": { "myKey": true },
+//!   "cliFlags": ["--my-flag"],
+//!   "mcpTransports": ["custom-transport"],
+//!   "pluginTypes": ["my-component-type"]
+//! }
+//! ```
+//! Users can also edit this file by hand. It is merged into the compiled baseline at the
+//! start of every scan (`load_known_features`) — the user baseline only adds entries,
+//! it never removes them.
+//!
+//! # Drift types
+//! - `"missing_file"` — a config file in the compiled baseline was not found on disk
+//! - `"new_feature"` — a feature was detected (settings key, CLI flag, etc.) that is not
+//!   in either baseline
+
 use crate::db::Db;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -416,10 +450,7 @@ fn probe_config_files() -> HashMap<String, bool> {
 
 type DriftTuple = (String, String, String, Option<String>);
 
-fn detect_drift(
-    known: &KnownFeatures,
-    categories: &HashMap<String, Vec<ParityFeature>>,
-) -> Vec<DriftTuple> {
+fn detect_drift(categories: &HashMap<String, Vec<ParityFeature>>) -> Vec<DriftTuple> {
     let mut drift: Vec<DriftTuple> = Vec::new();
 
     // Settings keys: new keys not in baseline
@@ -507,12 +538,16 @@ fn detect_drift(
         }
     }
 
-    let _ = known;
     drift
 }
 
 // ── Commands ──────────────────────────────────────────────────
 
+/// Run all parity probes, persist a new snapshot + drift items to SQLite, and return a summary.
+///
+/// Probes run: CLI version, CLI help flags, settings keys, MCP config, plugins, config files.
+/// Previously acknowledged drift items carry forward automatically — they are not re-flagged.
+/// Mutates the DB: inserts one row into `parity_snapshots` and N rows into `parity_drift`.
 #[tauri::command]
 pub async fn run_parity_scan(
     app: AppHandle,
@@ -522,9 +557,9 @@ pub async fn run_parity_scan(
     let snapshot_id = uuid::Uuid::new_v4().to_string();
     let scanned_at = now_iso();
 
-    // Run all probes concurrently where possible
-    let (cc_installed, cc_version) = probe_cli_version(&app).await;
-    let (cli_flags, cli_subcommands) = probe_cli_help(&app).await;
+    // Run async probes concurrently; sync probes run after
+    let ((cc_installed, cc_version), (cli_flags, cli_subcommands)) =
+        tokio::join!(probe_cli_version(&app), probe_cli_help(&app));
     let settings_keys = probe_settings_keys();
     let (mcp_servers, mcp_transports) = probe_mcp_config();
     let plugins = probe_plugins();
@@ -637,7 +672,7 @@ pub async fn run_parity_scan(
     let features_detected: usize = categories.values().map(|v| v.len()).sum();
 
     // Detect drift
-    let drift_tuples = detect_drift(&known, &categories);
+    let drift_tuples = detect_drift(&categories);
 
     // Persist snapshot and drift
     let raw_data = serde_json::to_string(&categories)
@@ -762,6 +797,8 @@ fn load_drift_by_snapshot(db: &Db, snapshot_id: &str) -> Result<Vec<ParityDriftI
     Ok(items)
 }
 
+/// Return the most recent parity snapshot, or `null` if no scan has run yet.
+/// The snapshot includes the full feature matrix (all detected features by category).
 #[tauri::command]
 pub fn get_parity_snapshot(db: State<'_, Db>) -> Result<Option<ParitySnapshot>, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
@@ -797,6 +834,9 @@ pub fn get_parity_snapshot(db: State<'_, Db>) -> Result<Option<ParitySnapshot>, 
     }
 }
 
+/// Return drift items from the most recent snapshot.
+/// Pass `include_acknowledged: true` to include items the user has already reviewed.
+/// Scoped to the latest snapshot only — older drift does not reappear after a rescan.
 #[tauri::command]
 pub fn get_parity_drift(
     db: State<'_, Db>,
@@ -848,25 +888,34 @@ pub fn get_parity_drift(
     Ok(items)
 }
 
+/// Mark a drift item as acknowledged (reviewed but not acted on).
+/// Acknowledged items are hidden from the default drift list; pass `include_acknowledged: true`
+/// to `get_parity_drift` to see them.
 #[tauri::command]
 pub fn acknowledge_drift(db: State<'_, Db>, drift_id: i64) -> Result<(), String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let acknowledged_at = now_iso();
+    // Scope to the latest snapshot to prevent silently suppressing drift from older scans.
     conn.execute(
-        "UPDATE parity_drift SET acknowledged = 1, acknowledged_at = ?1 WHERE id = ?2",
+        "UPDATE parity_drift SET acknowledged = 1, acknowledged_at = ?1 \
+         WHERE id = ?2 \
+         AND snapshot_id = (SELECT id FROM parity_snapshots ORDER BY timestamp DESC LIMIT 1)",
         rusqlite::params![acknowledged_at, drift_id],
     )
     .map_err(|e| format!("Failed to acknowledge drift item: {}", e))?;
     Ok(())
 }
 
+/// Return a reverse-chronological list of snapshot summaries (no feature detail).
+/// Defaults to the 20 most recent scans; pass `limit` to override.
+/// Used to build a scan history timeline.
 #[tauri::command]
 pub fn get_parity_history(
     db: State<'_, Db>,
     limit: Option<i64>,
 ) -> Result<Vec<ParitySnapshotSummary>, String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
-    let limit = limit.unwrap_or(20);
+    let limit = limit.unwrap_or(20).max(1).min(100);
     let mut stmt = conn
         .prepare(
             "SELECT id, timestamp, cc_version, features_count, drift_count \
@@ -1002,4 +1051,176 @@ pub fn add_to_parity_baseline(category: String, feature_name: String) -> Result<
     std::fs::write(&path, json).map_err(|e| e.to_string())?;
 
     Ok(())
+}
+
+// ── Tests ─────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashMap;
+
+    fn make_feature(name: &str, category: &str, known: bool, value: Option<&str>) -> ParityFeature {
+        ParityFeature {
+            name: name.to_string(),
+            category: category.to_string(),
+            value: value.map(|v| v.to_string()),
+            known_to_harness: known,
+        }
+    }
+
+    fn empty_known() -> KnownFeatures {
+        KnownFeatures {
+            config_files: HashMap::new(),
+            settings_keys: HashMap::new(),
+            mcp_transports: vec![],
+            cli_flags: vec![],
+            plugin_types: vec![],
+        }
+    }
+
+    // ── detect_drift ──────────────────────────────────────────
+
+    #[test]
+    fn detect_drift_flags_unknown_settings_key() {
+        let mut categories = HashMap::new();
+        categories.insert(
+            "settings_key".to_string(),
+            vec![
+                make_feature("permissions.allow", "settings_key", true, None),
+                make_feature("someNewKey", "settings_key", false, None),
+            ],
+        );
+        let drift = detect_drift(&categories);
+        assert_eq!(drift.len(), 1);
+        assert_eq!(drift[0].0, "settings_key");
+        assert_eq!(drift[0].1, "someNewKey");
+        assert_eq!(drift[0].2, "new_feature");
+    }
+
+    #[test]
+    fn detect_drift_no_drift_for_all_known_features() {
+        let mut categories = HashMap::new();
+        categories.insert(
+            "settings_key".to_string(),
+            vec![make_feature("permissions.allow", "settings_key", true, None)],
+        );
+        categories.insert(
+            "cli_flag".to_string(),
+            vec![make_feature("--version", "cli_flag", true, None)],
+        );
+        let drift = detect_drift(&categories);
+        assert!(drift.is_empty());
+    }
+
+    #[test]
+    fn detect_drift_flags_unknown_cli_flag() {
+        let mut categories = HashMap::new();
+        categories.insert(
+            "cli_flag".to_string(),
+            vec![
+                make_feature("--version", "cli_flag", true, None),
+                make_feature("--new-flag", "cli_flag", false, None),
+            ],
+        );
+        let drift = detect_drift(&categories);
+        assert_eq!(drift.len(), 1);
+        assert_eq!(drift[0].0, "cli_flag");
+        assert_eq!(drift[0].1, "--new-flag");
+        assert_eq!(drift[0].2, "new_feature");
+    }
+
+    #[test]
+    fn detect_drift_flags_missing_known_config_file() {
+        let mut categories = HashMap::new();
+        categories.insert(
+            "config_file".to_string(),
+            vec![
+                make_feature("CLAUDE.md", "config_file", true, Some("not_found")),
+                make_feature("AGENT.md", "config_file", true, Some("detected")),
+            ],
+        );
+        let drift = detect_drift(&categories);
+        assert_eq!(drift.len(), 1);
+        assert_eq!(drift[0].0, "config_file");
+        assert_eq!(drift[0].1, "CLAUDE.md");
+        assert_eq!(drift[0].2, "missing_file");
+    }
+
+    #[test]
+    fn detect_drift_does_not_flag_detected_config_file() {
+        let mut categories = HashMap::new();
+        categories.insert(
+            "config_file".to_string(),
+            vec![make_feature("CLAUDE.md", "config_file", true, Some("detected"))],
+        );
+        let drift = detect_drift(&categories);
+        assert!(drift.is_empty());
+    }
+
+    #[test]
+    fn detect_drift_multiple_categories_aggregated() {
+        let mut categories = HashMap::new();
+        categories.insert(
+            "settings_key".to_string(),
+            vec![make_feature("unknownKey", "settings_key", false, None)],
+        );
+        categories.insert(
+            "cli_flag".to_string(),
+            vec![make_feature("--unknown-flag", "cli_flag", false, None)],
+        );
+        categories.insert(
+            "config_file".to_string(),
+            vec![make_feature("SOUL.md", "config_file", true, Some("not_found"))],
+        );
+        let drift = detect_drift(&categories);
+        assert_eq!(drift.len(), 3);
+    }
+
+    // ── create_config_file ────────────────────────────────────
+
+    #[test]
+    fn create_config_file_rejects_unknown_name() {
+        let result = create_config_file("UNKNOWN.md".to_string());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Unknown config file"));
+    }
+
+    // ── add_to_parity_baseline ────────────────────────────────
+
+    #[test]
+    fn add_to_parity_baseline_rejects_long_feature_name() {
+        let long_name = "a".repeat(257);
+        let result = add_to_parity_baseline("settings_key".to_string(), long_name);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid feature_name"));
+    }
+
+    #[test]
+    fn add_to_parity_baseline_rejects_null_byte_in_name() {
+        let result = add_to_parity_baseline("settings_key".to_string(), "bad\0name".to_string());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Invalid feature_name"));
+    }
+
+    #[test]
+    fn add_to_parity_baseline_rejects_unknown_category() {
+        // Use a short valid name to get past the length check
+        let result = add_to_parity_baseline("invalid_category".to_string(), "someKey".to_string());
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Unknown category"));
+    }
+
+    // ── load_known_features ───────────────────────────────────
+
+    #[test]
+    fn load_known_features_parses_embedded_json() {
+        let known = load_known_features();
+        // Verify the baseline has at minimum the core config files and settings keys
+        assert!(known.config_files.contains_key("CLAUDE.md"));
+        assert!(known.config_files.contains_key("AGENT.md"));
+        assert!(known.settings_keys.contains_key("permissions.allow"));
+        assert!(!known.cli_flags.is_empty());
+        assert!(!known.mcp_transports.is_empty());
+    }
 }
