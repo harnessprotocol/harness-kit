@@ -84,10 +84,24 @@ export class ChatRelay {
   }
 
   private handleCreateRoom(ws: WebSocket, nickname: string, name?: string): void {
+    if (!nickname || nickname.length > 32) {
+      const errMsg: ServerMessage = { type: "room_error", error: "nickname must be 1–32 characters" };
+      if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(errMsg));
+      return;
+    }
+    if (name !== undefined && name.length > 64) {
+      const errMsg: ServerMessage = { type: "room_error", error: "room name must be ≤ 64 characters" };
+      if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(errMsg));
+      return;
+    }
+
     // Generate a unique code, retrying on collision
     let code: string;
+    let attempts = 0;
     do {
       code = generateRoomCode();
+      attempts++;
+      if (attempts > 10) throw new Error("Failed to generate unique room code after 10 attempts");
     } while (this.rooms.has(code));
 
     const room = new Room(code, name);
@@ -101,6 +115,12 @@ export class ChatRelay {
   }
 
   private handleJoinRoom(ws: WebSocket, code: string, nickname: string): void {
+    if (!nickname || nickname.length > 32) {
+      const errMsg: ServerMessage = { type: "room_error", error: "nickname must be 1–32 characters" };
+      if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(errMsg));
+      return;
+    }
+
     const room = this.rooms.get(code);
     if (!room) {
       const errMsg: ServerMessage = { type: "room_error", error: `Room ${code} does not exist` };
@@ -278,6 +298,7 @@ export class ChatRelay {
   private startGraceTimer(room: Room): void {
     room.graceTimer = setTimeout(() => {
       this.rooms.delete(room.code);
+      room.graceTimer = null;
       console.log(`[chat-relay] room ${room.code} expired after grace period`);
     }, GRACE_PERIOD_MS);
   }

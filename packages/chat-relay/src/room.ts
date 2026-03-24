@@ -46,14 +46,22 @@ export class Room {
     for (const [client] of this.members) {
       if (client === exclude) continue;
       if (client.readyState === WebSocket.OPEN) {
-        client.send(payload);
+        try {
+          client.send(payload);
+        } catch (err) {
+          console.warn("[chat-relay] send failed for client:", err);
+        }
       }
     }
   }
 
   send(ws: WebSocket, msg: ServerMessage): void {
     if (ws.readyState === WebSocket.OPEN) {
-      ws.send(JSON.stringify(msg));
+      try {
+        ws.send(JSON.stringify(msg));
+      } catch (err) {
+        console.warn("[chat-relay] send failed for client:", err);
+      }
     }
   }
 
