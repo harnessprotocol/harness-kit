@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useChat } from "../../context/ChatContext";
 import MessageList from "./MessageList";
 import ChatInput from "./ChatInput";
+import SharesTab from "./SharesTab";
 
 export default function ChatRoom() {
   const { state, leaveRoom } = useChat();
@@ -91,18 +92,7 @@ export default function ChatRoom() {
           <ChatInput />
         </>
       ) : (
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "12px",
-            color: "var(--fg-subtle)",
-          }}
-        >
-          Shares coming soon
-        </div>
+        <SharesTab messages={state.messages} />
       )}
     </div>
   );

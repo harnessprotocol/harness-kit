@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useChat } from "../../context/ChatContext";
+import { emitChatShare } from "../../lib/chat-events";
 import { compile, detectPlatforms, parseHarness } from "@harness-kit/core";
 import type { CompileResult, DetectedPlatform, TargetPlatform } from "@harness-kit/core";
 import {
@@ -102,6 +104,10 @@ export default function SyncPage() {
 
   // Backups
   const [backups, setBackups] = useState<BackupManifest[]>([]);
+
+  // Chat share
+  const { state: chatState } = useChat();
+  const [sharedToRoom, setSharedToRoom] = useState(false);
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -263,6 +269,7 @@ export default function SyncPage() {
     setPreviewError(null);
     setAppliedBackupId(null);
     setApplyError(null);
+    setSharedToRoom(false);
   }
 
   const canPreview = dirValid && selectedTargets.size > 0 && !!harnessContent && phase === "idle";
@@ -547,17 +554,45 @@ export default function SyncPage() {
                 </code>
               )}
             </div>
-            <button
-              onClick={handleReset}
-              style={{
-                padding: "5px 12px", borderRadius: "6px",
-                border: "1px solid var(--border-base)",
-                background: "var(--bg-elevated)", color: "var(--fg-base)",
-                fontSize: "12px", cursor: "pointer",
-              }}
-            >
-              Sync again
-            </button>
+            <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
+              {chatState.status === "in_room" && (
+                <button
+                  onClick={() => {
+                    const fileCount = previewResult?.files.filter((f) => f.action === "create" || f.action === "update").length ?? 0;
+                    emitChatShare({
+                      action: "sync_applied",
+                      target: harnessName,
+                      detail: `${fileCount} file${fileCount !== 1 ? "s" : ""} synced`,
+                      diff: null,
+                      pullable: true,
+                    });
+                    setSharedToRoom(true);
+                    setTimeout(() => setSharedToRoom(false), 2000);
+                  }}
+                  style={{
+                    padding: "5px 12px", borderRadius: "6px",
+                    border: "1px solid var(--accent)",
+                    background: sharedToRoom ? "var(--accent)" : "transparent",
+                    color: sharedToRoom ? "var(--accent-text, #fff)" : "var(--accent)",
+                    fontSize: "12px", cursor: "pointer", fontWeight: 500,
+                    transition: "all 0.15s",
+                  }}
+                >
+                  {sharedToRoom ? "Shared!" : "Share sync to Room"}
+                </button>
+              )}
+              <button
+                onClick={handleReset}
+                style={{
+                  padding: "5px 12px", borderRadius: "6px",
+                  border: "1px solid var(--border-base)",
+                  background: "var(--bg-elevated)", color: "var(--fg-base)",
+                  fontSize: "12px", cursor: "pointer",
+                }}
+              >
+                Sync again
+              </button>
+            </div>
           </Card>
         )}
 

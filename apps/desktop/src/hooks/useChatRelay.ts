@@ -4,6 +4,7 @@ import type {
   Member,
   ServerMessage,
   ClientMessage,
+  ShareMessage,
 } from "@harness-kit/shared";
 import {
   chatSaveMessages,
@@ -13,6 +14,7 @@ import {
   chatListRooms,
 } from "../lib/tauri";
 import type { ChatRoomRow } from "../lib/tauri";
+import { onChatShare } from "../lib/chat-events";
 
 // ── State types ──────────────────────────────────────────────
 
@@ -38,6 +40,7 @@ export interface UseChatRelayReturn {
   joinRoom: (code: string, nickname: string) => void;
   leaveRoom: () => void;
   sendChat: (body: string) => void;
+  sendShare: (share: Omit<ShareMessage, "id" | "roomCode" | "nickname" | "timestamp" | "type">) => void;
   sendTyping: (typing: boolean) => void;
   recentRooms: ChatRoomRow[];
   isOpen: boolean;
@@ -390,6 +393,28 @@ export function useChatRelay(): UseChatRelayReturn {
     send({ type: "chat", body: body.trim() });
   }, [send]);
 
+  const sendShare = useCallback((shareData: Omit<ShareMessage, "id" | "roomCode" | "nickname" | "timestamp" | "type">) => {
+    const current = stateRef.current;
+    if (current.status !== "in_room" || !wsRef.current) return;
+    const msg: ClientMessage = {
+      type: "share",
+      action: shareData.action,
+      target: shareData.target,
+      detail: shareData.detail ?? undefined,
+      diff: shareData.diff ?? undefined,
+      pullable: shareData.pullable,
+    };
+    wsRef.current.send(JSON.stringify(msg));
+  }, []);
+
+  // Listen for cross-page share events emitted via emitChatShare()
+  useEffect(() => {
+    const cleanup = onChatShare((shareData) => {
+      sendShare(shareData);
+    });
+    return cleanup;
+  }, [sendShare]);
+
   const sendTyping = useCallback((typing: boolean) => {
     send({ type: "typing", typing });
   }, [send]);
@@ -402,6 +427,7 @@ export function useChatRelay(): UseChatRelayReturn {
     joinRoom,
     leaveRoom,
     sendChat,
+    sendShare,
     sendTyping,
     recentRooms,
     isOpen,

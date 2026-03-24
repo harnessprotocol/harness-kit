@@ -1,6 +1,7 @@
 import type { AnyMessage } from "@harness-kit/shared";
 import ChatBubble from "./ChatBubble";
 import SystemEvent from "./SystemEvent";
+import ShareCard from "./ShareCard";
 
 interface Props {
   message: AnyMessage;
@@ -21,17 +22,5 @@ export default function MessageItem({ message, currentNickname }: Props) {
     return <SystemEvent message={message} />;
   }
 
-  // share — Phase 4 placeholder
-  return (
-    <div
-      style={{
-        padding: "4px 12px",
-        fontSize: "11px",
-        color: "var(--fg-subtle)",
-        fontStyle: "italic",
-      }}
-    >
-      [{message.nickname} shared something — shares coming in Phase 4]
-    </div>
-  );
+  return <ShareCard message={message} />;
 }
