@@ -678,7 +678,7 @@ pub async fn run_parity_scan(
                 feature_name.clone(),
                 drift_type.clone(),
             ));
-            let ack_at = pre_ack.then(|| scanned_at.as_str());
+            let ack_at = pre_ack.then_some(scanned_at.as_str());
             conn.execute(
                 "INSERT INTO parity_drift \
                  (snapshot_id, category, feature_name, drift_type, details, detected_at, acknowledged, acknowledged_at) \
