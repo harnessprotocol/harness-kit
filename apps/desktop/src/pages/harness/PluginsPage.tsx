@@ -14,9 +14,12 @@ import ImportOverlay from "./plugins/ImportOverlay";
 import ImportBanner, { type ImportStatus } from "./plugins/ImportBanner";
 import UninstallDialog from "./plugins/UninstallDialog";
 import PluginExplorerModal from "../../components/plugin-explorer/PluginExplorerModal";
+import { useChat } from "../../context/ChatContext";
+import { emitChatShare } from "../../lib/chat-events";
 
 export default function PluginsPage() {
   const navigate = useNavigate();
+  const { state: chatState } = useChat();
   const [plugins, setPlugins] = useState<InstalledPlugin[]>([]);
   const [updates, setUpdates] = useState<Record<string, PluginUpdateInfo>>({});
   const [loading, setLoading] = useState(true);
@@ -124,6 +127,9 @@ export default function PluginsPage() {
       }
       setImportStatus({ state: "success", name });
       loadPlugins();
+      if (chatState.status === "in_room") {
+        emitChatShare({ action: "plugin_installed", target: name, detail: null, diff: null, pullable: false });
+      }
     } catch (err) {
       setImportStatus({ state: "error", message: String(err) });
     }
@@ -145,6 +151,9 @@ export default function PluginsPage() {
         await importPluginFromPath(path);
         setImportStatus({ state: "success", name });
         loadPlugins();
+        if (chatState.status === "in_room") {
+          emitChatShare({ action: "plugin_installed", target: name, detail: null, diff: null, pullable: false });
+        }
       } catch (err) {
         setImportStatus({ state: "error", message: String(err) });
       }
@@ -157,10 +166,14 @@ export default function PluginsPage() {
 
   async function handleUninstall() {
     if (!uninstallTarget) return;
+    const pluginName = uninstallTarget.name;
     try {
-      await uninstallPlugin(uninstallTarget.name);
+      await uninstallPlugin(pluginName);
       setUninstallTarget(null);
       loadPlugins();
+      if (chatState.status === "in_room") {
+        emitChatShare({ action: "plugin_uninstalled", target: pluginName, detail: null, diff: null, pullable: false });
+      }
     } catch (err) {
       setError(String(err));
       setUninstallTarget(null);

@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import type {
   AnyMessage,
   Member,
@@ -46,6 +46,7 @@ export interface UseChatRelayReturn {
   isOpen: boolean;
   setOpen: (open: boolean) => void;
   unreadCount: number;
+  typingMembers: string[];
 }
 
 // ── localStorage keys ────────────────────────────────────────
@@ -72,6 +73,7 @@ export function useChatRelay(): UseChatRelayReturn {
   const mountedRef = useRef(true);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connIdRef = useRef(0);
+  const lastRoomRef = useRef<{ code: string; nickname: string } | null>(null);
 
   // Refs for values needed inside WS callbacks without triggering re-renders
   const isOpenRef = useRef(false);
@@ -213,6 +215,8 @@ export function useChatRelay(): UseChatRelayReturn {
           // Save room to SQLite
           chatSaveRoom(roomCode, roomName, myNick, urlToSave).catch(err => console.warn("[chat] failed to save room:", err));
 
+          lastRoomRef.current = { code: roomCode, nickname: myNick };
+
           setState({
             status: "in_room",
             serverUrl: urlToSave,
@@ -273,7 +277,14 @@ export function useChatRelay(): UseChatRelayReturn {
       }
 
       case "typing_update": {
-        // Typing indicators — handled in Phase 5
+        if (stateRef.current.status === "in_room") {
+          setState({
+            ...stateRef.current,
+            members: stateRef.current.members.map((m) =>
+              m.nickname === msg.nickname ? { ...m, typing: msg.typing } : m,
+            ),
+          });
+        }
         break;
       }
     }
@@ -309,6 +320,15 @@ export function useChatRelay(): UseChatRelayReturn {
         if (connIdRef.current !== connId) { ws.close(); return; }
         if (!mountedRef.current) return;
         setState({ status: "connected", serverUrl });
+        // Auto-rejoin previous room if connection was re-established
+        if (lastRoomRef.current) {
+          const { code, nickname } = lastRoomRef.current;
+          setTimeout(() => {
+            if (connIdRef.current === connId && mountedRef.current) {
+              send({ type: "join_room", code, nickname });
+            }
+          }, 1000);
+        }
       };
 
       ws.onmessage = (evt) => {
@@ -341,7 +361,7 @@ export function useChatRelay(): UseChatRelayReturn {
         if (mountedRef.current) connect(serverUrl);
       }, 5000);
     }
-  }, [handleServerMessage]);
+  }, [handleServerMessage, send]);
 
   // ── Disconnect ───────────────────────────────────────────
 
@@ -381,6 +401,7 @@ export function useChatRelay(): UseChatRelayReturn {
   const leaveRoom = useCallback(() => {
     const cur = stateRef.current;
     if (cur.status === "in_room") {
+      lastRoomRef.current = null;
       send({ type: "leave_room" });
       chatLeaveRoom(cur.roomCode).catch(() => {});
       setState({ status: "connected", serverUrl: cur.serverUrl });
@@ -419,6 +440,13 @@ export function useChatRelay(): UseChatRelayReturn {
     send({ type: "typing", typing });
   }, [send]);
 
+  const typingMembers = useMemo(() => {
+    if (state.status !== "in_room") return [];
+    return state.members
+      .filter((m) => m.typing && m.nickname !== state.nickname)
+      .map((m) => m.nickname);
+  }, [state]);
+
   return {
     state,
     connect,
@@ -433,5 +461,6 @@ export function useChatRelay(): UseChatRelayReturn {
     isOpen,
     setOpen,
     unreadCount,
+    typingMembers,
   };
 }

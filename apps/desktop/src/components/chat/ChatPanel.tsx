@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useChat } from "../../context/ChatContext";
 import ServerConnect from "./ServerConnect";
@@ -12,7 +13,17 @@ const variants = {
 };
 
 export default function ChatPanel() {
-  const { isOpen, state } = useChat();
+  const { isOpen, setOpen, state } = useChat();
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && isOpen) {
+        setOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [isOpen, setOpen]);
 
   return (
     <AnimatePresence>

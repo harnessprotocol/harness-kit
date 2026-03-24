@@ -3,10 +3,12 @@ import { useChat } from "../../context/ChatContext";
 import MessageList from "./MessageList";
 import ChatInput from "./ChatInput";
 import SharesTab from "./SharesTab";
+import { TypingIndicator } from "./TypingIndicator";
 
 export default function ChatRoom() {
-  const { state, leaveRoom } = useChat();
+  const { state, leaveRoom, typingMembers } = useChat();
   const [activeTab, setActiveTab] = useState<"chat" | "shares">("chat");
+  const [showMembers, setShowMembers] = useState(false);
 
   if (state.status !== "in_room") return null;
 
@@ -17,7 +19,7 @@ export default function ChatRoom() {
         style={{
           flexShrink: 0,
           padding: "8px 12px",
-          borderBottom: "1px solid var(--separator)",
+          borderBottom: showMembers ? "none" : "1px solid var(--separator)",
           display: "flex",
           alignItems: "center",
           gap: "8px",
@@ -49,15 +51,21 @@ export default function ChatRoom() {
             </span>
           )}
         </span>
-        <span
+        <button
+          onClick={() => setShowMembers(!showMembers)}
           style={{
             fontSize: "11px",
-            color: "var(--fg-subtle)",
+            color: showMembers ? "var(--accent-text)" : "var(--fg-subtle)",
+            background: showMembers ? "var(--accent-light)" : "transparent",
+            border: "none",
+            borderRadius: "4px",
+            padding: "2px 6px",
+            cursor: "pointer",
             flexShrink: 0,
           }}
         >
           {state.members.length} online
-        </span>
+        </button>
         <button
           className="btn btn-sm btn-secondary"
           onClick={leaveRoom}
@@ -65,6 +73,46 @@ export default function ChatRoom() {
           Leave
         </button>
       </div>
+
+      {/* Collapsible member list */}
+      {showMembers && (
+        <div
+          style={{
+            flexShrink: 0,
+            padding: "6px 12px 8px",
+            borderBottom: "1px solid var(--separator)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "3px",
+          }}
+        >
+          {state.members.map((m) => (
+            <div
+              key={m.nickname}
+              style={{
+                fontSize: "11px",
+                color: m.nickname === state.nickname ? "var(--fg-base)" : "var(--fg-muted)",
+                fontWeight: m.nickname === state.nickname ? 600 : 400,
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+              }}
+            >
+              <span
+                style={{
+                  display: "inline-block",
+                  width: "6px",
+                  height: "6px",
+                  borderRadius: "50%",
+                  background: "var(--success)",
+                  flexShrink: 0,
+                }}
+              />
+              {m.nickname}{m.nickname === state.nickname ? " (you)" : ""}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Tab bar */}
       <div className="tab-bar" style={{ flexShrink: 0 }}>
@@ -89,6 +137,7 @@ export default function ChatRoom() {
             messages={state.messages}
             currentNickname={state.nickname}
           />
+          <TypingIndicator typingMembers={typingMembers} />
           <ChatInput />
         </>
       ) : (
