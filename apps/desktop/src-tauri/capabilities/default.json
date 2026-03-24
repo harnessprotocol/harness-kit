@@ -118,6 +118,12 @@
     "allow-acknowledge-drift",
     "allow-get-parity-history",
     "allow-create-config-file",
-    "allow-add-to-parity-baseline"
+    "allow-add-to-parity-baseline",
+    "allow-chat-save-room",
+    "allow-chat-leave-room",
+    "allow-chat-list-rooms",
+    "allow-chat-save-messages",
+    "allow-chat-load-messages",
+    "allow-chat-purge-room"
   ]
 }

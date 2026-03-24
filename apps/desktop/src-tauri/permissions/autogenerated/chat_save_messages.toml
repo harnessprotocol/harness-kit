@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-chat-save-messages"
+description = "Enables the chat_save_messages command without any pre-configured scope."
+commands.allow = ["chat_save_messages"]
+
+[[permission]]
+identifier = "deny-chat-save-messages"
+description = "Denies the chat_save_messages command without any pre-configured scope."
+commands.deny = ["chat_save_messages"]

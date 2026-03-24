@@ -114,6 +114,13 @@ pub fn run() {
             commands::parity::get_parity_history,
             commands::parity::create_config_file,
             commands::parity::add_to_parity_baseline,
+            // Chat
+            commands::chat::chat_save_room,
+            commands::chat::chat_leave_room,
+            commands::chat::chat_list_rooms,
+            commands::chat::chat_save_messages,
+            commands::chat::chat_load_messages,
+            commands::chat::chat_purge_room,
         ])
         .setup(|app| {
             let state = app.state::<BoardServerState>();

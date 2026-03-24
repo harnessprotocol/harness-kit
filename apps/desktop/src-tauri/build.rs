@@ -82,6 +82,13 @@ fn main() {
                 "get_parity_history",
                 "create_config_file",
                 "add_to_parity_baseline",
+                // Chat
+                "chat_save_room",
+                "chat_leave_room",
+                "chat_list_rooms",
+                "chat_save_messages",
+                "chat_load_messages",
+                "chat_purge_room",
                 // Sync
                 "sync_read_file",
                 "sync_file_exists",

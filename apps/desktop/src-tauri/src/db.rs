@@ -107,6 +107,30 @@ pub fn init(data_dir: &Path) -> Result<Db, String> {
             acknowledged_at TEXT
         );
         CREATE INDEX IF NOT EXISTS idx_parity_drift_ack ON parity_drift(acknowledged);
+
+        CREATE TABLE IF NOT EXISTS chat_rooms (
+            code        TEXT PRIMARY KEY,
+            name        TEXT,
+            nickname    TEXT NOT NULL,
+            server_url  TEXT NOT NULL,
+            joined_at   TEXT NOT NULL,
+            left_at     TEXT
+        );
+
+        CREATE TABLE IF NOT EXISTS chat_messages (
+            id          TEXT PRIMARY KEY,
+            room_code   TEXT NOT NULL REFERENCES chat_rooms(code) ON DELETE CASCADE,
+            type        TEXT NOT NULL,
+            nickname    TEXT NOT NULL,
+            timestamp   TEXT NOT NULL,
+            body        TEXT,
+            action      TEXT,
+            target      TEXT,
+            detail      TEXT,
+            event_type  TEXT
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_chat_msg_room ON chat_messages(room_code, timestamp);
     ",
     )
     .map_err(|e| format!("Failed to run schema: {}", e))?;
