@@ -672,7 +672,7 @@ function DriftRow({
                 primary
                 loading={actionLoading === "create"}
                 onClick={() =>
-                  runAction("create", () => createConfigFile(item.featureName))
+                  runAction("create", () => createConfigFile(item.featureName).then(() => {}))
                 }
               />
             )}
@@ -695,7 +695,7 @@ function DriftRow({
             {item.driftType === "new_feature" && item.category === "settings_key" && (
               <ActionButton
                 label="Edit in Security →"
-                onClick={() => navigate("/security")}
+                onClick={() => navigate("/security/permissions")}
               />
             )}
 
