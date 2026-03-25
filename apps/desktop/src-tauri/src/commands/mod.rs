@@ -16,3 +16,4 @@ pub mod history;
 pub mod harness_file;
 pub mod sync;
 pub mod parity;
+pub mod chat;

@@ -2,6 +2,12 @@ mod commands;
 mod db;
 mod board_server;
 
+/// Process-wide lock for tests that mutate the HOME env variable.
+/// All `with_home()` helpers across test modules must hold this lock
+/// to prevent races when Rust runs tests in parallel threads.
+#[cfg(test)]
+pub static HOME_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 use tauri::Manager;
 use commands::comparator::ComparatorState;
 use board_server::BoardServerState;
@@ -114,6 +120,13 @@ pub fn run() {
             commands::parity::get_parity_history,
             commands::parity::create_config_file,
             commands::parity::add_to_parity_baseline,
+            // Chat
+            commands::chat::chat_save_room,
+            commands::chat::chat_leave_room,
+            commands::chat::chat_list_rooms,
+            commands::chat::chat_save_messages,
+            commands::chat::chat_load_messages,
+            commands::chat::chat_purge_room,
         ])
         .setup(|app| {
             let state = app.state::<BoardServerState>();

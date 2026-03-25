@@ -459,6 +459,68 @@ export async function addToParityBaseline(category: string, featureName: string)
   return invoke<void>("add_to_parity_baseline", { category, featureName });
 }
 
+// ── Chat commands ────────────────────────────────────────────
+
+export interface ChatRoomRow {
+  code: string;
+  name: string | null;
+  nickname: string;
+  serverUrl: string;
+  joinedAt: string;
+  leftAt: string | null;
+}
+
+export interface ChatMessageRow {
+  id: string;
+  roomCode: string;
+  /** "chat" | "share" | "system" */
+  msgType: string;
+  nickname: string;
+  timestamp: string;
+  body: string | null;
+  action: string | null;
+  target: string | null;
+  detail: string | null;
+  eventType: string | null;
+}
+
+export async function chatSaveRoom(
+  code: string,
+  name: string | null,
+  nickname: string,
+  serverUrl: string,
+): Promise<void> {
+  return invoke<void>("chat_save_room", { code, name, nickname, serverUrl });
+}
+
+export async function chatLeaveRoom(code: string): Promise<void> {
+  return invoke<void>("chat_leave_room", { code });
+}
+
+export async function chatListRooms(): Promise<ChatRoomRow[]> {
+  return invoke<ChatRoomRow[]>("chat_list_rooms");
+}
+
+export async function chatSaveMessages(messages: ChatMessageRow[]): Promise<void> {
+  return invoke<void>("chat_save_messages", { messages });
+}
+
+export async function chatLoadMessages(
+  roomCode: string,
+  limit: number,
+  before?: string,
+): Promise<ChatMessageRow[]> {
+  return invoke<ChatMessageRow[]>("chat_load_messages", {
+    roomCode,
+    limit,
+    before: before ?? null,
+  });
+}
+
+export async function chatPurgeRoom(code: string): Promise<void> {
+  return invoke<void>("chat_purge_room", { code });
+}
+
 // ── Board server commands ──────────────────────────────────
 
 export async function boardServerCheckInstalled(): Promise<boolean> {

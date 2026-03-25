@@ -2229,6 +2229,42 @@
           "markdownDescription": "Enables the board_server_start command without any pre-configured scope."
         },
         {
+          "description": "Enables the chat_leave_room command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-chat-leave-room",
+          "markdownDescription": "Enables the chat_leave_room command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the chat_list_rooms command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-chat-list-rooms",
+          "markdownDescription": "Enables the chat_list_rooms command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the chat_load_messages command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-chat-load-messages",
+          "markdownDescription": "Enables the chat_load_messages command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the chat_purge_room command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-chat-purge-room",
+          "markdownDescription": "Enables the chat_purge_room command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the chat_save_messages command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-chat-save-messages",
+          "markdownDescription": "Enables the chat_save_messages command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the chat_save_room command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-chat-save-room",
+          "markdownDescription": "Enables the chat_save_room command without any pre-configured scope."
+        },
+        {
           "description": "Enables the check_git_repo command without any pre-configured scope.",
           "type": "string",
           "const": "allow-check-git-repo",
@@ -2671,6 +2707,42 @@
           "type": "string",
           "const": "deny-board-server-start",
           "markdownDescription": "Denies the board_server_start command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the chat_leave_room command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-chat-leave-room",
+          "markdownDescription": "Denies the chat_leave_room command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the chat_list_rooms command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-chat-list-rooms",
+          "markdownDescription": "Denies the chat_list_rooms command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the chat_load_messages command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-chat-load-messages",
+          "markdownDescription": "Denies the chat_load_messages command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the chat_purge_room command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-chat-purge-room",
+          "markdownDescription": "Denies the chat_purge_room command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the chat_save_messages command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-chat-save-messages",
+          "markdownDescription": "Denies the chat_save_messages command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the chat_save_room command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-chat-save-room",
+          "markdownDescription": "Denies the chat_save_room command without any pre-configured scope."
         },
         {
           "description": "Denies the check_git_repo command without any pre-configured scope.",

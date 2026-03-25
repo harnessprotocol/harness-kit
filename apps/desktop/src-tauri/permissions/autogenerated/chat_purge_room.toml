@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-chat-purge-room"
+description = "Enables the chat_purge_room command without any pre-configured scope."
+commands.allow = ["chat_purge_room"]
+
+[[permission]]
+identifier = "deny-chat-purge-room"
+description = "Denies the chat_purge_room command without any pre-configured scope."
+commands.deny = ["chat_purge_room"]

@@ -28,13 +28,6 @@
     "shell:allow-stdin-write",
     "shell:allow-kill",
     "shell:allow-open",
-    "allow-run-parity-scan",
-    "allow-get-parity-snapshot",
-    "allow-get-parity-drift",
-    "allow-acknowledge-drift",
-    "allow-get-parity-history",
-    "allow-create-config-file",
-    "allow-add-to-parity-baseline",
     {
       "identifier": "shell:allow-execute",
       "allow": [
@@ -118,6 +111,12 @@
     "allow-acknowledge-drift",
     "allow-get-parity-history",
     "allow-create-config-file",
-    "allow-add-to-parity-baseline"
+    "allow-add-to-parity-baseline",
+    "allow-chat-save-room",
+    "allow-chat-leave-room",
+    "allow-chat-list-rooms",
+    "allow-chat-save-messages",
+    "allow-chat-load-messages",
+    "allow-chat-purge-room"
   ]
 }

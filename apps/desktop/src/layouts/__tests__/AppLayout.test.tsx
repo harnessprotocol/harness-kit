@@ -6,6 +6,11 @@ import { NAV_PATHS } from "../../hooks/useGlobalShortcuts";
 
 // ── Mocks ─────────────────────────────────────────────────────
 
+vi.mock("../../context/ChatContext", () => ({
+  useChat: () => ({ state: { status: "disconnected" }, isOpen: false, setOpen: vi.fn(), unreadCount: 0 }),
+  ChatProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 const mockStartDragging = vi.fn().mockResolvedValue(undefined);
 vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: vi.fn(() => ({ startDragging: mockStartDragging })),

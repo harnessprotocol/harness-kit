@@ -7,6 +7,7 @@ import { useArrowNavigation } from "../hooks/useArrowNavigation";
 import { useSidebarResize } from "../hooks/useSidebarResize";
 import { initTheme } from "../lib/theme";
 import { initPreferences, getHiddenSections } from "../lib/preferences";
+import { useChat } from "../context/ChatContext";
 
 type NavSection = {
   id: string;
@@ -109,6 +110,7 @@ function SidebarSubnav({ children }: { children: { label: string; path: string }
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { isOpen: chatOpen, setOpen: setChatOpen, unreadCount } = useChat();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try { return localStorage.getItem("sidebar-collapsed") === "true"; } catch { return false; }
@@ -283,6 +285,55 @@ export default function AppLayout() {
                   <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
                   <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
                 </svg>
+              </button>
+            </div>
+
+            {/* Chat toggle button */}
+            <div className="px-2 pb-1">
+              <button
+                onClick={() => setChatOpen(!chatOpen)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  width: "100%",
+                  padding: "6px 8px",
+                  borderRadius: "6px",
+                  border: "none",
+                  background: chatOpen ? "var(--accent-light)" : "transparent",
+                  color: chatOpen ? "var(--accent-text)" : "var(--fg-subtle)",
+                  cursor: "pointer",
+                  fontSize: "11px",
+                  textAlign: "left",
+                  position: "relative",
+                }}
+              >
+                {/* Chat bubble icon */}
+                <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v7a2 2 0 01-2 2H6l-4 4V5z" clipRule="evenodd" />
+                </svg>
+                Chat
+                {unreadCount > 0 && (
+                  <span
+                    style={{
+                      marginLeft: "auto",
+                      minWidth: "16px",
+                      height: "16px",
+                      padding: "0 4px",
+                      background: "var(--danger)",
+                      color: "#fff",
+                      borderRadius: "8px",
+                      fontSize: "10px",
+                      fontWeight: 600,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      lineHeight: 1,
+                    }}
+                  >
+                    {unreadCount > 99 ? "99+" : unreadCount}
+                  </span>
+                )}
               </button>
             </div>
 

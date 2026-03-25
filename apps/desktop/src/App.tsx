@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AppLayout from "./layouts/AppLayout";
 import PreferencesPage from "./pages/PreferencesPage";
 import { getDefaultSection } from "./lib/preferences";
+import { ChatProvider } from "./context/ChatContext";
+import ChatPanel from "./components/chat/ChatPanel";
 import HarnessFilePage from "./pages/harness/HarnessFilePage";
 import PluginsPage from "./pages/harness/PluginsPage";
 import HooksPage from "./pages/harness/HooksPage";
@@ -30,9 +32,10 @@ function DefaultRedirect() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<AppLayout />}>
+    <ChatProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<AppLayout />}>
           {/* Harness Manager */}
           <Route index element={<DefaultRedirect />} />
           <Route path="harness/file" element={<HarnessFilePage />} />
@@ -69,8 +72,10 @@ export default function App() {
 
           {/* Preferences */}
           <Route path="preferences" element={<PreferencesPage />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+          </Route>
+        </Routes>
+      </BrowserRouter>
+      <ChatPanel />
+    </ChatProvider>
   );
 }

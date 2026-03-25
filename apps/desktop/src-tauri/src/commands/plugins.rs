@@ -306,6 +306,8 @@ mod tests {
     use tempfile::TempDir;
 
     fn with_home(dir: &TempDir, f: impl FnOnce()) {
+        // Hold the crate-level lock so parallel tests don't race on HOME.
+        let _guard = crate::HOME_LOCK.lock().unwrap();
         let old = env::var("HOME").ok();
         env::set_var("HOME", dir.path());
         f();
