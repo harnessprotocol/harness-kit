@@ -2,6 +2,12 @@ mod commands;
 mod db;
 mod board_server;
 
+/// Process-wide lock for tests that mutate the HOME env variable.
+/// All `with_home()` helpers across test modules must hold this lock
+/// to prevent races when Rust runs tests in parallel threads.
+#[cfg(test)]
+pub static HOME_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+
 use tauri::Manager;
 use commands::comparator::ComparatorState;
 use board_server::BoardServerState;
