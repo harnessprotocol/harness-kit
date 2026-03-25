@@ -303,9 +303,14 @@ pub fn uninstall_plugin(name: String) -> Result<(), String> {
 mod tests {
     use super::*;
     use std::env;
+    use std::sync::Mutex;
     use tempfile::TempDir;
 
+    // Serialize all HOME-mutating tests to prevent races in parallel test execution.
+    static HOME_LOCK: Mutex<()> = Mutex::new(());
+
     fn with_home(dir: &TempDir, f: impl FnOnce()) {
+        let _guard = HOME_LOCK.lock().unwrap();
         let old = env::var("HOME").ok();
         env::set_var("HOME", dir.path());
         f();
