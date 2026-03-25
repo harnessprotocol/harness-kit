@@ -280,6 +280,28 @@ importers:
         specifier: ^5.4.0
         version: 5.9.3
 
+  packages/chat-relay:
+    dependencies:
+      '@harness-kit/shared':
+        specifier: workspace:*
+        version: link:../shared
+      ws:
+        specifier: ^8.16.0
+        version: 8.19.0
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.19.15
+      '@types/ws':
+        specifier: ^8.5.10
+        version: 8.18.1
+      tsx:
+        specifier: ^4.7.0
+        version: 4.21.0
+      typescript:
+        specifier: ^5.4.0
+        version: 5.9.3
+
   packages/core:
     dependencies:
       ajv:
