@@ -97,6 +97,13 @@ export const MOCK_RESPONSES: Record<string, unknown> = {
   acknowledge_drift: null,
   create_config_file: "/home/user/AGENT.md",
   add_to_parity_baseline: null,
+  // Chat
+  chat_save_room: null,
+  chat_leave_room: null,
+  chat_list_rooms: [],
+  chat_save_messages: null,
+  chat_load_messages: [],
+  chat_purge_room: null,
 };
 
 /**

@@ -233,8 +233,12 @@ export function useChatRelay(): UseChatRelayReturn {
       }
 
       case "room_error": {
-        // Stay in connected/disconnected, don't crash
         console.warn("[chat] room error:", msg.error);
+        // Clear lastRoomRef on nickname collision to prevent infinite auto-rejoin loop:
+        // if we reconnect and the same nick is still taken, the rejoin would fail again.
+        if (msg.error?.toLowerCase().includes("already taken")) {
+          lastRoomRef.current = null;
+        }
         break;
       }
 

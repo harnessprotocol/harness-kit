@@ -220,6 +220,11 @@ export class ChatRelay {
       return;
     }
 
+    if (typeof body !== "string" || body.length > 4_000) {
+      ws.send(JSON.stringify({ type: "room_error", error: "Message body too long (max 4000 chars)" }));
+      return;
+    }
+
     const { room, member } = state;
     const chatMsg = {
       id: randomUUID(),
@@ -242,6 +247,19 @@ export class ChatRelay {
     const state = this.clientState.get(ws);
     if (!state) {
       console.warn("[chat-relay] share message from client not in a room — ignoring");
+      return;
+    }
+
+    if (typeof msg.target !== "string" || msg.target.length > 256) {
+      ws.send(JSON.stringify({ type: "room_error", error: "Share target too long (max 256 chars)" }));
+      return;
+    }
+    if (msg.detail != null && msg.detail.length > 1_024) {
+      ws.send(JSON.stringify({ type: "room_error", error: "Share detail too long (max 1024 chars)" }));
+      return;
+    }
+    if (msg.diff != null && msg.diff.length > 64_000) {
+      ws.send(JSON.stringify({ type: "room_error", error: "Share diff too long (max 64000 chars)" }));
       return;
     }
 
