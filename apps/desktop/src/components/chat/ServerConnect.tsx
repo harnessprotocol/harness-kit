@@ -8,6 +8,10 @@ function getStoredServer(): string {
   try { return localStorage.getItem("harness-kit-chat-server") ?? ""; } catch { return ""; }
 }
 
+function getStoredKeepAlive(): number {
+  try { return Number(localStorage.getItem("harness-kit-chat-keep-alive") ?? "5") || 5; } catch { return 5; }
+}
+
 export default function ServerConnect() {
   const { connect } = useChat();
   const stored = getStoredServer();
@@ -15,11 +19,13 @@ export default function ServerConnect() {
   const [url, setUrl] = useState(stored || DEFAULT_URL);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [keepAliveMinutes, setKeepAliveMinutes] = useState(getStoredKeepAlive);
 
   async function handleHost() {
     setStarting(true);
     setError(null);
     try {
+      localStorage.setItem("harness-kit-chat-keep-alive", String(keepAliveMinutes));
       const port = await chatStartLocalRelay();
       connect(`ws://localhost:${port}`);
     } catch (e) {
@@ -71,6 +77,23 @@ export default function ServerConnect() {
           </div>
           <div style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>
             Replace <code>YOUR_IP</code> with your machine's local IP address when sharing with teammates.
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+            <label style={{ fontSize: "11px", color: "var(--fg-subtle)", fontWeight: 500 }}>
+              Keep room alive after everyone leaves
+            </label>
+            <select
+              className="form-input"
+              value={keepAliveMinutes}
+              onChange={(e) => setKeepAliveMinutes(Number(e.target.value))}
+            >
+              <option value={5}>5 minutes</option>
+              <option value={30}>30 minutes</option>
+              <option value={60}>1 hour</option>
+              <option value={240}>4 hours</option>
+              <option value={720}>12 hours</option>
+              <option value={1440}>24 hours</option>
+            </select>
           </div>
           {error && <div style={{ fontSize: "11px", color: "var(--red)" }}>{error}</div>}
           <button
