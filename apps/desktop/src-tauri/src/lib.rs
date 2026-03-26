@@ -149,6 +149,12 @@ pub fn run() {
             } else {
                 eprintln!("[board-server] not running — install with: pnpm board:install");
             }
+            // Auto-start membrain server on launch
+            let membrain_state = app.state::<MembrainServerState>();
+            match membrain_commands::membrain_start(membrain_state, None) {
+                Ok(msg) => eprintln!("[membrain] {msg}"),
+                Err(e) => eprintln!("[membrain] {e}"),
+            }
             Ok(())
         })
         .build(tauri::generate_context!())
