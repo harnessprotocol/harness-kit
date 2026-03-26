@@ -132,6 +132,10 @@ Read the full guide: **[Claude Conventions](docs/claude-md-conventions.md)**
 
 Plugins can also include agent definitions — isolated specialist workers with their own context and scoped tools. See [Understanding Agents](https://harnessprotocol.io/docs/concepts/agents) for how agents, AGENT.md, and subagent definitions relate.
 
+## Desktop App
+
+The monorepo also ships a Tauri desktop app (`apps/desktop/`) — a companion tool that brings the harness concept to a native UI. It includes a sync engine that compiles `harness.yaml` to platform configs, a plugin explorer, a parity tracker, and an IRC-style team chat backed by a self-hosted WebSocket relay (`packages/chat-relay/`). The desktop app is a separate product from the plugin marketplace; see `apps/desktop/` for its own build instructions.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for plugin guidelines, skill conventions, and PR process.

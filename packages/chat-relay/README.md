@@ -32,8 +32,11 @@ pnpm --filter @harness-kit/chat-relay dev
 pnpm --filter @harness-kit/chat-relay build
 docker build -t harness-kit/chat-relay packages/chat-relay
 
-# Run
+# Run (default port)
 docker run -p 4801:4801 harness-kit/chat-relay
+
+# Run on a custom port
+docker run -e CHAT_PORT=9000 -p 9000:9000 harness-kit/chat-relay
 ```
 
 The relay listens on port **4801** by default.
@@ -57,6 +60,7 @@ The relay is stateless except for in-memory room state. There is no database.
 - **Rooms expire** 5 minutes after the last member disconnects
 - **Nicknames** must be unique within a room, 1–32 characters
 - **Room names** are optional, max 64 characters
+- **Chat messages** are capped at 4 KB; share diffs at 64 KB — the server returns `room_error` if exceeded
 
 ### Connecting the desktop app
 
