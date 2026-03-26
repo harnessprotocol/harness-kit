@@ -147,7 +147,7 @@ describe("ParityDashboardPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Features Detected")).toBeInTheDocument();
     });
-    expect(screen.getByText("0")).toBeInTheDocument();
+    expect(screen.getAllByText("0").length).toBeGreaterThan(0);
   });
 
   it("renders drift item in list", async () => {
