@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-membrain-stop"
+description = "Enables the membrain_stop command without any pre-configured scope."
+commands.allow = ["membrain_stop"]
+
+[[permission]]
+identifier = "deny-membrain-stop"
+description = "Denies the membrain_stop command without any pre-configured scope."
+commands.deny = ["membrain_stop"]
