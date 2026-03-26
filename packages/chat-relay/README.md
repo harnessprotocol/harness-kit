@@ -62,7 +62,7 @@ The relay is stateless except for in-memory room state. There is no database.
 
 In the Harness Kit desktop app, click the chat icon in the sidebar and enter your relay's URL:
 
-```
+```text
 ws://your-server:4801
 ```
 
