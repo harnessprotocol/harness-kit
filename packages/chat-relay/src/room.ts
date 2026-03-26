@@ -12,7 +12,11 @@ export class Room {
   lastActivity: Date;
   graceTimer: ReturnType<typeof setTimeout> | null;
 
-  constructor(code: string, name?: string) {
+  constructor(
+    code: string,
+    name?: string,
+    readonly gracePeriodMs: number = 300_000,
+  ) {
     this.code = code;
     this.name = name ?? null;
     this.members = new Map();

@@ -117,6 +117,9 @@
     "allow-chat-list-rooms",
     "allow-chat-save-messages",
     "allow-chat-load-messages",
-    "allow-chat-purge-room"
+    "allow-chat-purge-room",
+    "allow-chat-start-local-relay",
+    "allow-chat-stop-local-relay",
+    "allow-chat-local-relay-running"
   ]
 }

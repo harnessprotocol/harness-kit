@@ -37,8 +37,10 @@ export default function ChatLobby() {
 
   function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!createNick.trim()) return;
-    createRoom(createNick.trim(), createName.trim() || undefined);
+    const nickTrimmed = createNick.trim();
+    if (!nickTrimmed) return;
+    const keepAlive = Number(localStorage.getItem("harness-kit-chat-keep-alive") ?? "5") || 5;
+    createRoom(nickTrimmed, createName.trim() || undefined, keepAlive);
   }
 
   function handleJoin(e: React.FormEvent) {

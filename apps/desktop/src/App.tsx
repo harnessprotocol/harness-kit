@@ -3,7 +3,6 @@ import AppLayout from "./layouts/AppLayout";
 import PreferencesPage from "./pages/PreferencesPage";
 import { getDefaultSection } from "./lib/preferences";
 import { ChatProvider } from "./context/ChatContext";
-import ChatPanel from "./components/chat/ChatPanel";
 import HarnessFilePage from "./pages/harness/HarnessFilePage";
 import PluginsPage from "./pages/harness/PluginsPage";
 import HooksPage from "./pages/harness/HooksPage";
@@ -75,7 +74,6 @@ export default function App() {
           </Route>
         </Routes>
       </BrowserRouter>
-      <ChatPanel />
     </ChatProvider>
   );
 }

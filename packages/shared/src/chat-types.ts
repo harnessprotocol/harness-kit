@@ -36,7 +36,7 @@ export interface SystemMessage {
   type: "system";
   nickname: string;
   timestamp: string;
-  event: "join" | "leave" | "nick_change" | "room_created";
+  event: "join" | "leave" | "nick_change" | "room_created" | "shutdown";
   detail: string | null;
 }
 
@@ -50,7 +50,7 @@ export interface Member {
 }
 
 export type ClientMessage =
-  | { type: "create_room"; name?: string; nickname: string }
+  | { type: "create_room"; name?: string; nickname: string; keepAliveMinutes?: number }
   | { type: "join_room"; code: string; nickname: string }
   | { type: "leave_room" }
   | { type: "chat"; body: string }
