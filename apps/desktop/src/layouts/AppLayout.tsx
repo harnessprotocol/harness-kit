@@ -147,12 +147,12 @@ export default function AppLayout() {
     function handler(e: KeyboardEvent) {
       if (e.metaKey && e.shiftKey && e.key === "\\") {
         e.preventDefault();
-        setChatOpen((prev) => !prev);
+        setChatOpen(!chatOpen);
       }
     }
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [setChatOpen]);
+  }, [setChatOpen, chatOpen]);
 
   const visibleSections = NAV_SECTIONS.filter((s) => !hiddenSections.has(s.id));
 
