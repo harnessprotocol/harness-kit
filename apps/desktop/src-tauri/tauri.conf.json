@@ -5,7 +5,7 @@
   "identifier": "com.harnesskit.desktop",
   "build": {
     "beforeDevCommand": "pnpm --filter board-server dev & pnpm dev",
-    "devUrl": "http://localhost:1420",
+    "devUrl": "http://localhost:1422",
     "beforeBuildCommand": "pnpm --filter board-server build && pnpm build",
     "frontendDist": "../dist"
   },
