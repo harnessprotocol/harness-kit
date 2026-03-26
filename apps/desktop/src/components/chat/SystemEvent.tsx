@@ -5,6 +5,7 @@ const EVENT_LABELS: Record<SystemMessage["event"], string> = {
   leave: "left",
   room_created: "created this room",
   nick_change: "changed their name",
+  shutdown: "shut down the server",
 };
 
 interface Props {
