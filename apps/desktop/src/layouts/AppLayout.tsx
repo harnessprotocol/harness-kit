@@ -219,13 +219,12 @@ export default function AppLayout() {
         <button
           className="titlebar-btn"
           onClick={() => setChatOpen(!chatOpen)}
-          title="Toggle chat (⌘⇧\)"
+          title="Team Chat (⌘⇧\)"
           style={{ marginLeft: "auto", position: "relative" }}
         >
-          {/* Right-sidebar icon: rectangle with vertical line on RIGHT side */}
+          {/* Speech bubble icon — communicates team chat */}
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <rect x="1" y="1" width="14" height="14" rx="2" />
-            <line x1="11" y1="1" x2="11" y2="15" />
+            <path d="M14 7C14 10.3137 11.3137 13 8 13C7.0401 13 6.1327 12.773 5.327 12.373L2 13.5L3.1 10.4C2.41 9.49 2 8.29 2 7C2 3.6863 4.6863 1 8 1C11.3137 1 14 3.6863 14 7Z" strokeLinejoin="round" />
           </svg>
           {unreadCount > 0 && (
             <span style={{
