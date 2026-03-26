@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useMembrainServerReady } from '../../hooks/useMembrainServerReady';
 import { MembrainOffline } from '../../components/memory/MembrainOffline';
-import { MEMBRAIN_SERVER_BASE } from '../../lib/membrain-api';
+import { MEMBRAIN_SERVER_BASE, syncMembrainTheme } from '../../lib/membrain-api';
 import { getMembrainEnabled } from '../../lib/preferences';
 import MemoryLabsPreview from './MemoryLabsPreview';
 
@@ -13,6 +13,11 @@ export default function MemoryWebView() {
 
   const serverState = useMembrainServerReady();
   const { ready, timedOut } = serverState;
+
+  // Sync HK palette to membrain whenever the server comes up
+  useEffect(() => {
+    if (ready) syncMembrainTheme();
+  }, [ready]);
 
   // Labs gate — show teaser until the user explicitly opts in
   if (!enabled) {
