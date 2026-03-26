@@ -22,6 +22,21 @@ fn port_in_use(port: u16) -> bool {
 }
 
 fn find_mem() -> Result<String, String> {
+    // Check well-known locations first — Tauri apps don't inherit $PATH from the shell,
+    // so ~/go/bin (the default `go install` output dir) is often missing.
+    let home = std::env::var("HOME").unwrap_or_default();
+    let candidates = [
+        format!("{home}/go/bin/mem"),
+        format!("{home}/.local/bin/mem"),
+        "/usr/local/bin/mem".to_string(),
+        "/opt/homebrew/bin/mem".to_string(),
+    ];
+    for path in &candidates {
+        if std::path::Path::new(path).is_file() {
+            return Ok(path.clone());
+        }
+    }
+    // Fall back to PATH lookup
     let output = Command::new("which")
         .arg("mem")
         .output()
