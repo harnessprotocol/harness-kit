@@ -52,7 +52,11 @@ impl Room {
     }
 
     fn members_list(&self) -> Value {
-        json!(self.members.values().map(|m| m.nickname.as_str()).collect::<Vec<_>>())
+        json!(self.members.values().map(|m| json!({
+            "nickname": m.nickname,
+            "joinedAt": "",
+            "typing": false
+        })).collect::<Vec<_>>())
     }
 }
 
@@ -71,12 +75,12 @@ pub type SharedRelayState = Arc<Mutex<RelayState>>;
 // ── Room code generation ─────────────────────────────────────
 
 fn generate_code() -> String {
-    use std::time::{SystemTime, UNIX_EPOCH};
-    let t = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().subsec_nanos();
+    use rand::Rng;
+    let mut rng = rand::thread_rng();
     let consonants: Vec<char> = "BCDFGHJKLMNPQRSTVWXYZ".chars().collect();
     let alphanum: Vec<char> = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".chars().collect();
-    let prefix: String = (0..3).map(|i| consonants[((t >> (i * 7)) as usize) % consonants.len()]).collect();
-    let suffix: String = (0..3).map(|i| alphanum[((t >> (i * 5 + 3)) as usize) % alphanum.len()]).collect();
+    let prefix: String = (0..3).map(|_| consonants[rng.gen_range(0..consonants.len())]).collect();
+    let suffix: String = (0..3).map(|_| alphanum[rng.gen_range(0..alphanum.len())]).collect();
     format!("{}-{}", prefix, suffix)
 }
 
@@ -136,7 +140,7 @@ fn handle_message(
                 leave_room_inner(addr, &code, &mut st);
             }
 
-            let keep_alive_minutes = msg["keepAliveMinutes"].as_u64().unwrap_or(5);
+            let keep_alive_minutes = msg["keepAliveMinutes"].as_u64().unwrap_or(5).min(1440);
             let grace_secs = keep_alive_minutes * 60;
 
             let code = unique_code(&st);
