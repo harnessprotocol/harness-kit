@@ -8,6 +8,7 @@ import { useSidebarResize } from "../hooks/useSidebarResize";
 import { initTheme } from "../lib/theme";
 import { initPreferences, getHiddenSections } from "../lib/preferences";
 import { useChat } from "../context/ChatContext";
+import ChatPanel from "../components/chat/ChatPanel";
 
 type NavSection = {
   id: string;
@@ -142,6 +143,17 @@ export default function AppLayout() {
     return () => window.removeEventListener("harness-kit-prefs-changed", onPrefsChanged);
   }, []);
 
+  useEffect(() => {
+    function handler(e: KeyboardEvent) {
+      if (e.metaKey && e.shiftKey && e.key === "\\") {
+        e.preventDefault();
+        setChatOpen((prev) => !prev);
+      }
+    }
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [setChatOpen]);
+
   const visibleSections = NAV_SECTIONS.filter((s) => !hiddenSections.has(s.id));
 
   const prefsActive = location.pathname === "/preferences";
@@ -203,6 +215,25 @@ export default function AppLayout() {
           <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
           </svg>
+        </button>
+        <button
+          className="titlebar-btn"
+          onClick={() => setChatOpen(!chatOpen)}
+          title="Toggle chat (⌘⇧\)"
+          style={{ marginLeft: "auto", position: "relative" }}
+        >
+          {/* Right-sidebar icon: rectangle with vertical line on RIGHT side */}
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+            <rect x="1" y="1" width="14" height="14" rx="2" />
+            <line x1="11" y1="1" x2="11" y2="15" />
+          </svg>
+          {unreadCount > 0 && (
+            <span style={{
+              position: "absolute", top: "2px", right: "2px",
+              width: "6px", height: "6px",
+              background: "var(--danger)", borderRadius: "50%",
+            }} />
+          )}
         </button>
       </div>
 
@@ -288,55 +319,6 @@ export default function AppLayout() {
               </button>
             </div>
 
-            {/* Chat toggle button */}
-            <div className="px-2 pb-1">
-              <button
-                onClick={() => setChatOpen(!chatOpen)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  width: "100%",
-                  padding: "6px 8px",
-                  borderRadius: "6px",
-                  border: "none",
-                  background: chatOpen ? "var(--accent-light)" : "transparent",
-                  color: chatOpen ? "var(--accent-text)" : "var(--fg-subtle)",
-                  cursor: "pointer",
-                  fontSize: "11px",
-                  textAlign: "left",
-                  position: "relative",
-                }}
-              >
-                {/* Chat bubble icon */}
-                <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v7a2 2 0 01-2 2H6l-4 4V5z" clipRule="evenodd" />
-                </svg>
-                Chat
-                {unreadCount > 0 && (
-                  <span
-                    style={{
-                      marginLeft: "auto",
-                      minWidth: "16px",
-                      height: "16px",
-                      padding: "0 4px",
-                      background: "var(--danger)",
-                      color: "#fff",
-                      borderRadius: "8px",
-                      fontSize: "10px",
-                      fontWeight: 600,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      lineHeight: 1,
-                    }}
-                  >
-                    {unreadCount > 99 ? "99+" : unreadCount}
-                  </span>
-                )}
-              </button>
-            </div>
-
             {/* Bottom bar: gear button */}
             <div
               className="px-2 py-2"
@@ -388,6 +370,16 @@ export default function AppLayout() {
         <main className="flex-1 overflow-y-auto" style={{ background: "var(--bg-base)" }}>
           <Outlet />
         </main>
+
+        {/* Right sidebar: chat panel */}
+        <div style={{
+          width: chatOpen ? "340px" : 0,
+          flexShrink: 0,
+          overflow: "hidden",
+          transition: "width 0.15s ease",
+        }}>
+          <ChatPanel />
+        </div>
       </div>
     </div>
   );
