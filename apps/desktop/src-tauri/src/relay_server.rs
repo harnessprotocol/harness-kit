@@ -24,11 +24,12 @@ struct Room {
     name: Option<String>,
     members: HashMap<String, Member>, // key = addr string
     messages: VecDeque<Value>,
+    grace_secs: u64,
 }
 
 impl Room {
-    fn new(name: Option<String>) -> Self {
-        Self { name, members: HashMap::new(), messages: VecDeque::new() }
+    fn new(name: Option<String>, grace_secs: u64) -> Self {
+        Self { name, members: HashMap::new(), messages: VecDeque::new(), grace_secs }
     }
 
     fn push_message(&mut self, msg: Value) {
@@ -135,9 +136,12 @@ fn handle_message(
                 leave_room_inner(addr, &code, &mut st);
             }
 
+            let keep_alive_minutes = msg["keepAliveMinutes"].as_u64().unwrap_or(5);
+            let grace_secs = keep_alive_minutes * 60;
+
             let code = unique_code(&st);
             let name = msg["name"].as_str().filter(|n| !n.is_empty()).map(String::from);
-            let mut room = Room::new(name.clone());
+            let mut room = Room::new(name.clone(), grace_secs);
             room.members.insert(addr.to_string(), Member { nickname: nickname.clone(), tx: tx.clone() });
             let sys_msg = json!({
                 "id": format!("sys-{}", uuid::Uuid::new_v4()),
@@ -329,6 +333,7 @@ fn leave_room_inner(addr: &str, code: &str, st: &mut RelayState) {
     let room = match st.rooms.get_mut(code) { Some(r) => r, None => return };
     let nickname = match room.members.remove(addr) { Some(m) => m.nickname, None => return };
     if room.members.is_empty() {
+        // TODO: Use room.grace_secs for a proper grace timer (requires threading SharedRelayState through)
         st.rooms.remove(code);
         return;
     }
