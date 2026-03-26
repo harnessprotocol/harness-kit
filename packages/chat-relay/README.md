@@ -57,14 +57,14 @@ The relay is stateless except for in-memory room state. There is no database.
 
 - **Rooms** are identified by a short code (e.g. `HRN-7K2`) generated when a room is created
 - **Messages** are held in a ring buffer (last 500 per room) so late joiners get scrollback
-- **Rooms expire** 5 minutes after the last member disconnects
+- **Rooms expire** after the last member disconnects; the grace period defaults to 5 minutes and is configurable per room via `keepAliveMinutes` on `create_room`
 - **Nicknames** must be unique within a room, 1–32 characters
 - **Room names** are optional, max 64 characters
-- **Chat messages** are capped at 4 KB; share diffs at 64 KB — the server returns `room_error` if exceeded
+- **Chat messages** are capped at 4,000 characters; share diffs at 64,000 characters — the server returns `room_error` if exceeded
 
 ### Connecting the desktop app
 
-In the Harness Kit desktop app, click the chat icon in the sidebar and enter your relay's URL:
+In the Harness Kit desktop app, click the chat icon in the titlebar (right side) and enter your relay's URL:
 
 ```text
 ws://your-server:4801
@@ -80,7 +80,7 @@ Messages are JSON over WebSocket.
 
 | `type` | Fields | Description |
 |--------|--------|-------------|
-| `create_room` | `nickname`, `name?` | Create a new room and join it |
+| `create_room` | `nickname`, `name?`, `keepAliveMinutes?` | Create a new room and join it |
 | `join_room` | `code`, `nickname` | Join an existing room |
 | `leave_room` | — | Leave the current room |
 | `chat` | `body` | Send a chat message |
@@ -95,7 +95,7 @@ Messages are JSON over WebSocket.
 | `room_created` | `code`, `name?` | Room created successfully |
 | `room_joined` | `code`, `name?`, `members`, `history` | Joined room, includes scrollback |
 | `room_error` | `error` | Join/create failed (room not found, nickname taken, etc.) |
-| `message` | `message` | Broadcast message from another member |
+| `message` | `message` | Broadcast message from another member; `message` is `ChatMessage`, `ShareMessage`, or `SystemMessage` (events: `join`, `leave`, `nick_change`, `room_created`, `shutdown`) |
 | `presence` | `members` | Updated member list |
 | `typing_update` | `nickname`, `typing` | Typing indicator from another member |
 
