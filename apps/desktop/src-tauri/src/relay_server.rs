@@ -24,6 +24,7 @@ struct Room {
     name: Option<String>,
     members: HashMap<String, Member>, // key = addr string
     messages: VecDeque<Value>,
+    #[allow(dead_code)] // TODO: wire into grace timer once SharedRelayState threads through leave_room_inner
     grace_secs: u64,
 }
 
