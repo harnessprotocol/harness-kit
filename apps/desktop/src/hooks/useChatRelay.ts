@@ -12,6 +12,7 @@ import {
   chatSaveRoom,
   chatLeaveRoom,
   chatListRooms,
+  chatStopLocalRelay,
 } from "../lib/tauri";
 import type { ChatRoomRow } from "../lib/tauri";
 import { onChatShare } from "../lib/chat-events";
@@ -30,18 +31,20 @@ export type ChatState =
       nickname: string;
       members: Member[];
       messages: AnyMessage[];
+      isHost: boolean;
     };
 
 export interface UseChatRelayReturn {
   state: ChatState;
   connect: (serverUrl: string) => void;
   disconnect: () => void;
-  createRoom: (nickname: string, name?: string) => void;
+  createRoom: (nickname: string, name?: string, keepAliveMinutes?: number) => void;
   joinRoom: (code: string, nickname: string) => void;
   leaveRoom: () => void;
   sendChat: (body: string) => void;
   sendShare: (share: Omit<ShareMessage, "id" | "roomCode" | "nickname" | "timestamp" | "type">) => void;
   sendTyping: (typing: boolean) => void;
+  shutdownServer: () => void;
   recentRooms: ChatRoomRow[];
   isOpen: boolean;
   setOpen: (open: boolean) => void;
@@ -74,6 +77,8 @@ export function useChatRelay(): UseChatRelayReturn {
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const connIdRef = useRef(0);
   const lastRoomRef = useRef<{ code: string; nickname: string } | null>(null);
+
+  const isHostRef = useRef(false);
 
   // Refs for values needed inside WS callbacks without triggering re-renders
   const isOpenRef = useRef(false);
@@ -225,6 +230,7 @@ export function useChatRelay(): UseChatRelayReturn {
             nickname: myNick,
             members,
             messages,
+            isHost: isHostRef.current,
           });
 
           refreshRooms();
@@ -379,25 +385,31 @@ export function useChatRelay(): UseChatRelayReturn {
       wsRef.current.close();
       wsRef.current = null;
     }
+    isHostRef.current = false;
     setState({ status: "disconnected" });
   }, []);
 
   // ── Room actions ─────────────────────────────────────────
 
-  const createRoom = useCallback((nickname: string, name?: string) => {
+  const createRoom = useCallback((nickname: string, name?: string, keepAliveMinutes?: number) => {
     saveNick(nickname);
     // Update nickname in stateRef so room_joined handler can pick it up
     if (stateRef.current.status === "connected") {
       // store in localStorage for room_joined handler
       saveNick(nickname);
     }
-    const msg: ClientMessage = name
-      ? { type: "create_room", nickname, name }
-      : { type: "create_room", nickname };
+    isHostRef.current = true;
+    const msg: ClientMessage = {
+      type: "create_room",
+      nickname,
+      ...(name !== undefined && { name }),
+      ...(keepAliveMinutes !== undefined && { keepAliveMinutes }),
+    };
     send(msg);
   }, [send]);
 
   const joinRoom = useCallback((code: string, nickname: string) => {
+    isHostRef.current = false;
     saveNick(nickname);
     send({ type: "join_room", code, nickname });
   }, [send]);
@@ -406,6 +418,7 @@ export function useChatRelay(): UseChatRelayReturn {
     const cur = stateRef.current;
     if (cur.status === "in_room") {
       lastRoomRef.current = null;
+      isHostRef.current = false;
       send({ type: "leave_room" });
       chatLeaveRoom(cur.roomCode).catch(() => {});
       setState({ status: "connected", serverUrl: cur.serverUrl });
@@ -444,6 +457,14 @@ export function useChatRelay(): UseChatRelayReturn {
     send({ type: "typing", typing });
   }, [send]);
 
+  const shutdownServer = useCallback(() => {
+    sendChat("[server shutting down]");
+    setTimeout(() => {
+      chatStopLocalRelay().catch(() => {});
+      disconnect();
+    }, 300);
+  }, [sendChat, disconnect]);
+
   const typingMembers = useMemo(() => {
     if (state.status !== "in_room") return [];
     return state.members
@@ -461,6 +482,7 @@ export function useChatRelay(): UseChatRelayReturn {
     sendChat,
     sendShare,
     sendTyping,
+    shutdownServer,
     recentRooms,
     isOpen,
     setOpen,

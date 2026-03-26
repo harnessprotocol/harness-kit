@@ -14,6 +14,7 @@ vi.mock("../../lib/tauri", () => ({
   chatSaveMessages: vi.fn().mockResolvedValue(undefined),
   chatLoadMessages: vi.fn().mockResolvedValue([]),
   chatPurgeRoom: vi.fn().mockResolvedValue(undefined),
+  chatStopLocalRelay: vi.fn().mockResolvedValue(undefined),
 }));
 
 // ── WebSocket mock ────────────────────────────────────────────
