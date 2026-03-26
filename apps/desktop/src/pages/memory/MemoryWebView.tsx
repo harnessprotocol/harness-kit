@@ -47,7 +47,7 @@ export default function MemoryWebView() {
       <iframe
         key={src}
         src={src}
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+        sandbox="allow-scripts allow-same-origin allow-forms"
         style={{
           width: '100%',
           height: '100%',

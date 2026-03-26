@@ -168,7 +168,7 @@ Graph:     <path to graph file>
 Desktop UI:  http://localhost:3131/
 ```
 
-If server not running: show MCP-only stats by calling `search_nodes("")` (empty string returns totals if supported) or note the server is offline.
+If server not running: note that the server is offline and MCP-only stats are not available (membrain does not support entity count queries via MCP without the HTTP server).
 
 ---
 

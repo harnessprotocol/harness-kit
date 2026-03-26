@@ -8,6 +8,24 @@ Search, trace, and manage your [membrain](https://github.com/siracusa5/membrain)
 go install github.com/siracusa5/membrain/cmd/mem@latest
 ```
 
+## Setup
+
+Add the membrain MCP server to your Claude Code settings:
+
+```json
+{
+  "mcpServers": {
+    "membrain": {
+      "command": "mem",
+      "args": ["mcp"],
+      "transport": "stdio"
+    }
+  }
+}
+```
+
+Then restart Claude Code. The `/memory` skill activates automatically.
+
 ## Usage
 
 ```
