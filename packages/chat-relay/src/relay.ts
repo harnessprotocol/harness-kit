@@ -3,8 +3,6 @@ import { WebSocket, WebSocketServer } from "ws";
 import type { ClientMessage, Member, ServerMessage, SystemMessage } from "./protocol.js";
 import { Room } from "./room.js";
 
-const GRACE_PERIOD_MS = 300_000; // 5 minutes
-
 // Uppercase consonants only — avoids forming recognisable words
 const CONSONANTS = "BCDFGHJKLMNPQRSTVWXYZ";
 const ALPHANUMERIC = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -56,7 +54,7 @@ export class ChatRelay {
   private handleMessage(ws: WebSocket, msg: ClientMessage): void {
     switch (msg.type) {
       case "create_room":
-        this.handleCreateRoom(ws, msg.nickname, msg.name);
+        this.handleCreateRoom(ws, msg.nickname, msg.name, msg.keepAliveMinutes);
         break;
       case "join_room":
         this.handleJoinRoom(ws, msg.code, msg.nickname);
@@ -83,7 +81,7 @@ export class ChatRelay {
     }
   }
 
-  private handleCreateRoom(ws: WebSocket, nickname: string, name?: string): void {
+  private handleCreateRoom(ws: WebSocket, nickname: string, name?: string, keepAliveMinutes?: number): void {
     if (!nickname || nickname.length > 32) {
       const errMsg: ServerMessage = { type: "room_error", error: "nickname must be 1–32 characters" };
       if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(errMsg));
@@ -104,7 +102,8 @@ export class ChatRelay {
       if (attempts > 10) throw new Error("Failed to generate unique room code after 10 attempts");
     } while (this.rooms.has(code));
 
-    const room = new Room(code, name);
+    const gracePeriodMs = (keepAliveMinutes ?? 5) * 60_000;
+    const room = new Room(code, name, gracePeriodMs);
     this.rooms.set(code, room);
 
     const createdMsg: ServerMessage = { type: "room_created", code, ...(name ? { name } : {}) };
@@ -318,7 +317,7 @@ export class ChatRelay {
       this.rooms.delete(room.code);
       room.graceTimer = null;
       console.log(`[chat-relay] room ${room.code} expired after grace period`);
-    }, GRACE_PERIOD_MS);
+    }, room.gracePeriodMs);
   }
 
   close(): void {
