@@ -6,7 +6,7 @@ import {
   membrainStop,
 } from '../lib/tauri';
 
-const MAX_POLLS = 5;
+const MAX_POLLS = 10;
 
 function fetchWithTimeout(url: string, ms: number): Promise<Response> {
   const controller = new AbortController();
@@ -32,6 +32,7 @@ export function useMembrainServerReady(): MembrainServerReadyState {
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pollCount = useRef(0);
+  const hasAutoStarted = useRef(false);
 
   // Check if mem binary is on PATH
   useEffect(() => {
@@ -61,13 +62,18 @@ export function useMembrainServerReady(): MembrainServerReadyState {
           if (!mounted) return;
           pollCount.current += 1;
           if (pollCount.current >= MAX_POLLS) setTimedOut(true);
+          // Auto-start on first failure if mem is installed
+          if (!hasAutoStarted.current && installed === true) {
+            hasAutoStarted.current = true;
+            membrainStart().catch(() => {});
+          }
         });
     };
 
     check();
     const id = setInterval(check, 2000);
     return () => { mounted = false; clearInterval(id); };
-  }, [ready, timedOut]);
+  }, [ready, timedOut, installed]);
 
   const retry = useCallback(() => {
     pollCount.current = 0;
