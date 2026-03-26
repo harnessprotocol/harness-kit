@@ -2247,6 +2247,12 @@
           "markdownDescription": "Enables the chat_load_messages command without any pre-configured scope."
         },
         {
+          "description": "Enables the chat_local_relay_running command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-chat-local-relay-running",
+          "markdownDescription": "Enables the chat_local_relay_running command without any pre-configured scope."
+        },
+        {
           "description": "Enables the chat_purge_room command without any pre-configured scope.",
           "type": "string",
           "const": "allow-chat-purge-room",
@@ -2263,6 +2269,18 @@
           "type": "string",
           "const": "allow-chat-save-room",
           "markdownDescription": "Enables the chat_save_room command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the chat_start_local_relay command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-chat-start-local-relay",
+          "markdownDescription": "Enables the chat_start_local_relay command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the chat_stop_local_relay command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-chat-stop-local-relay",
+          "markdownDescription": "Enables the chat_stop_local_relay command without any pre-configured scope."
         },
         {
           "description": "Enables the check_git_repo command without any pre-configured scope.",
@@ -2727,6 +2745,12 @@
           "markdownDescription": "Denies the chat_load_messages command without any pre-configured scope."
         },
         {
+          "description": "Denies the chat_local_relay_running command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-chat-local-relay-running",
+          "markdownDescription": "Denies the chat_local_relay_running command without any pre-configured scope."
+        },
+        {
           "description": "Denies the chat_purge_room command without any pre-configured scope.",
           "type": "string",
           "const": "deny-chat-purge-room",
@@ -2743,6 +2767,18 @@
           "type": "string",
           "const": "deny-chat-save-room",
           "markdownDescription": "Denies the chat_save_room command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the chat_start_local_relay command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-chat-start-local-relay",
+          "markdownDescription": "Denies the chat_start_local_relay command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the chat_stop_local_relay command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-chat-stop-local-relay",
+          "markdownDescription": "Denies the chat_stop_local_relay command without any pre-configured scope."
         },
         {
           "description": "Denies the check_git_repo command without any pre-configured scope.",

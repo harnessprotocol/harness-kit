@@ -538,3 +538,17 @@ export async function boardServerStart(): Promise<string> {
 export async function boardServerRestart(): Promise<string> {
   return invoke<string>("board_server_restart");
 }
+
+// ── Local relay commands ─────────────────────────────────────
+
+export function chatStartLocalRelay(port?: number): Promise<number> {
+  return invoke<number>("chat_start_local_relay", { port });
+}
+
+export function chatStopLocalRelay(): Promise<void> {
+  return invoke<void>("chat_stop_local_relay");
+}
+
+export function chatLocalRelayRunning(): Promise<boolean> {
+  return invoke<boolean>("chat_local_relay_running");
+}

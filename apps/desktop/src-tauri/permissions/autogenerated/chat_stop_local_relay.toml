@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-chat-stop-local-relay"
+description = "Enables the chat_stop_local_relay command without any pre-configured scope."
+commands.allow = ["chat_stop_local_relay"]
+
+[[permission]]
+identifier = "deny-chat-stop-local-relay"
+description = "Denies the chat_stop_local_relay command without any pre-configured scope."
+commands.deny = ["chat_stop_local_relay"]

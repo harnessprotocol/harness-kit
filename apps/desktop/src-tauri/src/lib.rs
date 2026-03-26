@@ -1,6 +1,7 @@
 mod commands;
 mod db;
 mod board_server;
+mod relay_server;
 
 /// Process-wide lock for tests that mutate the HOME env variable.
 /// All `with_home()` helpers across test modules must hold this lock
@@ -27,6 +28,7 @@ pub fn run() {
         .manage(ComparatorState::default())
         .manage(database)
         .manage(BoardServerState::new())
+        .manage(commands::relay::LocalRelay(tokio::sync::Mutex::new(None)))
         .invoke_handler(tauri::generate_handler![
             // Plugins
             commands::plugins::list_installed_plugins,
@@ -127,6 +129,10 @@ pub fn run() {
             commands::chat::chat_save_messages,
             commands::chat::chat_load_messages,
             commands::chat::chat_purge_room,
+            // Local relay
+            commands::relay::chat_start_local_relay,
+            commands::relay::chat_stop_local_relay,
+            commands::relay::chat_local_relay_running,
         ])
         .setup(|app| {
             let state = app.state::<BoardServerState>();
