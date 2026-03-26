@@ -11,7 +11,7 @@ harness-kit/
 ├── .github/
 │   └── workflows/
 │       └── validate.yml          ← CI: manifest parsing + version alignment
-├── plugins/                      ← one directory per plugin
+├── plugins/                      ← one directory per plugin (marketplace)
 │   ├── research/
 │   │   ├── .claude-plugin/
 │   │   │   └── plugin.json       ← plugin manifest
@@ -22,35 +22,19 @@ harness-kit/
 │   │           ├── SKILL.md      ← skill definition (what Claude reads)
 │   │           └── README.md     ← usage docs (what humans read)
 │   ├── explain/
-│   │   ├── .claude-plugin/
-│   │   │   └── plugin.json
-│   │   └── skills/
-│   │       └── explain/
-│   │           ├── SKILL.md
-│   │           └── README.md
 │   ├── lineage/
-│   │   ├── .claude-plugin/
-│   │   │   └── plugin.json
-│   │   └── skills/
-│   │       └── lineage/
-│   │           ├── SKILL.md
-│   │           └── README.md
 │   ├── orient/
-│   │   ├── .claude-plugin/
-│   │   │   └── plugin.json
-│   │   └── skills/
-│   │       └── orient/
-│   │           ├── SKILL.md
-│   │           └── README.md
-│   └── iterm-notify/
-│       ├── .claude-plugin/
-│       │   └── plugin.json
-│       ├── scripts/
-│       │   └── notify.sh         ← hook script (wire manually in settings.json)
-│       └── skills/
-│           └── iterm-notify/
-│               ├── SKILL.md
-│               └── README.md
+│   └── iterm-notify/             ← (same structure as research/)
+├── packages/                     ← shared libraries and standalone servers
+│   ├── core/                     ← harness.yaml compile/parse/detect logic
+│   ├── shared/                   ← shared TypeScript types (chat-types, etc.)
+│   ├── ui/                       ← shared React components
+│   ├── board-server/             ← WebSocket server for the kanban board feature
+│   └── chat-relay/               ← self-hosted WebSocket relay for team chat
+├── apps/                         ← end-user applications
+│   ├── desktop/                  ← Tauri desktop app (React + Rust)
+│   ├── board/                    ← web board client
+│   └── cli/                      ← harness CLI
 ├── harness.yaml                  ← dogfooding config (plugins used to develop this repo)
 ├── install.sh                    ← script fallback for users without plugin marketplace
 ├── CLAUDE.md                     ← this file
