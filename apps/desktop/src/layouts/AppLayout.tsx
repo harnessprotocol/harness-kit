@@ -81,6 +81,21 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "Board",
     path: "/board",
   },
+  {
+    id: "memory",
+    label: "Memory",
+    path: "/memory",
+    children: [
+      { label: "Dashboard", path: "/memory" },
+      { label: "Graph", path: "/memory/graph" },
+      { label: "Explore", path: "/memory/explore" },
+      { label: "Entities", path: "/memory/entities" },
+      { label: "Knowledge", path: "/memory/knowledge" },
+      { label: "Context", path: "/memory/context" },
+      { label: "Trace", path: "/memory/trace" },
+      { label: "Settings", path: "/memory/settings" },
+    ],
+  },
 ];
 
 function SidebarSubnav({ children }: { children: { label: string; path: string }[] }) {

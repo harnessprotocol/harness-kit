@@ -2,6 +2,7 @@ mod commands;
 mod db;
 mod board_server;
 mod relay_server;
+mod membrain_commands;
 
 /// Process-wide lock for tests that mutate the HOME env variable.
 /// All `with_home()` helpers across test modules must hold this lock
@@ -12,6 +13,7 @@ pub static HOME_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 use tauri::Manager;
 use commands::comparator::ComparatorState;
 use board_server::BoardServerState;
+use membrain_commands::MembrainServerState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -29,6 +31,7 @@ pub fn run() {
         .manage(database)
         .manage(BoardServerState::new())
         .manage(commands::relay::LocalRelay(tokio::sync::Mutex::new(None)))
+        .manage(MembrainServerState::new())
         .invoke_handler(tauri::generate_handler![
             // Plugins
             commands::plugins::list_installed_plugins,
@@ -114,6 +117,11 @@ pub fn run() {
             board_server::board_server_install,
             board_server::board_server_start,
             board_server::board_server_restart,
+            // membrain
+            membrain_commands::membrain_check_installed,
+            membrain_commands::membrain_start,
+            membrain_commands::membrain_stop,
+            membrain_commands::membrain_get_port,
             // Parity
             commands::parity::run_parity_scan,
             commands::parity::get_parity_snapshot,

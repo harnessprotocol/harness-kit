@@ -23,6 +23,14 @@ import AuditLogPage from "./pages/security/AuditLogPage";
 import BoardProjectsPage from "./pages/board/BoardProjectsPage";
 import BoardKanbanPage from "./pages/board/BoardKanbanPage";
 import ParityDashboardPage from "./pages/parity/ParityDashboardPage";
+import MemoryDashboardPage from "./pages/memory/MemoryDashboardPage";
+import MemoryGraphPage from "./pages/memory/MemoryGraphPage";
+import MemoryExplorePage from "./pages/memory/MemoryExplorePage";
+import MemoryEntitiesPage from "./pages/memory/MemoryEntitiesPage";
+import MemoryKnowledgePage from "./pages/memory/MemoryKnowledgePage";
+import MemoryContextPage from "./pages/memory/MemoryContextPage";
+import MemoryTracePage from "./pages/memory/MemoryTracePage";
+import MemorySettingsPage from "./pages/memory/MemorySettingsPage";
 
 function DefaultRedirect() {
   const defaultSection = getDefaultSection();
@@ -68,6 +76,19 @@ export default function App() {
           {/* Board */}
           <Route path="board" element={<BoardProjectsPage />} />
           <Route path="board/:slug" element={<BoardKanbanPage />} />
+
+          {/* Memory */}
+          <Route path="memory" element={<MemoryDashboardPage />} />
+          <Route path="memory/graph" element={<MemoryGraphPage />} />
+          <Route path="memory/explore" element={<MemoryExplorePage />} />
+          <Route path="memory/explore/*" element={<MemoryExplorePage />} />
+          <Route path="memory/entities" element={<MemoryEntitiesPage />} />
+          <Route path="memory/entities/*" element={<MemoryEntitiesPage />} />
+          <Route path="memory/knowledge" element={<MemoryKnowledgePage />} />
+          <Route path="memory/knowledge/*" element={<MemoryKnowledgePage />} />
+          <Route path="memory/context" element={<MemoryContextPage />} />
+          <Route path="memory/trace" element={<MemoryTracePage />} />
+          <Route path="memory/settings" element={<MemorySettingsPage />} />
 
           {/* Preferences */}
           <Route path="preferences" element={<PreferencesPage />} />
