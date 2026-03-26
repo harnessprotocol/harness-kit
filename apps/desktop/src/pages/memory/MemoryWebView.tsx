@@ -1,12 +1,23 @@
+import { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useMembrainServerReady } from '../../hooks/useMembrainServerReady';
 import { MembrainOffline } from '../../components/memory/MembrainOffline';
 import { MEMBRAIN_SERVER_BASE } from '../../lib/membrain-api';
+import { getMembrainEnabled } from '../../lib/preferences';
+import MemoryLabsPreview from './MemoryLabsPreview';
 
 export default function MemoryWebView() {
   const location = useLocation();
+  // Track enabled state locally so Enable button re-renders immediately
+  const [enabled, setEnabled] = useState(getMembrainEnabled);
+
   const serverState = useMembrainServerReady();
   const { ready, timedOut } = serverState;
+
+  // Labs gate — show teaser until the user explicitly opts in
+  if (!enabled) {
+    return <MemoryLabsPreview onEnable={() => setEnabled(true)} />;
+  }
 
   if (timedOut) {
     return <MembrainOffline serverState={serverState} />;

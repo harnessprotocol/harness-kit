@@ -125,6 +125,20 @@ export function setConfirmSave(confirm: boolean) {
   localStorage.setItem(KEY_CONFIRM_SAVE, String(confirm));
 }
 
+// ── Labs: membrain ───────────────────────────────────────────
+
+const KEY_MEMBRAIN_LABS = "harness-kit-membrain-labs";
+
+/** Returns true only if the user has explicitly opted in to the membrain Labs feature. */
+export function getMembrainEnabled(): boolean {
+  return localStorage.getItem(KEY_MEMBRAIN_LABS) === "true";
+}
+
+export function setMembrainEnabled(enabled: boolean) {
+  localStorage.setItem(KEY_MEMBRAIN_LABS, String(enabled));
+  window.dispatchEvent(new CustomEvent("harness-kit-prefs-changed"));
+}
+
 // ── Sidebar Width ────────────────────────────────────────────
 
 export function getSidebarWidth(): number {
