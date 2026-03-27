@@ -15,6 +15,7 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
   const [hovered, setHovered] = useState<string | null>(null);
   const [customProfiles, setCustomProfiles] = useState<CustomProfile[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -30,11 +31,15 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
     e.stopPropagation();
     if (!window.confirm(`Delete profile "${id}"?`)) return;
     setDeletingId(id);
+    setDeleteError(null);
     try {
       await deleteCustomProfile(id);
       setCustomProfiles((prev) => prev.filter((p) => p.id !== id));
-    } catch {}
-    setDeletingId(null);
+    } catch (err) {
+      setDeleteError(String(err));
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   function handleCustomSelect(p: CustomProfile) {
@@ -123,6 +128,11 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
 
             {/* Content */}
             <div style={{ overflowY: "auto", padding: "0 16px 16px" }}>
+              {deleteError && (
+                <div style={{ margin: "10px 0 0", padding: "8px 12px", borderRadius: "6px", background: "var(--bg-surface)", border: "1px solid var(--danger)", fontSize: "11px", color: "var(--danger)" }}>
+                  Failed to delete profile: {deleteError}
+                </div>
+              )}
               {/* Custom profiles section */}
               {customProfiles.length > 0 && (
                 <>
