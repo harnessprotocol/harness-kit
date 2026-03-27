@@ -222,21 +222,23 @@ fn extract_tool_names(content: &serde_json::Value) -> Vec<String> {
     }
 }
 
-/// Extract first text block as a preview (truncated to max_len).
+/// Truncate a string to at most `max_chars` characters (safe for multi-byte UTF-8).
+fn truncate_chars(s: &str, max_chars: usize) -> String {
+    match s.char_indices().nth(max_chars) {
+        Some((byte_pos, _)) => s[..byte_pos].to_string(),
+        None => s.to_string(),
+    }
+}
+
+/// Extract first text block as a preview (truncated to max_len characters).
 fn content_preview(content: &serde_json::Value, max_len: usize) -> Option<String> {
     match content {
-        serde_json::Value::String(s) => {
-            Some(if s.len() > max_len { s[..max_len].to_string() } else { s.clone() })
-        }
+        serde_json::Value::String(s) => Some(truncate_chars(s, max_len)),
         serde_json::Value::Array(arr) => {
             for block in arr {
                 if block.get("type").and_then(|t| t.as_str()) == Some("text") {
                     if let Some(text) = block.get("text").and_then(|t| t.as_str()) {
-                        return Some(if text.len() > max_len {
-                            text[..max_len].to_string()
-                        } else {
-                            text.to_string()
-                        });
+                        return Some(truncate_chars(text, max_len));
                     }
                 }
             }
