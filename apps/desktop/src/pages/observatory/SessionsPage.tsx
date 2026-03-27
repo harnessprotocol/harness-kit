@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { listSessionsSummary, readSessionFacet } from "../../lib/tauri";
-import { formatTimestamp, formatDuration, formatNumber } from "../../lib/format";
-import type { SessionSummary, SessionFacet } from "@harness-kit/shared";
+import { listSessionsSummary, readSessionFacet, readSessionTranscript } from "../../lib/tauri";
+import { formatTimestamp, formatDuration, formatNumber, shortModelName } from "../../lib/format";
+import type { SessionSummary, SessionFacet, SessionTranscript, TranscriptEntry } from "@harness-kit/shared";
 import { useArrowNavigation } from "../../hooks/useArrowNavigation";
 import ContextMenu from "../../components/ContextMenu";
 
@@ -74,65 +74,214 @@ function ProjectPill({ name }: { name: string }) {
   );
 }
 
-// ── Facet detail panel ─────────────────────────────────────────
+// ── Role colors ────────────────────────────────────────────────
 
-function FacetDetail({ facet, loading }: { facet: SessionFacet | null; loading: boolean }) {
-  if (loading) {
-    return (
-      <div style={{ padding: "10px 14px 12px 28px", borderTop: "1px solid var(--separator)" }}>
-        <p style={{ fontSize: "11px", color: "var(--fg-subtle)", margin: 0 }}>Loading insights…</p>
-      </div>
-    );
-  }
+const ROLE_COLORS: Record<string, string> = {
+  user: "#2563eb",
+  assistant: "#5b50e8",
+  system: "#636366",
+  result: "#0d9488",
+};
 
-  if (!facet) {
-    return (
-      <div style={{ padding: "10px 14px 12px 28px", borderTop: "1px solid var(--separator)" }}>
-        <p style={{ fontSize: "11px", color: "var(--fg-subtle)", margin: 0 }}>No insights available for this session.</p>
-      </div>
-    );
-  }
+// ── Transcript entry row ──────────────────────────────────────
 
-  const hasFriction = facet.friction_counts && Object.keys(facet.friction_counts).length > 0;
+function TranscriptRow({ entry }: { entry: TranscriptEntry }) {
+  const roleColor = ROLE_COLORS[entry.role] ?? "var(--fg-subtle)";
+  const time = entry.timestamp
+    ? new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
+    : "";
+
+  const isAssistant = entry.role === "assistant";
+
+  return (
+    <div style={{
+      display: "flex",
+      gap: "8px",
+      padding: isAssistant ? "5px 0 5px 0" : "4px 0",
+      borderBottom: "1px solid var(--separator)",
+      fontSize: "11px",
+      opacity: entry.isSubagent ? 0.7 : 1,
+      borderLeft: `2px solid ${roleColor}`,
+      paddingLeft: "8px",
+      marginLeft: entry.isSubagent ? "12px" : 0,
+    }}>
+      {/* Time */}
+      <span style={{ minWidth: "56px", color: "var(--fg-subtle)", fontVariantNumeric: "tabular-nums", flexShrink: 0, fontSize: "10px" }}>
+        {time}
+      </span>
+
+      {/* Role badge */}
+      <span style={{
+        minWidth: "52px",
+        flexShrink: 0,
+        fontWeight: 600,
+        fontSize: "10px",
+        color: roleColor,
+        textTransform: "uppercase",
+        letterSpacing: "0.03em",
+      }}>
+        {entry.isSubagent ? `\u21B3 ${entry.role}` : entry.role}
+      </span>
+
+      {/* Model */}
+      {entry.model && (
+        <span style={{
+          fontSize: "9px",
+          padding: "1px 6px",
+          borderRadius: "4px",
+          background: "rgba(91,80,232,0.10)",
+          color: "var(--accent-text)",
+          flexShrink: 0,
+          alignSelf: "center",
+          fontWeight: 500,
+        }}>
+          {shortModelName(entry.model)}
+        </span>
+      )}
+
+      {/* Tool chips */}
+      {entry.toolNames.length > 0 && (
+        <div style={{ display: "flex", gap: "3px", flexWrap: "wrap", flexShrink: 0, alignItems: "center" }}>
+          {entry.toolNames.slice(0, 5).map((name, i) => (
+            <span key={i} style={{
+              fontSize: "9px",
+              padding: "1px 5px",
+              borderRadius: "4px",
+              background: "rgba(13,148,136,0.10)",
+              color: "#0d9488",
+              fontWeight: 500,
+            }}>
+              {name}
+            </span>
+          ))}
+          {entry.toolNames.length > 5 && (
+            <span style={{ fontSize: "9px", color: "var(--fg-subtle)" }}>
+              +{entry.toolNames.length - 5}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Token count */}
+      {(entry.inputTokens || entry.outputTokens) && (
+        <span style={{ fontSize: "9px", color: "var(--fg-subtle)", flexShrink: 0, alignSelf: "center", fontVariantNumeric: "tabular-nums" }}>
+          {entry.outputTokens ? `${formatNumber(entry.outputTokens)} tok` : ""}
+        </span>
+      )}
+
+      {/* Content preview */}
+      {entry.contentPreview && (
+        <span style={{
+          color: "var(--fg-muted)",
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          flex: 1,
+          minWidth: 0,
+          fontSize: "10px",
+        }}>
+          {entry.contentPreview}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ── Session detail panel ──────────────────────────────────────
+
+function SessionDetail({
+  session, facet, facetLoading,
+}: {
+  session: SessionSummary;
+  facet: SessionFacet | null;
+  facetLoading: boolean;
+}) {
+  const [transcript, setTranscript] = useState<SessionTranscript | null>(null);
+  const [transcriptLoading, setTranscriptLoading] = useState(true);
+
+  useEffect(() => {
+    setTranscriptLoading(true);
+    setTranscript(null);
+    readSessionTranscript(session.sessionId, session.project)
+      .then(setTranscript)
+      .catch(() => setTranscript(null))
+      .finally(() => setTranscriptLoading(false));
+  }, [session.sessionId, session.project]);
 
   return (
     <div style={{ padding: "10px 14px 12px 28px", borderTop: "1px solid var(--separator)", background: "var(--bg-base)" }}>
-      {facet.brief_summary && (
-        <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "0 0 8px", lineHeight: 1.5 }}>
-          {facet.brief_summary}
-        </p>
+      {/* Facet summary header */}
+      {facetLoading && (
+        <p style={{ fontSize: "11px", color: "var(--fg-subtle)", margin: "0 0 8px" }}>Loading insights…</p>
+      )}
+      {facet && (
+        <div style={{ marginBottom: "10px" }}>
+          {facet.brief_summary && (
+            <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "0 0 6px", lineHeight: 1.5 }}>
+              {facet.brief_summary}
+            </p>
+          )}
+          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+            {facet.outcome && <OutcomeBadge outcome={facet.outcome} />}
+            {facet.claude_helpfulness && <HelpfulnessBadge value={facet.claude_helpfulness} />}
+            {facet.session_type && (
+              <span style={{ fontSize: "10px", color: "var(--fg-subtle)", textTransform: "capitalize" }}>
+                {facet.session_type.replace(/_/g, " ")}
+              </span>
+            )}
+          </div>
+          {facet.underlying_goal && (
+            <p style={{ fontSize: "11px", color: "var(--fg-subtle)", margin: "6px 0 0" }}>
+              <span style={{ fontWeight: 500, color: "var(--fg-muted)" }}>Goal:</span> {facet.underlying_goal}
+            </p>
+          )}
+        </div>
       )}
 
-      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center", marginBottom: facet.underlying_goal ? "8px" : 0 }}>
-        {facet.outcome && <OutcomeBadge outcome={facet.outcome} />}
-        {facet.claude_helpfulness && <HelpfulnessBadge value={facet.claude_helpfulness} />}
-        {facet.session_type && (
-          <span style={{ fontSize: "10px", color: "var(--fg-subtle)", textTransform: "capitalize" }}>
-            {facet.session_type.replace(/_/g, " ")}
+      {/* Transcript stats header */}
+      {transcript && transcript.entries.length > 0 && (
+        <div style={{
+          display: "flex",
+          gap: "14px",
+          padding: "8px 10px",
+          marginBottom: "8px",
+          borderRadius: "6px",
+          background: "var(--hover-bg)",
+          fontSize: "10px",
+          color: "var(--fg-muted)",
+          fontWeight: 500,
+        }}>
+          <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            <span style={{ color: "#ea580c" }}>{formatNumber(transcript.totalOutputTokens)}</span> tokens out
           </span>
-        )}
-      </div>
-
-      {facet.underlying_goal && (
-        <p style={{ fontSize: "11px", color: "var(--fg-subtle)", margin: "0 0 6px" }}>
-          <span style={{ fontWeight: 500, color: "var(--fg-muted)" }}>Goal:</span> {facet.underlying_goal}
-        </p>
+          <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            <span style={{ color: "#0d9488" }}>{formatNumber(transcript.totalToolCalls)}</span> tool calls
+          </span>
+          <span>{transcript.modelsUsed.map(shortModelName).join(", ")}</span>
+          {transcript.subagentCount > 0 && (
+            <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <span style={{ color: "#5b50e8" }}>{transcript.subagentCount}</span> subagent{transcript.subagentCount > 1 ? "s" : ""}
+            </span>
+          )}
+          {transcript.truncated && (
+            <span style={{ color: "var(--warning)" }}>truncated</span>
+          )}
+        </div>
       )}
 
-      {hasFriction && (
-        <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
-          {Object.entries(facet.friction_counts!).map(([type, count]) => (
-            <span key={type} style={{
-              fontSize: "10px",
-              padding: "1px 6px",
-              borderRadius: "4px",
-              background: "rgba(220,38,38,0.08)",
-              color: "var(--danger)",
-            }}>
-              {type.replace(/_/g, " ")} ×{count}
-            </span>
+      {/* Transcript timeline */}
+      {transcriptLoading && (
+        <p style={{ fontSize: "11px", color: "var(--fg-subtle)", margin: 0 }}>Loading transcript…</p>
+      )}
+      {!transcriptLoading && transcript && transcript.entries.length > 0 && (
+        <div style={{ maxHeight: "400px", overflowY: "auto" }}>
+          {transcript.entries.map((entry, i) => (
+            <TranscriptRow key={i} entry={entry} />
           ))}
         </div>
+      )}
+      {!transcriptLoading && (!transcript || transcript.entries.length === 0) && !facet && (
+        <p style={{ fontSize: "11px", color: "var(--fg-subtle)", margin: 0 }}>No transcript or insights available for this session.</p>
       )}
     </div>
   );
@@ -177,6 +326,8 @@ export default function SessionsPage() {
   });
 
   const projectCount = new Set(sessions.map((s) => s.projectShort).filter(Boolean)).size;
+
+  const expandedSession = sessions.find((s) => s.sessionId === expandedId);
 
   return (
     <div style={{ padding: "20px 24px" }}>
@@ -287,8 +438,12 @@ export default function SessionsPage() {
                   </div>
                 </button>
 
-                {isExpanded && (
-                  <FacetDetail facet={facet} loading={facetLoading} />
+                {isExpanded && expandedSession && (
+                  <SessionDetail
+                    session={expandedSession}
+                    facet={facet}
+                    facetLoading={facetLoading}
+                  />
                 )}
               </div>
             );

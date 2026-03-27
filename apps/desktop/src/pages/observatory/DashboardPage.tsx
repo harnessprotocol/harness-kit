@@ -7,20 +7,20 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import HKTooltip from "../../components/Tooltip";
-import { readStatsCache, readLiveActivity } from "../../lib/tauri";
+import { useObservatoryData } from "../../hooks/useObservatoryData";
 import { formatNumber, formatDate, formatHour, shortModelName } from "../../lib/format";
-import type { StatsCache, LiveDailyActivity } from "@harness-kit/shared";
+import type { DailyActivity, DailyModelTokens, ModelUsageEntry } from "@harness-kit/shared";
 
 const MODEL_COLORS = ["#5b50e8", "#0d9488", "#ea580c", "#16a34a", "#2563eb", "#e11d48"];
 
 // ── Date range types ─────────────────────────────────────────
 
-type Preset = "1d" | "7d" | "30d" | "1y" | "all";
+type Preset = "1h" | "6h" | "12h" | "1d" | "7d" | "30d" | "1y" | "all";
 
 interface DateRange {
   preset: Preset | "custom";
-  start: string; // "YYYY-MM-DD"
-  end: string;   // "YYYY-MM-DD"
+  start: string; // "YYYY-MM-DD" or ISO datetime
+  end: string;
 }
 
 function presetToDates(preset: Preset): { start: string; end: string } {
@@ -31,6 +31,16 @@ function presetToDates(preset: Preset): { start: string; end: string } {
     d.setDate(d.getDate() - n);
     return d.toISOString().slice(0, 10);
   };
+  const hoursAgo = (n: number) => {
+    const d = new Date(now);
+    d.setHours(d.getHours() - n);
+    return d.toISOString();
+  };
+  // Sub-day presets resolve to "today" since chart data is daily-bucketed.
+  // The ISO datetime is preserved for future intra-day chart support.
+  if (preset === "1h") return { start: hoursAgo(1), end: now.toISOString() };
+  if (preset === "6h") return { start: hoursAgo(6), end: now.toISOString() };
+  if (preset === "12h") return { start: hoursAgo(12), end: now.toISOString() };
   if (preset === "1d") return { start: daysAgo(1), end: today };
   if (preset === "7d") return { start: daysAgo(7), end: today };
   if (preset === "30d") return { start: daysAgo(30), end: today };
@@ -47,11 +57,89 @@ function defaultRange(): DateRange {
 
 function filterByRange<T extends { date: string }>(items: T[], range: DateRange): T[] {
   if (range.preset === "all" || (!range.start && !range.end)) return items;
+  // ISO string comparison works for both "YYYY-MM-DD" and full ISO datetime
+  const startCmp = range.start.slice(0, 10);
+  const endCmp = range.end.slice(0, 10);
   return items.filter((d) => {
-    if (range.start && d.date < range.start) return false;
-    if (range.end && d.date > range.end) return false;
+    if (startCmp && d.date < startCmp) return false;
+    if (endCmp && d.date > endCmp) return false;
     return true;
   });
+}
+
+// ── Data merge helpers ───────────────────────────────────────
+
+function mergeDailyActivity(
+  cacheData: DailyActivity[],
+  liveData: DailyActivity[],
+  cutoffDate: string | undefined,
+): DailyActivity[] {
+  if (!cutoffDate) return liveData.length > 0 ? liveData : cacheData;
+
+  // Cache for dates <= cutoff, live for dates after
+  const merged = new Map<string, DailyActivity>();
+  for (const d of cacheData) {
+    if (d.date <= cutoffDate) merged.set(d.date, d);
+  }
+  for (const d of liveData) {
+    if (d.date > cutoffDate) merged.set(d.date, d);
+  }
+  return Array.from(merged.values()).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function mergeDailyTokens(
+  cacheData: DailyModelTokens[],
+  liveData: DailyModelTokens[],
+  cutoffDate: string | undefined,
+): DailyModelTokens[] {
+  if (!cutoffDate) return liveData.length > 0 ? liveData : cacheData;
+
+  const merged = new Map<string, DailyModelTokens>();
+  for (const d of cacheData) {
+    if (d.date <= cutoffDate) merged.set(d.date, d);
+  }
+  for (const d of liveData) {
+    if (d.date > cutoffDate) merged.set(d.date, d);
+  }
+  return Array.from(merged.values()).sort((a, b) => a.date.localeCompare(b.date));
+}
+
+function mergeModelUsage(
+  cacheUsage: Record<string, ModelUsageEntry> | undefined,
+  liveUsage: Record<string, ModelUsageEntry> | undefined,
+): Record<string, ModelUsageEntry> {
+  const result: Record<string, ModelUsageEntry> = {};
+  for (const [model, entry] of Object.entries(cacheUsage ?? {})) {
+    result[model] = { ...entry };
+  }
+  for (const [model, entry] of Object.entries(liveUsage ?? {})) {
+    const existing = result[model];
+    if (existing) {
+      result[model] = {
+        inputTokens: (existing.inputTokens ?? 0) + (entry.inputTokens ?? 0),
+        outputTokens: (existing.outputTokens ?? 0) + (entry.outputTokens ?? 0),
+        cacheReadInputTokens: (existing.cacheReadInputTokens ?? 0) + (entry.cacheReadInputTokens ?? 0),
+        cacheCreationInputTokens: (existing.cacheCreationInputTokens ?? 0) + (entry.cacheCreationInputTokens ?? 0),
+      };
+    } else {
+      result[model] = { ...entry };
+    }
+  }
+  return result;
+}
+
+function mergeHourCounts(
+  cacheHours: Record<string, number> | undefined,
+  liveHours: Record<string, number> | undefined,
+): Record<string, number> {
+  const result: Record<string, number> = {};
+  for (const [h, c] of Object.entries(cacheHours ?? {})) {
+    result[h] = (result[h] ?? 0) + c;
+  }
+  for (const [h, c] of Object.entries(liveHours ?? {})) {
+    result[h] = (result[h] ?? 0) + c;
+  }
+  return result;
 }
 
 // ── Hooks ────────────────────────────────────────────────────
@@ -75,7 +163,8 @@ function getAccentColor() {
 
 // ── Stat card ────────────────────────────────────────────────
 
-function StatCard({ label, value, sub, tooltip }: { label: string; value: string; sub?: string; tooltip?: string }) {
+function StatCard({ label, value, sub, tooltip, accent }: { label: string; value: string; sub?: string; tooltip?: string; accent?: string }) {
+  const tint = accent ?? "var(--accent)";
   const labelEl = (
     <span style={{
       fontSize: "11px", fontWeight: 500, fontVariantCaps: "all-small-caps",
@@ -94,11 +183,12 @@ function StatCard({ label, value, sub, tooltip }: { label: string; value: string
       border: "1px solid var(--border-base)",
       borderRadius: "8px",
       padding: "12px 16px",
+      borderTop: `2px solid ${tint}`,
     }}>
-      <div style={{ fontSize: "20px", fontWeight: 600, letterSpacing: "-0.5px", color: "var(--fg-base)", lineHeight: 1.1, fontVariantNumeric: "tabular-nums" }}>
+      <div style={{ fontSize: "22px", fontWeight: 700, letterSpacing: "-0.5px", color: "var(--fg-base)", lineHeight: 1.1, fontVariantNumeric: "tabular-nums" }}>
         {value}
       </div>
-      <div style={{ marginTop: "4px" }}>
+      <div style={{ marginTop: "5px" }}>
         {tooltip ? <HKTooltip content={tooltip} position="bottom">{labelEl}</HKTooltip> : labelEl}
       </div>
       {sub && (
@@ -145,13 +235,15 @@ function GlobalDateControl({
   onResetOverrides: () => void;
   idPrefix?: string;
 }) {
+  const [showCustom, setShowCustom] = useState(false);
   const startId = idPrefix ? `${idPrefix}-start` : "range-start";
   const endId = idPrefix ? `${idPrefix}-end` : "range-end";
-  const presets: Preset[] = ["1d", "7d", "30d", "1y", "all"];
+  const presets: Preset[] = ["1h", "6h", "12h", "1d", "7d", "30d", "1y", "all"];
 
   function selectPreset(p: Preset) {
     const dates = presetToDates(p);
     onChange({ preset: p, ...dates });
+    setShowCustom(false);
   }
 
   function handleCustomDate(field: "start" | "end", value: string) {
@@ -159,63 +251,83 @@ function GlobalDateControl({
   }
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
-      {presets.map((p) => (
-        <Pill
-          key={p}
-          label={p === "all" ? "All" : p}
-          active={range.preset === p}
-          onClick={() => selectPreset(p)}
-        />
-      ))}
-      <div style={{ display: "flex", alignItems: "center", gap: "4px", marginLeft: "4px" }}>
-        <label htmlFor={startId} style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>Start date</label>
-        <input
-          id={startId}
-          type="date"
-          value={range.start}
-          onChange={(e) => handleCustomDate("start", e.target.value)}
-          style={{
-            fontSize: "11px",
-            padding: "2px 6px",
-            borderRadius: "5px",
-            border: "1px solid var(--border-base)",
-            background: "var(--bg-surface)",
-            color: "var(--fg-base)",
-          }}
-        />
-        <label htmlFor={endId} style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>End date</label>
-        <input
-          id={endId}
-          type="date"
-          value={range.end}
-          onChange={(e) => handleCustomDate("end", e.target.value)}
-          style={{
-            fontSize: "11px",
-            padding: "2px 6px",
-            borderRadius: "5px",
-            border: "1px solid var(--border-base)",
-            background: "var(--bg-surface)",
-            color: "var(--fg-base)",
-          }}
-        />
-      </div>
-      {hasOverrides && (
+    <div style={{ marginBottom: "16px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+        {presets.map((p) => (
+          <Pill
+            key={p}
+            label={p === "all" ? "All" : p}
+            active={range.preset === p}
+            onClick={() => selectPreset(p)}
+          />
+        ))}
         <button
-          onClick={onResetOverrides}
+          onClick={() => setShowCustom((s) => !s)}
           style={{
-            fontSize: "10px",
-            padding: "2px 8px",
-            borderRadius: "5px",
-            border: "1px solid var(--border-base)",
-            background: "var(--bg-base)",
-            color: "var(--fg-muted)",
+            fontSize: "11px",
+            fontWeight: range.preset === "custom" ? 600 : 400,
+            padding: "3px 10px",
+            borderRadius: "12px",
+            border: "1px solid",
+            borderColor: range.preset === "custom" ? "var(--accent)" : "var(--border-base)",
+            background: range.preset === "custom" ? "var(--accent-light)" : "transparent",
+            color: range.preset === "custom" ? "var(--accent-text)" : "var(--fg-muted)",
             cursor: "pointer",
-            marginLeft: "4px",
           }}
         >
-          Reset overrides
+          Custom
         </button>
+        {hasOverrides && (
+          <button
+            onClick={onResetOverrides}
+            style={{
+              fontSize: "10px",
+              padding: "2px 8px",
+              borderRadius: "5px",
+              border: "1px solid var(--border-base)",
+              background: "var(--bg-base)",
+              color: "var(--fg-muted)",
+              cursor: "pointer",
+              marginLeft: "4px",
+            }}
+          >
+            Reset overrides
+          </button>
+        )}
+      </div>
+      {(showCustom || range.preset === "custom") && (
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "8px", paddingLeft: "2px" }}>
+          <label htmlFor={startId} style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>From</label>
+          <input
+            id={startId}
+            type="date"
+            value={range.start.slice(0, 10)}
+            onChange={(e) => handleCustomDate("start", e.target.value)}
+            style={{
+              fontSize: "11px",
+              padding: "3px 8px",
+              borderRadius: "6px",
+              border: "1px solid var(--border-base)",
+              background: "var(--bg-surface)",
+              color: "var(--fg-base)",
+            }}
+          />
+          <label htmlFor={endId} style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>to</label>
+          <input
+            id={endId}
+            type="date"
+            value={range.end.slice(0, 10)}
+            onChange={(e) => handleCustomDate("end", e.target.value)}
+            style={{
+              fontSize: "11px",
+              padding: "3px 8px",
+              borderRadius: "6px",
+              border: "1px solid var(--border-base)",
+              background: "var(--bg-surface)",
+              color: "var(--fg-base)",
+            }}
+          />
+        </div>
       )}
     </div>
   );
@@ -303,14 +415,13 @@ const axisStyle = { fontSize: 10, fill: "var(--fg-subtle)" };
 // ── Main component ────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const [data, setData] = useState<StatsCache | null>(null);
-  const [liveActivity, setLiveActivity] = useState<LiveDailyActivity[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { cache, liveActivity, liveStats, loading, isRefreshing, error, lastRefreshed, refresh } = useObservatoryData();
   const [globalRange, setGlobalRange] = useState<DateRange>(defaultRange);
   const [chartOverrides, setChartOverrides] = useState<Record<string, DateRange | null>>({});
   const [accentColor, setAccentColor] = useState(getAccentColor);
   const reducedMotion = useReducedMotion();
+
+  const cutoffDate = cache?.lastComputedDate;
 
   function setChartOverride(chartId: string, range: DateRange) {
     setChartOverrides((prev) => ({ ...prev, [chartId]: range }));
@@ -326,23 +437,44 @@ export default function DashboardPage() {
     return chartOverrides[chartId] ?? globalRange;
   }
 
-  useEffect(() => {
-    Promise.all([
-      readStatsCache().then(setData),
-      readLiveActivity().then(setLiveActivity),
-    ])
-      .catch((e) => setError(String(e)))
-      .finally(() => setLoading(false));
-  }, []);
-
   // Re-read accent on mount to pick up dynamic theme
   useEffect(() => {
     setAccentColor(getAccentColor());
   }, []);
 
+  // Merge cache + live stats data
+  const mergedActivity = useMemo(() =>
+    mergeDailyActivity(
+      cache?.dailyActivity ?? [],
+      liveStats?.dailyActivity ?? [],
+      cutoffDate,
+    ),
+    [cache, liveStats, cutoffDate],
+  );
+
+  const mergedDailyTokens = useMemo(() =>
+    mergeDailyTokens(
+      cache?.dailyModelTokens ?? [],
+      liveStats?.dailyModelTokens ?? [],
+      cutoffDate,
+    ),
+    [cache, liveStats, cutoffDate],
+  );
+
+  const mergedModelUsage = useMemo(() =>
+    mergeModelUsage(cache?.modelUsage, liveStats?.modelUsage),
+    [cache, liveStats],
+  );
+
+  const mergedHourCounts = useMemo(() =>
+    mergeHourCounts(cache?.hourCounts, liveStats?.hourCounts),
+    [cache, liveStats],
+  );
+
+  // Messages chart uses liveActivity (from history.jsonl) for message/session counts
   const filteredMessagesActivity = useMemo(() =>
     filterByRange(liveActivity, rangeForChart("messages")),
-    [liveActivity, globalRange, chartOverrides]
+    [liveActivity, globalRange, chartOverrides],
   );
 
   const activityChartData = useMemo(() =>
@@ -350,7 +482,7 @@ export default function DashboardPage() {
       date: formatDate(d.date),
       messages: d.messageCount,
     })),
-    [filteredMessagesActivity]
+    [filteredMessagesActivity],
   );
 
   const sessionsChartData = useMemo(() => {
@@ -361,23 +493,22 @@ export default function DashboardPage() {
     }));
   }, [liveActivity, globalRange, chartOverrides]);
 
+  // Tool calls now uses merged data (cache + live JSONL scan)
   const toolCallsChartData = useMemo(() => {
-    const filtered = filterByRange(data?.dailyActivity ?? [], rangeForChart("toolCalls"));
+    const filtered = filterByRange(mergedActivity, rangeForChart("toolCalls"));
     return filtered.map((d) => ({
       date: formatDate(d.date),
       toolCalls: d.toolCallCount ?? 0,
     }));
-  }, [data, globalRange, chartOverrides]);
+  }, [mergedActivity, globalRange, chartOverrides]);
 
   const totalToolCalls = useMemo(() => {
-    if (!data?.dailyActivity) return 0;
-    return data.dailyActivity.reduce((sum, d) => sum + (d.toolCallCount ?? 0), 0);
-  }, [data]);
+    return mergedActivity.reduce((sum, d) => sum + (d.toolCallCount ?? 0), 0);
+  }, [mergedActivity]);
 
   const { totalOutputTokens, cacheHitRate } = useMemo(() => {
-    if (!data?.modelUsage) return { totalOutputTokens: 0, cacheHitRate: null };
     let outTokens = 0, cacheRead = 0, input = 0, cacheCreate = 0;
-    for (const m of Object.values(data.modelUsage)) {
+    for (const m of Object.values(mergedModelUsage)) {
       outTokens += m.outputTokens ?? 0;
       cacheRead += m.cacheReadInputTokens ?? 0;
       input += m.inputTokens ?? 0;
@@ -388,18 +519,18 @@ export default function DashboardPage() {
       totalOutputTokens: outTokens,
       cacheHitRate: total > 0 ? Math.round((cacheRead / total) * 100) : null,
     };
-  }, [data]);
+  }, [mergedModelUsage]);
 
   const { dailyTokensChartData, allModelNames } = useMemo(() => {
-    if (!data?.dailyModelTokens?.length) return { dailyTokensChartData: [], allModelNames: [] };
+    if (!mergedDailyTokens.length) return { dailyTokensChartData: [], allModelNames: [] };
 
     const modelSet = new Set<string>();
-    data.dailyModelTokens.forEach((d) => {
+    mergedDailyTokens.forEach((d) => {
       Object.keys(d.tokensByModel ?? {}).forEach((m) => modelSet.add(m));
     });
     const models = Array.from(modelSet);
 
-    const filtered = filterByRange(data.dailyModelTokens, rangeForChart("dailyTokens"));
+    const filtered = filterByRange(mergedDailyTokens, rangeForChart("dailyTokens"));
     const chartData = filtered.map((d) => {
       const row: Record<string, unknown> = { date: formatDate(d.date) };
       models.forEach((m) => {
@@ -412,18 +543,17 @@ export default function DashboardPage() {
       dailyTokensChartData: chartData,
       allModelNames: models.map(shortModelName),
     };
-  }, [data, globalRange, chartOverrides]);
+  }, [mergedDailyTokens, globalRange, chartOverrides]);
 
   const tokenTypeData = useMemo(() => {
-    if (!data?.modelUsage) return [];
-    return Object.entries(data.modelUsage).map(([model, usage]) => ({
+    return Object.entries(mergedModelUsage).map(([model, usage]) => ({
       name: shortModelName(model),
       Input: usage.inputTokens ?? 0,
       Output: usage.outputTokens ?? 0,
       "Cache Read": usage.cacheReadInputTokens ?? 0,
       "Cache Create": usage.cacheCreationInputTokens ?? 0,
     })).sort((a, b) => (b.Output) - (a.Output));
-  }, [data]);
+  }, [mergedModelUsage]);
 
   const TOKEN_TYPE_COLORS: Record<string, string> = {
     Input: "var(--fg-subtle)",
@@ -433,32 +563,20 @@ export default function DashboardPage() {
   };
 
   const hourlyChartData = useMemo(() => {
-    if (!data?.hourCounts) return [];
     return Array.from({ length: 24 }, (_, i) => ({
       hour: formatHour(i),
-      count: data.hourCounts?.[String(i)] ?? 0,
+      count: mergedHourCounts[String(i)] ?? 0,
     }));
-  }, [data]);
+  }, [mergedHourCounts]);
 
-  // Compute effective "last updated" from both data sources
+  // Effective "last updated" — combines cache date + live scan
   const effectiveLastUpdated = useMemo(() => {
-    const dates: string[] = [];
-    if (data?.lastComputedDate) dates.push(data.lastComputedDate);
-    if (liveActivity.length > 0) {
-      const latestLive = liveActivity[liveActivity.length - 1]?.date;
-      if (latestLive) dates.push(latestLive);
-    }
-    return dates.length > 0 ? dates.sort().pop()! : null;
-  }, [data, liveActivity]);
+    if (lastRefreshed) return lastRefreshed;
+    return null;
+  }, [lastRefreshed]);
 
-  const cacheIsStale = useMemo(() => {
-    if (!data?.lastComputedDate) return false;
-    const today = new Date().toISOString().slice(0, 10);
-    return data.lastComputedDate < today;
-  }, [data]);
-
-  const cacheSourceNote = cacheIsStale && data?.lastComputedDate
-    ? `cached \u00B7 ${formatDate(data.lastComputedDate)}`
+  const scanNote = liveStats
+    ? `${liveStats.scannedFiles} files in ${liveStats.scanDurationMs}ms`
     : undefined;
 
   if (loading) {
@@ -494,18 +612,46 @@ export default function DashboardPage() {
   return (
     <div style={{ padding: "20px 24px" }}>
       {/* Header */}
-      <div style={{ marginBottom: "16px" }}>
-        <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0, display: "inline" }}>
+      <div style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
+        <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
           Observatory
         </h1>
         {effectiveLastUpdated && (
-          <span style={{ fontSize: "10px", color: "var(--fg-subtle)", marginLeft: "8px" }}>
-            last updated {formatDate(effectiveLastUpdated)}
+          <span style={{ fontSize: "10px", color: "var(--fg-subtle)", marginTop: "1px" }}>
+            last updated {effectiveLastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           </span>
         )}
-        <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>
-          Claude Code usage patterns and activity trends
-        </p>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
+          {isRefreshing && (
+            <span style={{ fontSize: "10px", color: "var(--accent-text)", fontWeight: 500 }}>Refreshing…</span>
+          )}
+          <button
+            onClick={refresh}
+            disabled={isRefreshing}
+            title={scanNote ? `Last scan: ${scanNote}` : undefined}
+            style={{
+              fontSize: "11px",
+              fontWeight: 500,
+              padding: "4px 12px",
+              borderRadius: "6px",
+              border: "1px solid var(--border-base)",
+              background: "var(--bg-surface)",
+              color: "var(--fg-muted)",
+              cursor: isRefreshing ? "default" : "pointer",
+              opacity: isRefreshing ? 0.5 : 1,
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+              transition: "background 0.15s",
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ color: "currentColor" }}>
+              <path d="M21 12a9 9 0 1 1-2.63-6.36" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              <path d="M21 3v6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Refresh
+          </button>
+        </div>
       </div>
 
       {/* Global date range control */}
@@ -517,31 +663,32 @@ export default function DashboardPage() {
       />
 
       {/* Stats bar */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "16px", flexWrap: "wrap" }}>
-        <StatCard label="Total Sessions" value={formatNumber(data?.totalSessions ?? 0)} tooltip="Unique Claude Code sessions" />
-        <StatCard label="Total Messages" value={formatNumber(data?.totalMessages ?? 0)} tooltip="Total user messages across all sessions" />
-        <StatCard label="Tool Calls" value={formatNumber(totalToolCalls)} tooltip="Total tool invocations (Read, Edit, Bash, etc.)" />
+      <div style={{ display: "flex", gap: "10px", marginBottom: "18px", flexWrap: "wrap" }}>
+        <StatCard label="Sessions" value={formatNumber(cache?.totalSessions ?? 0)} tooltip="Unique Claude Code sessions" accent="#5b50e8" />
+        <StatCard label="Messages" value={formatNumber(cache?.totalMessages ?? 0)} tooltip="Total user messages across all sessions" accent="#2563eb" />
+        <StatCard label="Tool Calls" value={formatNumber(totalToolCalls)} tooltip="Total tool invocations (Read, Edit, Bash, etc.)" accent="#0d9488" />
         <StatCard label="Output Tokens" value={
           totalOutputTokens >= 1_000_000
             ? `${(totalOutputTokens / 1_000_000).toFixed(1)}M`
             : formatNumber(totalOutputTokens)
-        } tooltip="Total tokens generated by Claude across all models" />
+        } tooltip="Total tokens generated by Claude across all models" accent="#ea580c" />
         <StatCard
-          label="Cache Hit Rate"
+          label="Cache Hit"
           value={cacheHitRate !== null ? `${cacheHitRate}%` : "\u2014"}
-          sub="cache read / total input"
+          sub="read / total input"
           tooltip="Cache read tokens as a percentage of total input tokens"
+          accent="#16a34a"
         />
       </div>
 
-      {/* Messages chart — full width */}
+      {/* Messages chart — full width, hero chart */}
       <div style={{ marginBottom: "12px" }}>
         <ChartCard title="Messages per Day" chartId="messages"
           override={chartOverrides["messages"]} globalRange={globalRange}
           onOverride={(r) => setChartOverride("messages", r)}
           onClearOverride={() => clearOverride("messages")}
         >
-          <ResponsiveContainer width="100%" height={130}>
+          <ResponsiveContainer width="100%" height={160}>
             <AreaChart data={activityChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="msgGrad" x1="0" y1="0" x2="0" y2="1">
@@ -589,7 +736,6 @@ export default function DashboardPage() {
           override={chartOverrides["toolCalls"]} globalRange={globalRange}
           onOverride={(r) => setChartOverride("toolCalls", r)}
           onClearOverride={() => clearOverride("toolCalls")}
-          sourceNote={cacheSourceNote}
         >
           <ResponsiveContainer width="100%" height={120}>
             <AreaChart data={toolCallsChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
@@ -617,7 +763,6 @@ export default function DashboardPage() {
             override={chartOverrides["dailyTokens"]} globalRange={globalRange}
             onOverride={(r) => setChartOverride("dailyTokens", r)}
             onClearOverride={() => clearOverride("dailyTokens")}
-            sourceNote={cacheSourceNote}
           >
             <ResponsiveContainer width="100%" height={150}>
               <AreaChart data={dailyTokensChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
@@ -644,7 +789,7 @@ export default function DashboardPage() {
       {/* Token type breakdown — stacked horizontal bars (no range filter — totals only) */}
       {tokenTypeData.length > 0 && (
         <div style={{ marginBottom: "12px" }}>
-          <ChartCard title="Token Type Breakdown by Model" sourceNote={cacheSourceNote}>
+          <ChartCard title="Token Type Breakdown by Model">
             <ResponsiveContainer width="100%" height={Math.max(120, tokenTypeData.length * 36)}>
               <BarChart data={tokenTypeData} layout="vertical" margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
                 <XAxis type="number" tick={axisStyle} tickLine={false} axisLine={false}
@@ -666,7 +811,7 @@ export default function DashboardPage() {
 
       {/* Hourly distribution */}
       <div style={{ marginBottom: "12px" }}>
-        <ChartCard title="Activity by Hour of Day" sourceNote={cacheSourceNote}>
+        <ChartCard title="Activity by Hour of Day">
           {hourlyChartData.some((d) => d.count > 0) ? (
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={hourlyChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>

@@ -3,6 +3,7 @@ import AppLayout from "./layouts/AppLayout";
 import PreferencesPage from "./pages/PreferencesPage";
 import { getDefaultSection } from "./lib/preferences";
 import { ChatProvider } from "./context/ChatContext";
+import { ObservatoryProvider } from "./hooks/useObservatoryData";
 import HarnessFilePage from "./pages/harness/HarnessFilePage";
 import PluginsPage from "./pages/harness/PluginsPage";
 import HooksPage from "./pages/harness/HooksPage";
@@ -40,6 +41,7 @@ function DefaultRedirect() {
 export default function App() {
   return (
     <ChatProvider>
+      <ObservatoryProvider>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<AppLayout />}>
@@ -95,6 +97,7 @@ export default function App() {
           </Route>
         </Routes>
       </BrowserRouter>
+      </ObservatoryProvider>
     </ChatProvider>
   );
 }

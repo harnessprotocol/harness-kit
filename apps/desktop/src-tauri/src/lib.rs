@@ -67,6 +67,8 @@ pub fn run() {
             commands::observatory::read_session_facet,
             commands::observatory::list_active_sessions,
             commands::observatory::read_live_activity,
+            commands::observatory::compute_live_stats,
+            commands::observatory::read_session_transcript,
             // Comparator — live
             commands::comparator::detect_harnesses,
             commands::comparator::start_comparison,

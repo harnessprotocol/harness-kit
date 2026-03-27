@@ -3,6 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { StatsCache, LiveDailyActivity } from "@harness-kit/shared";
 import DashboardPage from "../DashboardPage";
+import { ObservatoryProvider } from "../../../hooks/useObservatoryData";
 
 // ── Recharts mock ─────────────────────────────────────────────
 // jsdom cannot render SVG/canvas; mock all recharts components as simple divs.
@@ -27,10 +28,12 @@ vi.mock("recharts", () => ({
 
 let mockReadStatsCache: () => Promise<unknown>;
 let mockReadLiveActivity: () => Promise<unknown>;
+let mockComputeLiveStats: () => Promise<unknown>;
 
 vi.mock("../../../lib/tauri", () => ({
   get readStatsCache() { return mockReadStatsCache; },
   get readLiveActivity() { return mockReadLiveActivity; },
+  get computeLiveStats() { return mockComputeLiveStats; },
 }));
 
 // ── Fixtures ──────────────────────────────────────────────────
@@ -66,7 +69,9 @@ const mockLiveActivity: LiveDailyActivity[] = [
 function renderDashboard() {
   return render(
     <MemoryRouter>
-      <DashboardPage />
+      <ObservatoryProvider>
+        <DashboardPage />
+      </ObservatoryProvider>
     </MemoryRouter>,
   );
 }
@@ -91,6 +96,7 @@ beforeEach(() => {
 
   mockReadStatsCache = vi.fn().mockResolvedValue(mockStats);
   mockReadLiveActivity = vi.fn().mockResolvedValue(mockLiveActivity);
+  mockComputeLiveStats = vi.fn().mockResolvedValue(null);
 });
 
 // ── Tests ─────────────────────────────────────────────────────
@@ -99,6 +105,7 @@ describe("DashboardPage — loading state", () => {
   it("shows 'Loading…' before data arrives", () => {
     // never-resolving promise keeps the loading state active
     mockReadStatsCache = () => new Promise(() => {});
+    mockComputeLiveStats = () => new Promise(() => {});
     renderDashboard();
     expect(screen.getByText("Loading…")).toBeInTheDocument();
   });
@@ -136,14 +143,18 @@ describe("DashboardPage — stats bar", () => {
 });
 
 describe("DashboardPage — error state", () => {
-  it("shows the error message when readStatsCache rejects", async () => {
+  it("shows the error message when all sources reject", async () => {
     mockReadStatsCache = () => Promise.reject(new Error("Failed to read stats"));
+    mockReadLiveActivity = () => Promise.reject(new Error("fail"));
+    mockComputeLiveStats = () => Promise.reject(new Error("fail"));
     renderDashboard();
     expect(await screen.findByText(/Failed to read stats/)).toBeInTheDocument();
   });
 
   it("does not show loading spinner after error", async () => {
     mockReadStatsCache = () => Promise.reject(new Error("Error"));
+    mockReadLiveActivity = () => Promise.reject(new Error("Error"));
+    mockComputeLiveStats = () => Promise.reject(new Error("Error"));
     renderDashboard();
     await screen.findByText(/Error/);
     expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
@@ -213,11 +224,10 @@ describe("date range control", () => {
     expect(screen.getByRole("button", { name: "All" })).toBeInTheDocument();
   });
 
-  it("renders custom date inputs", async () => {
+  it("renders custom date toggle", async () => {
     renderDashboard();
     await screen.findByText("200");
-    expect(screen.getByLabelText(/start date/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/end date/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Custom" })).toBeInTheDocument();
   });
 
   it("30d pill is active by default", async () => {

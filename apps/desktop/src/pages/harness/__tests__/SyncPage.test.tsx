@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import SyncPage from "../SyncPage";
 
@@ -78,13 +78,6 @@ function renderPage() {
   );
 }
 
-const REAL_SCAN = {
-  mcpServersJson: JSON.stringify({ mcpServers: { tauri: {}, grafana: {} } }),
-  settingsJson: JSON.stringify({ permissions: { allow: Array(16).fill("Bash") } }),
-  mcpSource: "~/.claude/mcp.json",
-  settingsSource: "~/.claude/settings.local.json",
-};
-
 // ── Tests ──────────────────────────────────────────────────────
 
 describe("SyncPage", () => {
@@ -97,46 +90,30 @@ describe("SyncPage", () => {
 
   it("renders without crashing", async () => {
     renderPage();
-    // Verify the page reaches its loaded empty-state (not just that the DOM exists)
+    // When no harness.yaml exists, shows the empty state
     await waitFor(() => {
-      expect(screen.getByText(/Generate from Claude Code setup/i)).toBeInTheDocument();
+      expect(screen.getByText(/No harness\.yaml found/i)).toBeInTheDocument();
     });
   });
 
-  it("does not fall back to template when scan returns real data", async () => {
-    mockScanClaudeConfig.mockResolvedValue(REAL_SCAN);
-    const { generateHarnessYaml } = await import("../../../lib/harness-generator");
+  it("shows harness.yaml found state when file exists", async () => {
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.claude/harness.yaml" });
 
     renderPage();
 
-    // Wait for loading to complete so the Generate button is visible
     await waitFor(() => {
-      expect(screen.queryByText(/Generate from Claude Code setup/i)).not.toBeNull();
-    });
-
-    fireEvent.click(screen.getByText(/Generate from Claude Code setup/i));
-
-    await waitFor(() => {
-      expect(generateHarnessYaml).toHaveBeenCalledWith(
-        expect.objectContaining({ mcpServersJson: expect.stringContaining("mcpServers") }),
-      );
+      expect(screen.getByText(/Sync/i)).toBeInTheDocument();
     });
   });
 
-  it("shows error message when scanClaudeConfig throws", async () => {
-    mockScanClaudeConfig.mockRejectedValue(new Error("command not found"));
+  it("renders empty state when readHarnessFile throws", async () => {
+    mockReadHarnessFile.mockRejectedValue(new Error("command not found"));
 
     renderPage();
 
-    // Wait for loading to complete so the Generate button is visible
+    // Falls back to empty state gracefully
     await waitFor(() => {
-      expect(screen.queryByText(/Generate from Claude Code setup/i)).not.toBeNull();
-    });
-
-    fireEvent.click(screen.getByText(/Generate from Claude Code setup/i));
-
-    await waitFor(() => {
-      expect(screen.queryByText(/command not found/i)).not.toBeNull();
+      expect(screen.getByText(/No harness\.yaml found/i)).toBeInTheDocument();
     });
   });
 });
