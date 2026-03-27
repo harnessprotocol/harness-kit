@@ -119,7 +119,10 @@ export function useComparison() {
       const [unlisten1, unlisten2, unlisten3] = await Promise.all([
         listen<PanelOutput>("comparator://output", (event) => {
           if (!cancelled && event.payload.comparisonId === state.comparisonId) {
-            dispatch({ type: "OUTPUT", panelId: event.payload.panelId, data: event.payload.data });
+            const text = event.payload.stream === "stderr"
+              ? `\x1b[31m${event.payload.data}\x1b[0m`
+              : event.payload.data;
+            dispatch({ type: "OUTPUT", panelId: event.payload.panelId, data: text });
           }
         }),
         listen<PanelComplete>("comparator://complete", (event) => {
