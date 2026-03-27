@@ -43,8 +43,11 @@ export default function MemoryWebView() {
     );
   }
 
-  // Strip /memory prefix to get the membrain SvelteKit path
-  const path = location.pathname.replace(/^\/memory/, '') || '/';
+  // Strip /memory prefix to get the membrain SvelteKit path.
+  // Validate against known routes to prevent path injection.
+  const ALLOWED_PREFIXES = ['/', '/graph', '/explore', '/entities', '/knowledge', '/context', '/trace', '/settings'];
+  const rawPath = location.pathname.replace(/^\/memory/, '') || '/';
+  const path = ALLOWED_PREFIXES.some(p => rawPath === p || rawPath.startsWith(p + '/')) ? rawPath : '/';
   const src = `${MEMBRAIN_SERVER_BASE}${path}`;
 
   return (

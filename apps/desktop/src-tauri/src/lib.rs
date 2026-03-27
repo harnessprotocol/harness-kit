@@ -149,12 +149,9 @@ pub fn run() {
             } else {
                 eprintln!("[board-server] not running — install with: pnpm board:install");
             }
-            // Auto-start membrain server on launch
-            let membrain_state = app.state::<MembrainServerState>();
-            match membrain_commands::membrain_start(membrain_state, None) {
-                Ok(msg) => eprintln!("[membrain] {msg}"),
-                Err(e) => eprintln!("[membrain] {e}"),
-            }
+            // membrain server starts on-demand when the user navigates to the
+            // Memory section (via useMembrainServerReady hook), not at app launch.
+            // This avoids opening a network listener until the Labs feature is enabled.
             Ok(())
         })
         .build(tauri::generate_context!())

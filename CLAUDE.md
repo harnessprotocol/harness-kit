@@ -30,7 +30,8 @@ harness-kit/
 │   ├── shared/                   ← shared TypeScript types (chat-types, etc.)
 │   ├── ui/                       ← shared React components
 │   ├── board-server/             ← WebSocket server for the kanban board feature
-│   └── chat-relay/               ← self-hosted WebSocket relay for team chat
+│   ├── chat-relay/               ← self-hosted WebSocket relay for team chat
+│   └── membrain/                 ← git submodule (siracusa5/membrain) — graph-based memory, excluded from pnpm workspace
 ├── apps/                         ← end-user applications
 │   ├── desktop/                  ← Tauri desktop app (React + Rust)
 │   ├── board/                    ← web board client

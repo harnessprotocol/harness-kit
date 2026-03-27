@@ -3,10 +3,15 @@
 ## Quick start
 
 ```
+git clone --recurse-submodules https://github.com/harnessprotocol/harness-kit.git
+cd harness-kit
+pnpm install
 git checkout -b feat/<plugin-name>
 # implement plugin (see CLAUDE.md for full 5-step guide)
 # open PR against main
 ```
+
+> If you already cloned without `--recurse-submodules`, run `git submodule update --init` to pull submodules (e.g., `packages/membrain`).
 
 CI runs on every PR. Squash merge only.
 
