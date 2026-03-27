@@ -6,7 +6,7 @@ import {
   createWorktrees, removeWorktrees, getDiffAgainstCommit, saveFileDiffs,
 } from "../../lib/tauri";
 import { useComparison, type PanelState } from "../../hooks/useComparison";
-import OutputPanel from "../../components/comparator/OutputPanel";
+import TerminalPane from "../../components/comparator/TerminalView";
 import DiffView from "../../components/comparator/DiffView";
 import EvaluationPanel from "../../components/comparator/EvaluationPanel";
 import ExportMenu from "../../components/comparator/ExportMenu";
@@ -345,7 +345,7 @@ export default function ComparatorRunPage() {
               key={panel.panelId}
               style={{ flex: 1, minWidth: 0, display: "flex", background: "var(--bg-base)" }}
             >
-              <OutputPanel panel={panel} onKill={handleKill} />
+              <TerminalPane panel={panel} onKill={handleKill} />
             </div>
           ))}
 

@@ -170,7 +170,8 @@ pub async fn start_comparison(
         let command = shell
             .command(cmd_name)
             .args(args)
-            .current_dir(cwd);
+            .current_dir(cwd)
+            .envs([("FORCE_COLOR", "1"), ("CLICOLOR_FORCE", "1")]);
 
         let (mut rx, child) = command
             .spawn()
