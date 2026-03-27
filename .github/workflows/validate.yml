@@ -145,15 +145,11 @@ jobs:
           "
 
       - name: Validate plugin.json against Protocol schema
+        # Schema is bundled at schema/plugin.schema.json — sync from harness-protocol
+        # repo (schema/draft/plugin.schema.json) when the upstream schema changes.
         run: |
           pip install -q 'jsonschema>=4.18,<5' || {
             echo "::error::Failed to install jsonschema"
-            exit 1
-          }
-
-          SCHEMA_URL="https://raw.githubusercontent.com/harnessprotocol/harness-protocol/main/schema/draft/plugin.schema.json"
-          curl -sf --max-time 30 "$SCHEMA_URL" -o /tmp/plugin.schema.json || {
-            echo "::error::Failed to fetch plugin schema from $SCHEMA_URL"
             exit 1
           }
 
@@ -161,7 +157,7 @@ jobs:
           import json, sys, glob
           from jsonschema import Draft202012Validator
 
-          schema = json.load(open('/tmp/plugin.schema.json'))
+          schema = json.load(open('schema/plugin.schema.json'))
           validator = Draft202012Validator(schema)
           errors = []
 

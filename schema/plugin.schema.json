@@ -1,0 +1,193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://harnessprotocol.io/schema/v1/plugin.schema.json",
+  "title": "Harness Protocol v1 — Plugin Manifest",
+  "description": "Schema for plugin.json manifests. Plugin authors use this to declare their plugin's identity, capabilities, and requirements.",
+  "type": "object",
+  "required": ["name", "description", "version"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9]([a-z0-9-]{0,62}[a-z0-9])?$",
+      "description": "Plugin identifier in lowercase kebab-case. Must match the directory name used when the plugin is installed. Max 64 characters."
+    },
+    "description": {
+      "type": "string",
+      "maxLength": 256,
+      "description": "One-sentence description of what this plugin does. Used in harness.yaml listings and discovery."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(?:-((?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\\+([0-9a-zA-Z-]+(?:\\.[0-9a-zA-Z-]+)*))?$",
+      "description": "Plugin version following semver 2.0.0. Used for version constraint resolution when harness.yaml specifies a 'version' range."
+    },
+    "author": {
+      "type": "object",
+      "required": ["name"],
+      "description": "Plugin author information.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Author display name."
+        },
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "description": "Author URL."
+        }
+      },
+      "additionalProperties": false
+    },
+    "license": {
+      "type": "string",
+      "description": "SPDX license expression. Examples: 'Apache-2.0', 'MIT'. Recommended for public plugins."
+    },
+    "category": {
+      "type": "string",
+      "pattern": "^[a-z0-9]([a-z0-9-]{0,30}[a-z0-9])?$",
+      "maxLength": 32,
+      "description": "Plugin category for discovery and marketplace organization. Lowercase kebab-case. Max 32 characters."
+    },
+    "tags": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 32
+      },
+      "maxItems": 10,
+      "uniqueItems": true,
+      "description": "Discovery and classification tags. Max 10 tags, each max 32 characters. Used for search and filtering."
+    },
+    "skills": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Names of skills this plugin provides. Each skill corresponds to a SKILL.md file. Used for documentation and discovery — not for validation."
+    },
+    "agents": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Names of sub-agents this plugin provides. Each agent corresponds to an agent definition file. Used for documentation and discovery."
+    },
+    "requires": {
+      "type": "object",
+      "description": "Plugin requirements that must be satisfied for the plugin to function.",
+      "properties": {
+        "env": {
+          "type": "array",
+          "description": "Environment variables this plugin needs. Uses the same env item schema as harness.yaml env[]. Implementations SHOULD surface these to users during install.",
+          "items": {
+            "type": "object",
+            "required": ["name", "description"],
+            "description": "An environment variable requirement.",
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[A-Z_][A-Z0-9_]*$",
+                "description": "Variable name in SCREAMING_SNAKE_CASE."
+              },
+              "description": {
+                "type": "string",
+                "description": "REQUIRED. Human-readable explanation of what this variable is for."
+              },
+              "required": {
+                "type": "boolean",
+                "default": false,
+                "description": "Whether the plugin will fail without this variable."
+              },
+              "sensitive": {
+                "type": "boolean",
+                "default": true,
+                "description": "Whether this variable contains sensitive data. Default: true. When true, 'default' is FORBIDDEN."
+              },
+              "when": {
+                "type": "string",
+                "description": "Human-readable description of when this variable is needed. Displayed to users when prompting. Implementations MAY evaluate it as a condition expression to suppress prompting when false; when not evaluated, it is shown as informational text."
+              },
+              "default": {
+                "type": "string",
+                "description": "Default value. FORBIDDEN when sensitive is true."
+              }
+            },
+            "if": {
+              "required": ["sensitive"],
+              "properties": {
+                "sensitive": {
+                  "const": false
+                }
+              }
+            },
+            "then": {},
+            "else": {
+              "properties": {
+                "default": false
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "min-protocol": {
+          "type": "string",
+          "pattern": "^(0|[1-9]\\d*)$",
+          "description": "Minimum Harness Protocol version required. Example: '1'. Implementations that encounter a plugin requiring a higher protocol version MUST warn the user."
+        }
+      },
+      "additionalProperties": false
+    },
+    "loading": {
+      "type": "string",
+      "enum": ["eager", "deferred"],
+      "default": "eager",
+      "description": "The plugin author's recommended loading mode. 'eager' loads all tools and context at session start (default). 'deferred' recommends loading on first invocation, reducing initial context size. Harness authors may override this in their plugins[] declaration."
+    },
+    "config-schema": {
+      "type": "object",
+      "description": "JSON Schema for the plugin's config object (the 'config' field in harness.yaml plugins[]). When present, implementations SHOULD validate harness.yaml plugin config against this schema.",
+      "additionalProperties": true
+    },
+    "mcp": {
+      "type": "object",
+      "description": "MCP server bundled with this plugin. The implementation starts this server alongside the plugin and registers its tools under a namespace derived from the plugin name.",
+      "required": ["server"],
+      "properties": {
+        "server": {
+          "type": "object",
+          "description": "Server declaration. Only stdio transport is supported for plugin-bundled servers.",
+          "required": ["transport", "command"],
+          "properties": {
+            "transport": {
+              "type": "string",
+              "const": "stdio",
+              "description": "Transport type. Plugin-bundled MCP servers use stdio (local subprocess)."
+            },
+            "command": {
+              "type": "string",
+              "description": "Executable to launch. Supports ${CLAUDE_PLUGIN_ROOT} for plugin-relative paths."
+            },
+            "args": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Command-line arguments. Values may reference ${CLAUDE_PLUGIN_ROOT}."
+            },
+            "env": {
+              "type": "object",
+              "description": "Additional environment variables for the server process.",
+              "additionalProperties": { "type": "string" }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "patternProperties": {
+    "^x-": {
+      "description": "Implementation-specific extension field. Implementations MUST ignore unrecognized x- fields."
+    }
+  },
+  "additionalProperties": false
+}
