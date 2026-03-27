@@ -146,10 +146,13 @@ jobs:
 
       - name: Validate plugin.json against Protocol schema
         run: |
-          pip install -q jsonschema 2>/dev/null
+          pip install -q 'jsonschema>=4.18,<5' || {
+            echo "::error::Failed to install jsonschema"
+            exit 1
+          }
 
           SCHEMA_URL="https://raw.githubusercontent.com/harnessprotocol/harness-protocol/main/schema/draft/plugin.schema.json"
-          curl -sf "$SCHEMA_URL" -o /tmp/plugin.schema.json || {
+          curl -sf --max-time 30 "$SCHEMA_URL" -o /tmp/plugin.schema.json || {
             echo "::error::Failed to fetch plugin schema from $SCHEMA_URL"
             exit 1
           }
