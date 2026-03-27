@@ -4,7 +4,7 @@
   "version": "0.3.0",
   "category": "code-quality",
   "tags": ["code-review", "pull-request", "static-analysis", "github"],
-  "developed_with": "claude-sonnet-4",
+  "x-developed-with": "claude-sonnet-4",
   "requires": {
     "env": [
       {

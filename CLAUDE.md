@@ -10,7 +10,7 @@ harness-kit/
 │   └── marketplace.json          ← marketplace catalog
 ├── .github/
 │   └── workflows/
-│       └── validate.yml          ← CI: manifest parsing + version alignment
+│       └── validate.yml          ← CI: manifest parsing, version alignment, schema validation
 ├── plugins/                      ← one directory per plugin (marketplace)
 │   ├── research/
 │   │   ├── .claude-plugin/

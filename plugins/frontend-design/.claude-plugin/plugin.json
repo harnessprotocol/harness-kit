@@ -4,5 +4,5 @@
   "version": "0.1.0",
   "category": "design",
   "tags": ["design", "frontend", "css", "typography", "color", "ui", "ux"],
-  "developed_with": "claude-sonnet-4-6"
+  "x-developed-with": "claude-sonnet-4-6"
 }

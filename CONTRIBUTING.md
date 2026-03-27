@@ -168,15 +168,16 @@ chore: set initial version to v0.1.0
 
 ## CI
 
-Five checks run on every PR via `validate.yml`:
+Six checks run on every PR via `validate.yml`:
 
 | Check | What it validates |
 |-------|------------------|
 | JSON manifests valid | `marketplace.json` and all `plugin.json` files parse without error |
 | Version alignment | `version` in `plugin.json` and `marketplace.json` must match exactly |
 | All plugins registered | Every `plugins/<name>/` directory has a matching `marketplace.json` entry |
-| `developed_with` field | Must be a non-empty string if present (optional field) |
+| `x-developed-with` field | Must be a non-empty string if present (optional field) |
 | `requires.env` schema | Each env entry has `name`, `description`, and valid `required`/`sensitive` booleans |
+| Protocol schema | All `plugin.json` files validate against the Protocol's `plugin.schema.json` |
 
 Plus four build jobs: `core-build-test`, `desktop-build-test`, `board-build`, `docs-build`. All must pass before merge. If they fail: fix manifests or source, push, CI re-runs automatically.
 

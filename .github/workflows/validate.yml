@@ -88,7 +88,7 @@ jobs:
               print(f'All {len(on_disk)} plugins registered: {sorted(on_disk)}')
           "
 
-      - name: Validate developed_with field
+      - name: Validate x-developed-with field
         run: |
           python3 -c "
           import json, sys, glob
@@ -97,18 +97,18 @@ jobs:
 
           for manifest_path in glob.glob('plugins/*/.claude-plugin/plugin.json'):
               manifest = json.load(open(manifest_path))
-              dw = manifest.get('developed_with')
+              dw = manifest.get('x-developed-with')
               if dw is not None:
                   if not isinstance(dw, str) or not dw.strip():
-                      errors.append(f'{manifest_path}: developed_with must be non-empty string if present, got {dw!r}')
+                      errors.append(f'{manifest_path}: x-developed-with must be non-empty string if present, got {dw!r}')
 
           if errors:
-              print('developed_with validation errors:')
+              print('x-developed-with validation errors:')
               for e in errors:
                   print(f'  {e}')
               sys.exit(1)
           else:
-              print('developed_with field valid (optional).')
+              print('x-developed-with field valid (optional).')
           "
 
       - name: Validate requires.env schema
@@ -142,6 +142,40 @@ jobs:
               sys.exit(1)
           else:
               print('requires.env schema valid.')
+          "
+
+      - name: Validate plugin.json against Protocol schema
+        # Schema is bundled at schema/plugin.schema.json — sync from harness-protocol
+        # repo (schema/draft/plugin.schema.json) when the upstream schema changes.
+        run: |
+          pip install -q 'jsonschema>=4.18,<5' || {
+            echo "::error::Failed to install jsonschema"
+            exit 1
+          }
+
+          python3 -c "
+          import json, sys, glob
+          from jsonschema import Draft202012Validator
+
+          schema = json.load(open('schema/plugin.schema.json'))
+          validator = Draft202012Validator(schema)
+          errors = []
+
+          for path in sorted(glob.glob('plugins/*/.claude-plugin/plugin.json')):
+              name = path.split('/')[1]
+              manifest = json.load(open(path))
+              for err in validator.iter_errors(manifest):
+                  loc = ' → '.join(str(p) for p in err.absolute_path) or '(root)'
+                  errors.append(f'{name}: [{loc}] {err.message}')
+                  print(f'::error file={path}::{err.message}')
+
+          if errors:
+              print(f'\nSchema validation failed ({len(errors)} error(s)):')
+              for e in errors:
+                  print(f'  {e}')
+              sys.exit(1)
+          else:
+              print('All plugin.json files valid against Protocol schema.')
           "
 
   core-build-test:
