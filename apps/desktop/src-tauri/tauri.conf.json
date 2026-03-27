@@ -25,17 +25,7 @@
       }
     ],
     "security": {
-      "csp": {
-        "default-src": "'self'",
-        "script-src": "'self'",
-        "style-src": "'self' 'unsafe-inline'",
-        "connect-src": "ipc: http://ipc.localhost http://localhost:* ws://localhost:*",
-        "frame-src": "http://localhost:3131",
-        "img-src": "'self' asset: http://asset.localhost data: blob:",
-        "font-src": "'self' data:",
-        "object-src": "'none'",
-        "base-uri": "'self'"
-      },
+      "csp": null,
       "devCsp": {
         "default-src": "'self'",
         "script-src": "'self' 'unsafe-inline'",
