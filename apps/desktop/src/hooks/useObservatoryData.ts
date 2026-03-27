@@ -1,6 +1,8 @@
-import { useEffect, useState, useCallback, useRef } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
+import type { ReactNode } from "react";
 import { readStatsCache, readLiveActivity, computeLiveStats } from "../lib/tauri";
 import type { StatsCache, LiveDailyActivity, LiveStats } from "@harness-kit/shared";
+import { createElement } from "react";
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const MIN_REFETCH_MS = 60 * 1000; // skip poll if fetched within 60s
@@ -16,7 +18,21 @@ export interface ObservatoryData {
   refresh: () => void;
 }
 
-export function useObservatoryData(): ObservatoryData {
+const INITIAL: ObservatoryData = {
+  cache: null,
+  liveActivity: [],
+  liveStats: null,
+  loading: true,
+  isRefreshing: false,
+  error: null,
+  lastRefreshed: null,
+  refresh: () => {},
+};
+
+const ObservatoryContext = createContext<ObservatoryData>(INITIAL);
+
+/** Wrap near the app root so data fetching starts immediately on launch. */
+export function ObservatoryProvider({ children }: { children: ReactNode }) {
   const [cache, setCache] = useState<StatsCache | null>(null);
   const [liveActivity, setLiveActivity] = useState<LiveDailyActivity[]>([]);
   const [liveStats, setLiveStats] = useState<LiveStats | null>(null);
@@ -65,7 +81,7 @@ export function useObservatoryData(): ObservatoryData {
     fetchAll(false);
   }, [fetchAll]);
 
-  // Initial load
+  // Fetch immediately on mount (app launch)
   useEffect(() => {
     fetchAll(true);
   }, [fetchAll]);
@@ -79,5 +95,12 @@ export function useObservatoryData(): ObservatoryData {
     return () => clearInterval(interval);
   }, [fetchAll]);
 
-  return { cache, liveActivity, liveStats, loading, isRefreshing, error, lastRefreshed, refresh };
+  const value: ObservatoryData = { cache, liveActivity, liveStats, loading, isRefreshing, error, lastRefreshed, refresh };
+
+  return createElement(ObservatoryContext.Provider, { value }, children);
+}
+
+/** Consume preloaded Observatory data. Must be inside ObservatoryProvider. */
+export function useObservatoryData(): ObservatoryData {
+  return useContext(ObservatoryContext);
 }

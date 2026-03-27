@@ -91,40 +91,49 @@ function TranscriptRow({ entry }: { entry: TranscriptEntry }) {
     ? new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })
     : "";
 
+  const isAssistant = entry.role === "assistant";
+
   return (
     <div style={{
       display: "flex",
       gap: "8px",
-      padding: "4px 0",
+      padding: isAssistant ? "5px 0 5px 0" : "4px 0",
       borderBottom: "1px solid var(--separator)",
       fontSize: "11px",
-      opacity: entry.isSubagent ? 0.75 : 1,
+      opacity: entry.isSubagent ? 0.7 : 1,
+      borderLeft: `2px solid ${roleColor}`,
+      paddingLeft: "8px",
+      marginLeft: entry.isSubagent ? "12px" : 0,
     }}>
       {/* Time */}
-      <span style={{ minWidth: "60px", color: "var(--fg-subtle)", fontVariantNumeric: "tabular-nums", flexShrink: 0 }}>
+      <span style={{ minWidth: "56px", color: "var(--fg-subtle)", fontVariantNumeric: "tabular-nums", flexShrink: 0, fontSize: "10px" }}>
         {time}
       </span>
 
       {/* Role badge */}
       <span style={{
-        minWidth: "55px",
+        minWidth: "52px",
         flexShrink: 0,
-        fontWeight: 500,
+        fontWeight: 600,
+        fontSize: "10px",
         color: roleColor,
+        textTransform: "uppercase",
+        letterSpacing: "0.03em",
       }}>
-        {entry.isSubagent ? `\u2514 ${entry.role}` : entry.role}
+        {entry.isSubagent ? `\u21B3 ${entry.role}` : entry.role}
       </span>
 
       {/* Model */}
       {entry.model && (
         <span style={{
           fontSize: "9px",
-          padding: "0 5px",
+          padding: "1px 6px",
           borderRadius: "4px",
-          background: "rgba(91,80,232,0.08)",
-          color: "#5b50e8",
+          background: "rgba(91,80,232,0.10)",
+          color: "var(--accent-text)",
           flexShrink: 0,
           alignSelf: "center",
+          fontWeight: 500,
         }}>
           {shortModelName(entry.model)}
         </span>
@@ -132,25 +141,31 @@ function TranscriptRow({ entry }: { entry: TranscriptEntry }) {
 
       {/* Tool chips */}
       {entry.toolNames.length > 0 && (
-        <div style={{ display: "flex", gap: "3px", flexWrap: "wrap", flexShrink: 0 }}>
-          {entry.toolNames.map((name, i) => (
+        <div style={{ display: "flex", gap: "3px", flexWrap: "wrap", flexShrink: 0, alignItems: "center" }}>
+          {entry.toolNames.slice(0, 5).map((name, i) => (
             <span key={i} style={{
               fontSize: "9px",
-              padding: "0 4px",
-              borderRadius: "3px",
-              background: "rgba(13,148,136,0.08)",
+              padding: "1px 5px",
+              borderRadius: "4px",
+              background: "rgba(13,148,136,0.10)",
               color: "#0d9488",
+              fontWeight: 500,
             }}>
               {name}
             </span>
           ))}
+          {entry.toolNames.length > 5 && (
+            <span style={{ fontSize: "9px", color: "var(--fg-subtle)" }}>
+              +{entry.toolNames.length - 5}
+            </span>
+          )}
         </div>
       )}
 
       {/* Token count */}
       {(entry.inputTokens || entry.outputTokens) && (
-        <span style={{ fontSize: "9px", color: "var(--fg-subtle)", flexShrink: 0, alignSelf: "center" }}>
-          {entry.outputTokens ? `${formatNumber(entry.outputTokens)} out` : ""}
+        <span style={{ fontSize: "9px", color: "var(--fg-subtle)", flexShrink: 0, alignSelf: "center", fontVariantNumeric: "tabular-nums" }}>
+          {entry.outputTokens ? `${formatNumber(entry.outputTokens)} tok` : ""}
         </span>
       )}
 
@@ -163,6 +178,7 @@ function TranscriptRow({ entry }: { entry: TranscriptEntry }) {
           whiteSpace: "nowrap",
           flex: 1,
           minWidth: 0,
+          fontSize: "10px",
         }}>
           {entry.contentPreview}
         </span>
@@ -226,21 +242,29 @@ function SessionDetail({
       {transcript && transcript.entries.length > 0 && (
         <div style={{
           display: "flex",
-          gap: "12px",
-          padding: "6px 0",
-          marginBottom: "6px",
-          borderBottom: "1px solid var(--separator)",
+          gap: "14px",
+          padding: "8px 10px",
+          marginBottom: "8px",
+          borderRadius: "6px",
+          background: "var(--hover-bg)",
           fontSize: "10px",
-          color: "var(--fg-subtle)",
+          color: "var(--fg-muted)",
+          fontWeight: 500,
         }}>
-          <span>{formatNumber(transcript.totalOutputTokens)} output tokens</span>
-          <span>{formatNumber(transcript.totalToolCalls)} tool calls</span>
+          <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            <span style={{ color: "#ea580c" }}>{formatNumber(transcript.totalOutputTokens)}</span> tokens out
+          </span>
+          <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+            <span style={{ color: "#0d9488" }}>{formatNumber(transcript.totalToolCalls)}</span> tool calls
+          </span>
           <span>{transcript.modelsUsed.map(shortModelName).join(", ")}</span>
           {transcript.subagentCount > 0 && (
-            <span>{transcript.subagentCount} subagent{transcript.subagentCount > 1 ? "s" : ""}</span>
+            <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+              <span style={{ color: "#5b50e8" }}>{transcript.subagentCount}</span> subagent{transcript.subagentCount > 1 ? "s" : ""}
+            </span>
           )}
           {transcript.truncated && (
-            <span style={{ color: "var(--warning)" }}>truncated to 500 entries</span>
+            <span style={{ color: "var(--warning)" }}>truncated</span>
           )}
         </div>
       )}

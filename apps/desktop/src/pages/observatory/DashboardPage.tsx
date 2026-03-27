@@ -163,7 +163,8 @@ function getAccentColor() {
 
 // ── Stat card ────────────────────────────────────────────────
 
-function StatCard({ label, value, sub, tooltip }: { label: string; value: string; sub?: string; tooltip?: string }) {
+function StatCard({ label, value, sub, tooltip, accent }: { label: string; value: string; sub?: string; tooltip?: string; accent?: string }) {
+  const tint = accent ?? "var(--accent)";
   const labelEl = (
     <span style={{
       fontSize: "11px", fontWeight: 500, fontVariantCaps: "all-small-caps",
@@ -182,11 +183,12 @@ function StatCard({ label, value, sub, tooltip }: { label: string; value: string
       border: "1px solid var(--border-base)",
       borderRadius: "8px",
       padding: "12px 16px",
+      borderTop: `2px solid ${tint}`,
     }}>
-      <div style={{ fontSize: "20px", fontWeight: 600, letterSpacing: "-0.5px", color: "var(--fg-base)", lineHeight: 1.1, fontVariantNumeric: "tabular-nums" }}>
+      <div style={{ fontSize: "22px", fontWeight: 700, letterSpacing: "-0.5px", color: "var(--fg-base)", lineHeight: 1.1, fontVariantNumeric: "tabular-nums" }}>
         {value}
       </div>
-      <div style={{ marginTop: "4px" }}>
+      <div style={{ marginTop: "5px" }}>
         {tooltip ? <HKTooltip content={tooltip} position="bottom">{labelEl}</HKTooltip> : labelEl}
       </div>
       {sub && (
@@ -233,6 +235,7 @@ function GlobalDateControl({
   onResetOverrides: () => void;
   idPrefix?: string;
 }) {
+  const [showCustom, setShowCustom] = useState(false);
   const startId = idPrefix ? `${idPrefix}-start` : "range-start";
   const endId = idPrefix ? `${idPrefix}-end` : "range-end";
   const presets: Preset[] = ["1h", "6h", "12h", "1d", "7d", "30d", "1y", "all"];
@@ -240,6 +243,7 @@ function GlobalDateControl({
   function selectPreset(p: Preset) {
     const dates = presetToDates(p);
     onChange({ preset: p, ...dates });
+    setShowCustom(false);
   }
 
   function handleCustomDate(field: "start" | "end", value: string) {
@@ -247,63 +251,83 @@ function GlobalDateControl({
   }
 
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap", marginBottom: "16px" }}>
-      {presets.map((p) => (
-        <Pill
-          key={p}
-          label={p === "all" ? "All" : p}
-          active={range.preset === p}
-          onClick={() => selectPreset(p)}
-        />
-      ))}
-      <div style={{ display: "flex", alignItems: "center", gap: "4px", marginLeft: "4px" }}>
-        <label htmlFor={startId} style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>Start date</label>
-        <input
-          id={startId}
-          type="date"
-          value={range.start.slice(0, 10)}
-          onChange={(e) => handleCustomDate("start", e.target.value)}
-          style={{
-            fontSize: "11px",
-            padding: "2px 6px",
-            borderRadius: "5px",
-            border: "1px solid var(--border-base)",
-            background: "var(--bg-surface)",
-            color: "var(--fg-base)",
-          }}
-        />
-        <label htmlFor={endId} style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>End date</label>
-        <input
-          id={endId}
-          type="date"
-          value={range.end.slice(0, 10)}
-          onChange={(e) => handleCustomDate("end", e.target.value)}
-          style={{
-            fontSize: "11px",
-            padding: "2px 6px",
-            borderRadius: "5px",
-            border: "1px solid var(--border-base)",
-            background: "var(--bg-surface)",
-            color: "var(--fg-base)",
-          }}
-        />
-      </div>
-      {hasOverrides && (
+    <div style={{ marginBottom: "16px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+        {presets.map((p) => (
+          <Pill
+            key={p}
+            label={p === "all" ? "All" : p}
+            active={range.preset === p}
+            onClick={() => selectPreset(p)}
+          />
+        ))}
         <button
-          onClick={onResetOverrides}
+          onClick={() => setShowCustom((s) => !s)}
           style={{
-            fontSize: "10px",
-            padding: "2px 8px",
-            borderRadius: "5px",
-            border: "1px solid var(--border-base)",
-            background: "var(--bg-base)",
-            color: "var(--fg-muted)",
+            fontSize: "11px",
+            fontWeight: range.preset === "custom" ? 600 : 400,
+            padding: "3px 10px",
+            borderRadius: "12px",
+            border: "1px solid",
+            borderColor: range.preset === "custom" ? "var(--accent)" : "var(--border-base)",
+            background: range.preset === "custom" ? "var(--accent-light)" : "transparent",
+            color: range.preset === "custom" ? "var(--accent-text)" : "var(--fg-muted)",
             cursor: "pointer",
-            marginLeft: "4px",
           }}
         >
-          Reset overrides
+          Custom
         </button>
+        {hasOverrides && (
+          <button
+            onClick={onResetOverrides}
+            style={{
+              fontSize: "10px",
+              padding: "2px 8px",
+              borderRadius: "5px",
+              border: "1px solid var(--border-base)",
+              background: "var(--bg-base)",
+              color: "var(--fg-muted)",
+              cursor: "pointer",
+              marginLeft: "4px",
+            }}
+          >
+            Reset overrides
+          </button>
+        )}
+      </div>
+      {(showCustom || range.preset === "custom") && (
+        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "8px", paddingLeft: "2px" }}>
+          <label htmlFor={startId} style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>From</label>
+          <input
+            id={startId}
+            type="date"
+            value={range.start.slice(0, 10)}
+            onChange={(e) => handleCustomDate("start", e.target.value)}
+            style={{
+              fontSize: "11px",
+              padding: "3px 8px",
+              borderRadius: "6px",
+              border: "1px solid var(--border-base)",
+              background: "var(--bg-surface)",
+              color: "var(--fg-base)",
+            }}
+          />
+          <label htmlFor={endId} style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>to</label>
+          <input
+            id={endId}
+            type="date"
+            value={range.end.slice(0, 10)}
+            onChange={(e) => handleCustomDate("end", e.target.value)}
+            style={{
+              fontSize: "11px",
+              padding: "3px 8px",
+              borderRadius: "6px",
+              border: "1px solid var(--border-base)",
+              background: "var(--bg-surface)",
+              color: "var(--fg-base)",
+            }}
+          />
+        </div>
       )}
     </div>
   );
@@ -588,38 +612,43 @@ export default function DashboardPage() {
   return (
     <div style={{ padding: "20px 24px" }}>
       {/* Header */}
-      <div style={{ marginBottom: "16px", display: "flex", alignItems: "baseline", gap: "8px" }}>
+      <div style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
         <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
           Observatory
         </h1>
         {effectiveLastUpdated && (
-          <span style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>
-            last updated {effectiveLastUpdated.toLocaleTimeString()}
+          <span style={{ fontSize: "10px", color: "var(--fg-subtle)", marginTop: "1px" }}>
+            {effectiveLastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           </span>
         )}
-        {scanNote && (
-          <span style={{ fontSize: "9px", color: "var(--fg-subtle)" }}>
-            ({scanNote})
-          </span>
-        )}
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "6px" }}>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
           {isRefreshing && (
-            <span style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>refreshing…</span>
+            <span style={{ fontSize: "10px", color: "var(--accent-text)", fontWeight: 500 }}>Refreshing…</span>
           )}
           <button
             onClick={refresh}
             disabled={isRefreshing}
+            title={scanNote ? `Last scan: ${scanNote}` : undefined}
             style={{
-              fontSize: "10px",
-              padding: "2px 8px",
-              borderRadius: "5px",
+              fontSize: "11px",
+              fontWeight: 500,
+              padding: "4px 12px",
+              borderRadius: "6px",
               border: "1px solid var(--border-base)",
               background: "var(--bg-surface)",
               color: "var(--fg-muted)",
               cursor: isRefreshing ? "default" : "pointer",
               opacity: isRefreshing ? 0.5 : 1,
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+              transition: "background 0.15s",
             }}
           >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ color: "currentColor" }}>
+              <path d="M21 12a9 9 0 1 1-2.63-6.36" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              <path d="M21 3v6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
             Refresh
           </button>
         </div>
@@ -634,31 +663,32 @@ export default function DashboardPage() {
       />
 
       {/* Stats bar */}
-      <div style={{ display: "flex", gap: "10px", marginBottom: "16px", flexWrap: "wrap" }}>
-        <StatCard label="Total Sessions" value={formatNumber(cache?.totalSessions ?? 0)} tooltip="Unique Claude Code sessions" />
-        <StatCard label="Total Messages" value={formatNumber(cache?.totalMessages ?? 0)} tooltip="Total user messages across all sessions" />
-        <StatCard label="Tool Calls" value={formatNumber(totalToolCalls)} tooltip="Total tool invocations (Read, Edit, Bash, etc.)" />
+      <div style={{ display: "flex", gap: "10px", marginBottom: "18px", flexWrap: "wrap" }}>
+        <StatCard label="Sessions" value={formatNumber(cache?.totalSessions ?? 0)} tooltip="Unique Claude Code sessions" accent="#5b50e8" />
+        <StatCard label="Messages" value={formatNumber(cache?.totalMessages ?? 0)} tooltip="Total user messages across all sessions" accent="#2563eb" />
+        <StatCard label="Tool Calls" value={formatNumber(totalToolCalls)} tooltip="Total tool invocations (Read, Edit, Bash, etc.)" accent="#0d9488" />
         <StatCard label="Output Tokens" value={
           totalOutputTokens >= 1_000_000
             ? `${(totalOutputTokens / 1_000_000).toFixed(1)}M`
             : formatNumber(totalOutputTokens)
-        } tooltip="Total tokens generated by Claude across all models" />
+        } tooltip="Total tokens generated by Claude across all models" accent="#ea580c" />
         <StatCard
-          label="Cache Hit Rate"
+          label="Cache Hit"
           value={cacheHitRate !== null ? `${cacheHitRate}%` : "\u2014"}
-          sub="cache read / total input"
+          sub="read / total input"
           tooltip="Cache read tokens as a percentage of total input tokens"
+          accent="#16a34a"
         />
       </div>
 
-      {/* Messages chart — full width */}
+      {/* Messages chart — full width, hero chart */}
       <div style={{ marginBottom: "12px" }}>
         <ChartCard title="Messages per Day" chartId="messages"
           override={chartOverrides["messages"]} globalRange={globalRange}
           onOverride={(r) => setChartOverride("messages", r)}
           onClearOverride={() => clearOverride("messages")}
         >
-          <ResponsiveContainer width="100%" height={130}>
+          <ResponsiveContainer width="100%" height={160}>
             <AreaChart data={activityChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="msgGrad" x1="0" y1="0" x2="0" y2="1">
