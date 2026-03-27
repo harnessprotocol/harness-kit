@@ -87,7 +87,7 @@ Run a BFS traversal to show how topics connect through the graph.
 
 **Requires:** membrain server running on `http://localhost:3131`
 
-1. Call `GET http://localhost:3131/api/v1/trace?q=<query>` (URL-encode the query)
+1. Call `GET http://localhost:3131/api/v1/trace?focus=<query>` (URL-encode the query)
 2. Parse the response — it includes traversal frames and token stats
 3. Display:
 
@@ -102,7 +102,7 @@ Starting node → relation → Node B → relation → Node C
 
 Token savings: retrieved ~X tokens of ~Y total (Z% saved)
 
-Open in browser: http://localhost:3131/trace?q=<query>
+Open in browser: http://localhost:3131/trace?focus=<query>
 ```
 
 If the server is not running:
@@ -134,14 +134,17 @@ Examples:
 Create a timestamped episode capturing a chunk of session knowledge.
 
 1. Extract a short name from the text (first sentence or ≤60 chars)
-2. Call `add_episode` with:
+2. Scan the text for entity names that exist in the graph (use recent `search_nodes` results if available)
+3. Call `add_episode` with:
    ```json
    {
      "name": "<short-name> (YYYY-MM-DD)",
      "summary": "<full text>",
-     "occurred_at": "<current ISO timestamp>"
+     "occurred_at": "<current ISO timestamp>",
+     "mentioned_entities": ["Entity1", "Entity2"]
    }
    ```
+   `mentioned_entities` auto-links the episode to existing graph entities — always include them when identifiable.
 3. On success: *"Episode created: **<name>**"*
 
 ---

@@ -135,7 +135,7 @@ Plugins can also include agent definitions — isolated specialist workers with 
 
 ## Desktop App
 
-The monorepo also ships a Tauri desktop app (`apps/desktop/`) — a companion tool that brings the harness concept to a native UI. It includes a sync engine that compiles `harness.yaml` to platform configs, a plugin explorer, a parity tracker, and an IRC-style team chat backed by a self-hosted WebSocket relay (`packages/chat-relay/`). The desktop app is a separate product from the plugin marketplace; see `apps/desktop/` for its own build instructions.
+The monorepo also ships a Tauri desktop app (`apps/desktop/`) — a companion tool that brings the harness concept to a native UI. It includes a sync engine that compiles `harness.yaml` to platform configs, a plugin explorer, a parity tracker, a knowledge graph viewer (via [membrain](https://github.com/siracusa5/membrain) integration), and an IRC-style team chat backed by a self-hosted WebSocket relay (`packages/chat-relay/`). The desktop app is a separate product from the plugin marketplace; see `apps/desktop/` for its own build instructions.
 
 ## Contributing
 

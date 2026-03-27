@@ -4,6 +4,8 @@ Search, trace, and manage your [membrain](https://github.com/siracusa5/membrain)
 
 ## Prerequisites
 
+- **Go 1.25+** (membrain uses Go modules)
+
 ```bash
 go install github.com/siracusa5/membrain/cmd/mem@latest
 ```
@@ -59,3 +61,5 @@ If the membrain MCP tools are not connected, the skill prints install and config
 ## Desktop UI
 
 When the HTTP server is running (`mem serve`), the full membrain UI is available at `http://localhost:3131`. In the harness-kit desktop app, it appears as the **Memory** section with full sub-page navigation.
+
+> **Note:** Memory is a Labs feature. Enable it via **Preferences → Labs → Memory** in the desktop app. The membrain server starts automatically when you first open the Memory section.
