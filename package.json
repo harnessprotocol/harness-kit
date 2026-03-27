@@ -26,5 +26,11 @@
     "board:status": "pnpm --filter board-server launchd:status",
     "board:logs": "pnpm --filter board-server launchd:logs",
     "board:restart": "pnpm --filter board-server launchd:restart"
+  },
+  "pnpm": {
+    "overrides": {
+      "picomatch": ">=4.0.4",
+      "dompurify": ">=3.3.2"
+    }
   }
 }
