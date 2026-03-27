@@ -27,6 +27,8 @@ fn main() {
                 "read_session_facet",
                 "list_active_sessions",
                 "read_live_activity",
+                "compute_live_stats",
+                "read_session_transcript",
                 // Comparator — live
                 "detect_harnesses",
                 "start_comparison",

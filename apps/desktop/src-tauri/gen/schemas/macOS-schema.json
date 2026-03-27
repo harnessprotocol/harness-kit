@@ -2301,10 +2301,22 @@
           "markdownDescription": "Enables the clear_audit_entries command without any pre-configured scope."
         },
         {
+          "description": "Enables the compute_live_stats command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-compute-live-stats",
+          "markdownDescription": "Enables the compute_live_stats command without any pre-configured scope."
+        },
+        {
           "description": "Enables the create_config_file command without any pre-configured scope.",
           "type": "string",
           "const": "allow-create-config-file",
           "markdownDescription": "Enables the create_config_file command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the create_evaluation_session command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-create-evaluation-session",
+          "markdownDescription": "Enables the create_evaluation_session command without any pre-configured scope."
         },
         {
           "description": "Enables the create_worktrees command without any pre-configured scope.",
@@ -2317,6 +2329,12 @@
           "type": "string",
           "const": "allow-delete-comparison",
           "markdownDescription": "Enables the delete_comparison command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the delete_custom_profile command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-delete-custom-profile",
+          "markdownDescription": "Enables the delete_custom_profile command without any pre-configured scope."
         },
         {
           "description": "Enables the delete_keychain_secret command without any pre-configured scope.",
@@ -2379,6 +2397,12 @@
           "markdownDescription": "Enables the get_diff_against_commit command without any pre-configured scope."
         },
         {
+          "description": "Enables the get_evaluation_session command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-evaluation-session",
+          "markdownDescription": "Enables the get_evaluation_session command without any pre-configured scope."
+        },
+        {
           "description": "Enables the get_evaluations command without any pre-configured scope.",
           "type": "string",
           "const": "allow-get-evaluations",
@@ -2389,6 +2413,18 @@
           "type": "string",
           "const": "allow-get-history-size",
           "markdownDescription": "Enables the get_history_size command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_pairwise_analytics command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-pairwise-analytics",
+          "markdownDescription": "Enables the get_pairwise_analytics command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_pairwise_votes command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-pairwise-votes",
+          "markdownDescription": "Enables the get_pairwise_votes command without any pre-configured scope."
         },
         {
           "description": "Enables the get_parity_drift command without any pre-configured scope.",
@@ -2449,6 +2485,12 @@
           "type": "string",
           "const": "allow-list-comparisons",
           "markdownDescription": "Enables the list_comparisons command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the list_custom_profiles command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-list-custom-profiles",
+          "markdownDescription": "Enables the list_custom_profiles command without any pre-configured scope."
         },
         {
           "description": "Enables the list_installed_plugins command without any pre-configured scope.",
@@ -2547,6 +2589,12 @@
           "markdownDescription": "Enables the read_session_facet command without any pre-configured scope."
         },
         {
+          "description": "Enables the read_session_transcript command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-read-session-transcript",
+          "markdownDescription": "Enables the read_session_transcript command without any pre-configured scope."
+        },
+        {
           "description": "Enables the read_stats_cache command without any pre-configured scope.",
           "type": "string",
           "const": "allow-read-stats-cache",
@@ -2557,6 +2605,12 @@
           "type": "string",
           "const": "allow-remove-worktrees",
           "markdownDescription": "Enables the remove_worktrees command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the reveal_evaluation_session command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-reveal-evaluation-session",
+          "markdownDescription": "Enables the reveal_evaluation_session command without any pre-configured scope."
         },
         {
           "description": "Enables the run_parity_scan command without any pre-configured scope.",
@@ -2571,6 +2625,12 @@
           "markdownDescription": "Enables the save_comparison command without any pre-configured scope."
         },
         {
+          "description": "Enables the save_custom_profile command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-save-custom-profile",
+          "markdownDescription": "Enables the save_custom_profile command without any pre-configured scope."
+        },
+        {
           "description": "Enables the save_evaluation command without any pre-configured scope.",
           "type": "string",
           "const": "allow-save-evaluation",
@@ -2581,6 +2641,12 @@
           "type": "string",
           "const": "allow-save-file-diffs",
           "markdownDescription": "Enables the save_file_diffs command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the save_pairwise_vote command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-save-pairwise-vote",
+          "markdownDescription": "Enables the save_pairwise_vote command without any pre-configured scope."
         },
         {
           "description": "Enables the save_panel_result command without any pre-configured scope.",
@@ -2799,10 +2865,22 @@
           "markdownDescription": "Denies the clear_audit_entries command without any pre-configured scope."
         },
         {
+          "description": "Denies the compute_live_stats command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-compute-live-stats",
+          "markdownDescription": "Denies the compute_live_stats command without any pre-configured scope."
+        },
+        {
           "description": "Denies the create_config_file command without any pre-configured scope.",
           "type": "string",
           "const": "deny-create-config-file",
           "markdownDescription": "Denies the create_config_file command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the create_evaluation_session command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-create-evaluation-session",
+          "markdownDescription": "Denies the create_evaluation_session command without any pre-configured scope."
         },
         {
           "description": "Denies the create_worktrees command without any pre-configured scope.",
@@ -2815,6 +2893,12 @@
           "type": "string",
           "const": "deny-delete-comparison",
           "markdownDescription": "Denies the delete_comparison command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the delete_custom_profile command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-delete-custom-profile",
+          "markdownDescription": "Denies the delete_custom_profile command without any pre-configured scope."
         },
         {
           "description": "Denies the delete_keychain_secret command without any pre-configured scope.",
@@ -2877,6 +2961,12 @@
           "markdownDescription": "Denies the get_diff_against_commit command without any pre-configured scope."
         },
         {
+          "description": "Denies the get_evaluation_session command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-evaluation-session",
+          "markdownDescription": "Denies the get_evaluation_session command without any pre-configured scope."
+        },
+        {
           "description": "Denies the get_evaluations command without any pre-configured scope.",
           "type": "string",
           "const": "deny-get-evaluations",
@@ -2887,6 +2977,18 @@
           "type": "string",
           "const": "deny-get-history-size",
           "markdownDescription": "Denies the get_history_size command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_pairwise_analytics command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-pairwise-analytics",
+          "markdownDescription": "Denies the get_pairwise_analytics command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_pairwise_votes command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-pairwise-votes",
+          "markdownDescription": "Denies the get_pairwise_votes command without any pre-configured scope."
         },
         {
           "description": "Denies the get_parity_drift command without any pre-configured scope.",
@@ -2947,6 +3049,12 @@
           "type": "string",
           "const": "deny-list-comparisons",
           "markdownDescription": "Denies the list_comparisons command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the list_custom_profiles command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-list-custom-profiles",
+          "markdownDescription": "Denies the list_custom_profiles command without any pre-configured scope."
         },
         {
           "description": "Denies the list_installed_plugins command without any pre-configured scope.",
@@ -3045,6 +3153,12 @@
           "markdownDescription": "Denies the read_session_facet command without any pre-configured scope."
         },
         {
+          "description": "Denies the read_session_transcript command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-read-session-transcript",
+          "markdownDescription": "Denies the read_session_transcript command without any pre-configured scope."
+        },
+        {
           "description": "Denies the read_stats_cache command without any pre-configured scope.",
           "type": "string",
           "const": "deny-read-stats-cache",
@@ -3055,6 +3169,12 @@
           "type": "string",
           "const": "deny-remove-worktrees",
           "markdownDescription": "Denies the remove_worktrees command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the reveal_evaluation_session command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-reveal-evaluation-session",
+          "markdownDescription": "Denies the reveal_evaluation_session command without any pre-configured scope."
         },
         {
           "description": "Denies the run_parity_scan command without any pre-configured scope.",
@@ -3069,6 +3189,12 @@
           "markdownDescription": "Denies the save_comparison command without any pre-configured scope."
         },
         {
+          "description": "Denies the save_custom_profile command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-save-custom-profile",
+          "markdownDescription": "Denies the save_custom_profile command without any pre-configured scope."
+        },
+        {
           "description": "Denies the save_evaluation command without any pre-configured scope.",
           "type": "string",
           "const": "deny-save-evaluation",
@@ -3079,6 +3205,12 @@
           "type": "string",
           "const": "deny-save-file-diffs",
           "markdownDescription": "Denies the save_file_diffs command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the save_pairwise_vote command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-save-pairwise-vote",
+          "markdownDescription": "Denies the save_pairwise_vote command without any pre-configured scope."
         },
         {
           "description": "Denies the save_panel_result command without any pre-configured scope.",
