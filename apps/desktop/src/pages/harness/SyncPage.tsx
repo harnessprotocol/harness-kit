@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { useChat } from "../../context/ChatContext";
 import { emitChatShare } from "../../lib/chat-events";
 import { compile, detectPlatforms, parseHarness } from "@harness-kit/core";
 import type { CompileResult, DetectedPlatform, TargetPlatform } from "@harness-kit/core";
 import {
   readHarnessFile,
-  scanClaudeConfig,
   syncCreateBackup,
   syncFileExists,
   syncListBackups,
@@ -13,11 +13,6 @@ import {
 } from "../../lib/tauri";
 import type { BackupManifest } from "../../lib/tauri";
 import { SyncFsProvider } from "../../lib/sync-fs";
-import { generateHarnessYaml, HARNESS_TEMPLATE } from "../../lib/harness-generator";
-import type { GenerateSummary } from "../../lib/harness-generator";
-import HarnessEditorModal from "../../components/HarnessEditorModal";
-import ProfilePickerModal from "../../components/ProfilePickerModal";
-import type { HarnessProfile } from "../../lib/profiles";
 import SyncPreview from "./sync/SyncPreview";
 import BackupHistory from "./sync/BackupHistory";
 
@@ -75,16 +70,6 @@ export default function SyncPage() {
   const [harnessDescription, setHarnessDescription] = useState<string | null>(null);
   const [harnessLoading, setHarnessLoading] = useState(true);
 
-  // Editor modal
-  const [editorOpen, setEditorOpen] = useState(false);
-  const [editorContent, setEditorContent] = useState("");
-  const [generating, setGenerating] = useState(false);
-  const [generateSummary, setGenerateSummary] = useState<GenerateSummary | null>(null);
-  const [generateError, setGenerateError] = useState<string | null>(null);
-
-  // Profile picker modal
-  const [profilePickerOpen, setProfilePickerOpen] = useState(false);
-
   // Project dir
   const [projectDir, setProjectDir] = useState("");
   const [recentDirs] = useState<string[]>(getRecentDirs);
@@ -135,54 +120,6 @@ export default function SyncPage() {
 
   useEffect(() => { loadHarness(); }, [loadHarness]);
   useEffect(() => { syncListBackups().then(setBackups).catch(() => {}); }, []);
-
-  // Open editor with current content
-  function openEditor() {
-    setEditorContent(harnessContent ?? HARNESS_TEMPLATE);
-    setEditorOpen(true);
-  }
-
-  // Generate harness from Claude Code config
-  async function handleGenerate() {
-    setGenerating(true);
-    setGenerateError(null);
-    setGenerateSummary(null);
-    try {
-      const scan = await scanClaudeConfig();
-      const { yaml, summary } = generateHarnessYaml(scan);
-      setGenerateSummary(summary);
-      setEditorContent(yaml);
-      setEditorOpen(true);
-    } catch (e) {
-      setGenerateError(String(e));
-      setEditorContent(HARNESS_TEMPLATE);
-      setEditorOpen(true);
-    } finally {
-      setGenerating(false);
-    }
-  }
-
-  // Profile picker
-  function handleProfileSelect(profile: HarnessProfile) {
-    setProfilePickerOpen(false);
-    setEditorContent(profile.yaml);
-    setEditorOpen(true);
-  }
-
-  // After editor saves, update state with the saved path returned by the modal
-  function handleEditorSaved(newContent: string, savedPath: string) {
-    setHarnessContent(newContent);
-    setHarnessPath(savedPath);
-    try {
-      const { config } = parseHarness(newContent);
-      setHarnessName(config.metadata?.name ?? "default");
-      setHarnessDescription(config.metadata?.description ?? null);
-    } catch {}
-    setEditorOpen(false);
-    // Reset sync phase so user can preview with new content
-    setPhase("idle");
-    setPreviewResult(null);
-  }
 
   // Debounced dir validation + platform detection
   const handleDirChange = useCallback((dir: string) => {
@@ -289,30 +226,28 @@ export default function SyncPage() {
             </p>
           </div>
 
-          {harnessContent && !harnessLoading && (
-            <button
-              onClick={openEditor}
-              style={{
-                display: "flex", alignItems: "center", gap: "5px",
-                padding: "5px 11px", borderRadius: "6px",
-                border: "1px solid var(--border-base)",
-                background: "var(--bg-elevated)",
-                color: "var(--fg-base)", fontSize: "11px", fontWeight: 500,
-                cursor: "pointer", flexShrink: 0,
-              }}
-            >
-              <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-              </svg>
-              Edit harness.yaml
-            </button>
-          )}
+          <Link
+            to="/harness/file"
+            style={{
+              display: "flex", alignItems: "center", gap: "5px",
+              padding: "5px 11px", borderRadius: "6px",
+              border: "1px solid var(--border-base)",
+              background: "var(--bg-elevated)",
+              color: "var(--fg-base)", fontSize: "11px", fontWeight: 500,
+              cursor: "pointer", textDecoration: "none", flexShrink: 0,
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+            </svg>
+            Edit harness.yaml
+          </Link>
         </div>
 
         {/* No harness.yaml — empty state */}
         {!harnessLoading && !harnessContent && (
           <Card>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "14px", padding: "20px 0 8px", textAlign: "center" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", padding: "16px 0 8px", textAlign: "center" }}>
               <div style={{
                 width: "40px", height: "40px", borderRadius: "10px",
                 background: "var(--bg-elevated)", border: "1px solid var(--border-base)",
@@ -321,62 +256,24 @@ export default function SyncPage() {
               }}>
                 🧰
               </div>
-              <div>
-                <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)", margin: "0 0 4px" }}>
-                  No harness.yaml found
-                </p>
-                <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: 0, maxWidth: "400px", lineHeight: "1.5" }}>
-                  harness.yaml is the single source of truth for your AI assistant configuration —
-                  MCP servers, instructions, permissions, and more.
-                </p>
-              </div>
-
-              {/* Generate summary (shown after scan) */}
-              {generateSummary && (
-                <div style={{
-                  padding: "8px 14px", borderRadius: "6px",
-                  background: "var(--bg-elevated)", border: "1px solid var(--border-base)",
-                  fontSize: "11px", color: "var(--fg-muted)", textAlign: "left",
-                }}>
-                  {generateSummary.mcpSource
-                    ? <span>Found <strong style={{ color: "var(--fg-base)" }}>{generateSummary.mcpServerCount} MCP server{generateSummary.mcpServerCount !== 1 ? "s" : ""}</strong> from <code style={{ fontFamily: "ui-monospace, monospace" }}>{generateSummary.mcpSource}</code></span>
-                    : <span style={{ color: "var(--fg-subtle)" }}>No MCP config found</span>
-                  }
-                  {" · "}
-                  {generateSummary.settingsSource
-                    ? <span><strong style={{ color: "var(--fg-base)" }}>{generateSummary.allowCount}</strong> allowed tools from <code style={{ fontFamily: "ui-monospace, monospace" }}>{generateSummary.settingsSource}</code></span>
-                    : <span style={{ color: "var(--fg-subtle)" }}>No settings found</span>
-                  }
-                </div>
-              )}
-              {generateError && (
-                <p style={{ margin: 0, fontSize: "11px", color: "var(--danger)" }}>{generateError}</p>
-              )}
-
-              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "center" }}>
-                <button
-                  onClick={handleGenerate}
-                  disabled={generating}
-                  style={{
-                    padding: "7px 14px", borderRadius: "6px", border: "none",
-                    background: "var(--accent)", color: "var(--accent-text, #fff)",
-                    fontSize: "12px", fontWeight: 600, cursor: generating ? "not-allowed" : "pointer",
-                  }}
-                >
-                  {generating ? "Scanning…" : "Generate from Claude Code setup"}
-                </button>
-                <button
-                  onClick={() => setProfilePickerOpen(true)}
-                  style={{
-                    padding: "7px 14px", borderRadius: "6px",
-                    border: "1px solid var(--border-base)",
-                    background: "var(--bg-elevated)", color: "var(--fg-base)",
-                    fontSize: "12px", cursor: "pointer",
-                  }}
-                >
-                  Start from a profile
-                </button>
-              </div>
+              <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)", margin: 0 }}>
+                No harness.yaml found
+              </p>
+              <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: 0, maxWidth: "400px", lineHeight: "1.5" }}>
+                Create your harness.yaml first, then come back to sync it to your projects.
+              </p>
+              <Link
+                to="/harness/file"
+                style={{
+                  padding: "7px 14px", borderRadius: "6px",
+                  border: "none",
+                  background: "var(--accent)", color: "var(--accent-text, #fff)",
+                  fontSize: "12px", fontWeight: 600, cursor: "pointer",
+                  textDecoration: "none", marginTop: "4px",
+                }}
+              >
+                Create harness.yaml
+              </Link>
             </div>
           </Card>
         )}
@@ -607,21 +504,6 @@ export default function SyncPage() {
 
       </div>
 
-      {/* Profile picker modal */}
-      <ProfilePickerModal
-        open={profilePickerOpen}
-        onClose={() => setProfilePickerOpen(false)}
-        onSelect={handleProfileSelect}
-      />
-
-      {/* Editor modal — rendered over everything */}
-      <HarnessEditorModal
-        open={editorOpen}
-        initialContent={editorContent}
-        filePath={harnessPath ?? "~/.claude/harness.yaml"}
-        onClose={() => setEditorOpen(false)}
-        onSaved={handleEditorSaved}
-      />
     </>
   );
 }

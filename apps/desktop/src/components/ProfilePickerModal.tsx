@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { PROFILES } from "../lib/profiles";
 import type { HarnessProfile } from "../lib/profiles";
+import { listCustomProfiles, getCustomProfile, deleteCustomProfile } from "../lib/tauri";
+import type { CustomProfile } from "../lib/tauri";
 
 interface ProfilePickerModalProps {
   open: boolean;
@@ -11,15 +13,59 @@ interface ProfilePickerModalProps {
 
 export default function ProfilePickerModal({ open, onClose, onSelect }: ProfilePickerModalProps) {
   const [hovered, setHovered] = useState<string | null>(null);
+  const [customProfiles, setCustomProfiles] = useState<CustomProfile[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
+    listCustomProfiles().then(setCustomProfiles).catch(() => {});
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+
+  async function handleDelete(id: string, e: React.MouseEvent) {
+    e.stopPropagation();
+    if (!window.confirm(`Delete profile "${id}"?`)) return;
+    setDeletingId(id);
+    setDeleteError(null);
+    try {
+      await deleteCustomProfile(id);
+      setCustomProfiles((prev) => prev.filter((p) => p.id !== id));
+    } catch (err) {
+      setDeleteError(String(err));
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  async function handleCustomSelect(p: CustomProfile) {
+    setLoadingId(p.id);
+    setLoadError(null);
+    try {
+      const yaml = await getCustomProfile(p.id);
+      onSelect({ id: p.id, name: p.name, description: p.description, icon: "📄", tags: [], yaml });
+    } catch (err) {
+      setLoadError(String(err));
+    } finally {
+      setLoadingId(null);
+    }
+  }
+
+  const sectionLabel = (text: string) => (
+    <div style={{
+      fontSize: "10px", fontWeight: 600, textTransform: "uppercase",
+      letterSpacing: "0.5px", color: "var(--fg-subtle)",
+      padding: "8px 0 6px", marginTop: "4px",
+    }}>
+      {text}
+    </div>
+  );
 
   return (
     <AnimatePresence>
@@ -91,64 +137,141 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
               </button>
             </div>
 
-            {/* Grid */}
-            <div style={{
-              overflowY: "auto",
-              padding: "14px 16px",
-              display: "grid",
-              gridTemplateColumns: "repeat(2, 1fr)",
-              gap: "10px",
-            }}>
-              {PROFILES.map((profile) => (
-                <button
-                  key={profile.id}
-                  onClick={() => onSelect(profile)}
-                  onMouseEnter={() => setHovered(profile.id)}
-                  onMouseLeave={() => setHovered(null)}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "6px",
-                    padding: "14px",
-                    borderRadius: "8px",
-                    border: `1px solid ${hovered === profile.id ? "var(--accent)" : "var(--border-base)"}`,
-                    background: hovered === profile.id ? "var(--bg-elevated)" : "var(--bg-base)",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    transition: "border-color 0.1s, background 0.1s",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                    <span style={{ fontSize: "20px", lineHeight: 1 }}>{profile.icon}</span>
-                    <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)" }}>
-                      {profile.name}
-                    </span>
-                  </div>
-                  <p style={{ margin: 0, fontSize: "11px", color: "var(--fg-muted)", lineHeight: "1.5" }}>
-                    {profile.description}
-                  </p>
-                  <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
-                    {profile.tags.map((tag) => (
-                      <span
-                        key={tag}
+            {/* Content */}
+            <div style={{ overflowY: "auto", padding: "0 16px 16px" }}>
+              {deleteError && (
+                <div style={{ margin: "10px 0 0", padding: "8px 12px", borderRadius: "6px", background: "var(--bg-surface)", border: "1px solid var(--danger)", fontSize: "11px", color: "var(--danger)" }}>
+                  Failed to delete profile: {deleteError}
+                </div>
+              )}
+              {loadError && (
+                <div style={{ margin: "10px 0 0", padding: "8px 12px", borderRadius: "6px", background: "var(--bg-surface)", border: "1px solid var(--danger)", fontSize: "11px", color: "var(--danger)" }}>
+                  Failed to load profile: {loadError}
+                </div>
+              )}
+              {/* Custom profiles section */}
+              {customProfiles.length > 0 && (
+                <>
+                  {sectionLabel("Your Profiles")}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px", marginBottom: "4px" }}>
+                    {customProfiles.map((profile) => (
+                      <button
+                        key={profile.id}
+                        onClick={() => handleCustomSelect(profile)}
+                        disabled={loadingId === profile.id}
+                        onMouseEnter={() => setHovered(`custom-${profile.id}`)}
+                        onMouseLeave={() => setHovered(null)}
                         style={{
-                          padding: "1px 6px",
-                          borderRadius: "4px",
-                          fontSize: "9px",
-                          fontWeight: 600,
-                          textTransform: "uppercase",
-                          letterSpacing: "0.3px",
-                          background: "var(--bg-elevated)",
-                          color: "var(--fg-subtle)",
-                          border: "1px solid var(--border-base)",
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: "6px",
+                          padding: "14px",
+                          borderRadius: "8px",
+                          border: `1px solid ${hovered === `custom-${profile.id}` ? "var(--accent)" : "var(--border-base)"}`,
+                          background: hovered === `custom-${profile.id}` ? "var(--bg-elevated)" : "var(--bg-base)",
+                          cursor: loadingId === profile.id ? "wait" : "pointer",
+                          textAlign: "left",
+                          transition: "border-color 0.1s, background 0.1s",
+                          position: "relative",
+                          opacity: loadingId === profile.id ? 0.6 : 1,
                         }}
                       >
-                        {tag}
-                      </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "space-between" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <span style={{ fontSize: "20px", lineHeight: 1 }}>📄</span>
+                            <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)" }}>
+                              {profile.name}
+                            </span>
+                          </div>
+                          <button
+                            onClick={(e) => handleDelete(profile.id, e)}
+                            disabled={deletingId === profile.id}
+                            style={{
+                              padding: "2px 6px", borderRadius: "4px",
+                              border: "1px solid var(--border-base)",
+                              background: "var(--bg-elevated)",
+                              color: "var(--fg-subtle)",
+                              fontSize: "10px", cursor: "pointer", flexShrink: 0,
+                            }}
+                          >
+                            {deletingId === profile.id ? "…" : "Delete"}
+                          </button>
+                        </div>
+                        {profile.description && (
+                          <p style={{ margin: 0, fontSize: "11px", color: "var(--fg-muted)", lineHeight: "1.5" }}>
+                            {profile.description}
+                          </p>
+                        )}
+                        <span style={{
+                          padding: "1px 6px", borderRadius: "4px",
+                          fontSize: "9px", fontWeight: 600,
+                          textTransform: "uppercase", letterSpacing: "0.3px",
+                          background: "var(--bg-elevated)", color: "var(--fg-subtle)",
+                          border: "1px solid var(--border-base)",
+                          alignSelf: "flex-start",
+                        }}>
+                          custom
+                        </span>
+                      </button>
                     ))}
                   </div>
-                </button>
-              ))}
+                </>
+              )}
+
+              {/* Built-in profiles section */}
+              {sectionLabel("Built-in")}
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px" }}>
+                {PROFILES.map((profile) => (
+                  <button
+                    key={profile.id}
+                    onClick={() => onSelect(profile)}
+                    onMouseEnter={() => setHovered(profile.id)}
+                    onMouseLeave={() => setHovered(null)}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "6px",
+                      padding: "14px",
+                      borderRadius: "8px",
+                      border: `1px solid ${hovered === profile.id ? "var(--accent)" : "var(--border-base)"}`,
+                      background: hovered === profile.id ? "var(--bg-elevated)" : "var(--bg-base)",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      transition: "border-color 0.1s, background 0.1s",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "20px", lineHeight: 1 }}>{profile.icon}</span>
+                      <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)" }}>
+                        {profile.name}
+                      </span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: "11px", color: "var(--fg-muted)", lineHeight: "1.5" }}>
+                      {profile.description}
+                    </p>
+                    <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                      {profile.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          style={{
+                            padding: "1px 6px",
+                            borderRadius: "4px",
+                            fontSize: "9px",
+                            fontWeight: 600,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.3px",
+                            background: "var(--bg-elevated)",
+                            color: "var(--fg-subtle)",
+                            border: "1px solid var(--border-base)",
+                          }}
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           </motion.div>
         </motion.div>

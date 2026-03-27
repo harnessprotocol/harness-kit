@@ -7,6 +7,8 @@ const MonacoEditor = lazy(() => import("./plugin-explorer/MonacoEditor"));
 interface HarnessEditorModalProps {
   open: boolean;
   initialContent: string;
+  /** Content currently on disk, or null if no file exists yet. Used to determine if Save should be enabled. */
+  diskContent: string | null;
   filePath: string;
   onClose: () => void;
   onSaved: (newContent: string, savedPath: string) => void;
@@ -15,27 +17,28 @@ interface HarnessEditorModalProps {
 export default function HarnessEditorModal({
   open,
   initialContent,
+  diskContent,
   filePath,
   onClose,
   onSaved,
 }: HarnessEditorModalProps) {
   const [content, setContent] = useState(initialContent);
-  const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+
+  // Saveable when content differs from what's on disk (works for generated/profile content too)
+  const saveable = content !== (diskContent ?? "");
 
   // Sync content when modal opens with new initialContent
   useEffect(() => {
     if (open) {
       setContent(initialContent);
-      setDirty(false);
       setSaveError(null);
     }
   }, [open, initialContent]);
 
   const handleChange = useCallback((value: string) => {
     setContent(value);
-    setDirty(true);
     setSaveError(null);
   }, []);
 
@@ -45,7 +48,6 @@ export default function HarnessEditorModal({
     setSaveError(null);
     try {
       const savedPath = await writeHarnessFile(content);
-      setDirty(false);
       onSaved(content, savedPath);
     } catch (e) {
       setSaveError(String(e));
@@ -133,21 +135,21 @@ export default function HarnessEditorModal({
                 {saveError && (
                   <span style={{ fontSize: "11px", color: "var(--danger)" }}>{saveError}</span>
                 )}
-                {dirty && !saveError && (
+                {saveable && !saveError && (
                   <span style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>Unsaved changes</span>
                 )}
                 <button
                   onClick={handleSave}
-                  disabled={!dirty || saving}
+                  disabled={!saveable || saving}
                   style={{
                     padding: "4px 12px",
                     borderRadius: "6px",
                     border: "none",
-                    background: dirty && !saving ? "var(--accent)" : "var(--bg-elevated)",
-                    color: dirty && !saving ? "var(--accent-text, #fff)" : "var(--fg-subtle)",
+                    background: saveable && !saving ? "var(--accent)" : "var(--bg-elevated)",
+                    color: saveable && !saving ? "var(--accent-text, #fff)" : "var(--fg-subtle)",
                     fontSize: "11px",
                     fontWeight: 600,
-                    cursor: dirty && !saving ? "pointer" : "not-allowed",
+                    cursor: saveable && !saving ? "pointer" : "not-allowed",
                   }}
                 >
                   {saving ? "Saving…" : "Save"}

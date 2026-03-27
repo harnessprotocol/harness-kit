@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   InstalledPlugin, KnownMarketplace, PluginUpdateInfo, HooksConfig, StatsCache,
   SessionSummary, SessionFacet, ActiveSession, LiveDailyActivity,
+
   HarnessInfo, ComparisonRequest, GitRepoInfo, ComparisonSummary,
   ComparisonDetail, PanelDiffs, ReplaySetup, SaveEvaluationRequest,
   EvaluationScores, AnalyticsData, FileDiffEntry,
@@ -113,6 +114,30 @@ export interface ClaudeConfigScan {
 
 export async function scanClaudeConfig(): Promise<ClaudeConfigScan> {
   return invoke<ClaudeConfigScan>("scan_claude_config");
+}
+
+// ── Custom Profile commands ───────────────────────────────────
+
+export interface CustomProfile {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export async function listCustomProfiles(): Promise<CustomProfile[]> {
+  return invoke<CustomProfile[]>("list_custom_profiles");
+}
+
+export async function getCustomProfile(id: string): Promise<string> {
+  return invoke<string>("get_custom_profile", { id });
+}
+
+export async function saveCustomProfile(id: string, content: string): Promise<string> {
+  return invoke<string>("save_custom_profile", { id, content });
+}
+
+export async function deleteCustomProfile(id: string): Promise<void> {
+  return invoke<void>("delete_custom_profile", { id });
 }
 
 // ── Settings / directory commands ────────────────────────────

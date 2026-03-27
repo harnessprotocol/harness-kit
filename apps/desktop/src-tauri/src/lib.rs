@@ -54,6 +54,11 @@ pub fn run() {
             commands::harness_file::read_harness_file,
             commands::harness_file::write_harness_file,
             commands::harness_file::scan_claude_config,
+            // Custom Profiles
+            commands::profiles::list_custom_profiles,
+            commands::profiles::get_custom_profile,
+            commands::profiles::save_custom_profile,
+            commands::profiles::delete_custom_profile,
             // Settings
             commands::settings::list_claude_dir,
             // Observatory
