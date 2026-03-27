@@ -2,4 +2,5 @@ packages:
   - "website"
   - "marketplace"
   - "packages/*"
+  - "!packages/membrain"
   - "apps/*"
