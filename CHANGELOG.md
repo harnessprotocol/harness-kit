@@ -15,6 +15,7 @@
 
 ### Changed
 
+- **Desktop: Comparator terminals** — each output panel is now a real xterm.js terminal instance, replacing the previous ansi-to-html + `dangerouslySetInnerHTML` approach. Output writes incrementally, auto-resizes with the panel, and renders ANSI color codes natively. Spawned harness processes now receive `FORCE_COLOR=1` and `CLICOLOR_FORCE=1` so CLIs emit color output over pipes. OSC hyperlink handling is disabled (`linkHandler: null`) to eliminate the terminal escape injection surface.
 - **Desktop: Observatory typography** — stat and chart card headers use `font-variant-caps: all-small-caps` instead of `text-transform: uppercase`, matching the sidebar and other labels. Area chart fill gradients are subtler (top stop halved); grid lines use `--separator` instead of `--border-base` so data pops more.
 - **Desktop: Permissions layout** — Tools, Paths, and Network sections merged into a single unified card with inset section dividers. Allow/Deny/Ask tool rows are stacked vertically with color-coded labels. Preset cards display a colored left border (green for Strict, blue for Standard, amber for Permissive) for at-a-glance identity.
 - Renamed `stage` plugin to `capture-session` for clarity — the slash command is now `/capture-session`. The staging file (`session-staging.md`) keeps its name.

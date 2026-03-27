@@ -1,7 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
-import { SearchAddon } from "@xterm/addon-search";
 import "@xterm/xterm/css/xterm.css";
 import type { PanelState } from "../../hooks/useComparison";
 import PanelStatusBar from "./PanelStatusBar";
@@ -14,7 +13,6 @@ interface TerminalPaneProps {
 export default function TerminalPane({ panel, onKill }: TerminalPaneProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const termRef = useRef<Terminal | null>(null);
-  const fitAddonRef = useRef<FitAddon | null>(null);
   const writtenRef = useRef(0);
 
   // Initialize terminal once on mount
@@ -23,7 +21,6 @@ export default function TerminalPane({ panel, onKill }: TerminalPaneProps) {
     if (!container) return;
 
     const fitAddon = new FitAddon();
-    const searchAddon = new SearchAddon();
 
     const terminal = new Terminal({
       fontSize: 12,
@@ -37,15 +34,14 @@ export default function TerminalPane({ panel, onKill }: TerminalPaneProps) {
       },
       scrollback: 10000,
       convertEol: true,
+      linkHandler: null,
     });
 
     terminal.loadAddon(fitAddon);
-    terminal.loadAddon(searchAddon);
     terminal.open(container);
     fitAddon.fit();
 
     termRef.current = terminal;
-    fitAddonRef.current = fitAddon;
     writtenRef.current = 0;
 
     const observer = new ResizeObserver(() => {
@@ -57,7 +53,6 @@ export default function TerminalPane({ panel, onKill }: TerminalPaneProps) {
       observer.disconnect();
       terminal.dispose();
       termRef.current = null;
-      fitAddonRef.current = null;
       writtenRef.current = 0;
     };
   }, []);
