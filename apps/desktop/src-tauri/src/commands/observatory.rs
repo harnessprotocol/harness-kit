@@ -639,11 +639,16 @@ pub fn compute_live_stats(since_date: Option<String>) -> Result<LiveStats, Strin
                 None => continue,
             };
 
-            let (date, hour) = jnl
-                .timestamp
-                .as_ref()
-                .and_then(extract_date_hour)
-                .unwrap_or_else(|| ("unknown".to_string(), 0));
+            let (date, hour) = match jnl.timestamp.as_ref().and_then(extract_date_hour) {
+                Some(dh) => dh,
+                None => continue, // skip entries without parseable timestamps
+            };
+
+            // Only aggregate entries strictly after the cutoff to avoid
+            // double-counting with cache data
+            if date <= cutoff {
+                continue;
+            }
 
             let model = msg.model.clone().unwrap_or_default();
 
@@ -809,10 +814,7 @@ pub fn read_session_transcript(
     // Sort by timestamp
     entries.sort_by(|a, b| a.timestamp.cmp(&b.timestamp));
 
-    // Truncate and compute totals
-    let truncated = entries.len() > 500;
-    entries.truncate(500);
-
+    // Compute totals from ALL entries before truncation
     let mut total_input = 0u64;
     let mut total_output = 0u64;
     let mut total_tools = 0u64;
@@ -827,13 +829,20 @@ pub fn read_session_transcript(
         }
     }
 
+    // Truncate entries for transport, but totals reflect the full session
+    let truncated = entries.len() > 500;
+    entries.truncate(500);
+
+    let mut models_used: Vec<String> = models_set.into_iter().collect();
+    models_used.sort();
+
     Ok(SessionTranscript {
         session_id,
         entries,
         total_input_tokens: total_input,
         total_output_tokens: total_output,
         total_tool_calls: total_tools,
-        models_used: models_set.into_iter().collect(),
+        models_used,
         subagent_count,
         truncated,
     })
