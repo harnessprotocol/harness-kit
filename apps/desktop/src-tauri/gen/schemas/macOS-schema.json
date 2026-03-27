@@ -2481,6 +2481,30 @@
           "markdownDescription": "Enables the list_sessions_summary command without any pre-configured scope."
         },
         {
+          "description": "Enables the membrain_check_installed command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-membrain-check-installed",
+          "markdownDescription": "Enables the membrain_check_installed command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the membrain_get_port command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-membrain-get-port",
+          "markdownDescription": "Enables the membrain_get_port command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the membrain_start command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-membrain-start",
+          "markdownDescription": "Enables the membrain_start command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the membrain_stop command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-membrain-stop",
+          "markdownDescription": "Enables the membrain_stop command without any pre-configured scope."
+        },
+        {
           "description": "Enables the push_file_history command without any pre-configured scope.",
           "type": "string",
           "const": "allow-push-file-history",
@@ -2977,6 +3001,30 @@
           "type": "string",
           "const": "deny-list-sessions-summary",
           "markdownDescription": "Denies the list_sessions_summary command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the membrain_check_installed command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-membrain-check-installed",
+          "markdownDescription": "Denies the membrain_check_installed command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the membrain_get_port command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-membrain-get-port",
+          "markdownDescription": "Denies the membrain_get_port command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the membrain_start command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-membrain-start",
+          "markdownDescription": "Denies the membrain_start command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the membrain_stop command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-membrain-stop",
+          "markdownDescription": "Denies the membrain_stop command without any pre-configured scope."
         },
         {
           "description": "Denies the push_file_history command without any pre-configured scope.",
