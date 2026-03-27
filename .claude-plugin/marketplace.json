@@ -68,6 +68,16 @@
       "tags": ["session-capture", "knowledge-graph", "reflection", "staging"]
     },
     {
+      "name": "membrain",
+      "source": "./plugins/membrain",
+      "description": "Graph-based agent memory — search, trace, and manage what your agent knows",
+      "version": "0.1.0",
+      "author": { "name": "harnessprotocol" },
+      "license": "Apache-2.0",
+      "category": "research-knowledge",
+      "tags": ["memory", "knowledge-graph", "context", "governance", "mcp"]
+    },
+    {
       "name": "review",
       "source": "./plugins/review",
       "description": "Code review for a branch, PR, or path — structured output with severity labels and cross-file analysis",

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-membrain-get-port"
+description = "Enables the membrain_get_port command without any pre-configured scope."
+commands.allow = ["membrain_get_port"]
+
+[[permission]]
+identifier = "deny-membrain-get-port"
+description = "Denies the membrain_get_port command without any pre-configured scope."
+commands.deny = ["membrain_get_port"]

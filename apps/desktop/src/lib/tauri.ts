@@ -552,3 +552,21 @@ export function chatStopLocalRelay(): Promise<void> {
 export function chatLocalRelayRunning(): Promise<boolean> {
   return invoke<boolean>("chat_local_relay_running");
 }
+
+// ── membrain commands ────────────────────────────────────
+
+export async function membrainCheckInstalled(): Promise<boolean> {
+  return invoke<boolean>("membrain_check_installed");
+}
+
+export async function membrainStart(port?: number): Promise<string> {
+  return invoke<string>("membrain_start", { port: port ?? null });
+}
+
+export async function membrainStop(): Promise<void> {
+  return invoke<void>("membrain_stop");
+}
+
+export async function membrainGetPort(): Promise<number> {
+  return invoke<number>("membrain_get_port");
+}

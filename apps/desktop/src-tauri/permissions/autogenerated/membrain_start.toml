@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-membrain-start"
+description = "Enables the membrain_start command without any pre-configured scope."
+commands.allow = ["membrain_start"]
+
+[[permission]]
+identifier = "deny-membrain-start"
+description = "Denies the membrain_start command without any pre-configured scope."
+commands.deny = ["membrain_start"]
