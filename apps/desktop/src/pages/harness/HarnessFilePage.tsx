@@ -148,12 +148,12 @@ export default function HarnessFilePage() {
 
   async function handleSaveAsProfile() {
     if (!profileNameInput.trim()) return;
-    const id = profileNameInput.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const id = profileNameInput.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 64);
     if (!id) return;
     setProfileSaving(true);
     setProfileSaveError(null);
     try {
-      await saveCustomProfile(id, diskContent ?? "");
+      await saveCustomProfile(id, view === "editor" ? editorContent : (diskContent ?? ""));
       setProfileSavedMsg(true);
       setProfileNameInput("");
       setProfileNameOpen(false);

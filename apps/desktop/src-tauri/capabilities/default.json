@@ -55,6 +55,7 @@
     "allow-write-harness-file",
     "allow-scan-claude-config",
     "allow-list-custom-profiles",
+    "allow-get-custom-profile",
     "allow-save-custom-profile",
     "allow-delete-custom-profile",
     "allow-list-claude-dir",

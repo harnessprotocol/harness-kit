@@ -122,11 +122,14 @@ export interface CustomProfile {
   id: string;
   name: string;
   description: string;
-  yaml: string;
 }
 
 export async function listCustomProfiles(): Promise<CustomProfile[]> {
   return invoke<CustomProfile[]>("list_custom_profiles");
+}
+
+export async function getCustomProfile(id: string): Promise<string> {
+  return invoke<string>("get_custom_profile", { id });
 }
 
 export async function saveCustomProfile(id: string, content: string): Promise<string> {

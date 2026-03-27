@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { PROFILES } from "../lib/profiles";
 import type { HarnessProfile } from "../lib/profiles";
-import { listCustomProfiles, deleteCustomProfile } from "../lib/tauri";
+import { listCustomProfiles, getCustomProfile, deleteCustomProfile } from "../lib/tauri";
 import type { CustomProfile } from "../lib/tauri";
 
 interface ProfilePickerModalProps {
@@ -15,7 +15,9 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
   const [hovered, setHovered] = useState<string | null>(null);
   const [customProfiles, setCustomProfiles] = useState<CustomProfile[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [loadingId, setLoadingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -42,8 +44,17 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
     }
   }
 
-  function handleCustomSelect(p: CustomProfile) {
-    onSelect({ id: p.id, name: p.name, description: p.description, icon: "📄", tags: [], yaml: p.yaml });
+  async function handleCustomSelect(p: CustomProfile) {
+    setLoadingId(p.id);
+    setLoadError(null);
+    try {
+      const yaml = await getCustomProfile(p.id);
+      onSelect({ id: p.id, name: p.name, description: p.description, icon: "📄", tags: [], yaml });
+    } catch (err) {
+      setLoadError(String(err));
+    } finally {
+      setLoadingId(null);
+    }
   }
 
   const sectionLabel = (text: string) => (
@@ -133,6 +144,11 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
                   Failed to delete profile: {deleteError}
                 </div>
               )}
+              {loadError && (
+                <div style={{ margin: "10px 0 0", padding: "8px 12px", borderRadius: "6px", background: "var(--bg-surface)", border: "1px solid var(--danger)", fontSize: "11px", color: "var(--danger)" }}>
+                  Failed to load profile: {loadError}
+                </div>
+              )}
               {/* Custom profiles section */}
               {customProfiles.length > 0 && (
                 <>
@@ -142,6 +158,7 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
                       <button
                         key={profile.id}
                         onClick={() => handleCustomSelect(profile)}
+                        disabled={loadingId === profile.id}
                         onMouseEnter={() => setHovered(`custom-${profile.id}`)}
                         onMouseLeave={() => setHovered(null)}
                         style={{
@@ -152,10 +169,11 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
                           borderRadius: "8px",
                           border: `1px solid ${hovered === `custom-${profile.id}` ? "var(--accent)" : "var(--border-base)"}`,
                           background: hovered === `custom-${profile.id}` ? "var(--bg-elevated)" : "var(--bg-base)",
-                          cursor: "pointer",
+                          cursor: loadingId === profile.id ? "wait" : "pointer",
                           textAlign: "left",
                           transition: "border-color 0.1s, background 0.1s",
                           position: "relative",
+                          opacity: loadingId === profile.id ? 0.6 : 1,
                         }}
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "space-between" }}>
