@@ -2,7 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   InstalledPlugin, KnownMarketplace, PluginUpdateInfo, HooksConfig, StatsCache,
   SessionSummary, SessionFacet, ActiveSession, LiveDailyActivity,
-  LiveStats, SessionTranscript,
+
   HarnessInfo, ComparisonRequest, GitRepoInfo, ComparisonSummary,
   ComparisonDetail, PanelDiffs, ReplaySetup, SaveEvaluationRequest,
   EvaluationScores, AnalyticsData, FileDiffEntry,
@@ -163,14 +163,6 @@ export async function listActiveSessions(): Promise<ActiveSession[]> {
 
 export async function readLiveActivity(): Promise<LiveDailyActivity[]> {
   return invoke<LiveDailyActivity[]>("read_live_activity");
-}
-
-export async function computeLiveStats(sinceDate?: string): Promise<LiveStats> {
-  return invoke<LiveStats>("compute_live_stats", { sinceDate: sinceDate ?? null });
-}
-
-export async function readSessionTranscript(sessionId: string, project: string): Promise<SessionTranscript> {
-  return invoke<SessionTranscript>("read_session_transcript", { sessionId, project });
 }
 
 // ── Comparator commands ─────────────────────────────────────

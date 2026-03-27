@@ -2319,6 +2319,12 @@
           "markdownDescription": "Enables the delete_comparison command without any pre-configured scope."
         },
         {
+          "description": "Enables the delete_custom_profile command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-delete-custom-profile",
+          "markdownDescription": "Enables the delete_custom_profile command without any pre-configured scope."
+        },
+        {
           "description": "Enables the delete_keychain_secret command without any pre-configured scope.",
           "type": "string",
           "const": "allow-delete-keychain-secret",
@@ -2449,6 +2455,12 @@
           "type": "string",
           "const": "allow-list-comparisons",
           "markdownDescription": "Enables the list_comparisons command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the list_custom_profiles command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-list-custom-profiles",
+          "markdownDescription": "Enables the list_custom_profiles command without any pre-configured scope."
         },
         {
           "description": "Enables the list_installed_plugins command without any pre-configured scope.",
@@ -2593,6 +2605,12 @@
           "type": "string",
           "const": "allow-save-comparison",
           "markdownDescription": "Enables the save_comparison command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the save_custom_profile command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-save-custom-profile",
+          "markdownDescription": "Enables the save_custom_profile command without any pre-configured scope."
         },
         {
           "description": "Enables the save_evaluation command without any pre-configured scope.",
@@ -2841,6 +2859,12 @@
           "markdownDescription": "Denies the delete_comparison command without any pre-configured scope."
         },
         {
+          "description": "Denies the delete_custom_profile command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-delete-custom-profile",
+          "markdownDescription": "Denies the delete_custom_profile command without any pre-configured scope."
+        },
+        {
           "description": "Denies the delete_keychain_secret command without any pre-configured scope.",
           "type": "string",
           "const": "deny-delete-keychain-secret",
@@ -2971,6 +2995,12 @@
           "type": "string",
           "const": "deny-list-comparisons",
           "markdownDescription": "Denies the list_comparisons command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the list_custom_profiles command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-list-custom-profiles",
+          "markdownDescription": "Denies the list_custom_profiles command without any pre-configured scope."
         },
         {
           "description": "Denies the list_installed_plugins command without any pre-configured scope.",
@@ -3115,6 +3145,12 @@
           "type": "string",
           "const": "deny-save-comparison",
           "markdownDescription": "Denies the save_comparison command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the save_custom_profile command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-save-custom-profile",
+          "markdownDescription": "Denies the save_custom_profile command without any pre-configured scope."
         },
         {
           "description": "Denies the save_evaluation command without any pre-configured scope.",
