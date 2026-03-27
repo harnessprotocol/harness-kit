@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type {
   InstalledPlugin, KnownMarketplace, PluginUpdateInfo, HooksConfig, StatsCache,
   SessionSummary, SessionFacet, ActiveSession, LiveDailyActivity,
+  LiveStats, SessionTranscript,
   HarnessInfo, ComparisonRequest, GitRepoInfo, ComparisonSummary,
   ComparisonDetail, PanelDiffs, ReplaySetup, SaveEvaluationRequest,
   EvaluationScores, AnalyticsData, FileDiffEntry,
@@ -115,6 +116,27 @@ export async function scanClaudeConfig(): Promise<ClaudeConfigScan> {
   return invoke<ClaudeConfigScan>("scan_claude_config");
 }
 
+// ── Custom Profile commands ───────────────────────────────────
+
+export interface CustomProfile {
+  id: string;
+  name: string;
+  description: string;
+  yaml: string;
+}
+
+export async function listCustomProfiles(): Promise<CustomProfile[]> {
+  return invoke<CustomProfile[]>("list_custom_profiles");
+}
+
+export async function saveCustomProfile(id: string, content: string): Promise<string> {
+  return invoke<string>("save_custom_profile", { id, content });
+}
+
+export async function deleteCustomProfile(id: string): Promise<void> {
+  return invoke<void>("delete_custom_profile", { id });
+}
+
 // ── Settings / directory commands ────────────────────────────
 
 export async function listClaudeDir(): Promise<string[]> {
@@ -141,6 +163,14 @@ export async function listActiveSessions(): Promise<ActiveSession[]> {
 
 export async function readLiveActivity(): Promise<LiveDailyActivity[]> {
   return invoke<LiveDailyActivity[]>("read_live_activity");
+}
+
+export async function computeLiveStats(sinceDate?: string): Promise<LiveStats> {
+  return invoke<LiveStats>("compute_live_stats", { sinceDate: sinceDate ?? null });
+}
+
+export async function readSessionTranscript(sessionId: string, project: string): Promise<SessionTranscript> {
+  return invoke<SessionTranscript>("read_session_transcript", { sessionId, project });
 }
 
 // ── Comparator commands ─────────────────────────────────────

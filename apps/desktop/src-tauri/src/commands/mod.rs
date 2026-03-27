@@ -14,6 +14,7 @@ pub mod export;
 pub mod types;
 pub mod history;
 pub mod harness_file;
+pub mod profiles;
 pub mod sync;
 pub mod parity;
 pub mod chat;
