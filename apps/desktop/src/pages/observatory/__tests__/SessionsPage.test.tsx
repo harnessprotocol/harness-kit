@@ -10,10 +10,12 @@ import SessionsPage from "../SessionsPage";
 
 let mockListSessionsSummary: () => Promise<unknown>;
 let mockReadSessionFacet: (sessionId: string) => Promise<unknown>;
+let mockReadSessionTranscript: (sessionId: string, project: string) => Promise<unknown>;
 
 vi.mock("../../../lib/tauri", () => ({
   get listSessionsSummary() { return mockListSessionsSummary; },
   get readSessionFacet() { return mockReadSessionFacet; },
+  get readSessionTranscript() { return mockReadSessionTranscript; },
 }));
 
 // ── Fixtures ──────────────────────────────────────────────────
@@ -60,8 +62,9 @@ function renderSessions() {
 // ── Setup ─────────────────────────────────────────────────────
 
 beforeEach(() => {
-  // Default: facet returns null unless overridden per test
+  // Default: facet and transcript return null unless overridden per test
   mockReadSessionFacet = () => Promise.resolve(null);
+  mockReadSessionTranscript = () => Promise.resolve({ sessionId: "", entries: [], totalInputTokens: 0, totalOutputTokens: 0, totalToolCalls: 0, modelsUsed: [], subagentCount: 0, truncated: false });
 });
 
 // ── Tests ─────────────────────────────────────────────────────
@@ -162,7 +165,7 @@ describe("SessionsPage — row click / facet", () => {
     fireEvent.click(rowButton);
 
     expect(
-      await screen.findByText("No insights available for this session."),
+      await screen.findByText("No transcript or insights available for this session."),
     ).toBeInTheDocument();
   });
 });

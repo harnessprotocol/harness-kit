@@ -618,7 +618,7 @@ export default function DashboardPage() {
         </h1>
         {effectiveLastUpdated && (
           <span style={{ fontSize: "10px", color: "var(--fg-subtle)", marginTop: "1px" }}>
-            {effectiveLastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            last updated {effectiveLastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           </span>
         )}
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
