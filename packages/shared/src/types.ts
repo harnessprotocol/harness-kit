@@ -268,6 +268,39 @@ export interface LiveDailyActivity {
   sessionCount: number;
 }
 
+export interface LiveStats {
+  dailyActivity: DailyActivity[];
+  dailyModelTokens: DailyModelTokens[];
+  modelUsage: Record<string, ModelUsageEntry>;
+  hourCounts: Record<string, number>;
+  totalToolCalls: number;
+  totalOutputTokens: number;
+  scannedFiles: number;
+  scanDurationMs: number;
+}
+
+export interface SessionTranscript {
+  sessionId: string;
+  entries: TranscriptEntry[];
+  totalInputTokens: number;
+  totalOutputTokens: number;
+  totalToolCalls: number;
+  modelsUsed: string[];
+  subagentCount: number;
+  truncated: boolean;
+}
+
+export interface TranscriptEntry {
+  timestamp: string | null;
+  role: string;
+  model: string | null;
+  toolNames: string[];
+  inputTokens: number | null;
+  outputTokens: number | null;
+  contentPreview: string | null;
+  isSubagent: boolean;
+}
+
 // ── Comparator types ────────────────────────────────────────
 
 export interface HarnessInfo {

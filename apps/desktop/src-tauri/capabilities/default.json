@@ -64,6 +64,8 @@
     "allow-read-session-facet",
     "allow-list-active-sessions",
     "allow-read-live-activity",
+    "allow-compute-live-stats",
+    "allow-read-session-transcript",
     "allow-detect-harnesses",
     "allow-start-comparison",
     "allow-kill-panel",
