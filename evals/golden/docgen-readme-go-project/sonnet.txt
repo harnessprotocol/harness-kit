@@ -1,0 +1,52 @@
+# items-api
+
+A lightweight Go HTTP API server for managing items. Supports listing all items, fetching a single item by ID, and creating new items.
+
+## Install
+
+Requires Go 1.21 or later.
+
+```bash
+git clone https://github.com/example/items-api
+cd items-api
+go build -o items-api ./cmd/server
+```
+
+Or run directly without building:
+
+```bash
+go run ./cmd/server
+```
+
+## Usage
+
+Start the server (default port 8080):
+
+```bash
+./items-api
+```
+
+**List all items**
+
+```
+GET /items
+```
+
+**Get item by ID**
+
+```
+GET /items/:id
+```
+
+**Create an item**
+
+```
+POST /items
+Content-Type: application/json
+
+{"name": "Widget", "description": "A useful widget"}
+```
+
+---
+
+Want me to write this to `README.md`?

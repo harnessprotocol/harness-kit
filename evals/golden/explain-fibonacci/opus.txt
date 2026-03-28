@@ -1,0 +1,29 @@
+## Summary
+
+`fib.py` implements two functions for working with Fibonacci numbers: `fib(n)` computes the nth Fibonacci number iteratively, and `fib_sequence(n)` returns a list of the first `n` Fibonacci numbers. The iterative approach avoids the exponential time complexity of a naive recursive implementation.
+
+## Key Components
+
+- **`fib(n)`** — Computes the nth Fibonacci number (0-indexed) using a loop. Raises `ValueError` for negative input. Returns an integer.
+- **`fib_sequence(n)`** — Builds and returns a list of the first `n` Fibonacci numbers by calling `fib()` in a list comprehension.
+
+## How It Connects
+
+These functions are standalone utilities with no external dependencies beyond the standard library. `fib_sequence` delegates entirely to `fib`, so all core logic lives in one place. Callers import either function directly; there is no class wrapper or module-level side effects.
+
+## Patterns & Conventions
+
+- **Iterative over recursive** — the iterative implementation keeps space and time costs linear, avoiding Python's recursion limit for large inputs.
+- **Early validation** — `fib` raises `ValueError` before doing any work, following the fail-fast principle.
+- **List comprehension delegation** — `fib_sequence` is intentionally thin; it composes rather than duplicates logic.
+
+## Gotchas
+
+- `fib(n)` raises `ValueError` for negative input. Callers that pass user-supplied integers should guard against this.
+- The Fibonacci sequence is 0-indexed here: `fib(0)` returns 0, `fib(1)` returns 1. Some definitions start the sequence at 1; confirm which convention the caller expects before integrating.
+
+## Entry Points for Change
+
+- **Performance** — for very large `n`, consider memoization (`functools.lru_cache`) or a closed-form approximation.
+- **0-indexed vs 1-indexed** — if callers expect `fib(1) == 1` and `fib(2) == 1`, adjust the loop initialization.
+- **`fib_sequence` efficiency** — the current implementation calls `fib(i)` for each `i`, recomputing earlier values repeatedly. Rewrite to build the sequence in a single pass if generating long sequences.

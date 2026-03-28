@@ -1,0 +1,35 @@
+## Summary
+
+`src/routes/users.js` is an Express router that handles CRUD operations for users — listing all users, fetching a single user by ID, and creating a new user. Every route is protected by the `authenticate` middleware, which verifies a JWT Bearer token before the route handler runs.
+
+## Key Components
+
+- **`router`** — An Express Router instance that groups all `/users` endpoints. Exported and mounted by the main app.
+- **`authenticate`** — Imported middleware applied to the entire router via `router.use(authenticate)`. Rejects requests with missing or invalid tokens before any handler runs.
+- **`GET /`** — Returns all users from the database as a JSON array.
+- **`GET /:id`** — Fetches a single user by `req.params.id`. Does not handle the case where the user is not found.
+- **`POST /`** — Creates a new user from `req.body` and returns the created record.
+- **`db`** — Database module imported for query execution; the exact adapter is opaque to this file.
+
+## How It Connects
+
+The router is mounted at `/users` in the main `app.js` (or equivalent entry point). The `authenticate` middleware is applied once at the router level, so all three routes share the same auth gate. On a successful request, `authenticate` attaches the decoded token payload to `req.user`, which downstream handlers can access. The `db` module abstracts the actual database calls.
+
+## Patterns & Conventions
+
+- **Express router pattern** — grouping related routes in a dedicated router file keeps the main app file clean and routes composable.
+- **Middleware chain** — `router.use(authenticate)` applies the guard to every route in the file rather than repeating it per-route, following DRY middleware composition.
+- **JSON response convention** — all handlers respond with `res.json(...)`, ensuring consistent Content-Type headers.
+
+## Gotchas
+
+- **`GET /:id` missing error handling** — the `db.query` call is not awaited with error handling; a rejected promise propagates unhandled, which will crash or hang the request in most Express setups without a global error handler.
+- **`POST /` missing input validation** — `req.body` is passed directly to `db.create` with no schema validation or sanitization, leaving the route open to malformed or malicious input.
+- **No 404 for unknown user** — `GET /:id` returns whatever `db.query` returns (potentially `null` or `undefined`) without a 404 guard.
+
+## Entry Points for Change
+
+- Add `try/catch` (or `.catch`) around the `GET /:id` and `POST /` database calls for proper error propagation.
+- Introduce input validation (e.g., Joi, Zod, or express-validator) on the `POST /` route before hitting the database.
+- Add a 404 response when `GET /:id` returns no result.
+- To add authentication-exempt routes (e.g., a public profile endpoint), move `router.use(authenticate)` to individual routes instead.

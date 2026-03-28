@@ -1,0 +1,39 @@
+## Verdict
+
+**Request Changes** — two unhandled errors must be fixed before merge.
+
+---
+
+**BLOCKER** — `row.Scan(&token)` ignores the error return value.
+
+`Scan` returns an `error` that must be checked. Silently ignoring it means a scan failure (type mismatch, NULL column, closed rows) will leave `token` at its zero value with no indication that anything went wrong. The caller will proceed as if the scan succeeded.
+
+```go
+// Before
+row.Scan(&token)
+
+// After
+if err := row.Scan(&token); err != nil {
+    return "", fmt.Errorf("scanning token: %w", err)
+}
+```
+
+**BLOCKER** — `p.db.Exec(...)` ignores the error return value on the INSERT.
+
+Database write failures (constraint violations, connection loss, deadlocks) are silently swallowed. The function will return success to the caller even if the row was never written.
+
+```go
+// Before
+p.db.Exec(insertSQL, args...)
+
+// After
+if _, err := p.db.Exec(insertSQL, args...); err != nil {
+    return fmt.Errorf("inserting record: %w", err)
+}
+```
+
+---
+
+**NIT** — Consider wrapping both errors with `%w` (as shown above) so callers can use `errors.Is` / `errors.As` for targeted error handling.
+
+Otherwise the diff is straightforward. Logic, naming, and structure look fine pending the blockers above.
