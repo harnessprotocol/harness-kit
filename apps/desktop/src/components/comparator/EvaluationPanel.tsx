@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Command } from "@tauri-apps/plugin-shell";
 import { saveEvaluation, getEvaluations } from "../../lib/tauri";
 import ScoreRadar from "./ScoreRadar";
+import PairwisePanel from "./PairwisePanel";
 
 const DIMENSIONS = [
   { key: "correctness", label: "Correctness" },
@@ -225,6 +226,8 @@ export default function EvaluationPanel({
   // Undo state after accepting AI scores
   const [undoScores, setUndoScores] = useState<ScoreMap | null>(null);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const [evalMode, setEvalMode] = useState<"score" | "compare">("score");
 
   // Check if any scores have been set (for CTA vs table decision)
   const hasAnyScores = Object.values(scores).some((panelScores) =>
@@ -488,8 +491,40 @@ export default function EvaluationPanel({
   const showCta = !readOnly && !showManualTable && !hasAnyScores && aiState === "idle";
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "auto" }}>
-      <div style={{ padding: "16px", flex: 1 }}>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+      {!readOnly && (
+        <div style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-end",
+          padding: "8px 16px",
+          borderBottom: "1px solid var(--border-base)",
+          background: "var(--bg-surface)",
+          flexShrink: 0,
+        }}>
+          <div className="eval-mode-toggle">
+            <button
+              className={`eval-mode-btn${evalMode === "score" ? " active" : ""}`}
+              onClick={() => setEvalMode("score")}
+            >
+              Score
+            </button>
+            <button
+              className={`eval-mode-btn${evalMode === "compare" ? " active" : ""}`}
+              onClick={() => setEvalMode("compare")}
+            >
+              Compare
+            </button>
+          </div>
+        </div>
+      )}
+
+      {evalMode === "compare" && !readOnly ? (
+        <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+          <PairwisePanel comparisonId={comparisonId} panels={panels} />
+        </div>
+      ) : (
+      <div style={{ padding: "16px", flex: 1, overflow: "auto" }}>
         {/* CTA: default state when no scores exist */}
         {showCta && (
           <div className="eval-cta-container">
@@ -706,6 +741,7 @@ export default function EvaluationPanel({
           <ScoreRadar panels={radarPanels} />
         </div>
       </div>
+      )}
     </div>
   );
 }
