@@ -19,12 +19,19 @@ vi.mock("../../../lib/preferences", () => ({
   setFileExplorerWidth: vi.fn(),
   FILE_EXPLORER_WIDTH_MIN: 140,
   FILE_EXPLORER_WIDTH_MAX: 360,
+  getMarkdownFont: vi.fn(() => "sans"),
 }));
 
-// Monaco is a heavy lazy import — replace with a stub
+// Monaco and MarkdownPanel are heavy lazy imports — replace with stubs
 vi.mock("../../../components/plugin-explorer/MonacoEditor", () => ({
   default: ({ content }: { content: string }) => (
     <div data-testid="monaco-editor">{content}</div>
+  ),
+}));
+
+vi.mock("../../../components/MarkdownPanel", () => ({
+  default: ({ content }: { content: string }) => (
+    <div data-testid="markdown-panel">{content}</div>
   ),
 }));
 

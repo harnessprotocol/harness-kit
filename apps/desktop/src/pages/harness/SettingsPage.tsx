@@ -10,6 +10,7 @@ import {
 } from "../../lib/preferences";
 
 const MonacoEditor = lazy(() => import("../../components/plugin-explorer/MonacoEditor"));
+const MarkdownPanel = lazy(() => import("../../components/MarkdownPanel"));
 
 // ── File filtering ────────────────────────────────────────────
 
@@ -226,11 +227,7 @@ export default function SettingsPage() {
               {editor.error}
             </div>
             <button
-              onClick={() => {
-                const f = selectedFile;
-                setSelectedFile(null);
-                setTimeout(() => setSelectedFile(f), 0);
-              }}
+              onClick={editor.reload}
               style={{
                 fontSize: "12px", color: "var(--accent-text)", background: "none",
                 border: "none", padding: 0, cursor: "pointer", textDecoration: "underline",
@@ -240,7 +237,12 @@ export default function SettingsPage() {
             </button>
           </div>
         )}
-        {selectedFile && !editor.loading && !editor.error && editor.content !== null && (
+        {selectedFile && !editor.loading && !editor.error && editor.content !== null && viewMode === "preview" && (
+          <Suspense fallback={null}>
+            <MarkdownPanel content={editor.content} defaultView="preview" fill />
+          </Suspense>
+        )}
+        {selectedFile && !editor.loading && !editor.error && editor.content !== null && viewMode !== "preview" && (
           <Suspense fallback={null}>
             <MonacoEditor
               filePath={`~/.claude/${selectedFile}`}

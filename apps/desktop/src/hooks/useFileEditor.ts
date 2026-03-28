@@ -12,6 +12,7 @@ export interface FileEditorState {
   updateContent: (content: string) => void;
   saveFile: () => Promise<void>;
   revertFile: () => void;
+  reload: () => void;
 }
 
 export function useFileEditor(filePath: string | null): FileEditorState {
@@ -21,6 +22,7 @@ export function useFileEditor(filePath: string | null): FileEditorState {
   const [saving, setSaving] = useState(false);
   const [savedRecently, setSavedRecently] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isDirty = content !== null && originalContent !== null && content !== originalContent;
@@ -41,7 +43,7 @@ export function useFileEditor(filePath: string | null): FileEditorState {
       })
       .catch((e) => setError(String(e)))
       .finally(() => setLoading(false));
-  }, [filePath]);
+  }, [filePath, reloadKey]);
 
   const updateContent = useCallback((c: string) => {
     setContent(c);
@@ -67,6 +69,10 @@ export function useFileEditor(filePath: string | null): FileEditorState {
     if (originalContent !== null) setContent(originalContent);
   }, [originalContent]);
 
+  const reload = useCallback(() => {
+    setReloadKey((k) => k + 1);
+  }, []);
+
   useEffect(() => {
     return () => {
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
@@ -84,5 +90,6 @@ export function useFileEditor(filePath: string | null): FileEditorState {
     updateContent,
     saveFile,
     revertFile,
+    reload,
   };
 }
