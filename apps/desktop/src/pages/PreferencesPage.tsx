@@ -12,8 +12,10 @@ import {
   getMarkdownFont, setMarkdownFont,
   getConfirmSave, setConfirmSave,
   getMembrainEnabled, setMembrainEnabled,
+  getConfigFilesDetailLevel, setConfigFilesDetailLevel,
   type Density,
   type MarkdownFont,
+  type ConfigFilesDetailLevel,
 } from "../lib/preferences";
 import {
   getTheme, setTheme,
@@ -128,6 +130,7 @@ export default function PreferencesPage() {
   const [markdownFont, setMarkdownFontState] = useState(getMarkdownFont);
   const [confirmSave, setConfirmSaveState] = useState(getConfirmSave);
   const [membrainEnabled, setMembrainEnabledState] = useState(getMembrainEnabled);
+  const [configFilesDetail, setConfigFilesDetailState] = useState(getConfigFilesDetailLevel);
 
   function handleSetTheme(t: "light" | "dark" | "system") {
     setTheme(t);
@@ -193,6 +196,11 @@ export default function PreferencesPage() {
   function handleSetMembrainEnabled(value: boolean) {
     setMembrainEnabled(value);
     setMembrainEnabledState(value);
+  }
+
+  function handleSetConfigFilesDetail(level: ConfigFilesDetailLevel) {
+    setConfigFilesDetailLevel(level);
+    setConfigFilesDetailState(level);
   }
 
   // Compute whether each section pill should be disabled (last visible)
@@ -424,6 +432,26 @@ export default function PreferencesPage() {
             ]}
             value={markdownFont}
             onChange={handleSetMarkdownFont}
+          />
+        </SettingRow>
+      </div>
+
+      {/* ── Config File Explorer ─────────────────────────────────── */}
+      <div style={{ marginBottom: "28px" }}>
+        <SectionHeader>Config File Explorer</SectionHeader>
+
+        <SettingRow
+          label="File visibility"
+          description="Which files appear in the ~/.claude/ editor"
+        >
+          <Segmented
+            options={[
+              { value: "essentials" as ConfigFilesDetailLevel, label: "Essentials" },
+              { value: "text-files" as ConfigFilesDetailLevel, label: "Text Files" },
+              { value: "all" as ConfigFilesDetailLevel, label: "All" },
+            ]}
+            value={configFilesDetail}
+            onChange={handleSetConfigFilesDetail}
           />
         </SettingRow>
       </div>

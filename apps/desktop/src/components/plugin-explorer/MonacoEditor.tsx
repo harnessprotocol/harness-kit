@@ -48,9 +48,10 @@ interface MonacoEditorProps {
   content: string;
   onChange: (value: string) => void;
   onSave: () => void;
+  readOnly?: boolean;
 }
 
-export default function MonacoEditor({ filePath, content, onChange, onSave }: MonacoEditorProps) {
+export default function MonacoEditor({ filePath, content, onChange, onSave, readOnly = false }: MonacoEditorProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const themeRef = useRef(getMonacoTheme());
@@ -110,6 +111,7 @@ export default function MonacoEditor({ filePath, content, onChange, onSave }: Mo
         </div>
       }
       options={{
+        readOnly,
         fontSize: 12,
         fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
         minimap: { enabled: false },

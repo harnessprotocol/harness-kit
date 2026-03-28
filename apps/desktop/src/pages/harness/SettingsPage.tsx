@@ -1,120 +1,267 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { listClaudeDir } from "../../lib/tauri";
+import { useFileEditor } from "../../hooks/useFileEditor";
+import SplitPane from "../../components/file-explorer/SplitPane";
+import EditorToolbar from "../../components/file-explorer/EditorToolbar";
+import {
+  getConfigFilesDetailLevel,
+  type ConfigFilesDetailLevel,
+} from "../../lib/preferences";
+
+const MonacoEditor = lazy(() => import("../../components/plugin-explorer/MonacoEditor"));
+const MarkdownPanel = lazy(() => import("../../components/MarkdownPanel"));
+
+// ── File filtering ────────────────────────────────────────────
 
 const TEXT_EXTENSIONS = new Set([".md", ".json", ".yaml", ".yml", ".sh", ".txt", ".toml", ".mjs"]);
+const HIDDEN_PATTERNS: RegExp[] = [
+  /^security_warnings_state_/,
+  /^statsig-/,
+  /^stats-cache\.json$/,
+];
+const ESSENTIALS = new Set(["CLAUDE.md", "AGENT.md", "SOUL.md", "settings.json", "keybindings.json"]);
 
 function extOf(name: string): string {
   const idx = name.lastIndexOf(".");
   return idx === -1 ? "" : name.slice(idx);
 }
 
-const EXT_LABEL: Record<string, string> = {
-  ".md": "Markdown",
-  ".json": "JSON",
-  ".yaml": "YAML",
-  ".yml": "YAML",
-  ".sh": "Shell",
-  ".txt": "Text",
-  ".toml": "TOML",
-  ".mjs": "JS",
-};
-
-const HIDDEN_PATTERNS: RegExp[] = [
-  /^security_warnings_state_/,
-  /^statsig-/,
-  /^stats-cache\.json$/,
-];
-
-function isHiddenFile(name: string): boolean {
-  return HIDDEN_PATTERNS.some((p) => p.test(name));
+function filterFiles(files: string[], level: ConfigFilesDetailLevel): string[] {
+  if (level === "essentials") return files.filter((f) => ESSENTIALS.has(f));
+  if (level === "text-files") return files.filter(
+    (f) => TEXT_EXTENSIONS.has(extOf(f)) && !HIDDEN_PATTERNS.some((p) => p.test(f))
+  );
+  return files;
 }
+
+// ── Component ─────────────────────────────────────────────────
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const [files, setFiles] = useState<string[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const detailLevel = getConfigFilesDetailLevel();
 
+  const [allFiles, setAllFiles] = useState<string[]>([]);
+  const [loadingList, setLoadingList] = useState(true);
+  const [listError, setListError] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
+  const [pendingFile, setPendingFile] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState("editor");
+
+  const files = filterFiles(allFiles, detailLevel);
+  const filePath = selectedFile ? `~/.claude/${selectedFile}` : null;
+  const editor = useFileEditor(filePath);
+
+  // Auto-select first file and set view mode on initial load
   useEffect(() => {
     listClaudeDir()
-      .then((entries) => setFiles(entries.filter((e) => TEXT_EXTENSIONS.has(extOf(e)) && !isHiddenFile(e))))
-      .catch((e) => setError(String(e)))
-      .finally(() => setLoading(false));
-  }, []);
+      .then((entries) => {
+        setAllFiles(entries);
+        const filtered = filterFiles(entries, detailLevel);
+        if (filtered.length > 0) {
+          setSelectedFile(filtered[0]);
+          setViewMode(extOf(filtered[0]) === ".md" ? "preview" : "editor");
+        }
+      })
+      .catch((e) => setListError(String(e)))
+      .finally(() => setLoadingList(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return (
-    <div style={{ padding: "20px 24px" }}>
-      <div style={{ marginBottom: "16px" }}>
-        <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
-          Config Files
-        </h1>
-        <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>
-          Text files in{" "}
-          <code style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>~/.claude/</code>
-        </p>
+  const handleSelectFile = useCallback((name: string) => {
+    if (name === selectedFile) return;
+    if (editor.isDirty) {
+      setPendingFile(name);
+    } else {
+      setSelectedFile(name);
+      setViewMode(extOf(name) === ".md" ? "preview" : "editor");
+    }
+  }, [selectedFile, editor.isDirty]);
+
+  const handleConfirmDiscard = useCallback(() => {
+    if (!pendingFile) return;
+    setSelectedFile(pendingFile);
+    setViewMode(extOf(pendingFile) === ".md" ? "preview" : "editor");
+    setPendingFile(null);
+  }, [pendingFile]);
+
+  const viewModes = extOf(selectedFile ?? "") === ".md"
+    ? [{ key: "editor", label: "Editor" }, { key: "preview", label: "Preview" }]
+    : [{ key: "editor", label: "Editor" }];
+
+  // ── Left panel ───────────────────────────────────────────────
+  const leftPanel = (
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflow: "hidden" }}>
+      <div style={{
+        padding: "10px 12px 6px",
+        fontSize: "10px",
+        fontWeight: 600,
+        textTransform: "uppercase",
+        letterSpacing: "0.05em",
+        color: "var(--fg-subtle)",
+        flexShrink: 0,
+      }}>
+        Config Files
       </div>
 
-      {loading && <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</p>}
-
-      {error && (
+      {pendingFile && (
         <div style={{
+          margin: "0 8px 6px",
+          padding: "8px 10px",
           background: "var(--bg-surface)",
           border: "1px solid var(--border-base)",
-          borderRadius: "8px",
-          padding: "10px 14px",
-          fontSize: "13px",
-          color: "var(--danger)",
+          borderRadius: "6px",
+          fontSize: "11px",
+          color: "var(--fg-base)",
+          flexShrink: 0,
         }}>
-          {error}
+          <div style={{ marginBottom: "6px" }}>
+            Unsaved changes in{" "}
+            <code style={{ fontFamily: "ui-monospace, monospace" }}>{selectedFile}</code>.
+            Discard and switch?
+          </div>
+          <div style={{ display: "flex", gap: "6px" }}>
+            <button
+              onClick={handleConfirmDiscard}
+              style={{
+                fontSize: "11px", padding: "2px 8px", borderRadius: "4px",
+                border: "1px solid var(--border-base)",
+                background: "var(--danger-light)", color: "var(--danger)", cursor: "pointer",
+              }}
+            >
+              Discard
+            </button>
+            <button
+              onClick={() => setPendingFile(null)}
+              style={{
+                fontSize: "11px", padding: "2px 8px", borderRadius: "4px",
+                border: "1px solid var(--border-base)",
+                background: "transparent", color: "var(--fg-muted)", cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
-      {!loading && !error && (
-        <div className="row-list">
-          {files.map((name) => {
-            const ext = extOf(name);
-            const label = EXT_LABEL[ext] ?? ext.slice(1).toUpperCase();
-            return (
-              <button
-                key={name}
-                onClick={() => navigate(`/harness/settings/${encodeURIComponent(name)}`)}
-                className="row-list-item"
-                style={{
-                  width: "100%",
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  textAlign: "left",
-                  justifyContent: "space-between",
-                }}
-              >
-                <span style={{
-                  fontFamily: "ui-monospace, monospace",
-                  fontSize: "13px",
-                  fontWeight: 500,
-                  color: "var(--fg-base)",
-                }}>
-                  {name}
-                </span>
-                <span style={{
-                  fontSize: "10px",
-                  fontWeight: 500,
-                  padding: "1px 6px",
-                  borderRadius: "4px",
-                  background: "var(--bg-base)",
-                  color: "var(--fg-subtle)",
-                  border: "1px solid var(--border-base)",
-                  flexShrink: 0,
-                  marginLeft: "12px",
-                }}>
-                  {label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <div style={{ flex: 1, overflow: "auto" }}>
+        {loadingList && (
+          <p style={{ fontSize: "12px", color: "var(--fg-subtle)", padding: "8px 12px", margin: 0 }}>
+            Loading…
+          </p>
+        )}
+        {listError && (
+          <p style={{ fontSize: "12px", color: "var(--danger)", padding: "8px 12px", margin: 0 }}>
+            {listError}
+          </p>
+        )}
+        {!loadingList && !listError && files.length === 0 && (
+          <div style={{ padding: "8px 12px", fontSize: "12px", color: "var(--fg-subtle)" }}>
+            No files found.{" "}
+            <button
+              onClick={() => navigate("/preferences")}
+              style={{
+                background: "none", border: "none", padding: 0, cursor: "pointer",
+                color: "var(--accent-text)", fontSize: "12px", textDecoration: "underline",
+              }}
+            >
+              Change detail level in Preferences
+            </button>
+          </div>
+        )}
+        {files.map((name) => (
+          <button
+            key={name}
+            onClick={() => handleSelectFile(name)}
+            style={{
+              display: "block",
+              width: "100%",
+              textAlign: "left",
+              padding: "6px 12px",
+              background: selectedFile === name ? "var(--bg-elevated)" : "transparent",
+              border: "none",
+              borderLeft: selectedFile === name ? "2px solid var(--accent)" : "2px solid transparent",
+              cursor: "pointer",
+              fontSize: "12px",
+              fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace",
+              color: selectedFile === name ? "var(--fg-base)" : "var(--fg-muted)",
+              whiteSpace: "nowrap",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+            }}
+          >
+            {name}
+          </button>
+        ))}
+      </div>
     </div>
+  );
+
+  // ── Right panel ──────────────────────────────────────────────
+  const rightPanel = (
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
+      <EditorToolbar
+        filePath={filePath}
+        isDirty={editor.isDirty}
+        saving={editor.saving}
+        viewMode={viewMode}
+        availableModes={viewModes}
+        onViewModeChange={setViewMode}
+        onSave={filePath ? editor.saveFile : undefined}
+      />
+      <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
+        {!selectedFile && (
+          <div style={{ padding: "20px 24px", fontSize: "13px", color: "var(--fg-subtle)" }}>
+            Select a file to edit
+          </div>
+        )}
+        {selectedFile && editor.loading && (
+          <div style={{ padding: "20px 24px", fontSize: "13px", color: "var(--fg-subtle)" }}>
+            Loading…
+          </div>
+        )}
+        {selectedFile && editor.error && (
+          <div style={{ padding: "20px 24px" }}>
+            <div style={{ fontSize: "13px", color: "var(--danger)", marginBottom: "8px" }}>
+              {editor.error}
+            </div>
+            <button
+              onClick={editor.reload}
+              style={{
+                fontSize: "12px", color: "var(--accent-text)", background: "none",
+                border: "none", padding: 0, cursor: "pointer", textDecoration: "underline",
+              }}
+            >
+              Reload
+            </button>
+          </div>
+        )}
+        {selectedFile && !editor.loading && !editor.error && editor.content !== null && viewMode === "preview" && (
+          <Suspense fallback={null}>
+            <MarkdownPanel content={editor.content} defaultView="preview" fill />
+          </Suspense>
+        )}
+        {selectedFile && !editor.loading && !editor.error && editor.content !== null && viewMode !== "preview" && (
+          <Suspense fallback={null}>
+            <MonacoEditor
+              filePath={`~/.claude/${selectedFile}`}
+              content={editor.content}
+              onChange={editor.updateContent}
+              onSave={editor.saveFile}
+            />
+          </Suspense>
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <SplitPane
+      left={leftPanel}
+      right={rightPanel}
+      collapsed={collapsed}
+      onToggleCollapsed={() => setCollapsed((c) => !c)}
+    />
   );
 }

@@ -50,6 +50,7 @@ pub fn run() {
             commands::hooks::read_hooks,
             // Claude.md
             commands::claude_md::read_claude_md,
+            commands::claude_md::write_config_file,
             // Harness File
             commands::harness_file::read_harness_file,
             commands::harness_file::write_harness_file,

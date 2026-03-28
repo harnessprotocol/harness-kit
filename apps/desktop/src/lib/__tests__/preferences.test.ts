@@ -24,6 +24,8 @@ import {
   getConfirmSave,
   setConfirmSave,
   initPreferences,
+  getConfigFilesDetailLevel,
+  setConfigFilesDetailLevel,
 } from "../preferences";
 
 beforeEach(() => {
@@ -254,6 +256,27 @@ describe("corrupted localStorage resilience", () => {
   it("getMarkdownFont falls back to 'sans' for invalid string", () => {
     localStorage.setItem("harness-kit-markdown-font", "foo");
     expect(getMarkdownFont()).toBe("sans");
+  });
+});
+
+// ── Config Files Detail Level ────────────────────────────────
+
+describe("configFilesDetailLevel", () => {
+  it("returns 'text-files' by default", () => {
+    expect(getConfigFilesDetailLevel()).toBe("text-files");
+  });
+
+  it("persists and retrieves the set value", () => {
+    setConfigFilesDetailLevel("essentials");
+    expect(getConfigFilesDetailLevel()).toBe("essentials");
+
+    setConfigFilesDetailLevel("all");
+    expect(getConfigFilesDetailLevel()).toBe("all");
+  });
+
+  it("falls back to 'text-files' for unknown stored values", () => {
+    localStorage.setItem("harness-kit-config-files-detail", "garbage");
+    expect(getConfigFilesDetailLevel()).toBe("text-files");
   });
 });
 

@@ -2301,6 +2301,12 @@
           "markdownDescription": "Enables the clear_audit_entries command without any pre-configured scope."
         },
         {
+          "description": "Enables the compute_live_stats command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-compute-live-stats",
+          "markdownDescription": "Enables the compute_live_stats command without any pre-configured scope."
+        },
+        {
           "description": "Enables the create_config_file command without any pre-configured scope.",
           "type": "string",
           "const": "allow-create-config-file",
@@ -2377,6 +2383,12 @@
           "type": "string",
           "const": "allow-get-comparison-setup",
           "markdownDescription": "Enables the get_comparison_setup command without any pre-configured scope."
+        },
+        {
+          "description": "Allows the get_custom_profile command.",
+          "type": "string",
+          "const": "allow-get-custom-profile",
+          "markdownDescription": "Allows the get_custom_profile command."
         },
         {
           "description": "Enables the get_diff_against_commit command without any pre-configured scope.",
@@ -2583,6 +2595,12 @@
           "markdownDescription": "Enables the read_session_facet command without any pre-configured scope."
         },
         {
+          "description": "Enables the read_session_transcript command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-read-session-transcript",
+          "markdownDescription": "Enables the read_session_transcript command without any pre-configured scope."
+        },
+        {
           "description": "Enables the read_stats_cache command without any pre-configured scope.",
           "type": "string",
           "const": "allow-read-stats-cache",
@@ -2707,6 +2725,12 @@
           "type": "string",
           "const": "allow-update-permissions",
           "markdownDescription": "Enables the update_permissions command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the write_config_file command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-write-config-file",
+          "markdownDescription": "Enables the write_config_file command without any pre-configured scope."
         },
         {
           "description": "Enables the write_env_config command without any pre-configured scope.",
@@ -2841,6 +2865,12 @@
           "markdownDescription": "Denies the clear_audit_entries command without any pre-configured scope."
         },
         {
+          "description": "Denies the compute_live_stats command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-compute-live-stats",
+          "markdownDescription": "Denies the compute_live_stats command without any pre-configured scope."
+        },
+        {
           "description": "Denies the create_config_file command without any pre-configured scope.",
           "type": "string",
           "const": "deny-create-config-file",
@@ -2917,6 +2947,12 @@
           "type": "string",
           "const": "deny-get-comparison-setup",
           "markdownDescription": "Denies the get_comparison_setup command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_custom_profile command.",
+          "type": "string",
+          "const": "deny-get-custom-profile",
+          "markdownDescription": "Denies the get_custom_profile command."
         },
         {
           "description": "Denies the get_diff_against_commit command without any pre-configured scope.",
@@ -3123,6 +3159,12 @@
           "markdownDescription": "Denies the read_session_facet command without any pre-configured scope."
         },
         {
+          "description": "Denies the read_session_transcript command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-read-session-transcript",
+          "markdownDescription": "Denies the read_session_transcript command without any pre-configured scope."
+        },
+        {
           "description": "Denies the read_stats_cache command without any pre-configured scope.",
           "type": "string",
           "const": "deny-read-stats-cache",
@@ -3247,6 +3289,12 @@
           "type": "string",
           "const": "deny-update-permissions",
           "markdownDescription": "Denies the update_permissions command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the write_config_file command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-write-config-file",
+          "markdownDescription": "Denies the write_config_file command without any pre-configured scope."
         },
         {
           "description": "Denies the write_env_config command without any pre-configured scope.",

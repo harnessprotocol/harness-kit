@@ -34,6 +34,15 @@ vi.mock("../../lib/theme", () => ({
   },
 }));
 
+vi.mock("../../lib/preferences", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/preferences")>();
+  return {
+    ...actual,
+    getConfigFilesDetailLevel: vi.fn(() => "text-files"),
+    setConfigFilesDetailLevel: vi.fn(),
+  };
+});
+
 import PreferencesPage from "../PreferencesPage";
 
 // ── Helpers ──────────────────────────────────────────────────
@@ -58,9 +67,9 @@ describe("PreferencesPage", () => {
     expect(screen.getByText("Preferences")).toBeInTheDocument();
   });
 
-  it("renders all 5 section headers", () => {
+  it("renders all 7 section headers", () => {
     renderPage();
-    for (const heading of ["Appearance", "Layout", "Behavior", "Content", "About"]) {
+    for (const heading of ["Appearance", "Layout", "Behavior", "Content", "Config File Explorer", "Labs", "About"]) {
       expect(screen.getByText(heading)).toBeInTheDocument();
     }
   });
@@ -95,5 +104,11 @@ describe("PreferencesPage", () => {
     renderPage();
     expect(screen.getByText("Release notes")).toBeInTheDocument();
     expect(screen.getByText("GitHub")).toBeInTheDocument();
+  });
+
+  it("renders the Config File Explorer section", () => {
+    render(<MemoryRouter><PreferencesPage /></MemoryRouter>);
+    expect(screen.getByText("Config File Explorer")).toBeInTheDocument();
+    expect(screen.getByText("File visibility")).toBeInTheDocument();
   });
 });
