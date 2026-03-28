@@ -83,8 +83,27 @@ export default function McpServerForm({
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, onCancel]);
+
+  useEffect(() => {
+    if (!open) return;
+    setName(initialName ?? "");
+    const isNet = initialServer ? isNetworkServer(initialServer) : false;
+    setTransport(isNet ? "network" : "stdio");
+    if (initialServer && !isNet && !isNetworkServer(initialServer)) {
+      setCommand((initialServer as ClaudeMcpStdio).command ?? "");
+      setArgsText(((initialServer as ClaudeMcpStdio).args ?? []).join("\n"));
+      setEnvPairs(Object.entries((initialServer as ClaudeMcpStdio).env ?? {}).map(([key, value]) => ({ key, value })));
+    } else {
+      setCommand(""); setArgsText(""); setEnvPairs([]);
+    }
+    if (initialServer && isNet) {
+      setUrl((initialServer as ClaudeMcpNetwork).url ?? "");
+      setHeaderPairs(Object.entries((initialServer as ClaudeMcpNetwork).headers ?? {}).map(([key, value]) => ({ key, value })));
+    } else {
+      setUrl(""); setHeaderPairs([]);
+    }
+  }, [open, initialName, initialServer]);
 
   const nameHasSpaces = name.includes(" ");
   const isValid =
@@ -213,7 +232,7 @@ export default function McpServerForm({
               className="form-input"
               value={argsText}
               onChange={(e) => setArgsText(e.target.value)}
-              placeholder="-y&#10;@modelcontextprotocol/server-filesystem"
+              placeholder={"-y\n@modelcontextprotocol/server-filesystem"}
               spellCheck={false}
               style={{ height: "80px", resize: "vertical", fontFamily: "ui-monospace, monospace" }}
             />

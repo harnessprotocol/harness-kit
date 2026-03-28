@@ -67,7 +67,7 @@ export default function TerminalPane({ panel, onKill }: TerminalPaneProps) {
       terminal.write(panel.outputLines[i]);
     }
     writtenRef.current = panel.outputLines.length;
-  }, [panel.outputLines]);
+  }, [panel.outputLines.length]); // only rerun when length changes, not on reference changes
 
   return (
     <div className="comparator-panel" style={{ display: "flex", flexDirection: "column" }}>

@@ -59,6 +59,8 @@ export default function McpServerCard({
       className="row-list-item"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onFocus={() => setHovered(true)}
+      onBlur={() => setHovered(false)}
       style={{ display: "flex", alignItems: "center", gap: "8px" }}
     >
       {/* Left: name + transport badge + command/url + env count */}
@@ -117,7 +119,7 @@ export default function McpServerCard({
             onEdit();
           }}
           style={{ opacity: hovered ? 1 : 0, transition: "opacity 0.15s" }}
-          tabIndex={hovered ? 0 : -1}
+          tabIndex={0}
           aria-label={`Edit ${name}`}
         >
           Edit
@@ -129,7 +131,7 @@ export default function McpServerCard({
             onDelete();
           }}
           style={{ opacity: hovered ? 1 : 0, transition: "opacity 0.15s" }}
-          tabIndex={hovered ? 0 : -1}
+          tabIndex={0}
           aria-label={`Delete ${name}`}
         >
           ×

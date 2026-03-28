@@ -12,6 +12,8 @@
 - **Desktop: Custom title bar** — macOS overlay title bar with collapsible sidebar toggle and back/forward navigation. Traffic lights overlay the web content; the entire bar is a drag region. Keyboard shortcuts: `Cmd+\` toggles the sidebar, `Cmd+[` navigates back, `Cmd+]` navigates forward. Sidebar collapsed state persists across sessions.
 - **Desktop: Comparator two-column layout** — setup form now fills available width in a responsive two-column grid (harness selector + directory on the left, prompt on the right). Maximum concurrent harnesses raised from 3 to 4.
 - **Desktop: Inline config file editor** — the Settings page now opens `~/.claude/` files in an inline split-pane editor instead of navigating away. File list is filterable by detail level (Essentials / Text Files / All), controlled from Preferences. Unsaved-changes are detected on file switch with an inline discard prompt. Files with a `.md` extension default to preview mode; toggle to editor is per-file. Draggable panel resize persists across sessions.
+- **Desktop: MCP Servers page** — dedicated page in the Harness menu for managing `~/.claude/mcp.json` entries. Add, edit, and remove stdio and network (HTTP/SSE) servers. Source toggle switches between editing `mcp.json` directly and the `harness.yaml` `mcp-servers` section. Servers present in both sources show an "in harness" indicator.
+- **Desktop: Pairwise voting** — blind side-by-side evaluation in the Comparator. After running a comparison, rate outputs by dimension (correctness, completeness, conciseness, instruction-following, style) without knowing which harness produced each. Results reveal the harness names and accumulate Elo rankings across sessions.
 
 ### Changed
 

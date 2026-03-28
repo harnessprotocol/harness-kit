@@ -220,9 +220,9 @@ export default function ComparatorRunPage() {
     }
   };
 
-  const handleStopAll = () => {
+  const handleStopAll = async () => {
     const running = activePanels.filter((p) => p.status === "running");
-    Promise.all(running.map((p) => handleKill(p.panelId)));
+    await Promise.all(running.map((p) => handleKill(p.panelId)));
   };
 
   const handleRerun = () => {

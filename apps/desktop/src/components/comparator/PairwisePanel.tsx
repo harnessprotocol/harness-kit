@@ -45,8 +45,9 @@ function shuffle<T>(arr: T[]): T[] {
   return a;
 }
 
-function decodeBlindOrder(blindOrder: string): [string, string] {
+function decodeBlindOrder(blindOrder: string): [string, string] | null {
   const parts = blindOrder.split(",");
+  if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
   return [parts[0], parts[1]];
 }
 
@@ -89,8 +90,9 @@ export default function PairwisePanel({ comparisonId, panels }: PairwisePanelPro
 
   const handleVote = useCallback(async (dim: DimensionKey, result: VoteResult) => {
     if (!session?.blindOrder) return;
-    const [panelA, panelB] = decodeBlindOrder(session.blindOrder);
-    if (!panelA || !panelB) return;
+    const blindPanels = decodeBlindOrder(session.blindOrder);
+    if (!blindPanels) return;
+    const [panelA, panelB] = blindPanels;
     const currentVote = votesRef.current[dim];
     const newResult = currentVote === result ? undefined : result;
     setVotes((prev) => ({ ...prev, [dim]: newResult }));
@@ -144,10 +146,9 @@ export default function PairwisePanel({ comparisonId, panels }: PairwisePanelPro
     );
   }
 
-  const [panelAId, panelBId] = decodeBlindOrder(session.blindOrder ?? "");
-  if (!panelAId || !panelBId) {
-    return <div className="pairwise-loading">Session data is invalid.</div>;
-  }
+  const blindPanels = decodeBlindOrder(session.blindOrder ?? "");
+  if (!blindPanels) return <p>Invalid session state.</p>;
+  const [panelAId, panelBId] = blindPanels;
   const panelA = panels.find((p) => p.panelId === panelAId);
   const panelB = panels.find((p) => p.panelId === panelBId);
   const isRevealed = !!session.revealedAt;

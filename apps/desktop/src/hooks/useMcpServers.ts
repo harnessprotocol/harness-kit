@@ -81,8 +81,8 @@ export function useMcpServers(): UseMcpServersReturn {
       if (mcpResult.found && mcpResult.serversJson) {
         try {
           parsedMcp = JSON.parse(mcpResult.serversJson) as Record<string, ClaudeMcpServer>;
-        } catch {
-          // Malformed JSON — fall back to empty
+        } catch (e) {
+          console.warn("useMcpServers: mcp.json has malformed JSON, treating as empty:", e);
           parsedMcp = {};
         }
       }
@@ -100,8 +100,8 @@ export function useMcpServers(): UseMcpServersReturn {
             parsedHarness = config["mcp-servers"] as Record<string, McpServer>;
             harnessHasMcp = true;
           }
-        } catch {
-          // Unparseable harness — treat as empty
+        } catch (e) {
+          console.warn("useMcpServers: harness.yaml parse failed, ignoring mcp-servers:", e);
           parsedHarness = {};
         }
       }

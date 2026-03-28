@@ -231,7 +231,7 @@ export default function EvaluationPanel({
 
   // Check if any scores have been set (for CTA vs table decision)
   const hasAnyScores = Object.values(scores).some((panelScores) =>
-    Object.values(panelScores).some((v) => v != null && v !== null),
+    Object.values(panelScores).some((v) => v != null),
   );
 
   // Load existing evaluations
