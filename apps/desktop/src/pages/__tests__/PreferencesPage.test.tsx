@@ -96,4 +96,10 @@ describe("PreferencesPage", () => {
     expect(screen.getByText("Release notes")).toBeInTheDocument();
     expect(screen.getByText("GitHub")).toBeInTheDocument();
   });
+
+  it("renders the Config File Explorer section", () => {
+    render(<MemoryRouter><PreferencesPage /></MemoryRouter>);
+    expect(screen.getByText("Config File Explorer")).toBeInTheDocument();
+    expect(screen.getByText("File visibility")).toBeInTheDocument();
+  });
 });
