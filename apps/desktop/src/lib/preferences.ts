@@ -21,6 +21,12 @@ const KEY_MARKDOWN_FONT = "harness-kit-markdown-font";
 const KEY_SIDEBAR_WIDTH = "harness-kit-sidebar-width";
 const KEY_CONFIRM_SAVE = "harness-kit-confirm-save";
 
+export const FILE_EXPLORER_WIDTH_MIN = 140;
+export const FILE_EXPLORER_WIDTH_MAX = 360;
+export const FILE_EXPLORER_WIDTH_DEFAULT = 200;
+
+const KEY_FILE_EXPLORER_WIDTH = "harness-kit-file-explorer-width";
+
 // ── Helpers ──────────────────────────────────────────────────
 
 function clamp(value: number, min: number, max: number): number {
@@ -151,6 +157,19 @@ export function setSidebarWidth(width: number) {
   const clamped = clamp(width, SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX);
   localStorage.setItem(KEY_SIDEBAR_WIDTH, String(clamped));
   document.documentElement.style.setProperty("--sidebar-width", `${clamped}px`);
+}
+
+// ── File Explorer Panel Width ──────────────────────────────────
+
+export function getFileExplorerWidth(): number {
+  const raw = localStorage.getItem(KEY_FILE_EXPLORER_WIDTH);
+  if (raw === null) return FILE_EXPLORER_WIDTH_DEFAULT;
+  return clamp(Number(raw), FILE_EXPLORER_WIDTH_MIN, FILE_EXPLORER_WIDTH_MAX);
+}
+
+export function setFileExplorerWidth(width: number) {
+  const clamped = clamp(width, FILE_EXPLORER_WIDTH_MIN, FILE_EXPLORER_WIDTH_MAX);
+  localStorage.setItem(KEY_FILE_EXPLORER_WIDTH, String(clamped));
 }
 
 // ── Init ─────────────────────────────────────────────────────
