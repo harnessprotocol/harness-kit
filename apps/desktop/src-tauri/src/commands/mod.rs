@@ -19,3 +19,4 @@ pub mod sync;
 pub mod parity;
 pub mod chat;
 pub mod relay;
+pub mod pairwise;

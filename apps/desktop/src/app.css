@@ -703,7 +703,7 @@ body {
   color: var(--fg-base);
   font-size: 12px;
   font-weight: 600;
-  min-width: 140px;
+  min-width: 100px;
 }
 
 .eval-table td {
@@ -730,6 +730,233 @@ body {
   font-size: 12px;
   color: var(--fg-base);
   text-align: left;
+}
+
+/* ── Score number display (compact, click-to-edit) ── */
+.score-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 32px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--fg-subtle);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background 0.1s, color 0.1s;
+  user-select: none;
+}
+
+.score-number.has-value {
+  color: var(--fg-base);
+}
+
+.score-number:hover {
+  background: var(--hover-bg);
+  color: var(--fg-base);
+}
+
+.score-number.readonly {
+  cursor: default;
+  font-size: 14px;
+}
+
+.score-number.readonly:hover {
+  background: none;
+}
+
+/* ── Score popover (0-10 selector dropdown) ── */
+.score-popover {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-base);
+  border-radius: 8px;
+  padding: 6px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  margin-top: 4px;
+  white-space: nowrap;
+}
+
+.score-popover-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1;
+  border: 1px solid var(--border-base);
+  border-radius: 6px;
+  background: var(--bg-base);
+  color: var(--fg-muted);
+  cursor: pointer;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  user-select: none;
+}
+
+.score-popover-btn:hover {
+  background: var(--hover-bg);
+  border-color: var(--border-strong);
+  color: var(--fg-base);
+}
+
+.score-popover-btn.selected {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+
+.score-auto-value {
+  display: inline-flex;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-base);
+}
+
+/* ── Dimension group header ── */
+.eval-group-header td {
+  padding: 10px 10px 4px !important;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--fg-subtle);
+  border-bottom: none !important;
+}
+
+/* ── Notes textarea ── */
+.eval-notes {
+  width: 100%;
+  min-height: 40px;
+  padding: 6px 8px;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--fg-base);
+  background: var(--bg-base);
+  border: 1px solid var(--border-base);
+  border-radius: 6px;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.eval-notes:focus {
+  border-color: var(--accent);
+}
+
+.eval-notes[readonly] {
+  background: var(--bg-surface);
+  cursor: default;
+  resize: none;
+}
+
+.eval-notes-row td {
+  padding: 4px 10px !important;
+  border-bottom: none !important;
+}
+
+/* ── CTA: Score with AI default state ── */
+.eval-cta-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px;
+  gap: 12px;
+}
+
+.eval-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 200px;
+  height: 44px;
+  padding: 0 24px;
+  font-size: 14px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.eval-cta:hover {
+  filter: brightness(1.1);
+}
+
+.eval-cta:active {
+  transform: scale(0.98);
+}
+
+.eval-cta-link {
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: var(--fg-subtle);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  padding: 0;
+}
+
+.eval-cta-link:hover {
+  color: var(--fg-muted);
+}
+
+/* ── AI scoring ── */
+.ai-score-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--accent-light);
+  color: var(--accent-text);
+  white-space: nowrap;
+}
+
+.ai-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border-base);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Compact density adjustments for score numbers */
+[data-density="compact"] .score-number {
+  width: 36px;
+  height: 26px;
+  font-size: 16px;
+}
+
+[data-density="compact"] .score-popover-btn {
+  width: 26px;
+  height: 26px;
+  font-size: 10px;
 }
 
 /* ── Comparator panels ── */
@@ -797,6 +1024,201 @@ body {
   0% { opacity: 0.3; }
   50% { opacity: 0.6; }
   100% { opacity: 0.3; }
+}
+
+/* ── Comparator: progress bar ── */
+.comp-progress-bar {
+  display: flex;
+  align-items: stretch;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-base);
+  flex-shrink: 0;
+}
+
+.comp-progress-segment {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--fg-muted);
+  border-right: 1px solid var(--border-base);
+}
+
+.comp-progress-segment:last-child {
+  border-right: none;
+}
+
+.comp-progress-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.comp-progress-dot.running {
+  background: var(--accent);
+  animation: comp-pulse 1.2s ease-in-out infinite;
+}
+
+.comp-progress-dot.complete {
+  background: var(--success);
+}
+
+.comp-progress-dot.killed {
+  background: var(--danger);
+}
+
+.comp-progress-dot.pending {
+  background: var(--fg-subtle);
+  opacity: 0.4;
+}
+
+@keyframes comp-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.8); }
+}
+
+.comp-progress-summary {
+  font-size: 10px;
+  color: var(--fg-subtle);
+  text-align: center;
+  padding: 4px 12px;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-base);
+}
+
+/* ── Comparator: mode badge ── */
+.comp-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 10px;
+  line-height: 1;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.comp-mode-badge-live {
+  background: rgba(22, 163, 74, 0.12);
+  color: var(--success);
+}
+
+.comp-mode-badge-review {
+  background: rgba(91, 80, 232, 0.10);
+  color: var(--accent-text);
+}
+
+/* ── Comparator: disabled tab ── */
+.tab.comp-tab-disabled {
+  color: var(--fg-subtle);
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tab.comp-tab-disabled:hover {
+  color: var(--fg-subtle);
+}
+
+/* ── Comparator: prompt chevron ── */
+.comp-prompt-chevron {
+  display: inline-block;
+  color: var(--fg-subtle);
+  font-size: 10px;
+  margin-right: 6px;
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.comp-prompt-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+/* ── DiffView: context fold row ── */
+.diff-fold-row {
+  cursor: pointer;
+  user-select: none;
+}
+
+.diff-fold-row:hover .diff-fold-label {
+  color: var(--fg-muted);
+  border-color: var(--border-strong);
+}
+
+.diff-fold-label {
+  text-align: center;
+  color: var(--fg-subtle);
+  font-size: 10px;
+  font-style: italic;
+  padding: 3px 0;
+  border-top: 1px dashed var(--border-base);
+  border-bottom: 1px dashed var(--border-base);
+  background: var(--bg-surface);
+  transition: color 0.1s, border-color 0.1s;
+}
+
+/* ── DiffView: summary header ── */
+.diff-summary-header {
+  padding: 6px 16px;
+  font-size: 12px;
+  color: var(--fg-muted);
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-base);
+  flex-shrink: 0;
+}
+
+.diff-summary-header strong {
+  color: var(--fg-base);
+  font-weight: 600;
+}
+
+/* ── Confirm dialog ── */
+.confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.confirm-card {
+  max-width: 400px;
+  width: 100%;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-base);
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg);
+  padding: 20px;
+}
+
+.confirm-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg-base);
+  margin-bottom: 8px;
+}
+
+.confirm-message {
+  font-size: 13px;
+  color: var(--fg-muted);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
 /* ── Reduced motion ── */

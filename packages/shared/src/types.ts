@@ -310,6 +310,9 @@ export interface HarnessInfo {
   available: boolean;
   version?: string;
   mode?: string; // "supported" | "unsupported"
+  authenticated: boolean;
+  models: string[];
+  defaultModel?: string;
 }
 
 export interface PanelConfig {

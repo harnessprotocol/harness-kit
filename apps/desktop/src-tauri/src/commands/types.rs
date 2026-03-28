@@ -10,6 +10,32 @@ pub struct FileDiffEntry {
     pub change_type: String,
 }
 
+/// Pairwise evaluation session — created once per comparison run to track blind voting.
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct EvaluationSession {
+    pub id: String,
+    pub comparison_id: String,
+    pub eval_method: String,
+    pub blind_order: Option<String>,
+    pub revealed_at: Option<String>,
+    pub created_at: String,
+}
+
+/// A single pairwise vote cast during a blind evaluation session.
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PairwiseVote {
+    pub id: String,
+    pub comparison_id: String,
+    pub session_id: String,
+    pub left_panel_id: String,
+    pub right_panel_id: String,
+    pub dimension: String,
+    pub result: String,
+    pub created_at: String,
+}
+
 /// Shared evaluation type — used by evaluation.rs (CRUD commands)
 /// and comparator_db.rs (loaded as part of ComparisonDetail).
 #[derive(Debug, Serialize, Clone)]

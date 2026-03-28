@@ -32,6 +32,7 @@
       "identifier": "shell:allow-execute",
       "allow": [
         { "name": "claude", "cmd": "claude", "args": true },
+        { "name": "copilot", "cmd": "copilot", "args": true },
         { "name": "cursor", "cmd": "cursor", "args": true },
         { "name": "gh", "cmd": "gh", "args": true },
         { "name": "git", "cmd": "git", "args": true },

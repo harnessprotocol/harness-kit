@@ -92,6 +92,13 @@ pub fn run() {
             commands::evaluation::save_evaluation,
             commands::evaluation::get_evaluations,
             commands::evaluation::update_evaluation_score,
+            // Pairwise voting
+            commands::pairwise::create_evaluation_session,
+            commands::pairwise::get_evaluation_session,
+            commands::pairwise::reveal_evaluation_session,
+            commands::pairwise::save_pairwise_vote,
+            commands::pairwise::get_pairwise_votes,
+            commands::pairwise::get_pairwise_analytics,
             // Export + Analytics
             commands::export::export_comparison_json,
             commands::export::get_comparator_analytics,

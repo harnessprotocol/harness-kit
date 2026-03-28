@@ -4,11 +4,9 @@ import { detectHarnesses, checkGitRepo, getComparisonSetup } from "../../lib/tau
 import HarnessSelector, { type SelectedHarness } from "../../components/comparator/HarnessSelector";
 import type { HarnessInfo, GitRepoInfo } from "@harness-kit/shared";
 
-const MODEL_DEFAULTS: Record<string, string> = {
-  claude: "claude-sonnet-4-6",
-  cursor: "gpt-4o",
-  "gh-copilot": "gpt-4o",
-};
+function getDefaultModel(h: HarnessInfo): string {
+  return h.defaultModel ?? h.models?.[0] ?? "";
+}
 
 export default function ComparatorSetupPage() {
   const navigate = useNavigate();
@@ -18,6 +16,7 @@ export default function ComparatorSetupPage() {
   const [prompt, setPrompt] = useState("");
   const [workingDir, setWorkingDir] = useState("");
   const [loading, setLoading] = useState(true);
+  const [detecting, setDetecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Git state
@@ -29,18 +28,27 @@ export default function ComparatorSetupPage() {
   const replayFrom = (location.state as { replayFrom?: string } | null)?.replayFrom;
   const [replayDate, setReplayDate] = useState<string | null>(null);
 
+  const runDetection = useCallback(async () => {
+    try {
+      const h = await detectHarnesses();
+      setHarnesses(h);
+      return h;
+    } catch (e) {
+      setError(String(e));
+      return [];
+    }
+  }, []);
+
   useEffect(() => {
-    detectHarnesses()
+    runDetection()
       .then((h) => {
-        setHarnesses(h);
-        const first = h.find((x) => x.available);
+        const first = h.find((x) => x.available && x.authenticated);
         if (first) {
-          setSelected([{ harnessId: first.id, model: MODEL_DEFAULTS[first.id] || "" }]);
+          setSelected([{ harnessId: first.id, model: getDefaultModel(first) }]);
         }
       })
-      .catch((e) => setError(String(e)))
       .finally(() => setLoading(false));
-  }, []);
+  }, [runDetection]);
 
   // Handle replay pre-fill
   useEffect(() => {
@@ -50,15 +58,18 @@ export default function ComparatorSetupPage() {
         setPrompt(setup.prompt);
         setWorkingDir(setup.workingDir);
         setSelected(
-          setup.panels.map((p) => ({
-            harnessId: p.harnessId,
-            model: p.model || MODEL_DEFAULTS[p.harnessId] || "",
-          })),
+          setup.panels.map((p) => {
+            const h = harnesses.find((x) => x.id === p.harnessId);
+            return {
+              harnessId: p.harnessId,
+              model: p.model || (h ? getDefaultModel(h) : ""),
+            };
+          }),
         );
         setReplayDate(new Date().toLocaleDateString());
       })
       .catch((e) => console.error("Failed to load replay:", e));
-  }, [replayFrom]);
+  }, [replayFrom, harnesses]);
 
   // Check git repo when working directory changes
   useEffect(() => {
@@ -82,10 +93,11 @@ export default function ComparatorSetupPage() {
         const exists = prev.find((s) => s.harnessId === harnessId);
         if (exists) return prev.filter((s) => s.harnessId !== harnessId);
         if (prev.length >= 4) return prev;
-        return [...prev, { harnessId, model: MODEL_DEFAULTS[harnessId] || "" }];
+        const h = harnesses.find((x) => x.id === harnessId);
+        return [...prev, { harnessId, model: h ? getDefaultModel(h) : "" }];
       });
     },
-    [],
+    [harnesses],
   );
 
   const handleModelChange = useCallback((harnessId: string, model: string) => {
@@ -108,6 +120,23 @@ export default function ComparatorSetupPage() {
       },
     });
   };
+
+  const handleRedetect = useCallback(async () => {
+    setDetecting(true);
+    setError(null);
+    try {
+      const h = await runDetection();
+      // Remove any selected harnesses that are no longer available/authenticated
+      setSelected((prev) =>
+        prev.filter((s) => {
+          const info = h.find((x) => x.id === s.harnessId);
+          return info?.available && info?.authenticated;
+        }),
+      );
+    } finally {
+      setDetecting(false);
+    }
+  }, [runDetection]);
 
   const canRun = prompt.trim().length > 0 && selected.length > 0;
 
@@ -143,10 +172,27 @@ export default function ComparatorSetupPage() {
         <div>
           {/* Harness selector */}
           <div style={{ marginBottom: "24px" }}>
-            <label className="text-label" style={{ display: "block", marginBottom: "8px" }}>
-              Select Tools (1–4)
-            </label>
-            {loading && <p className="text-caption">Detecting available tools...</p>}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px" }}>
+              <label className="text-label">
+                Select Tools (1-4)
+              </label>
+              {!loading && (
+                <button
+                  className="btn"
+                  onClick={handleRedetect}
+                  disabled={detecting}
+                  style={{
+                    fontSize: "11px",
+                    padding: "2px 8px",
+                    borderRadius: "6px",
+                    opacity: detecting ? 0.6 : 1,
+                  }}
+                >
+                  {detecting ? "Detecting..." : "Re-detect"}
+                </button>
+              )}
+            </div>
+            {(loading || detecting) && <p className="text-caption">Detecting available tools...</p>}
             {error && <p style={{ color: "var(--danger)", fontSize: "12px" }}>{error}</p>}
             {!loading && <HarnessSelector harnesses={harnesses} selected={selected} onToggle={handleToggle} onModelChange={handleModelChange} />}
           </div>

@@ -8,10 +8,10 @@ import {
 import { useComparison, type PanelState } from "../../hooks/useComparison";
 import TerminalPane from "../../components/comparator/TerminalView";
 import DiffView from "../../components/comparator/DiffView";
+import type { OutputPanel } from "../../components/comparator/DiffView";
 import EvaluationPanel from "../../components/comparator/EvaluationPanel";
 import ExportMenu from "../../components/comparator/ExportMenu";
 import type { SelectedHarness } from "../../components/comparator/HarnessSelector";
-import type { FileDiff } from "@harness-kit/shared";
 
 const HARNESS_NAMES: Record<string, string> = {
   claude: "Claude Code",
@@ -35,7 +35,6 @@ export default function ComparatorRunPage() {
   const isReviewMode = location.pathname.startsWith("/comparator/review/");
   const [reviewLoaded, setReviewLoaded] = useState(false);
   const [reviewPanels, setReviewPanels] = useState<PanelState[]>([]);
-  const [reviewDiffs, setReviewDiffs] = useState<Record<string, FileDiff[]>>({});
   const [reviewPrompt, setReviewPrompt] = useState("");
 
   const { prompt, workingDir, selected, pinnedCommit } = (location.state || {}) as {
@@ -66,14 +65,6 @@ export default function ComparatorRunPage() {
         })),
       );
 
-      // Load diffs
-      const diffsMap: Record<string, FileDiff[]> = {};
-      for (const p of detail.panels) {
-        if (p.diffs.length > 0) {
-          diffsMap[p.id] = p.diffs;
-        }
-      }
-      setReviewDiffs(diffsMap);
     }).catch((err) => {
       console.error("Failed to load comparison:", err);
     });
@@ -244,25 +235,34 @@ export default function ComparatorRunPage() {
   const activePanels = isReviewMode ? reviewPanels : compState.panels;
   const activePhase = isReviewMode ? "complete" : compState.phase;
   const activePrompt = isReviewMode ? reviewPrompt : prompt;
-  const activeDiffs = isReviewMode ? reviewDiffs : (compState.diffs || {});
-
   const hasRunning = activePanels.some((p) => p.status === "running");
   const isComplete = activePhase === "complete";
 
-  // Build diff panels data for DiffView
-  const diffPanels = activePanels.map((p) => ({
+  // Build output panels data for DiffView (cross-pane output comparison)
+  const outputPanels: OutputPanel[] = activePanels.map((p) => ({
     panelId: p.panelId,
     harnessName: p.harnessName,
-    diffs: activeDiffs[p.panelId] || [],
+    model: p.model,
+    outputText: p.outputLines.join(""),
   }));
 
-  // Build eval panels info
+  // Build eval panels info (include output text for AI scoring)
   const evalPanels = activePanels.map((p) => ({
     panelId: p.panelId,
     harnessName: p.harnessName,
     model: p.model,
     durationMs: p.durationMs,
+    outputText: p.outputLines.join(""),
   }));
+
+  // Progress bar summary text
+  const completeCount = activePanels.filter((p) => p.status === "complete").length;
+  const killedCount = activePanels.filter((p) => p.status === "killed").length;
+  const progressSummary = isComplete
+    ? killedCount > 0
+      ? `${completeCount} complete, ${killedCount} killed`
+      : "All panels complete"
+    : undefined;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
@@ -289,9 +289,22 @@ export default function ComparatorRunPage() {
             overflow: "hidden",
             whiteSpace: promptExpanded ? "pre-wrap" : "nowrap",
             textOverflow: promptExpanded ? "unset" : "ellipsis",
+            display: "flex",
+            alignItems: "baseline",
           }}
         >
-          {activePrompt || "No prompt"}
+          <span className={`comp-prompt-chevron${promptExpanded ? " expanded" : ""}`}>
+            {"\u25B8"}
+          </span>
+          <span
+            className={`comp-mode-badge ${isReviewMode ? "comp-mode-badge-review" : "comp-mode-badge-live"}`}
+            style={{ marginRight: "8px", position: "relative", top: "-1px" }}
+          >
+            {isReviewMode ? "Review" : "Live"}
+          </span>
+          <span style={{ overflow: "hidden", textOverflow: promptExpanded ? "unset" : "ellipsis" }}>
+            {activePrompt || "No prompt"}
+          </span>
         </div>
 
         <div style={{ display: "flex", gap: "8px", flexShrink: 0, alignItems: "center" }}>
@@ -314,20 +327,57 @@ export default function ComparatorRunPage() {
         </div>
       </div>
 
-      {/* Tabs (shown when complete) */}
-      {isComplete && (
-        <div className="tab-bar">
-          {(["output", "diffs", "evaluate"] as Tab[]).map((tab) => (
+      {/* Progress bar */}
+      {activePanels.length > 0 && (
+        <>
+          <div className="comp-progress-bar">
+            {activePanels.map((panel) => {
+              const statusIcon =
+                panel.status === "running" || panel.status === "pending"
+                  ? null
+                  : panel.status === "complete"
+                    ? "\u2713"
+                    : "\u2717";
+              return (
+                <div key={panel.panelId} className="comp-progress-segment">
+                  <span
+                    className={`comp-progress-dot ${panel.status}`}
+                  />
+                  <span>{panel.harnessName}</span>
+                  {statusIcon && (
+                    <span style={{
+                      color: panel.status === "complete" ? "var(--success)" : "var(--danger)",
+                      fontWeight: 600,
+                      fontSize: "12px",
+                    }}>
+                      {statusIcon}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {progressSummary && (
+            <div className="comp-progress-summary">{progressSummary}</div>
+          )}
+        </>
+      )}
+
+      {/* Tabs (always visible) */}
+      <div className="tab-bar">
+        {(["output", "diffs", "evaluate"] as Tab[]).map((tab) => {
+          const isDisabled = !isComplete && tab !== "output";
+          return (
             <button
               key={tab}
-              className={`tab${activeTab === tab ? " active" : ""}`}
-              onClick={() => setActiveTab(tab)}
+              className={`tab${activeTab === tab ? " active" : ""}${isDisabled ? " comp-tab-disabled" : ""}`}
+              onClick={() => { if (!isDisabled) setActiveTab(tab); }}
             >
               {tab === "evaluate" ? "Evaluate" : tab === "diffs" ? "Diffs" : "Output"}
             </button>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
 
       {/* Content */}
       {(activeTab === "output" || !isComplete) && (
@@ -369,7 +419,7 @@ export default function ComparatorRunPage() {
 
       {isComplete && activeTab === "diffs" && (
         <div style={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-          <DiffView panels={diffPanels} />
+          <DiffView panels={outputPanels} />
         </div>
       )}
 
@@ -378,6 +428,7 @@ export default function ComparatorRunPage() {
           <EvaluationPanel
             comparisonId={comparisonId}
             panels={evalPanels}
+            prompt={activePrompt || ""}
             readOnly={isReviewMode}
           />
         </div>
