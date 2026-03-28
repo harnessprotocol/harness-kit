@@ -67,9 +67,9 @@ describe("PreferencesPage", () => {
     expect(screen.getByText("Preferences")).toBeInTheDocument();
   });
 
-  it("renders all 6 section headers", () => {
+  it("renders all 7 section headers", () => {
     renderPage();
-    for (const heading of ["Appearance", "Layout", "Behavior", "Content", "Config File Explorer", "About"]) {
+    for (const heading of ["Appearance", "Layout", "Behavior", "Content", "Config File Explorer", "Labs", "About"]) {
       expect(screen.getByText(heading)).toBeInTheDocument();
     }
   });
