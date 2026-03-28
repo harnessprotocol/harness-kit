@@ -1280,6 +1280,7 @@ dependencies = [
  "chrono",
  "dirs 5.0.1",
  "futures-util",
+ "rand 0.8.5",
  "rusqlite",
  "serde",
  "serde_json",
