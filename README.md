@@ -6,7 +6,9 @@ Portable configuration for AI coding tools.
 
 [![Release](https://img.shields.io/github/v/release/harnessprotocol/harness-kit?style=flat-square)](https://github.com/harnessprotocol/harness-kit/releases)
 [![Validate](https://img.shields.io/github/actions/workflow/status/harnessprotocol/harness-kit/validate.yml?style=flat-square&label=validate)](https://github.com/harnessprotocol/harness-kit/actions/workflows/validate.yml)
-[![License](https://img.shields.io/github/license/harnessprotocol/harness-kit?style=flat-square)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](LICENSE)
+[![Plugins](https://img.shields.io/badge/plugins-16-8A2BE2?style=flat-square)](.claude-plugin/marketplace.json)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](CONTRIBUTING.md)
 
 Works with [Claude Code](https://claude.ai/claude-code) · [Cursor](https://cursor.com) · [GitHub Copilot](https://github.com/features/copilot)
 
@@ -63,7 +65,7 @@ A few highlights to get started:
 | [`review`](plugins/review/skills/review/README.md) | Code review with severity labels and cross-file analysis | `/review` |
 | [`lineage`](plugins/lineage/skills/lineage/README.md) | Column-level data lineage through SQL, Kafka, Spark, and JDBC | `/lineage orders.amount` |
 
-> 📋 **[Browse all plugins →](https://harnesskit.ai/docs/plugins)** or run `/plugin marketplace browse harness-kit`
+> 📋 **[Browse all 16 plugins →](.claude-plugin/marketplace.json)** or run `/plugin marketplace browse harness-kit`
 
 ### 🌍 Community
 
