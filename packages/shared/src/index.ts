@@ -61,6 +61,11 @@ export type {
   AuditEntry,
   ComponentCounts,
   FileTreeNode,
+  EvaluationSession,
+  PairwiseVote,
+  EloEntry,
+  DimensionWinRate,
+  PairwiseAnalytics,
 } from "./types.js";
 
 export type {

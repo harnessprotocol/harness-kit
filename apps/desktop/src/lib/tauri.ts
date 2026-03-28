@@ -6,6 +6,7 @@ import type {
   HarnessInfo, ComparisonRequest, GitRepoInfo, ComparisonSummary,
   ComparisonDetail, PanelDiffs, ReplaySetup, SaveEvaluationRequest,
   EvaluationScores, AnalyticsData, FileDiffEntry,
+  EvaluationSession, PairwiseVote, PairwiseAnalytics,
   PermissionsState, SecurityPreset, KeychainSecretInfo,
   EnvConfigEntry, AuditEntry, FileTreeNode,
 } from "@harness-kit/shared";
@@ -285,6 +286,48 @@ export async function updateEvaluationScore(
   evaluationId: string, dimension: string, score: number,
 ): Promise<void> {
   return invoke<void>("update_evaluation_score", { evaluationId, dimension, score });
+}
+
+// ── Pairwise voting commands ─────────────────────────────────────
+
+export async function createEvaluationSession(
+  id: string,
+  comparisonId: string,
+  blindOrder: string | null,
+): Promise<EvaluationSession> {
+  return invoke<EvaluationSession>("create_evaluation_session", { id, comparisonId, blindOrder });
+}
+
+export async function getEvaluationSession(
+  comparisonId: string,
+): Promise<EvaluationSession | null> {
+  return invoke<EvaluationSession | null>("get_evaluation_session", { comparisonId });
+}
+
+export async function revealEvaluationSession(sessionId: string): Promise<void> {
+  return invoke<void>("reveal_evaluation_session", { sessionId });
+}
+
+export async function savePairwiseVote(
+  id: string,
+  comparisonId: string,
+  sessionId: string,
+  leftPanelId: string,
+  rightPanelId: string,
+  dimension: string,
+  result: string,
+): Promise<void> {
+  return invoke<void>("save_pairwise_vote", {
+    id, comparisonId, sessionId, leftPanelId, rightPanelId, dimension, result,
+  });
+}
+
+export async function getPairwiseVotes(comparisonId: string): Promise<PairwiseVote[]> {
+  return invoke<PairwiseVote[]>("get_pairwise_votes", { comparisonId });
+}
+
+export async function getPairwiseAnalytics(): Promise<PairwiseAnalytics> {
+  return invoke<PairwiseAnalytics>("get_pairwise_analytics");
 }
 
 // ── Export commands ──────────────────────────────────────────
