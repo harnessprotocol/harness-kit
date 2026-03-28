@@ -1,0 +1,100 @@
+---
+title: board
+description: Kanban project board with real-time two-way sync between Claude and a web UI via MCP.
+---
+
+> **[View in Marketplace →](https://marketplace.harnessprotocol.io/plugins/board)** for install tracking, related plugins, and profiles.
+
+# board
+
+A lightweight Kanban board with real-time two-way sync between Claude and a web UI. Tasks live in `~/.harness/board/projects/<slug>.yaml`. Claude interacts via MCP tools; you interact via browser.
+
+## Requirements
+
+- Node.js (for the board server — installed as part of harness-kit desktop or via `pnpm board:install`)
+
+## Install
+
+```
+/plugin marketplace add harnessprotocol/harness-kit
+/plugin install board@harness-kit
+```
+
+## Usage
+
+### Open the board UI
+
+```
+/board
+```
+
+Launches the board web UI. If the server is not running, the plugin prints instructions to install it as a persistent launchd service.
+
+### Create a task
+
+```
+/board create Fix login redirect bug
+```
+
+Creates a task in the active project and epic. Returns the task ID.
+
+### Check board status
+
+```
+/board status
+```
+
+Shows a summary of all tasks grouped by status column.
+
+### Move a task
+
+```
+/board move TASK-42 in-progress
+/board move TASK-42 done
+```
+
+## Status Columns
+
+| Status | Meaning |
+|--------|---------|
+| `backlog` | Not started |
+| `in-progress` | Being worked on |
+| `review` | Ready for human review |
+| `done` | Complete |
+
+## MCP Tools
+
+The board plugin exposes MCP tools for deeper integration:
+
+| Tool | Purpose |
+|------|---------|
+| `create_project` | Create a new project |
+| `create_epic` | Create an epic |
+| `create_task` | Create a task |
+| `update_task` | Edit title, description, flags |
+| `move_task` | Change status column |
+| `add_comment` | Post a comment |
+| `list_tasks` | Read board state (filterable) |
+| `link_branch` | Associate a branch or worktree |
+| `link_commit` | Attach a commit SHA |
+| `request_review` | Flag task ready for review |
+| `block_task` / `unblock_task` | Mark or clear blocked status |
+
+## Workflow Integration
+
+When Claude starts work on a task, it can automatically:
+
+1. Move the task to `in-progress` and link the working branch
+2. Post progress comments as work proceeds
+3. Flag `request_review` when done
+4. Move to `done` after merge
+
+## Source Files
+
+<Accordions>
+<Accordion title="SKILL.md — Runtime Configuration">
+
+{/* @embed plugins/board/skills/board/SKILL.md */}
+
+</Accordion>
+</Accordions>

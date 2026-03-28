@@ -1,4 +1,4 @@
 {
   "title": "Plugins",
-  "pages": ["overview", "research-knowledge", "code-quality", "data-engineering", "documentation", "devops", "productivity"]
+  "pages": ["overview", "research-knowledge", "code-quality", "data-engineering", "documentation", "devops", "productivity", "design"]
 }

@@ -1,0 +1,76 @@
+---
+title: stats
+description: Interactive HTML dashboard for Claude Code token and session usage analytics.
+---
+
+> **[View in Marketplace →](https://marketplace.harnessprotocol.io/plugins/stats)** for install tracking, related plugins, and profiles.
+
+# stats
+
+Generate an interactive HTML dashboard from your local Claude Code session data — daily activity, token usage, model distribution, hourly patterns, and project breakdown.
+
+## Requirements
+
+- Python 3.10+
+- A browser with internet access (charts use Chart.js from a CDN)
+
+## Install
+
+```
+/plugin marketplace add harnessprotocol/harness-kit
+/plugin install stats@harness-kit
+```
+
+## Usage
+
+```
+/stats                    # last 14 days (default)
+/stats last week
+/stats last month
+/stats all time
+/stats Mar 1 to Mar 10
+```
+
+## What You Get
+
+The dashboard opens in your browser with:
+
+- **Summary cards** — total messages, sessions, output tokens, active days
+- **Daily activity chart** — stacked bar chart of messages, sessions, and tool calls
+- **Token usage trend** — output tokens over time
+- **Model distribution** — donut chart showing which models you used
+- **Hourly pattern** — when you're most active during the day
+- **Project breakdown** — where you spent your tokens
+- **Sortable tables** — daily and session-level detail
+- **Live filtering** — filter by date range, model, or project without re-running
+
+## Data Sources
+
+The plugin reads from `~/.claude/` only. Nothing leaves your machine.
+
+| Source | Contents |
+|--------|----------|
+| `stats-cache.json` | Pre-computed daily aggregates |
+| `projects/**/*.jsonl` | Full session transcripts (scanned for recent data) |
+| `history.jsonl` | Command history for project path mapping |
+
+## Limitations
+
+- **Not a billing tool.** Token counts are not costs — pricing depends on your plan.
+- **Cache staleness.** `stats-cache.json` may lag by a few days; the script fills gaps from session files directly.
+- **Large histories.** Scanning "all time" can take 10–30 seconds with thousands of sessions.
+
+## Source Files
+
+<Accordions>
+<Accordion title="SKILL.md — Runtime Configuration">
+
+{/* @embed plugins/stats/skills/stats/SKILL.md */}
+
+</Accordion>
+<Accordion title="README.md — Plugin Documentation">
+
+{/* @embed plugins/stats/skills/stats/README.md */}
+
+</Accordion>
+</Accordions>

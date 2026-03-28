@@ -1,0 +1,86 @@
+---
+title: iterm-notify
+description: macOS desktop notifications and iTerm2 badge management for Claude Code lifecycle events.
+---
+
+> **[View in Marketplace →](https://marketplace.harnessprotocol.io/plugins/iterm-notify)** for install tracking, related plugins, and profiles.
+
+# iterm-notify
+
+macOS desktop notifications and iTerm2 badge management for Claude Code lifecycle events. Know when Claude needs your attention or finishes a task — without watching the terminal.
+
+**This plugin is not a slash command.** It provides a hook script that must be wired into `~/.claude/settings.json`. See the wiring instructions below.
+
+## Requirements
+
+- macOS with [iTerm2](https://iterm2.com)
+- `terminal-notifier`: `brew install terminal-notifier`
+- `jq`: `brew install jq`
+
+## Install
+
+```
+/plugin marketplace add harnessprotocol/harness-kit
+/plugin install iterm-notify@harness-kit
+```
+
+## What It Does
+
+| Event | Behavior |
+|-------|----------|
+| `Notification` (Claude needs attention) | Bounces the iTerm2 dock icon, sets badge to `<topic> ⚡`, sends macOS desktop notification with click-to-focus |
+| `Stop` (task complete) | Clears the iTerm2 badge |
+
+Clicking the macOS notification focuses the iTerm2 window where Claude is running.
+
+## Wiring
+
+After install, add the hook to `~/.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "Notification": [{
+      "hooks": [{
+        "type": "command",
+        "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh"
+      }]
+    }],
+    "Stop": [{
+      "hooks": [{
+        "type": "command",
+        "command": "${CLAUDE_PLUGIN_ROOT}/scripts/notify.sh"
+      }]
+    }]
+  }
+}
+```
+
+Both events use the same script — it reads `hook_event_name` from stdin JSON to determine behavior.
+
+## Badge Label
+
+By default the badge shows `⚡`. To include a project name:
+
+```bash
+echo "my-project" > ~/.claude/iterm-badge-label.txt
+```
+
+The badge will show `my-project ⚡`. Clear it with `echo "" > ~/.claude/iterm-badge-label.txt`.
+
+The label file path is configurable via `HARNESS_BADGE_LABEL_FILE` (default: `~/.claude/iterm-badge-label.txt`).
+
+## Source Files
+
+<Accordions>
+<Accordion title="SKILL.md — Runtime Configuration">
+
+{/* @embed plugins/iterm-notify/skills/iterm-notify/SKILL.md */}
+
+</Accordion>
+<Accordion title="README.md — Plugin Documentation">
+
+{/* @embed plugins/iterm-notify/skills/iterm-notify/README.md */}
+
+</Accordion>
+</Accordions>
