@@ -9,6 +9,8 @@ harness-kit/
 ├── .claude-plugin/
 │   └── marketplace.json          ← marketplace catalog
 ├── .github/
+│   ├── schema/
+│   │   └── plugin.schema.json    ← Protocol JSON Schema for plugin manifest validation
 │   └── workflows/
 │       └── validate.yml          ← CI: manifest parsing, version alignment, schema validation
 ├── plugins/                      ← one directory per plugin (marketplace)
@@ -35,7 +37,8 @@ harness-kit/
 ├── apps/                         ← end-user applications
 │   ├── desktop/                  ← Tauri desktop app (React + Rust)
 │   ├── board/                    ← web board client
-│   └── cli/                      ← harness CLI
+│   ├── cli/                      ← harness CLI
+│   └── marketplace/              ← Next.js marketplace web app
 ├── harness.yaml                  ← dogfooding config (plugins used to develop this repo)
 ├── install.sh                    ← script fallback for users without plugin marketplace
 ├── CLAUDE.md                     ← this file
@@ -91,9 +94,9 @@ Add an entry to `.claude-plugin/marketplace.json` under `plugins`:
 
 Note: `source` is relative to the **repo root**, not `pluginRoot`. Always use the full path from root (e.g., `"./plugins/research"`).
 
-### 4. Add a section to README.md
+### 4. Update the plugin count in README.md
 
-Under `## Skills` (or a new `## Agents`, `## Hooks` section as appropriate), add a one-liner and a link to the plugin's README.
+The README shows a "Browse all N plugins" link — update the count. Individual plugins are not listed in the README; the marketplace handles discovery.
 
 ### 5. Test it
 

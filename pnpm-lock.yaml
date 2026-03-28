@@ -201,11 +201,11 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0(@types/node@25.5.0)(jsdom@28.1.0)(vite@6.4.1(@types/node@25.5.0)(jiti@2.6.1)(lightningcss@1.31.1)(tsx@4.21.0)(yaml@2.8.3))
 
-  marketplace:
+  apps/marketplace:
     dependencies:
       '@harness-kit/shared':
         specifier: workspace:*
-        version: link:../packages/shared
+        version: link:../../packages/shared
       '@supabase/supabase-js':
         specifier: ^2.0.0
         version: 2.99.1
