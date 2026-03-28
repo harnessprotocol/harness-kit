@@ -484,6 +484,52 @@ export interface DimensionAvg {
   avg: number;
 }
 
+// ── Pairwise voting types ────────────────────────────────────
+
+export interface EvaluationSession {
+  id: string;
+  comparisonId: string;
+  evalMethod: string;
+  blindOrder: string | null;
+  revealedAt: string | null;
+  createdAt: string;
+}
+
+export interface PairwiseVote {
+  id: string;
+  comparisonId: string;
+  sessionId: string;
+  leftPanelId: string;
+  rightPanelId: string;
+  dimension: string;
+  result: string;
+  createdAt: string;
+}
+
+export interface EloEntry {
+  panelId: string;
+  harnessName: string;
+  elo: number;
+  wins: number;
+  losses: number;
+  ties: number;
+}
+
+export interface DimensionWinRate {
+  panelId: string;
+  harnessName: string;
+  dimension: string;
+  wins: number;
+  total: number;
+  rate: number;
+}
+
+export interface PairwiseAnalytics {
+  totalVotes: number;
+  eloRankings: EloEntry[];
+  dimensionWinRates: DimensionWinRate[];
+}
+
 // ── Security types ──────────────────────────────────────────
 
 export interface PermissionsState {
