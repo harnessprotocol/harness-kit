@@ -142,7 +142,7 @@ pub async fn detect_harnesses(app: AppHandle) -> Result<Vec<HarnessInfo>, String
                             std::time::Duration::from_secs(5),
                             app.shell()
                                 .command("cursor")
-                                .args(&["agent", "-p", "--trust", "test"])
+                                .args(["agent", "-p", "--trust", "test"])
                                 .output(),
                         )
                         .await;

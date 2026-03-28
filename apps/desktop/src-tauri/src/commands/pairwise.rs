@@ -100,6 +100,7 @@ pub fn reveal_evaluation_session(
 
 // ── Vote commands ─────────────────────────────────────────────
 
+#[allow(clippy::too_many_arguments)]
 #[tauri::command]
 pub fn save_pairwise_vote(
     db: State<'_, Db>,
