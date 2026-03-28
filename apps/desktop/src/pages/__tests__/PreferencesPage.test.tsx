@@ -34,6 +34,15 @@ vi.mock("../../lib/theme", () => ({
   },
 }));
 
+vi.mock("../../lib/preferences", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../lib/preferences")>();
+  return {
+    ...actual,
+    getConfigFilesDetailLevel: vi.fn(() => "text-files"),
+    setConfigFilesDetailLevel: vi.fn(),
+  };
+});
+
 import PreferencesPage from "../PreferencesPage";
 
 // ── Helpers ──────────────────────────────────────────────────
