@@ -109,7 +109,7 @@ See [`harness.yaml.example`](harness.yaml.example) for the config format. `harne
 - **Audit logging** — permission changes, secret access, and preset applications are logged with timestamps.
 - **Prompt injection detection** — the research plugin treats all external content as untrusted, scanning for injection attempts before processing.
 
-See the [Secrets Management guide](https://harnesskit.ai/docs/guides/secrets-management) for setup with 1Password, direnv, Google Secret Manager, and CI environments.
+See the [Secrets Management guide](website/content/docs/guides/secrets-management.md) for setup with 1Password, direnv, Google Secret Manager, and CI environments.
 
 ## 🖥️ Desktop App
 
@@ -118,7 +118,7 @@ A Tauri desktop companion that brings the harness concept to a native UI.
 - **Sync engine** — compiles `harness.yaml` to platform configs
 - **Plugin explorer** — browse and manage installed plugins
 - **Observatory** — live session dashboard with stats and transcripts
-- **Comparator** — side-by-side harness comparison with xterm.js terminals
+- **Comparator** — side-by-side harness comparison with interactive terminal panes
 - **Harness editor** — inline editing with custom profiles
 - **Memory** — knowledge graph viewer via [membrain](https://github.com/siracusa5/membrain) integration
 - **Team chat** — IRC-style chat backed by a self-hosted WebSocket relay
