@@ -2343,6 +2343,12 @@
           "markdownDescription": "Enables the delete_keychain_secret command without any pre-configured scope."
         },
         {
+          "description": "Enables the delete_pairwise_vote command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-delete-pairwise-vote",
+          "markdownDescription": "Enables the delete_pairwise_vote command without any pre-configured scope."
+        },
+        {
           "description": "Enables the detect_harnesses command without any pre-configured scope.",
           "type": "string",
           "const": "allow-detect-harnesses",
@@ -2595,6 +2601,12 @@
           "markdownDescription": "Enables the read_live_activity command without any pre-configured scope."
         },
         {
+          "description": "Enables the read_mcp_config command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-read-mcp-config",
+          "markdownDescription": "Enables the read_mcp_config command without any pre-configured scope."
+        },
+        {
           "description": "Enables the read_permissions command without any pre-configured scope.",
           "type": "string",
           "const": "allow-read-permissions",
@@ -2781,6 +2793,12 @@
           "markdownDescription": "Enables the write_harness_file command without any pre-configured scope."
         },
         {
+          "description": "Enables the write_mcp_config command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-write-mcp-config",
+          "markdownDescription": "Enables the write_mcp_config command without any pre-configured scope."
+        },
+        {
           "description": "Enables the write_plugin_file command without any pre-configured scope.",
           "type": "string",
           "const": "allow-write-plugin-file",
@@ -2941,6 +2959,12 @@
           "type": "string",
           "const": "deny-delete-keychain-secret",
           "markdownDescription": "Denies the delete_keychain_secret command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the delete_pairwise_vote command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-delete-pairwise-vote",
+          "markdownDescription": "Denies the delete_pairwise_vote command without any pre-configured scope."
         },
         {
           "description": "Denies the detect_harnesses command without any pre-configured scope.",
@@ -3195,6 +3219,12 @@
           "markdownDescription": "Denies the read_live_activity command without any pre-configured scope."
         },
         {
+          "description": "Denies the read_mcp_config command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-read-mcp-config",
+          "markdownDescription": "Denies the read_mcp_config command without any pre-configured scope."
+        },
+        {
           "description": "Denies the read_permissions command without any pre-configured scope.",
           "type": "string",
           "const": "deny-read-permissions",
@@ -3379,6 +3409,12 @@
           "type": "string",
           "const": "deny-write-harness-file",
           "markdownDescription": "Denies the write_harness_file command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the write_mcp_config command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-write-mcp-config",
+          "markdownDescription": "Denies the write_mcp_config command without any pre-configured scope."
         },
         {
           "description": "Denies the write_plugin_file command without any pre-configured scope.",

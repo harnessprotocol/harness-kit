@@ -37,7 +37,8 @@
     "react-markdown": "^9.0.1",
     "react-router-dom": "^7.0.0",
     "recharts": "^3.8.0",
-    "remark-gfm": "^4.0.0"
+    "remark-gfm": "^4.0.0",
+    "yaml": "^2.8.3"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",

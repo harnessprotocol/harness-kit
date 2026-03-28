@@ -25,6 +25,7 @@ export const NAV_SECTIONS: NavSection[] = [
     children: [
       { label: "Harness File", path: "/harness/file" },
       { label: "Plugins", path: "/harness/plugins" },
+      { label: "MCP Servers", path: "/harness/mcp" },
       { label: "Hooks", path: "/harness/hooks" },
       { label: "CLAUDE.md", path: "/harness/claude-md" },
       { label: "Sync", path: "/harness/sync" },
