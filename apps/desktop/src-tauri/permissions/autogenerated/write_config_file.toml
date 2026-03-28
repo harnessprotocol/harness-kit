@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-write-config-file"
+description = "Enables the write_config_file command without any pre-configured scope."
+commands.allow = ["write_config_file"]
+
+[[permission]]
+identifier = "deny-write-config-file"
+description = "Denies the write_config_file command without any pre-configured scope."
+commands.deny = ["write_config_file"]
