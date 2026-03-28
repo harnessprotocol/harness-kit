@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-pairwise-analytics"
+description = "Enables the get_pairwise_analytics command without any pre-configured scope."
+commands.allow = ["get_pairwise_analytics"]
+
+[[permission]]
+identifier = "deny-get-pairwise-analytics"
+description = "Denies the get_pairwise_analytics command without any pre-configured scope."
+commands.deny = ["get_pairwise_analytics"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-evaluation-session"
+description = "Enables the get_evaluation_session command without any pre-configured scope."
+commands.allow = ["get_evaluation_session"]
+
+[[permission]]
+identifier = "deny-get-evaluation-session"
+description = "Denies the get_evaluation_session command without any pre-configured scope."
+commands.deny = ["get_evaluation_session"]

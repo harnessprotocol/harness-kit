@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-reveal-evaluation-session"
+description = "Enables the reveal_evaluation_session command without any pre-configured scope."
+commands.allow = ["reveal_evaluation_session"]
+
+[[permission]]
+identifier = "deny-reveal-evaluation-session"
+description = "Denies the reveal_evaluation_session command without any pre-configured scope."
+commands.deny = ["reveal_evaluation_session"]

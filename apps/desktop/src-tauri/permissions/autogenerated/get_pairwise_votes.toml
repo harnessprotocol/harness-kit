@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-pairwise-votes"
+description = "Enables the get_pairwise_votes command without any pre-configured scope."
+commands.allow = ["get_pairwise_votes"]
+
+[[permission]]
+identifier = "deny-get-pairwise-votes"
+description = "Denies the get_pairwise_votes command without any pre-configured scope."
+commands.deny = ["get_pairwise_votes"]
