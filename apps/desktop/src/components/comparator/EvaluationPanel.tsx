@@ -521,7 +521,22 @@ export default function EvaluationPanel({
 
       {evalMode === "compare" && !readOnly ? (
         <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
-          <PairwisePanel comparisonId={comparisonId} panels={panels} />
+          {panels.length > 2 ? (
+            <div style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "100%",
+              padding: "32px",
+              textAlign: "center",
+              color: "var(--fg-subtle)",
+              fontSize: "13px",
+            }}>
+              Blind comparison supports 2 panels. Re-run with 2 tools to use this mode.
+            </div>
+          ) : (
+            <PairwisePanel comparisonId={comparisonId} panels={panels} />
+          )}
         </div>
       ) : (
       <div style={{ padding: "16px", flex: 1, overflow: "auto" }}>

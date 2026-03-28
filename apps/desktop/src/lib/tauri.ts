@@ -121,6 +121,22 @@ export async function scanClaudeConfig(): Promise<ClaudeConfigScan> {
   return invoke<ClaudeConfigScan>("scan_claude_config");
 }
 
+// ── MCP commands ─────────────────────────────────────────────
+
+export interface McpConfigResult {
+  found: boolean;
+  serversJson: string | null;
+  source: string | null;
+}
+
+export async function readMcpConfig(): Promise<McpConfigResult> {
+  return invoke<McpConfigResult>("read_mcp_config");
+}
+
+export async function writeMcpConfig(serversJson: string): Promise<string> {
+  return invoke<string>("write_mcp_config", { serversJson });
+}
+
 // ── Custom Profile commands ───────────────────────────────────
 
 export interface CustomProfile {
@@ -322,12 +338,16 @@ export async function savePairwiseVote(
   });
 }
 
-export async function getPairwiseVotes(comparisonId: string): Promise<PairwiseVote[]> {
-  return invoke<PairwiseVote[]>("get_pairwise_votes", { comparisonId });
+export async function getPairwiseVotes(sessionId: string): Promise<PairwiseVote[]> {
+  return invoke<PairwiseVote[]>("get_pairwise_votes", { sessionId });
 }
 
 export async function getPairwiseAnalytics(): Promise<PairwiseAnalytics> {
   return invoke<PairwiseAnalytics>("get_pairwise_analytics");
+}
+
+export async function deletePairwiseVote(sessionId: string, dimension: string): Promise<void> {
+  return invoke<void>("delete_pairwise_vote", { sessionId, dimension });
 }
 
 // ── Export commands ──────────────────────────────────────────

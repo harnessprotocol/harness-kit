@@ -5,6 +5,7 @@ import {
   revealEvaluationSession,
   savePairwiseVote,
   getPairwiseVotes,
+  deletePairwiseVote,
 } from "../../lib/tauri";
 import type { EvaluationSession } from "@harness-kit/shared";
 
@@ -61,7 +62,7 @@ export default function PairwisePanel({ comparisonId, panels }: PairwisePanelPro
       .then((s) => {
         setSession(s);
         if (s) {
-          getPairwiseVotes(comparisonId).then((existing) => {
+          getPairwiseVotes(s.id).then((existing) => {
             const map: VoteMap = {};
             for (const v of existing) {
               map[v.dimension as DimensionKey] = v.result as VoteResult;
@@ -93,7 +94,15 @@ export default function PairwisePanel({ comparisonId, panels }: PairwisePanelPro
     const currentVote = votesRef.current[dim];
     const newResult = currentVote === result ? undefined : result;
     setVotes((prev) => ({ ...prev, [dim]: newResult }));
-    if (!newResult) return;
+    if (!newResult) {
+      try {
+        await deletePairwiseVote(session.id, dim);
+      } catch (err) {
+        console.error("Failed to delete vote:", err);
+        setVotes((prev) => ({ ...prev, [dim]: currentVote }));
+      }
+      return;
+    }
     setSaving(dim);
     try {
       await savePairwiseVote(
