@@ -5,7 +5,7 @@ title: Plugin Overview
 
 # Plugins
 
-harness-kit ships 11 plugins across 6 categories. Each packages a proven workflow as a portable prompt template, currently distributed through Claude Code's plugin marketplace.
+harness-kit ships 16 plugins across 7 categories. Each packages a proven workflow as a portable prompt template, currently distributed through Claude Code's plugin marketplace.
 
 ## At a Glance
 
@@ -22,6 +22,11 @@ harness-kit ships 11 plugins across 6 categories. Each packages a proven workflo
 | [merge-pr](devops/merge-pr) | Merge a ready PR: verify CI, sync base, squash merge, clean up | `gh` CLI |
 | [pull-request-sweep](devops/pull-request-sweep) | Cross-repo PR sweep: triage, review, merge, fix CI | `gh` CLI |
 | [harness-share](productivity/harness-share) | Compile, export, import, and sync harness configs across AI tools | None |
+| [stats](productivity/stats) | Interactive HTML dashboard for Claude Code token and session usage | Python 3.10+ |
+| [iterm-notify](productivity/iterm-notify) | macOS desktop notifications and iTerm2 badge management for Claude Code events | macOS, iTerm2, terminal-notifier, jq |
+| [board](productivity/board) | Kanban project board with real-time Claude-to-web sync via MCP | Node.js (board server) |
+| [frontend-design](design/frontend-design) | Production-grade frontend design rules: OKLCH color, typography, motion, accessibility | None |
+| [membrain](research-knowledge/membrain) | Graph-based agent memory — search, trace, and manage a persistent knowledge graph | Go 1.25+, membrain MCP server |
 
 Plugin dependencies are formally declared in `plugin.json` under `requires`. See [Secrets & Configuration](/docs/concepts/secrets-management) for the schema and [Secrets Management](/docs/guides/secrets-management) for setup instructions.
 

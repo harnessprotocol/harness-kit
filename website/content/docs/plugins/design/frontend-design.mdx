@@ -1,0 +1,102 @@
+---
+title: frontend-design
+description: Production-grade frontend design rules for typography, OKLCH color, layout, motion, and accessibility — applied automatically when building UI.
+---
+
+> **[View in Marketplace →](https://marketplace.harnessprotocol.io/plugins/frontend-design)** for install tracking, related plugins, and profiles.
+
+# frontend-design
+
+A passive skill that guides Claude to produce distinctive, production-grade frontend interfaces. It activates automatically when you ask Claude to build a web component, page, or application — no explicit invocation needed.
+
+Based on [Impeccable](https://github.com/pbakaus/impeccable) by Paul Bakaus, adapted for the harness-kit plugin format.
+
+## Requirements
+
+None.
+
+## Install
+
+```
+/plugin marketplace add harnessprotocol/harness-kit
+/plugin install frontend-design@harness-kit
+```
+
+## Usage
+
+The skill activates automatically for frontend tasks:
+
+```
+Build a settings page for my app
+Create a landing page hero section
+Design a data table component
+```
+
+Claude will ask for design context (target audience, use cases, brand tone) if none is available before generating anything.
+
+## What It Enforces
+
+### The AI Slop Test
+
+Before shipping any UI, the skill checks for the fingerprints of generic AI-generated work:
+
+- Inter, Roboto, Open Sans, Arial, or system defaults
+- Purple-to-blue gradients; cyan-on-dark; neon accents
+- Gray text on colored backgrounds
+- Glassmorphism used decoratively
+- Pure black (`#000`) or pure white (`#fff`) anywhere
+- Cards nested inside cards; identical card grids; everything centered
+- Hero metric layout (big number, gradient accent)
+- Dark mode defaulted to as an aesthetic choice
+- Bounce / elastic easing; `ease` as the default easing function
+
+If a design fails the test, Claude revises it.
+
+### Typography
+
+- Avoids Inter, Roboto, Open Sans — uses Instrument Sans, Figtree, Plus Jakarta Sans, Fraunces, or similar
+- Modular scale with ≥3:1 ratio between size levels
+- Fluid type via `clamp(min, preferred, max)`
+- Line-height as the base unit for all vertical spacing
+
+### Color
+
+- OKLCH instead of HSL (perceptually uniform — equal steps look equal)
+- Neutrals always tinted toward brand hue
+- 60-30-10 rule: 60% neutral / 30% secondary / 10% accent
+- Dark mode backgrounds at oklch 12–18% (never pure black)
+
+### Layout
+
+- 4pt base spacing system (4, 8, 12, 16, 24, 32, 48, 64, 96px)
+- Container queries for components, viewport queries for page layouts
+- Cards only when content needs explicit comparison or discrete interaction
+
+### Motion
+
+- 100 / 300 / 500ms duration tiers
+- Named `cubic-bezier` values — never the `ease` keyword
+- Only `transform` and `opacity` animated; `grid-template-rows` for height
+- `prefers-reduced-motion` always respected
+
+### Interaction & Accessibility
+
+- All 8 states per interactive element: Default, Hover, Focus, Active, Disabled, Loading, Error, Success
+- `:focus-visible` focus rings — `outline: none` never removed without replacement
+- Minimum 44px touch targets
+- 4.5:1 contrast ratio for body text (WCAG AA)
+
+## Source Files
+
+<Accordions>
+<Accordion title="SKILL.md — Runtime Configuration">
+
+{/* @embed plugins/frontend-design/skills/frontend-design/SKILL.md */}
+
+</Accordion>
+<Accordion title="README.md — Plugin Documentation">
+
+{/* @embed plugins/frontend-design/skills/frontend-design/README.md */}
+
+</Accordion>
+</Accordions>
