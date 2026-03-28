@@ -3,6 +3,11 @@ use tauri::State;
 
 pub use super::types::{EvaluationSession, PairwiseVote};
 
+const VALID_DIMENSIONS: &[&str] = &[
+    "correctness", "completeness", "codeQuality", "efficiency",
+    "reasoning", "safety", "contextAwareness", "autonomy", "adherence",
+];
+
 // ── Session commands ─────────────────────────────────────────
 
 #[tauri::command]
@@ -15,8 +20,21 @@ pub fn create_evaluation_session(
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let now = chrono::Utc::now().to_rfc3339();
 
+    let exists: bool = conn
+        .query_row(
+            "SELECT 1 FROM evaluation_sessions WHERE id = ?1",
+            rusqlite::params![id],
+            |_| Ok(true),
+        )
+        .ok()
+        .unwrap_or(false);
+
+    if exists {
+        return Err(format!("Evaluation session {} already exists", id));
+    }
+
     conn.execute(
-        "INSERT OR REPLACE INTO evaluation_sessions (id, comparison_id, eval_method, blind_order, revealed_at, created_at)
+        "INSERT INTO evaluation_sessions (id, comparison_id, eval_method, blind_order, revealed_at, created_at)
          VALUES (?1, ?2, 'pairwise', ?3, NULL, ?4)",
         rusqlite::params![id, comparison_id, blind_order, now],
     )
@@ -93,9 +111,20 @@ pub fn save_pairwise_vote(
     dimension: String,
     result: String,
 ) -> Result<(), String> {
+    if id.is_empty() || comparison_id.is_empty() || session_id.is_empty()
+        || left_panel_id.is_empty() || right_panel_id.is_empty()
+        || dimension.is_empty()
+    {
+        return Err("All fields are required".to_string());
+    }
+
     // Validate result value
     if !["left", "right", "tie"].contains(&result.as_str()) {
         return Err(format!("Invalid result: {}. Must be 'left', 'right', or 'tie'", result));
+    }
+
+    if !VALID_DIMENSIONS.contains(&dimension.as_str()) {
+        return Err(format!("Invalid dimension: {}", dimension));
     }
 
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
@@ -242,13 +271,6 @@ pub fn get_pairwise_analytics(
     let mut panel_to_harness: std::collections::HashMap<String, String> = std::collections::HashMap::new();
 
     for row in &vote_rows {
-        // Only update Elo for 'overall' dimension to avoid counting multiple times
-        if row.dimension != "overall" {
-            panel_to_harness.insert(row.left_id.clone(), row.left_name.clone());
-            panel_to_harness.insert(row.right_id.clone(), row.right_name.clone());
-            continue;
-        }
-
         let lname = row.left_name.clone();
         let rname = row.right_name.clone();
         panel_to_harness.insert(row.left_id.clone(), lname.clone());

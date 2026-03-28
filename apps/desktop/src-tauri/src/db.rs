@@ -154,6 +154,7 @@ pub fn init(data_dir: &Path) -> Result<Db, String> {
         );
         CREATE INDEX IF NOT EXISTS idx_pairwise_votes_comp ON pairwise_votes(comparison_id);
         CREATE INDEX IF NOT EXISTS idx_pairwise_votes_session ON pairwise_votes(session_id);
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_pairwise_votes_unique ON pairwise_votes(session_id, dimension);
     ",
     )
     .map_err(|e| format!("Failed to run schema: {}", e))?;
