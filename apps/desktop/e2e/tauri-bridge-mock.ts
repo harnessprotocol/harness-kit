@@ -75,6 +75,23 @@ export const MOCK_RESPONSES: Record<string, unknown> = {
   board_server_check_installed: false,
   read_env_config: [],
   get_comparator_analytics: { totalComparisons: 0, totalPanels: 0 },
+  get_evaluation_session: null,
+  create_evaluation_session: {
+    id: "mock-session-1",
+    comparisonId: "mock-cmp-1",
+    evalMethod: "pairwise",
+    blindOrder: "panel-2,panel-1",
+    revealedAt: null,
+    createdAt: new Date().toISOString(),
+  },
+  reveal_evaluation_session: null,
+  save_pairwise_vote: null,
+  get_pairwise_votes: [],
+  get_pairwise_analytics: {
+    totalVotes: 0,
+    eloRankings: [],
+    dimensionWinRates: [],
+  },
   sync_list_backups: [],
   // Parity
   get_parity_snapshot: {
