@@ -100,6 +100,17 @@ curl -fsSL https://raw.githubusercontent.com/harnessprotocol/harness-kit/main/ha
 See [`harness.yaml.example`](harness.yaml.example) for the config format. `harness.yaml` follows the [Harness Protocol v1](https://harnessprotocol.io) open spec — a vendor-neutral format for portable AI coding harnesses.
 </details>
 
+## 🔒 Security & Privacy
+
+- **No telemetry, no data collection** — harness-kit never phones home. Optional stats are local-only.
+- **Secrets stay out of config** — plugins declare environment variables they need (`requires.env` in `plugin.json`) with `required`, `optional`, and `sensitive` flags. Values live in your shell profile, direnv, or a secrets manager — never in checked-in files. The framework validates existence but never reads or logs values.
+- **Plain text, fully inspectable** — plugins are markdown and JSON. No binaries, no background processes, no network calls on install. Scripts and hooks only run when you explicitly invoke a skill.
+- **Granular permissions** — tool-level allow/deny/ask, path-level write restrictions, and network host allowlists. All configurable per-project.
+- **Audit logging** — permission changes, secret access, and preset applications are logged with timestamps.
+- **Prompt injection detection** — the research plugin treats all external content as untrusted, scanning for injection attempts before processing.
+
+See the [Secrets Management guide](https://harnesskit.ai/docs/guides/secrets-management) for setup with 1Password, direnv, Google Secret Manager, and CI environments.
+
 ## 🖥️ Desktop App
 
 A Tauri desktop companion that brings the harness concept to a native UI.
