@@ -32,10 +32,11 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: |
           if [ -z "$ANTHROPIC_API_KEY" ]; then
-            echo "ANTHROPIC_API_KEY not set — skipping evals"
-            exit 0
+            echo "ANTHROPIC_API_KEY not set — running offline structure checks"
+            python evals/runner.py --offline
+          else
+            python evals/runner.py
           fi
-          python evals/runner.py
 
       - name: Render compatibility page
         run: python evals/render_results.py

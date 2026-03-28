@@ -20,6 +20,7 @@ from config import (
     REPO_ROOT,
     MAX_TOKENS,
     SKILL_MD_PATH,
+    GOLDEN_DIR,
 )
 from grader import run_code_graders, run_model_graders
 from results import compute_metrics, write_results
@@ -71,6 +72,18 @@ def build_prompt(task: dict, skill_md: str, fixture_content: str) -> tuple[str, 
     return skill_md, "\n\n".join(user_parts)
 
 
+def load_golden_response(task_name: str, model_key: str) -> Optional[str]:
+    """Load a pre-committed golden response from evals/golden/<task_name>/<model_key>.txt.
+
+    Returns None (with a warning) if the file does not exist.
+    """
+    path = GOLDEN_DIR / task_name / f"{model_key}.txt"
+    if not path.exists():
+        print(f"    [offline] WARNING: golden file not found: {path.relative_to(REPO_ROOT)}")
+        return None
+    return path.read_text()
+
+
 def call_api(
     client: anthropic.Anthropic, model_id: str, system: str, user: str
 ) -> str:
@@ -84,22 +97,61 @@ def call_api(
 
 
 def run_task_model(
-    client: anthropic.Anthropic,
+    client: Optional[anthropic.Anthropic],
     task: dict,
     model_key: str,
     model_id: str,
     structure_only: bool = False,
-) -> dict:
+    offline: bool = False,
+) -> Optional[dict]:
     skill = task["skill"]
     task_name = task["name"]
     n_trials = task.get("trials", 3)
 
     print(f"  [{model_key}] {task_name} ({n_trials} trials)")
 
+    if offline:
+        golden = load_golden_response(task_name, model_key)
+        if golden is None:
+            return None
+
     skill_md = load_skill_md(skill)
     fixture_name = task.get("input", {}).get("fixture")
     fixture_content = load_fixture(fixture_name) if fixture_name else ""
     system, user = build_prompt(task, skill_md, fixture_content)
+
+    # In offline mode: run code graders once against the single golden response.
+    # (quality/model graders are always skipped in offline mode.)
+    if offline:
+        print(f"    [offline] grading golden response...", end=" ", flush=True)
+        code_grades = run_code_graders(golden, task)
+        structure_passed = all(g.passed for g in code_grades) if code_grades else True
+        status = "pass" if structure_passed else "fail"
+        print(f"{status}")
+        trial_results = [
+            {
+                "trial": 1,
+                "output_length": len(golden),
+                "code_grades": [
+                    {"name": g.name, "passed": g.passed, "detail": g.detail}
+                    for g in code_grades
+                ],
+                "quality_grades": [],
+                "structure_passed": structure_passed,
+                "quality_score": 0.0,
+                "quality_max": float(
+                    sum(c.get("weight", 1) for c in task.get("expectations", {}).get("quality", []))
+                ),
+            }
+        ]
+        metrics = compute_metrics(trial_results)
+        return {
+            "task": task_name,
+            "skill": skill,
+            "model": model_key,
+            "trials": trial_results,
+            **metrics,
+        }
 
     trial_results = []
     for i in range(n_trials):
@@ -170,6 +222,11 @@ def main() -> None:
         help="Include plugin-author evals from plugins/*/evals/",
     )
     parser.add_argument(
+        "--offline",
+        action="store_true",
+        help="Load golden responses from evals/golden/ instead of calling the API",
+    )
+    parser.add_argument(
         "--dry-run",
         action="store_true",
         help="List tasks that would run without calling any API",
@@ -188,7 +245,8 @@ def main() -> None:
     models = {args.model: MODELS[args.model]} if args.model else dict(MODELS)
 
     if args.dry_run:
-        print(f"Would run {len(task_files)} task(s) × {len(models)} model(s):\n")
+        mode = "[offline mode] " if args.offline else ""
+        print(f"{mode}Would run {len(task_files)} task(s) × {len(models)} model(s):\n")
         for task_path in task_files:
             task = load_task(task_path)
             for m in models:
@@ -198,15 +256,28 @@ def main() -> None:
                 )
         return
 
-    client = anthropic.Anthropic()
+    if args.offline:
+        print("[offline mode] Loading golden responses from evals/golden/ — no API calls will be made.\n")
+        client = None
+    else:
+        client = anthropic.Anthropic()
+
     all_results = []
 
     for task_path in task_files:
         task = load_task(task_path)
         print(f"\nTask: {task['skill']}/{task['name']}")
         for model_key, model_id in models.items():
-            result = run_task_model(client, task, model_key, model_id, args.structure_only)
-            all_results.append(result)
+            result = run_task_model(
+                client,
+                task,
+                model_key,
+                model_id,
+                structure_only=args.structure_only or args.offline,
+                offline=args.offline,
+            )
+            if result is not None:
+                all_results.append(result)
 
     write_results(all_results, RESULTS_DIR / "latest.json")
 

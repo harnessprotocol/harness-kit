@@ -18,3 +18,5 @@ PLUGINS_DIR = REPO_ROOT / "plugins"
 SKILL_MD_PATH = "plugins/{skill}/skills/{skill}/SKILL.md"
 
 MAX_TOKENS = 4096
+
+GOLDEN_DIR = REPO_ROOT / "evals" / "golden"

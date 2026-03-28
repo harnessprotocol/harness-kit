@@ -1,0 +1,34 @@
+## Summary
+
+Authentication in this Express app is implemented as JWT Bearer token verification. A single `authenticate` middleware function in `src/middleware/auth.js` extracts the token from the `Authorization` header, verifies it with a secret key, and attaches the decoded payload to `req.user` before passing control to the route handler. Every protected route delegates entirely to this middleware rather than implementing auth logic inline.
+
+## Key Components
+
+- **`authenticate`** (`src/middleware/auth.js`) — The core auth function. Reads the `Authorization: Bearer <token>` header, calls `jwt.verify()`, and either attaches `req.user` and calls `next()`, or responds with `401 Unauthorized`.
+- **`JWT_SECRET`** — The signing secret read from `process.env.JWT_SECRET`. Used by `jwt.verify()` to validate the token signature.
+- **`jsonwebtoken`** — The npm package used for token verification. Handles signature checking, expiration, and claim parsing.
+- **`router.use(authenticate)`** — Applied at the router level in `src/routes/users.js` to guard all routes without repeating the middleware on each handler.
+
+## How It Connects
+
+The flow for a protected request is: incoming HTTP request → Express routes the request to the correct router → `authenticate` runs first (via `router.use`) → if the JWT token is valid, `req.user` is set to the decoded payload and `next()` is called → the actual route handler runs with `req.user` available.
+
+If the token is missing, malformed, or expired, `authenticate` short-circuits the chain and returns a `401` response; the route handler is never invoked.
+
+## Patterns & Conventions
+
+- **Middleware gate pattern** — auth logic lives in one reusable function, not duplicated across handlers.
+- **`req.user` convention** — attaching the decoded payload to `req.user` is the standard Express pattern for passing identity data downstream.
+- **Bearer token scheme** — follows RFC 6750; the `Authorization` header is split on a space to extract the raw JWT.
+
+## Gotchas
+
+- `JWT_SECRET` is read directly from `process.env.JWT_SECRET` with no validation or fallback. If the environment variable is missing at startup, `jwt.verify()` will throw or behave unpredictably on the first request. A startup assertion (`if (!process.env.JWT_SECRET) throw new Error(...)`) would surface this earlier.
+- There is no token refresh mechanism. Expired tokens are rejected with no path for the client to renew silently; clients must handle `401` and re-authenticate.
+
+## Entry Points for Change
+
+- **Add refresh tokens** — introduce a `/auth/refresh` endpoint that accepts a long-lived refresh token and issues a new short-lived JWT.
+- **Validate `JWT_SECRET` at startup** — add an assertion in `app.js` before the server starts listening.
+- **Role-based access** — extend `authenticate` (or add a second middleware) that checks `req.user.role` against a required role, enabling route-level authorization on top of authentication.
+- **Audit logging** — log failed auth attempts (with client IP and timestamp) inside `authenticate` for security monitoring.

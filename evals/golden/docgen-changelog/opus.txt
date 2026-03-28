@@ -1,0 +1,19 @@
+# Changelog
+
+## Added
+
+- `GET /items` endpoint to list all items
+- `GET /items/:id` endpoint to fetch a single item by ID
+- `POST /items` endpoint to create a new item
+
+## Fixed
+
+- Corrected error handling on database connection failure at startup
+
+## Changed
+
+- Renamed internal `ItemRecord` type to `Item` for consistency with API response shape
+
+---
+
+Want me to write this to `CHANGELOG.md`?
