@@ -1221,6 +1221,228 @@ body {
   justify-content: flex-end;
 }
 
+/* ── Pairwise voting ─────────────────────────────────────────── */
+
+.pairwise-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--fg-subtle);
+  font-size: 12px;
+}
+
+.eval-cta-hint {
+  font-size: 11px;
+  color: var(--fg-subtle);
+  margin-top: 6px;
+  text-align: center;
+}
+
+.pairwise-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border-base);
+  background: var(--bg-surface);
+  flex-shrink: 0;
+}
+
+.pairwise-progress-pill {
+  font-size: 11px;
+  color: var(--fg-muted);
+  background: var(--bg-base);
+  border: 1px solid var(--border-base);
+  border-radius: 10px;
+  padding: 2px 8px;
+}
+
+.pairwise-vote-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.pairwise-vote-table thead th {
+  padding: 6px 12px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-muted);
+  border-bottom: 1px solid var(--border-base);
+  background: var(--bg-surface);
+}
+
+.pairwise-vote-table thead th:first-child {
+  text-align: left;
+}
+
+.pairwise-dim-label {
+  padding: 8px 12px;
+  color: var(--fg-muted);
+  white-space: nowrap;
+}
+
+.pairwise-vote-cell {
+  text-align: center;
+  padding: 4px 8px;
+}
+
+.pairwise-vote-row:hover {
+  background: var(--bg-hover);
+}
+
+.pairwise-vote-btn {
+  min-width: 40px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--border-base);
+  background: var(--bg-base);
+  color: var(--fg-muted);
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.1s, color 0.1s;
+}
+
+.pairwise-vote-btn:hover {
+  background: var(--bg-hover);
+  color: var(--fg-base);
+}
+
+.pairwise-vote-btn.selected.left {
+  background: rgba(59, 130, 246, 0.15);
+  color: var(--accent-text);
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.pairwise-vote-btn.selected.right {
+  background: rgba(168, 85, 247, 0.12);
+  color: #a855f7;
+  border-color: #a855f7;
+  font-weight: 600;
+}
+
+.pairwise-vote-btn.selected.tie {
+  background: rgba(107, 114, 128, 0.15);
+  color: var(--fg-base);
+  border-color: var(--fg-subtle);
+  font-weight: 600;
+}
+
+.pairwise-results {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: auto;
+  padding: 16px;
+  gap: 16px;
+}
+
+.pairwise-reveal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-base);
+  flex-wrap: wrap;
+}
+
+.pairwise-label-reveal {
+  font-weight: 600;
+  color: var(--fg-muted);
+}
+
+.pairwise-label-eq {
+  color: var(--fg-subtle);
+}
+
+.pairwise-harness-name {
+  color: var(--fg-base);
+  font-weight: 500;
+}
+
+.pairwise-model {
+  color: var(--fg-subtle);
+  font-size: 10px;
+}
+
+.pairwise-separator {
+  flex: 0 0 1px;
+  width: 1px;
+  height: 14px;
+  background: var(--border-base);
+  margin: 0 4px;
+}
+
+.pairwise-results-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.pairwise-results-table th {
+  text-align: left;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-muted);
+  border-bottom: 1px solid var(--border-base);
+}
+
+.pairwise-results-table td {
+  padding: 7px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--fg-muted);
+}
+
+.pairwise-result-cell.left  { color: var(--accent-text); font-weight: 500; }
+.pairwise-result-cell.right { color: #a855f7; font-weight: 500; }
+.pairwise-result-cell.tie   { color: var(--fg-subtle); }
+.pairwise-result-cell.unvoted { color: var(--fg-subtle); font-style: italic; }
+
+.pairwise-tally {
+  font-size: 12px;
+  color: var(--fg-muted);
+  padding: 8px 12px;
+  background: var(--bg-surface);
+  border-radius: 6px;
+  border: 1px solid var(--border-base);
+}
+
+/* Mode toggle */
+
+.eval-mode-toggle {
+  display: flex;
+  border: 1px solid var(--border-base);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.eval-mode-btn {
+  padding: 4px 14px;
+  font-size: 11px;
+  background: var(--bg-base);
+  color: var(--fg-muted);
+  border: none;
+  border-right: 1px solid var(--border-base);
+  cursor: pointer;
+}
+
+.eval-mode-btn:last-child {
+  border-right: none;
+}
+
+.eval-mode-btn.active {
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-weight: 600;
+}
+
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
