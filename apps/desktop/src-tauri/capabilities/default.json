@@ -51,6 +51,7 @@
     "allow-export-plugin-to-folder",
     "allow-read-hooks",
     "allow-read-claude-md",
+    "allow-write-config-file",
     "allow-read-harness-file",
     "allow-write-harness-file",
     "allow-scan-claude-config",

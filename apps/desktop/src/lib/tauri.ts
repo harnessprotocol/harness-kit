@@ -89,6 +89,10 @@ export async function readClaudeMd(path: string): Promise<string> {
   return invoke<string>("read_claude_md", { path });
 }
 
+export async function writeConfigFile(path: string, content: string): Promise<void> {
+  return invoke<void>("write_config_file", { path, content });
+}
+
 // ── Harness File commands ─────────────────────────────────────
 
 export interface HarnessFileResult {
