@@ -2,21 +2,21 @@
 
 # harness-kit
 
-A configuration framework for AI coding tools.
+Portable configuration for AI coding tools.
 
 [![Release](https://img.shields.io/github/v/release/harnessprotocol/harness-kit?style=flat-square)](https://github.com/harnessprotocol/harness-kit/releases)
 [![Validate](https://img.shields.io/github/actions/workflow/status/harnessprotocol/harness-kit/validate.yml?style=flat-square&label=validate)](https://github.com/harnessprotocol/harness-kit/actions/workflows/validate.yml)
 [![License](https://img.shields.io/github/license/harnessprotocol/harness-kit?style=flat-square)](LICENSE)
 
-Works with [Claude Code](https://claude.ai/claude-code), [Cursor](https://cursor.com), and [GitHub Copilot](https://github.com/features/copilot)
+Works with [Claude Code](https://claude.ai/claude-code) · [Cursor](https://cursor.com) · [GitHub Copilot](https://github.com/features/copilot)
 
 </div>
 
-Building a good AI setup takes real work. harness-kit makes it portable. Package your plugins, skills, MCP servers, hooks, and conventions into a config you can apply to any harness on any machine — and share with your team in one file. Works with Claude Code, Cursor, and GitHub Copilot. Designed to travel.
+## 🧰 What is harness-kit?
 
-The harness concept is gaining industry adoption — LangChain's [deepagents](https://blog.langchain.com/the-anatomy-of-an-agent-harness/) is built around the same idea.
+Your AI coding setup — plugins, skills, MCP servers, hooks, conventions — packaged into a single config you can apply to any tool on any machine. Build it once, share it with your team in one file.
 
-## Install
+## 📦 Install
 
 ```
 /plugin marketplace add harnessprotocol/harness-kit
@@ -31,10 +31,10 @@ If your Claude Code build doesn't support the plugin marketplace:
 curl -fsSL https://raw.githubusercontent.com/harnessprotocol/harness-kit/main/install.sh | bash
 ```
 
-Downloads skill files to `~/.claude/skills/` over HTTPS. This installs only the skill files; the full plugin (e.g. index rebuild script) comes from the marketplace install.
+Downloads skill files to `~/.claude/skills/` over HTTPS. The full plugin experience (scripts, hooks, agents) requires the marketplace install.
 </details>
 
-## Quick Start
+## ⚡ Quick Start
 
 Install `explain` — no dependencies, works in any codebase:
 
@@ -50,104 +50,87 @@ Then try it:
 /explain src/services/                # map a directory
 ```
 
-Produces a structured explanation: summary, key components, how it connects, patterns, gotchas, and where to start if you need to change it.
+Produces a layered explanation: summary, key components, how it connects, patterns, gotchas, and where to start if you need to change it.
 
-## Plugins
+## 🔌 Plugins
 
-### Built-in
+A few highlights to get started:
 
 | Plugin | What it does | Try it |
 |--------|-------------|--------|
-| [`explain`](plugins/explain/skills/explain/README.md) | Layered explanations of files, functions, directories, or concepts | `/explain src/auth/` |
-| [`review`](plugins/review/skills/review/README.md) | Code review for a branch, PR, or path — structured output with severity labels | `/review` |
-| [`docgen`](plugins/docgen/skills/docgen/README.md) | Generate or update README, API docs, architecture overview, or changelog | `/docgen readme` |
+| [`explain`](plugins/explain/skills/explain/README.md) | Layered code explanations for files, functions, directories, or concepts | `/explain src/auth/` |
 | [`research`](plugins/research/skills/research/README.md) | Process any source into a structured, compounding knowledge base | `/research https://...` |
-| [`lineage`](plugins/lineage/skills/lineage/README.md) | Trace column-level data lineage through SQL, Kafka, Spark, and JDBC codebases | `/lineage orders.amount` |
-| [`orient`](plugins/orient/skills/orient/README.md) ¹ | Topic-focused session orientation across graph, knowledge, journal, and research | `/orient auth` |
-| [`capture`](plugins/capture/skills/capture/README.md) ¹ | Capture session information into a staging file for later reflection | `/capture` |
-| [`membrain`](plugins/membrain/skills/memory/README.md) ¹ | Graph-based agent memory — search, trace, and manage what your agent knows via MCP | `/memory search auth` |
-| [`open-pr`](plugins/open-pr/skills/open-pr/README.md) | Pre-flight checks and PR creation: tests, PR, review, CI | `/open-pr` |
-| [`merge-pr`](plugins/merge-pr/skills/merge-pr/README.md) | Merge a ready PR: verify CI, sync base, squash merge, clean up | `/merge-pr` |
-| [`pr-sweep`](plugins/pr-sweep/skills/pr-sweep/README.md) | Cross-repo PR sweep: triage, review, merge, report | `/pr-sweep` |
-| [`harness-share`](plugins/harness-share/skills/harness-export/README.md) | Export your plugin setup to `harness.yaml`, compile to native configs for Claude Code, Cursor, and Copilot, and keep them in sync | `/harness-export` · `/harness-import` · `/harness-validate` · `/harness-compile` · `/harness-sync` |
-| [`stats`](plugins/stats/skills/stats/README.md) | Interactive HTML dashboard for Claude Code usage — tokens, sessions, models, and activity patterns | `/stats` |
-| [`iterm-notify`](plugins/iterm-notify/skills/iterm-notify/README.md) | macOS desktop notifications and iTerm2 badges for Claude Code hooks | _(hook-based)_ |
-| [`frontend-design`](plugins/frontend-design/skills/frontend-design/README.md) | Production-grade frontend design skill — avoids AI slop with specific rules for typography, OKLCH color, layout, motion, interaction, and UX writing | _(auto-triggered)_ |
+| [`review`](plugins/review/skills/review/README.md) | Code review with severity labels and cross-file analysis | `/review` |
+| [`lineage`](plugins/lineage/skills/lineage/README.md) | Column-level data lineage through SQL, Kafka, Spark, and JDBC | `/lineage orders.amount` |
 
-¹ Personal-workflow plugins designed for projects using the [knowledge graph + journal pattern](docs/claude-md-conventions.md).
+> 📋 **[Browse all plugins →](https://harnesskit.ai/docs/plugins)** or run `/plugin marketplace browse harness-kit`
 
-### Community
+### 🌍 Community
 
-Plugins from the broader ecosystem that complement the kit. These are developed and maintained by their respective authors.
-
-| Plugin | Author | What it does | Install |
-|--------|--------|-------------|---------|
-| [`superpowers`](https://github.com/obra/superpowers) | [Jesse Vincent](https://github.com/obra) | Structured dev workflows — TDD, systematic debugging, brainstorming-before-coding, subagent delegation, and git worktree isolation | See below |
+| Plugin | Author | What it does |
+|--------|--------|-------------|
+| [`superpowers`](https://github.com/obra/superpowers) | [Jesse Vincent](https://github.com/obra) | TDD, systematic debugging, brainstorming-before-coding, subagent delegation, git worktree isolation |
 
 ```
 /plugin marketplace add obra/superpowers-marketplace
 /plugin install superpowers@obra
 ```
 
-## Sharing Your Setup
+## 🔄 Share Your Setup
 
-Capture your installed plugins into a `harness.yaml` file, commit it to your dotfiles, and restore it on any machine — or share it with a teammate.
+Export your plugin setup to a `harness.yaml`, commit it to your dotfiles, and restore it anywhere.
 
-```
-/harness-export               # write harness.yaml from your current setup
-/harness-import harness.yaml  # interactive wizard to pick what to install
-/harness-validate             # validate harness.yaml against the Harness Protocol v1 schema
-/harness-compile              # compile harness.yaml to native config files for Claude Code, Cursor, and Copilot
-/harness-sync                 # keep Claude Code, Cursor, and Copilot configuration in sync
-```
+| Command | What it does |
+|---------|-------------|
+| `/harness-export` | Write `harness.yaml` from your current setup |
+| `/harness-import harness.yaml` | Interactive wizard — pick what to install |
+| `/harness-compile` | Compile to native configs for Claude Code, Cursor, and Copilot |
+| `/harness-sync` | Keep all three tools' configs aligned |
+| `/harness-validate` | Validate against the [Harness Protocol v1](https://harnessprotocol.io) schema |
 
-The import wizard shows each plugin with its description and lets you pick a subset — your config is a starting point, not a mandate.
-
-`harness.yaml` follows the [Harness Protocol v1](https://harnessprotocol.io) open spec — a vendor-neutral format for portable AI coding harnesses that can declare plugins, MCP servers, environment variables, and instructions in one shareable file.
-
-**Shell fallback (no Claude Code required):**
+<details>
+<summary>Shell fallback (no Claude Code required)</summary>
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/harnessprotocol/harness-kit/main/harness-restore.sh | bash -s -- harness.yaml
 ```
 
-See [`harness.yaml.example`](harness.yaml.example) for the config format.
+See [`harness.yaml.example`](harness.yaml.example) for the config format. `harness.yaml` follows the [Harness Protocol v1](https://harnessprotocol.io) open spec — a vendor-neutral format for portable AI coding harnesses.
+</details>
 
-## Using with Other Tools
+## 🖥️ Desktop App
 
-harness-kit natively supports Claude Code, Cursor, and GitHub Copilot. Use `/harness-compile` to generate native config files for each tool from a single `harness.yaml`, and `/harness-sync` to keep them aligned as your setup evolves.
+A Tauri desktop companion that brings the harness concept to a native UI.
 
-SKILL.md files are plain markdown — they work in any tool's instruction system. VS Code Copilot reads `CLAUDE.md` natively via the `chat.useClaudeMdFile` setting, so the conventions guide works without modification. The [Harness Protocol spec](https://harnessprotocol.io) documents the full cross-platform target mapping.
+- **Sync engine** — compiles `harness.yaml` to platform configs
+- **Plugin explorer** — browse and manage installed plugins
+- **Observatory** — live session dashboard with stats and transcripts
+- **Comparator** — side-by-side harness comparison with xterm.js terminals
+- **Harness editor** — inline editing with custom profiles
+- **Memory** — knowledge graph viewer via [membrain](https://github.com/siracusa5/membrain) integration
+- **Team chat** — IRC-style chat backed by a self-hosted WebSocket relay
 
-## Conventions Guide
+See [`apps/desktop/`](apps/desktop/) for build instructions. The desktop app is a separate product from the plugin marketplace.
 
-A standalone guide to organizing Claude Code configuration with separation of concerns. Worth reading even if you don't use any plugins.
+## 🌐 Cross-Platform
 
-| File | Scope | Purpose |
-|------|-------|---------|
-| `CLAUDE.md` | Global + Project + Package | Operational: build, test, architecture |
-| `AGENT.md` | Global + Project | Behavioral: tone, autonomy, workflow |
-| `SOUL.md` | Global only | Identity: values, relationship, memory |
+- **Claude Code** — native plugin marketplace support
+- **Cursor** — SKILL.md files work as prompt instructions; `/harness-compile` generates native config
+- **GitHub Copilot** — reads `CLAUDE.md` natively via `chat.useClaudeMdFile`
 
-Read the full guide: **[Claude Conventions](docs/claude-md-conventions.md)**
+See the [Harness Protocol spec](https://harnessprotocol.io) for the full cross-platform target mapping.
 
-Plugins can also include agent definitions — isolated specialist workers with their own context and scoped tools. See [Understanding Agents](https://harnessprotocol.io/docs/concepts/agents) for how agents, AGENT.md, and subagent definitions relate.
+## 📚 Docs
 
-## Desktop App
+- **[FAQ](docs/FAQ.md)** — What is this, why do I need it, how does it work
+- **[Plugins vs. Skills](docs/plugins-vs-skills.md)** — Why everything ships as a plugin, even when it's just a prompt
+- **[Claude Conventions](docs/claude-md-conventions.md)** — Organizing `CLAUDE.md`, `AGENT.md`, and `SOUL.md` with separation of concerns
+- **[Understanding Agents](https://harnessprotocol.io/docs/concepts/agents)** — AGENT.md, custom subagents, and "AI agent" disambiguation
 
-The monorepo also ships a Tauri desktop app (`apps/desktop/`) — a companion tool that brings the harness concept to a native UI. It includes a sync engine that compiles `harness.yaml` to platform configs, a plugin explorer, a parity tracker, a knowledge graph viewer (via [membrain](https://github.com/siracusa5/membrain) integration), and an IRC-style team chat backed by a self-hosted WebSocket relay (`packages/chat-relay/`). The desktop app is a separate product from the plugin marketplace; see `apps/desktop/` for its own build instructions.
-
-## Contributing
+## 🤝 Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for plugin guidelines, skill conventions, and PR process.
 
-## Docs
+## 📄 License
 
-- **[FAQ](FAQ.md)** — What is this, why do I need it, how does it work
-- **[Plugins vs. Skills](docs/plugins-vs-skills.md)** — Why everything ships as a plugin, even when it's just a prompt
-- **[Claude Conventions](docs/claude-md-conventions.md)** — Organizing Claude Code config with separation of concerns
-- **[Understanding Agents](https://harnessprotocol.io/docs/concepts/agents)** — Disambiguating AGENT.md, custom subagents, and "AI agent" generally
-
-## License
-
-Apache 2.0
+[Apache 2.0](LICENSE)
