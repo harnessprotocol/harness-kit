@@ -46,7 +46,7 @@ const initialState: ComparisonState = {
   diffs: null,
 };
 
-function reducer(state: ComparisonState, action: Action): ComparisonState {
+export function reducer(state: ComparisonState, action: Action): ComparisonState {
   switch (action.type) {
     case "START":
       return {
@@ -78,13 +78,13 @@ function reducer(state: ComparisonState, action: Action): ComparisonState {
       return { ...state, panels: updated, phase: allDone ? "complete" : state.phase };
     }
 
-    case "KILL":
-      return {
-        ...state,
-        panels: state.panels.map((p) =>
-          p.panelId === action.panelId ? { ...p, status: "killed" as const } : p,
-        ),
-      };
+    case "KILL": {
+      const updated = state.panels.map((p) =>
+        p.panelId === action.panelId ? { ...p, status: "killed" as const } : p,
+      );
+      const allDone = updated.every((p) => p.status === "complete" || p.status === "killed");
+      return { ...state, panels: updated, phase: allDone ? "complete" : state.phase };
+    }
 
     case "DIFFS_LOADED":
       return {

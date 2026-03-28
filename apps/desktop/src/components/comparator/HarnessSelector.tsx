@@ -1,9 +1,9 @@
 import type { HarnessInfo } from "@harness-kit/shared";
 
-const MODEL_OPTIONS: Record<string, string[]> = {
-  claude: ["claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5-20251001"],
-  cursor: ["gpt-4o", "claude-sonnet-4-6", "gemini-2.5-pro"],
-  "gh-copilot": ["gpt-4o", "gpt-4"],
+const LOGIN_COMMANDS: Record<string, string> = {
+  claude: "claude login",
+  cursor: "cursor agent login",
+  "gh-copilot": "copilot auth login",
 };
 
 interface SelectedHarness {
@@ -31,13 +31,15 @@ export default function HarnessSelector({
       {harnesses.map((h) => {
         const isSelected = selectedIds.has(h.id);
         const sel = selected.find((s) => s.harnessId === h.id);
-        const models = MODEL_OPTIONS[h.id] || [];
+        const models = h.models ?? [];
         const atMax = selected.length >= 4 && !isSelected;
+        const needsAuth = h.available && !h.authenticated;
+        const disabled = !h.available || needsAuth || atMax;
 
         const cardClass = [
           "harness-card",
           isSelected && "selected",
-          !h.available && "unavailable",
+          (!h.available || needsAuth) && "unavailable",
           atMax && "at-max",
         ].filter(Boolean).join(" ");
 
@@ -46,17 +48,20 @@ export default function HarnessSelector({
             key={h.id}
             className={cardClass}
             onClick={() => {
-              if (!h.available || atMax) return;
+              if (disabled) return;
               onToggle(h.id);
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px", flexWrap: "wrap" }}>
               <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)" }}>
                 {h.name}
               </span>
               {!h.available && <span className="badge badge-danger">Not found</span>}
               {h.available && h.mode === "unsupported" && (
                 <span className="badge badge-warning">Unconfirmed</span>
+              )}
+              {needsAuth && (
+                <span className="badge badge-warning">Login required</span>
               )}
             </div>
 
@@ -71,6 +76,24 @@ export default function HarnessSelector({
                 whiteSpace: "nowrap",
               }}>
                 {h.version}
+              </div>
+            )}
+
+            {needsAuth && (
+              <div style={{
+                fontSize: "11px",
+                color: "var(--fg-muted)",
+                marginTop: "4px",
+                padding: "4px 8px",
+                borderRadius: "4px",
+                background: "var(--bg-surface)",
+                fontFamily: "ui-monospace, monospace",
+                cursor: "text",
+                userSelect: "all",
+              }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {LOGIN_COMMANDS[h.id] ?? `${h.command} login`}
               </div>
             )}
 

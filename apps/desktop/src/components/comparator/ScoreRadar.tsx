@@ -45,10 +45,16 @@ export default function ScoreRadar({ panels }: ScoreRadarProps) {
     );
   }
 
-  const data = DIMENSIONS.map((dim) => {
+  // Only include dimensions where at least one panel has a score
+  const scoredDimensions = DIMENSIONS.filter((dim) =>
+    panels.some((p) => p.scores[dim.key] != null),
+  );
+
+  const data = scoredDimensions.map((dim) => {
     const entry: Record<string, string | number> = { dimension: dim.label };
     for (const panel of panels) {
-      entry[panel.panelId] = panel.scores[dim.key] ?? 0;
+      const val = panel.scores[dim.key];
+      if (val != null) entry[panel.panelId] = val;
     }
     return entry;
   });

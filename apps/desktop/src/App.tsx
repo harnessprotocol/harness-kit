@@ -7,6 +7,7 @@ import { ObservatoryProvider } from "./hooks/useObservatoryData";
 import HarnessFilePage from "./pages/harness/HarnessFilePage";
 import PluginsPage from "./pages/harness/PluginsPage";
 import HooksPage from "./pages/harness/HooksPage";
+import McpServersPage from "./pages/harness/McpServersPage";
 import SettingsPage from "./pages/harness/SettingsPage";
 import FileViewerPage from "./pages/harness/FileViewerPage";
 import ClaudeMdPage from "./pages/harness/ClaudeMdPage";
@@ -38,6 +39,24 @@ function DefaultRedirect() {
   return <Navigate to={defaultSection} replace />;
 }
 
+// Dev mode: show branch + launch time in title bar to distinguish multiple instances
+if (import.meta.env.DEV) {
+  const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  fetch("http://localhost:1422/__tauri_cli__")
+    .catch(() => null); // ignore — just prevents console noise
+  import("@tauri-apps/plugin-shell").then(({ Command }) => {
+    Command.create("git", ["branch", "--show-current"])
+      .execute()
+      .then((out) => {
+        const branch = out.stdout.trim() || "detached";
+        document.title = `Harness Kit — ${branch} — ${time}`;
+      })
+      .catch(() => {
+        document.title = `Harness Kit — dev — ${time}`;
+      });
+  });
+}
+
 export default function App() {
   return (
     <ChatProvider>
@@ -49,6 +68,7 @@ export default function App() {
           <Route index element={<DefaultRedirect />} />
           <Route path="harness/file" element={<HarnessFilePage />} />
           <Route path="harness/plugins" element={<PluginsPage />} />
+          <Route path="harness/mcp" element={<McpServersPage />} />
           <Route path="harness/hooks" element={<HooksPage />} />
           <Route path="harness/claude-md" element={<ClaudeMdPage />} />
           <Route path="harness/sync" element={<SyncPage />} />

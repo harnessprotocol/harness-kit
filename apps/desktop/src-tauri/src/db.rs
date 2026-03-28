@@ -131,6 +131,30 @@ pub fn init(data_dir: &Path) -> Result<Db, String> {
         );
 
         CREATE INDEX IF NOT EXISTS idx_chat_msg_room ON chat_messages(room_code, timestamp);
+
+        CREATE TABLE IF NOT EXISTS evaluation_sessions (
+            id              TEXT PRIMARY KEY,
+            comparison_id   TEXT NOT NULL REFERENCES comparisons(id) ON DELETE CASCADE,
+            eval_method     TEXT NOT NULL DEFAULT 'pairwise',
+            blind_order     TEXT,
+            revealed_at     TEXT,
+            created_at      TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_eval_sessions_comp ON evaluation_sessions(comparison_id);
+
+        CREATE TABLE IF NOT EXISTS pairwise_votes (
+            id              TEXT PRIMARY KEY,
+            comparison_id   TEXT NOT NULL REFERENCES comparisons(id) ON DELETE CASCADE,
+            session_id      TEXT NOT NULL REFERENCES evaluation_sessions(id) ON DELETE CASCADE,
+            left_panel_id   TEXT NOT NULL,
+            right_panel_id  TEXT NOT NULL,
+            dimension       TEXT NOT NULL,
+            result          TEXT NOT NULL,
+            created_at      TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_pairwise_votes_comp ON pairwise_votes(comparison_id);
+        CREATE INDEX IF NOT EXISTS idx_pairwise_votes_session ON pairwise_votes(session_id);
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_pairwise_votes_unique ON pairwise_votes(session_id, dimension);
     ",
     )
     .map_err(|e| format!("Failed to run schema: {}", e))?;

@@ -4,12 +4,14 @@ import { listComparisons, deleteComparison } from "../../lib/tauri";
 import type { ComparisonSummary } from "@harness-kit/shared";
 import { useArrowNavigation } from "../../hooks/useArrowNavigation";
 import ContextMenu from "../../components/ContextMenu";
+import ConfirmDialog from "../../components/ConfirmDialog";
 
 export default function ComparatorHistoryPage() {
   const navigate = useNavigate();
   const [comparisons, setComparisons] = useState<ComparisonSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; comp: ComparisonSummary } | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
 
   const { focusedIndex: histFocusedIndex, onKeyDown: onHistKeyDown } = useArrowNavigation({
     count: comparisons.length,
@@ -26,13 +28,20 @@ export default function ComparatorHistoryPage() {
 
   useEffect(load, []);
 
-  const handleDelete = async (id: string, e: React.MouseEvent) => {
+  const handleDelete = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    setDeleteTarget(id);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
     try {
-      await deleteComparison(id);
-      setComparisons((prev) => prev.filter((c) => c.id !== id));
+      await deleteComparison(deleteTarget);
+      setComparisons((prev) => prev.filter((c) => c.id !== deleteTarget));
     } catch (err) {
       console.error("Failed to delete:", err);
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -175,18 +184,20 @@ export default function ComparatorHistoryPage() {
           y={contextMenu.y}
           items={[
             { label: "Review", onClick: () => navigate(`/comparator/review/${contextMenu.comp.id}`) },
-            { label: "Delete", danger: true, onClick: async () => {
-              try {
-                await deleteComparison(contextMenu.comp.id);
-                setComparisons((prev) => prev.filter((c) => c.id !== contextMenu.comp.id));
-              } catch (err) {
-                console.error("Failed to delete:", err);
-              }
-            }},
+            { label: "Delete", danger: true, onClick: () => setDeleteTarget(contextMenu.comp.id) },
           ]}
           onClose={() => setContextMenu(null)}
         />
       )}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Delete Comparison"
+        message="This comparison and all its evaluations will be permanently deleted."
+        confirmLabel="Delete"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

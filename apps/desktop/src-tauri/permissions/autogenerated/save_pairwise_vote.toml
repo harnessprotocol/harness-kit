@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-save-pairwise-vote"
+description = "Enables the save_pairwise_vote command without any pre-configured scope."
+commands.allow = ["save_pairwise_vote"]
+
+[[permission]]
+identifier = "deny-save-pairwise-vote"
+description = "Denies the save_pairwise_vote command without any pre-configured scope."
+commands.deny = ["save_pairwise_vote"]

@@ -17,7 +17,7 @@ export default defineConfig({
   testDir: "./tests",
   timeout: 30_000,
   use: {
-    baseURL: "http://localhost:1420",
+    baseURL: "http://localhost:1422",
     screenshot: "only-on-failure",
     video: "off",
   },
@@ -25,7 +25,7 @@ export default defineConfig({
   reporter: [["list"], ["html", { open: "never" }]],
   webServer: {
     command: "pnpm dev",
-    url: "http://localhost:1420",
+    url: "http://localhost:1422",
     reuseExistingServer: true,
     timeout: 30_000,
   },

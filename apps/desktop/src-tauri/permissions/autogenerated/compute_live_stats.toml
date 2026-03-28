@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-compute-live-stats"
+description = "Enables the compute_live_stats command without any pre-configured scope."
+commands.allow = ["compute_live_stats"]
+
+[[permission]]
+identifier = "deny-compute-live-stats"
+description = "Denies the compute_live_stats command without any pre-configured scope."
+commands.deny = ["compute_live_stats"]
