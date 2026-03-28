@@ -197,6 +197,28 @@ async function seedComponents(
       .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
       .join(" ");
 
+    // Assign plausible seed install counts by category tier.
+    // These are rough estimates for initial seeding — real counts come from
+    // production installs tracked by the install API route.
+    const SEED_INSTALL_COUNTS: Record<string, number> = {
+      research: 1240,
+      review: 980,
+      explain: 870,
+      lineage: 640,
+      orient: 590,
+      capture: 520,
+      "harness-share": 480,
+      docgen: 430,
+      "open-pr": 390,
+      "merge-pr": 360,
+      "pr-sweep": 310,
+      stats: 290,
+      membrain: 260,
+      board: 230,
+      "iterm-notify": 190,
+      "frontend-design": 170,
+    };
+
     const component = {
       slug: plugin.name,
       name: displayName,
@@ -209,6 +231,7 @@ async function seedComponents(
       skill_md: skillMd,
       readme_md: readmeMd,
       repo_url: `https://github.com/harnessprotocol/harness-kit/tree/main/plugins/${plugin.name}`,
+      install_count: SEED_INSTALL_COUNTS[plugin.name] ?? 100,
     };
 
     const { data, error } = await supabase

@@ -33,6 +33,11 @@ const CATEGORIES = [
     name: "Productivity",
     description: "Configuration sharing, session capture, and workflow tools",
   },
+  {
+    slug: "design",
+    name: "Design",
+    description: "Production-grade frontend design rules for typography, color, and UX",
+  },
 ];
 
 function TrustBadge({ tier }: { tier: string }) {
