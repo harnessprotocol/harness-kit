@@ -226,7 +226,11 @@ export default function SettingsPage() {
               {editor.error}
             </div>
             <button
-              onClick={() => setSelectedFile((f) => f)}
+              onClick={() => {
+                const f = selectedFile;
+                setSelectedFile(null);
+                setTimeout(() => setSelectedFile(f), 0);
+              }}
               style={{
                 fontSize: "12px", color: "var(--accent-text)", background: "none",
                 border: "none", padding: 0, cursor: "pointer", textDecoration: "underline",
