@@ -2,26 +2,23 @@
 
 ## Environment variables
 
-Create `apps/marketplace/.env.local` with the following values:
+Copy `.env.example` to `.env.local` and fill in your values:
 
-```
-# Supabase project URL (from Project Settings → API)
-NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
-
-# Supabase anon key — safe to expose in the browser
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon-key>
-
-# Supabase service role key — server-only, never expose publicly
-SUPABASE_SERVICE_ROLE_KEY=<service-role-key>
-
-# GitHub personal access token — used by the sync route to read private repo contents (optional)
-GITHUB_TOKEN=<github-pat>
-
-# GitHub webhook secret — must match the secret set in the GitHub webhook config
-GITHUB_WEBHOOK_SECRET=<webhook-secret>
+```bash
+cp apps/marketplace/.env.example apps/marketplace/.env.local
 ```
 
-Supabase values are in your project dashboard under **Settings → API**. GitHub values come from your repo webhook config and a GitHub PAT.
+Required variables:
+
+| Variable | Where to get it |
+|----------|----------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project dashboard → Settings → API |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase project dashboard → Settings → API |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase project dashboard → Settings → API (server-only, never expose publicly) |
+| `SUPABASE_URL` | Same as `NEXT_PUBLIC_SUPABASE_URL` — used in seed scripts and server-side operations |
+| `REGISTER_API_KEY` | Choose any secret string — protects the `/api/register` endpoint |
+| `GITHUB_TOKEN` | GitHub PAT with repo read access (optional — for syncing private repo content) |
+| `GITHUB_WEBHOOK_SECRET` | Match the secret set in your GitHub webhook config |
 
 ## Seed the database
 
