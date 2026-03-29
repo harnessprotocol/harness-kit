@@ -67,7 +67,7 @@ export const taskTools = [
   },
   {
     name: 'move_task',
-    description: 'Change a task status column (backlog → in-progress → review → done)',
+    description: 'Change a task status column (planning → in-progress → ai-review → human-review → done)',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -212,7 +212,7 @@ export const taskTools = [
   },
   {
     name: 'request_review',
-    description: 'Flag a task as ready for human review (moves to "human-review" status)',
+    description: 'Flag a task as ready for AI review (moves to "ai-review" status)',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -228,7 +228,7 @@ export const taskTools = [
       note: z.string().optional(),
     }),
     handler: async (args: { project: string; task_id: number; note?: string }) => {
-      const task = store.moveTask(args.project, args.task_id, 'human-review');
+      const task = store.moveTask(args.project, args.task_id, 'ai-review');
       if (args.note) {
         store.addComment(args.project, args.task_id, 'claude', `**Ready for review:** ${args.note}`);
       }
