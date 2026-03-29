@@ -24,11 +24,10 @@ export function SortableTaskCard({ task, onClick, repoUrl }: Props) {
   return (
     <div
       ref={setNodeRef}
+      className={isDragging ? 'opacity-40 cursor-grabbing' : 'opacity-100 cursor-grab'}
       style={{
         transform: CSS.Transform.toString(transform),
         transition,
-        opacity: isDragging ? 0.4 : 1,
-        cursor: isDragging ? 'grabbing' : 'grab',
       }}
       {...attributes}
       {...listeners}

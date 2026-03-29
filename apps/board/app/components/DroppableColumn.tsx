@@ -4,6 +4,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { Task, TaskStatus } from '../lib/api';
 import { COLUMN_META } from '../lib/columns';
+import { cn } from '../lib/utils';
 import { SortableTaskCard } from './SortableTaskCard';
 import { Tooltip } from './Tooltip';
 
@@ -23,55 +24,26 @@ export function DroppableColumn({ status, tasks, onTaskClick, onAddTask, repoUrl
 
   return (
     <div
-      style={{
-        width: 280,
-        minWidth: 280,
-        display: 'flex',
-        flexDirection: 'column',
-        background: isOver ? 'var(--bg-elevated)' : 'var(--bg-surface)',
-        borderRadius: 10,
-        border: `1px solid ${isOver ? 'var(--accent)' : 'var(--border-subtle)'}`,
-        overflow: 'hidden',
-        maxHeight: '100%',
-        transition: 'background 0.15s, border-color 0.15s',
-      }}
+      className={cn(
+        'flex min-w-[220px] flex-1 flex-col overflow-hidden rounded-[10px] border max-h-full',
+        'transition-[background,border-color] duration-150',
+        isOver
+          ? 'bg-[var(--bg-elevated)] border-[var(--accent)]'
+          : 'bg-[var(--bg-surface)] border-[var(--border-subtle)]',
+      )}
     >
       {/* Column header */}
-      <div
-        style={{
-          padding: '12px 14px 10px',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 8,
-          borderBottom: '1px solid var(--border-subtle)',
-          flexShrink: 0,
-        }}
-      >
+      <div className="flex shrink-0 items-center gap-2 border-b border-[var(--border-subtle)] px-3.5 pt-3 pb-2.5">
         <span
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            background: meta.color,
-            flexShrink: 0,
-          }}
+          className="size-2 shrink-0 rounded-full"
+          style={{ background: meta.color }}
         />
         <Tooltip text={meta.tooltip} position="bottom">
-          <span style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>
+          <span className="text-[13px] font-semibold text-[var(--text-primary)]">
             {meta.label}
           </span>
         </Tooltip>
-        <span
-          style={{
-            marginLeft: 'auto',
-            fontSize: 11,
-            fontWeight: 600,
-            color: 'var(--text-muted)',
-            background: 'var(--bg-elevated)',
-            borderRadius: 10,
-            padding: '1px 7px',
-          }}
-        >
+        <span className="ml-auto rounded-[10px] bg-[var(--bg-elevated)] px-[7px] py-px text-[11px] font-semibold text-[var(--text-muted)]">
           {tasks.length}
         </span>
       </div>
@@ -79,28 +51,17 @@ export function DroppableColumn({ status, tasks, onTaskClick, onAddTask, repoUrl
       {/* Task list — droppable zone */}
       <div
         ref={setNodeRef}
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: 10,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 8,
-          minHeight: 80,
-        }}
+        className="flex flex-1 flex-col gap-2 overflow-y-auto p-2.5 min-h-[80px]"
       >
         <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
           {tasks.length === 0 ? (
             <div
-              style={{
-                padding: '24px 12px',
-                textAlign: 'center',
-                color: isOver ? 'var(--accent)' : 'var(--text-muted)',
-                fontSize: 12,
-                borderRadius: 6,
-                border: `1px dashed ${isOver ? 'var(--accent)' : 'var(--border-subtle)'}`,
-                transition: 'all 0.15s',
-              }}
+              className={cn(
+                'rounded-md border border-dashed px-3 py-6 text-center text-xs transition-all duration-150',
+                isOver
+                  ? 'border-[var(--accent)] text-[var(--accent)]'
+                  : 'border-[var(--border-subtle)] text-[var(--text-muted)]',
+              )}
             >
               {isOver ? 'Drop here' : 'No tasks'}
             </div>
@@ -117,39 +78,23 @@ export function DroppableColumn({ status, tasks, onTaskClick, onAddTask, repoUrl
         </SortableContext>
       </div>
 
-      {/* Add task button — only in Backlog */}
-      {status === 'backlog' && <Tooltip text="Create a new task" position="top">
-        <button
-          onClick={onAddTask}
-          style={{
-            margin: '0 10px 10px',
-            padding: '6px',
-            background: 'transparent',
-            border: '1px dashed var(--border)',
-            borderRadius: 6,
-            color: 'var(--text-muted)',
-            fontSize: 12,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 4,
-            transition: 'all 0.1s',
-            flexShrink: 0,
-            width: 'calc(100% - 20px)',
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)';
-            (e.currentTarget as HTMLElement).style.color = 'var(--accent)';
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
-            (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)';
-          }}
-        >
-          + Add task
-        </button>
-      </Tooltip>}
+      {/* Add task button — only in Planning */}
+      {status === 'planning' && (
+        <Tooltip text="Create a new task" position="top">
+          <button
+            onClick={onAddTask}
+            className={cn(
+              'mx-2.5 mb-2.5 shrink-0 flex items-center justify-center gap-1',
+              'rounded-md border border-dashed border-[var(--border)] bg-transparent',
+              'p-1.5 text-xs text-[var(--text-muted)] cursor-pointer',
+              'transition-all duration-100',
+              'hover:border-[var(--accent)] hover:text-[var(--accent)]',
+            )}
+          >
+            + Add task
+          </button>
+        </Tooltip>
+      )}
     </div>
   );
 }
