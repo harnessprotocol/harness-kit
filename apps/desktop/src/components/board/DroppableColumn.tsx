@@ -22,8 +22,8 @@ export function DroppableColumn({ status, tasks, onTaskClick, onAddTask, repoUrl
   return (
     <div
       style={{
-        width: 280,
-        minWidth: 280,
+        minWidth: 220,
+        flex: 1,
         display: 'flex',
         flexDirection: 'column',
         background: isOver ? 'var(--bg-elevated)' : 'var(--bg-surface)',
@@ -115,39 +115,41 @@ export function DroppableColumn({ status, tasks, onTaskClick, onAddTask, repoUrl
         </SortableContext>
       </div>
 
-      {/* Add task button — only in Backlog */}
-      {status === 'backlog' && <Tooltip text="Create a new task" position="top">
-        <button
-          onClick={onAddTask}
-          style={{
-            margin: '0 10px 10px',
-            padding: '6px',
-            background: 'transparent',
-            border: '1px dashed var(--border)',
-            borderRadius: 6,
-            color: 'var(--text-muted)',
-            fontSize: 12,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 4,
-            transition: 'all 0.1s',
-            flexShrink: 0,
-            width: 'calc(100% - 20px)',
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)';
-            (e.currentTarget as HTMLElement).style.color = 'var(--accent)';
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
-            (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)';
-          }}
-        >
-          + Add task
-        </button>
-      </Tooltip>}
+      {/* Add task button — only in Planning */}
+      {status === 'planning' && (
+        <Tooltip text="Create a new task" position="top">
+          <button
+            onClick={onAddTask}
+            style={{
+              margin: '0 10px 10px',
+              padding: 6,
+              background: 'transparent',
+              border: '1px dashed var(--border)',
+              borderRadius: 6,
+              color: 'var(--text-muted)',
+              fontSize: 12,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 4,
+              transition: 'all 0.1s',
+              flexShrink: 0,
+              width: 'calc(100% - 20px)',
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)';
+              (e.currentTarget as HTMLElement).style.color = 'var(--accent)';
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
+              (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)';
+            }}
+          >
+            + Add task
+          </button>
+        </Tooltip>
+      )}
     </div>
   );
 }
