@@ -1,22 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import type { Component, Profile, TrustTier } from "@/lib/types";
-
-function TrustBadge({ tier }: { tier: TrustTier }) {
-  const colors: Record<TrustTier, string> = {
-    official: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-    verified: "bg-green-500/20 text-green-400 border-green-500/30",
-    community: "bg-gray-500/20 text-gray-400 border-gray-500/30",
-  };
-  return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${colors[tier]}`}
-    >
-      {tier}
-    </span>
-  );
-}
+import type { Component, Profile } from "@/lib/types";
+import { TrustBadge } from "@/app/components/TrustBadge";
 
 export default async function ProfileDetailPage({
   params,
@@ -112,7 +98,7 @@ export default async function ProfileDetailPage({
             {profile.author.url ? (
               <a
                 href={profile.author.url}
-                className="text-blue-400 hover:text-blue-300"
+                className="text-violet-400 hover:text-violet-300"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -131,7 +117,7 @@ export default async function ProfileDetailPage({
           {tags.map((tag) => (
             <span
               key={tag}
-              className="rounded-full border border-[#2a2a2a] px-3 py-1 text-xs text-gray-400"
+              className="rounded-full border border-[#2a2a2e] px-3 py-1 text-xs text-gray-400"
             >
               {tag}
             </span>
@@ -154,15 +140,15 @@ export default async function ProfileDetailPage({
               <Link
                 key={component.id}
                 href={`/plugins/${component.slug}`}
-                className="group flex items-center justify-between rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] p-4 transition-colors hover:border-blue-500/40"
+                className="group flex items-center justify-between rounded-xl border border-[#2a2a2e] bg-[#1a1a1e] p-4 transition-colors hover:border-violet-500/40"
               >
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold group-hover:text-blue-400">
+                    <h3 className="font-semibold group-hover:text-violet-400">
                       {component.name}
                     </h3>
                     <TrustBadge tier={component.trust_tier} />
-                    <span className="rounded-full border border-[#2a2a2a] px-2 py-0.5 text-xs capitalize text-gray-500">
+                    <span className="rounded-full border border-[#2a2a2e] px-2 py-0.5 text-xs capitalize text-gray-500">
                       {component.type}
                     </span>
                   </div>
@@ -183,14 +169,14 @@ export default async function ProfileDetailPage({
       {profile.harness_yaml_template && (
         <section className="mb-10">
           <h2 className="mb-4 text-xl font-bold">harness.yaml</h2>
-          <pre className="overflow-x-auto rounded-xl border border-[#2a2a2a] bg-[#111] p-5 text-sm text-gray-300">
+          <pre className="overflow-x-auto rounded-xl border border-[#2a2a2e] bg-[#111] p-5 text-sm text-gray-300">
             <code>{profile.harness_yaml_template}</code>
           </pre>
         </section>
       )}
 
       {/* Install Profile */}
-      <section className="mb-10 rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] p-5">
+      <section className="mb-10 rounded-xl border border-[#2a2a2e] bg-[#1a1a1e] p-5">
         <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400">
           Install Profile
         </h2>
@@ -202,7 +188,7 @@ export default async function ProfileDetailPage({
           {components.map((component) => (
             <code
               key={component.id}
-              className="block rounded-lg bg-[#111] px-4 py-2 text-sm text-blue-300"
+              className="block rounded-lg bg-[#111] px-4 py-2 text-sm text-violet-300"
             >
               /plugin install {component.slug}@harness-kit
             </code>
@@ -219,9 +205,9 @@ export default async function ProfileDetailPage({
               <Link
                 key={related.id}
                 href={`/profiles/${related.slug}`}
-                className="group rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] p-4 transition-colors hover:border-blue-500/40"
+                className="group rounded-xl border border-[#2a2a2e] bg-[#1a1a1e] p-4 transition-colors hover:border-violet-500/40"
               >
-                <h3 className="font-semibold group-hover:text-blue-400">
+                <h3 className="font-semibold group-hover:text-violet-400">
                   {related.name}
                 </h3>
                 <p className="mt-1 text-sm text-gray-400">

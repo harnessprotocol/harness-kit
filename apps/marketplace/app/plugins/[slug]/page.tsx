@@ -3,21 +3,7 @@ import { notFound } from "next/navigation";
 import sanitizeHtml from "sanitize-html";
 import { supabase } from "@/lib/supabase";
 import type { Component, Profile, TrustTier } from "@/lib/types";
-
-function TrustBadge({ tier }: { tier: TrustTier }) {
-  const colors: Record<TrustTier, string> = {
-    official: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-    verified: "bg-green-500/20 text-green-400 border-green-500/30",
-    community: "bg-gray-500/20 text-gray-400 border-gray-500/30",
-  };
-  return (
-    <span
-      className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${colors[tier]}`}
-    >
-      {tier}
-    </span>
-  );
-}
+import { TrustBadge } from "@/app/components/TrustBadge";
 
 /**
  * Allowed tags and attributes for sanitizeHtml.
@@ -67,12 +53,12 @@ function renderMarkdown(md: string): string {
     // Inline code
     .replace(
       /`([^`]+)`/g,
-      '<code class="rounded bg-[#1a1a1a] px-1.5 py-0.5 text-sm text-blue-300">$1</code>',
+      '<code class="rounded bg-[#1a1a1e] px-1.5 py-0.5 text-sm text-violet-300">$1</code>',
     )
     // Links
     .replace(
       /\[([^\]]+)\]\(([^)]+)\)/g,
-      '<a href="$2" class="text-blue-400 underline hover:text-blue-300" target="_blank" rel="noopener noreferrer">$1</a>',
+      '<a href="$2" class="text-violet-400 underline hover:text-violet-300" target="_blank" rel="noopener noreferrer">$1</a>',
     )
     // Unordered lists
     .replace(/^- (.+)$/gm, '<li class="ml-4 list-disc text-gray-300">$1</li>')
@@ -188,7 +174,7 @@ export default async function PluginDetailPage({
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-3xl font-bold">{component.name}</h1>
               <TrustBadge tier={component.trust_tier} />
-              <span className="rounded-full border border-[#2a2a2a] px-2.5 py-0.5 text-xs capitalize text-gray-400">
+              <span className="rounded-full border border-[#2a2a2e] px-2.5 py-0.5 text-xs capitalize text-gray-400">
                 {component.type}
               </span>
             </div>
@@ -227,7 +213,7 @@ export default async function PluginDetailPage({
                 <Link
                   key={tag}
                   href={`/plugins?tag=${tag}`}
-                  className="rounded-full border border-[#2a2a2a] px-3 py-1 text-xs text-gray-400 transition-colors hover:border-blue-500/30 hover:text-blue-400"
+                  className="rounded-full border border-[#2a2a2e] px-3 py-1 text-xs text-gray-400 transition-colors hover:border-violet-500/30 hover:text-violet-400"
                 >
                   {tag}
                 </Link>
@@ -240,7 +226,7 @@ export default async function PluginDetailPage({
             <section className="mb-10">
               <h2 className="mb-4 text-xl font-bold">Skill Definition</h2>
               <div
-                className="prose-invert max-w-none rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] p-6"
+                className="prose-invert max-w-none rounded-xl border border-[#2a2a2e] bg-[#1a1a1e] p-6"
                 dangerouslySetInnerHTML={{ __html: skillHtml }}
               />
             </section>
@@ -251,7 +237,7 @@ export default async function PluginDetailPage({
             <section className="mb-10">
               <h2 className="mb-4 text-xl font-bold">Documentation</h2>
               <div
-                className="prose-invert max-w-none rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] p-6"
+                className="prose-invert max-w-none rounded-xl border border-[#2a2a2e] bg-[#1a1a1e] p-6"
                 dangerouslySetInnerHTML={{ __html: readmeHtml }}
               />
             </section>
@@ -263,18 +249,18 @@ export default async function PluginDetailPage({
           <div className="space-y-5">
             {/* Author card */}
             {component.author && (
-              <div className="rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] p-4">
+              <div className="rounded-xl border border-[#2a2a2e] bg-[#1a1a1e] p-4">
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
                   Author
                 </h3>
                 <div className="flex items-center gap-3">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2a2a2a] text-sm font-semibold text-gray-300">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#2a2a2e] text-sm font-semibold text-gray-300">
                     {component.author.name.charAt(0).toUpperCase()}
                   </div>
                   {component.author.url ? (
                     <a
                       href={component.author.url}
-                      className="text-sm font-medium text-blue-400 hover:text-blue-300"
+                      className="text-sm font-medium text-violet-400 hover:text-violet-300"
                       target="_blank"
                       rel="noopener noreferrer"
                     >
@@ -295,7 +281,7 @@ export default async function PluginDetailPage({
                 href={component.repo_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-2 rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] px-4 py-3 text-sm font-medium text-gray-200 transition-colors hover:border-blue-500/40 hover:text-blue-400"
+                className="flex items-center justify-center gap-2 rounded-xl border border-[#2a2a2e] bg-[#1a1a1e] px-4 py-3 text-sm font-medium text-gray-200 transition-colors hover:border-violet-500/40 hover:text-violet-400"
               >
                 <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
@@ -305,18 +291,18 @@ export default async function PluginDetailPage({
             )}
 
             {/* Install command */}
-            <div className="rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] p-4">
+            <div className="rounded-xl border border-[#2a2a2e] bg-[#1a1a1e] p-4">
               <h3 className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
                 Install
               </h3>
-              <code className="block rounded-lg bg-[#111] px-3 py-2.5 text-sm text-blue-300">
+              <code className="block rounded-lg bg-[#111] px-3 py-2.5 text-sm text-violet-300">
                 /plugin install {component.slug}@harness-kit
               </code>
             </div>
 
             {/* Included in Profiles */}
             {includedInProfiles.length > 0 && (
-              <div className="rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] p-4">
+              <div className="rounded-xl border border-[#2a2a2e] bg-[#1a1a1e] p-4">
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
                   Included in Profiles
                 </h3>
@@ -325,7 +311,7 @@ export default async function PluginDetailPage({
                     <li key={profile.id}>
                       <Link
                         href={`/profiles/${profile.slug}`}
-                        className="text-sm text-blue-400 hover:text-blue-300"
+                        className="text-sm text-violet-400 hover:text-violet-300"
                       >
                         {profile.name}
                       </Link>
@@ -337,7 +323,7 @@ export default async function PluginDetailPage({
 
             {/* Related Plugins */}
             {relatedComponents.length > 0 && (
-              <div className="rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] p-4">
+              <div className="rounded-xl border border-[#2a2a2e] bg-[#1a1a1e] p-4">
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
                   Related Plugins
                 </h3>
@@ -349,7 +335,7 @@ export default async function PluginDetailPage({
                         className="group block"
                       >
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-gray-200 group-hover:text-blue-400">
+                          <span className="text-sm font-medium text-gray-200 group-hover:text-violet-400">
                             {related.name}
                           </span>
                           <span className="text-xs text-gray-500">
