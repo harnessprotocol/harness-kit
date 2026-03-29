@@ -11,7 +11,7 @@ Search, trace, and manage your [membrain](https://github.com/siracusa5/membrain)
 
 ## Requirements
 
-- Go 1.25+
+- Go (any recent version)
 
 ```bash
 go install github.com/siracusa5/membrain/cmd/mem@latest
@@ -33,8 +33,7 @@ After install, add the membrain MCP server to your Claude Code settings:
   "mcpServers": {
     "membrain": {
       "command": "mem",
-      "args": ["mcp"],
-      "transport": "stdio"
+      "args": ["mcp"]
     }
   }
 }

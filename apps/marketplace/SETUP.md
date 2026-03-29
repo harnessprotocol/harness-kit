@@ -21,7 +21,7 @@ GITHUB_TOKEN=<github-pat>
 GITHUB_WEBHOOK_SECRET=<webhook-secret>
 ```
 
-All values are available in your Supabase project dashboard under **Settings → API**.
+Supabase values are in your project dashboard under **Settings → API**. GitHub values come from your repo webhook config and a GitHub PAT.
 
 ## Seed the database
 

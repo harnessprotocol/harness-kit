@@ -1,4 +1,4 @@
-import { readFile, writeFile, access } from "node:fs/promises";
+import { writeFile, access } from "node:fs/promises";
 import { resolve, basename } from "node:path";
 import chalk from "chalk";
 import { confirm, input, checkbox, Separator } from "@inquirer/prompts";
