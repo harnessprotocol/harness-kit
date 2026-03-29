@@ -1,6 +1,8 @@
 import { Command } from "commander";
 import { validateCommand } from "./commands/validate.js";
 import { compileCommand } from "./commands/compile.js";
+import { detectCommand } from "./commands/detect.js";
+import { initCommand } from "./commands/init.js";
 
 const program = new Command();
 
@@ -47,6 +49,21 @@ Examples:
   )
   .action(async (path: string, flags) => {
     await compileCommand(path, flags);
+  });
+
+program
+  .command("detect")
+  .description("Show which AI coding platforms are detected in the current directory")
+  .action(async () => {
+    await detectCommand();
+  });
+
+program
+  .command("init")
+  .description("Scaffold a new harness.yaml interactively")
+  .argument("[path]", "Output path for harness.yaml", "harness.yaml")
+  .action(async (path: string) => {
+    await initCommand(path);
   });
 
 program.parse();
