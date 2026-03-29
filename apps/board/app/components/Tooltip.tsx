@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, type ReactNode } from 'react';
+import { cn } from '../lib/utils';
 
 interface Props {
   text: string;
@@ -26,39 +27,23 @@ export function Tooltip({ text, children, position = 'top', delay = 400 }: Props
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
   }, []);
 
-  const positionStyles: Record<string, React.CSSProperties> = {
-    top: { bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: 6 },
-    bottom: { top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: 6 },
-    left: { right: '100%', top: '50%', transform: 'translateY(-50%)', marginRight: 6 },
-    right: { left: '100%', top: '50%', transform: 'translateY(-50%)', marginLeft: 6 },
-  };
-
   return (
     <span
       onMouseEnter={handleEnter}
       onMouseLeave={handleLeave}
-      style={{ position: 'relative', display: 'inline-flex' }}
+      className="relative inline-flex"
     >
       {children}
       {visible && (
         <span
           role="tooltip"
-          style={{
-            position: 'absolute',
-            ...positionStyles[position],
-            background: 'var(--bg-elevated)',
-            border: '1px solid var(--border)',
-            borderRadius: 6,
-            padding: '5px 10px',
-            fontSize: 12,
-            color: 'var(--text-secondary)',
-            whiteSpace: 'nowrap',
-            zIndex: 100,
-            pointerEvents: 'none',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-            lineHeight: 1.4,
-            maxWidth: 260,
-          }}
+          className={cn(
+            'absolute z-[100] rounded-[6px] border border-[var(--border)] bg-[var(--bg-elevated)] px-2.5 py-[5px] text-[12px] text-[var(--text-secondary)] whitespace-nowrap pointer-events-none max-w-[260px] leading-[1.4] shadow-[0_4px_12px_rgba(0,0,0,0.3)]',
+            position === 'top' && 'bottom-full left-1/2 -translate-x-1/2 mb-1.5',
+            position === 'bottom' && 'top-full left-1/2 -translate-x-1/2 mt-1.5',
+            position === 'left' && 'right-full top-1/2 -translate-y-1/2 mr-1.5',
+            position === 'right' && 'left-full top-1/2 -translate-y-1/2 ml-1.5',
+          )}
         >
           {text}
         </span>
