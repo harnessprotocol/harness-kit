@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-const taskStatusSchema = z.enum(['backlog', 'in-progress', 'review', 'done']);
+const taskStatusSchema = z.enum(['planning', 'in-progress', 'ai-review', 'human-review', 'done']);
 
 export const taskTools = [
   {
@@ -73,7 +73,7 @@ export const taskTools = [
       properties: {
         project: { type: 'string', description: 'Project slug' },
         task_id: { type: 'number', description: 'Task ID' },
-        status: { type: 'string', enum: ['backlog', 'in-progress', 'review', 'done'], description: 'New status' },
+        status: { type: 'string', enum: ['planning', 'in-progress', 'ai-review', 'human-review', 'done'], description: 'New status' },
       },
       required: ['project', 'task_id', 'status'],
     },
@@ -151,7 +151,7 @@ export const taskTools = [
       properties: {
         project: { type: 'string', description: 'Filter by project slug' },
         epic_id: { type: 'number', description: 'Filter by epic ID' },
-        status: { type: 'string', enum: ['backlog', 'in-progress', 'review', 'done'], description: 'Filter by status' },
+        status: { type: 'string', enum: ['planning', 'in-progress', 'ai-review', 'human-review', 'done'], description: 'Filter by status' },
       },
     },
     schema: z.object({
@@ -212,7 +212,7 @@ export const taskTools = [
   },
   {
     name: 'request_review',
-    description: 'Flag a task as ready for human review (moves to "review" status)',
+    description: 'Flag a task as ready for human review (moves to "human-review" status)',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -228,7 +228,7 @@ export const taskTools = [
       note: z.string().optional(),
     }),
     handler: async (args: { project: string; task_id: number; note?: string }) => {
-      const task = store.moveTask(args.project, args.task_id, 'review');
+      const task = store.moveTask(args.project, args.task_id, 'human-review');
       if (args.note) {
         store.addComment(args.project, args.task_id, 'claude', `**Ready for review:** ${args.note}`);
       }
