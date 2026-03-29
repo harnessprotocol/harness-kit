@@ -4,6 +4,9 @@ import sanitizeHtml from "sanitize-html";
 import { supabase } from "@/lib/supabase";
 import type { Component, Profile, TrustTier } from "@/lib/types";
 import { TrustBadge } from "@/app/components/TrustBadge";
+import { ReviewForm } from "@/app/components/ReviewForm";
+import { ReviewList } from "@/app/components/ReviewList";
+import { getServerSession } from "@/lib/auth";
 
 /**
  * Allowed tags and attributes for sanitizeHtml.
@@ -82,6 +85,9 @@ export default async function PluginDetailPage({
   let tags: string[] = [];
   let relatedComponents: Component[] = [];
   let includedInProfiles: Profile[] = [];
+
+  // Get current user session for reviews
+  const user = await getServerSession();
 
   try {
     // Fetch the component
@@ -201,6 +207,18 @@ export default async function PluginDetailPage({
               </svg>
               {component.install_count.toLocaleString()} installs
             </span>
+            {component.average_rating !== undefined && component.average_rating > 0 && (
+              <span className="inline-flex items-center gap-1">
+                <svg
+                  className="h-3.5 w-3.5"
+                  fill="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                </svg>
+                {component.average_rating.toFixed(1)} ({component.review_count})
+              </span>
+            )}
             <span>v{component.version}</span>
             {component.license && <span>{component.license}</span>}
             {updatedDate && <span>Updated {updatedDate}</span>}
@@ -242,6 +260,19 @@ export default async function PluginDetailPage({
               />
             </section>
           )}
+
+          {/* Reviews section */}
+          <section className="mb-10">
+            <h2 className="mb-6 text-xl font-bold">Reviews</h2>
+
+            {/* Review form */}
+            <div className="mb-8">
+              <ReviewForm user={user} componentSlug={slug} />
+            </div>
+
+            {/* Review list */}
+            <ReviewList componentId={component.id} user={user} />
+          </section>
         </div>
 
         {/* Sidebar */}

@@ -32,6 +32,8 @@ export interface Component {
   readme_md: string | null;
   repo_url: string | null;
   install_count: number;
+  average_rating?: number;
+  review_count?: number;
   created_at: string;
   updated_at: string;
 }

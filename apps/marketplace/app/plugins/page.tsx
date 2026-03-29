@@ -2,6 +2,7 @@ import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import type { Component, ComponentType, TrustTier } from "@/lib/types";
 import { TrustBadge } from "@/app/components/TrustBadge";
+import { StarRating } from "@/app/components/StarRating";
 
 const CATEGORIES = [
   { slug: "research-knowledge", name: "Research & Knowledge" },
@@ -45,7 +46,12 @@ export default async function PluginsPage({
 
   let components: Component[] = [];
   try {
-    let q = supabase.from("components").select("*");
+    let q = supabase
+      .from("components")
+      .select(`
+        *,
+        ratings:ratings(rating)
+      `);
 
     if (query) {
       q = q.ilike("name", `%${query}%`);
@@ -64,7 +70,21 @@ export default async function PluginsPage({
     }
 
     const { data } = await q;
-    let results = (data as Component[]) ?? [];
+    let results = (data ?? []).map((item: any) => {
+      const ratings = item.ratings || [];
+      const average_rating = ratings.length > 0
+        ? ratings.reduce((sum: number, r: { rating: number }) => sum + r.rating, 0) / ratings.length
+        : 0;
+      const review_count = ratings.length;
+
+      // Remove the ratings array and add computed fields
+      const { ratings: _, ...component } = item;
+      return {
+        ...component,
+        average_rating,
+        review_count,
+      } as Component;
+    });
 
     // Apply category filter via join table
     if (selectedCategory && results.length > 0) {
@@ -289,6 +309,12 @@ export default async function PluginsPage({
                         <span className="font-semibold text-gray-100 group-hover:text-violet-400">
                           {component.name}
                         </span>
+                        {component.average_rating && component.review_count ? (
+                          <span className="inline-flex items-center gap-1.5 text-xs text-gray-500">
+                            <StarRating rating={component.average_rating} />
+                            <span>({component.review_count})</span>
+                          </span>
+                        ) : null}
                         <span className="inline-flex items-center gap-1 text-xs text-gray-500">
                           <svg
                             className="h-3 w-3"

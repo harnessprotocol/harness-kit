@@ -1,3 +1,7 @@
+// NOTE: Rate limiting is in-memory only. State is not shared across process restarts
+// or horizontal deployments. For production multi-instance deployments, replace
+// with a Redis- or Supabase-backed implementation.
+
 interface RateLimitEntry {
   count: number;
   resetAt: number;
