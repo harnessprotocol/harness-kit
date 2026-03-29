@@ -1008,8 +1008,11 @@ body {
   --accent-dim: var(--accent-light);
   /* Status colors */
   --status-backlog: var(--fg-subtle);
+  --status-planning: var(--fg-subtle);
   --status-in-progress: #2563eb;
   --status-review: var(--warning);
+  --status-ai-review: #d97706;
+  --status-human-review: #f59e0b;
   --status-done: var(--success);
   --blocked: var(--danger);
 }
