@@ -198,7 +198,7 @@ export function SwimlaneView({ epics, onTaskClick, onAddTask, repoUrl }: Props) 
                       onTaskClick={onTaskClick}
                       repoUrl={repoUrl}
                     />
-                    {col === 'backlog' && (
+                    {col === 'planning' && (
                       <Tooltip text={`Create a new task in ${epic.name}`} position="top">
                         <button
                           onClick={() => onAddTask?.(col, epic.id)}

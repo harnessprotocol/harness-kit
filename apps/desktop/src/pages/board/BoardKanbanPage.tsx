@@ -54,7 +54,7 @@ export default function BoardKanbanPage() {
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [formOpen, setFormOpen] = useState(false);
-  const [formDefaultStatus, setFormDefaultStatus] = useState<TaskStatus>('backlog');
+  const [formDefaultStatus, setFormDefaultStatus] = useState<TaskStatus>('planning');
   const [formDefaultEpicId, setFormDefaultEpicId] = useState<number | undefined>();
   const [viewMode, setViewMode] = useState<ViewMode>('columns');
 
