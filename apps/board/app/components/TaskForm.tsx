@@ -2,8 +2,19 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
-import type { Epic, TaskStatus } from '../lib/api';
+import type { Epic, TaskStatus, TaskPriority } from '../lib/api';
+import { COLUMNS, COLUMN_META } from '../lib/columns';
+import { cn } from '../lib/utils';
 import { api } from '../lib/api';
+
+const PRIORITIES: TaskPriority[] = ['low', 'medium', 'high', 'critical'];
+
+const PRIORITY_CONFIG: Record<TaskPriority, { label: string; className: string }> = {
+  critical: { label: 'Critical', className: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20' },
+  high: { label: 'High', className: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20' },
+  medium: { label: 'Medium', className: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20' },
+  low: { label: 'Low', className: 'bg-gray-500/10 text-[var(--text-muted)] border-gray-500/20' },
+};
 
 interface Props {
   open: boolean;
@@ -19,6 +30,8 @@ export function TaskForm({ open, projectSlug, epics, defaultEpicId, defaultStatu
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [epicId, setEpicId] = useState<number>(defaultEpicId ?? epics[0]?.id ?? 0);
+  const [priority, setPriority] = useState<TaskPriority>('medium');
+  const [status, setStatus] = useState<TaskStatus>(defaultStatus ?? 'planning');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const titleRef = useRef<HTMLInputElement>(null);
@@ -28,10 +41,12 @@ export function TaskForm({ open, projectSlug, epics, defaultEpicId, defaultStatu
       setTitle('');
       setDescription('');
       setEpicId(defaultEpicId ?? epics[0]?.id ?? 0);
+      setPriority('medium');
+      setStatus(defaultStatus ?? 'planning');
       setError('');
       setTimeout(() => titleRef.current?.focus(), 50);
     }
-  }, [open, defaultEpicId, epics]);
+  }, [open, defaultEpicId, defaultStatus, epics]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -52,10 +67,11 @@ export function TaskForm({ open, projectSlug, epics, defaultEpicId, defaultStatu
       const task = await api.tasks.create(projectSlug, epicId, {
         title: trimmed,
         description: description.trim() || undefined,
+        priority,
       });
-      // If a specific status was requested (e.g. created from In Progress column), move it
-      if (defaultStatus && defaultStatus !== 'backlog') {
-        await api.tasks.update(projectSlug, task.id, { status: defaultStatus });
+      // If a specific status was requested, move it from default planning
+      if (status !== 'planning') {
+        await api.tasks.update(projectSlug, task.id, { status });
       }
       onCreated();
       onClose();
@@ -65,19 +81,6 @@ export function TaskForm({ open, projectSlug, epics, defaultEpicId, defaultStatu
       setSubmitting(false);
     }
   }
-
-  const inputStyle: React.CSSProperties = {
-    background: 'var(--bg-base)',
-    border: '1px solid var(--border)',
-    borderRadius: 6,
-    color: 'var(--text-primary)',
-    fontSize: 14,
-    padding: '8px 12px',
-    fontFamily: 'inherit',
-    outline: 'none',
-    width: '100%',
-    boxSizing: 'border-box',
-  };
 
   return (
     <AnimatePresence>
@@ -90,7 +93,7 @@ export function TaskForm({ open, projectSlug, epics, defaultEpicId, defaultStatu
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             onClick={onClose}
-            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 60 }}
+            className="fixed inset-0 z-[60] bg-black/50"
           />
           <motion.div
             key="modal"
@@ -98,34 +101,20 @@ export function TaskForm({ open, projectSlug, epics, defaultEpicId, defaultStatu
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -8 }}
             transition={{ type: 'spring', stiffness: 420, damping: 36 }}
-            style={{
-              position: 'fixed',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: 480,
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border)',
-              borderRadius: 12,
-              padding: 24,
-              zIndex: 70,
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 16,
-            }}
+            className="fixed top-1/2 left-1/2 z-[70] flex w-[480px] -translate-x-1/2 -translate-y-1/2 flex-col gap-4 rounded-xl border border-[var(--border)] bg-[var(--bg-surface)] p-6"
           >
-            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>
+            <h2 className="m-0 text-base font-semibold text-[var(--text-primary)]">
               New task
             </h2>
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-3.5">
               {/* Epic selector */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-muted)' }}>Epic</label>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--text-muted)]">Epic</label>
                 <select
                   value={epicId}
                   onChange={e => setEpicId(Number(e.target.value))}
-                  style={{ ...inputStyle, appearance: 'none' }}
+                  className="w-full appearance-none rounded-md border border-[var(--border)] bg-[var(--bg-base)] px-3 py-2 font-[inherit] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
                 >
                   {epics.map(ep => (
                     <option key={ep.id} value={ep.id}>{ep.name}</option>
@@ -134,63 +123,108 @@ export function TaskForm({ open, projectSlug, epics, defaultEpicId, defaultStatu
               </div>
 
               {/* Title */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-muted)' }}>Title</label>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--text-muted)]">Title</label>
                 <input
                   ref={titleRef}
                   value={title}
                   onChange={e => setTitle(e.target.value)}
                   placeholder="What needs to be done?"
-                  style={inputStyle}
-                  onFocus={e => { (e.target as HTMLElement).style.borderColor = 'var(--accent)'; }}
-                  onBlur={e => { (e.target as HTMLElement).style.borderColor = 'var(--border)'; }}
+                  className="w-full rounded-md border border-[var(--border)] bg-[var(--bg-base)] px-3 py-2 font-[inherit] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
                 />
               </div>
 
               {/* Description */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-muted)' }}>
-                  Description <span style={{ fontWeight: 400 }}>(optional)</span>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--text-muted)]">
+                  Description <span className="font-normal">(optional)</span>
                 </label>
                 <textarea
                   value={description}
                   onChange={e => setDescription(e.target.value)}
                   placeholder="Add context, acceptance criteria, links…"
                   rows={4}
-                  style={{ ...inputStyle, resize: 'vertical' }}
-                  onFocus={e => { (e.target as HTMLElement).style.borderColor = 'var(--accent)'; }}
-                  onBlur={e => { (e.target as HTMLElement).style.borderColor = 'var(--border)'; }}
+                  className="w-full resize-y rounded-md border border-[var(--border)] bg-[var(--bg-base)] px-3 py-2 font-[inherit] text-sm text-[var(--text-primary)] outline-none focus:border-[var(--accent)]"
                 />
               </div>
 
+              {/* Status selector */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--text-muted)]">Status</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {COLUMNS.map(s => {
+                    const meta = COLUMN_META[s];
+                    const isActive = status === s;
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setStatus(s)}
+                        className={cn(
+                          'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer',
+                          isActive
+                            ? 'border-[var(--accent)] bg-[var(--accent)]/10 text-[var(--text-primary)]'
+                            : 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:border-[var(--border)]',
+                        )}
+                      >
+                        <span
+                          className="inline-block size-2 rounded-full"
+                          style={{ backgroundColor: meta.color }}
+                        />
+                        {meta.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Priority selector */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-[var(--text-muted)]">Priority</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {PRIORITIES.map(p => {
+                    const cfg = PRIORITY_CONFIG[p];
+                    const isActive = priority === p;
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setPriority(p)}
+                        className={cn(
+                          'rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide transition-colors cursor-pointer',
+                          isActive
+                            ? cn(cfg.className, 'ring-1 ring-current/20')
+                            : 'border-[var(--border-subtle)] bg-[var(--bg-elevated)] text-[var(--text-muted)] hover:border-[var(--border)]',
+                        )}
+                      >
+                        {cfg.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {error && (
-                <div style={{ fontSize: 12, color: 'var(--blocked)', background: 'rgba(220,38,38,0.08)', borderRadius: 6, padding: '6px 10px' }}>
+                <div className="rounded-md bg-red-500/[0.08] px-2.5 py-1.5 text-xs text-[var(--blocked)]">
                   {error}
                 </div>
               )}
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, marginTop: 4 }}>
+              <div className="mt-1 flex justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={onClose}
-                  style={{
-                    padding: '7px 16px', background: 'transparent',
-                    border: '1px solid var(--border)', borderRadius: 6,
-                    color: 'var(--text-secondary)', fontSize: 13, cursor: 'pointer',
-                  }}
+                  className="cursor-pointer rounded-md border border-[var(--border)] bg-transparent px-4 py-[7px] text-[13px] text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  style={{
-                    padding: '7px 20px', background: 'var(--accent)',
-                    border: 'none', borderRadius: 6,
-                    color: '#fff', fontSize: 13, fontWeight: 500,
-                    cursor: submitting ? 'not-allowed' : 'pointer',
-                    opacity: submitting ? 0.6 : 1,
-                  }}
+                  className={cn(
+                    'rounded-md border-none bg-[var(--accent)] px-5 py-[7px] text-[13px] font-medium text-white',
+                    submitting ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:opacity-90',
+                  )}
                 >
                   {submitting ? 'Creating…' : 'Create task'}
                 </button>
