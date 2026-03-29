@@ -1,7 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useState } from 'react';
-import type { Task } from '../../lib/board-api';
-import { COLUMN_META } from '../../lib/board-columns';
+import type { Task, TaskPriority, TaskStatus } from '../../lib/board-api';
+import { COLUMN_META, COLUMNS } from '../../lib/board-columns';
 import { CommentThread } from './CommentThread';
 import { api } from '../../lib/board-api';
 
@@ -12,6 +12,13 @@ interface Props {
   onTaskUpdated: () => void;
   repoUrl?: string;
 }
+
+const PRIORITY_CONFIG: Record<TaskPriority, { label: string; color: string; bgColor: string; borderColor: string }> = {
+  critical: { label: 'Critical', color: '#dc2626', bgColor: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.2)' },
+  high: { label: 'High', color: '#ea580c', bgColor: 'rgba(249,115,22,0.1)', borderColor: 'rgba(249,115,22,0.2)' },
+  medium: { label: 'Medium', color: '#ca8a04', bgColor: 'rgba(234,179,8,0.1)', borderColor: 'rgba(234,179,8,0.2)' },
+  low: { label: 'Low', color: 'var(--text-muted)', bgColor: 'rgba(107,114,128,0.1)', borderColor: 'rgba(107,114,128,0.2)' },
+};
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -26,12 +33,58 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export function TaskDetailPanel({ task, projectSlug, onClose, onTaskUpdated, repoUrl }: Props) {
   const [copied, setCopied] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [updatingPriority, setUpdatingPriority] = useState(false);
 
   async function handleAddComment(body: string) {
     if (!task) return;
     await api.comments.create(projectSlug, task.id, { author: 'user', body });
     onTaskUpdated();
   }
+
+  async function handleStatusChange(newStatus: TaskStatus) {
+    if (!task || updatingStatus) return;
+    setUpdatingStatus(true);
+    try {
+      await api.tasks.update(projectSlug, task.id, { status: newStatus });
+      onTaskUpdated();
+    } finally {
+      setUpdatingStatus(false);
+    }
+  }
+
+  async function handlePriorityChange(newPriority: TaskPriority) {
+    if (!task || updatingPriority) return;
+    setUpdatingPriority(true);
+    try {
+      await api.tasks.update(projectSlug, task.id, { priority: newPriority });
+      onTaskUpdated();
+    } finally {
+      setUpdatingPriority(false);
+    }
+  }
+
+  const pillBase: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 9999,
+    border: '1px solid var(--border-subtle)',
+    padding: '4px 10px',
+    fontSize: 11,
+    fontWeight: 500,
+    cursor: 'pointer',
+    background: 'var(--bg-elevated)',
+    color: 'var(--text-muted)',
+    transition: 'all 0.15s',
+  };
+
+  const pillActive: React.CSSProperties = {
+    ...pillBase,
+    borderColor: 'var(--accent)',
+    background: 'rgba(var(--accent-rgb, 99,102,241), 0.1)',
+    color: 'var(--text-primary)',
+  };
 
   return (
     <AnimatePresence>
@@ -166,18 +219,69 @@ export function TaskDetailPanel({ task, projectSlug, onClose, onTaskUpdated, rep
             >
               {/* Status */}
               <Section title="Status">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      background: COLUMN_META[task.status as keyof typeof COLUMN_META]?.color ?? 'var(--text-muted)',
-                    }}
-                  />
-                  <span style={{ fontSize: 13, color: 'var(--text-primary)' }}>
-                    {COLUMN_META[task.status as keyof typeof COLUMN_META]?.label ?? task.status}
-                  </span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {COLUMNS.map(status => {
+                    const meta = COLUMN_META[status];
+                    const isActive = task.status === status;
+                    return (
+                      <button
+                        key={status}
+                        onClick={() => handleStatusChange(status)}
+                        disabled={updatingStatus}
+                        style={{
+                          ...(isActive ? pillActive : pillBase),
+                          opacity: updatingStatus ? 0.5 : 1,
+                          cursor: updatingStatus ? 'not-allowed' : 'pointer',
+                        }}
+                      >
+                        <span
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            background: meta.color,
+                            display: 'inline-block',
+                          }}
+                        />
+                        {meta.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </Section>
+
+              {/* Priority */}
+              <Section title="Priority">
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {(Object.keys(PRIORITY_CONFIG) as TaskPriority[]).map(priority => {
+                    const cfg = PRIORITY_CONFIG[priority];
+                    const isActive = task.priority === priority;
+                    return (
+                      <button
+                        key={priority}
+                        onClick={() => handlePriorityChange(priority)}
+                        disabled={updatingPriority}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          borderRadius: 9999,
+                          padding: '4px 10px',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          cursor: updatingPriority ? 'not-allowed' : 'pointer',
+                          opacity: updatingPriority ? 0.5 : 1,
+                          transition: 'all 0.15s',
+                          border: isActive ? `1px solid ${cfg.borderColor}` : '1px solid var(--border-subtle)',
+                          background: isActive ? cfg.bgColor : 'var(--bg-elevated)',
+                          color: isActive ? cfg.color : 'var(--text-muted)',
+                        }}
+                      >
+                        {cfg.label}
+                      </button>
+                    );
+                  })}
                 </div>
               </Section>
 
