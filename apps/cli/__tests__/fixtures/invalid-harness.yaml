@@ -1,0 +1,9 @@
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
+version: "1"
+
+metadata:
+  # Missing required 'name' field
+  description: Invalid harness
+
+instructions:
+  operational: "Test"

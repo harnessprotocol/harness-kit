@@ -184,7 +184,7 @@ Six checks run on every PR via `validate.yml`:
 | `requires.env` schema | Each env entry has `name`, `description`, and valid `required`/`sensitive` booleans |
 | Protocol schema | All `plugin.json` files validate against the Protocol's `plugin.schema.json` |
 
-Plus four build jobs: `core-build-test`, `desktop-build-test`, `board-build`, `docs-build`. All must pass before merge. If they fail: fix manifests or source, push, CI re-runs automatically.
+Plus five additional jobs: `test-all` (runs `pnpm test:all` across all packages), `core-build-test` (includes `pnpm audit --audit-level=critical`), `desktop-build-test`, `board-build`, `docs-build`. All must pass before merge. If they fail: fix manifests or source, push, CI re-runs automatically.
 
 ---
 
