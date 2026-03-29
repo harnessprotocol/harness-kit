@@ -1,39 +1,86 @@
 @import "tailwindcss";
 
+/* ── Theme tokens (warm-tinted, matching desktop app) ── */
 :root {
-  --bg-base: #0a0a0f;
-  --bg-surface: #13131a;
-  --bg-elevated: #1c1c26;
-  --bg-hover: #242430;
-  --border: #2a2a38;
-  --border-subtle: #1e1e2a;
-  --text-primary: #e8e8f0;
-  --text-secondary: #8888a8;
-  --text-muted: #55556a;
-  --accent: #7c3aed;
-  --accent-hover: #6d28d9;
-  --accent-dim: rgba(124, 58, 237, 0.15);
-  --status-backlog: #55556a;
+  /* Backgrounds */
+  --bg-base: #f4f2ef;
+  --bg-surface: #faf9f7;
+  --bg-elevated: #ffffff;
+  --bg-hover: rgba(0, 0, 0, 0.04);
+
+  /* Borders */
+  --border: rgba(0, 0, 0, 0.08);
+  --border-subtle: rgba(0, 0, 0, 0.05);
+
+  /* Foregrounds */
+  --text-primary: #181714;
+  --text-secondary: #5c5a56;
+  --text-muted: #9a9892;
+
+  /* Accent — refined blue-violet */
+  --accent: #5b50e8;
+  --accent-hover: #4338d4;
+  --accent-dim: rgba(91, 80, 232, 0.09);
+
+  /* Status */
+  --status-backlog: #9a9892;
   --status-in-progress: #2563eb;
   --status-review: #d97706;
   --status-done: #16a34a;
   --blocked: #dc2626;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.10), 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.06);
 }
 
-* {
+.dark {
+  /* Backgrounds — warm-tinted dark */
+  --bg-base: #211f1c;
+  --bg-surface: #282622;
+  --bg-elevated: #322f2a;
+  --bg-hover: rgba(255, 248, 230, 0.05);
+
+  /* Borders — warm off-white base */
+  --border: rgba(255, 248, 230, 0.09);
+  --border-subtle: rgba(255, 248, 230, 0.05);
+
+  /* Foregrounds — warm shift */
+  --text-primary: #f2f1ed;
+  --text-secondary: #9a9590;
+  --text-muted: #6e6a64;
+
+  /* Accent */
+  --accent: #7b72f0;
+  --accent-hover: #9d96f5;
+  --accent-dim: rgba(123, 114, 240, 0.12);
+
+  /* Status */
+  --status-backlog: #6e6a64;
+
+  /* Shadows — stronger in dark mode */
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.30), 0 1px 2px rgba(0,0,0,0.20);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.40), 0 2px 4px rgba(0,0,0,0.20);
+}
+
+/* ── Base ── */
+*, *::before, *::after {
   box-sizing: border-box;
 }
 
 body {
   background: var(--bg-base);
   color: var(--text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
   margin: 0;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; height: 6px; }
+/* ── Scrollbars — macOS-style thin ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.18); border-radius: 3px; }
+.dark ::-webkit-scrollbar-thumb { background: rgba(255, 248, 230, 0.18); }
