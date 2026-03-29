@@ -19,8 +19,10 @@ import { TaskCard } from '../components/TaskCard';
 import { TaskDetailPanel } from '../components/TaskDetailPanel';
 import { TaskForm } from '../components/TaskForm';
 import { api } from '../lib/api';
+import { cn } from '../lib/utils';
 import type { Task, Epic, TaskStatus } from '../lib/api';
 import { COLUMNS } from '../lib/columns';
+
 const LS_VIEW_KEY = 'harness:board:view';
 
 function flattenTasks(epics: Epic[]): Task[] {
@@ -32,9 +34,7 @@ function flattenTasks(epics: Epic[]): Task[] {
 function resolveTargetStatus(overId: string, allTasks: Task[]): TaskStatus | null {
   if (overId.startsWith('col-')) return overId.replace('col-', '') as TaskStatus;
   if (overId.startsWith('swim-')) {
-    // swim-{epicId}-{status}
     const parts = overId.split('-');
-    // status may contain hyphens (e.g. "in-progress" → parts[2]+parts[3])
     return parts.slice(2).join('-') as TaskStatus;
   }
   if (overId.startsWith('task-')) {
@@ -51,7 +51,7 @@ export default function BoardPage({ params }: { params: Promise<{ project: strin
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [formOpen, setFormOpen] = useState(false);
-  const [formDefaultStatus, setFormDefaultStatus] = useState<TaskStatus>('backlog');
+  const [formDefaultStatus, setFormDefaultStatus] = useState<TaskStatus>('planning');
   const [formDefaultEpicId, setFormDefaultEpicId] = useState<number | undefined>();
   const [viewMode, setViewMode] = useState<ViewMode>('columns');
 
@@ -122,45 +122,39 @@ export default function BoardPage({ params }: { params: Promise<{ project: strin
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-        <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>Loading board…</span>
+      <div className="flex h-full items-center justify-center">
+        <span className="text-sm text-[var(--text-muted)]">Loading board…</span>
       </div>
     );
   }
 
   if (error || !project) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: 12 }}>
-        <span style={{ fontSize: 32 }}>⚠️</span>
-        <span style={{ color: 'var(--text-secondary)', fontSize: 14 }}>
+      <div className="flex h-full flex-col items-center justify-center gap-3">
+        <span className="text-[32px]">⚠️</span>
+        <span className="text-sm text-[var(--text-secondary)]">
           {error ?? `Project "${projectSlug}" not found`}
         </span>
-        <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>Is the board server running on :4800?</span>
+        <span className="text-xs text-[var(--text-muted)]">Is the board server running on :4800?</span>
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
+    <div className="flex h-full flex-col overflow-hidden">
       {/* Header */}
-      <div
-        style={{
-          padding: '12px 24px',
-          borderBottom: '1px solid var(--border-subtle)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 12,
-          flexShrink: 0,
-        }}
-      >
+      <div className="flex shrink-0 items-center gap-3 border-b border-[var(--border-subtle)] px-6 py-3">
         {project.color && (
-          <span style={{ width: 10, height: 10, borderRadius: '50%', background: project.color, flexShrink: 0 }} />
+          <span
+            className="h-2.5 w-2.5 shrink-0 rounded-full"
+            style={{ background: project.color }}
+          />
         )}
-        <h1 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--text-primary)' }}>
+        <h1 className="m-0 text-base font-bold text-[var(--text-primary)]">
           {project.name}
         </h1>
         {project.description && (
-          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{project.description}</span>
+          <span className="text-xs text-[var(--text-muted)]">{project.description}</span>
         )}
         {project.repo_url && (
           <a
@@ -168,37 +162,19 @@ export default function BoardPage({ params }: { params: Promise<{ project: strin
             target="_blank"
             rel="noopener noreferrer"
             title="View on GitHub"
-            style={{
-              color: 'var(--text-muted)',
-              display: 'flex',
-              alignItems: 'center',
-              padding: 4,
-              borderRadius: 4,
-              transition: 'color 0.1s',
-            }}
-            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)'; }}
-            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; }}
+            className="flex items-center rounded p-1 text-[var(--text-muted)] transition-colors duration-100 hover:text-[var(--text-primary)]"
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
               <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
             </svg>
           </a>
         )}
-        <span
-          style={{
-            fontSize: 11,
-            color: 'var(--text-muted)',
-            background: 'var(--bg-elevated)',
-            borderRadius: 6,
-            padding: '2px 8px',
-            border: '1px solid var(--border-subtle)',
-          }}
-        >
+        <span className="rounded-md border border-[var(--border-subtle)] bg-[var(--bg-elevated)] px-2 py-0.5 text-[11px] text-[var(--text-muted)]">
           {allTasks.length} task{allTasks.length !== 1 ? 's' : ''}
         </span>
 
         {/* View toggle */}
-        <div style={{ marginLeft: 'auto' }}>
+        <div className="ml-auto">
           <ViewToggle mode={viewMode} onChange={handleViewChange} />
         </div>
       </div>
@@ -211,17 +187,7 @@ export default function BoardPage({ params }: { params: Promise<{ project: strin
         onDragEnd={handleDragEnd}
       >
         {viewMode === 'columns' ? (
-          <div
-            style={{
-              flex: 1,
-              display: 'flex',
-              gap: 16,
-              padding: 20,
-              overflowX: 'auto',
-              overflowY: 'hidden',
-              alignItems: 'flex-start',
-            }}
-          >
+          <div className="flex flex-1 items-start gap-4 overflow-x-auto overflow-y-hidden p-5">
             {COLUMNS.map(col => (
               <DroppableColumn
                 key={col}
@@ -244,7 +210,7 @@ export default function BoardPage({ params }: { params: Promise<{ project: strin
 
         <DragOverlay dropAnimation={{ duration: 150, easing: 'ease' }}>
           {activeTask ? (
-            <div style={{ opacity: 0.85, transform: 'rotate(1.5deg)' }}>
+            <div className="rotate-[1.5deg] opacity-85">
               <TaskCard task={activeTask} />
             </div>
           ) : null}
