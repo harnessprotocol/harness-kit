@@ -168,7 +168,7 @@ pub async fn create_terminal(
         let maybe: Option<tauri::State<TerminalState>> = app_handle.try_state();
         if let Some(st) = maybe {
             if let Ok(mut map) = st.sessions.lock() {
-                let map: &mut HashMap<String, TerminalSession> = &mut *map;
+                let map: &mut HashMap<String, TerminalSession> = &mut map;
                 map.remove(&tid);
             }
         }
@@ -267,7 +267,7 @@ pub async fn detect_harnesses(app: AppHandle) -> Result<Vec<HarnessInfo>, String
             .output()
             .await;
 
-        let available = output.as_ref().map_or(false, |o| o.status.success());
+        let available = output.as_ref().is_ok_and(|o| o.status.success());
         let version = output
             .as_ref()
             .ok()
