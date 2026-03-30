@@ -315,7 +315,7 @@ describe("yaml-store", () => {
       expect(task.id).toBe(2); // Epic is 1, task is 2
       expect(task.title).toBe("Test Task");
       expect(task.description).toBe("Task description");
-      expect(task.status).toBe("backlog");
+      expect(task.status).toBe("planning");
       expect(task.linked_commits).toEqual([]);
       expect(task.comments).toEqual([]);
       expect(task.created_at).toBeDefined();
@@ -492,8 +492,8 @@ describe("yaml-store", () => {
       let moved = store.moveTask(project.slug, task.id, "in-progress");
       expect(moved.status).toBe("in-progress");
 
-      moved = store.moveTask(project.slug, task.id, "review");
-      expect(moved.status).toBe("review");
+      moved = store.moveTask(project.slug, task.id, "ai-review");
+      expect(moved.status).toBe("ai-review");
 
       moved = store.moveTask(project.slug, task.id, "done");
       expect(moved.status).toBe("done");
@@ -704,11 +704,11 @@ describe("yaml-store", () => {
       const task2 = store.createTask(project.slug, epic.id, "Task 2");
       store.moveTask(project.slug, task2.id, "in-progress");
 
-      const backlogTasks = store.listTasks({ project: project.slug, status: "backlog" });
+      const planningTasks = store.listTasks({ project: project.slug, status: "planning" });
       const inProgressTasks = store.listTasks({ project: project.slug, status: "in-progress" });
 
-      expect(backlogTasks).toHaveLength(1);
-      expect(backlogTasks[0].title).toBe("Task 1");
+      expect(planningTasks).toHaveLength(1);
+      expect(planningTasks[0].title).toBe("Task 1");
       expect(inProgressTasks).toHaveLength(1);
       expect(inProgressTasks[0].title).toBe("Task 2");
     });

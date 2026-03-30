@@ -323,7 +323,7 @@ describe("HTTP Routes", () => {
       expect(res.status).toBe(201);
       expect(res.body.title).toBe("New Task");
       expect(res.body.id).toBe(2); // Epic used ID 1
-      expect(res.body.status).toBe("backlog");
+      expect(res.body.status).toBe("planning");
       expect(res.body.linked_commits).toEqual([]);
       expect(res.body.comments).toEqual([]);
     });
@@ -406,11 +406,11 @@ describe("HTTP Routes", () => {
 
       const res = await request(app)
         .get("/api/v1/projects/test-project/tasks")
-        .query({ status: "backlog" });
+        .query({ status: "planning" });
 
       expect(res.status).toBe(200);
       expect(res.body).toHaveLength(2);
-      expect(res.body.every((t: any) => t.status === "backlog")).toBe(true);
+      expect(res.body.every((t: any) => t.status === "planning")).toBe(true);
     });
 
     it("filters tasks by both epic_id and status", async () => {
@@ -485,13 +485,13 @@ describe("HTTP Routes", () => {
         .send({
           title: "Multi Update",
           description: "Multi description",
-          status: "review",
+          status: "ai-review",
         });
 
       expect(res.status).toBe(200);
       expect(res.body.title).toBe("Multi Update");
       expect(res.body.description).toBe("Multi description");
-      expect(res.body.status).toBe("review");
+      expect(res.body.status).toBe("ai-review");
     });
 
     it("returns 400 for non-existent task", async () => {
