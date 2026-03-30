@@ -1,0 +1,7 @@
+metadata:
+  name: test-harness
+  description: Missing version field
+
+plugins:
+  - name: explain
+    source: siracusa5/harness-kit

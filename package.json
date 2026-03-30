@@ -16,6 +16,8 @@
     "build": "pnpm -r build",
     "build:core": "pnpm --filter @harness-kit/core build",
     "build:cli": "pnpm --filter @harness-kit/cli build",
+    "test:all": "pnpm -r test",
+    "test:coverage": "pnpm -r test -- --coverage",
     "test:core": "pnpm --filter @harness-kit/core test",
     "test:desktop:unit": "pnpm --filter harness-kit-desktop test",
     "test:desktop:rust": "cd apps/desktop/src-tauri && cargo test -- --test-threads=1",
@@ -26,6 +28,9 @@
     "board:status": "pnpm --filter board-server launchd:status",
     "board:logs": "pnpm --filter board-server launchd:logs",
     "board:restart": "pnpm --filter board-server launchd:restart"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^3"
   },
   "pnpm": {
     "overrides": {

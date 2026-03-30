@@ -4,17 +4,27 @@ import os from 'node:os';
 import yaml from 'js-yaml';
 import type { Project, Epic, Task, Comment, TaskStatus, EpicStatus } from '../types.js';
 
-const BOARD_DIR = path.join(os.homedir(), '.harness', 'board', 'projects');
+function getBoardDir(): string {
+  if (process.env.NODE_ENV === 'test' && process.env.BOARD_TEST_DIR) {
+    return process.env.BOARD_TEST_DIR;
+  }
+  return path.join(os.homedir(), '.harness', 'board', 'projects');
+}
 
 let boardDirEnsured = false;
 function ensureBoardDir(): void {
   if (boardDirEnsured) return;
-  fs.mkdirSync(BOARD_DIR, { recursive: true });
+  fs.mkdirSync(getBoardDir(), { recursive: true });
   boardDirEnsured = true;
 }
 
+// For testing: reset the boardDirEnsured flag
+export function resetBoardDirCache(): void {
+  boardDirEnsured = false;
+}
+
 function projectPath(slug: string): string {
-  return path.join(BOARD_DIR, `${slug}.yaml`);
+  return path.join(getBoardDir(), `${slug}.yaml`);
 }
 
 function slugify(name: string): string {
@@ -49,16 +59,17 @@ export function writeProject(project: Project): void {
 
 export function listProjects(): Project[] {
   ensureBoardDir();
-  const files = fs.readdirSync(BOARD_DIR).filter(f => f.endsWith('.yaml'));
+  const boardDir = getBoardDir();
+  const files = fs.readdirSync(boardDir).filter(f => f.endsWith('.yaml'));
   return files.map(f => {
-    const raw = fs.readFileSync(path.join(BOARD_DIR, f), 'utf-8');
+    const raw = fs.readFileSync(path.join(boardDir, f), 'utf-8');
     return yaml.load(raw) as Project;
   });
 }
 
 export function projectsDir(): string {
   ensureBoardDir();
-  return BOARD_DIR;
+  return getBoardDir();
 }
 
 // --- Project operations ---
