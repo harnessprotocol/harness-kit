@@ -1,5 +1,6 @@
 'use client';
 
+import { cn } from '../lib/utils';
 import { Tooltip } from './Tooltip';
 
 export type ViewMode = 'columns' | 'swimlane';
@@ -16,43 +17,26 @@ interface Props {
 
 export function ViewToggle({ mode, onChange }: Props) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        background: 'var(--bg-elevated)',
-        borderRadius: 6,
-        border: '1px solid var(--border-subtle)',
-        padding: 2,
-        gap: 2,
-      }}
-    >
+    <div className="flex rounded-[6px] border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-0.5 gap-0.5">
       {(['columns', 'swimlane'] as ViewMode[]).map(v => (
         <Tooltip key={v} text={VIEW_TOOLTIPS[v]} position="bottom">
           <button
             onClick={() => onChange(v)}
             title={v === 'columns' ? 'Column view' : 'Swimlane view'}
-            style={{
-              padding: '4px 10px',
-              borderRadius: 4,
-              border: 'none',
-              background: mode === v ? 'var(--bg-hover)' : 'transparent',
-              color: mode === v ? 'var(--text-primary)' : 'var(--text-muted)',
-              fontSize: 12,
-              fontWeight: mode === v ? 600 : 400,
-              cursor: 'pointer',
-              transition: 'all 0.1s',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-            }}
+            className={cn(
+              'flex items-center gap-[5px] rounded-[4px] border-none px-2.5 py-1 text-[12px] cursor-pointer transition-all duration-100',
+              mode === v
+                ? 'bg-[var(--bg-hover)] text-[var(--text-primary)] font-semibold'
+                : 'bg-transparent text-[var(--text-muted)] font-normal',
+            )}
           >
             {v === 'columns' ? (
               <>
-                <span style={{ fontSize: 13 }}>⣿</span> Columns
+                <span className="text-[13px]">⣿</span> Columns
               </>
             ) : (
               <>
-                <span style={{ fontSize: 13 }}>≡</span> Swimlane
+                <span className="text-[13px]">≡</span> Swimlane
               </>
             )}
           </button>

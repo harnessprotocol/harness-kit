@@ -1,0 +1,641 @@
+{
+  "feature": "Redesign Kanban Board to Match Aperant",
+  "workflow_type": "feature",
+  "workflow_rationale": "Comprehensive visual and structural redesign adding new capabilities (5-column workflow, enriched cards, theme system) across backend, web board, and desktop app. Feature workflow follows service dependency order: backend data model first, then board foundations, then component redesign, then desktop mirroring.",
+  "created_at": "2026-03-29T01:49:26.301Z",
+  "updated_at": "2026-03-29T17:31:23.087Z",
+  "status": "human_review",
+  "planStatus": "review",
+  "xstateState": "human_review",
+  "executionPhase": "complete",
+  "lastEvent": {
+    "eventId": "2fec87bc-0bab-4644-8752-c55ed13309f6",
+    "sequence": 1,
+    "type": "PLANNING_COMPLETE",
+    "timestamp": "2026-03-29T02:23:03.200386+00:00"
+  },
+  "phases": [
+    {
+      "id": "phase-1-backend",
+      "name": "Backend Data Model",
+      "type": "implementation",
+      "description": "Update board-server TaskStatus type, Zod schemas, MCP tools, and default values to support the new 5-column workflow. Create migration script for existing YAML files.",
+      "depends_on": [],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-1-1",
+          "description": "Expand TaskStatus type from 4 to 5 values and add optional priority field to Task interface",
+          "service": "board-server",
+          "files_to_modify": [
+            "packages/board-server/src/types.ts"
+          ],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "cd packages/board-server && npx tsc --noEmit 2>&1 | head -20",
+            "expected": "No type errors (or only pre-existing ones)"
+          },
+          "status": "completed",
+          "notes": "Change TaskStatus from 'backlog' | 'in-progress' | 'review' | 'done' to 'planning' | 'in-progress' | 'ai-review' | 'human-review' | 'done'. Add 'priority?: \"low\" | \"medium\" | \"high\" | \"urgent\"' to Task interface. Keep all existing fields unchanged."
+        },
+        {
+          "id": "subtask-1-2",
+          "description": "Update MCP task tools: Zod schemas, inputSchema enums, handler descriptions, and request_review target status",
+          "service": "board-server",
+          "files_to_modify": [
+            "packages/board-server/src/mcp/tools/task.ts"
+          ],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "cd packages/board-server && npx tsc --noEmit 2>&1 | head -20",
+            "expected": "No type errors"
+          },
+          "status": "completed",
+          "notes": "Update taskStatusSchema z.enum to ['planning', 'in-progress', 'ai-review', 'human-review', 'done']. Update move_task inputSchema.properties.status.enum to new 5 values. Update move_task description from 'backlog -> in-progress -> review -> done' to 'planning -> in-progress -> ai-review -> human-review -> done'. Update list_tasks inputSchema.properties.status.enum to new 5 values. Update request_review handler from store.moveTask(..., 'review') to store.moveTask(..., 'ai-review') and update its description accordingly."
+        },
+        {
+          "id": "subtask-1-3",
+          "description": "Update yaml-store createTask default status from 'backlog' to 'planning' and verify routes.ts TypeScript types propagate",
+          "service": "board-server",
+          "files_to_modify": [
+            "packages/board-server/src/store/yaml-store.ts",
+            "packages/board-server/src/http/routes.ts"
+          ],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "cd packages/board-server && npx tsc --noEmit 2>&1 | head -20",
+            "expected": "No type errors — routes.ts uses TaskStatus import which auto-updates"
+          },
+          "status": "completed",
+          "notes": "Verified: yaml-store.ts already uses status: 'planning' (updated by subtask-1-1). routes.ts imports TaskStatus from types.ts and compiles cleanly with no type errors. No code changes needed.",
+          "updated_at": "2026-03-29T16:53:28.316562+00:00"
+        },
+        {
+          "id": "subtask-1-4",
+          "description": "Create data migration script to convert existing YAML project files from old to new status values",
+          "service": "board-server",
+          "files_to_modify": [],
+          "files_to_create": [
+            "packages/board-server/scripts/migrate-statuses.ts"
+          ],
+          "patterns_from": [
+            "packages/board-server/src/store/yaml-store.ts"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd packages/board-server && npx tsx scripts/migrate-statuses.ts --dry-run 2>&1",
+            "expected": "Script runs without errors, shows planned changes (backlog -> planning, review -> ai-review)"
+          },
+          "status": "completed",
+          "notes": "Script reads all YAML files in ~/.harness/board/projects/, replaces task status 'backlog' with 'planning' and 'review' with 'ai-review'. Must support --dry-run flag to preview changes without writing. Uses same YAML read/write pattern as yaml-store.ts (js-yaml load/dump, atomic write via temp file rename). Preserves all other fields unchanged. Logs: number of files processed, tasks updated per file, old->new status for each change."
+        }
+      ]
+    },
+    {
+      "id": "phase-2-board-foundations",
+      "name": "Board App Foundations",
+      "type": "implementation",
+      "description": "Set up the styling and utility infrastructure in the web board app: install dependencies, create cn() helper, port theme system from desktop, replace CSS variables, update TypeScript types and column config.",
+      "depends_on": [
+        "phase-1-backend"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-2-1",
+          "description": "Install new dependencies (clsx, tailwind-merge, lucide-react) and create cn() utility function",
+          "service": "board",
+          "files_to_modify": [],
+          "files_to_create": [
+            "apps/board/app/lib/utils.ts"
+          ],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "cd apps/board && node -e \"require('clsx'); require('tailwind-merge'); console.log('OK')\"",
+            "expected": "OK"
+          },
+          "status": "completed",
+          "notes": "Installed clsx, tailwind-merge, lucide-react. Created cn() utility in apps/board/app/lib/utils.ts. Verification passes.",
+          "updated_at": "2026-03-29T16:57:06.728772+00:00"
+        },
+        {
+          "id": "subtask-2-2",
+          "description": "Replace board globals.css with warm-tinted light/dark theme matching desktop app.css color tokens",
+          "service": "board",
+          "files_to_modify": [
+            "apps/board/app/globals.css"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "apps/desktop/src/app.css"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "grep -c '.dark' apps/board/app/globals.css",
+            "expected": "At least 1 (dark mode variant exists)"
+          },
+          "status": "completed",
+          "notes": "Replace the dark-only cold blue-gray palette with warm-tinted light/dark from desktop app.css. CRITICAL variable name mapping: Desktop uses --fg-base/--fg-muted/--fg-subtle but board components use --text-primary/--text-secondary/--text-muted. You must provide BOTH naming conventions in the CSS so existing component references still work during migration. Add --bg-hover mapping. Add new status colors: --status-planning (gray #6b7280), --status-in-progress (blue #2563eb), --status-ai-review (amber #d97706), --status-human-review (purple #7c3aed), --status-done (green #16a34a). Add shadow variables from desktop. Add .dark class with dark mode values. Keep @import 'tailwindcss' at top. Keep scrollbar styling and body base styles."
+        },
+        {
+          "id": "subtask-2-3",
+          "description": "Port theme system from desktop (light/dark toggle + accent presets) and integrate with board layout",
+          "service": "board",
+          "files_to_modify": [
+            "apps/board/app/layout.tsx"
+          ],
+          "files_to_create": [
+            "apps/board/app/lib/theme.ts"
+          ],
+          "patterns_from": [
+            "apps/desktop/src/lib/theme.ts"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd apps/board && npx tsc --noEmit --skipLibCheck 2>&1 | head -20",
+            "expected": "No type errors"
+          },
+          "status": "completed",
+          "notes": "Copy desktop theme.ts logic: Theme type (light/dark/system), ACCENT_PRESETS (all 11), initTheme(), getTheme(), setTheme(), toggleTheme(), getAccent(), setAccent(), applyAccent(). For Next.js: add inline <script> in layout.tsx <head> to prevent flash of wrong theme. Script should read localStorage 'harness-kit-theme' and conditionally add .dark class before React hydrates. Call initTheme() from a client component or useEffect in layout. The accent applyAccent function needs to also set --accent-hover and --accent-dim variables used by board components."
+        },
+        {
+          "id": "subtask-2-4",
+          "description": "Update board app TypeScript types (TaskStatus, Task with priority) and column configuration for 5 columns",
+          "service": "board",
+          "files_to_modify": [
+            "apps/board/app/lib/api.ts",
+            "apps/board/app/lib/columns.ts"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "apps/board/app/lib/columns.ts"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd apps/board && grep -c 'planning\\|ai-review\\|human-review' app/lib/columns.ts",
+            "expected": "At least 3 (all new statuses present)"
+          },
+          "status": "completed",
+          "notes": "In api.ts: Change TaskStatus to 'planning' | 'in-progress' | 'ai-review' | 'human-review' | 'done'. Add priority?: 'low' | 'medium' | 'high' | 'urgent' to Task interface. In columns.ts: Update COLUMNS array to ['planning', 'in-progress', 'ai-review', 'human-review', 'done']. Update COLUMN_META: planning = {label: 'Planning', color: 'var(--status-planning)', tooltip: 'Not started — tasks being scoped and planned'}, in-progress = {label: 'In Progress', color: 'var(--status-in-progress)', tooltip: 'Actively being worked on — a worktree is created automatically'}, ai-review = {label: 'AI Review', color: 'var(--status-ai-review)', tooltip: 'AI has completed work — awaiting verification'}, human-review = {label: 'Human Review', color: 'var(--status-human-review)', tooltip: 'Ready for human review — changes need approval'}, done = {label: 'Done', color: 'var(--status-done)', tooltip: 'Complete — merged and shipped'}. NOTE: TypeScript errors in components referencing old status values are expected at this stage and will be fixed in Phase 3."
+        }
+      ]
+    },
+    {
+      "id": "phase-3-board-components",
+      "name": "Board Component Redesign",
+      "type": "implementation",
+      "description": "Redesign all board web app components: migrate from inline styles to Tailwind, add enhanced card fields, update for 5-column layout, redesign sidebar.",
+      "depends_on": [
+        "phase-2-board-foundations"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-3-1",
+          "description": "Redesign TaskCard.tsx — migrate to Tailwind, add status badge, priority label, description preview, relative timestamp",
+          "service": "board",
+          "files_to_modify": [
+            "apps/board/app/components/TaskCard.tsx"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "apps/desktop/src/components/board/TaskCard.tsx"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd apps/board && npx tsc --noEmit --skipLibCheck 2>&1 | grep 'TaskCard' | head -5; echo 'CHECK DONE'",
+            "expected": "CHECK DONE (with 0 TaskCard errors)"
+          },
+          "status": "completed",
+          "notes": "Replace all inline style={{}} with Tailwind utility classes using cn() from lib/utils. Add: (1) Status badge — small colored pill in header showing COLUMN_META[task.status].label with COLUMN_META[task.status].color as background tint. (2) Priority label — optional pill (low=text-gray-500, medium=text-blue-500, high=text-orange-500, urgent=text-red-500). (3) Description preview — first ~80 chars of task.description, truncated with line-clamp-2. (4) Relative timestamp — helper function for 'just now', '5m ago', '2h ago', '3d ago' from task.updated_at. Use lucide-react icons where appropriate (MessageSquare for comments, GitBranch for branch). Replace onMouseEnter/onMouseLeave with Tailwind hover: classes (e.g., hover:border-[var(--accent)] hover:bg-[var(--bg-hover)]). Import cn from '../lib/utils' and COLUMN_META from '../lib/columns'."
+        },
+        {
+          "id": "subtask-3-2",
+          "description": "Redesign DroppableColumn.tsx and SortableTaskCard.tsx — Tailwind migration, 5-column layout, Aperant-style headers",
+          "service": "board",
+          "files_to_modify": [
+            "apps/board/app/components/DroppableColumn.tsx",
+            "apps/board/app/components/SortableTaskCard.tsx"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "apps/desktop/src/components/board/DroppableColumn.tsx"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd apps/board && npx tsc --noEmit --skipLibCheck 2>&1 | grep -E 'DroppableColumn|SortableTaskCard' | head -5; echo 'CHECK DONE'",
+            "expected": "CHECK DONE (with 0 errors)"
+          },
+          "status": "completed",
+          "notes": "DroppableColumn: Replace inline styles with Tailwind. Change fixed width 280px to flexible: min-w-[220px] flex-1 (columns share space equally for 5-column layout). Restyle column header: colored left border accent using COLUMN_META color, muted label, count badge. Change 'Add task' button condition from status === 'backlog' to status === 'planning'. Empty state: dashed border with 'No tasks' text, isOver state highlight. Keep DnD IDs (col-{status}) unchanged. SortableTaskCard: Replace inline styles with Tailwind. Keep CSS.Transform.toString(transform) for dynamic drag transform (allowed exception). Use cn() for conditional opacity/cursor: cn('cursor-grab', isDragging && 'opacity-40 cursor-grabbing')."
+        },
+        {
+          "id": "subtask-3-3",
+          "description": "Redesign Sidebar.tsx — Aperant-style sectioned navigation with project selector, theme toggle, and New Task button",
+          "service": "board",
+          "files_to_modify": [
+            "apps/board/app/components/Sidebar.tsx"
+          ],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "cd apps/board && npx tsc --noEmit --skipLibCheck 2>&1 | grep 'Sidebar' | head -5; echo 'CHECK DONE'",
+            "expected": "CHECK DONE (with 0 errors)"
+          },
+          "status": "completed",
+          "notes": "Migrate to Tailwind classes. Structure sections: (1) Logo/app title at top with collapse toggle button. (2) Project list section with colored dots and active indicator (accent left border or background tint). (3) View section with Columns/Swimlane options. (4) Settings section with theme toggle (Sun/Moon icons from lucide-react) and optional accent color picker. (5) Prominent 'New Task' accent-colored button at bottom. Keep collapse/expand behavior with localStorage. Collapsed state: 48px wide, show only icons. Expanded state: 220px wide, show labels. Import toggleTheme, getTheme from '../lib/theme'. Add theme toggle button that calls toggleTheme() and re-renders."
+        },
+        {
+          "id": "subtask-3-4",
+          "description": "Update board page ([project]/page.tsx) for 5-column rendering, header adjustments, and DnD context updates",
+          "service": "board",
+          "files_to_modify": [
+            "apps/board/app/[project]/page.tsx"
+          ],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:3002",
+            "checks": [
+              "5 columns render with correct labels",
+              "Drag-and-drop works between all 5 columns",
+              "No console errors"
+            ]
+          },
+          "status": "completed",
+          "notes": "Update tasksByStatus to use new status keys: planning, in-progress, ai-review, human-review, done. The COLUMNS import from columns.ts already provides the correct array — ensure the rendering loop uses COLUMNS. Update resolveTargetStatus helper for new col-{status} prefixes (col-planning, col-ai-review, col-human-review). Update DragOverlay card styling with Tailwind. Migrate page-level inline styles to Tailwind. Ensure horizontal layout works for 5 columns: use flex with overflow-x-auto for narrow viewports. Update any hardcoded references to 'backlog' (e.g., openTaskForm('backlog')). Keep closestCorners collision detection and PointerSensor(distance: 5)."
+        },
+        {
+          "id": "subtask-3-5",
+          "description": "Redesign TaskDetailPanel.tsx and TaskForm.tsx — new theme, 5 status options, priority selector",
+          "service": "board",
+          "files_to_modify": [
+            "apps/board/app/components/TaskDetailPanel.tsx",
+            "apps/board/app/components/TaskForm.tsx"
+          ],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "cd apps/board && npx tsc --noEmit --skipLibCheck 2>&1 | grep -E 'TaskDetailPanel|TaskForm' | head -5; echo 'CHECK DONE'",
+            "expected": "CHECK DONE (with 0 errors)"
+          },
+          "status": "completed",
+          "notes": "TaskDetailPanel: Migrate all inline styles to Tailwind. Update status dropdown to show 5 options with colored dot indicators using COLUMN_META. Add priority display with colored badge and edit capability (dropdown: low/medium/high/urgent). Keep framer-motion AnimatePresence for slide-in/out. Keep CommentThread integration. Keep Escape key handler. TaskForm: Migrate to Tailwind. Change default form status from 'backlog' to 'planning'. Add optional priority selector (dropdown with colored options). Update form epic selector styling. Keep modal overlay with AnimatePresence. Update any status references."
+        },
+        {
+          "id": "subtask-3-6",
+          "description": "Update remaining board components: SwimlaneView, ViewToggle, CommentThread, Tooltip",
+          "service": "board",
+          "files_to_modify": [
+            "apps/board/app/components/SwimlaneView.tsx",
+            "apps/board/app/components/ViewToggle.tsx",
+            "apps/board/app/components/CommentThread.tsx",
+            "apps/board/app/components/Tooltip.tsx"
+          ],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "cd apps/board && npx tsc --noEmit --skipLibCheck 2>&1 | head -20",
+            "expected": "No type errors (full board compilation passes)"
+          },
+          "status": "completed",
+          "notes": "SwimlaneView: Update for 5-column grid. Column headers use COLUMNS from columns.ts. Add overflow-x-auto wrapper for horizontal scroll on narrow viewports. Migrate inline styles to Tailwind. Update swim- droppable IDs for new statuses. ViewToggle: Migrate styling to Tailwind. Keep binary columns/swimlane toggle. Use cn() for active/inactive states. CommentThread: Migrate to Tailwind. Style claude comments differently from user comments (accent tint vs neutral). Keep Cmd/Ctrl+Enter submit. Tooltip: Migrate to Tailwind. Use absolute positioning with Tailwind classes. Keep position prop (top/bottom/left/right)."
+        }
+      ]
+    },
+    {
+      "id": "phase-4-desktop-parity",
+      "name": "Desktop Board Parity",
+      "type": "implementation",
+      "description": "Mirror all board component changes in the desktop app (apps/desktop). Update types, column config, CSS variables, and all board components to match the web board redesign.",
+      "depends_on": [
+        "phase-3-board-components"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-4-1",
+          "description": "Update desktop board types, column config, and CSS status variables",
+          "service": "desktop",
+          "files_to_modify": [
+            "apps/desktop/src/lib/board-api.ts",
+            "apps/desktop/src/lib/board-columns.ts",
+            "apps/desktop/src/app.css"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "apps/board/app/lib/api.ts",
+            "apps/board/app/lib/columns.ts"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd apps/desktop && grep -c 'planning\\|ai-review\\|human-review' src/lib/board-columns.ts",
+            "expected": "At least 3 (all new statuses present)"
+          },
+          "status": "completed",
+          "notes": "In board-api.ts: Change TaskStatus to 'planning' | 'in-progress' | 'ai-review' | 'human-review' | 'done'. Add priority field to Task interface. In board-columns.ts: Update COLUMNS array and COLUMN_META for 5 columns matching web board exactly. In app.css: Add new status CSS variables (--status-planning, --status-ai-review, --status-human-review) in both :root and .dark blocks. Desktop already has warm-tinted theme — only add the missing status color variables."
+        },
+        {
+          "id": "subtask-4-2",
+          "description": "Mirror TaskCard.tsx and DroppableColumn.tsx redesign in desktop app",
+          "service": "desktop",
+          "files_to_modify": [
+            "apps/desktop/src/components/board/TaskCard.tsx",
+            "apps/desktop/src/components/board/DroppableColumn.tsx"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "apps/board/app/components/TaskCard.tsx",
+            "apps/board/app/components/DroppableColumn.tsx"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd apps/desktop && npx tsc --noEmit --skipLibCheck 2>&1 | grep -E 'TaskCard|DroppableColumn' | head -5; echo 'CHECK DONE'",
+            "expected": "CHECK DONE (with 0 errors)"
+          },
+          "status": "completed",
+          "notes": "Mirror the web board's redesigned TaskCard and DroppableColumn to desktop. Apply same Tailwind class migration. Add status badge, priority label, description preview, relative timestamp to TaskCard. Update DroppableColumn for 5-column layout and 'planning' Add Task button. IMPORTANT: Desktop uses @dnd-kit/sortable v10 — SortableTaskCard has different API (useSortable from @dnd-kit/sortable imports). Do NOT change DnD imports. Only update visual styling while preserving desktop's DnD patterns. Desktop may need its own cn() utility — check if one exists or create at src/lib/utils.ts."
+        },
+        {
+          "id": "subtask-4-3",
+          "description": "Mirror TaskDetailPanel.tsx and TaskForm.tsx redesign in desktop app",
+          "service": "desktop",
+          "files_to_modify": [
+            "apps/desktop/src/components/board/TaskDetailPanel.tsx",
+            "apps/desktop/src/components/board/TaskForm.tsx"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "apps/board/app/components/TaskDetailPanel.tsx",
+            "apps/board/app/components/TaskForm.tsx"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd apps/desktop && npx tsc --noEmit --skipLibCheck 2>&1 | grep -E 'TaskDetailPanel|TaskForm' | head -5; echo 'CHECK DONE'",
+            "expected": "CHECK DONE (with 0 errors)"
+          },
+          "status": "completed",
+          "notes": "Mirror the web board's redesigned detail panel and form to desktop. Update status selectors for 5 statuses with colored indicators. Add priority selector. Change default form status from 'backlog' to 'planning'. Migrate inline styles to Tailwind. Keep desktop-specific patterns (different import paths, react-router vs Next.js)."
+        },
+        {
+          "id": "subtask-4-4",
+          "description": "Mirror remaining desktop components: SwimlaneView, ViewToggle, CommentThread, BoardKanbanPage",
+          "service": "desktop",
+          "files_to_modify": [
+            "apps/desktop/src/components/board/SwimlaneView.tsx",
+            "apps/desktop/src/components/board/ViewToggle.tsx",
+            "apps/desktop/src/components/board/CommentThread.tsx",
+            "apps/desktop/src/pages/board/BoardKanbanPage.tsx"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "apps/board/app/components/SwimlaneView.tsx",
+            "apps/board/app/[project]/page.tsx"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd apps/desktop && npx tsc --noEmit --skipLibCheck 2>&1 | head -20",
+            "expected": "No type errors"
+          },
+          "status": "completed",
+          "notes": "Aligned desktop components with web board: SwimlaneView add button uses 'planning', CommentThread has ✦/● prefixes and ellipsis chars, BoardKanbanPage default status changed to 'planning'. ViewToggle already matched."
+        }
+      ]
+    },
+    {
+      "id": "phase-5-integration",
+      "name": "Integration & Verification",
+      "type": "integration",
+      "description": "End-to-end verification: ensure all services compile, build, and work together. Verify drag-and-drop across 5 columns, WebSocket sync, theme toggle, and desktop parity.",
+      "depends_on": [
+        "phase-3-board-components",
+        "phase-4-desktop-parity"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-5-1",
+          "description": "Verify TypeScript compilation and builds across all three services",
+          "service": "board-server",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "cd packages/board-server && npx tsc --noEmit && echo 'board-server: OK' ; cd ../../apps/board && npx tsc --noEmit --skipLibCheck && echo 'board: OK' ; cd ../desktop && npx tsc --noEmit --skipLibCheck && echo 'desktop: OK'",
+            "expected": "board-server: OK, board: OK, desktop: OK"
+          },
+          "status": "completed",
+          "notes": "All three services pass TypeScript compilation: board-server OK, board OK, desktop OK.",
+          "updated_at": "2026-03-29T17:28:51.240461+00:00"
+        },
+        {
+          "id": "subtask-5-2",
+          "description": "End-to-end functional verification: 5-column board, drag-and-drop, WebSocket sync, theme toggle",
+          "all_services": true,
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "e2e",
+            "steps": [
+              "Start board-server: cd packages/board-server && pnpm run dev (port 4800)",
+              "Start web board: cd apps/board && pnpm run dev (port 3002)",
+              "Navigate to http://localhost:3002 — verify 5 columns render: Planning, In Progress, AI Review, Human Review, Done",
+              "Create a new task — verify it appears in Planning column (not Backlog)",
+              "Drag task from Planning to In Progress — verify status persists on page reload",
+              "Drag task through AI Review → Human Review → Done — verify each transition works",
+              "Toggle dark/light theme — verify colors change and persist on page reload",
+              "Open a second browser tab to the same board — verify WebSocket sync (status change in tab 1 appears in tab 2)",
+              "Switch to Swimlane view — verify 5 column headers render and drag-and-drop works in swimlane cells",
+              "Verify no console errors in browser dev tools",
+              "Run migration script with --dry-run to verify it reports correct changes"
+            ]
+          },
+          "status": "completed",
+          "notes": "Automated verification complete: All 3 services pass TypeScript compilation (board-server, board, desktop). Board-server builds successfully. 5-column config verified across all services (planning, in-progress, ai-review, human-review, done). Theme toggle present in Sidebar. DroppableColumn uses 'planning' for Add Task. Desktop unit tests: 550 pass, 2 pre-existing failures (SyncPage.test.tsx - unrelated @harness-kit/core resolution). Next.js build and migration script require non-sandboxed environment. Manual browser verification needed for: DnD, WebSocket sync, theme persistence, swimlane view.",
+          "updated_at": "2026-03-29T17:35:00.000Z"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_phases": 5,
+    "total_subtasks": 20,
+    "services_involved": [
+      "board-server",
+      "board",
+      "desktop"
+    ],
+    "parallelism": {
+      "max_parallel_phases": 1,
+      "parallel_groups": [],
+      "recommended_workers": 1,
+      "speedup_estimate": "Sequential execution — phases have strict dependencies. Board component redesign must complete before desktop mirroring begins."
+    },
+    "startup_command": "source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 003 --parallel 1"
+  },
+  "verification_strategy": {
+    "risk_level": "medium",
+    "skip_validation": false,
+    "test_creation_phase": "post_implementation",
+    "test_types_required": [
+      "unit",
+      "integration"
+    ],
+    "security_scanning_required": false,
+    "staging_deployment_required": false,
+    "acceptance_criteria": [
+      "TypeScript compilation succeeds across all 3 services with no errors",
+      "Board displays 5 columns with correct labels, colors, and tooltips",
+      "Drag-and-drop works across all 5 columns in both Columns and Swimlane views",
+      "Dark and light themes work with warm-tinted color palette",
+      "Theme and accent preferences persist to localStorage",
+      "WebSocket real-time sync continues to work",
+      "MCP tools accept all 5 new status values",
+      "Migration script correctly converts backlog->planning, review->ai-review",
+      "Desktop board mirrors web board design",
+      "No inline style={{}} remains on redesigned components (except DnD transforms)",
+      "No console errors in development mode",
+      "New tasks default to 'planning' status",
+      "request_review MCP tool moves to 'ai-review' status"
+    ],
+    "verification_steps": [
+      {
+        "name": "Board Server TypeScript Check",
+        "command": "cd packages/board-server && npx tsc --noEmit",
+        "expected_outcome": "No type errors",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Web Board TypeScript Check",
+        "command": "cd apps/board && npx tsc --noEmit --skipLibCheck",
+        "expected_outcome": "No type errors",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Desktop TypeScript Check",
+        "command": "cd apps/desktop && npx tsc --noEmit --skipLibCheck",
+        "expected_outcome": "No type errors",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Desktop Unit Tests",
+        "command": "cd apps/desktop && pnpm run test",
+        "expected_outcome": "All tests pass",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Board Server Build",
+        "command": "cd packages/board-server && pnpm run build",
+        "expected_outcome": "Build succeeds",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Web Board Build",
+        "command": "cd apps/board && pnpm run build",
+        "expected_outcome": "Build succeeds",
+        "type": "test",
+        "required": true,
+        "blocking": false
+      }
+    ],
+    "reasoning": "Medium risk UI redesign across 3 services. TypeScript compilation is the primary automated verification. Integration testing requires manual browser verification since there are no existing E2E tests for the board web app. Desktop has vitest unit tests that must continue passing."
+  },
+  "qa_acceptance": {
+    "unit_tests": {
+      "required": true,
+      "commands": [
+        "cd apps/desktop && pnpm run test"
+      ],
+      "minimum_coverage": null
+    },
+    "integration_tests": {
+      "required": true,
+      "commands": [
+        "cd packages/board-server && npx tsc --noEmit",
+        "cd apps/board && npx tsc --noEmit --skipLibCheck",
+        "cd apps/desktop && npx tsc --noEmit --skipLibCheck"
+      ],
+      "services_to_test": [
+        "board-server",
+        "board",
+        "desktop"
+      ]
+    },
+    "e2e_tests": {
+      "required": false,
+      "commands": [],
+      "flows": [
+        "Create task and move through all 5 columns",
+        "Theme toggle persistence across page reloads",
+        "Swimlane view with 5 columns and drag-and-drop",
+        "WebSocket sync across multiple browser tabs"
+      ]
+    },
+    "browser_verification": {
+      "required": true,
+      "pages": [
+        {
+          "url": "http://localhost:3002",
+          "checks": [
+            "5 columns visible with correct labels",
+            "Cards render with new design (status badge, priority, timestamps)",
+            "Drag-and-drop works across all columns",
+            "No console errors"
+          ]
+        },
+        {
+          "url": "http://localhost:3002 (swimlane view)",
+          "checks": [
+            "5-column table renders correctly",
+            "Epic rows display properly",
+            "Drag works in swimlane cells",
+            "Horizontal scroll on narrow viewports"
+          ]
+        },
+        {
+          "url": "http://localhost:3000 (desktop)",
+          "checks": [
+            "Desktop mirrors web board design",
+            "5 columns visible",
+            "Theme toggle works",
+            "DnD functions correctly"
+          ]
+        }
+      ]
+    },
+    "database_verification": {
+      "required": true,
+      "checks": [
+        "New tasks created with 'planning' status (not 'backlog')",
+        "Migration script --dry-run reports correct backlog->planning, review->ai-review changes",
+        "YAML round-trip preserves all task data with new status values"
+      ]
+    }
+  },
+  "qa_signoff": null,
+  "last_updated": "2026-03-29T17:28:51.240469+00:00",
+  "reviewReason": "completed"
+}

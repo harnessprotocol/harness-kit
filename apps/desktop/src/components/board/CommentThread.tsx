@@ -51,7 +51,7 @@ export function CommentThread({ comments, onAdd }: Props) {
                   letterSpacing: '0.04em',
                 }}
               >
-                {c.author === 'claude' ? 'Claude' : 'You'}
+                {c.author === 'claude' ? '\u2726 Claude' : '\u25CF You'}
               </span>
               <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
                 {formatTime(c.timestamp)}
@@ -80,7 +80,7 @@ export function CommentThread({ comments, onAdd }: Props) {
         <textarea
           value={body}
           onChange={e => setBody(e.target.value)}
-          placeholder="Add a comment..."
+          placeholder="Add a comment\u2026"
           rows={3}
           style={{
             background: 'var(--bg-base)',
@@ -92,6 +92,7 @@ export function CommentThread({ comments, onAdd }: Props) {
             resize: 'vertical',
             fontFamily: 'inherit',
             outline: 'none',
+            transition: 'border-color 0.1s',
           }}
           onFocus={e => { (e.target as HTMLElement).style.borderColor = 'var(--accent)'; }}
           onBlur={e => { (e.target as HTMLElement).style.borderColor = 'var(--border)'; }}
@@ -116,7 +117,7 @@ export function CommentThread({ comments, onAdd }: Props) {
             transition: 'opacity 0.1s',
           }}
         >
-          {submitting ? 'Posting...' : 'Comment'}
+          {submitting ? 'Posting\u2026' : 'Comment'}
         </button>
       </form>
     </div>

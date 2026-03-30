@@ -4,10 +4,10 @@ import { useDroppable } from '@dnd-kit/core';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import type { Epic, Task, TaskStatus } from '../lib/api';
 import { COLUMNS, COLUMN_META } from '../lib/columns';
+import { cn } from '../lib/utils';
 import { SortableTaskCard } from './SortableTaskCard';
 import { Tooltip } from './Tooltip';
 
-// Individual droppable cell in the swimlane grid
 function SwimCell({
   epicId,
   status,
@@ -28,29 +28,20 @@ function SwimCell({
   return (
     <div
       ref={setNodeRef}
-      style={{
-        minWidth: 200,
-        minHeight: 80,
-        background: isOver ? 'var(--bg-elevated)' : 'transparent',
-        borderRadius: 6,
-        border: `1px solid ${isOver ? 'var(--accent)' : 'var(--border-subtle)'}`,
-        padding: 8,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 6,
-        transition: 'background 0.15s, border-color 0.15s',
-      }}
+      className={cn(
+        'min-w-[200px] min-h-[80px] rounded-[6px] border p-2 flex flex-col gap-1.5 transition-[background,border-color] duration-150',
+        isOver
+          ? 'bg-[var(--bg-elevated)] border-[var(--accent)]'
+          : 'bg-transparent border-[var(--border-subtle)]',
+      )}
     >
       <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
         {tasks.length === 0 ? (
           <div
-            style={{
-              fontSize: 11,
-              color: isOver ? 'var(--accent)' : 'var(--text-muted)',
-              textAlign: 'center',
-              padding: '16px 0',
-              fontStyle: 'italic',
-            }}
+            className={cn(
+              'text-[11px] text-center py-4 italic',
+              isOver ? 'text-[var(--accent)]' : 'text-[var(--text-muted)]',
+            )}
           >
             {isOver ? 'Drop here' : '\u2014'}
           </div>
@@ -81,60 +72,32 @@ export function SwimlaneView({ epics, onTaskClick, onAddTask, repoUrl }: Props) 
 
   if (activeEpics.length === 0) {
     return (
-      <div style={{ padding: 40, color: 'var(--text-muted)', fontSize: 13, textAlign: 'center' }}>
+      <div className="p-10 text-[var(--text-muted)] text-[13px] text-center">
         No active epics. Create one with <code>create_epic</code>.
       </div>
     );
   }
 
   return (
-    <div style={{ overflowX: 'auto', overflowY: 'auto', flex: 1, padding: 20 }}>
-      <table style={{ borderCollapse: 'separate', borderSpacing: 0, width: '100%', minWidth: 900 }}>
-        {/* Column headers */}
+    <div className="overflow-x-auto overflow-y-auto flex-1 p-5">
+      <table className="border-collapse border-spacing-0 w-full min-w-[900px]" style={{ borderCollapse: 'separate' }}>
         <thead>
           <tr>
-            {/* Epic label column */}
-            <th
-              style={{
-                width: 160,
-                minWidth: 160,
-                padding: '8px 12px',
-                textAlign: 'left',
-                fontSize: 11,
-                fontWeight: 600,
-                color: 'var(--text-muted)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.06em',
-                borderBottom: '1px solid var(--border-subtle)',
-                position: 'sticky',
-                left: 0,
-                background: 'var(--bg-base)',
-                zIndex: 2,
-              }}
-            >
+            <th className="w-[160px] min-w-[160px] px-3 py-2 text-left text-[11px] font-semibold text-[var(--text-muted)] uppercase tracking-[0.06em] border-b border-[var(--border-subtle)] sticky left-0 bg-[var(--bg-base)] z-[2]">
               Epic
             </th>
             {COLUMNS.map(col => (
               <th
                 key={col}
-                style={{
-                  padding: '8px 12px',
-                  textAlign: 'left',
-                  borderBottom: '1px solid var(--border-subtle)',
-                }}
+                className="px-3 py-2 text-left border-b border-[var(--border-subtle)]"
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div className="flex items-center gap-1.5">
                   <span
-                    style={{
-                      width: 7,
-                      height: 7,
-                      borderRadius: '50%',
-                      background: COLUMN_META[col].color,
-                      flexShrink: 0,
-                    }}
+                    className="size-[7px] rounded-full shrink-0"
+                    style={{ background: COLUMN_META[col].color }}
                   />
                   <Tooltip text={COLUMN_META[col].tooltip} position="bottom">
-                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-primary)' }}>
+                    <span className="text-[12px] font-semibold text-[var(--text-primary)]">
                       {COLUMN_META[col].label}
                     </span>
                   </Tooltip>
@@ -144,7 +107,6 @@ export function SwimlaneView({ epics, onTaskClick, onAddTask, repoUrl }: Props) 
           </tr>
         </thead>
 
-        {/* Epic rows */}
         <tbody>
           {activeEpics.map((epic, rowIdx) => {
             const tasksByStatus = Object.fromEntries(
@@ -158,40 +120,32 @@ export function SwimlaneView({ epics, onTaskClick, onAddTask, repoUrl }: Props) 
 
             return (
               <tr key={epic.id}>
-                {/* Epic label */}
                 <td
-                  style={{
-                    padding: '10px 12px',
-                    verticalAlign: 'top',
-                    borderBottom: rowIdx < activeEpics.length - 1 ? '1px solid var(--border-subtle)' : 'none',
-                    position: 'sticky',
-                    left: 0,
-                    background: 'var(--bg-base)',
-                    zIndex: 1,
-                  }}
+                  className={cn(
+                    'px-3 py-2.5 align-top sticky left-0 bg-[var(--bg-base)] z-[1]',
+                    rowIdx < activeEpics.length - 1 && 'border-b border-[var(--border-subtle)]',
+                  )}
                 >
-                  <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)', marginBottom: 4 }}>
+                  <div className="font-semibold text-[13px] text-[var(--text-primary)] mb-1">
                     {epic.name}
                   </div>
                   {epic.description && (
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>
+                    <div className="text-[11px] text-[var(--text-muted)] leading-[1.4]">
                       {epic.description}
                     </div>
                   )}
-                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 6 }}>
+                  <div className="text-[11px] text-[var(--text-muted)] mt-1.5">
                     {epic.tasks.length} task{epic.tasks.length !== 1 ? 's' : ''}
                   </div>
                 </td>
 
-                {/* Status cells */}
                 {COLUMNS.map(col => (
                   <td
                     key={col}
-                    style={{
-                      padding: '8px',
-                      verticalAlign: 'top',
-                      borderBottom: rowIdx < activeEpics.length - 1 ? '1px solid var(--border-subtle)' : 'none',
-                    }}
+                    className={cn(
+                      'p-2 align-top',
+                      rowIdx < activeEpics.length - 1 && 'border-b border-[var(--border-subtle)]',
+                    )}
                   >
                     <SwimCell
                       epicId={epic.id}
@@ -200,30 +154,11 @@ export function SwimlaneView({ epics, onTaskClick, onAddTask, repoUrl }: Props) 
                       onTaskClick={onTaskClick}
                       repoUrl={repoUrl}
                     />
-                    {col === 'backlog' && (
+                    {col === 'planning' && (
                       <Tooltip text={`Create a new task in ${epic.name}`} position="top">
                         <button
                           onClick={() => onAddTask?.(col, epic.id)}
-                          style={{
-                            marginTop: 6,
-                            width: '100%',
-                            padding: '4px',
-                            background: 'transparent',
-                            border: '1px dashed var(--border-subtle)',
-                            borderRadius: 4,
-                            color: 'var(--text-muted)',
-                            fontSize: 11,
-                            cursor: 'pointer',
-                            transition: 'all 0.1s',
-                          }}
-                          onMouseEnter={e => {
-                            (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)';
-                            (e.currentTarget as HTMLElement).style.color = 'var(--accent)';
-                          }}
-                          onMouseLeave={e => {
-                            (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-subtle)';
-                            (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)';
-                          }}
+                          className="mt-1.5 w-full rounded-[4px] border border-dashed border-[var(--border-subtle)] bg-transparent py-1 px-2 text-[11px] text-[var(--text-muted)] cursor-pointer transition-all duration-100 hover:border-[var(--accent)] hover:text-[var(--accent)]"
                         >
                           + Add
                         </button>

@@ -1,4 +1,5 @@
-export type TaskStatus = 'backlog' | 'in-progress' | 'review' | 'done';
+export type TaskStatus = 'planning' | 'in-progress' | 'ai-review' | 'human-review' | 'done';
+export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type EpicStatus = 'active' | 'completed' | 'archived';
 export type CommentAuthor = 'claude' | 'user';
 
@@ -13,6 +14,7 @@ export interface Task {
   title: string;
   description?: string;
   status: TaskStatus;
+  priority?: TaskPriority;
   branch?: string;
   worktree_path?: string;
   linked_commits: string[];

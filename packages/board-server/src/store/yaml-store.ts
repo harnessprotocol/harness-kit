@@ -164,7 +164,7 @@ export function createTask(
     id: project.next_id++,
     title,
     description,
-    status: 'backlog',
+    status: 'planning',
     linked_commits: [],
     comments: [],
     created_at: ts,

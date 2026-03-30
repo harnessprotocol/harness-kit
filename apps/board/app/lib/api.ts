@@ -33,12 +33,12 @@ export const api = {
       if (params?.epic_id) q.set('epic_id', String(params.epic_id));
       return apiFetch<Task[]>(`/projects/${slug}/tasks${q.size ? `?${q}` : ''}`);
     },
-    create: (slug: string, epicId: number, body: { title: string; description?: string }) =>
+    create: (slug: string, epicId: number, body: { title: string; description?: string; priority?: TaskPriority }) =>
       apiFetch<Task>(`/projects/${slug}/epics/${epicId}/tasks`, {
         method: 'POST',
         body: JSON.stringify(body),
       }),
-    update: (slug: string, taskId: number, body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'no_worktree'>>) =>
+    update: (slug: string, taskId: number, body: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'no_worktree'>>) =>
       apiFetch<Task>(`/projects/${slug}/tasks/${taskId}`, {
         method: 'PATCH',
         body: JSON.stringify(body),
@@ -54,7 +54,8 @@ export const api = {
 };
 
 // Types (mirrors board-server/src/types.ts)
-export type TaskStatus = 'backlog' | 'in-progress' | 'review' | 'done';
+export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
+export type TaskStatus = 'planning' | 'in-progress' | 'ai-review' | 'human-review' | 'done';
 export type EpicStatus = 'active' | 'completed' | 'archived';
 
 export interface Comment {
@@ -68,6 +69,7 @@ export interface Task {
   title: string;
   description?: string;
   status: TaskStatus;
+  priority?: TaskPriority;
   branch?: string;
   worktree_path?: string;
   linked_commits: string[];

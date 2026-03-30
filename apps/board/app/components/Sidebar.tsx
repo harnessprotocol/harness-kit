@@ -2,9 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { Sun, Moon, PanelLeftClose, PanelLeft, Plus, LayoutGrid, TableProperties } from 'lucide-react';
 import type { Project } from '../lib/api';
 import { api } from '../lib/api';
+import { cn } from '../lib/utils';
+import { toggleTheme, getTheme } from '../lib/theme';
 
 const PROJECT_COLORS = [
   '#7c3aed', '#2563eb', '#16a34a', '#d97706',
@@ -17,39 +20,13 @@ function colorDot(color?: string) {
   return color ?? '#55556a';
 }
 
-const chevronStyle: React.CSSProperties = {
-  background: 'transparent',
-  border: 'none',
-  color: 'var(--text-muted)',
-  cursor: 'pointer',
-  fontSize: 14,
-  padding: '4px 6px',
-  borderRadius: 4,
-  lineHeight: 1,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-};
-
-const inputStyle: React.CSSProperties = {
-  background: 'var(--bg-base)',
-  border: '1px solid var(--border)',
-  borderRadius: 6,
-  color: 'var(--text-primary)',
-  fontSize: 13,
-  padding: '6px 10px',
-  fontFamily: 'inherit',
-  outline: 'none',
-  width: '100%',
-  boxSizing: 'border-box' as const,
-};
-
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
+  const [isDark, setIsDark] = useState(false);
 
   // Form state
   const [formOpen, setFormOpen] = useState(false);
@@ -59,19 +36,20 @@ export function Sidebar() {
   const [formError, setFormError] = useState('');
   const nameInputRef = useRef<HTMLInputElement>(null);
 
-  // Read collapsed state from localStorage on mount
+  // Read collapsed state and theme on mount
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored === 'collapsed') setCollapsed(true);
     } catch { /* ignore */ }
+    setIsDark(document.documentElement.classList.contains('dark'));
   }, []);
 
   // Fetch projects
   useEffect(() => {
     api.projects.list()
       .then(setProjects)
-      .catch(console.error)
+      .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
@@ -82,17 +60,14 @@ export function Sidebar() {
     }
   }, [formOpen]);
 
-  function toggleCollapsed() {
+  const toggleCollapsed = useCallback(() => {
     const next = !collapsed;
     setCollapsed(next);
     try {
       localStorage.setItem(STORAGE_KEY, next ? 'collapsed' : 'expanded');
     } catch { /* ignore */ }
-    // Close form when collapsing
-    if (next) {
-      resetForm();
-    }
-  }
+    if (next) resetForm();
+  }, [collapsed]);
 
   function resetForm() {
     setFormOpen(false);
@@ -121,126 +96,86 @@ export function Sidebar() {
     }
   }
 
-  const width = collapsed ? 48 : 220;
+  function handleThemeToggle() {
+    toggleTheme();
+    setIsDark(document.documentElement.classList.contains('dark'));
+  }
 
   return (
     <aside
-      style={{
-        width,
-        minWidth: width,
-        background: 'var(--bg-surface)',
-        borderRight: '1px solid var(--border-subtle)',
-        display: 'flex',
-        flexDirection: 'column',
-        padding: '16px 0',
-        overflow: 'hidden',
-        transition: 'width 0.2s ease, min-width 0.2s ease',
-      }}
+      className={cn(
+        'flex flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-surface)] overflow-hidden transition-all duration-200',
+        collapsed ? 'w-12 min-w-12' : 'w-[220px] min-w-[220px]',
+      )}
     >
-      {/* Wordmark / Header */}
-      <div style={{ padding: collapsed ? '0 8px 16px' : '0 16px 16px', borderBottom: '1px solid var(--border-subtle)' }}>
+      {/* Header / Logo */}
+      <div className={cn('border-b border-[var(--border-subtle)]', collapsed ? 'px-2 py-4' : 'px-4 py-4')}>
         {collapsed ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-            <span
-              style={{
-                width: 24,
-                height: 24,
-                background: 'var(--accent)',
-                borderRadius: 6,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 12,
-                fontWeight: 700,
-                color: '#fff',
-                flexShrink: 0,
-              }}
-            >
+          <div className="flex flex-col items-center gap-2">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[var(--accent)] text-xs font-bold text-white">
               H
             </span>
             <button
               onClick={toggleCollapsed}
-              style={chevronStyle}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; }}
+              className="flex items-center justify-center rounded p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
               aria-label="Expand sidebar"
             >
-              &raquo;
+              <PanelLeft size={16} />
             </button>
           </div>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span
-              style={{
-                width: 24,
-                height: 24,
-                background: 'var(--accent)',
-                borderRadius: 6,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 12,
-                fontWeight: 700,
-                color: '#fff',
-                flexShrink: 0,
-              }}
-            >
+          <div className="flex items-center gap-2">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-[var(--accent)] text-xs font-bold text-white">
               H
             </span>
-            <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--text-primary)', flex: 1 }}>
+            <span className="flex-1 text-sm font-semibold text-[var(--text-primary)]">
               Harness Board
             </span>
             <button
               onClick={toggleCollapsed}
-              style={chevronStyle}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; }}
+              className="flex items-center justify-center rounded p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
               aria-label="Collapse sidebar"
             >
-              &laquo;
+              <PanelLeftClose size={16} />
             </button>
           </div>
         )}
       </div>
 
-      {/* Nav */}
+      {/* Projects section */}
       {collapsed ? (
-        /* Collapsed: vertical strip of project color dots */
-        <nav style={{ padding: '12px 0', flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+        <nav className="flex flex-1 flex-col items-center gap-2 overflow-y-auto py-3">
           {projects.map(p => {
             const isActive = pathname === `/${p.slug}` || pathname.startsWith(`/${p.slug}/`);
             return (
               <Link
                 key={p.slug}
                 href={`/${p.slug}`}
-                style={{ display: 'block', textDecoration: 'none' }}
+                className="block"
                 title={p.name}
               >
                 <span
-                  style={{
-                    display: 'block',
-                    width: 8,
-                    height: 8,
-                    borderRadius: '50%',
-                    background: colorDot(p.color),
-                    ...(isActive ? { outline: '2px solid var(--accent)', outlineOffset: 2 } : {}),
-                  }}
+                  className={cn(
+                    'block h-2 w-2 rounded-full',
+                    isActive && 'outline outline-2 outline-offset-2 outline-[var(--accent)]',
+                  )}
+                  style={{ background: colorDot(p.color) }}
                 />
               </Link>
             );
           })}
         </nav>
       ) : (
-        /* Expanded: full project list + create form */
-        <nav style={{ padding: '12px 8px', flex: 1, overflowY: 'auto' }}>
-          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', padding: '0 8px 8px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        <nav className="flex flex-1 flex-col overflow-y-auto px-2 py-3">
+          {/* Section label */}
+          <div className="px-2 pb-2 text-[11px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">
             Projects
           </div>
 
           {loading ? (
-            <div style={{ padding: '8px', fontSize: 12, color: 'var(--text-muted)' }}>Loading…</div>
+            <div className="px-2 text-xs text-[var(--text-muted)]">Loading…</div>
           ) : projects.length === 0 ? (
-            <div style={{ padding: '8px', fontSize: 12, color: 'var(--text-muted)' }}>No projects yet</div>
+            <div className="px-2 text-xs text-[var(--text-muted)]">No projects yet</div>
           ) : (
             projects.map(p => {
               const isActive = pathname === `/${p.slug}` || pathname.startsWith(`/${p.slug}/`);
@@ -248,38 +183,18 @@ export function Sidebar() {
                 <Link
                   key={p.slug}
                   href={`/${p.slug}`}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    padding: '6px 8px',
-                    borderRadius: 6,
-                    textDecoration: 'none',
-                    background: isActive ? 'var(--accent-dim)' : 'transparent',
-                    color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                    fontSize: 13,
-                    fontWeight: isActive ? 500 : 400,
-                    transition: 'all 0.1s',
-                  }}
-                  onMouseEnter={e => {
-                    if (!isActive) (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)';
-                  }}
-                  onMouseLeave={e => {
-                    if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent';
-                  }}
+                  className={cn(
+                    'flex items-center gap-2 rounded-md px-2 py-1.5 text-[13px] transition-colors',
+                    isActive
+                      ? 'bg-[var(--accent-dim)] font-medium text-[var(--text-primary)] border-l-2 border-[var(--accent)]'
+                      : 'text-[var(--text-secondary)] hover:bg-[var(--bg-hover)]',
+                  )}
                 >
                   <span
-                    style={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: '50%',
-                      background: colorDot(p.color),
-                      flexShrink: 0,
-                    }}
+                    className="h-2 w-2 shrink-0 rounded-full"
+                    style={{ background: colorDot(p.color) }}
                   />
-                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {p.name}
-                  </span>
+                  <span className="truncate">{p.name}</span>
                 </Link>
               );
             })
@@ -287,7 +202,7 @@ export function Sidebar() {
 
           {/* Inline project creation */}
           {formOpen ? (
-            <div style={{ padding: '8px', marginTop: 4 }}>
+            <div className="mt-1 px-2">
               <input
                 ref={nameInputRef}
                 type="text"
@@ -299,51 +214,36 @@ export function Sidebar() {
                   if (e.key === 'Escape') resetForm();
                 }}
                 disabled={creating}
-                style={inputStyle}
+                className="w-full rounded-md border border-[var(--border)] bg-[var(--bg-base)] px-2.5 py-1.5 text-[13px] text-[var(--text-primary)] outline-none placeholder:text-[var(--text-muted)] focus:border-[var(--accent)]"
               />
 
               {/* Color swatches */}
-              <div style={{ display: 'flex', gap: 6, padding: '8px 0', flexWrap: 'wrap' }}>
+              <div className="flex flex-wrap gap-1.5 py-2">
                 {PROJECT_COLORS.map(c => (
                   <button
                     key={c}
                     type="button"
                     onClick={() => setFormColor(c)}
-                    style={{
-                      width: 16,
-                      height: 16,
-                      borderRadius: '50%',
-                      background: c,
-                      border: 'none',
-                      cursor: 'pointer',
-                      padding: 0,
-                      ...(formColor === c
-                        ? { outline: '2px solid var(--text-primary)', outlineOffset: 2 }
-                        : {}),
-                    }}
+                    className={cn(
+                      'h-4 w-4 rounded-full border-none p-0 cursor-pointer',
+                      formColor === c && 'outline outline-2 outline-offset-2 outline-[var(--text-primary)]',
+                    )}
+                    style={{ background: c }}
                     aria-label={`Select color ${c}`}
                   />
                 ))}
               </div>
 
               {/* Button row */}
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={handleCreate}
                   disabled={creating}
-                  style={{
-                    background: 'var(--accent)',
-                    color: '#fff',
-                    border: 'none',
-                    borderRadius: 6,
-                    padding: '5px 12px',
-                    fontSize: 12,
-                    fontWeight: 500,
-                    cursor: creating ? 'default' : 'pointer',
-                    opacity: creating ? 0.6 : 1,
-                    fontFamily: 'inherit',
-                  }}
+                  className={cn(
+                    'rounded-md bg-[var(--accent)] px-3 py-1 text-xs font-medium text-white',
+                    creating ? 'cursor-default opacity-60' : 'cursor-pointer hover:opacity-90',
+                  )}
                 >
                   {creating ? 'Creating…' : 'Create'}
                 </button>
@@ -351,59 +251,62 @@ export function Sidebar() {
                   type="button"
                   onClick={resetForm}
                   disabled={creating}
-                  style={{
-                    background: 'transparent',
-                    color: 'var(--text-muted)',
-                    border: 'none',
-                    padding: '5px 8px',
-                    fontSize: 12,
-                    cursor: 'pointer',
-                    fontFamily: 'inherit',
-                  }}
+                  className="cursor-pointer border-none bg-transparent px-2 py-1 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
                 >
                   Cancel
                 </button>
               </div>
 
               {formError && (
-                <div style={{ color: '#ef4444', fontSize: 11, marginTop: 6 }}>{formError}</div>
+                <div className="mt-1.5 text-[11px] text-red-500">{formError}</div>
               )}
             </div>
           ) : (
             <button
               type="button"
               onClick={() => setFormOpen(true)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 4,
-                width: '100%',
-                padding: '6px 8px',
-                marginTop: 4,
-                background: 'transparent',
-                border: '1px dashed var(--border)',
-                borderRadius: 6,
-                color: 'var(--text-muted)',
-                fontSize: 12,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; }}
+              className="mt-1 flex w-full items-center justify-center gap-1 rounded-md border border-dashed border-[var(--border)] bg-transparent px-2 py-1.5 text-xs text-[var(--text-muted)] cursor-pointer hover:text-[var(--text-primary)] hover:border-[var(--text-muted)] transition-colors"
             >
-              + New
+              + New Project
             </button>
           )}
         </nav>
       )}
 
-      {/* Footer — only when expanded */}
-      {!collapsed && (
-        <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border-subtle)' }}>
-          <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-            Connected to :4800
-          </div>
+      {/* Settings section — theme toggle */}
+      {collapsed ? (
+        <div className="flex flex-col items-center gap-2 border-t border-[var(--border-subtle)] py-3">
+          <button
+            onClick={handleThemeToggle}
+            className="flex items-center justify-center rounded p-1.5 text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors cursor-pointer"
+            aria-label="Toggle theme"
+          >
+            {isDark ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
+        </div>
+      ) : (
+        <div className="border-t border-[var(--border-subtle)] px-4 py-3">
+          {/* Theme toggle row */}
+          <button
+            onClick={handleThemeToggle}
+            className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-hover)] transition-colors cursor-pointer bg-transparent border-none"
+          >
+            {isDark ? <Sun size={14} /> : <Moon size={14} />}
+            <span>{isDark ? 'Light Mode' : 'Dark Mode'}</span>
+          </button>
+
+          {/* New Task button */}
+          <button
+            type="button"
+            onClick={() => {
+              // Dispatch a custom event that the board page listens to
+              window.dispatchEvent(new CustomEvent('harness:new-task'));
+            }}
+            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md bg-[var(--accent)] px-3 py-2 text-xs font-medium text-white cursor-pointer hover:opacity-90 transition-opacity"
+          >
+            <Plus size={14} />
+            New Task
+          </button>
         </div>
       )}
     </aside>

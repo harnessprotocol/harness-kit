@@ -1,7 +1,17 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
-import type { Epic, TaskStatus } from '../../lib/board-api';
+import type { Epic, TaskStatus, TaskPriority } from '../../lib/board-api';
+import { COLUMNS, COLUMN_META } from '../../lib/board-columns';
 import { api } from '../../lib/board-api';
+
+const PRIORITIES: TaskPriority[] = ['low', 'medium', 'high', 'critical'];
+
+const PRIORITY_CONFIG: Record<TaskPriority, { label: string; color: string; bgColor: string; borderColor: string }> = {
+  critical: { label: 'Critical', color: '#dc2626', bgColor: 'rgba(239,68,68,0.1)', borderColor: 'rgba(239,68,68,0.2)' },
+  high: { label: 'High', color: '#ea580c', bgColor: 'rgba(249,115,22,0.1)', borderColor: 'rgba(249,115,22,0.2)' },
+  medium: { label: 'Medium', color: '#ca8a04', bgColor: 'rgba(234,179,8,0.1)', borderColor: 'rgba(234,179,8,0.2)' },
+  low: { label: 'Low', color: 'var(--text-muted)', bgColor: 'rgba(107,114,128,0.1)', borderColor: 'rgba(107,114,128,0.2)' },
+};
 
 interface Props {
   open: boolean;
@@ -17,6 +27,8 @@ export function TaskForm({ open, projectSlug, epics, defaultEpicId, defaultStatu
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [epicId, setEpicId] = useState<number>(defaultEpicId ?? epics[0]?.id ?? 0);
+  const [priority, setPriority] = useState<TaskPriority>('medium');
+  const [status, setStatus] = useState<TaskStatus>(defaultStatus ?? 'planning');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
   const titleRef = useRef<HTMLInputElement>(null);
@@ -26,10 +38,12 @@ export function TaskForm({ open, projectSlug, epics, defaultEpicId, defaultStatu
       setTitle('');
       setDescription('');
       setEpicId(defaultEpicId ?? epics[0]?.id ?? 0);
+      setPriority('medium');
+      setStatus(defaultStatus ?? 'planning');
       setError('');
       setTimeout(() => titleRef.current?.focus(), 50);
     }
-  }, [open, defaultEpicId, epics]);
+  }, [open, defaultEpicId, defaultStatus, epics]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -50,10 +64,11 @@ export function TaskForm({ open, projectSlug, epics, defaultEpicId, defaultStatu
       const task = await api.tasks.create(projectSlug, epicId, {
         title: trimmed,
         description: description.trim() || undefined,
+        priority,
       });
-      // If a specific status was requested (e.g. created from In Progress column), move it
-      if (defaultStatus && defaultStatus !== 'backlog') {
-        await api.tasks.update(projectSlug, task.id, { status: defaultStatus });
+      // If a specific status was requested, move it from default planning
+      if (status !== 'planning') {
+        await api.tasks.update(projectSlug, task.id, { status });
       }
       onCreated();
       onClose();
@@ -75,6 +90,28 @@ export function TaskForm({ open, projectSlug, epics, defaultEpicId, defaultStatu
     outline: 'none',
     width: '100%',
     boxSizing: 'border-box',
+  };
+
+  const pillBase: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 9999,
+    border: '1px solid var(--border-subtle)',
+    padding: '4px 10px',
+    fontSize: 11,
+    fontWeight: 500,
+    cursor: 'pointer',
+    background: 'var(--bg-elevated)',
+    color: 'var(--text-muted)',
+    transition: 'all 0.15s',
+  };
+
+  const pillActive: React.CSSProperties = {
+    ...pillBase,
+    borderColor: 'var(--accent)',
+    background: 'rgba(var(--accent-rgb, 99,102,241), 0.1)',
+    color: 'var(--text-primary)',
   };
 
   return (
@@ -161,6 +198,71 @@ export function TaskForm({ open, projectSlug, epics, defaultEpicId, defaultStatu
                 />
               </div>
 
+              {/* Status selector */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-muted)' }}>Status</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {COLUMNS.map(s => {
+                    const meta = COLUMN_META[s];
+                    const isActive = status === s;
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setStatus(s)}
+                        style={isActive ? pillActive : pillBase}
+                      >
+                        <span
+                          style={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            background: meta.color,
+                            display: 'inline-block',
+                          }}
+                        />
+                        {meta.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Priority selector */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <label style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-muted)' }}>Priority</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {PRIORITIES.map(p => {
+                    const cfg = PRIORITY_CONFIG[p];
+                    const isActive = priority === p;
+                    return (
+                      <button
+                        key={p}
+                        type="button"
+                        onClick={() => setPriority(p)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          borderRadius: 9999,
+                          padding: '4px 10px',
+                          fontSize: 11,
+                          fontWeight: 600,
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s',
+                          border: isActive ? `1px solid ${cfg.borderColor}` : '1px solid var(--border-subtle)',
+                          background: isActive ? cfg.bgColor : 'var(--bg-elevated)',
+                          color: isActive ? cfg.color : 'var(--text-muted)',
+                        }}
+                      >
+                        {cfg.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {error && (
                 <div style={{ fontSize: 12, color: 'var(--blocked)', background: 'rgba(220,38,38,0.08)', borderRadius: 6, padding: '6px 10px' }}>
                   {error}
@@ -190,7 +292,7 @@ export function TaskForm({ open, projectSlug, epics, defaultEpicId, defaultStatu
                     opacity: submitting ? 0.6 : 1,
                   }}
                 >
-                  {submitting ? 'Creating...' : 'Create task'}
+                  {submitting ? 'Creating\u2026' : 'Create task'}
                 </button>
               </div>
             </form>
