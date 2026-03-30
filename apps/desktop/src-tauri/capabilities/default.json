@@ -32,9 +32,9 @@
       "identifier": "shell:allow-execute",
       "allow": [
         { "name": "claude", "cmd": "claude", "args": true },
-        { "name": "agent", "cmd": "agent", "args": true },
-        { "name": "copilot", "cmd": "copilot", "args": true },
-        { "name": "codex", "cmd": "codex", "args": true },
+        { "name": "agent", "cmd": "agent", "args": ["--version"] },
+        { "name": "copilot", "cmd": "copilot", "args": ["--version"] },
+        { "name": "codex", "cmd": "codex", "args": ["--version"] },
         { "name": "gh", "cmd": "gh", "args": true },
         { "name": "git", "cmd": "git", "args": true },
         { "name": "security", "cmd": "security", "args": true }

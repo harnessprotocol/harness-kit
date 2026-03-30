@@ -27,6 +27,8 @@ interface TerminalExitPayload {
 // ── Constants ────────────────────────────────────────────────
 
 const MAX_TERMINALS = 12;
+/** Max raw chunks per terminal before trimming (prevents unbounded memory growth). */
+const MAX_RAW_CHUNKS = 5000;
 
 // ── Hook ─────────────────────────────────────────────────────
 
@@ -53,6 +55,10 @@ export function useTerminals(): UseTerminalsReturn {
   // Auto-incrementing title counter.
   const titleCounterRef = useRef(0);
 
+  // Ref to current sessions for cleanup on unmount.
+  const sessionsRef = useRef<TerminalSession[]>([]);
+  sessionsRef.current = sessions;
+
   // ── Event listeners ──────────────────────────────────────────
 
   useEffect(() => {
@@ -61,7 +67,12 @@ export function useTerminals(): UseTerminalsReturn {
       const chunks = rawChunksRef.current.get(terminalId);
       if (chunks) {
         chunks.push(data);
-        setOutputTick((t) => t + 1);
+        // Trim old chunks to prevent unbounded memory growth.
+        if (chunks.length > MAX_RAW_CHUNKS) {
+          const excess = chunks.length - MAX_RAW_CHUNKS;
+          chunks.splice(0, excess);
+        }
+        setOutputTick((t) => (t + 1) & 0x7fffffff);
       }
     });
 
@@ -82,10 +93,21 @@ export function useTerminals(): UseTerminalsReturn {
     };
   }, []);
 
+  // ── Cleanup PTY sessions on unmount ──────────────────────────
+
+  useEffect(() => {
+    return () => {
+      for (const s of sessionsRef.current) {
+        invoke("destroy_terminal", { terminalId: s.id }).catch(() => {});
+      }
+    };
+  }, []);
+
   // ── Actions ──────────────────────────────────────────────────
 
   const createTerminal = useCallback(async (projectPath: string): Promise<string | null> => {
-    if (sessions.length >= MAX_TERMINALS) return null;
+    // Use ref for latest count to avoid stale closure over sessions.length.
+    if (sessionsRef.current.length >= MAX_TERMINALS) return null;
 
     const terminalId = await invoke<string>("create_terminal", { projectPath });
     titleCounterRef.current += 1;
@@ -101,7 +123,7 @@ export function useTerminals(): UseTerminalsReturn {
 
     setSessions((prev) => [...prev, session]);
     return terminalId;
-  }, [sessions.length]);
+  }, []);
 
   const destroyTerminal = useCallback((id: string) => {
     invoke("destroy_terminal", { terminalId: id }).catch(console.error);
@@ -119,6 +141,8 @@ export function useTerminals(): UseTerminalsReturn {
 
   const invokeInTerminal = useCallback(
     async (id: string, harnessId: string, prompt: string, model?: string) => {
+      // NOTE: write_terminal is an unrestricted shell stdin pipe. All command
+      // construction MUST go through buildInvokeCommand to ensure proper quoting.
       const command = buildInvokeCommand(harnessId, prompt, model);
       if (!command) {
         console.error(`Unknown harness: ${harnessId}`);
@@ -131,7 +155,6 @@ export function useTerminals(): UseTerminalsReturn {
         ),
       );
 
-      // Write the command directly to the shell's stdin.
       await invoke("write_terminal", {
         terminalId: id,
         data: command + "\n",
@@ -142,14 +165,15 @@ export function useTerminals(): UseTerminalsReturn {
 
   const invokeAll = useCallback(
     async (prompt: string) => {
-      const eligible = sessions.filter((s) => s.harnessId);
+      // Use ref for latest sessions to avoid stale closure.
+      const eligible = sessionsRef.current.filter((s) => s.harnessId);
       await Promise.all(
         eligible.map((s) =>
           invokeInTerminal(s.id, s.harnessId!, prompt, s.model),
         ),
       );
     },
-    [sessions, invokeInTerminal],
+    [invokeInTerminal],
   );
 
   const getRawChunks = useCallback((id: string): string[] => {

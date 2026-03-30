@@ -246,7 +246,10 @@ export default function TerminalPanel({
       }
       writtenRef.current = rawChunks.length;
     }
-  }, [rawChunks, rawChunks.length]);
+  // rawChunks is the same array reference (mutated); rawChunks.length changes
+  // on each parent re-render triggered by outputTick.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rawChunks.length]);
 
   // ── Status dot ───────────────────────────────────────────────
 
@@ -280,6 +283,7 @@ export default function TerminalPanel({
           <button
             style={styles.iconBtn}
             title="Invoke harness"
+            aria-label="Invoke harness"
             onClick={onInvoke}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = "#3a3835";
@@ -296,6 +300,7 @@ export default function TerminalPanel({
             <button
               style={styles.iconBtn}
               title="Expand"
+              aria-label="Expand"
               onClick={onExpand}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = "#3a3835";
@@ -312,6 +317,7 @@ export default function TerminalPanel({
           <button
             style={styles.iconBtn}
             title="Close terminal"
+            aria-label="Close terminal"
             onClick={onClose}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = "#3a3835";

@@ -205,7 +205,7 @@ export default function InvokeDialog({
 
   return createPortal(
     <div style={styles.backdrop} onPointerDown={onClose}>
-      <div style={styles.card} onPointerDown={(e) => e.stopPropagation()}>
+      <div style={styles.card} role="dialog" aria-modal="true" aria-label={`Invoke in ${terminalTitle}`} onPointerDown={(e) => e.stopPropagation()}>
         {/* Header */}
         <div style={styles.header}>
           <span style={styles.title}>Invoke in {terminalTitle}</span>
@@ -232,8 +232,9 @@ export default function InvokeDialog({
         <div style={styles.body}>
           {/* Harness selector */}
           <div>
-            <label style={styles.fieldLabel}>Harness</label>
+            <label htmlFor="invoke-harness" style={styles.fieldLabel}>Harness</label>
             <select
+              id="invoke-harness"
               style={styles.select}
               value={selectedHarness}
               onChange={(e) => setSelectedHarness(e.target.value)}
@@ -251,8 +252,9 @@ export default function InvokeDialog({
 
           {/* Model selector */}
           <div>
-            <label style={styles.fieldLabel}>Model</label>
+            <label htmlFor="invoke-model" style={styles.fieldLabel}>Model</label>
             <select
+              id="invoke-model"
               style={styles.select}
               value={selectedModel}
               onChange={(e) => setSelectedModel(e.target.value)}
@@ -269,8 +271,9 @@ export default function InvokeDialog({
 
           {/* Prompt */}
           <div>
-            <label style={styles.fieldLabel}>Prompt</label>
+            <label htmlFor="invoke-prompt" style={styles.fieldLabel}>Prompt</label>
             <textarea
+              id="invoke-prompt"
               ref={promptRef}
               style={styles.textarea}
               value={prompt}
