@@ -77,38 +77,33 @@ export function TaskDetailPanel({ task, projectSlug, onClose, onTaskUpdated, rep
 
   async function handleRun() {
     if (!task) return;
-    await fetch(`/api/v1/projects/${projectSlug}/tasks/${task.id}/execute`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
-    });
+    await api.execution.start(projectSlug, task.id);
     onTaskUpdated();
   }
 
   async function handleStop() {
     if (!task) return;
-    await fetch(`/api/v1/projects/${projectSlug}/tasks/${task.id}/stop`, { method: 'POST' });
+    await api.execution.stop(projectSlug, task.id);
     onTaskUpdated();
   }
 
   async function handleSubtaskAdd(title: string) {
     if (!task) return;
-    await fetch(`/api/v1/projects/${projectSlug}/tasks/${task.id}/subtasks`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ title }),
-    });
+    await api.subtasks.create(projectSlug, task.id, { title });
     onTaskUpdated();
   }
 
   async function handleSubtaskToggle(subtaskId: number, completed: boolean) {
     if (!task) return;
-    await fetch(`/api/v1/projects/${projectSlug}/tasks/${task.id}/subtasks/${subtaskId}`, {
-      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: completed ? 'completed' : 'pending' }),
+    await api.subtasks.update(projectSlug, task.id, subtaskId, {
+      status: completed ? 'completed' : 'pending',
     });
     onTaskUpdated();
   }
 
   async function handleSubtaskDelete(subtaskId: number) {
     if (!task) return;
-    await fetch(`/api/v1/projects/${projectSlug}/tasks/${task.id}/subtasks/${subtaskId}`, { method: 'DELETE' });
+    await api.subtasks.delete(projectSlug, task.id, subtaskId);
     onTaskUpdated();
   }
 

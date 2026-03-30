@@ -1,9 +1,5 @@
 import { cn } from '../lib/utils';
-
-interface Subtask {
-  id: number;
-  status: 'pending' | 'in_progress' | 'completed' | 'failed';
-}
+import type { Subtask } from '../lib/api';
 
 interface Props {
   subtasks: Subtask[];

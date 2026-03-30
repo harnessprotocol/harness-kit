@@ -11,7 +11,7 @@ interface Props {
 // Strip basic ANSI escape codes for plain display
 function stripAnsi(str: string): string {
   // eslint-disable-next-line no-control-regex
-  return str.replace(/\x1B\[[0-9;]*[mGKHF]/g, '');
+  return str.replace(/\x1B(?:\[[0-9;]*[A-Za-z]|\(B)/g, '');
 }
 
 function classifyLine(line: string): string {

@@ -1,12 +1,7 @@
 import { useState, useRef } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import { cn } from '../lib/utils';
-
-interface Subtask {
-  id: number;
-  title: string;
-  status: 'pending' | 'in_progress' | 'completed' | 'failed';
-}
+import type { Subtask } from '../lib/api';
 
 interface Props {
   subtasks: Subtask[];

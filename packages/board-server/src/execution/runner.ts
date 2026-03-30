@@ -19,6 +19,7 @@ interface RunConfig {
 
 export class TaskRunner {
   private processes = new Map<string, ChildProcess>();
+  private manuallyStopped = new Set<string>();
 
   private key(slug: string, taskId: number): string {
     return `${slug}/${taskId}`;
@@ -75,7 +76,6 @@ export class TaskRunner {
           updateExecution(slug, taskId, {
             phase: phase as import('../types.js').ExecutionPhase,
             message,
-            phases: [], // Will be properly tracked in a full impl
           }).catch(() => {});
         } catch { /* ignore malformed markers */ }
       }
@@ -99,6 +99,11 @@ export class TaskRunner {
 
     proc.on('exit', async (code) => {
       this.processes.delete(k);
+      // Don't overwrite status if manually stopped (stop() already set 'cancelled')
+      if (this.manuallyStopped.has(k)) {
+        this.manuallyStopped.delete(k);
+        return;
+      }
       const status = code === 0 ? 'completed' : 'failed';
       await updateExecution(slug, taskId, {
         status,
@@ -115,8 +120,10 @@ export class TaskRunner {
   }
 
   async stop(slug: string, taskId: number): Promise<void> {
-    const proc = this.processes.get(this.key(slug, taskId));
+    const k = this.key(slug, taskId);
+    const proc = this.processes.get(k);
     if (!proc) return;
+    this.manuallyStopped.add(k);
     proc.kill('SIGTERM');
     // Force kill after 5s if still running
     setTimeout(() => {
