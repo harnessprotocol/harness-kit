@@ -50,14 +50,10 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    id: "comparator",
+    id: "terminals",
     label: "Comparator",
-    path: "/comparator",
-    children: [
-      { label: "New Comparison", path: "/comparator" },
-      { label: "History", path: "/comparator/history" },
-      { label: "Analytics", path: "/comparator/analytics" },
-    ],
+    path: "/terminals",
+    children: [],
   },
   {
     id: "security",

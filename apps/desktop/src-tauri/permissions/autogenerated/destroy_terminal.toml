@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-destroy-terminal"
+description = "Enables the destroy_terminal command without any pre-configured scope."
+commands.allow = ["destroy_terminal"]
+
+[[permission]]
+identifier = "deny-destroy-terminal"
+description = "Denies the destroy_terminal command without any pre-configured scope."
+commands.deny = ["destroy_terminal"]

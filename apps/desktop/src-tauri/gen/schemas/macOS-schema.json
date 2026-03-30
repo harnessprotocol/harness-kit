@@ -2319,6 +2319,12 @@
           "markdownDescription": "Enables the create_evaluation_session command without any pre-configured scope."
         },
         {
+          "description": "Enables the create_terminal command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-create-terminal",
+          "markdownDescription": "Enables the create_terminal command without any pre-configured scope."
+        },
+        {
           "description": "Enables the create_worktrees command without any pre-configured scope.",
           "type": "string",
           "const": "allow-create-worktrees",
@@ -2347,6 +2353,12 @@
           "type": "string",
           "const": "allow-delete-pairwise-vote",
           "markdownDescription": "Enables the delete_pairwise_vote command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the destroy_terminal command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-destroy-terminal",
+          "markdownDescription": "Enables the destroy_terminal command without any pre-configured scope."
         },
         {
           "description": "Enables the detect_harnesses command without any pre-configured scope.",
@@ -2401,6 +2413,12 @@
           "type": "string",
           "const": "allow-get-custom-profile",
           "markdownDescription": "Allows the get_custom_profile command."
+        },
+        {
+          "description": "Enables the get_cwd command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-cwd",
+          "markdownDescription": "Enables the get_cwd command without any pre-configured scope."
         },
         {
           "description": "Enables the get_diff_against_commit command without any pre-configured scope.",
@@ -2649,6 +2667,12 @@
           "markdownDescription": "Enables the remove_worktrees command without any pre-configured scope."
         },
         {
+          "description": "Enables the resize_terminal command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-resize-terminal",
+          "markdownDescription": "Enables the resize_terminal command without any pre-configured scope."
+        },
+        {
           "description": "Enables the reveal_evaluation_session command without any pre-configured scope.",
           "type": "string",
           "const": "allow-reveal-evaluation-session",
@@ -2805,6 +2829,12 @@
           "markdownDescription": "Enables the write_plugin_file command without any pre-configured scope."
         },
         {
+          "description": "Enables the write_terminal command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-write-terminal",
+          "markdownDescription": "Enables the write_terminal command without any pre-configured scope."
+        },
+        {
           "description": "Denies the acknowledge_drift command without any pre-configured scope.",
           "type": "string",
           "const": "deny-acknowledge-drift",
@@ -2937,6 +2967,12 @@
           "markdownDescription": "Denies the create_evaluation_session command without any pre-configured scope."
         },
         {
+          "description": "Denies the create_terminal command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-create-terminal",
+          "markdownDescription": "Denies the create_terminal command without any pre-configured scope."
+        },
+        {
           "description": "Denies the create_worktrees command without any pre-configured scope.",
           "type": "string",
           "const": "deny-create-worktrees",
@@ -2965,6 +3001,12 @@
           "type": "string",
           "const": "deny-delete-pairwise-vote",
           "markdownDescription": "Denies the delete_pairwise_vote command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the destroy_terminal command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-destroy-terminal",
+          "markdownDescription": "Denies the destroy_terminal command without any pre-configured scope."
         },
         {
           "description": "Denies the detect_harnesses command without any pre-configured scope.",
@@ -3019,6 +3061,12 @@
           "type": "string",
           "const": "deny-get-custom-profile",
           "markdownDescription": "Denies the get_custom_profile command."
+        },
+        {
+          "description": "Denies the get_cwd command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-cwd",
+          "markdownDescription": "Denies the get_cwd command without any pre-configured scope."
         },
         {
           "description": "Denies the get_diff_against_commit command without any pre-configured scope.",
@@ -3267,6 +3315,12 @@
           "markdownDescription": "Denies the remove_worktrees command without any pre-configured scope."
         },
         {
+          "description": "Denies the resize_terminal command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-resize-terminal",
+          "markdownDescription": "Denies the resize_terminal command without any pre-configured scope."
+        },
+        {
           "description": "Denies the reveal_evaluation_session command without any pre-configured scope.",
           "type": "string",
           "const": "deny-reveal-evaluation-session",
@@ -3421,6 +3475,12 @@
           "type": "string",
           "const": "deny-write-plugin-file",
           "markdownDescription": "Denies the write_plugin_file command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the write_terminal command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-write-terminal",
+          "markdownDescription": "Denies the write_terminal command without any pre-configured scope."
         },
         {
           "description": "Default core plugins set.\n#### This default permission set includes:\n\n- `core:path:default`\n- `core:event:default`\n- `core:window:default`\n- `core:webview:default`\n- `core:app:default`\n- `core:image:default`\n- `core:resources:default`\n- `core:menu:default`\n- `core:tray:default`",
