@@ -18,7 +18,11 @@ export function saveImage(slug: string, data: Buffer, ext: string): string {
   return id;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
 export function getImagePath(slug: string, imageId: string): string | null {
+  // Validate UUID format to prevent matching unintended files
+  if (!UUID_RE.test(imageId)) return null;
   const dir = imageDir(slug);
   if (!fs.existsSync(dir)) return null;
   const files = fs.readdirSync(dir);

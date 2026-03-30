@@ -1,6 +1,7 @@
 import http from 'node:http';
 import { WsHub } from './ws/hub.js';
 import { createHttpApp } from './http/server.js';
+import { taskRunner } from './execution/runner.js';
 
 const PORT = Number(process.env.BOARD_PORT ?? 4800);
 
@@ -20,20 +21,21 @@ const hub = new WsHub(httpServer);
 const app = createHttpApp(hub);
 httpServer.on('request', app);
 
-httpServer.listen(PORT, () => {
-  console.log(`[board-server] HTTP + WebSocket listening on :${PORT}`);
+const HOST = process.env.BOARD_HOST ?? '127.0.0.1';
+
+httpServer.listen(PORT, HOST, () => {
+  console.log(`[board-server] HTTP + WebSocket listening on ${HOST}:${PORT}`);
 });
 
-process.on('SIGINT', () => {
+function shutdown() {
+  // Kill any running task processes to prevent orphans
+  taskRunner.stopAll();
   hub.close();
   httpServer.close();
   process.exit(0);
-});
+}
 
-process.on('SIGTERM', () => {
-  hub.close();
-  httpServer.close();
-  process.exit(0);
-});
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
 
 export { hub };

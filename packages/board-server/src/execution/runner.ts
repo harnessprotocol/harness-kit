@@ -130,6 +130,16 @@ export class TaskRunner {
       completed_at: new Date().toISOString(),
     });
   }
+
+  /** Kill all running processes (used during shutdown) */
+  stopAll(): void {
+    for (const proc of this.processes.values()) {
+      if (proc.exitCode === null) {
+        proc.kill('SIGTERM');
+      }
+    }
+    this.processes.clear();
+  }
 }
 
 function buildPrompt(description: string, phases: PhaseConfig[]): string {

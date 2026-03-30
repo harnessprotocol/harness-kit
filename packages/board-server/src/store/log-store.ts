@@ -17,11 +17,20 @@ function ensureLogDir(slug: string, taskId: number): void {
   fs.mkdirSync(logDir(slug, taskId), { recursive: true });
 }
 
+const MAX_LOG_SIZE = 50 * 1024 * 1024; // 50MB per task log file
+
 export function appendLog(slug: string, taskId: number, line: string, structured?: Record<string, unknown>): void {
   ensureLogDir(slug, taskId);
   const dir = logDir(slug, taskId);
+  const logPath = path.join(dir, 'execution.log');
+
+  // Enforce max log size to prevent unbounded disk growth
+  try {
+    if (fs.existsSync(logPath) && fs.statSync(logPath).size >= MAX_LOG_SIZE) return;
+  } catch { /* race condition ok — proceed */ }
+
   const ts = new Date().toISOString();
-  fs.appendFileSync(path.join(dir, 'execution.log'), line + '\n');
+  fs.appendFileSync(logPath, line + '\n');
   if (structured !== undefined) {
     fs.appendFileSync(path.join(dir, 'execution.jsonl'), JSON.stringify({ ts, ...structured, message: line }) + '\n');
   }

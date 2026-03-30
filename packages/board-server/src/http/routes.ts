@@ -6,6 +6,17 @@ import { listProfiles } from '../execution/profiles.js';
 import type { TaskStatus, EpicStatus } from '../types.js';
 import type { WsHub } from '../ws/hub.js';
 
+// Allowed enum values for input validation
+const VALID_STATUSES = new Set<string>(['planning', 'in-progress', 'ai-review', 'human-review', 'done']);
+const VALID_PRIORITIES = new Set<string>(['low', 'medium', 'high', 'critical']);
+const VALID_EPIC_STATUSES = new Set<string>(['active', 'completed', 'archived']);
+
+/** Extract safe error message (no stack traces or internal paths) */
+function safeError(err: unknown): string {
+  if (err instanceof Error) return err.message;
+  return 'Internal error';
+}
+
 export function createRouter(hub?: WsHub): Router {
   const router = Router();
 
@@ -15,7 +26,7 @@ export function createRouter(hub?: WsHub): Router {
     try {
       res.json(store.listProjects());
     } catch (err) {
-      res.status(500).json({ error: String(err) });
+      res.status(500).json({ error: safeError(err) });
     }
   });
 
@@ -31,7 +42,7 @@ export function createRouter(hub?: WsHub): Router {
       const project = store.createProject({ name, description, color, repo_url });
       res.status(201).json(project);
     } catch (err) {
-      res.status(400).json({ error: String(err) });
+      res.status(400).json({ error: safeError(err) });
     }
   });
 
@@ -45,7 +56,7 @@ export function createRouter(hub?: WsHub): Router {
       const project = store.updateProject(req.params.slug, { description, color, repo_url });
       res.json(project);
     } catch (err) {
-      res.status(400).json({ error: String(err) });
+      res.status(400).json({ error: safeError(err) });
     }
   });
 
@@ -55,7 +66,7 @@ export function createRouter(hub?: WsHub): Router {
       if (!project) return res.status(404).json({ error: 'Not found' });
       res.json(project);
     } catch (err) {
-      res.status(500).json({ error: String(err) });
+      res.status(500).json({ error: safeError(err) });
     }
   });
 
@@ -68,7 +79,7 @@ export function createRouter(hub?: WsHub): Router {
       const epic = store.createEpic(req.params.slug, name, description);
       res.status(201).json(epic);
     } catch (err) {
-      res.status(400).json({ error: String(err) });
+      res.status(400).json({ error: safeError(err) });
     }
   });
 
@@ -76,10 +87,11 @@ export function createRouter(hub?: WsHub): Router {
     try {
       const epicId = Number(req.params.epicId);
       const { status } = req.body as { status: EpicStatus };
+      if (!VALID_EPIC_STATUSES.has(status)) return res.status(400).json({ error: 'Invalid epic status' });
       const epic = store.updateEpicStatus(req.params.slug, epicId, status);
       res.json(epic);
     } catch (err) {
-      res.status(400).json({ error: String(err) });
+      res.status(400).json({ error: safeError(err) });
     }
   });
 
@@ -92,7 +104,7 @@ export function createRouter(hub?: WsHub): Router {
       const tasks = store.listTasks({ project: req.params.slug, epicId, status });
       res.json(tasks);
     } catch (err) {
-      res.status(500).json({ error: String(err) });
+      res.status(500).json({ error: safeError(err) });
     }
   });
 
@@ -104,7 +116,7 @@ export function createRouter(hub?: WsHub): Router {
       const task = store.createTask(req.params.slug, epicId, title, description);
       res.status(201).json(task);
     } catch (err) {
-      res.status(400).json({ error: String(err) });
+      res.status(400).json({ error: safeError(err) });
     }
   });
 
@@ -121,6 +133,10 @@ export function createRouter(hub?: WsHub): Router {
         agent_profile?: string;
         use_worktree?: boolean;
       };
+      // Validate enum fields
+      if (status !== undefined && !VALID_STATUSES.has(status)) return res.status(400).json({ error: 'Invalid status' });
+      if (priority !== undefined && !VALID_PRIORITIES.has(priority)) return res.status(400).json({ error: 'Invalid priority' });
+
       const updates: Partial<import('../types.js').Task> = {};
       if (title !== undefined) updates.title = title;
       if (description !== undefined) updates.description = description;
@@ -133,7 +149,7 @@ export function createRouter(hub?: WsHub): Router {
       const task = store.updateTask(req.params.slug, taskId, updates);
       res.json(task);
     } catch (err) {
-      res.status(400).json({ error: String(err) });
+      res.status(400).json({ error: safeError(err) });
     }
   });
 
@@ -147,7 +163,7 @@ export function createRouter(hub?: WsHub): Router {
       const comment = store.addComment(req.params.slug, taskId, author, body);
       res.status(201).json(comment);
     } catch (err) {
-      res.status(400).json({ error: String(err) });
+      res.status(400).json({ error: safeError(err) });
     }
   });
 
@@ -163,7 +179,7 @@ export function createRouter(hub?: WsHub): Router {
       if (project) hub?.notifyProjectChanged(slug, project);
       res.json(subtask);
     } catch (err) {
-      res.status(400).json({ error: String(err) });
+      res.status(400).json({ error: safeError(err) });
     }
   });
 
@@ -175,7 +191,7 @@ export function createRouter(hub?: WsHub): Router {
       if (project) hub?.notifyProjectChanged(slug, project);
       res.json(subtask);
     } catch (err) {
-      res.status(400).json({ error: String(err) });
+      res.status(400).json({ error: safeError(err) });
     }
   });
 
@@ -187,7 +203,7 @@ export function createRouter(hub?: WsHub): Router {
       if (project) hub?.notifyProjectChanged(slug, project);
       res.sendStatus(204);
     } catch (err) {
-      res.status(400).json({ error: String(err) });
+      res.status(400).json({ error: safeError(err) });
     }
   });
 
@@ -226,7 +242,7 @@ export function createRouter(hub?: WsHub): Router {
       if (updated) hub?.notifyProjectChanged(slug, updated);
       res.json({ ok: true });
     } catch (err) {
-      res.status(400).json({ error: String(err) });
+      res.status(400).json({ error: safeError(err) });
     }
   });
 
@@ -238,7 +254,7 @@ export function createRouter(hub?: WsHub): Router {
       if (project) hub?.notifyProjectChanged(slug, project);
       res.json({ ok: true });
     } catch (err) {
-      res.status(400).json({ error: String(err) });
+      res.status(400).json({ error: safeError(err) });
     }
   });
 
@@ -251,7 +267,7 @@ export function createRouter(hub?: WsHub): Router {
       const lines = logStore.readTail(slug, Number(taskId), tail);
       res.json({ lines });
     } catch (err) {
-      res.status(500).json({ error: String(err) });
+      res.status(500).json({ error: safeError(err) });
     }
   });
 

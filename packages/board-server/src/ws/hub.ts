@@ -4,6 +4,8 @@ import * as store from '../store/yaml-store.js';
 import { FileWatcher } from '../store/file-watcher.js';
 import type { TaskExecution, Project } from '../types.js';
 
+const LOCALHOST_ORIGIN = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
+
 export type BoardEvent =
   | { type: 'project_updated'; slug: string; project: ReturnType<typeof store.readProject> }
   | { type: 'connected'; message: string }
@@ -19,7 +21,16 @@ export class WsHub {
   private logSubscriptions = new Map<WebSocket, Set<number>>();
 
   constructor(httpServer: Server) {
-    this.wss = new WebSocketServer({ server: httpServer, path: '/ws' });
+    this.wss = new WebSocketServer({
+      server: httpServer,
+      path: '/ws',
+      maxPayload: 64 * 1024, // 64KB max message size
+      verifyClient: ({ origin }: { origin?: string }) => {
+        // Allow connections with no origin (non-browser clients like Tauri)
+        if (!origin) return true;
+        return LOCALHOST_ORIGIN.test(origin);
+      },
+    });
     this.watcher = new FileWatcher(store.projectsDir());
 
     this.wss.on('connection', (ws: WebSocket, _req: IncomingMessage) => {
