@@ -3,11 +3,12 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { Sun, Moon, PanelLeftClose, PanelLeft, Plus, LayoutGrid, TableProperties } from 'lucide-react';
+import { Sun, Moon, PanelLeftClose, PanelLeft, Plus, GitBranch } from 'lucide-react';
 import type { Project } from '../lib/api';
 import { api } from '../lib/api';
 import { cn } from '../lib/utils';
-import { toggleTheme, getTheme } from '../lib/theme';
+import { toggleTheme, getTheme, setAccent, getAccent, ACCENT_PRESETS } from '../lib/theme';
+import type { AccentName } from '../lib/theme';
 
 const PROJECT_COLORS = [
   '#7c3aed', '#2563eb', '#16a34a', '#d97706',
@@ -20,13 +21,26 @@ function colorDot(color?: string) {
   return color ?? '#55556a';
 }
 
-export function Sidebar() {
+export interface WorktreeTask {
+  id: number;
+  title: string;
+  branch?: string;
+  worktree_path?: string;
+}
+
+interface SidebarProps {
+  worktreeTasks?: WorktreeTask[];
+}
+
+export function Sidebar({ worktreeTasks: worktreeTasksProp }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
   const [isDark, setIsDark] = useState(false);
+  const [currentAccent, setCurrentAccent] = useState<AccentName>('purple');
+  const [selfFetchedWorktreeTasks, setSelfFetchedWorktreeTasks] = useState<WorktreeTask[]>([]);
 
   // Form state
   const [formOpen, setFormOpen] = useState(false);
@@ -43,6 +57,7 @@ export function Sidebar() {
       if (stored === 'collapsed') setCollapsed(true);
     } catch { /* ignore */ }
     setIsDark(document.documentElement.classList.contains('dark'));
+    setCurrentAccent(getAccent());
   }, []);
 
   // Fetch projects
@@ -52,6 +67,30 @@ export function Sidebar() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  // Derive current project slug from pathname (e.g. "/my-project" or "/my-project/...")
+  const currentProjectSlug = pathname.split('/').filter(Boolean)[0] ?? null;
+
+  // Self-fetch worktree tasks when no prop is provided
+  useEffect(() => {
+    if (worktreeTasksProp !== undefined) return; // use prop instead
+    if (!currentProjectSlug) {
+      setSelfFetchedWorktreeTasks([]);
+      return;
+    }
+    api.projects.get(currentProjectSlug)
+      .then(project => {
+        const tasks = project.epics.flatMap(e =>
+          e.tasks
+            .filter(t => t.worktree_path)
+            .map(t => ({ id: t.id, title: t.title, branch: t.branch, worktree_path: t.worktree_path }))
+        );
+        setSelfFetchedWorktreeTasks(tasks);
+      })
+      .catch(() => setSelfFetchedWorktreeTasks([]));
+  }, [currentProjectSlug, worktreeTasksProp]);
+
+  const worktreeTasks = worktreeTasksProp ?? selfFetchedWorktreeTasks;
 
   // Auto-focus name input when form opens
   useEffect(() => {
@@ -100,6 +139,13 @@ export function Sidebar() {
     toggleTheme();
     setIsDark(document.documentElement.classList.contains('dark'));
   }
+
+  function handleAccentChange(name: AccentName) {
+    setAccent(name);
+    setCurrentAccent(name);
+  }
+
+  const expanded = !collapsed;
 
   return (
     <aside
@@ -270,10 +316,30 @@ export function Sidebar() {
               + New Project
             </button>
           )}
+
+          {/* Worktrees section */}
+          {expanded && worktreeTasks && worktreeTasks.length > 0 && (
+            <div className="mt-3 px-2 py-1">
+              <div className="mb-1.5 px-0 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]">
+                Worktrees
+              </div>
+              {worktreeTasks.map(t => (
+                <div
+                  key={t.id}
+                  className="flex items-center gap-2 rounded px-2 py-1 text-[11px] text-[var(--text-muted)] hover:bg-[var(--bg-hover)] transition-colors"
+                  title={t.worktree_path}
+                >
+                  <GitBranch size={11} className="shrink-0" />
+                  <span className="flex-1 truncate">{t.branch ?? `task-${t.id}`}</span>
+                  <span className="shrink-0 opacity-50">#{t.id}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </nav>
       )}
 
-      {/* Settings section — theme toggle */}
+      {/* Settings section — theme toggle + accent swatches + new task */}
       {collapsed ? (
         <div className="flex flex-col items-center gap-2 border-t border-[var(--border-subtle)] py-3">
           <button
@@ -285,7 +351,25 @@ export function Sidebar() {
           </button>
         </div>
       ) : (
-        <div className="border-t border-[var(--border-subtle)] px-4 py-3">
+        <div className="border-t border-[var(--border-subtle)] px-4 py-3 space-y-2">
+          {/* Accent color swatches */}
+          <div className="flex flex-wrap gap-1.5">
+            {(Object.entries(ACCENT_PRESETS) as [AccentName, typeof ACCENT_PRESETS[AccentName]][]).map(([name, preset]) => (
+              <button
+                key={name}
+                type="button"
+                onClick={() => handleAccentChange(name)}
+                aria-label={`Accent: ${preset.label}`}
+                title={preset.label}
+                className={cn(
+                  'h-3.5 w-3.5 rounded-full border-none p-0 cursor-pointer transition-transform hover:scale-110',
+                  currentAccent === name && 'outline outline-2 outline-offset-1 outline-[var(--text-primary)]',
+                )}
+                style={{ background: preset.swatch }}
+              />
+            ))}
+          </div>
+
           {/* Theme toggle row */}
           <button
             onClick={handleThemeToggle}
@@ -302,7 +386,7 @@ export function Sidebar() {
               // Dispatch a custom event that the board page listens to
               window.dispatchEvent(new CustomEvent('harness:new-task'));
             }}
-            className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-md bg-[var(--accent)] px-3 py-2 text-xs font-medium text-white cursor-pointer hover:opacity-90 transition-opacity"
+            className="flex w-full items-center justify-center gap-1.5 rounded-md bg-[var(--cta-bg)] px-3 py-2 text-xs font-medium text-[var(--cta-text)] cursor-pointer hover:bg-[var(--cta-bg-hover)] transition-colors"
           >
             <Plus size={14} />
             New Task

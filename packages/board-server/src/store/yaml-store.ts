@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import yaml from 'js-yaml';
-import type { Project, Epic, Task, Comment, TaskStatus, EpicStatus } from '../types.js';
+import type { Project, Epic, Task, Comment, TaskStatus, EpicStatus, Subtask, TaskExecution, PhaseConfig } from '../types.js';
 
 function getBoardDir(): string {
   if (process.env.NODE_ENV === 'test' && process.env.BOARD_TEST_DIR) {
@@ -87,7 +87,7 @@ export function createProject(opts: { name: string; description?: string; color?
     color,
     repo_url,
     next_id: 1,
-    version: 1,
+    version: 2,
     epics: [],
     created_at: ts,
     updated_at: ts,
@@ -165,8 +165,11 @@ export function createTask(
     title,
     description,
     status: 'planning',
+    use_worktree: true,
     linked_commits: [],
     comments: [],
+    subtasks: [],
+    reference_images: [],
     created_at: ts,
     updated_at: ts,
   };
@@ -185,30 +188,48 @@ export function findTask(project: Project, taskId: number): { epic: Epic; task: 
   return undefined;
 }
 
-function withTask(projectSlug: string, taskId: number, fn: (task: Task, epic: Epic, project: Project) => void): Task {
+function withTask<T>(
+  projectSlug: string,
+  taskId: number,
+  fn: (task: Task, epic: Epic, project: Project) => T,
+): T extends Promise<infer U> ? Promise<U> : T {
   const project = readProject(projectSlug);
   if (!project) throw new Error(`Project "${projectSlug}" not found`);
   const found = findTask(project, taskId);
   if (!found) throw new Error(`Task ${taskId} not found`);
-  fn(found.task, found.epic, project);
+  const result = fn(found.task, found.epic, project);
+
+  // Support async callbacks
+  if (result instanceof Promise) {
+    return result.then((value) => {
+      const ts = now();
+      found.task.updated_at = ts;
+      found.epic.updated_at = ts;
+      project.updated_at = ts;
+      writeProject(project);
+      return value;
+    }) as T extends Promise<infer U> ? Promise<U> : T;
+  }
+
   const ts = now();
   found.task.updated_at = ts;
   found.epic.updated_at = ts;
   project.updated_at = ts;
   writeProject(project);
-  return found.task;
+  return result as T extends Promise<infer U> ? Promise<U> : T;
 }
 
 export function updateTask(
   projectSlug: string,
   taskId: number,
-  updates: Partial<Pick<Task, 'title' | 'description' | 'status' | 'no_worktree'>>,
+  updates: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'category' | 'complexity' | 'agent_profile' | 'use_worktree' | 'phase_config'>>,
 ): Task {
   // Strip undefined values so we don't wipe existing fields
   const cleanUpdates = Object.fromEntries(Object.entries(updates).filter(([, v]) => v !== undefined));
   return withTask(projectSlug, taskId, (task) => {
     Object.assign(task, cleanUpdates);
-  });
+    return task;
+  }) as Task;
 }
 
 export function moveTask(projectSlug: string, taskId: number, status: TaskStatus): Task {
@@ -232,26 +253,106 @@ export function linkBranch(projectSlug: string, taskId: number, branch: string, 
   return withTask(projectSlug, taskId, (task) => {
     task.branch = branch;
     if (worktreePath) task.worktree_path = worktreePath;
-  });
+    return task;
+  }) as Task;
 }
 
 export function linkCommit(projectSlug: string, taskId: number, sha: string): Task {
   return withTask(projectSlug, taskId, (task) => {
     if (!task.linked_commits.includes(sha)) task.linked_commits.push(sha);
-  });
+    return task;
+  }) as Task;
 }
 
 export function blockTask(projectSlug: string, taskId: number, reason: string): Task {
   return withTask(projectSlug, taskId, (task) => {
     task.blocked = true;
     task.blocked_reason = reason;
-  });
+    return task;
+  }) as Task;
 }
 
 export function unblockTask(projectSlug: string, taskId: number): Task {
   return withTask(projectSlug, taskId, (task) => {
     task.blocked = false;
     task.blocked_reason = undefined;
+    return task;
+  }) as Task;
+}
+
+// --- Subtask operations ---
+
+export function addSubtask(slug: string, taskId: number, title: string): Subtask {
+  let created: Subtask | undefined;
+  withTask(slug, taskId, (task, _epic, project) => {
+    const subtask: Subtask = {
+      id: project.next_id++,
+      title,
+      status: 'pending',
+    };
+    task.subtasks.push(subtask);
+    created = subtask;
+  });
+  if (!created) throw new Error('Failed to create subtask');
+  return created;
+}
+
+export function updateSubtask(
+  slug: string,
+  taskId: number,
+  subtaskId: number,
+  updates: { status?: Subtask['status']; title?: string },
+): Subtask {
+  let updated: Subtask | undefined;
+  withTask(slug, taskId, (task) => {
+    const subtask = task.subtasks.find(s => s.id === subtaskId);
+    if (!subtask) throw new Error(`Subtask ${subtaskId} not found`);
+    if (updates.status !== undefined) {
+      subtask.status = updates.status;
+      if (updates.status === 'completed') subtask.completed_at = new Date().toISOString();
+      else delete subtask.completed_at;
+    }
+    if (updates.title !== undefined) subtask.title = updates.title;
+    updated = subtask;
+  });
+  if (!updated) throw new Error('Failed to update subtask');
+  return updated;
+}
+
+export function removeSubtask(slug: string, taskId: number, subtaskId: number): void {
+  withTask(slug, taskId, (task) => {
+    task.subtasks = task.subtasks.filter(s => s.id !== subtaskId);
+  });
+}
+
+// --- Execution operations ---
+
+export async function updateExecution(slug: string, taskId: number, execution: Partial<TaskExecution>): Promise<Task> {
+  const project = readProject(slug);
+  if (!project) throw new Error(`Project "${slug}" not found`);
+  const found = findTask(project, taskId);
+  if (!found) throw new Error(`Task ${taskId} not found`);
+  found.task.execution = {
+    ...(found.task.execution ?? {
+      status: 'idle',
+      phase: 'idle',
+      phase_progress: 0,
+      overall_progress: 0,
+      phases: [],
+    }),
+    ...execution,
+  };
+  const ts = now();
+  found.task.updated_at = ts;
+  found.epic.updated_at = ts;
+  project.updated_at = ts;
+  writeProject(project);
+  return found.task;
+}
+
+export function updatePhaseConfig(slug: string, taskId: number, phases: PhaseConfig[]): void {
+  withTask(slug, taskId, (task) => {
+    task.phase_config = phases;
   });
 }
 

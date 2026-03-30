@@ -1,7 +1,8 @@
 import express, { type Express } from 'express';
 import { createRouter } from './routes.js';
+import type { WsHub } from '../ws/hub.js';
 
-export function createHttpApp(): Express {
+export function createHttpApp(hub?: WsHub): Express {
   const app = express();
 
   // CORS — allow the Next.js dev server and any localhost origin
@@ -20,7 +21,7 @@ export function createHttpApp(): Express {
 
   app.get('/health', (_req, res) => res.json({ ok: true, service: 'harness-board' }));
 
-  app.use('/api/v1', createRouter());
+  app.use('/api/v1', createRouter(hub));
 
   return app;
 }

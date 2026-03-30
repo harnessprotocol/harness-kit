@@ -1,8 +1,12 @@
 import { Router } from 'express';
 import * as store from '../store/yaml-store.js';
+import * as logStore from '../store/log-store.js';
+import { taskRunner } from '../execution/runner.js';
+import { listProfiles } from '../execution/profiles.js';
 import type { TaskStatus, EpicStatus } from '../types.js';
+import type { WsHub } from '../ws/hub.js';
 
-export function createRouter(): Router {
+export function createRouter(hub?: WsHub): Router {
   const router = Router();
 
   // --- Projects ---
@@ -107,17 +111,25 @@ export function createRouter(): Router {
   router.patch('/projects/:slug/tasks/:taskId', (req, res) => {
     try {
       const taskId = Number(req.params.taskId);
-      const { title, description, status, no_worktree } = req.body as {
+      const { title, description, status, priority, category, complexity, agent_profile, use_worktree } = req.body as {
         title?: string;
         description?: string;
         status?: TaskStatus;
-        no_worktree?: boolean;
+        priority?: import('../types.js').TaskPriority;
+        category?: string;
+        complexity?: string;
+        agent_profile?: string;
+        use_worktree?: boolean;
       };
-      const updates: Partial<Pick<import('../types.js').Task, 'title' | 'description' | 'status' | 'no_worktree'>> = {};
+      const updates: Partial<import('../types.js').Task> = {};
       if (title !== undefined) updates.title = title;
       if (description !== undefined) updates.description = description;
       if (status !== undefined) updates.status = status;
-      if (no_worktree !== undefined) updates.no_worktree = no_worktree;
+      if (priority !== undefined) updates.priority = priority;
+      if (category !== undefined) updates.category = category;
+      if (complexity !== undefined) updates.complexity = complexity;
+      if (agent_profile !== undefined) updates.agent_profile = agent_profile;
+      if (use_worktree !== undefined) updates.use_worktree = use_worktree;
       const task = store.updateTask(req.params.slug, taskId, updates);
       res.json(task);
     } catch (err) {
@@ -137,6 +149,116 @@ export function createRouter(): Router {
     } catch (err) {
       res.status(400).json({ error: String(err) });
     }
+  });
+
+  // --- Subtasks ---
+
+  router.post('/projects/:slug/tasks/:taskId/subtasks', async (req, res) => {
+    try {
+      const { slug, taskId } = req.params;
+      const { title } = req.body as { title: string };
+      if (!title) return res.status(400).json({ error: 'title is required' });
+      const subtask = store.addSubtask(slug, Number(taskId), title);
+      const project = store.readProject(slug);
+      if (project) hub?.notifyProjectChanged(slug, project);
+      res.json(subtask);
+    } catch (err) {
+      res.status(400).json({ error: String(err) });
+    }
+  });
+
+  router.patch('/projects/:slug/tasks/:taskId/subtasks/:subtaskId', async (req, res) => {
+    try {
+      const { slug, taskId, subtaskId } = req.params;
+      const subtask = store.updateSubtask(slug, Number(taskId), Number(subtaskId), req.body as { status?: import('../types.js').Subtask['status']; title?: string });
+      const project = store.readProject(slug);
+      if (project) hub?.notifyProjectChanged(slug, project);
+      res.json(subtask);
+    } catch (err) {
+      res.status(400).json({ error: String(err) });
+    }
+  });
+
+  router.delete('/projects/:slug/tasks/:taskId/subtasks/:subtaskId', async (req, res) => {
+    try {
+      const { slug, taskId, subtaskId } = req.params;
+      store.removeSubtask(slug, Number(taskId), Number(subtaskId));
+      const project = store.readProject(slug);
+      if (project) hub?.notifyProjectChanged(slug, project);
+      res.sendStatus(204);
+    } catch (err) {
+      res.status(400).json({ error: String(err) });
+    }
+  });
+
+  // --- Execution ---
+
+  router.post('/projects/:slug/tasks/:taskId/execute', async (req, res) => {
+    try {
+      const { slug, taskId } = req.params;
+      const { agent_profile, phase_config } = req.body as {
+        agent_profile?: string;
+        phase_config?: import('../types.js').PhaseConfig[];
+      };
+      const project = store.readProject(slug);
+      if (!project) return res.status(404).json({ error: 'Project not found' });
+      const allTasks = project.epics.flatMap(e => e.tasks);
+      const task = allTasks.find(t => t.id === Number(taskId));
+      if (!task) return res.status(404).json({ error: 'Task not found' });
+
+      await taskRunner.start({
+        slug,
+        taskId: Number(taskId),
+        description: task.description ?? task.title,
+        worktreePath: task.worktree_path,
+        phaseConfig: phase_config ?? task.phase_config,
+        agentProfile: agent_profile ?? task.agent_profile,
+        onLog: (line) => hub?.broadcastLogLine(slug, Number(taskId), line),
+        onPhaseChange: (phase) => hub?.broadcastTaskEvent({
+          type: 'task_phase_changed',
+          slug,
+          task_id: Number(taskId),
+          phase,
+        }),
+      });
+
+      const updated = store.readProject(slug);
+      if (updated) hub?.notifyProjectChanged(slug, updated);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(400).json({ error: String(err) });
+    }
+  });
+
+  router.post('/projects/:slug/tasks/:taskId/stop', async (req, res) => {
+    try {
+      const { slug, taskId } = req.params;
+      await taskRunner.stop(slug, Number(taskId));
+      const project = store.readProject(slug);
+      if (project) hub?.notifyProjectChanged(slug, project);
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(400).json({ error: String(err) });
+    }
+  });
+
+  // --- Logs ---
+
+  router.get('/projects/:slug/tasks/:taskId/logs', (req, res) => {
+    try {
+      const { slug, taskId } = req.params;
+      const tail = Number(req.query.tail) || 100;
+      const lines = logStore.readTail(slug, Number(taskId), tail);
+      res.json({ lines });
+    } catch (err) {
+      res.status(500).json({ error: String(err) });
+    }
+  });
+
+  // --- Agent Profiles ---
+
+  router.get('/profiles', (_req, res) => {
+    res.json(listProfiles());
   });
 
   return router;

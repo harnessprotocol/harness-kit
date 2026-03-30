@@ -21,6 +21,10 @@ export const taskTools = [
         epic_id: { type: 'number', description: 'Epic ID' },
         title: { type: 'string', description: 'Task title' },
         description: { type: 'string', description: 'Optional task description' },
+        priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical'], description: 'Task priority' },
+        category: { type: 'string', description: 'Task category (feature, bug_fix, refactor, docs, security, performance)' },
+        agent_profile: { type: 'string', description: 'Agent profile ID (auto, complex, balanced, quick)' },
+        use_worktree: { type: 'boolean', description: 'Create isolated git worktree for this task (default: true)' },
       },
       required: ['project', 'epic_id', 'title'],
     },
@@ -29,15 +33,28 @@ export const taskTools = [
       epic_id: z.number(),
       title: z.string(),
       description: z.string().optional(),
+      priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+      category: z.string().optional(),
+      agent_profile: z.string().optional(),
+      use_worktree: z.boolean().optional(),
     }),
-    handler: async (args: { project: string; epic_id: number; title: string; description?: string }) => {
+    handler: async (args: { project: string; epic_id: number; title: string; description?: string; priority?: import('../../types.js').TaskPriority; category?: string; agent_profile?: string; use_worktree?: boolean }) => {
       const task = store.createTask(args.project, args.epic_id, args.title, args.description);
+      // Apply optional fields after creation
+      if (args.priority !== undefined || args.category !== undefined || args.agent_profile !== undefined || args.use_worktree !== undefined) {
+        const updates: Partial<import('../../types.js').Task> = {};
+        if (args.priority !== undefined) updates.priority = args.priority;
+        if (args.category !== undefined) updates.category = args.category;
+        if (args.agent_profile !== undefined) updates.agent_profile = args.agent_profile;
+        if (args.use_worktree !== undefined) updates.use_worktree = args.use_worktree;
+        return { content: [{ type: 'text' as const, text: JSON.stringify(store.updateTask(args.project, task.id, updates), null, 2) }] };
+      }
       return { content: [{ type: 'text' as const, text: JSON.stringify(task, null, 2) }] };
     },
   },
   {
     name: 'update_task',
-    description: 'Update task title, description, or no_worktree flag',
+    description: 'Update task fields (title, description, priority, category, agent profile, worktree settings)',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -45,7 +62,10 @@ export const taskTools = [
         task_id: { type: 'number', description: 'Task ID' },
         title: { type: 'string', description: 'New title' },
         description: { type: 'string', description: 'New description' },
-        no_worktree: { type: 'boolean', description: 'Disable auto-worktree for this task' },
+        priority: { type: 'string', enum: ['low', 'medium', 'high', 'critical'], description: 'Task priority' },
+        category: { type: 'string', description: 'Task category' },
+        agent_profile: { type: 'string', description: 'Agent profile ID' },
+        use_worktree: { type: 'boolean', description: 'Create isolated git worktree for this task' },
       },
       required: ['project', 'task_id'],
     },
@@ -54,13 +74,19 @@ export const taskTools = [
       task_id: z.number(),
       title: z.string().optional(),
       description: z.string().optional(),
-      no_worktree: z.boolean().optional(),
+      priority: z.enum(['low', 'medium', 'high', 'critical']).optional(),
+      category: z.string().optional(),
+      agent_profile: z.string().optional(),
+      use_worktree: z.boolean().optional(),
     }),
-    handler: async (args: { project: string; task_id: number; title?: string; description?: string; no_worktree?: boolean }) => {
+    handler: async (args: { project: string; task_id: number; title?: string; description?: string; priority?: import('../../types.js').TaskPriority; category?: string; agent_profile?: string; use_worktree?: boolean }) => {
       const task = store.updateTask(args.project, args.task_id, {
         title: args.title,
         description: args.description,
-        no_worktree: args.no_worktree,
+        priority: args.priority,
+        category: args.category,
+        agent_profile: args.agent_profile,
+        use_worktree: args.use_worktree,
       });
       return { content: [{ type: 'text' as const, text: JSON.stringify(task, null, 2) }] };
     },
@@ -87,7 +113,7 @@ export const taskTools = [
       const notes: string[] = [];
 
       // --- Worktree auto-creation on in-progress ---
-      if (args.status === 'in-progress' && !task.branch && !task.no_worktree) {
+      if (args.status === 'in-progress' && !task.branch && task.use_worktree !== false) {
         const worktreeResult = tryCreateWorktree(args.project, task.id, task.title);
         if (worktreeResult.created) {
           store.linkBranch(args.project, task.id, worktreeResult.branch!, worktreeResult.worktreePath!);

@@ -1,11 +1,11 @@
 import http from 'node:http';
-import { createHttpApp } from './http/server.js';
 import { WsHub } from './ws/hub.js';
+import { createHttpApp } from './http/server.js';
 
 const PORT = Number(process.env.BOARD_PORT ?? 4800);
 
-const app = createHttpApp();
-const httpServer = http.createServer(app);
+// Create hub first so routes can reference it
+const httpServer = http.createServer();
 
 // Register before WsHub so this listener fires before ws re-emits on WebSocketServer
 httpServer.on('error', (err: NodeJS.ErrnoException) => {
@@ -17,6 +17,8 @@ httpServer.on('error', (err: NodeJS.ErrnoException) => {
 });
 
 const hub = new WsHub(httpServer);
+const app = createHttpApp(hub);
+httpServer.on('request', app);
 
 httpServer.listen(PORT, () => {
   console.log(`[board-server] HTTP + WebSocket listening on :${PORT}`);
