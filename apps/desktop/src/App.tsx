@@ -15,10 +15,7 @@ import SyncPage from "./pages/harness/SyncPage";
 import MarketplacePage from "./pages/marketplace/MarketplacePage";
 import DashboardPage from "./pages/observatory/DashboardPage";
 import SessionsPage from "./pages/observatory/SessionsPage";
-import ComparatorSetupPage from "./pages/comparator/ComparatorSetupPage";
-import ComparatorRunPage from "./pages/comparator/ComparatorRunPage";
-import ComparatorHistoryPage from "./pages/comparator/ComparatorHistoryPage";
-import ComparatorAnalyticsPage from "./pages/comparator/ComparatorAnalyticsPage";
+import TerminalsPage from "./pages/terminals/TerminalsPage";
 import PermissionsPage from "./pages/security/PermissionsPage";
 import SecretsPage from "./pages/security/SecretsPage";
 import AuditLogPage from "./pages/security/AuditLogPage";
@@ -80,12 +77,8 @@ export default function App() {
           <Route path="observatory" element={<DashboardPage />} />
           <Route path="observatory/sessions" element={<SessionsPage />} />
 
-          {/* Comparator */}
-          <Route path="comparator" element={<ComparatorSetupPage />} />
-          <Route path="comparator/run/:comparisonId" element={<ComparatorRunPage />} />
-          <Route path="comparator/history" element={<ComparatorHistoryPage />} />
-          <Route path="comparator/analytics" element={<ComparatorAnalyticsPage />} />
-          <Route path="comparator/review/:comparisonId" element={<ComparatorRunPage />} />
+          {/* Terminals */}
+          <Route path="terminals" element={<TerminalsPage />} />
 
           {/* Security */}
           <Route path="security/permissions" element={<PermissionsPage />} />

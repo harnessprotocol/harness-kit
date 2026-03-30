@@ -11,7 +11,7 @@ mod membrain_commands;
 pub static HOME_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 use tauri::Manager;
-use commands::comparator::ComparatorState;
+use commands::terminal::TerminalState;
 use board_server::BoardServerState;
 use membrain_commands::MembrainServerState;
 
@@ -27,7 +27,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
-        .manage(ComparatorState::default())
+        .manage(TerminalState::default())
         .manage(database)
         .manage(BoardServerState::new())
         .manage(commands::relay::LocalRelay(tokio::sync::Mutex::new(None)))
@@ -73,19 +73,13 @@ pub fn run() {
             commands::observatory::read_live_activity,
             commands::observatory::compute_live_stats,
             commands::observatory::read_session_transcript,
-            // Comparator — live
-            commands::comparator::detect_harnesses,
-            commands::comparator::start_comparison,
-            commands::comparator::kill_panel,
-            // Comparator — persistence
-            commands::comparator_db::save_comparison,
-            commands::comparator_db::save_panel_result,
-            commands::comparator_db::list_comparisons,
-            commands::comparator_db::get_comparison,
-            commands::comparator_db::delete_comparison,
-            commands::comparator_db::save_file_diffs,
-            commands::comparator_db::get_comparison_diffs,
-            commands::comparator_db::get_comparison_setup,
+            // Terminal sessions
+            commands::terminal::get_cwd,
+            commands::terminal::create_terminal,
+            commands::terminal::destroy_terminal,
+            commands::terminal::write_terminal,
+            commands::terminal::resize_terminal,
+            commands::terminal::detect_harnesses,
             // Git
             commands::git::check_git_repo,
             commands::git::create_worktrees,

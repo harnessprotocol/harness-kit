@@ -3,10 +3,7 @@ import type {
   InstalledPlugin, KnownMarketplace, PluginUpdateInfo, HooksConfig, StatsCache,
   SessionSummary, SessionFacet, ActiveSession, LiveDailyActivity,
   LiveStats, SessionTranscript,
-  HarnessInfo, ComparisonRequest, GitRepoInfo, ComparisonSummary,
-  ComparisonDetail, PanelDiffs, ReplaySetup, SaveEvaluationRequest,
-  EvaluationScores, AnalyticsData, FileDiffEntry,
-  EvaluationSession, PairwiseVote, PairwiseAnalytics,
+  HarnessInfo,
   PermissionsState, SecurityPreset, KeychainSecretInfo,
   EnvConfigEntry, AuditEntry, FileTreeNode,
 } from "@harness-kit/shared";
@@ -197,169 +194,10 @@ export async function readSessionTranscript(sessionId: string, project: string):
   return invoke<SessionTranscript>("read_session_transcript", { sessionId, project });
 }
 
-// ── Comparator commands ─────────────────────────────────────
+// ── Terminal commands ───────────────────────────────────────
 
 export async function detectHarnesses(): Promise<HarnessInfo[]> {
   return invoke<HarnessInfo[]>("detect_harnesses");
-}
-
-export async function startComparison(request: ComparisonRequest): Promise<void> {
-  return invoke<void>("start_comparison", { request });
-}
-
-export async function killPanel(comparisonId: string, panelId: string): Promise<void> {
-  return invoke<void>("kill_panel", { comparisonId, panelId });
-}
-
-// ── Git commands ────────────────────────────────────────────
-
-export async function checkGitRepo(dir: string): Promise<GitRepoInfo> {
-  return invoke<GitRepoInfo>("check_git_repo", { dir });
-}
-
-export async function createWorktrees(
-  repoDir: string, comparisonId: string, panelIds: string[], commit: string,
-): Promise<Array<{ panelId: string; worktreePath: string }>> {
-  return invoke("create_worktrees", { repoDir, comparisonId, panelIds, commit });
-}
-
-export async function removeWorktrees(repoDir: string, comparisonId: string): Promise<void> {
-  return invoke<void>("remove_worktrees", { repoDir, comparisonId });
-}
-
-export async function getDiffAgainstCommit(
-  worktreePath: string, baseCommit: string,
-): Promise<FileDiffEntry[]> {
-  return invoke("get_diff_against_commit", { worktreePath, baseCommit });
-}
-
-// ── Persistence commands ────────────────────────────────────
-
-interface SavePanelRequest {
-  id: string;
-  harnessId: string;
-  harnessName: string;
-  model?: string;
-}
-
-export async function saveComparison(
-  id: string, prompt: string, workingDir: string,
-  pinnedCommit: string | null, panels: SavePanelRequest[],
-): Promise<void> {
-  return invoke<void>("save_comparison", { id, prompt, workingDir, pinnedCommit, panels });
-}
-
-export async function savePanelResult(
-  comparisonId: string, panelId: string,
-  exitCode: number | null, durationMs: number | null,
-  status: string, outputText: string | null,
-): Promise<void> {
-  return invoke<void>("save_panel_result", {
-    comparisonId, panelId, exitCode, durationMs, status, outputText,
-  });
-}
-
-export async function listComparisons(
-  limit?: number, offset?: number,
-): Promise<ComparisonSummary[]> {
-  return invoke<ComparisonSummary[]>("list_comparisons", { limit, offset });
-}
-
-export async function getComparison(comparisonId: string): Promise<ComparisonDetail> {
-  return invoke<ComparisonDetail>("get_comparison", { comparisonId });
-}
-
-export async function deleteComparison(comparisonId: string): Promise<void> {
-  return invoke<void>("delete_comparison", { comparisonId });
-}
-
-export async function saveFileDiffs(
-  comparisonId: string, panelId: string,
-  diffs: Array<{ filePath: string; diffText: string; changeType: string }>,
-): Promise<void> {
-  return invoke<void>("save_file_diffs", { comparisonId, panelId, diffs });
-}
-
-export async function getComparisonDiffs(comparisonId: string): Promise<PanelDiffs[]> {
-  return invoke<PanelDiffs[]>("get_comparison_diffs", { comparisonId });
-}
-
-export async function getComparisonSetup(comparisonId: string): Promise<ReplaySetup> {
-  return invoke<ReplaySetup>("get_comparison_setup", { comparisonId });
-}
-
-// ── Evaluation commands ─────────────────────────────────────
-
-export async function saveEvaluation(evaluation: SaveEvaluationRequest): Promise<void> {
-  return invoke<void>("save_evaluation", { ...evaluation });
-}
-
-export async function getEvaluations(comparisonId: string): Promise<EvaluationScores[]> {
-  return invoke<EvaluationScores[]>("get_evaluations", { comparisonId });
-}
-
-export async function updateEvaluationScore(
-  evaluationId: string, dimension: string, score: number,
-): Promise<void> {
-  return invoke<void>("update_evaluation_score", { evaluationId, dimension, score });
-}
-
-// ── Pairwise voting commands ─────────────────────────────────────
-
-export async function createEvaluationSession(
-  id: string,
-  comparisonId: string,
-  blindOrder: string | null,
-): Promise<EvaluationSession> {
-  return invoke<EvaluationSession>("create_evaluation_session", { id, comparisonId, blindOrder });
-}
-
-export async function getEvaluationSession(
-  comparisonId: string,
-): Promise<EvaluationSession | null> {
-  return invoke<EvaluationSession | null>("get_evaluation_session", { comparisonId });
-}
-
-export async function revealEvaluationSession(sessionId: string): Promise<void> {
-  return invoke<void>("reveal_evaluation_session", { sessionId });
-}
-
-export async function savePairwiseVote(
-  id: string,
-  comparisonId: string,
-  sessionId: string,
-  leftPanelId: string,
-  rightPanelId: string,
-  dimension: string,
-  result: string,
-): Promise<void> {
-  return invoke<void>("save_pairwise_vote", {
-    id, comparisonId, sessionId, leftPanelId, rightPanelId, dimension, result,
-  });
-}
-
-export async function getPairwiseVotes(sessionId: string): Promise<PairwiseVote[]> {
-  return invoke<PairwiseVote[]>("get_pairwise_votes", { sessionId });
-}
-
-export async function getPairwiseAnalytics(): Promise<PairwiseAnalytics> {
-  return invoke<PairwiseAnalytics>("get_pairwise_analytics");
-}
-
-export async function deletePairwiseVote(sessionId: string, dimension: string): Promise<void> {
-  return invoke<void>("delete_pairwise_vote", { sessionId, dimension });
-}
-
-// ── Export commands ──────────────────────────────────────────
-
-export async function exportComparisonJson(comparisonId: string): Promise<string> {
-  return invoke<string>("export_comparison_json", { comparisonId });
-}
-
-// ── Analytics commands ──────────────────────────────────────
-
-export async function getComparatorAnalytics(): Promise<AnalyticsData> {
-  return invoke<AnalyticsData>("get_comparator_analytics");
 }
 
 // ── Security commands ───────────────────────────────────────
