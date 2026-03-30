@@ -470,13 +470,13 @@ describe("HTTP Routes", () => {
       expect(res.body.status).toBe("in-progress");
     });
 
-    it("updates task no_worktree flag", async () => {
+    it("updates task use_worktree flag", async () => {
       const res = await request(app)
         .patch("/api/v1/projects/test-project/tasks/2")
-        .send({ no_worktree: true });
+        .send({ use_worktree: false });
 
       expect(res.status).toBe(200);
-      expect(res.body.no_worktree).toBe(true);
+      expect(res.body.use_worktree).toBe(false);
     });
 
     it("updates multiple fields at once", async () => {

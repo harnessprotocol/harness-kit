@@ -41,7 +41,7 @@ describe("yaml-store", () => {
       expect(project.name).toBe("Test Project");
       expect(project.slug).toBe("test-project");
       expect(project.next_id).toBe(1);
-      expect(project.version).toBe(1);
+      expect(project.version).toBe(2);
       expect(project.epics).toEqual([]);
       expect(project.created_at).toBeDefined();
       expect(project.updated_at).toBeDefined();
@@ -435,13 +435,13 @@ describe("yaml-store", () => {
         title: "New Title",
         description: "New Description",
         status: "in-progress",
-        no_worktree: true,
+        use_worktree: false,
       });
 
       expect(updated.title).toBe("New Title");
       expect(updated.description).toBe("New Description");
       expect(updated.status).toBe("in-progress");
-      expect(updated.no_worktree).toBe(true);
+      expect(updated.use_worktree).toBe(false);
     });
 
     it("strips undefined values", () => {

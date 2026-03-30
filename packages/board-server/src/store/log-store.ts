@@ -2,10 +2,15 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 
-const LOGS_DIR = path.join(os.homedir(), '.harness', 'board', 'logs');
+function getLogsDir(): string {
+  if (process.env.NODE_ENV === 'test' && process.env.BOARD_TEST_LOG_DIR) {
+    return process.env.BOARD_TEST_LOG_DIR;
+  }
+  return path.join(os.homedir(), '.harness', 'board', 'logs');
+}
 
 function logDir(slug: string, taskId: number): string {
-  return path.join(LOGS_DIR, slug, `task-${taskId}`);
+  return path.join(getLogsDir(), slug, `task-${taskId}`);
 }
 
 function ensureLogDir(slug: string, taskId: number): void {
