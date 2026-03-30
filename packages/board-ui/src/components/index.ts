@@ -14,6 +14,8 @@ export { ExecutionPhaseBadge } from './ExecutionPhaseBadge';
 
 export { InfoBanner } from './InfoBanner';
 
+export { PhaseProgressIndicator } from './PhaseProgressIndicator';
+
 export { LogViewer } from './LogViewer';
 
 export { PhaseConfigGrid } from './PhaseConfigGrid';
@@ -49,3 +51,10 @@ export { Tooltip } from './Tooltip';
 
 export { ViewToggle } from './ViewToggle';
 export type { ViewMode } from './ViewToggle';
+
+// UI primitives
+export { Card, CardContent } from './ui/card';
+export { Badge } from './ui/badge';
+export { Button } from './ui/button';
+export { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from './ui/dropdown-menu';
+export { Checkbox } from './ui/checkbox';

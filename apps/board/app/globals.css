@@ -46,6 +46,24 @@
   --warning: #b5a50a;
   --info: #2563eb;
   --destructive: #dc2626;
+
+  /* Aliases for component library compatibility */
+  --card: #ffffff;
+  --card-foreground: #181714;
+  --foreground: #181714;
+  --muted-foreground: #9a9892;
+  --primary: #a5a66a;
+  --primary-foreground: #ffffff;
+  --secondary: #faf9f7;
+  --muted: #faf9f7;
+  --ring: #a5a66a;
+
+  /* Radius system */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
 }
 
 .dark {
@@ -90,6 +108,17 @@
   --info: #479ffa;
   --destructive: #ff5c5c;
   --blocked: #ff5c5c;
+
+  /* Aliases for component library compatibility */
+  --card: #121216;
+  --card-foreground: #e6e6e6;
+  --foreground: #e6e6e6;
+  --muted-foreground: #868f97;
+  --primary: #d6d876;
+  --primary-foreground: #0b0b0f;
+  --secondary: #1a1a1f;
+  --muted: #1a1a1f;
+  --ring: #d6d876;
 }
 
 /* ── Base ── */
@@ -100,7 +129,7 @@
 body {
   background: var(--bg-base);
   color: var(--text-primary);
-  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
   font-size: 13px;
   line-height: 1.45;
   margin: 0;
@@ -109,17 +138,24 @@ body {
 }
 
 /* ── Scrollbars — macOS-style thin ── */
-::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(0, 0, 0, 0.18); border-radius: 3px; }
 .dark ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.18); }
 
 /* ===== Aperant-style card animations ===== */
+.task-card-enhanced {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 .task-card-enhanced:hover {
   border-color: rgba(214, 216, 118, 0.4);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(214, 216, 118, 0.08), 0 1px 3px rgba(0, 0, 0, 0.3);
-  transition: border-color 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 0 0 1px rgba(214, 216, 118, 0.1), 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.dark .task-card-enhanced:hover {
+  box-shadow: 0 0 0 1px rgba(214, 216, 118, 0.15), 0 4px 20px rgba(0, 0, 0, 0.4);
 }
 
 .dark .task-running-pulse,
@@ -193,14 +229,44 @@ body {
     background: var(--cta-bg);
     animation: progress-indeterminate 1.5s ease-in-out infinite;
   }
+
+  @keyframes empty-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+
+  @keyframes subtask-dot-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.2); }
+  }
+
+  @keyframes status-running-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+}
+
+.empty-state-bounce {
+  animation: empty-bounce 3s ease-in-out infinite;
+}
+
+.subtask-dot-active {
+  animation: subtask-dot-pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Card surface base styling */
+.card-surface {
+  background-color: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
 }
 
 /* Column header accent borders */
-.column-header-planning    { border-top: 2px solid var(--text-muted); }
-.column-header-in-progress { border-top: 2px solid var(--info); }
-.column-header-ai-review   { border-top: 2px solid var(--warning); }
-.column-header-human-review { border-top: 2px solid #a855f7; }
-.column-header-done        { border-top: 2px solid var(--success); }
+.column-header-planning    { border-top: 3px solid var(--text-muted); }
+.column-header-in-progress { border-top: 3px solid var(--info); }
+.column-header-ai-review   { border-top: 3px solid var(--warning); }
+.column-header-human-review { border-top: 3px solid #a855f7; }
+.column-header-done        { border-top: 3px solid var(--success); }
 
 /* Drop zone highlight */
 .drop-zone-active {
@@ -211,7 +277,7 @@ body {
 /* Empty column state */
 .empty-column-dropzone {
   border: 2px dashed var(--border-subtle);
-  border-radius: 8px;
+  border-radius: var(--radius-lg);
   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 

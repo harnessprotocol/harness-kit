@@ -1,30 +1,80 @@
-import type { Task, TaskPriority } from '../lib/api';
-import { COLUMN_META } from '../lib/columns';
+import { useMemo } from 'react';
+import {
+  Play, Square, Clock, Target, Bug, Wrench, FileCode, Shield, Gauge,
+  Loader2, AlertTriangle, Archive, MoreVertical,
+} from 'lucide-react';
+import { Card, CardContent } from './ui/card';
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 import { cn } from '../lib/utils';
-import { Tooltip } from './Tooltip';
-import { ProgressBar } from './ProgressBar';
-import { ProgressDots } from './ProgressDots';
-import { PhaseStepsIndicator } from './PhaseStepsIndicator';
-import { ExecutionPhaseBadge } from './ExecutionPhaseBadge';
+import { PhaseProgressIndicator } from './PhaseProgressIndicator';
+import { COLUMNS } from '../lib/columns';
+import type { Task, TaskStatus, Subtask } from '../lib/api';
 
-interface Props {
+// ---------------------------------------------------------------------------
+// Prop types
+// ---------------------------------------------------------------------------
+
+interface TaskCardProps {
   task: Task;
   onClick?: () => void;
+  onStatusChange?: (newStatus: TaskStatus) => void;
+  onAction?: (action: string, taskId: number) => void;
   repoUrl?: string;
 }
 
-const PRIORITY_CONFIG: Record<TaskPriority, { label: string; className: string }> = {
-  critical: { label: 'Critical', className: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20' },
-  high: { label: 'High', className: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20' },
-  medium: { label: 'Medium', className: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20' },
-  low: { label: 'Low', className: 'bg-gray-500/10 text-[var(--text-muted)] border-gray-500/20' },
+// ---------------------------------------------------------------------------
+// Status config
+// ---------------------------------------------------------------------------
+
+type BadgeVariant = 'success' | 'info' | 'warning' | 'purple' | 'destructive' | 'secondary' | 'outline';
+
+const STATUS_BADGE: Record<TaskStatus, { variant: BadgeVariant; label: string }> = {
+  planning:       { variant: 'secondary', label: 'Pending' },
+  'in-progress':  { variant: 'info',      label: 'Running' },
+  'ai-review':    { variant: 'warning',   label: 'AI Review' },
+  'human-review': { variant: 'purple',    label: 'Needs Review' },
+  done:           { variant: 'success',   label: 'Complete' },
 };
 
-function relativeTime(dateStr: string): string {
+// ---------------------------------------------------------------------------
+// Category icon mapping
+// ---------------------------------------------------------------------------
+
+const CATEGORY_ICONS: Record<string, typeof Target> = {
+  feature:     Target,
+  bug_fix:     Bug,
+  refactor:    Wrench,
+  docs:        FileCode,
+  security:    Shield,
+  performance: Gauge,
+};
+
+const CATEGORY_LABELS: Record<string, string> = {
+  feature:     'Feature',
+  bug_fix:     'Bug Fix',
+  refactor:    'Refactor',
+  docs:        'Docs',
+  security:    'Security',
+  performance: 'Performance',
+};
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+function formatRelativeTime(dateStr: string): string {
   const now = Date.now();
   const then = new Date(dateStr).getTime();
-  const diffMs = now - then;
-  const diffSec = Math.floor(diffMs / 1000);
+  const diffSec = Math.floor((now - then) / 1000);
   if (diffSec < 60) return 'just now';
   const diffMin = Math.floor(diffSec / 60);
   if (diffMin < 60) return `${diffMin}m ago`;
@@ -32,161 +82,217 @@ function relativeTime(dateStr: string): string {
   if (diffHr < 24) return `${diffHr}h ago`;
   const diffDay = Math.floor(diffHr / 24);
   if (diffDay < 30) return `${diffDay}d ago`;
-  const diffMonth = Math.floor(diffDay / 30);
-  return `${diffMonth}mo ago`;
+  return `${Math.floor(diffDay / 30)}mo ago`;
 }
 
-export function TaskCard({ task, onClick, repoUrl }: Props) {
-  const statusMeta = COLUMN_META[task.status];
-  const priorityCfg = task.priority ? PRIORITY_CONFIG[task.priority] : null;
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
+export function TaskCard({ task, onClick, onStatusChange, onAction, repoUrl }: TaskCardProps) {
+  const isRunning = task.status === 'in-progress';
+  const executionPhase = task.execution?.phase;
+  const hasActiveExecution = executionPhase
+    && executionPhase !== 'idle'
+    && executionPhase !== 'complete'
+    && executionPhase !== 'failed';
+
+  // Detect stuck tasks: running status but execution says idle/complete/failed
+  const isStuck = isRunning
+    && task.execution
+    && (task.execution.status === 'completed' || task.execution.status === 'failed' || task.execution.status === 'cancelled');
+
+  const subtasks: Subtask[] = task.subtasks ?? [];
+
+  const relativeTime = useMemo(
+    () => formatRelativeTime(task.updated_at),
+    [task.updated_at],
+  );
+
+  // Phase label for the execution badge
+  const phaseLabel = useMemo(() => {
+    if (!executionPhase) return '';
+    const labels: Record<string, string> = {
+      spec: 'Spec', planning: 'Planning', coding: 'Coding',
+      qa: 'QA', complete: 'Complete', failed: 'Failed', idle: 'Idle',
+    };
+    return labels[executionPhase] ?? executionPhase;
+  }, [executionPhase]);
+
+  // Status badge
+  const { variant: statusVariant, label: statusLabel } = STATUS_BADGE[task.status] ?? STATUS_BADGE.planning;
+
+  // Category icon + label
+  const CategoryIcon = task.category ? CATEGORY_ICONS[task.category] : undefined;
+  const categoryLabel = task.category ? (CATEGORY_LABELS[task.category] ?? task.category) : '';
+
+  // Status menu items for "Move To"
+  const statusMenuItems = useMemo(() => {
+    if (!onStatusChange) return null;
+    return COLUMNS.filter(s => s !== task.status).map(status => {
+      const meta = STATUS_BADGE[status];
+      return (
+        <DropdownMenuItem
+          key={status}
+          onClick={() => onStatusChange(status)}
+        >
+          {meta?.label ?? status}
+        </DropdownMenuItem>
+      );
+    });
+  }, [task.status, onStatusChange]);
+
+  // Action handlers
+  const handleStart = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onAction?.('start', task.id);
+  };
+
+  const handleStop = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onAction?.('stop', task.id);
+  };
+
+  const handleArchive = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onAction?.('archive', task.id);
+  };
 
   return (
-    <div
-      onClick={onClick}
+    <Card
       className={cn(
-        'task-card-enhanced flex flex-col gap-1.5 rounded-lg border p-2.5 cursor-pointer',
-        'transition-[border-color,background] duration-100',
-        'bg-[var(--bg-elevated)]',
-        task.blocked
-          ? 'border-[var(--blocked)] hover:border-[var(--blocked)]'
-          : 'border-[var(--border)] hover:border-[var(--accent)]',
-        'hover:bg-[var(--bg-hover)]',
-        task.execution?.status === 'running' && 'task-running-pulse',
+        'card-surface task-card-enhanced cursor-pointer',
+        isRunning && !isStuck && 'ring-2 ring-[var(--primary)] border-[var(--primary)] task-running-pulse',
+        isStuck && 'ring-2 ring-[var(--warning)] border-[var(--warning)] task-stuck-pulse',
       )}
+      onClick={onClick}
     >
-      {/* Header: title + id */}
-      <div className="flex items-start justify-between gap-2">
-        <span className="text-[13px] font-medium leading-snug text-[var(--text-primary)]">
+      <CardContent className="p-4">
+        {/* Title */}
+        <h3 className="font-semibold text-sm text-[var(--foreground)] line-clamp-2 leading-snug">
           {task.title}
-        </span>
-        <span className="shrink-0 text-[11px] text-[var(--text-muted)]">
-          #{task.id}
-        </span>
-      </div>
+        </h3>
 
-      {/* Description preview */}
-      {task.description && (
-        <p className="m-0 line-clamp-2 text-[11px] leading-relaxed text-[var(--text-secondary)]">
-          {task.description}
-        </p>
-      )}
-
-      {/* Phase steps indicator — only when execution has started */}
-      {task.execution && task.execution.phase !== 'idle' && (
-        <PhaseStepsIndicator
-          currentPhase={task.execution.phase === 'complete' || task.execution.phase === 'failed' ? undefined : task.execution.phase}
-          completedPhases={task.execution.phases?.filter(p => p.status === 'completed').map(p => p.name) ?? []}
-          failedPhase={task.execution.phase === 'failed' ? task.execution.current_subtask : undefined}
-          className="mt-0.5"
-        />
-      )}
-
-      {/* Progress bar — shown when subtasks exist or execution is running */}
-      {(task.subtasks && task.subtasks.length > 0) || (task.execution?.status === 'running') ? (
-        <ProgressBar
-          value={task.subtasks && task.subtasks.length > 0
-            ? task.subtasks.filter(s => s.status === 'completed').length / task.subtasks.length * 100
-            : task.execution?.overall_progress}
-          loading={task.execution?.status === 'running' && (!task.subtasks || task.subtasks.length === 0)}
-          shimmer={task.execution?.status === 'running'}
-          showLabel={!!task.subtasks && task.subtasks.length > 0}
-          height="h-1"
-          className="mt-0.5"
-        />
-      ) : null}
-
-      {/* Subtask dots */}
-      {task.subtasks && task.subtasks.length > 0 && (
-        <ProgressDots subtasks={task.subtasks} className="mt-0.5" />
-      )}
-
-      {/* Execution phase badge — while running */}
-      {task.execution?.status === 'running' && task.execution.phase !== 'idle' && (
-        <ExecutionPhaseBadge phase={task.execution.phase} isRunning className="mt-0.5 self-start" />
-      )}
-
-      {/* Badges row: status, priority, epic */}
-      <div className="flex flex-wrap items-center gap-1.5">
-        {/* Status badge */}
-        <span
-          className="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-1.5 py-px text-[10px] font-medium text-[var(--text-muted)]"
-        >
-          <span
-            className="inline-block size-1.5 rounded-full"
-            style={{ backgroundColor: statusMeta?.color }}
-          />
-          {statusMeta?.label ?? task.status}
-        </span>
-
-        {/* Priority label */}
-        {priorityCfg && (
-          <span
-            className={cn(
-              'rounded-full border px-1.5 py-px text-[10px] font-semibold uppercase tracking-wide',
-              priorityCfg.className,
-            )}
-          >
-            {priorityCfg.label}
-          </span>
+        {/* Description */}
+        {task.description && (
+          <p className="mt-2 text-xs text-[var(--muted-foreground)] line-clamp-2">
+            {task.description.slice(0, 120)}
+          </p>
         )}
 
-        {/* Epic badge */}
-        {task.epic_name && (
-          <span className="rounded-full border border-[var(--border-subtle)] bg-[var(--bg-surface)] px-1.5 py-px text-[11px] text-[var(--text-muted)]">
-            {task.epic_name}
-          </span>
-        )}
-      </div>
+        {/* Badges section */}
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          {/* Status badge */}
+          <Badge variant={statusVariant} className="text-[10px] px-1.5 py-0.5">
+            {statusLabel}
+          </Badge>
 
-      {/* Footer row */}
-      <div className="mt-0.5 flex items-center gap-2">
-        {/* Blocked indicator */}
-        {task.blocked && (
-          <Tooltip text="Blocked — click to see reason" position="top">
-            <span className="rounded bg-red-500/10 px-1.5 py-px text-[10px] font-semibold uppercase tracking-wider text-[var(--blocked)]">
+          {/* Category badge with icon */}
+          {task.category && CategoryIcon && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+              <CategoryIcon className="h-2.5 w-2.5 mr-0.5" />
+              {categoryLabel}
+            </Badge>
+          )}
+
+          {/* Execution phase badge when actively running */}
+          {hasActiveExecution && (
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0.5 flex items-center gap-1">
+              <Loader2 className="h-2.5 w-2.5 animate-spin" />
+              {phaseLabel}
+            </Badge>
+          )}
+
+          {/* Blocked badge */}
+          {task.blocked && (
+            <Badge variant="destructive" className="text-[10px] px-1.5 py-0.5 flex items-center gap-1">
+              <AlertTriangle className="h-2.5 w-2.5" />
               Blocked
-            </span>
-          </Tooltip>
+            </Badge>
+          )}
+        </div>
+
+        {/* Progress section — show when subtasks exist or task is running */}
+        {(subtasks.length > 0 || isRunning) && (
+          <div className="mt-4">
+            <PhaseProgressIndicator
+              phase={task.execution?.phase}
+              subtasks={subtasks}
+              phaseProgress={task.execution?.phase_progress}
+              isRunning={isRunning}
+            />
+          </div>
         )}
 
-        {/* Branch */}
-        {task.branch && (
-          repoUrl ? (
-            <a
-              href={`${repoUrl}/tree/${task.branch}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={e => e.stopPropagation()}
-              className="max-w-[140px] truncate font-mono text-[11px] text-[var(--text-muted)] no-underline hover:text-[var(--accent)]"
-            >
-              {task.branch}
-            </a>
-          ) : (
-            <span className="max-w-[140px] truncate font-mono text-[11px] text-[var(--text-muted)]">
-              {task.branch}
-            </span>
-          )
-        )}
+        {/* Footer */}
+        <div className="mt-4 flex items-center justify-between">
+          <div className="flex items-center gap-1.5 text-xs text-[var(--muted-foreground)]">
+            <Clock className="h-3 w-3" />
+            <span>{relativeTime}</span>
+          </div>
 
-        {/* Spacer */}
-        <div className="flex-1" />
+          <div className="flex items-center gap-1.5">
+            {/* Action buttons based on status */}
+            {task.status === 'planning' && onAction && (
+              <Button
+                variant="default"
+                size="sm"
+                className="h-7 px-2.5"
+                onClick={handleStart}
+              >
+                <Play className="mr-1.5 h-3 w-3" />
+                Start
+              </Button>
+            )}
 
-        {/* Comment count */}
-        {task.comments.length > 0 && (
-          <Tooltip text={`${task.comments.length} comment(s) — click to view`} position="top">
-            <span className="flex items-center gap-1 text-[11px] text-[var(--text-muted)]">
-              {task.comments.length}
-            </span>
-          </Tooltip>
-        )}
+            {task.status === 'in-progress' && onAction && (
+              <Button
+                variant="destructive"
+                size="sm"
+                className="h-7 px-2.5"
+                onClick={handleStop}
+              >
+                <Square className="mr-1.5 h-3 w-3" />
+                Stop
+              </Button>
+            )}
 
-        {/* Relative timestamp */}
-        <Tooltip text={new Date(task.updated_at).toLocaleString()} position="top">
-          <span className="text-[10px] text-[var(--text-muted)]">
-            {relativeTime(task.updated_at)}
-          </span>
-        </Tooltip>
-      </div>
-    </div>
+            {task.status === 'done' && onAction && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2.5"
+                onClick={handleArchive}
+              >
+                <Archive className="mr-1.5 h-3 w-3" />
+                Archive
+              </Button>
+            )}
+
+            {/* Three-dot menu for Move To */}
+            {statusMenuItems && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 w-7 p-0"
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label="Task actions"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenuLabel>Move to</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {statusMenuItems}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

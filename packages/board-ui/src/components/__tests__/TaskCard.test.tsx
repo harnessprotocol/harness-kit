@@ -1,3 +1,4 @@
+import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import type { Task } from '../../lib/api';
@@ -9,7 +10,6 @@ vi.mock('framer-motion', () => ({
     get: (_, tag) => {
       const Component = ({ children, ...props }: Record<string, unknown> & { children?: React.ReactNode }) => {
         const Tag = typeof tag === 'string' ? tag : 'div';
-        // Filter out framer-motion-specific props
         const { initial, animate, exit, transition, whileHover, whileTap, style, className, ...rest } = props;
         return <Tag style={style as React.CSSProperties} className={className as string} {...rest}>{children}</Tag>;
       };
@@ -19,26 +19,53 @@ vi.mock('framer-motion', () => ({
   }),
 }));
 
-// Mock lucide-react icons
-vi.mock('lucide-react', () => ({
-  X: ({ size, ...props }: Record<string, unknown>) => <span data-testid="icon-x" {...props} />,
-  Play: ({ size, ...props }: Record<string, unknown>) => <span data-testid="icon-play" {...props} />,
-  Square: ({ size, ...props }: Record<string, unknown>) => <span data-testid="icon-square" {...props} />,
-  Loader2: ({ size, ...props }: Record<string, unknown>) => <span data-testid="icon-loader" {...props} />,
-  Pencil: ({ size, ...props }: Record<string, unknown>) => <span data-testid="icon-pencil" {...props} />,
-  FolderOpen: ({ size, ...props }: Record<string, unknown>) => <span data-testid="icon-folder" {...props} />,
-  ChevronDown: ({ size, ...props }: Record<string, unknown>) => <span data-testid="icon-chevron" {...props} />,
-  Sparkles: ({ size, ...props }: Record<string, unknown>) => <span data-testid="icon-sparkles" {...props} />,
-  Brain: ({ size, ...props }: Record<string, unknown>) => <span data-testid="icon-brain" {...props} />,
-  Scale: ({ size, ...props }: Record<string, unknown>) => <span data-testid="icon-scale" {...props} />,
-  Zap: ({ size, ...props }: Record<string, unknown>) => <span data-testid="icon-zap" {...props} />,
-  Info: ({ size, ...props }: Record<string, unknown>) => <span data-testid="icon-info" {...props} />,
-  AlertTriangle: ({ size, ...props }: Record<string, unknown>) => <span data-testid="icon-alert" {...props} />,
-  CheckCircle: ({ size, ...props }: Record<string, unknown>) => <span data-testid="icon-check" {...props} />,
-  GitBranch: ({ size, ...props }: Record<string, unknown>) => <span data-testid="icon-git" {...props} />,
+// Mock lucide-react icons — return simple spans
+vi.mock('lucide-react', () => {
+  const icon = (name: string) => {
+    const Comp = (props: Record<string, unknown>) => <span data-testid={`icon-${name}`} {...props} />;
+    Comp.displayName = name;
+    return Comp;
+  };
+  return {
+    Play: icon('play'), Square: icon('square'), Clock: icon('clock'),
+    Target: icon('target'), Bug: icon('bug'), Wrench: icon('wrench'),
+    FileCode: icon('filecode'), Shield: icon('shield'), Gauge: icon('gauge'),
+    Loader2: icon('loader2'), AlertTriangle: icon('alert-triangle'),
+    Archive: icon('archive'), MoreVertical: icon('more-vertical'),
+  };
+});
+
+// Mock ui primitives that don't exist yet
+vi.mock('../ui/card', () => ({
+  Card: ({ children, className, onClick }: { children: React.ReactNode; className?: string; onClick?: () => void }) =>
+    <div className={className} onClick={onClick} data-testid="card">{children}</div>,
+  CardContent: ({ children, className }: { children: React.ReactNode; className?: string }) =>
+    <div className={className}>{children}</div>,
+}));
+
+vi.mock('../ui/badge', () => ({
+  Badge: ({ children, variant, className }: { children: React.ReactNode; variant?: string; className?: string }) =>
+    <span data-variant={variant} className={className}>{children}</span>,
+}));
+
+vi.mock('../ui/button', () => ({
+  Button: ({ children, onClick, className, ...props }: Record<string, unknown> & { children?: React.ReactNode; onClick?: (e: React.MouseEvent) => void; className?: string }) =>
+    <button onClick={onClick} className={className}>{children}</button>,
+}));
+
+vi.mock('../ui/dropdown-menu', () => ({
+  DropdownMenu: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenuContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenuItem: ({ children, onClick }: { children: React.ReactNode; onClick?: () => void }) =>
+    <div role="menuitem" onClick={onClick}>{children}</div>,
+  DropdownMenuLabel: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DropdownMenuSeparator: () => <hr />,
 }));
 
 import { TaskCard } from '../TaskCard';
+
+const noop = () => {};
 
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
@@ -56,60 +83,57 @@ function makeTask(overrides: Partial<Task> = {}): Task {
 }
 
 describe('TaskCard', () => {
-  it('renders task title and ID', () => {
-    render(<TaskCard task={makeTask()} />);
+  it('renders task title', () => {
+    render(<TaskCard task={makeTask()} onClick={noop} />);
     expect(screen.getByText('Implement OAuth login')).toBeInTheDocument();
-    expect(screen.getByText('#42')).toBeInTheDocument();
   });
 
-  it('shows priority badge when task has priority', () => {
-    render(<TaskCard task={makeTask({ priority: 'high' })} />);
-    expect(screen.getByText('High')).toBeInTheDocument();
+  it('shows status badge with correct label', () => {
+    render(<TaskCard task={makeTask({ status: 'planning' })} onClick={noop} />);
+    expect(screen.getByText('Pending')).toBeInTheDocument();
   });
 
-  it('does not show priority badge when priority is undefined', () => {
-    render(<TaskCard task={makeTask({ priority: undefined })} />);
-    expect(screen.queryByText('High')).not.toBeInTheDocument();
-    expect(screen.queryByText('Medium')).not.toBeInTheDocument();
-    expect(screen.queryByText('Low')).not.toBeInTheDocument();
-    expect(screen.queryByText('Critical')).not.toBeInTheDocument();
+  it('shows Running status badge for in-progress tasks', () => {
+    render(<TaskCard task={makeTask({ status: 'in-progress' })} onClick={noop} />);
+    expect(screen.getByText('Running')).toBeInTheDocument();
   });
 
   it('shows description preview when present', () => {
-    render(<TaskCard task={makeTask()} />);
+    render(<TaskCard task={makeTask()} onClick={noop} />);
     expect(screen.getByText('Add OAuth2 support for GitHub and Google providers')).toBeInTheDocument();
   });
 
   it('does not show description when absent', () => {
-    render(<TaskCard task={makeTask({ description: undefined })} />);
+    render(<TaskCard task={makeTask({ description: undefined })} onClick={noop} />);
     expect(screen.queryByText('Add OAuth2 support for GitHub and Google providers')).not.toBeInTheDocument();
   });
 
   it('shows "Blocked" indicator when task.blocked is true', () => {
-    render(<TaskCard task={makeTask({ blocked: true })} />);
+    render(<TaskCard task={makeTask({ blocked: true })} onClick={noop} />);
     expect(screen.getByText('Blocked')).toBeInTheDocument();
   });
 
   it('does not show "Blocked" indicator when task.blocked is false', () => {
-    render(<TaskCard task={makeTask({ blocked: false })} />);
+    render(<TaskCard task={makeTask({ blocked: false })} onClick={noop} />);
     expect(screen.queryByText('Blocked')).not.toBeInTheDocument();
   });
 
-  it('shows ProgressBar when subtasks exist', () => {
+  it('shows progress section when subtasks exist', () => {
     const task = makeTask({
       subtasks: [
         { id: 1, title: 'Sub 1', status: 'completed' },
         { id: 2, title: 'Sub 2', status: 'pending' },
       ],
     });
-    const { container } = render(<TaskCard task={task} />);
-    // ProgressBar renders a progress bar container with rounded-full
+    const { container } = render(<TaskCard task={task} onClick={noop} />);
+    // PhaseProgressIndicator renders a progress bar container with rounded-full
     const progressBars = container.querySelectorAll('.rounded-full');
     expect(progressBars.length).toBeGreaterThan(0);
   });
 
-  it('shows PhaseStepsIndicator when execution has started', () => {
+  it('shows phase steps when execution has started', () => {
     const task = makeTask({
+      status: 'in-progress',
       execution: {
         status: 'running',
         phase: 'coding',
@@ -123,15 +147,16 @@ describe('TaskCard', () => {
         ],
       },
     });
-    render(<TaskCard task={task} />);
-    // PhaseStepsIndicator renders phase labels
+    render(<TaskCard task={task} onClick={noop} />);
+    // PhaseProgressIndicator renders phase step labels
     expect(screen.getByText('Spec')).toBeInTheDocument();
     expect(screen.getByText('Plan')).toBeInTheDocument();
     expect(screen.getByText('Code')).toBeInTheDocument();
   });
 
-  it('shows running pulse class when execution status is running', () => {
+  it('shows running pulse class when task is in-progress', () => {
     const task = makeTask({
+      status: 'in-progress',
       execution: {
         status: 'running',
         phase: 'coding',
@@ -140,13 +165,14 @@ describe('TaskCard', () => {
         phases: [],
       },
     });
-    const { container } = render(<TaskCard task={task} />);
-    const card = container.firstElementChild;
+    const { container } = render(<TaskCard task={task} onClick={noop} />);
+    const card = container.querySelector('[data-testid="card"]');
     expect(card?.className).toContain('task-running-pulse');
   });
 
-  it('does not show running pulse class when not running', () => {
+  it('does not show running pulse class when not in-progress', () => {
     const task = makeTask({
+      status: 'done',
       execution: {
         status: 'completed',
         phase: 'complete',
@@ -155,8 +181,28 @@ describe('TaskCard', () => {
         phases: [],
       },
     });
-    const { container } = render(<TaskCard task={task} />);
-    const card = container.firstElementChild;
+    const { container } = render(<TaskCard task={task} onClick={noop} />);
+    const card = container.querySelector('[data-testid="card"]');
     expect(card?.className).not.toContain('task-running-pulse');
+  });
+
+  it('shows category badge with label when category is set', () => {
+    render(<TaskCard task={makeTask({ category: 'bug_fix' })} onClick={noop} />);
+    expect(screen.getByText('Bug Fix')).toBeInTheDocument();
+  });
+
+  it('shows Start button for planning tasks when onAction is provided', () => {
+    render(<TaskCard task={makeTask({ status: 'planning' })} onClick={noop} onAction={noop} />);
+    expect(screen.getByText('Start')).toBeInTheDocument();
+  });
+
+  it('shows Stop button for in-progress tasks when onAction is provided', () => {
+    render(<TaskCard task={makeTask({ status: 'in-progress' })} onClick={noop} onAction={noop} />);
+    expect(screen.getByText('Stop')).toBeInTheDocument();
+  });
+
+  it('shows Archive button for done tasks when onAction is provided', () => {
+    render(<TaskCard task={makeTask({ status: 'done' })} onClick={noop} onAction={noop} />);
+    expect(screen.getByText('Archive')).toBeInTheDocument();
   });
 });

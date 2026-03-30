@@ -1,15 +1,17 @@
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { Task } from '../lib/api';
+import type { Task, TaskStatus } from '../lib/api';
 import { TaskCard } from './TaskCard';
 
 interface Props {
   task: Task;
   onClick?: () => void;
+  onStatusChange?: (newStatus: TaskStatus) => void;
+  onAction?: (action: string, taskId: number) => void;
   repoUrl?: string;
 }
 
-export function SortableTaskCard({ task, onClick, repoUrl }: Props) {
+export function SortableTaskCard({ task, onClick, onStatusChange, onAction, repoUrl }: Props) {
   const {
     attributes,
     listeners,
@@ -30,7 +32,13 @@ export function SortableTaskCard({ task, onClick, repoUrl }: Props) {
       {...attributes}
       {...listeners}
     >
-      <TaskCard task={task} onClick={onClick} repoUrl={repoUrl} />
+      <TaskCard
+        task={task}
+        onClick={onClick ?? (() => {})}
+        onStatusChange={onStatusChange}
+        onAction={onAction}
+        repoUrl={repoUrl}
+      />
     </div>
   );
 }
