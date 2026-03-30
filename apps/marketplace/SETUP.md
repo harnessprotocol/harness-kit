@@ -20,6 +20,30 @@ Required variables:
 | `GITHUB_TOKEN` | GitHub PAT with repo read access (optional — for syncing private repo content) |
 | `GITHUB_WEBHOOK_SECRET` | Match the secret set in your GitHub webhook config |
 
+## Configure GitHub OAuth
+
+To enable user authentication for ratings and reviews, configure GitHub as an OAuth provider in Supabase:
+
+1. **Create a GitHub OAuth App:**
+   - Go to GitHub Settings → Developer settings → OAuth Apps → New OAuth App
+   - **Application name:** Harness Kit Marketplace (or your app name)
+   - **Homepage URL:** `http://localhost:3001` (or your production URL)
+   - **Authorization callback URL:** `https://<project-ref>.supabase.co/auth/v1/callback`
+   - Save the app and note the **Client ID** and **Client Secret**
+
+2. **Configure Supabase Auth:**
+   - In your Supabase dashboard, go to **Authentication → Providers**
+   - Enable the **GitHub** provider
+   - Enter your GitHub OAuth **Client ID** and **Client Secret**
+   - Save changes
+
+3. **Update Site URL (Production only):**
+   - In Supabase dashboard, go to **Authentication → URL Configuration**
+   - Set **Site URL** to your production domain (e.g., `https://marketplace.harness.com`)
+   - Add your production domain to **Redirect URLs**
+
+For local development, the default callback URL configuration will work. For production, update the GitHub OAuth app's callback URL and Supabase site URL to match your production domain.
+
 ## Seed the database
 
 Run the seed script once to populate categories, tags, and all 16 plugins from the local catalog:
