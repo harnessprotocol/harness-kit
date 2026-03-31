@@ -19,6 +19,15 @@ fn main() {
                 "read_hooks",
                 // Claude.md
                 "read_claude_md",
+                "write_config_file",
+                // MCP
+                "read_mcp_config",
+                "write_mcp_config",
+                // Custom Profiles
+                "list_custom_profiles",
+                "get_custom_profile",
+                "save_custom_profile",
+                "delete_custom_profile",
                 // Settings
                 "list_claude_dir",
                 // Observatory
@@ -29,18 +38,30 @@ fn main() {
                 "read_live_activity",
                 "compute_live_stats",
                 "read_session_transcript",
+                // Terminal sessions
+                "get_cwd",
+                "create_terminal",
+                "destroy_terminal",
+                "write_terminal",
+                "resize_terminal",
                 // Comparator — live
                 "detect_harnesses",
                 "start_comparison",
                 "kill_panel",
-                // Comparator — persistence
+                // Comparator — sessions
                 "save_comparison",
-                "save_panel_result",
+                "update_comparison_title",
+                "update_comparison_status",
                 "list_comparisons",
                 "get_comparison",
                 "delete_comparison",
+                // Comparator — panels
+                "save_panel",
+                "update_panel_result",
+                "save_panel_result",
                 "save_file_diffs",
                 "get_comparison_diffs",
+                "get_panel_diffs",
                 "get_comparison_setup",
                 // Git
                 "check_git_repo",
@@ -51,6 +72,14 @@ fn main() {
                 "save_evaluation",
                 "get_evaluations",
                 "update_evaluation_score",
+                // Pairwise voting
+                "create_evaluation_session",
+                "get_evaluation_session",
+                "reveal_evaluation_session",
+                "save_pairwise_vote",
+                "get_pairwise_votes",
+                "get_pairwise_analytics",
+                "delete_pairwise_vote",
                 // Export + Analytics
                 "export_comparison_json",
                 "get_comparator_analytics",
@@ -76,6 +105,11 @@ fn main() {
                 "board_server_install",
                 "board_server_start",
                 "board_server_restart",
+                // membrain
+                "membrain_check_installed",
+                "membrain_start",
+                "membrain_stop",
+                "membrain_get_port",
                 // Parity
                 "run_parity_scan",
                 "get_parity_snapshot",
@@ -91,6 +125,10 @@ fn main() {
                 "chat_save_messages",
                 "chat_load_messages",
                 "chat_purge_room",
+                // Local relay
+                "chat_start_local_relay",
+                "chat_stop_local_relay",
+                "chat_local_relay_running",
                 // Sync
                 "sync_read_file",
                 "sync_file_exists",

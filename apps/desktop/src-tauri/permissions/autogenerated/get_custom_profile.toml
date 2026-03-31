@@ -1,9 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
 [[permission]]
 identifier = "allow-get-custom-profile"
-description = "Allows the get_custom_profile command."
+description = "Enables the get_custom_profile command without any pre-configured scope."
 commands.allow = ["get_custom_profile"]
 
 [[permission]]
 identifier = "deny-get-custom-profile"
-description = "Denies the get_custom_profile command."
+description = "Denies the get_custom_profile command without any pre-configured scope."
 commands.deny = ["get_custom_profile"]

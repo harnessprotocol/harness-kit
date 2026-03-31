@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-save-panel"
+description = "Enables the save_panel command without any pre-configured scope."
+commands.allow = ["save_panel"]
+
+[[permission]]
+identifier = "deny-save-panel"
+description = "Denies the save_panel command without any pre-configured scope."
+commands.deny = ["save_panel"]

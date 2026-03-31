@@ -100,6 +100,19 @@ pub fn run() {
             // Export + Analytics
             commands::export::export_comparison_json,
             commands::export::get_comparator_analytics,
+            // Comparator sessions
+            commands::comparator::save_comparison,
+            commands::comparator::update_comparison_title,
+            commands::comparator::update_comparison_status,
+            commands::comparator::list_comparisons,
+            commands::comparator::get_comparison,
+            commands::comparator::delete_comparison,
+            // Comparator panels
+            commands::comparator_panels::save_panel,
+            commands::comparator_panels::update_panel_result,
+            commands::comparator_panels::save_file_diffs,
+            commands::comparator_panels::get_comparison_diffs,
+            commands::comparator_panels::get_panel_diffs,
             // Security
             commands::security::read_permissions,
             commands::security::update_permissions,

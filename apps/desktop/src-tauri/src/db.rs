@@ -159,6 +159,11 @@ pub fn init(data_dir: &Path) -> Result<Db, String> {
     )
     .map_err(|e| format!("Failed to run schema: {}", e))?;
 
+    // Migration: add title column to comparisons
+    conn.execute_batch("
+        ALTER TABLE comparisons ADD COLUMN title TEXT;
+    ").ok(); // .ok() ignores error if column already exists
+
     Ok(Db {
         conn: Mutex::new(conn),
     })

@@ -20,3 +20,5 @@ pub mod parity;
 pub mod chat;
 pub mod relay;
 pub mod pairwise;
+pub mod comparator;
+pub mod comparator_panels;

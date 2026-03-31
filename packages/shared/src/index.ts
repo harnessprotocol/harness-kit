@@ -40,6 +40,14 @@ export type {
   AuditEntry,
   ComponentCounts,
   FileTreeNode,
+  ComparisonPhase,
+  ComparisonStatus,
+  PanelStatus,
+  ComparisonSummary,
+  ComparisonDetail,
+  PanelDetail,
+  FileDiffInput,
+  FileDiffRow,
 } from "./types.js";
 
 export type {

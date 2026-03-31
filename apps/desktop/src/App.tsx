@@ -15,7 +15,7 @@ import SyncPage from "./pages/harness/SyncPage";
 import MarketplacePage from "./pages/marketplace/MarketplacePage";
 import DashboardPage from "./pages/observatory/DashboardPage";
 import SessionsPage from "./pages/observatory/SessionsPage";
-import TerminalsPage from "./pages/terminals/TerminalsPage";
+import ComparatorPage from "./pages/comparator/ComparatorPage";
 import PermissionsPage from "./pages/security/PermissionsPage";
 import SecretsPage from "./pages/security/SecretsPage";
 import AuditLogPage from "./pages/security/AuditLogPage";
@@ -78,7 +78,7 @@ export default function App() {
           <Route path="observatory/sessions" element={<SessionsPage />} />
 
           {/* Terminals */}
-          <Route path="terminals" element={<TerminalsPage />} />
+          <Route path="terminals" element={<ComparatorPage />} />
 
           {/* Security */}
           <Route path="security/permissions" element={<PermissionsPage />} />
