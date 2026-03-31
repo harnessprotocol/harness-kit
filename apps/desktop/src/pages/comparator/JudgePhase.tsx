@@ -4,24 +4,24 @@ import type { ComparisonState } from "../../hooks/useComparator";
 // ── Design Tokens ───────────────────────────────────────────
 
 const tokens = {
-  bgBase: "#f4f2ef",
-  bgSurface: "#faf9f7",
-  bgElevated: "#ffffff",
-  fgBase: "#181714",
-  fgMuted: "#5c5a56",
-  fgSubtle: "#9a9892",
-  fgPlaceholder: "#bcbab5",
-  borderBase: "rgba(0, 0, 0, 0.08)",
-  borderStrong: "rgba(0, 0, 0, 0.14)",
-  borderSubtle: "rgba(0, 0, 0, 0.05)",
-  accent: "#5b50e8",
-  accentLight: "rgba(91, 80, 232, 0.09)",
-  accentFg: "#4338d4",
-  accentText: "#5b50e8",
-  success: "#16a34a",
-  warning: "#d97706",
-  danger: "#dc2626",
-  hoverBg: "rgba(0, 0, 0, 0.04)",
+  bgBase: "var(--bg-base)",
+  bgSurface: "var(--bg-surface)",
+  bgElevated: "var(--bg-elevated)",
+  fgBase: "var(--fg-base)",
+  fgMuted: "var(--fg-muted)",
+  fgSubtle: "var(--fg-subtle)",
+  fgPlaceholder: "var(--fg-placeholder)",
+  borderBase: "var(--border-base)",
+  borderStrong: "var(--border-strong)",
+  borderSubtle: "var(--border-subtle)",
+  accent: "var(--accent)",
+  accentLight: "var(--accent-light)",
+  accentFg: "var(--accent-fg)",
+  accentText: "var(--accent-text)",
+  success: "var(--success)",
+  warning: "var(--warning)",
+  danger: "var(--danger)",
+  hoverBg: "var(--hover-bg)",
 };
 
 const fontStack = '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif';
@@ -66,6 +66,13 @@ const DEFAULT_DIMENSIONS = [
 
 const DEFAULT_PROMPT =
   "Evaluate the code quality, correctness, and completeness of each submission. Score each dimension 0-10.";
+
+const JUDGE_MODELS = [
+  "claude-sonnet-4-6",
+  "claude-opus-4-6",
+  "gpt-5",
+  "o4-mini",
+];
 
 // ── Styles ──────────────────────────────────────────────────
 
@@ -266,6 +273,69 @@ const styles = {
   checkboxChecked: {
     background: tokens.accent,
     borderColor: tokens.accent,
+  } as React.CSSProperties,
+
+  selectWrapper: {
+    position: "relative" as const,
+    marginTop: 10,
+  } as React.CSSProperties,
+
+  selectLabel: {
+    fontSize: 11,
+    fontWeight: 600,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.5px",
+    color: tokens.fgSubtle,
+    marginBottom: 6,
+    fontFamily: fontStack,
+  } as React.CSSProperties,
+
+  select: {
+    width: "100%",
+    height: 38,
+    padding: "0 12px",
+    fontSize: 13,
+    fontWeight: 500,
+    fontFamily: monoStack,
+    color: tokens.fgBase,
+    background: tokens.bgElevated,
+    border: `1px solid ${tokens.borderBase}`,
+    borderRadius: 6,
+    outline: "none",
+    cursor: "pointer",
+    appearance: "none" as const,
+    WebkitAppearance: "none" as const,
+    backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239a9892' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+    backgroundRepeat: "no-repeat",
+    backgroundPosition: "right 12px center",
+    transition: "border-color 150ms, box-shadow 150ms",
+  } as React.CSSProperties,
+
+  customRubricLabel: {
+    fontSize: 11,
+    fontWeight: 600,
+    textTransform: "uppercase" as const,
+    letterSpacing: "0.5px",
+    color: tokens.fgSubtle,
+    marginTop: 14,
+    marginBottom: 6,
+    fontFamily: fontStack,
+  } as React.CSSProperties,
+
+  customRubricTextarea: {
+    width: "100%",
+    minHeight: 72,
+    padding: "10px 12px",
+    fontFamily: fontStack,
+    fontSize: 13,
+    lineHeight: "1.6",
+    color: tokens.fgBase,
+    background: tokens.bgElevated,
+    border: `1px solid ${tokens.borderBase}`,
+    borderRadius: 6,
+    outline: "none",
+    resize: "vertical" as const,
+    transition: "border-color 150ms, box-shadow 150ms",
   } as React.CSSProperties,
 
   runBtn: {
@@ -490,6 +560,8 @@ export default function JudgePhase({ active }: JudgePhaseProps) {
   const [enabledDimensions, setEnabledDimensions] = useState<Set<string>>(
     new Set(DEFAULT_DIMENSIONS.slice(0, 3)),
   );
+  const [judgeModel, setJudgeModel] = useState("claude-sonnet-4-6");
+  const [customRubric, setCustomRubric] = useState("");
   const [results, setResults] = useState<JudgeResult | null>(null);
 
   // ── Toggle a rubric dimension ──────────────────────────────
@@ -509,12 +581,15 @@ export default function JudgePhase({ active }: JudgePhaseProps) {
   // ── Run judge (MVP: mock) ──────────────────────────────────
 
   const handleRunJudge = useCallback(() => {
-    const dims = Array.from(enabledDimensions);
+    const dims = [
+      ...Array.from(enabledDimensions),
+      ...customRubric.split("\n").map((l) => l.trim()).filter(Boolean),
+    ];
     if (dims.length === 0) return;
     const mockResults = generateMockResults(active.panels, dims);
     setResults(mockResults);
     setTab("results");
-  }, [active.panels, enabledDimensions]);
+  }, [active.panels, enabledDimensions, customRubric]);
 
   // ── Build harness options for radio list ────────────────────
 
@@ -604,6 +679,30 @@ export default function JudgePhase({ active }: JudgePhaseProps) {
                   );
                 })}
               </div>
+
+              {/* Judge Model Selection */}
+              <div style={styles.selectWrapper}>
+                <div style={styles.selectLabel}>Judge Model</div>
+                <select
+                  value={judgeModel}
+                  onChange={(e) => setJudgeModel(e.target.value)}
+                  style={styles.select}
+                  onFocus={(e) => {
+                    e.currentTarget.style.borderColor = tokens.accent;
+                    e.currentTarget.style.boxShadow = `0 0 0 3px ${tokens.accentLight}`;
+                  }}
+                  onBlur={(e) => {
+                    e.currentTarget.style.borderColor = tokens.borderBase;
+                    e.currentTarget.style.boxShadow = "none";
+                  }}
+                >
+                  {JUDGE_MODELS.map((model) => (
+                    <option key={model} value={model}>
+                      {model}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
             {/* Evaluation Prompt */}
@@ -660,6 +759,23 @@ export default function JudgePhase({ active }: JudgePhaseProps) {
                       </div>
                     );
                   })}
+
+                  {/* Custom Dimensions */}
+                  <div style={styles.customRubricLabel}>Custom Dimensions</div>
+                  <textarea
+                    value={customRubric}
+                    onChange={(e) => setCustomRubric(e.target.value)}
+                    placeholder="Add custom dimensions, one per line..."
+                    style={styles.customRubricTextarea}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = tokens.accent;
+                      e.currentTarget.style.boxShadow = `0 0 0 3px ${tokens.accentLight}`;
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = tokens.borderBase;
+                      e.currentTarget.style.boxShadow = "none";
+                    }}
+                  />
                 </div>
               )}
             </div>
@@ -668,19 +784,19 @@ export default function JudgePhase({ active }: JudgePhaseProps) {
             <button
               style={{
                 ...styles.runBtn,
-                ...(enabledDimensions.size === 0
+                ...(enabledDimensions.size === 0 && customRubric.trim().length === 0
                   ? { opacity: 0.5, cursor: "not-allowed" }
                   : {}),
               }}
-              disabled={enabledDimensions.size === 0}
+              disabled={enabledDimensions.size === 0 && customRubric.trim().length === 0}
               onClick={handleRunJudge}
               onMouseEnter={(e) => {
-                if (enabledDimensions.size === 0) return;
+                if (enabledDimensions.size === 0 && customRubric.trim().length === 0) return;
                 e.currentTarget.style.background = tokens.accentFg;
                 e.currentTarget.style.transform = "scale(0.99)";
               }}
               onMouseLeave={(e) => {
-                if (enabledDimensions.size === 0) return;
+                if (enabledDimensions.size === 0 && customRubric.trim().length === 0) return;
                 e.currentTarget.style.background = tokens.accent;
                 e.currentTarget.style.transform = "scale(1)";
               }}

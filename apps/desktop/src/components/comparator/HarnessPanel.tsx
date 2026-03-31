@@ -16,24 +16,24 @@ type TabKey = "terminal" | "activity" | "files";
 // ── Design Tokens ───────────────────────────────────────────
 
 const tokens = {
-  bgBase: "#f4f2ef",
-  bgSurface: "#faf9f7",
-  bgElevated: "#ffffff",
-  fgBase: "#181714",
-  fgMuted: "#5c5a56",
-  fgSubtle: "#9a9892",
-  fgPlaceholder: "#bcbab5",
-  borderBase: "rgba(0, 0, 0, 0.08)",
-  borderStrong: "rgba(0, 0, 0, 0.14)",
-  borderSubtle: "rgba(0, 0, 0, 0.05)",
-  separator: "rgba(0, 0, 0, 0.07)",
-  accent: "#5b50e8",
-  accentLight: "rgba(91, 80, 232, 0.09)",
-  accentText: "#5b50e8",
-  success: "#16a34a",
-  warning: "#d97706",
-  danger: "#dc2626",
-  hoverBg: "rgba(0, 0, 0, 0.04)",
+  bgBase: "var(--bg-base)",
+  bgSurface: "var(--bg-surface)",
+  bgElevated: "var(--bg-elevated)",
+  fgBase: "var(--fg-base)",
+  fgMuted: "var(--fg-muted)",
+  fgSubtle: "var(--fg-subtle)",
+  fgPlaceholder: "var(--fg-placeholder)",
+  borderBase: "var(--border-base)",
+  borderStrong: "var(--border-strong)",
+  borderSubtle: "var(--border-subtle)",
+  separator: "var(--separator)",
+  accent: "var(--accent)",
+  accentLight: "var(--accent-light)",
+  accentText: "var(--accent-text)",
+  success: "var(--success)",
+  warning: "var(--warning)",
+  danger: "var(--danger)",
+  hoverBg: "var(--hover-bg)",
   terminalBg: "#0d0d1a",
   terminalFg: "#e4e4e8",
 };
@@ -62,7 +62,7 @@ function injectHarnessPanelCSS() {
       background: transparent;
     }
     .harness-panel-activity::-webkit-scrollbar-thumb {
-      background: rgba(0, 0, 0, 0.10);
+      background: var(--border-base);
       border-radius: 2px;
     }
   `;

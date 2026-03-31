@@ -29,8 +29,11 @@
 
   /* Status */
   --success: #16a34a;
+  --success-light: rgba(22, 163, 74, 0.08);
   --warning: #d97706;
+  --warning-light: rgba(217, 119, 6, 0.08);
   --danger: #dc2626;
+  --danger-light: rgba(220, 38, 38, 0.08);
 
   /* Sidebar */
   --sidebar-width: 208px;
@@ -71,6 +74,11 @@
   --accent-light: rgba(123, 114, 240, 0.12);
   --accent-fg: #9d96f5;
   --accent-text: #9d96f5;
+
+  /* Status — higher alpha on dark backgrounds */
+  --success-light: rgba(22, 163, 74, 0.14);
+  --warning-light: rgba(217, 119, 6, 0.14);
+  --danger-light: rgba(220, 38, 38, 0.14);
 
   /* Interactive hover — warm tint */
   --hover-bg: rgba(255, 248, 230, 0.05);

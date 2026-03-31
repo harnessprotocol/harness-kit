@@ -28,24 +28,24 @@ interface HarnessSelection {
 // ── Design Tokens ───────────────────────────────────────────
 
 const tokens = {
-  bgBase: "#f4f2ef",
-  bgSurface: "#faf9f7",
-  bgElevated: "#ffffff",
-  fgBase: "#181714",
-  fgMuted: "#5c5a56",
-  fgSubtle: "#9a9892",
-  fgPlaceholder: "#bcbab5",
-  borderBase: "rgba(0, 0, 0, 0.08)",
-  borderStrong: "rgba(0, 0, 0, 0.14)",
-  borderSubtle: "rgba(0, 0, 0, 0.05)",
-  separator: "rgba(0, 0, 0, 0.07)",
-  accent: "#5b50e8",
-  accentLight: "rgba(91, 80, 232, 0.09)",
-  accentFg: "#4338d4",
-  accentText: "#5b50e8",
-  success: "#16a34a",
-  danger: "#dc2626",
-  hoverBg: "rgba(0, 0, 0, 0.04)",
+  bgBase: "var(--bg-base)",
+  bgSurface: "var(--bg-surface)",
+  bgElevated: "var(--bg-elevated)",
+  fgBase: "var(--fg-base)",
+  fgMuted: "var(--fg-muted)",
+  fgSubtle: "var(--fg-subtle)",
+  fgPlaceholder: "var(--fg-placeholder)",
+  borderBase: "var(--border-base)",
+  borderStrong: "var(--border-strong)",
+  borderSubtle: "var(--border-subtle)",
+  separator: "var(--separator)",
+  accent: "var(--accent)",
+  accentLight: "var(--accent-light)",
+  accentFg: "var(--accent-fg)",
+  accentText: "var(--accent-text)",
+  success: "var(--success)",
+  danger: "var(--danger)",
+  hoverBg: "var(--hover-bg)",
 };
 
 // ── Fonts ───────────────────────────────────────────────────
@@ -300,7 +300,7 @@ export default function SetupPhase({ onStart }: SetupPhaseProps) {
         return invoke<GitInfo>("check_git_repo", { dir });
       })
       .then((info) => setGitInfo(info))
-      .catch(console.error);
+      .catch(() => setWorkingDir("~"));
   }, []);
 
   // ── Detect harnesses ────────────────────────────────────────
@@ -362,17 +362,43 @@ export default function SetupPhase({ onStart }: SetupPhaseProps) {
     [harnesses],
   );
 
-  // ── Update model for a harness ──────────────────────────────
+  // ── Global model selector: all unique models across harnesses ─
 
-  const setModel = useCallback((id: string, model: string) => {
-    setSelections((prev) => {
-      const next = new Map(prev);
-      const current = next.get(id);
-      if (!current) return prev;
-      next.set(id, { ...current, model: model || null });
-      return next;
-    });
-  }, []);
+  const allModels = useMemo(() => {
+    const set = new Set<string>();
+    for (const h of harnesses) {
+      for (const m of h.models) set.add(m);
+    }
+    return Array.from(set).sort();
+  }, [harnesses]);
+
+  const globalModelValue = useMemo(() => {
+    const selectedModels = new Set<string | null>();
+    for (const [id, sel] of selections) {
+      if (!sel.selected) continue;
+      const h = harnesses.find((h) => h.id === id);
+      if (h && h.models.length > 0) selectedModels.add(sel.model);
+    }
+    if (selectedModels.size === 1) return Array.from(selectedModels)[0] ?? "";
+    return "__mixed__";
+  }, [selections, harnesses]);
+
+  const setGlobalModel = useCallback(
+    (model: string) => {
+      setSelections((prev) => {
+        const next = new Map(prev);
+        for (const [id, sel] of next) {
+          if (!sel.selected) continue;
+          const h = harnesses.find((h) => h.id === id);
+          if (h && h.models.includes(model)) {
+            next.set(id, { ...sel, model });
+          }
+        }
+        return next;
+      });
+    },
+    [harnesses],
+  );
 
   // ── Start handler ──────────────────────────────────────────
 
@@ -438,7 +464,7 @@ export default function SetupPhase({ onStart }: SetupPhaseProps) {
         <div>
           <div style={styles.sectionLabel}>Project Directory</div>
           <div style={styles.gitBar}>
-            <span style={styles.gitPath}>{workingDir || "Loading..."}</span>
+            <span style={styles.gitPath}>{workingDir || "~"}</span>
             {gitInfo?.isGitRepo && (
               <>
                 {gitInfo.branch && (
@@ -460,10 +486,53 @@ export default function SetupPhase({ onStart }: SetupPhaseProps) {
         {/* ── Harnesses ──────────────────────────────────────── */}
         <div>
           <div style={styles.sectionLabel}>Harnesses</div>
-          <div style={styles.selectionCounter}>
-            {selectedCount} of {MAX_SELECTED} selected
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 8,
+          }}>
+            {/* Global model selector */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <label
+                style={{
+                  fontSize: 11,
+                  fontWeight: 500,
+                  color: tokens.fgMuted,
+                  fontFamily: fontStack,
+                  whiteSpace: "nowrap" as const,
+                }}
+              >
+                Model for all:
+              </label>
+              <select
+                value={globalModelValue}
+                onChange={(e) => setGlobalModel(e.target.value)}
+                disabled={selectedCount === 0 || allModels.length === 0}
+                style={{
+                  ...styles.modelSelect,
+                  width: "auto",
+                  minWidth: 180,
+                  opacity: selectedCount === 0 ? 0.5 : 1,
+                }}
+              >
+                {globalModelValue === "__mixed__" && (
+                  <option value="__mixed__" disabled>
+                    Mixed
+                  </option>
+                )}
+                {allModels.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div style={styles.selectionCounter}>
+              {selectedCount} of {MAX_SELECTED} selected
+            </div>
           </div>
-          <div style={{ ...styles.harnessGrid, marginTop: 8 }}>
+          <div style={styles.harnessGrid}>
             {harnesses.map((h) => {
               const sel = selections.get(h.id);
               const isSelected = sel?.selected ?? false;
@@ -477,7 +546,6 @@ export default function SetupPhase({ onStart }: SetupPhaseProps) {
                   isAvailable={isAvailable}
                   model={sel?.model ?? null}
                   onToggle={() => toggleHarness(h.id)}
-                  onModelChange={(m) => setModel(h.id, m)}
                 />
               );
             })}
@@ -541,14 +609,12 @@ function HarnessCard({
   isAvailable,
   model,
   onToggle,
-  onModelChange,
 }: {
   harness: HarnessInfo;
   isSelected: boolean;
   isAvailable: boolean;
   model: string | null;
   onToggle: () => void;
-  onModelChange: (model: string) => void;
 }) {
   const [hovered, setHovered] = useState(false);
 
@@ -595,24 +661,32 @@ function HarnessCard({
       </div>
       <span style={styles.harnessVersion}>{statusText}</span>
 
-      {/* Model dropdown */}
-      {isAvailable && harness.models.length > 0 && (
-        <select
-          value={model ?? ""}
-          onChange={(e) => {
-            e.stopPropagation();
-            onModelChange(e.target.value);
+      {/* Show selected model or info when no models available */}
+      {isAvailable && harness.models.length > 0 && model && (
+        <span
+          style={{
+            fontSize: 10,
+            fontFamily: monoStack,
+            color: tokens.fgMuted,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap" as const,
           }}
-          onClick={(e) => e.stopPropagation()}
-          style={styles.modelSelect}
         >
-          {!model && <option value="">Select model...</option>}
-          {harness.models.map((m) => (
-            <option key={m} value={m}>
-              {m}
-            </option>
-          ))}
-        </select>
+          {model}
+        </span>
+      )}
+      {isAvailable && harness.models.length === 0 && (
+        <span
+          style={{
+            fontSize: 10,
+            fontStyle: "italic",
+            color: tokens.fgSubtle,
+            fontFamily: fontStack,
+          }}
+        >
+          Model configured in app
+        </span>
       )}
 
       {/* Selected indicator */}

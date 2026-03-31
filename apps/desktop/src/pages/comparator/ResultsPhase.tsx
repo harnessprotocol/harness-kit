@@ -13,27 +13,28 @@ export interface ResultsPhaseProps {
 // ── Design Tokens ───────────────────────────────────────────
 
 const tokens = {
-  bgBase: "#f4f2ef",
-  bgSurface: "#faf9f7",
-  bgElevated: "#ffffff",
-  fgBase: "#181714",
-  fgMuted: "#5c5a56",
-  fgSubtle: "#9a9892",
-  fgPlaceholder: "#bcbab5",
-  borderBase: "rgba(0, 0, 0, 0.08)",
-  borderStrong: "rgba(0, 0, 0, 0.14)",
-  borderSubtle: "rgba(0, 0, 0, 0.05)",
-  separator: "rgba(0, 0, 0, 0.07)",
-  accent: "#5b50e8",
-  accentLight: "rgba(91, 80, 232, 0.09)",
-  accentFg: "#4338d4",
-  accentText: "#5b50e8",
-  success: "#16a34a",
-  successLight: "rgba(22, 163, 74, 0.08)",
-  warning: "#d97706",
-  warningLight: "rgba(217, 119, 6, 0.08)",
-  danger: "#dc2626",
-  hoverBg: "rgba(0, 0, 0, 0.04)",
+  bgBase: "var(--bg-base)",
+  bgSurface: "var(--bg-surface)",
+  bgElevated: "var(--bg-elevated)",
+  fgBase: "var(--fg-base)",
+  fgMuted: "var(--fg-muted)",
+  fgSubtle: "var(--fg-subtle)",
+  fgPlaceholder: "var(--fg-placeholder)",
+  borderBase: "var(--border-base)",
+  borderStrong: "var(--border-strong)",
+  borderSubtle: "var(--border-subtle)",
+  separator: "var(--separator)",
+  accent: "var(--accent)",
+  accentLight: "var(--accent-light)",
+  accentFg: "var(--accent-fg)",
+  accentText: "var(--accent-text)",
+  success: "var(--success)",
+  successLight: "var(--success-light)",
+  warning: "var(--warning)",
+  warningLight: "var(--warning-light)",
+  danger: "var(--danger)",
+  dangerLight: "var(--danger-light)",
+  hoverBg: "var(--hover-bg)",
 };
 
 // ── Fonts ───────────────────────────────────────────────────
@@ -133,7 +134,7 @@ const styles = {
     border: `1px solid ${tokens.borderBase}`,
     borderRadius: 8,
     padding: 14,
-    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.02)",
+    boxShadow: "var(--shadow-sm)",
   } as React.CSSProperties,
 
   sectionTitle: {
@@ -343,7 +344,7 @@ function changeTypeBadge(changeType: string): React.ReactNode {
     fg = tokens.warning;
   } else if (isDel) {
     label = "del";
-    bg = "rgba(220, 38, 38, 0.08)";
+    bg = tokens.dangerLight;
     fg = tokens.danger;
   }
 
