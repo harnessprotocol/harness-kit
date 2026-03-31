@@ -65,6 +65,15 @@ function injectHarnessPanelCSS() {
       background: var(--border-base);
       border-radius: 2px;
     }
+    .harness-panel-tab:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      * {
+        animation-duration: 0.01ms !important;
+      }
+    }
   `;
   document.head.appendChild(style);
 }
@@ -147,7 +156,7 @@ const styles = {
     alignItems: "center",
     cursor: "pointer",
     borderBottom: "2px solid transparent",
-    transition: "color 120ms, border-color 120ms",
+    transition: "color 150ms ease-out, border-color 150ms ease-out",
     background: "none",
     border: "none",
     color: tokens.fgSubtle,
@@ -189,7 +198,7 @@ const styles = {
   star: {
     fontSize: 12,
     cursor: "pointer",
-    transition: "transform 80ms",
+    transition: "transform 100ms ease-out",
     lineHeight: 1,
   } as React.CSSProperties,
 
@@ -203,7 +212,7 @@ const styles = {
     borderRadius: 3,
     padding: "1px 6px",
     cursor: "pointer",
-    transition: "background 120ms, color 120ms",
+    transition: "background 150ms ease-out, color 150ms ease-out",
   } as React.CSSProperties,
 };
 
@@ -490,6 +499,7 @@ export default function HarnessPanel({ panel, rawChunks, outputTick, onSend: _on
           return (
             <button
               key={tab.key}
+              className="harness-panel-tab"
               style={{
                 ...styles.tab,
                 ...(isActive ? styles.tabActive : {}),
@@ -531,14 +541,19 @@ export default function HarnessPanel({ panel, rawChunks, outputTick, onSend: _on
               <span
                 key={star}
                 style={{
-                  ...styles.star,
+                  fontSize: 14,
+                  cursor: "pointer",
                   color: filled ? tokens.warning : tokens.borderStrong,
+                  transition: "transform 100ms ease-out, color 100ms ease-out",
+                  transform: hoveredStar === star ? "scale(1.25)" : "scale(1)",
+                  display: "inline-block",
+                  lineHeight: 1,
                 }}
                 onClick={() => setRating(star === rating ? 0 : star)}
                 onMouseEnter={() => setHoveredStar(star)}
                 onMouseLeave={() => setHoveredStar(0)}
               >
-                {filled ? "\u2605" : "\u2606"}
+                ★
               </span>
             );
           })}

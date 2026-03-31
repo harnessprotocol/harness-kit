@@ -90,7 +90,7 @@ const styles = {
     padding: "4px 0",
     width: "100%",
     fontFamily: fontStack,
-    transition: "border-color 150ms",
+    transition: "border-color 150ms ease-out",
   } as React.CSSProperties,
 
   subtitle: {
@@ -175,7 +175,7 @@ const styles = {
     border: `1px solid ${tokens.borderBase}`,
     background: tokens.bgElevated,
     cursor: "pointer",
-    transition: "all 150ms",
+    transition: "all 150ms ease-out",
     position: "relative" as const,
   } as React.CSSProperties,
 
@@ -234,7 +234,7 @@ const styles = {
     borderRadius: 8,
     outline: "none",
     resize: "vertical" as const,
-    transition: "border-color 150ms, box-shadow 150ms",
+    transition: "border-color 150ms ease-out, box-shadow 150ms ease-out",
   } as React.CSSProperties,
 
   // Start button
@@ -251,7 +251,7 @@ const styles = {
     fontWeight: 600,
     fontFamily: fontStack,
     cursor: "pointer",
-    transition: "background 120ms, transform 60ms, opacity 120ms",
+    transition: "background 150ms ease-out, transform 100ms ease-out, opacity 150ms ease-out",
   } as React.CSSProperties,
 
   // Selection counter
@@ -650,8 +650,12 @@ function HarnessCard({
 
   return (
     <div
+      className="comparator-focusable"
+      tabIndex={0}
+      role="button"
       style={cardStyle}
       onClick={onToggle}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >

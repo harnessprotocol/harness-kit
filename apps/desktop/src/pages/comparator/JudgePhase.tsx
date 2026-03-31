@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { ComparisonState } from "../../hooks/useComparator";
 
 // ── Design Tokens ───────────────────────────────────────────
@@ -111,7 +111,7 @@ const styles = {
     borderBottom: "2px solid transparent",
     cursor: "pointer",
     color: tokens.fgMuted,
-    transition: "color 150ms, border-color 150ms",
+    transition: "color 150ms ease-out, border-color 150ms ease-out",
   } as React.CSSProperties,
 
   tabActive: {
@@ -170,7 +170,7 @@ const styles = {
     border: `1px solid ${tokens.borderBase}`,
     background: tokens.bgElevated,
     cursor: "pointer",
-    transition: "all 150ms",
+    transition: "all 150ms ease-out",
   } as React.CSSProperties,
 
   radioOptionSelected: {
@@ -187,7 +187,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
-    transition: "border-color 150ms",
+    transition: "border-color 150ms ease-out",
   } as React.CSSProperties,
 
   radioDotSelected: {
@@ -231,7 +231,7 @@ const styles = {
     borderRadius: 8,
     outline: "none",
     resize: "vertical" as const,
-    transition: "border-color 150ms, box-shadow 150ms",
+    transition: "border-color 150ms ease-out, box-shadow 150ms ease-out",
   } as React.CSSProperties,
 
   rubricToggle: {
@@ -243,7 +243,7 @@ const styles = {
     border: "none",
     padding: 0,
     fontFamily: fontStack,
-    transition: "opacity 150ms",
+    transition: "opacity 150ms ease-out",
   } as React.CSSProperties,
 
   checkboxRow: {
@@ -266,7 +266,7 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     flexShrink: 0,
-    transition: "all 150ms",
+    transition: "all 150ms ease-out",
     cursor: "pointer",
   } as React.CSSProperties,
 
@@ -308,7 +308,7 @@ const styles = {
     backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239a9892' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
     backgroundRepeat: "no-repeat",
     backgroundPosition: "right 12px center",
-    transition: "border-color 150ms, box-shadow 150ms",
+    transition: "border-color 150ms ease-out, box-shadow 150ms ease-out",
   } as React.CSSProperties,
 
   customRubricLabel: {
@@ -335,7 +335,7 @@ const styles = {
     borderRadius: 6,
     outline: "none",
     resize: "vertical" as const,
-    transition: "border-color 150ms, box-shadow 150ms",
+    transition: "border-color 150ms ease-out, box-shadow 150ms ease-out",
   } as React.CSSProperties,
 
   runBtn: {
@@ -353,7 +353,7 @@ const styles = {
     cursor: "pointer",
     background: tokens.accent,
     color: "#ffffff",
-    transition: "background 120ms, transform 60ms",
+    transition: "background 150ms ease-out, transform 100ms ease-out",
   } as React.CSSProperties,
 
   // Results styles
@@ -424,7 +424,7 @@ const styles = {
   scoreBarFill: {
     height: "100%",
     borderRadius: 3,
-    transition: "width 400ms ease",
+    transition: "width 400ms ease-out",
   } as React.CSSProperties,
 
   scoreValue: {
@@ -541,7 +541,7 @@ function ChevronIcon({ open }: { open: boolean }) {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      style={{ transition: "transform 150ms", transform: open ? "rotate(90deg)" : "rotate(0deg)" }}
+      style={{ transition: "transform 150ms ease-out", transform: open ? "rotate(90deg)" : "rotate(0deg)" }}
     >
       <polyline points="6 4 10 8 6 12" />
     </svg>
@@ -563,6 +563,15 @@ export default function JudgePhase({ active }: JudgePhaseProps) {
   const [judgeModel, setJudgeModel] = useState("claude-sonnet-4-6");
   const [customRubric, setCustomRubric] = useState("");
   const [results, setResults] = useState<JudgeResult | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  // Trigger staggered entrance animation for score bars
+  useEffect(() => {
+    if (results) {
+      setMounted(false);
+      requestAnimationFrame(() => setMounted(true));
+    }
+  }, [results]);
 
   // ── Toggle a rubric dimension ──────────────────────────────
 
@@ -823,15 +832,16 @@ export default function JudgePhase({ active }: JudgePhaseProps) {
                   </div>
 
                   {/* Score bars */}
-                  {verdict.dimensions.map((dim) => (
+                  {verdict.dimensions.map((dim, dimIndex) => (
                     <div key={dim.label} style={styles.scoreRow}>
                       <span style={styles.scoreLabel}>{dim.label}</span>
                       <div style={styles.scoreBarTrack}>
                         <div
                           style={{
                             ...styles.scoreBarFill,
-                            width: `${dim.score * 10}%`,
+                            width: mounted ? `${dim.score * 10}%` : "0%",
                             background: scoreColor(dim.score),
+                            transition: `width 500ms ease-out ${dimIndex * 80}ms`,
                           }}
                         />
                       </div>

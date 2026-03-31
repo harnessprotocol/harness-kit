@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type { ComparisonPhase, ComparisonSummary } from "@harness-kit/shared";
 import { useComparator } from "../../hooks/useComparator";
 import SetupPhase from "./SetupPhase";
@@ -67,11 +67,25 @@ function injectGlobalCSS() {
       background: transparent;
     }
     .comparator-rail::-webkit-scrollbar-thumb {
-      background: rgba(0, 0, 0, 0.12);
+      background: var(--border-base);
       border-radius: 3px;
     }
     .comparator-rail::-webkit-scrollbar-thumb:hover {
-      background: rgba(0, 0, 0, 0.2);
+      background: var(--border-strong);
+    }
+    .stepper-line-animated {
+      transition: background 400ms ease-out;
+    }
+    /* Focus rings for keyboard navigation */
+    .comparator-focusable:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .comparator-pulse-dot {
+        animation: none !important;
+      }
     }
   `;
   document.head.appendChild(style);
@@ -124,7 +138,7 @@ const styles = {
     fontWeight: 500,
     fontFamily: fontStack,
     cursor: "pointer",
-    transition: "background 120ms, transform 60ms",
+    transition: "background 150ms ease-out, transform 100ms ease-out",
   } as React.CSSProperties,
 
   stepperSection: {
@@ -140,7 +154,7 @@ const styles = {
     cursor: "pointer",
     borderRadius: 4,
     padding: "0 4px",
-    transition: "background 120ms",
+    transition: "background 150ms ease-out",
   } as React.CSSProperties,
 
   stepDot: {
@@ -154,7 +168,7 @@ const styles = {
     fontWeight: 600,
     fontFamily: fontStack,
     flexShrink: 0,
-    transition: "all 150ms",
+    transition: "all 150ms ease-out",
   } as React.CSSProperties,
 
   stepLine: {
@@ -193,7 +207,7 @@ const styles = {
     padding: 8,
     borderRadius: 6,
     cursor: "pointer",
-    transition: "background 120ms",
+    transition: "background 150ms ease-out",
     marginBottom: 2,
   } as React.CSSProperties,
 
@@ -258,7 +272,7 @@ const styles = {
     padding: 0,
     marginLeft: "auto",
     flexShrink: 0,
-    transition: "background 120ms, color 120ms",
+    transition: "background 150ms ease-out, color 150ms ease-out",
   } as React.CSSProperties,
 };
 
@@ -349,8 +363,12 @@ function PhaseStepper({
         return (
           <div key={p.key}>
             <div
+              className="comparator-focusable"
+              tabIndex={0}
+              role="button"
               style={styles.stepRow}
               onClick={() => onPhaseClick(p.key)}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onPhaseClick(p.key); } }}
               onMouseEnter={(e) => { e.currentTarget.style.background = tokens.hoverBg; }}
               onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
             >
@@ -359,7 +377,7 @@ function PhaseStepper({
               </div>
               <span style={labelStyle}>{p.label}</span>
             </div>
-            {i < PHASES.length - 1 && <div style={lineStyle} />}
+            {i < PHASES.length - 1 && <div className="stepper-line-animated" style={lineStyle} />}
           </div>
         );
       })}
@@ -382,6 +400,8 @@ function SessionCard({
 }) {
   const [hovered, setHovered] = useState(false);
   const [deleteHovered, setDeleteHovered] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const confirmTimerRef = useRef<number>(0);
   const isRunning = session.status === "running";
 
   const cardStyle: React.CSSProperties = {
@@ -410,29 +430,44 @@ function SessionCard({
         <span style={styles.sessionTitle}>
           {session.title || "Untitled comparison"}
         </span>
-        {hovered && (
+        {(hovered || confirmDelete) && (
           <button
             style={{
               ...styles.deleteBtn,
-              ...(deleteHovered ? { background: "rgba(220, 38, 38, 0.1)", color: tokens.danger } : {}),
+              ...(confirmDelete
+                ? { background: "rgba(220, 38, 38, 0.1)", color: tokens.danger, width: "auto", padding: "0 4px" }
+                : deleteHovered
+                  ? { background: "rgba(220, 38, 38, 0.1)", color: tokens.danger }
+                  : {}),
             }}
             title="Delete session"
             onClick={(e) => {
               e.stopPropagation();
-              onDelete();
+              if (confirmDelete) {
+                clearTimeout(confirmTimerRef.current);
+                setConfirmDelete(false);
+                onDelete();
+              } else {
+                setConfirmDelete(true);
+                confirmTimerRef.current = window.setTimeout(() => setConfirmDelete(false), 2000);
+              }
             }}
             onMouseEnter={() => setDeleteHovered(true)}
             onMouseLeave={() => setDeleteHovered(false)}
           >
-            <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <line x1="4" y1="4" x2="12" y2="12" />
-              <line x1="12" y1="4" x2="4" y2="12" />
-            </svg>
+            {confirmDelete ? (
+              <span style={{ fontSize: 9, fontWeight: 600, color: tokens.danger }}>Delete?</span>
+            ) : (
+              <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="4" y1="4" x2="12" y2="12" />
+                <line x1="12" y1="4" x2="4" y2="12" />
+              </svg>
+            )}
           </button>
         )}
       </div>
       <div style={styles.sessionMeta}>
-        <div style={dotStyle} />
+        <div className="comparator-pulse-dot" style={dotStyle} />
         <span style={styles.sessionTime}>{formatSessionTime(session.createdAt)}</span>
         {session.harnessNames.map((name) => (
           <span key={name} style={styles.harnessBadge}>{name}</span>
@@ -547,6 +582,7 @@ export default function ComparatorPage() {
         {/* New Comparison button */}
         <div style={styles.railTop}>
           <button
+            className="comparator-focusable"
             style={styles.newBtn}
             onClick={handleNewComparison}
             onMouseEnter={(e) => {
@@ -575,16 +611,36 @@ export default function ComparatorPage() {
         {/* Session list */}
         <div style={styles.sessionsList} className="comparator-rail">
           {sessions.length === 0 ? (
-            <div
-              style={{
-                padding: "16px 8px",
-                textAlign: "center",
-                fontSize: 11,
+            <div style={{
+              padding: "24px 12px",
+              textAlign: "center",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 8,
+            }}>
+              <div style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                background: tokens.bgElevated,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
                 color: tokens.fgPlaceholder,
-                fontFamily: fontStack,
-              }}
-            >
-              No sessions yet
+              }}>
+                {/* Split comparison icon */}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="3" width="20" height="18" rx="2" />
+                  <path d="M12 3v18" />
+                </svg>
+              </div>
+              <span style={{ fontSize: 11, color: tokens.fgPlaceholder, fontFamily: fontStack }}>
+                No sessions yet
+              </span>
+              <span style={{ fontSize: 10, color: tokens.fgPlaceholder, opacity: 0.7, fontFamily: fontStack }}>
+                Click <strong>New Comparison</strong> to start
+              </span>
             </div>
           ) : (
             sessions.map((session) => (

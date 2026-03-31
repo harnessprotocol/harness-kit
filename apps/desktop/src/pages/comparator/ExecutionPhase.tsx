@@ -83,7 +83,7 @@ const styles = {
     fontFamily: fontStack,
     minWidth: 120,
     maxWidth: 260,
-    transition: "border-color 150ms",
+    transition: "border-color 150ms ease-out",
   } as React.CSSProperties,
 
   pipeSep: {
@@ -123,7 +123,7 @@ const styles = {
     borderRadius: 5,
     padding: "4px 12px",
     cursor: "pointer",
-    transition: "background 120ms, color 120ms, border-color 120ms",
+    transition: "background 150ms ease-out, color 150ms ease-out, border-color 150ms ease-out",
     flexShrink: 0,
   } as React.CSSProperties,
 
@@ -157,7 +157,7 @@ const styles = {
     padding: "4px 10px",
     borderRadius: 4,
     cursor: "pointer",
-    transition: "all 120ms",
+    transition: "all 150ms ease-out",
     border: "none",
     flexShrink: 0,
   } as React.CSSProperties,
@@ -172,7 +172,7 @@ const styles = {
     borderRadius: 5,
     padding: "5px 10px",
     outline: "none",
-    transition: "border-color 150ms",
+    transition: "border-color 150ms ease-out",
   } as React.CSSProperties,
 
   sendBtn: {
@@ -185,7 +185,7 @@ const styles = {
     borderRadius: 5,
     padding: "5px 14px",
     cursor: "pointer",
-    transition: "background 120ms, transform 60ms",
+    transition: "background 150ms ease-out, transform 100ms ease-out",
     flexShrink: 0,
   } as React.CSSProperties,
 

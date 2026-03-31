@@ -108,7 +108,7 @@ const styles = {
     border: `1px solid ${tokens.borderStrong}`,
     borderRadius: 6,
     cursor: "pointer",
-    transition: "background 120ms, border-color 120ms",
+    transition: "background 150ms ease-out, border-color 150ms ease-out",
   } as React.CSSProperties,
 
   btnPrimary: {
@@ -125,7 +125,7 @@ const styles = {
     border: "none",
     borderRadius: 6,
     cursor: "pointer",
-    transition: "background 120ms, transform 60ms",
+    transition: "background 150ms ease-out, transform 100ms ease-out",
   } as React.CSSProperties,
 
   // Section card
@@ -399,6 +399,12 @@ export default function ResultsPhase({ active, onStartJudge }: ResultsPhaseProps
   const [diffs, setDiffs] = useState<FileDiffRow[]>([]);
   const [diffsLoading, setDiffsLoading] = useState(true);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
+
+  // Trigger staggered entrance animation on mount
+  useEffect(() => {
+    requestAnimationFrame(() => setMounted(true));
+  }, []);
 
   // Load diffs on mount / when active changes
   useEffect(() => {
@@ -682,7 +688,7 @@ export default function ResultsPhase({ active, onStartJudge }: ResultsPhaseProps
                         top: 0,
                         left: 0,
                         height: "100%",
-                        width: `${Math.max(pct, 2)}%`,
+                        width: mounted ? `${Math.max(pct, 2)}%` : "0%",
                         background: barColor,
                         borderRadius: 4,
                         display: "flex",
@@ -690,7 +696,7 @@ export default function ResultsPhase({ active, onStartJudge }: ResultsPhaseProps
                         justifyContent: pct > 20 ? "flex-end" : "flex-start",
                         paddingRight: pct > 20 ? 8 : 0,
                         paddingLeft: pct > 20 ? 0 : 8,
-                        transition: "width 300ms ease-out",
+                        transition: `width 600ms ease-out ${i * 150}ms`,
                       }}
                     >
                       <span
