@@ -29,7 +29,7 @@ harness-kit/
 │   └── iterm-notify/             ← (same structure as research/)
 ├── packages/                     ← shared libraries and standalone servers
 │   ├── core/                     ← harness.yaml compile/parse/detect logic
-│   ├── shared/                   ← shared TypeScript types (chat-types, etc.)
+│   ├── shared/                   ← shared TypeScript types used across apps
 │   ├── ui/                       ← shared React components
 │   ├── board-server/             ← WebSocket server for the kanban board feature
 │   ├── chat-relay/               ← self-hosted WebSocket relay for team chat

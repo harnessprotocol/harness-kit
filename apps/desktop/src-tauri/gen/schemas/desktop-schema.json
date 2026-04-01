@@ -2403,12 +2403,6 @@
           "markdownDescription": "Enables the get_comparison_diffs command without any pre-configured scope."
         },
         {
-          "description": "Enables the get_comparison_setup command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-get-comparison-setup",
-          "markdownDescription": "Enables the get_comparison_setup command without any pre-configured scope."
-        },
-        {
           "description": "Enables the get_custom_profile command without any pre-configured scope.",
           "type": "string",
           "const": "allow-get-custom-profile",
@@ -2491,12 +2485,6 @@
           "type": "string",
           "const": "allow-import-plugin-from-zip",
           "markdownDescription": "Enables the import_plugin_from_zip command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the kill_panel command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-kill-panel",
-          "markdownDescription": "Enables the kill_panel command without any pre-configured scope."
         },
         {
           "description": "Enables the list_active_sessions command without any pre-configured scope.",
@@ -2727,12 +2715,6 @@
           "markdownDescription": "Enables the save_panel command without any pre-configured scope."
         },
         {
-          "description": "Enables the save_panel_result command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-save-panel-result",
-          "markdownDescription": "Enables the save_panel_result command without any pre-configured scope."
-        },
-        {
           "description": "Enables the scan_claude_config command without any pre-configured scope.",
           "type": "string",
           "const": "allow-scan-claude-config",
@@ -2743,12 +2725,6 @@
           "type": "string",
           "const": "allow-set-keychain-secret",
           "markdownDescription": "Enables the set_keychain_secret command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the start_comparison command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-start-comparison",
-          "markdownDescription": "Enables the start_comparison command without any pre-configured scope."
         },
         {
           "description": "Enables the sync_create_backup command without any pre-configured scope.",
@@ -3081,12 +3057,6 @@
           "markdownDescription": "Denies the get_comparison_diffs command without any pre-configured scope."
         },
         {
-          "description": "Denies the get_comparison_setup command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-get-comparison-setup",
-          "markdownDescription": "Denies the get_comparison_setup command without any pre-configured scope."
-        },
-        {
           "description": "Denies the get_custom_profile command without any pre-configured scope.",
           "type": "string",
           "const": "deny-get-custom-profile",
@@ -3169,12 +3139,6 @@
           "type": "string",
           "const": "deny-import-plugin-from-zip",
           "markdownDescription": "Denies the import_plugin_from_zip command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the kill_panel command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-kill-panel",
-          "markdownDescription": "Denies the kill_panel command without any pre-configured scope."
         },
         {
           "description": "Denies the list_active_sessions command without any pre-configured scope.",
@@ -3405,12 +3369,6 @@
           "markdownDescription": "Denies the save_panel command without any pre-configured scope."
         },
         {
-          "description": "Denies the save_panel_result command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-save-panel-result",
-          "markdownDescription": "Denies the save_panel_result command without any pre-configured scope."
-        },
-        {
           "description": "Denies the scan_claude_config command without any pre-configured scope.",
           "type": "string",
           "const": "deny-scan-claude-config",
@@ -3421,12 +3379,6 @@
           "type": "string",
           "const": "deny-set-keychain-secret",
           "markdownDescription": "Denies the set_keychain_secret command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the start_comparison command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-start-comparison",
-          "markdownDescription": "Denies the start_comparison command without any pre-configured scope."
         },
         {
           "description": "Denies the sync_create_backup command without any pre-configured scope.",

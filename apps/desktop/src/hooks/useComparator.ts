@@ -3,7 +3,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import type {
   ComparisonSummary,
-  ComparisonDetail,
   ComparisonPhase,
 } from "@harness-kit/shared";
 import { buildInvokeCommand } from "../lib/harness-definitions";
@@ -331,7 +330,22 @@ export function useComparator(): UseComparatorReturn {
 
   const loadComparison = useCallback(async (id: string) => {
     try {
-      const detail: ComparisonDetail = await getComparison(id);
+      // Destroy terminals from any currently-active live comparison.
+      const current = activeRef.current;
+      if (current) {
+        for (const panel of current.panels) {
+          if (panel.terminalId) {
+            invoke("destroy_terminal", { terminalId: panel.terminalId }).catch(() => {});
+          }
+        }
+      }
+
+      const detail = await getComparison(id);
+      if (!detail) {
+        console.error("Comparison not found:", id);
+        await loadSessions(); // Refresh sidebar (entry may be stale)
+        return;
+      }
 
       const panels: PanelState[] = detail.panels.map((p) => ({
         id: p.id,
@@ -361,21 +375,26 @@ export function useComparator(): UseComparatorReturn {
     } catch (err) {
       console.error("Failed to load comparison:", err);
     }
-  }, []);
+  }, [loadSessions]);
 
   // ── Delete a session ────────────────────────────────────────
 
   const deleteSession = useCallback(
     async (id: string) => {
       try {
-        await deleteComparison(id);
-
-        // If the deleted session is currently active, clear it.
-        if (activeRef.current?.id === id) {
+        // Destroy live terminals if deleting the active comparison.
+        const current = activeRef.current;
+        if (current?.id === id) {
+          for (const panel of current.panels) {
+            if (panel.terminalId) {
+              invoke("destroy_terminal", { terminalId: panel.terminalId }).catch(() => {});
+            }
+          }
           setActive(null);
           setPhase("setup");
         }
 
+        await deleteComparison(id);
         await loadSessions();
       } catch (err) {
         console.error("Failed to delete comparison:", err);

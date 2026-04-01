@@ -521,8 +521,12 @@ export default function ComparatorPage() {
   // ── New comparison handler ──────────────────────────────────
 
   const handleNewComparison = useCallback(() => {
-    setPhase("setup");
-  }, [setPhase]);
+    if (active && active.panels.some(p => p.status === "running")) {
+      endSession();
+    } else {
+      setPhase("setup");
+    }
+  }, [active, endSession, setPhase]);
 
   // ── Phase click handler ─────────────────────────────────────
 

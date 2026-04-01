@@ -160,9 +160,12 @@ pub fn init(data_dir: &Path) -> Result<Db, String> {
     .map_err(|e| format!("Failed to run schema: {}", e))?;
 
     // Migration: add title column to comparisons
-    conn.execute_batch("
-        ALTER TABLE comparisons ADD COLUMN title TEXT;
-    ").ok(); // .ok() ignores error if column already exists
+    if let Err(e) = conn.execute_batch("ALTER TABLE comparisons ADD COLUMN title TEXT;") {
+        let msg = e.to_string();
+        if !msg.contains("duplicate column name") {
+            return Err(format!("Migration failed: {}", msg));
+        }
+    }
 
     Ok(Db {
         conn: Mutex::new(conn),

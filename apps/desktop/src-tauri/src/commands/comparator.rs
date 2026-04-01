@@ -58,7 +58,7 @@ pub fn save_comparison(
     let now = chrono::Utc::now().to_rfc3339();
 
     conn.execute(
-        "INSERT OR REPLACE INTO comparisons (id, title, prompt, working_dir, pinned_commit, created_at, status)
+        "INSERT INTO comparisons (id, title, prompt, working_dir, pinned_commit, created_at, status)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, 'running')",
         rusqlite::params![id, title, prompt, working_dir, pinned_commit, now],
     )
@@ -81,6 +81,10 @@ pub fn update_comparison_title(
     )
     .map_err(|e| e.to_string())?;
 
+    if conn.changes() == 0 {
+        return Err(format!("Comparison not found: {}", id));
+    }
+
     Ok(())
 }
 
@@ -90,6 +94,14 @@ pub fn update_comparison_status(
     id: String,
     status: String,
 ) -> Result<(), String> {
+    const VALID_STATUSES: &[&str] = &["running", "completed", "cancelled"];
+    if !VALID_STATUSES.contains(&status.as_str()) {
+        return Err(format!(
+            "Invalid status: {}. Must be one of: running, completed, cancelled",
+            status
+        ));
+    }
+
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
 
     conn.execute(
@@ -97,6 +109,10 @@ pub fn update_comparison_status(
         rusqlite::params![status, id],
     )
     .map_err(|e| e.to_string())?;
+
+    if conn.changes() == 0 {
+        return Err(format!("Comparison not found: {}", id));
+    }
 
     Ok(())
 }

@@ -54,6 +54,14 @@ pub fn update_panel_result(
     duration_ms: Option<i64>,
     status: String,
 ) -> Result<(), String> {
+    const VALID_PANEL_STATUSES: &[&str] = &["running", "completed", "failed", "cancelled"];
+    if !VALID_PANEL_STATUSES.contains(&status.as_str()) {
+        return Err(format!(
+            "Invalid status: {}. Must be one of: running, completed, failed, cancelled",
+            status
+        ));
+    }
+
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
 
     conn.execute(
@@ -62,6 +70,10 @@ pub fn update_panel_result(
         rusqlite::params![exit_code, duration_ms, status, comparison_id, panel_id],
     )
     .map_err(|e| e.to_string())?;
+
+    if conn.changes() == 0 {
+        return Err(format!("Panel not found: {}", panel_id));
+    }
 
     Ok(())
 }

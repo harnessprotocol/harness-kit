@@ -46,8 +46,6 @@ fn main() {
                 "resize_terminal",
                 // Comparator — live
                 "detect_harnesses",
-                "start_comparison",
-                "kill_panel",
                 // Comparator — sessions
                 "save_comparison",
                 "update_comparison_title",
@@ -58,11 +56,9 @@ fn main() {
                 // Comparator — panels
                 "save_panel",
                 "update_panel_result",
-                "save_panel_result",
                 "save_file_diffs",
                 "get_comparison_diffs",
                 "get_panel_diffs",
-                "get_comparison_setup",
                 // Git
                 "check_git_repo",
                 "create_worktrees",

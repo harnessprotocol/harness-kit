@@ -118,7 +118,7 @@ A Tauri desktop companion that brings the harness concept to a native UI.
 - **Sync engine** — compiles `harness.yaml` to platform configs
 - **Plugin explorer** — browse and manage installed plugins
 - **Observatory** — live session dashboard with stats and transcripts
-- **Comparator** — side-by-side harness comparison with interactive terminal panes
+- **Comparator** -- structured evaluation workbench: configure harnesses, run side-by-side comparisons, review file diffs, and judge results across a 4-phase workflow
 - **Harness editor** — inline editing with custom profiles
 - **Memory** — knowledge graph viewer via [membrain](https://github.com/siracusa5/membrain) integration
 - **Team chat** — IRC-style chat backed by a self-hosted WebSocket relay

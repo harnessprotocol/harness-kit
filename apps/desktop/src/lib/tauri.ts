@@ -537,8 +537,8 @@ export async function listComparisons(
   return invoke<ComparisonSummary[]>("list_comparisons", { limit: limit ?? 50, offset: offset ?? 0 });
 }
 
-export async function getComparison(id: string): Promise<ComparisonDetail> {
-  return invoke<ComparisonDetail>("get_comparison", { id });
+export async function getComparison(id: string): Promise<ComparisonDetail | null> {
+  return invoke<ComparisonDetail | null>("get_comparison", { id });
 }
 
 export async function deleteComparison(id: string): Promise<void> {
