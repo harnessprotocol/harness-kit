@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-update-panel-result"
+description = "Enables the update_panel_result command without any pre-configured scope."
+commands.allow = ["update_panel_result"]
+
+[[permission]]
+identifier = "deny-update-panel-result"
+description = "Denies the update_panel_result command without any pre-configured scope."
+commands.deny = ["update_panel_result"]

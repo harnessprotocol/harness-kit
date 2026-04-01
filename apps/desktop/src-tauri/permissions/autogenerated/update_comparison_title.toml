@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-update-comparison-title"
+description = "Enables the update_comparison_title command without any pre-configured scope."
+commands.allow = ["update_comparison_title"]
+
+[[permission]]
+identifier = "deny-update-comparison-title"
+description = "Denies the update_comparison_title command without any pre-configured scope."
+commands.deny = ["update_comparison_title"]

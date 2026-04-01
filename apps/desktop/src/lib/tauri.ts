@@ -6,6 +6,7 @@ import type {
   HarnessInfo,
   PermissionsState, SecurityPreset, KeychainSecretInfo,
   EnvConfigEntry, AuditEntry, FileTreeNode,
+  ComparisonSummary, ComparisonDetail, FileDiffInput, FileDiffRow,
 } from "@harness-kit/shared";
 
 // ── Plugin commands ──────────────────────────────────────────
@@ -507,4 +508,80 @@ export async function membrainStop(): Promise<void> {
 
 export async function membrainGetPort(): Promise<number> {
   return invoke<number>("membrain_get_port");
+}
+
+// ── Comparator session commands ─────────────────────────────
+
+export async function saveComparison(
+  id: string,
+  title: string | null,
+  prompt: string,
+  workingDir: string,
+  pinnedCommit: string | null,
+): Promise<void> {
+  return invoke<void>("save_comparison", { id, title, prompt, workingDir, pinnedCommit });
+}
+
+export async function updateComparisonTitle(id: string, title: string): Promise<void> {
+  return invoke<void>("update_comparison_title", { id, title });
+}
+
+export async function updateComparisonStatus(id: string, status: string): Promise<void> {
+  return invoke<void>("update_comparison_status", { id, status });
+}
+
+export async function listComparisons(
+  limit?: number,
+  offset?: number,
+): Promise<ComparisonSummary[]> {
+  return invoke<ComparisonSummary[]>("list_comparisons", { limit: limit ?? 50, offset: offset ?? 0 });
+}
+
+export async function getComparison(id: string): Promise<ComparisonDetail | null> {
+  return invoke<ComparisonDetail | null>("get_comparison", { id });
+}
+
+export async function deleteComparison(id: string): Promise<void> {
+  return invoke<void>("delete_comparison", { id });
+}
+
+// ── Comparator panel commands ───────────────────────────────
+
+export async function savePanel(
+  id: string,
+  comparisonId: string,
+  harnessId: string,
+  harnessName: string,
+  model: string | null,
+): Promise<void> {
+  return invoke<void>("save_panel", { id, comparisonId, harnessId, harnessName, model });
+}
+
+export async function updatePanelResult(
+  comparisonId: string,
+  panelId: string,
+  exitCode: number,
+  durationMs: number,
+  status: string,
+): Promise<void> {
+  return invoke<void>("update_panel_result", { comparisonId, panelId, exitCode, durationMs, status });
+}
+
+export async function saveFileDiffs(
+  comparisonId: string,
+  panelId: string,
+  diffs: FileDiffInput[],
+): Promise<void> {
+  return invoke<void>("save_file_diffs", { comparisonId, panelId, diffs });
+}
+
+export async function getComparisonDiffs(comparisonId: string): Promise<FileDiffRow[]> {
+  return invoke<FileDiffRow[]>("get_comparison_diffs", { comparisonId });
+}
+
+export async function getPanelDiffs(
+  comparisonId: string,
+  panelId: string,
+): Promise<FileDiffRow[]> {
+  return invoke<FileDiffRow[]>("get_panel_diffs", { comparisonId, panelId });
 }

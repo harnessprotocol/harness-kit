@@ -2403,16 +2403,10 @@
           "markdownDescription": "Enables the get_comparison_diffs command without any pre-configured scope."
         },
         {
-          "description": "Enables the get_comparison_setup command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-get-comparison-setup",
-          "markdownDescription": "Enables the get_comparison_setup command without any pre-configured scope."
-        },
-        {
-          "description": "Allows the get_custom_profile command.",
+          "description": "Enables the get_custom_profile command without any pre-configured scope.",
           "type": "string",
           "const": "allow-get-custom-profile",
-          "markdownDescription": "Allows the get_custom_profile command."
+          "markdownDescription": "Enables the get_custom_profile command without any pre-configured scope."
         },
         {
           "description": "Enables the get_cwd command without any pre-configured scope.",
@@ -2457,6 +2451,12 @@
           "markdownDescription": "Enables the get_pairwise_votes command without any pre-configured scope."
         },
         {
+          "description": "Enables the get_panel_diffs command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-panel-diffs",
+          "markdownDescription": "Enables the get_panel_diffs command without any pre-configured scope."
+        },
+        {
           "description": "Enables the get_parity_drift command without any pre-configured scope.",
           "type": "string",
           "const": "allow-get-parity-drift",
@@ -2485,12 +2485,6 @@
           "type": "string",
           "const": "allow-import-plugin-from-zip",
           "markdownDescription": "Enables the import_plugin_from_zip command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the kill_panel command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-kill-panel",
-          "markdownDescription": "Enables the kill_panel command without any pre-configured scope."
         },
         {
           "description": "Enables the list_active_sessions command without any pre-configured scope.",
@@ -2715,10 +2709,10 @@
           "markdownDescription": "Enables the save_pairwise_vote command without any pre-configured scope."
         },
         {
-          "description": "Enables the save_panel_result command without any pre-configured scope.",
+          "description": "Enables the save_panel command without any pre-configured scope.",
           "type": "string",
-          "const": "allow-save-panel-result",
-          "markdownDescription": "Enables the save_panel_result command without any pre-configured scope."
+          "const": "allow-save-panel",
+          "markdownDescription": "Enables the save_panel command without any pre-configured scope."
         },
         {
           "description": "Enables the scan_claude_config command without any pre-configured scope.",
@@ -2731,12 +2725,6 @@
           "type": "string",
           "const": "allow-set-keychain-secret",
           "markdownDescription": "Enables the set_keychain_secret command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the start_comparison command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-start-comparison",
-          "markdownDescription": "Enables the start_comparison command without any pre-configured scope."
         },
         {
           "description": "Enables the sync_create_backup command without any pre-configured scope.",
@@ -2787,10 +2775,28 @@
           "markdownDescription": "Enables the uninstall_plugin command without any pre-configured scope."
         },
         {
+          "description": "Enables the update_comparison_status command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-update-comparison-status",
+          "markdownDescription": "Enables the update_comparison_status command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the update_comparison_title command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-update-comparison-title",
+          "markdownDescription": "Enables the update_comparison_title command without any pre-configured scope."
+        },
+        {
           "description": "Enables the update_evaluation_score command without any pre-configured scope.",
           "type": "string",
           "const": "allow-update-evaluation-score",
           "markdownDescription": "Enables the update_evaluation_score command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the update_panel_result command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-update-panel-result",
+          "markdownDescription": "Enables the update_panel_result command without any pre-configured scope."
         },
         {
           "description": "Enables the update_permissions command without any pre-configured scope.",
@@ -3051,16 +3057,10 @@
           "markdownDescription": "Denies the get_comparison_diffs command without any pre-configured scope."
         },
         {
-          "description": "Denies the get_comparison_setup command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-get-comparison-setup",
-          "markdownDescription": "Denies the get_comparison_setup command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the get_custom_profile command.",
+          "description": "Denies the get_custom_profile command without any pre-configured scope.",
           "type": "string",
           "const": "deny-get-custom-profile",
-          "markdownDescription": "Denies the get_custom_profile command."
+          "markdownDescription": "Denies the get_custom_profile command without any pre-configured scope."
         },
         {
           "description": "Denies the get_cwd command without any pre-configured scope.",
@@ -3105,6 +3105,12 @@
           "markdownDescription": "Denies the get_pairwise_votes command without any pre-configured scope."
         },
         {
+          "description": "Denies the get_panel_diffs command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-panel-diffs",
+          "markdownDescription": "Denies the get_panel_diffs command without any pre-configured scope."
+        },
+        {
           "description": "Denies the get_parity_drift command without any pre-configured scope.",
           "type": "string",
           "const": "deny-get-parity-drift",
@@ -3133,12 +3139,6 @@
           "type": "string",
           "const": "deny-import-plugin-from-zip",
           "markdownDescription": "Denies the import_plugin_from_zip command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the kill_panel command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-kill-panel",
-          "markdownDescription": "Denies the kill_panel command without any pre-configured scope."
         },
         {
           "description": "Denies the list_active_sessions command without any pre-configured scope.",
@@ -3363,10 +3363,10 @@
           "markdownDescription": "Denies the save_pairwise_vote command without any pre-configured scope."
         },
         {
-          "description": "Denies the save_panel_result command without any pre-configured scope.",
+          "description": "Denies the save_panel command without any pre-configured scope.",
           "type": "string",
-          "const": "deny-save-panel-result",
-          "markdownDescription": "Denies the save_panel_result command without any pre-configured scope."
+          "const": "deny-save-panel",
+          "markdownDescription": "Denies the save_panel command without any pre-configured scope."
         },
         {
           "description": "Denies the scan_claude_config command without any pre-configured scope.",
@@ -3379,12 +3379,6 @@
           "type": "string",
           "const": "deny-set-keychain-secret",
           "markdownDescription": "Denies the set_keychain_secret command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the start_comparison command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-start-comparison",
-          "markdownDescription": "Denies the start_comparison command without any pre-configured scope."
         },
         {
           "description": "Denies the sync_create_backup command without any pre-configured scope.",
@@ -3435,10 +3429,28 @@
           "markdownDescription": "Denies the uninstall_plugin command without any pre-configured scope."
         },
         {
+          "description": "Denies the update_comparison_status command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-update-comparison-status",
+          "markdownDescription": "Denies the update_comparison_status command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the update_comparison_title command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-update-comparison-title",
+          "markdownDescription": "Denies the update_comparison_title command without any pre-configured scope."
+        },
+        {
           "description": "Denies the update_evaluation_score command without any pre-configured scope.",
           "type": "string",
           "const": "deny-update-evaluation-score",
           "markdownDescription": "Denies the update_evaluation_score command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the update_panel_result command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-update-panel-result",
+          "markdownDescription": "Denies the update_panel_result command without any pre-configured scope."
         },
         {
           "description": "Denies the update_permissions command without any pre-configured scope.",
