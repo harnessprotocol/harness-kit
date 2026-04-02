@@ -4,6 +4,7 @@ import type { Task, TaskPriority, TaskStatus } from '../../lib/board-api';
 import { COLUMN_META, COLUMNS } from '../../lib/board-columns';
 import { CommentThread } from './CommentThread';
 import { api } from '../../lib/board-api';
+import { openInClaudeCode } from '../../lib/open-in-claude';
 
 interface Props {
   task: Task | null;
@@ -186,6 +187,37 @@ export function TaskDetailPanel({ task, projectSlug, onClose, onTaskUpdated, rep
                 >
                   {task.title}
                 </h2>
+                {(['backlog', 'planning', 'in-progress'] as string[]).includes(task.status) && (
+                <button
+                  onClick={() => openInClaudeCode(task)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    marginTop: 8,
+                    padding: '4px 10px',
+                    fontSize: 11,
+                    fontWeight: 500,
+                    color: 'var(--text-muted)',
+                    background: 'transparent',
+                    border: '1px solid var(--border-subtle)',
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)';
+                    (e.currentTarget as HTMLElement).style.color = 'var(--accent)';
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-subtle)';
+                    (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)';
+                  }}
+                >
+                  <span style={{ fontSize: 10 }}>{'\u25B6'}</span>
+                  Open in Claude Code
+                </button>
+                )}
               </div>
               <button
                 onClick={onClose}

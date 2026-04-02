@@ -286,10 +286,24 @@ export default function AppLayout() {
             <nav className="flex-1 py-2 px-2">
               {visibleSections.map((section) => {
                 const active = isActive(section);
+                const sectionIndex = NAV_SECTIONS.indexOf(section);
+                const shortcutNum = sectionIndex >= 0 && sectionIndex < 8 ? sectionIndex + 1 : null;
                 return (
                   <div key={section.id} className="mb-0.5">
                     <NavLink to={section.path} className={`sidebar-item${active ? " active" : ""}`}>
-                      {section.label}
+                      <span style={{ flex: 1 }}>{section.label}</span>
+                      {shortcutNum && !sidebarCollapsed && (
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontFamily: 'ui-monospace, monospace',
+                            color: 'var(--fg-subtle)',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {'\u2318'}{shortcutNum}
+                        </span>
+                      )}
                     </NavLink>
 
                     {active && section.children && (

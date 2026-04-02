@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import * as store from '../store/yaml-store.js';
-import type { TaskStatus, EpicStatus } from '../types.js';
+import type { TaskStatus, TaskPriority, EpicStatus } from '../types.js';
 
 export function createRouter(): Router {
   const router = Router();
@@ -107,16 +107,18 @@ export function createRouter(): Router {
   router.patch('/projects/:slug/tasks/:taskId', (req, res) => {
     try {
       const taskId = Number(req.params.taskId);
-      const { title, description, status, no_worktree } = req.body as {
+      const { title, description, status, priority, no_worktree } = req.body as {
         title?: string;
         description?: string;
         status?: TaskStatus;
+        priority?: TaskPriority;
         no_worktree?: boolean;
       };
-      const updates: Partial<Pick<import('../types.js').Task, 'title' | 'description' | 'status' | 'no_worktree'>> = {};
+      const updates: Partial<Pick<import('../types.js').Task, 'title' | 'description' | 'status' | 'priority' | 'no_worktree'>> = {};
       if (title !== undefined) updates.title = title;
       if (description !== undefined) updates.description = description;
       if (status !== undefined) updates.status = status;
+      if (priority !== undefined) updates.priority = priority;
       if (no_worktree !== undefined) updates.no_worktree = no_worktree;
       const task = store.updateTask(req.params.slug, taskId, updates);
       res.json(task);
