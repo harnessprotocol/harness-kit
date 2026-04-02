@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { api } from '../lib/board-api';
 import type { Project } from '../lib/board-api';
 import { useWebSocket } from './useWebSocket';
@@ -11,7 +11,6 @@ export function useBoardData(slug: string, ready = true) {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const lastSyncedAtRef = useRef<Date | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
 
   const fetchProject = useCallback(() => {
@@ -19,9 +18,7 @@ export function useBoardData(slug: string, ready = true) {
       .then(p => {
         setProject(p);
         setError(null);
-        const now = new Date();
-        lastSyncedAtRef.current = now;
-        setLastSyncedAt(now);
+        setLastSyncedAt(new Date());
       })
       .catch(err => setError(String(err)))
       .finally(() => setLoading(false));
@@ -38,9 +35,7 @@ export function useBoardData(slug: string, ready = true) {
       const event = JSON.parse(evt.data as string) as BoardEvent;
       if (event.type === 'project_updated' && event.slug === slug && event.project) {
         setProject(event.project);
-        const now = new Date();
-        lastSyncedAtRef.current = now;
-        setLastSyncedAt(now);
+        setLastSyncedAt(new Date());
       }
     } catch {
       // ignore malformed messages

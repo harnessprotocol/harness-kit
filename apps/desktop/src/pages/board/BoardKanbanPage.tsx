@@ -77,11 +77,15 @@ export default function BoardKanbanPage() {
     if (saved === 'swimlane' || saved === 'columns') setViewMode(saved);
   }, []);
 
-  // Restore collapsed columns from localStorage
+  // Restore collapsed columns from localStorage (default: backlog collapsed)
   useEffect(() => {
     try {
       const saved = localStorage.getItem(LS_COLLAPSED_KEY);
-      if (saved) setCollapsedColumns(JSON.parse(saved));
+      if (saved) {
+        setCollapsedColumns(JSON.parse(saved));
+      } else {
+        setCollapsedColumns({ backlog: true });
+      }
     } catch { /* ignore malformed */ }
   }, []);
 
