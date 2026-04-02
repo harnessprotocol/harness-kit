@@ -1,5 +1,6 @@
 import type { Task, TaskPriority } from '../../lib/board-api';
 import { COLUMN_META } from '../../lib/board-columns';
+import { openInClaudeCode } from '../../lib/open-in-claude';
 import { Tooltip } from './Tooltip';
 
 interface Props {
@@ -231,6 +232,35 @@ export function TaskCard({ task, onClick, repoUrl }: Props) {
             {relativeTime(task.updated_at)}
           </span>
         </Tooltip>
+
+        {/* Open in Claude Code */}
+        {(['backlog', 'planning', 'in-progress'] as string[]).includes(task.status) && (
+          <Tooltip text="Open in Claude Code" position="top">
+            <button
+              onClick={e => {
+                e.stopPropagation();
+                openInClaudeCode(task);
+              }}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--fg-subtle, var(--text-muted))',
+                cursor: 'pointer',
+                fontSize: 12,
+                lineHeight: 1,
+                padding: 2,
+                borderRadius: 4,
+                display: 'inline-flex',
+                alignItems: 'center',
+                transition: 'color 0.15s',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--accent)'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--fg-subtle, var(--text-muted))'; }}
+            >
+              {'\u25B6'}
+            </button>
+          </Tooltip>
+        )}
       </div>
     </div>
   );
