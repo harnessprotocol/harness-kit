@@ -187,6 +187,7 @@ export function TaskDetailPanel({ task, projectSlug, onClose, onTaskUpdated, rep
                 >
                   {task.title}
                 </h2>
+                {(['backlog', 'planning', 'in-progress'] as string[]).includes(task.status) && (
                 <button
                   onClick={() => openInClaudeCode(task)}
                   style={{
@@ -216,6 +217,7 @@ export function TaskDetailPanel({ task, projectSlug, onClose, onTaskUpdated, rep
                   <span style={{ fontSize: 10 }}>{'\u25B6'}</span>
                   Open in Claude Code
                 </button>
+                )}
               </div>
               <button
                 onClick={onClose}

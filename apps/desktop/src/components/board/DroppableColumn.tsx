@@ -25,7 +25,6 @@ interface Props {
   tasks: Task[];
   onTaskClick?: (task: Task) => void;
   onAddTask?: () => void;
-  isOver?: boolean;
   repoUrl?: string;
   collapsed?: boolean;
   onToggleCollapse?: () => void;

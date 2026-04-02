@@ -12,7 +12,7 @@ export async function openInClaudeCode(task: TaskLike) {
   if (task.worktree_path) {
     args.push('--cwd', task.worktree_path);
   }
-  args.push('--print', `Work on board task #${task.id}: ${task.title}`);
+  args.push('--resume', `Work on board task #${task.id}: ${task.title}`);
   const cmd = Command.create('claude', args);
   await cmd.spawn();
 }
