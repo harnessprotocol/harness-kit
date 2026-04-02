@@ -42,6 +42,20 @@
   --hover-bg: rgba(0, 0, 0, 0.04);
   --active-bg: rgba(0, 0, 0, 0.07);
 
+  /* Board status */
+  --status-backlog: #9a9892;
+  --status-planning: #9a9892;
+  --status-in-progress: #2563eb;
+  --status-ai-review: #d97706;
+  --status-human-review: #f59e0b;
+  --status-done: #16a34a;
+
+  /* Board text aliases (used by board components) */
+  --text-primary: var(--fg-base);
+  --text-secondary: var(--fg-muted);
+  --text-muted: var(--fg-subtle);
+  --border: var(--border-base);
+
   /* Shadows */
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.10), 0 1px 2px rgba(0,0,0,0.06);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.06);
@@ -79,6 +93,10 @@
   --success-light: rgba(22, 163, 74, 0.14);
   --warning-light: rgba(217, 119, 6, 0.14);
   --danger-light: rgba(220, 38, 38, 0.14);
+
+  /* Board status (dark) */
+  --status-backlog: #6e6a64;
+  --status-planning: #6e6a64;
 
   /* Interactive hover — warm tint */
   --hover-bg: rgba(255, 248, 230, 0.05);

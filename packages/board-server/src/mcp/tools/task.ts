@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 
-const taskStatusSchema = z.enum(['planning', 'in-progress', 'ai-review', 'human-review', 'done']);
+const taskStatusSchema = z.enum(['backlog', 'planning', 'in-progress', 'ai-review', 'human-review', 'done']);
 
 export const taskTools = [
   {
@@ -67,13 +67,13 @@ export const taskTools = [
   },
   {
     name: 'move_task',
-    description: 'Change a task status column (planning → in-progress → ai-review → human-review → done)',
+    description: 'Change a task status column (backlog → planning → in-progress → ai-review → human-review → done)',
     inputSchema: {
       type: 'object' as const,
       properties: {
         project: { type: 'string', description: 'Project slug' },
         task_id: { type: 'number', description: 'Task ID' },
-        status: { type: 'string', enum: ['planning', 'in-progress', 'ai-review', 'human-review', 'done'], description: 'New status' },
+        status: { type: 'string', enum: ['backlog', 'planning', 'in-progress', 'ai-review', 'human-review', 'done'], description: 'New status' },
       },
       required: ['project', 'task_id', 'status'],
     },
@@ -151,7 +151,7 @@ export const taskTools = [
       properties: {
         project: { type: 'string', description: 'Filter by project slug' },
         epic_id: { type: 'number', description: 'Filter by epic ID' },
-        status: { type: 'string', enum: ['planning', 'in-progress', 'ai-review', 'human-review', 'done'], description: 'Filter by status' },
+        status: { type: 'string', enum: ['backlog', 'planning', 'in-progress', 'ai-review', 'human-review', 'done'], description: 'Filter by status' },
       },
     },
     schema: z.object({

@@ -24,11 +24,22 @@ import type { Task, Epic, TaskStatus } from '../../lib/board-api';
 import { COLUMNS } from '../../lib/board-columns';
 
 const LS_VIEW_KEY = 'harness:board:view';
+const LS_COLLAPSED_KEY = 'harness:board:collapsed';
 
 function flattenTasks(epics: Epic[]): Task[] {
   return epics.flatMap(epic =>
     epic.tasks.map(task => ({ ...task, epic_id: epic.id, epic_name: epic.name }))
   );
+}
+
+function formatSyncedAgo(date: Date | null): string | null {
+  if (!date) return null;
+  const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (seconds < 5) return 'just now';
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  return `${Math.floor(minutes / 60)}h ago`;
 }
 
 function resolveTargetStatus(overId: string, allTasks: Task[]): TaskStatus | null {
@@ -49,7 +60,7 @@ export default function BoardKanbanPage() {
   const projectSlug = slug!;
   const serverState = useBoardServerReady();
   const { ready, timedOut } = serverState;
-  const { project, loading, error, refetch } = useBoardData(projectSlug, ready);
+  const { project, loading, error, refetch, lastSyncedAt } = useBoardData(projectSlug, ready);
 
   const [activeTask, setActiveTask] = useState<Task | null>(null);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -57,6 +68,8 @@ export default function BoardKanbanPage() {
   const [formDefaultStatus, setFormDefaultStatus] = useState<TaskStatus>('planning');
   const [formDefaultEpicId, setFormDefaultEpicId] = useState<number | undefined>();
   const [viewMode, setViewMode] = useState<ViewMode>('columns');
+  const [collapsedColumns, setCollapsedColumns] = useState<Record<string, boolean>>({});
+  const [, setNow] = useState(0); // forces re-render for "synced N ago" display
 
   // Restore view preference from localStorage
   useEffect(() => {
@@ -64,9 +77,31 @@ export default function BoardKanbanPage() {
     if (saved === 'swimlane' || saved === 'columns') setViewMode(saved);
   }, []);
 
+  // Restore collapsed columns from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(LS_COLLAPSED_KEY);
+      if (saved) setCollapsedColumns(JSON.parse(saved));
+    } catch { /* ignore malformed */ }
+  }, []);
+
+  // Tick every 15s to update "synced N ago"
+  useEffect(() => {
+    const id = setInterval(() => setNow(n => n + 1), 15_000);
+    return () => clearInterval(id);
+  }, []);
+
   function handleViewChange(mode: ViewMode) {
     setViewMode(mode);
     localStorage.setItem(LS_VIEW_KEY, mode);
+  }
+
+  function toggleCollapse(col: string) {
+    setCollapsedColumns(prev => {
+      const next = { ...prev, [col]: !prev[col] };
+      localStorage.setItem(LS_COLLAPSED_KEY, JSON.stringify(next));
+      return next;
+    });
   }
 
   // Escape closes detail panel
@@ -104,6 +139,15 @@ export default function BoardKanbanPage() {
 
     const task = allTasks.find(t => t.id === taskId);
     if (!task || task.status === targetStatus) return;
+
+    // Expand collapsed column on drop
+    if (collapsedColumns[targetStatus]) {
+      setCollapsedColumns(prev => {
+        const next = { ...prev, [targetStatus]: false };
+        localStorage.setItem(LS_COLLAPSED_KEY, JSON.stringify(next));
+        return next;
+      });
+    }
 
     await api.tasks.update(projectSlug, taskId, { status: targetStatus });
     refetch();
@@ -205,9 +249,45 @@ export default function BoardKanbanPage() {
           {allTasks.length} task{allTasks.length !== 1 ? 's' : ''}
         </span>
 
-        {/* View toggle + restart */}
+        {/* View toggle + connection status + restart */}
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
           <ViewToggle mode={viewMode} onChange={handleViewChange} />
+
+          {/* Connection status pill */}
+          <span
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              fontSize: 11,
+              color: 'var(--text-muted)',
+              padding: '2px 8px',
+              borderRadius: 6,
+              border: '1px solid var(--border-subtle)',
+              background: 'transparent',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: serverState.timedOut
+                  ? 'var(--danger)'
+                  : serverState.ready
+                    ? 'var(--success)'
+                    : 'var(--warning)',
+                flexShrink: 0,
+              }}
+            />
+            {serverState.timedOut
+              ? 'Offline'
+              : serverState.ready
+                ? (lastSyncedAt ? `Synced ${formatSyncedAgo(lastSyncedAt)}` : 'Connected')
+                : 'Connecting...'}
+          </span>
+
           <button
             onClick={serverState.restart}
             disabled={serverState.starting}
@@ -266,6 +346,8 @@ export default function BoardKanbanPage() {
                 onTaskClick={task => setSelectedTask(task)}
                 onAddTask={() => openTaskForm(col)}
                 repoUrl={project.repo_url}
+                collapsed={!!collapsedColumns[col]}
+                onToggleCollapse={() => toggleCollapse(col)}
               />
             ))}
           </div>

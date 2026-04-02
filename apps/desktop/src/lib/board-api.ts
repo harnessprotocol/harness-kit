@@ -56,7 +56,7 @@ export const api = {
 
 // Types (mirrors board-server/src/types.ts)
 export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
-export type TaskStatus = 'planning' | 'in-progress' | 'ai-review' | 'human-review' | 'done';
+export type TaskStatus = 'backlog' | 'planning' | 'in-progress' | 'ai-review' | 'human-review' | 'done';
 export type EpicStatus = 'active' | 'completed' | 'archived';
 
 export interface Comment {

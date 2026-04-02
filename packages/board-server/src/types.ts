@@ -1,4 +1,4 @@
-export type TaskStatus = 'planning' | 'in-progress' | 'ai-review' | 'human-review' | 'done';
+export type TaskStatus = 'backlog' | 'planning' | 'in-progress' | 'ai-review' | 'human-review' | 'done';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
 export type EpicStatus = 'active' | 'completed' | 'archived';
 export type CommentAuthor = 'claude' | 'user';
