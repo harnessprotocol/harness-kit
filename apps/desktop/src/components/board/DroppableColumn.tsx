@@ -5,6 +5,21 @@ import { COLUMN_META, EMPTY_STATE_COPY } from '../../lib/board-columns';
 import { SortableTaskCard } from './SortableTaskCard';
 import { Tooltip } from './Tooltip';
 
+const pulseKeyframes = `
+@keyframes statusPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+`;
+
+// Inject keyframes once
+if (typeof document !== 'undefined' && !document.getElementById('status-pulse-style')) {
+  const style = document.createElement('style');
+  style.id = 'status-pulse-style';
+  style.textContent = pulseKeyframes;
+  document.head.appendChild(style);
+}
+
 interface Props {
   status: string;
   tasks: Task[];
@@ -148,6 +163,7 @@ export function DroppableColumn({ status, tasks, onTaskClick, onAddTask, repoUrl
             borderRadius: '50%',
             background: meta.color,
             flexShrink: 0,
+            ...(status === 'in-progress' && tasks.length > 0 ? { animation: 'statusPulse 2s ease-in-out infinite' } : {}),
           }}
         />
         <Tooltip text={meta.tooltip} position="bottom">
@@ -166,7 +182,7 @@ export function DroppableColumn({ status, tasks, onTaskClick, onAddTask, repoUrl
             padding: '1px 7px',
           }}
         >
-          {tasks.length}
+          {status === 'in-progress' ? `${tasks.length} running` : tasks.length}
         </span>
       </div>
 
