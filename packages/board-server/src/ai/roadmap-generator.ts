@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import { execFile, execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import * as store from '../store/yaml-store.js';
 import * as roadmapStore from '../store/roadmap-store.js';
@@ -23,16 +23,61 @@ export interface ErrorEvent {
 
 export type RoadmapGeneratorEvent = GenerateEvent | DoneEvent | ErrorEvent;
 
+let _claudePath: string | null = null;
+function findClaude(): string {
+  if (process.env.CLAUDE_PATH) return process.env.CLAUDE_PATH;
+  if (_claudePath) return _claudePath;
+  // Try common install locations, then fall back to PATH lookup
+  const candidates = [
+    `${process.env.HOME}/.local/bin/claude`,
+    '/usr/local/bin/claude',
+    '/opt/homebrew/bin/claude',
+  ];
+  for (const p of candidates) {
+    try {
+      execFileSync('test', ['-x', p]);
+      _claudePath = p;
+      return p;
+    } catch { /* not found */ }
+  }
+  // Last resort: resolve via `which`
+  try {
+    _claudePath = execFileSync('which', ['claude'], { env: { ...process.env, PATH: `/usr/local/bin:/opt/homebrew/bin:${process.env.HOME}/.local/bin:${process.env.PATH}` } }).toString().trim();
+    return _claudePath;
+  } catch {
+    throw new Error('claude CLI not found. Install Claude Code: https://claude.ai/code');
+  }
+}
+
+function runClaude(prompt: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const claude = findClaude();
+    const child = execFile(
+      claude,
+      ['-p', '--output-format', 'json', '--model', 'claude-opus-4-6'],
+      { maxBuffer: 16 * 1024 * 1024, timeout: 180_000 },
+      (error, stdout, stderr) => {
+        if (error) {
+          reject(new Error(stderr || error.message));
+          return;
+        }
+        try {
+          const parsed = JSON.parse(stdout) as { result?: string };
+          resolve(parsed.result ?? stdout);
+        } catch {
+          resolve(stdout);
+        }
+      },
+    );
+    child.stdin?.write(prompt);
+    child.stdin?.end();
+  });
+}
+
 export async function generateRoadmap(
   slug: string,
   onEvent: (event: RoadmapGeneratorEvent) => void,
 ): Promise<void> {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    onEvent({ type: 'error', message: 'ANTHROPIC_API_KEY is not set. Set it in the board server environment.' });
-    return;
-  }
-
   // Phase 1: Analyze project
   onEvent({ type: 'phase', phase: 'analyzing', label: 'Reading project data...' });
 
@@ -52,7 +97,7 @@ export async function generateRoadmap(
       return `  Epic: ${epic.name}\n${tasksText}`;
     }).join('\n\n');
 
-    projectContext = `Project: ${project.name || slug}\nEpics and tasks (${taskCount} total):\n\n${epicsText}`;
+    projectContext = `Project: ${project.name || slug}\nEpics and tasks (${taskCount} total):\n\n${epicsText || '  (no epics or tasks yet)'}`;
   } catch (err) {
     onEvent({ type: 'error', message: `Failed to read project: ${err instanceof Error ? err.message : String(err)}` });
     return;
@@ -61,16 +106,11 @@ export async function generateRoadmap(
   // Phase 2: Generate with Claude
   onEvent({ type: 'phase', phase: 'generating', label: 'Generating roadmap with Claude...' });
 
-  const client = new Anthropic({ apiKey });
-
-  const systemPrompt = `You are a product strategist. Generate a comprehensive product roadmap as a JSON object.
-CRITICAL: Respond with ONLY a valid JSON object. No explanation, no markdown fences, no text before or after. Pure JSON only.`;
-
-  const userPrompt = `Generate a strategic product roadmap for this project.
+  const prompt = `Generate a strategic product roadmap for this project.
 
 ${projectContext}
 
-Return a JSON object with this exact structure (use real UUIDs for all id fields):
+Return ONLY a valid JSON object with this structure (use real UUIDs for all id fields):
 {
   "version": "1.0",
   "projectName": "<project name>",
@@ -78,9 +118,9 @@ Return a JSON object with this exact structure (use real UUIDs for all id fields
   "status": "active",
   "targetAudience": {
     "primary": "<primary user persona>",
-    "secondary": ["<secondary persona 1>", "<secondary persona 2>"],
-    "painPoints": ["<pain point 1>", "<pain point 2>", "<pain point 3>"],
-    "goals": ["<goal 1>", "<goal 2>", "<goal 3>"],
+    "secondary": ["<secondary persona>"],
+    "painPoints": ["<pain point>", "<pain point>", "<pain point>"],
+    "goals": ["<goal>", "<goal>", "<goal>"],
     "usageContext": "<when/how they use it>"
   },
   "phases": [
@@ -90,31 +130,23 @@ Return a JSON object with this exact structure (use real UUIDs for all id fields
       "description": "<phase goal>",
       "order": 1,
       "status": "planned",
-      "features": ["<feature-id-1>", "<feature-id-2>"],
-      "milestones": [
-        {
-          "id": "<uuid>",
-          "title": "<milestone title>",
-          "description": "<milestone description>",
-          "features": ["<feature-id>"],
-          "status": "planned"
-        }
-      ]
+      "features": ["<feature-id>"],
+      "milestones": [{"id": "<uuid>", "title": "<title>", "description": "<desc>", "features": ["<feature-id>"], "status": "planned"}]
     }
   ],
   "features": [
     {
       "id": "<uuid>",
-      "title": "<feature title>",
-      "description": "<feature description>",
-      "rationale": "<why this feature matters>",
+      "title": "<title>",
+      "description": "<description>",
+      "rationale": "<why this matters>",
       "priority": "must",
       "complexity": "medium",
       "impact": "high",
       "phaseId": "<phase-uuid>",
       "status": "backlog",
       "dependencies": [],
-      "acceptanceCriteria": ["<criterion 1>", "<criterion 2>"],
+      "acceptanceCriteria": ["<criterion>", "<criterion>"],
       "userStories": ["As a <persona>, I want to <action> so that <benefit>."],
       "competitorInsightIds": []
     }
@@ -122,31 +154,18 @@ Return a JSON object with this exact structure (use real UUIDs for all id fields
 }
 
 Requirements:
-- 3-4 phases ordered logically (foundation → growth → scale → etc.)
+- 3-4 phases ordered logically (foundation → growth → scale etc.)
 - 10-15 features total across all phases
-- Mix priorities: must (40%), should (35%), could (20%), wont (5%)
-- Each feature has 2-3 user stories and 2-3 acceptance criteria
-- phase.features array must contain the ids of features assigned to that phase
-- All ids must be valid UUIDs (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx format)
-- Base the roadmap on the existing tasks/epics — extend and improve, don't just restate them`;
+- Mix priorities: ~40% must, ~35% should, ~20% could, ~5% wont
+- Each feature needs 2-3 user stories and 2-3 acceptance criteria
+- phase.features array must list the ids of features in that phase
+- Base the roadmap on the existing tasks/epics context above
+- Return ONLY the JSON object, no explanation, no markdown fences`;
 
   let roadmapJson: Roadmap;
   try {
-    const message = await client.messages.create({
-      model: 'claude-opus-4-6',
-      max_tokens: 8192,
-      messages: [{ role: 'user', content: userPrompt }],
-      system: systemPrompt,
-    });
-
-    const content = message.content[0];
-    if (content.type !== 'text') {
-      onEvent({ type: 'error', message: 'Unexpected response type from Claude' });
-      return;
-    }
-
-    // Strip any accidental markdown fences
-    const rawText = content.text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+    const result = await runClaude(prompt);
+    const rawText = result.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
     const parsed = JSON.parse(rawText) as Record<string, unknown>;
 
     if (!parsed.version || !Array.isArray(parsed.phases) || !Array.isArray(parsed.features)) {
