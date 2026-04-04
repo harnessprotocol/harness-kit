@@ -3,6 +3,11 @@ import { validateCommand } from "./commands/validate.js";
 import { compileCommand } from "./commands/compile.js";
 import { detectCommand } from "./commands/detect.js";
 import { initCommand } from "./commands/init.js";
+import {
+  listOrganizations,
+  createOrganization,
+  joinOrganization,
+} from "./commands/org.js";
 
 const program = new Command();
 
@@ -64,6 +69,32 @@ program
   .argument("[path]", "Output path for harness.yaml", "harness.yaml")
   .action(async (path: string) => {
     await initCommand(path);
+  });
+
+const orgCommand = program
+  .command("org")
+  .description("Manage organizations");
+
+orgCommand
+  .command("list")
+  .description("List all organizations")
+  .action(async () => {
+    await listOrganizations();
+  });
+
+orgCommand
+  .command("create")
+  .description("Create a new organization")
+  .action(async () => {
+    await createOrganization();
+  });
+
+orgCommand
+  .command("join")
+  .description("Join an organization")
+  .argument("<slug>", "Organization slug to join")
+  .action(async (slug: string) => {
+    await joinOrganization(slug);
   });
 
 program.parse();
