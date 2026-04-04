@@ -7,8 +7,9 @@ import {
 import { projectTools } from './tools/project.js';
 import { epicTools } from './tools/epic.js';
 import { taskTools } from './tools/task.js';
+import { roadmapTools } from './tools/roadmap.js';
 
-const allTools = [...projectTools, ...epicTools, ...taskTools];
+const allTools = [...projectTools, ...epicTools, ...taskTools, ...roadmapTools];
 
 type AnyTool = (typeof allTools)[number];
 type ToolName = AnyTool['name'];
