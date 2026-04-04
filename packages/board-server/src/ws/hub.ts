@@ -26,6 +26,7 @@ export class WsHub {
 
     // When a YAML file changes (externally or via MCP subprocess), push the updated project
     this.watcher.on('change', ({ filename }: { filename: string }) => {
+      if (filename.endsWith('.roadmap.yaml') || filename.endsWith('.competitors.yaml')) return;
       const slug = filename.replace(/\.yaml$/, '');
       const project = store.readProject(slug);
       if (!project) return;
