@@ -1,8 +1,11 @@
 import { AnimatePresence, motion } from 'framer-motion';
-import { useState } from 'react';
-import type { Task, TaskPriority, TaskStatus } from '../../lib/board-api';
+import { useEffect, useState } from 'react';
+import type { Task, TaskCategory, TaskComplexity, TaskPriority, TaskStatus } from '../../lib/board-api';
 import { COLUMN_META, COLUMNS } from '../../lib/board-columns';
+import { CATEGORY_CONFIG, COMPLEXITY_CONFIG } from '../../lib/board-task-meta';
 import { CommentThread } from './CommentThread';
+import { ProgressBar } from './ProgressBar';
+import { SubtaskList } from './SubtaskList';
 import { api } from '../../lib/board-api';
 import { openInClaudeCode } from '../../lib/open-in-claude';
 
@@ -36,6 +39,11 @@ export function TaskDetailPanel({ task, projectSlug, onClose, onTaskUpdated, rep
   const [copied, setCopied] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [updatingPriority, setUpdatingPriority] = useState(false);
+  const [updatingCategory, setUpdatingCategory] = useState(false);
+  const [updatingComplexity, setUpdatingComplexity] = useState(false);
+  const [activeTab, setActiveTab] = useState<'overview' | 'subtasks' | 'activity'>('overview');
+
+  useEffect(() => { setActiveTab('overview'); }, [task?.id]);
 
   async function handleAddComment(body: string) {
     if (!task) return;
@@ -62,6 +70,28 @@ export function TaskDetailPanel({ task, projectSlug, onClose, onTaskUpdated, rep
       onTaskUpdated();
     } finally {
       setUpdatingPriority(false);
+    }
+  }
+
+  async function handleCategoryChange(newCategory: TaskCategory) {
+    if (!task || updatingCategory) return;
+    setUpdatingCategory(true);
+    try {
+      await api.tasks.update(projectSlug, task.id, { category: newCategory });
+      onTaskUpdated();
+    } finally {
+      setUpdatingCategory(false);
+    }
+  }
+
+  async function handleComplexityChange(newComplexity: TaskComplexity) {
+    if (!task || updatingComplexity) return;
+    setUpdatingComplexity(true);
+    try {
+      await api.tasks.update(projectSlug, task.id, { complexity: newComplexity });
+      onTaskUpdated();
+    } finally {
+      setUpdatingComplexity(false);
     }
   }
 
@@ -238,6 +268,24 @@ export function TaskDetailPanel({ task, projectSlug, onClose, onTaskUpdated, rep
               </button>
             </div>
 
+            {/* Tab bar */}
+            <div className="tab-bar" style={{ padding: '0 20px' }}>
+              {(['overview', 'subtasks', 'activity'] as const).map(tab => {
+                let label = tab.charAt(0).toUpperCase() + tab.slice(1);
+                if (tab === 'subtasks' && task.subtasks?.length > 0) label = `Subtasks (${task.subtasks.length})`;
+                if (tab === 'activity') label = `Activity (${task.comments.length})`;
+                return (
+                  <button
+                    key={tab}
+                    className={`tab ${activeTab === tab ? 'active' : ''}`}
+                    onClick={() => setActiveTab(tab)}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+
             {/* Scrollable body */}
             <div
               style={{
@@ -249,261 +297,339 @@ export function TaskDetailPanel({ task, projectSlug, onClose, onTaskUpdated, rep
                 gap: 24,
               }}
             >
-              {/* Status */}
-              <Section title="Status">
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {COLUMNS.map(status => {
-                    const meta = COLUMN_META[status];
-                    const isActive = task.status === status;
-                    return (
-                      <button
-                        key={status}
-                        onClick={() => handleStatusChange(status)}
-                        disabled={updatingStatus}
-                        style={{
-                          ...(isActive ? pillActive : pillBase),
-                          opacity: updatingStatus ? 0.5 : 1,
-                          cursor: updatingStatus ? 'not-allowed' : 'pointer',
-                        }}
-                      >
-                        <span
-                          style={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: '50%',
-                            background: meta.color,
-                            display: 'inline-block',
-                          }}
-                        />
-                        {meta.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </Section>
-
-              {/* Priority */}
-              <Section title="Priority">
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {(Object.keys(PRIORITY_CONFIG) as TaskPriority[]).map(priority => {
-                    const cfg = PRIORITY_CONFIG[priority];
-                    const isActive = task.priority === priority;
-                    return (
-                      <button
-                        key={priority}
-                        onClick={() => handlePriorityChange(priority)}
-                        disabled={updatingPriority}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          borderRadius: 9999,
-                          padding: '4px 10px',
-                          fontSize: 11,
-                          fontWeight: 600,
-                          textTransform: 'uppercase',
-                          letterSpacing: '0.05em',
-                          cursor: updatingPriority ? 'not-allowed' : 'pointer',
-                          opacity: updatingPriority ? 0.5 : 1,
-                          transition: 'all 0.15s',
-                          border: isActive ? `1px solid ${cfg.borderColor}` : '1px solid var(--border-subtle)',
-                          background: isActive ? cfg.bgColor : 'var(--bg-elevated)',
-                          color: isActive ? cfg.color : 'var(--text-muted)',
-                        }}
-                      >
-                        {cfg.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </Section>
-
-              {/* Description */}
-              {task.description && (
-                <Section title="Description">
-                  <div
-                    style={{
-                      fontSize: 13,
-                      color: 'var(--text-secondary)',
-                      lineHeight: 1.6,
-                      whiteSpace: 'pre-wrap',
-                    }}
-                  >
-                    {task.description}
-                  </div>
-                </Section>
-              )}
-
-              {/* Branch + Worktree */}
-              {(task.branch || task.worktree_path) && (
-                <Section title="Git">
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {task.branch && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)', width: 60, flexShrink: 0 }}>Branch</span>
-                        {repoUrl ? (
-                          <a
-                            href={`${repoUrl}/tree/${task.branch}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
+              {/* ─── OVERVIEW TAB ─── */}
+              {activeTab === 'overview' && (
+                <>
+                  {/* Status */}
+                  <Section title="Status">
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {COLUMNS.map(status => {
+                        const meta = COLUMN_META[status];
+                        const isActive = task.status === status;
+                        return (
+                          <button
+                            key={status}
+                            onClick={() => handleStatusChange(status)}
+                            disabled={updatingStatus}
                             style={{
-                              fontSize: 12,
-                              color: 'var(--text-secondary)',
-                              background: 'var(--bg-elevated)',
-                              borderRadius: 4,
-                              padding: '2px 6px',
-                              border: '1px solid var(--border-subtle)',
-                              textDecoration: 'none',
+                              ...(isActive ? pillActive : pillBase),
+                              opacity: updatingStatus ? 0.5 : 1,
+                              cursor: updatingStatus ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            <span
+                              style={{
+                                width: 8,
+                                height: 8,
+                                borderRadius: '50%',
+                                background: meta.color,
+                                display: 'inline-block',
+                              }}
+                            />
+                            {meta.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </Section>
+
+                  {/* Priority */}
+                  <Section title="Priority">
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {(Object.keys(PRIORITY_CONFIG) as TaskPriority[]).map(priority => {
+                        const cfg = PRIORITY_CONFIG[priority];
+                        const isActive = task.priority === priority;
+                        return (
+                          <button
+                            key={priority}
+                            onClick={() => handlePriorityChange(priority)}
+                            disabled={updatingPriority}
+                            style={{
                               display: 'inline-flex',
                               alignItems: 'center',
-                              gap: 4,
+                              borderRadius: 9999,
+                              padding: '4px 10px',
+                              fontSize: 11,
+                              fontWeight: 600,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.05em',
+                              cursor: updatingPriority ? 'not-allowed' : 'pointer',
+                              opacity: updatingPriority ? 0.5 : 1,
+                              transition: 'all 0.15s',
+                              border: isActive ? `1px solid ${cfg.borderColor}` : '1px solid var(--border-subtle)',
+                              background: isActive ? cfg.bgColor : 'var(--bg-elevated)',
+                              color: isActive ? cfg.color : 'var(--text-muted)',
                             }}
                           >
-                            {task.branch}
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
-                              <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
-                              <polyline points="15 3 21 3 21 9" />
-                              <line x1="10" y1="14" x2="21" y2="3" />
-                            </svg>
-                          </a>
-                        ) : (
-                          <code
+                            {cfg.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </Section>
+
+                  {/* Category */}
+                  <Section title="Category">
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {(Object.keys(CATEGORY_CONFIG) as TaskCategory[]).map(cat => {
+                        const cfg = CATEGORY_CONFIG[cat];
+                        const isActive = task.category === cat;
+                        return (
+                          <button
+                            key={cat}
+                            onClick={() => handleCategoryChange(cat)}
+                            disabled={updatingCategory}
                             style={{
-                              fontSize: 12,
-                              color: 'var(--text-secondary)',
-                              background: 'var(--bg-elevated)',
-                              borderRadius: 4,
-                              padding: '2px 6px',
-                              border: '1px solid var(--border-subtle)',
+                              ...pillBase,
+                              borderColor: isActive ? `${cfg.color}66` : 'var(--border-subtle)',
+                              background: isActive ? `${cfg.color}15` : 'var(--bg-elevated)',
+                              color: isActive ? cfg.color : 'var(--text-muted)',
+                              fontSize: 11,
+                              fontWeight: isActive ? 600 : 500,
+                              opacity: updatingCategory ? 0.5 : 1,
+                              cursor: updatingCategory ? 'not-allowed' : 'pointer',
                             }}
                           >
-                            {task.branch}
-                          </code>
+                            {cfg.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </Section>
+
+                  {/* Complexity */}
+                  <Section title="Complexity">
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {(Object.keys(COMPLEXITY_CONFIG) as TaskComplexity[]).map(cplx => {
+                        const isActive = task.complexity === cplx;
+                        return (
+                          <button
+                            key={cplx}
+                            onClick={() => handleComplexityChange(cplx)}
+                            disabled={updatingComplexity}
+                            style={{
+                              ...(isActive ? pillActive : pillBase),
+                              opacity: updatingComplexity ? 0.5 : 1,
+                              cursor: updatingComplexity ? 'not-allowed' : 'pointer',
+                            }}
+                          >
+                            {COMPLEXITY_CONFIG[cplx].label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </Section>
+
+                  {/* Description */}
+                  {task.description && (
+                    <Section title="Description">
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: 'var(--text-secondary)',
+                          lineHeight: 1.6,
+                          whiteSpace: 'pre-wrap',
+                        }}
+                      >
+                        {task.description}
+                      </div>
+                    </Section>
+                  )}
+
+                  {/* Branch + Worktree */}
+                  {(task.branch || task.worktree_path) && (
+                    <Section title="Git">
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {task.branch && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', width: 60, flexShrink: 0 }}>Branch</span>
+                            {repoUrl ? (
+                              <a
+                                href={`${repoUrl}/tree/${task.branch}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  fontSize: 12,
+                                  color: 'var(--text-secondary)',
+                                  background: 'var(--bg-elevated)',
+                                  borderRadius: 4,
+                                  padding: '2px 6px',
+                                  border: '1px solid var(--border-subtle)',
+                                  textDecoration: 'none',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: 4,
+                                }}
+                              >
+                                {task.branch}
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
+                                  <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                                  <polyline points="15 3 21 3 21 9" />
+                                  <line x1="10" y1="14" x2="21" y2="3" />
+                                </svg>
+                              </a>
+                            ) : (
+                              <code
+                                style={{
+                                  fontSize: 12,
+                                  color: 'var(--text-secondary)',
+                                  background: 'var(--bg-elevated)',
+                                  borderRadius: 4,
+                                  padding: '2px 6px',
+                                  border: '1px solid var(--border-subtle)',
+                                }}
+                              >
+                                {task.branch}
+                              </code>
+                            )}
+                          </div>
+                        )}
+                        {task.worktree_path && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', width: 60, flexShrink: 0 }}>Worktree</span>
+                            <code
+                              style={{
+                                fontSize: 11,
+                                color: 'var(--text-muted)',
+                                background: 'var(--bg-elevated)',
+                                borderRadius: 4,
+                                padding: '2px 6px',
+                                border: '1px solid var(--border-subtle)',
+                                wordBreak: 'break-all',
+                              }}
+                            >
+                              {task.worktree_path}
+                            </code>
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(task.worktree_path!);
+                                setCopied(true);
+                                setTimeout(() => setCopied(false), 1500);
+                              }}
+                              title="Copy path"
+                              style={{
+                                background: 'transparent',
+                                border: 'none',
+                                color: 'var(--text-muted)',
+                                cursor: 'pointer',
+                                fontSize: 11,
+                                padding: '2px 4px',
+                                borderRadius: 4,
+                              }}
+                            >
+                              {copied ? 'Copied!' : '\u2398'}
+                            </button>
+                          </div>
                         )}
                       </div>
-                    )}
-                    {task.worktree_path && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 11, color: 'var(--text-muted)', width: 60, flexShrink: 0 }}>Worktree</span>
-                        <code
-                          style={{
-                            fontSize: 11,
-                            color: 'var(--text-muted)',
-                            background: 'var(--bg-elevated)',
-                            borderRadius: 4,
-                            padding: '2px 6px',
-                            border: '1px solid var(--border-subtle)',
-                            wordBreak: 'break-all',
-                          }}
-                        >
-                          {task.worktree_path}
-                        </code>
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(task.worktree_path!);
-                            setCopied(true);
-                            setTimeout(() => setCopied(false), 1500);
-                          }}
-                          title="Copy path"
-                          style={{
-                            background: 'transparent',
-                            border: 'none',
-                            color: 'var(--text-muted)',
-                            cursor: 'pointer',
-                            fontSize: 11,
-                            padding: '2px 4px',
-                            borderRadius: 4,
-                          }}
-                        >
-                          {copied ? 'Copied!' : '\u2398'}
-                        </button>
+                    </Section>
+                  )}
+
+                  {/* Linked commits */}
+                  {task.linked_commits.length > 0 && (
+                    <Section title={`Commits (${task.linked_commits.length})`}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                        {task.linked_commits.map(sha => (
+                          repoUrl ? (
+                            <a
+                              key={sha}
+                              href={`${repoUrl}/commit/${sha}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              style={{
+                                fontSize: 12,
+                                color: 'var(--text-secondary)',
+                                background: 'var(--bg-elevated)',
+                                borderRadius: 4,
+                                padding: '2px 6px',
+                                border: '1px solid var(--border-subtle)',
+                                fontFamily: 'monospace',
+                                textDecoration: 'none',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 4,
+                                width: 'fit-content',
+                              }}
+                            >
+                              {sha.slice(0, 8)}
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
+                                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                                <polyline points="15 3 21 3 21 9" />
+                                <line x1="10" y1="14" x2="21" y2="3" />
+                              </svg>
+                            </a>
+                          ) : (
+                            <code
+                              key={sha}
+                              style={{
+                                fontSize: 12,
+                                color: 'var(--text-secondary)',
+                                background: 'var(--bg-elevated)',
+                                borderRadius: 4,
+                                padding: '2px 6px',
+                                border: '1px solid var(--border-subtle)',
+                                fontFamily: 'monospace',
+                              }}
+                            >
+                              {sha.slice(0, 12)}
+                            </code>
+                          )
+                        ))}
                       </div>
-                    )}
+                    </Section>
+                  )}
+
+                  {/* Blocked reason */}
+                  {task.blocked && task.blocked_reason && (
+                    <Section title="Blocked reason">
+                      <div
+                        style={{
+                          fontSize: 13,
+                          color: 'var(--blocked)',
+                          background: 'rgba(220,38,38,0.08)',
+                          borderRadius: 6,
+                          padding: '8px 10px',
+                          border: '1px solid rgba(220,38,38,0.2)',
+                        }}
+                      >
+                        {task.blocked_reason}
+                      </div>
+                    </Section>
+                  )}
+
+                  {/* Timestamps */}
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', gap: 16 }}>
+                    <span>Created {new Date(task.created_at).toLocaleDateString()}</span>
+                    <span>Updated {new Date(task.updated_at).toLocaleDateString()}</span>
                   </div>
-                </Section>
+                </>
               )}
 
-              {/* Linked commits */}
-              {task.linked_commits.length > 0 && (
-                <Section title={`Commits (${task.linked_commits.length})`}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {task.linked_commits.map(sha => (
-                      repoUrl ? (
-                        <a
-                          key={sha}
-                          href={`${repoUrl}/commit/${sha}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{
-                            fontSize: 12,
-                            color: 'var(--text-secondary)',
-                            background: 'var(--bg-elevated)',
-                            borderRadius: 4,
-                            padding: '2px 6px',
-                            border: '1px solid var(--border-subtle)',
-                            fontFamily: 'monospace',
-                            textDecoration: 'none',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            width: 'fit-content',
-                          }}
-                        >
-                          {sha.slice(0, 8)}
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
-                            <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
-                            <polyline points="15 3 21 3 21 9" />
-                            <line x1="10" y1="14" x2="21" y2="3" />
-                          </svg>
-                        </a>
-                      ) : (
-                        <code
-                          key={sha}
-                          style={{
-                            fontSize: 12,
-                            color: 'var(--text-secondary)',
-                            background: 'var(--bg-elevated)',
-                            borderRadius: 4,
-                            padding: '2px 6px',
-                            border: '1px solid var(--border-subtle)',
-                            fontFamily: 'monospace',
-                          }}
-                        >
-                          {sha.slice(0, 12)}
-                        </code>
-                      )
-                    ))}
-                  </div>
-                </Section>
+              {/* ─── SUBTASKS TAB ─── */}
+              {activeTab === 'subtasks' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  {(task.subtasks?.length ?? 0) > 0 && (
+                    <ProgressBar
+                      completed={task.subtasks?.filter(s => s.status === 'completed').length ?? 0}
+                      total={task.subtasks?.length ?? 0}
+                      height={6}
+                    />
+                  )}
+                  <SubtaskList
+                    subtasks={task.subtasks ?? []}
+                    projectSlug={projectSlug}
+                    taskId={task.id}
+                    onUpdated={onTaskUpdated}
+                  />
+                </div>
               )}
 
-              {/* Blocked reason */}
-              {task.blocked && task.blocked_reason && (
-                <Section title="Blocked reason">
-                  <div
-                    style={{
-                      fontSize: 13,
-                      color: 'var(--blocked)',
-                      background: 'rgba(220,38,38,0.08)',
-                      borderRadius: 6,
-                      padding: '8px 10px',
-                      border: '1px solid rgba(220,38,38,0.2)',
-                    }}
-                  >
-                    {task.blocked_reason}
-                  </div>
+              {/* ─── ACTIVITY TAB ─── */}
+              {activeTab === 'activity' && (
+                <Section title={`Comments (${task.comments.length})`}>
+                  <CommentThread comments={task.comments} onAdd={handleAddComment} />
                 </Section>
               )}
-
-              {/* Comments */}
-              <Section title={`Comments (${task.comments.length})`}>
-                <CommentThread comments={task.comments} onAdd={handleAddComment} />
-              </Section>
-
-              {/* Timestamps */}
-              <div style={{ fontSize: 11, color: 'var(--text-muted)', display: 'flex', gap: 16 }}>
-                <span>Created {new Date(task.created_at).toLocaleDateString()}</span>
-                <span>Updated {new Date(task.updated_at).toLocaleDateString()}</span>
-              </div>
             </div>
           </motion.aside>
         </div>

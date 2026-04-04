@@ -255,6 +255,9 @@ pub async fn detect_harnesses(app: AppHandle) -> Result<Vec<HarnessInfo>, String
         ("codex", "Codex CLI", "codex", vec![
             "o4-mini", "gpt-4.1",
         ]),
+        ("opencode", "OpenCode", "opencode", vec![
+            "anthropic/claude-sonnet-4-5", "openai/gpt-4o", "ollama/qwen2.5-coder",
+        ]),
     ];
 
     let mut harnesses = Vec::new();

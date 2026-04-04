@@ -17,8 +17,9 @@ import { DroppableColumn } from '../../components/board/DroppableColumn';
 import { SwimlaneView } from '../../components/board/SwimlaneView';
 import { ViewToggle, type ViewMode } from '../../components/board/ViewToggle';
 import { TaskCard } from '../../components/board/TaskCard';
-import { TaskDetailPanel } from '../../components/board/TaskDetailPanel';
+import { TaskDetailDialog } from '../../components/board/TaskDetailDialog';
 import { TaskForm } from '../../components/board/TaskForm';
+import { ExecutionProvider } from '../../contexts/ExecutionContext';
 import { api } from '../../lib/board-api';
 import type { Task, Epic, TaskStatus, Project } from '../../lib/board-api';
 import { COLUMNS } from '../../lib/board-columns';
@@ -205,6 +206,7 @@ export default function BoardKanbanPage() {
   }
 
   return (
+    <ExecutionProvider>
     <div className="board-scope" style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
       {/* Header */}
       <div
@@ -434,9 +436,9 @@ export default function BoardKanbanPage() {
         </DragOverlay>
       </DndContext>
 
-      <TaskDetailPanel
+      <TaskDetailDialog
         task={selectedTask}
-        projectSlug={projectSlug}
+        project={project}
         onClose={() => setSelectedTask(null)}
         onTaskUpdated={refetch}
         repoUrl={project.repo_url}
@@ -452,5 +454,6 @@ export default function BoardKanbanPage() {
         onCreated={refetch}
       />
     </div>
+    </ExecutionProvider>
   );
 }

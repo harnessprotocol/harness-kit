@@ -1,6 +1,8 @@
 import type { Task, TaskPriority } from '../../lib/board-api';
 import { COLUMN_META } from '../../lib/board-columns';
+import { CATEGORY_CONFIG, COMPLEXITY_CONFIG } from '../../lib/board-task-meta';
 import { openInClaudeCode } from '../../lib/open-in-claude';
+import { ProgressBar } from './ProgressBar';
 import { Tooltip } from './Tooltip';
 
 interface Props {
@@ -35,6 +37,10 @@ function relativeTime(dateStr: string): string {
 export function TaskCard({ task, onClick, repoUrl }: Props) {
   const statusMeta = COLUMN_META[task.status];
   const priorityCfg = task.priority ? PRIORITY_CONFIG[task.priority] : null;
+  const completedSubtasks = task.subtasks?.filter(s => s.status === 'completed').length ?? 0;
+  const totalSubtasks = task.subtasks?.length ?? 0;
+  const categoryCfg = task.category ? CATEGORY_CONFIG[task.category] : null;
+  const complexityCfg = task.complexity ? COMPLEXITY_CONFIG[task.complexity] : null;
 
   return (
     <div
@@ -150,7 +156,69 @@ export function TaskCard({ task, onClick, repoUrl }: Props) {
             {task.epic_name}
           </span>
         )}
+
+        {/* Category badge */}
+        {categoryCfg && (
+          <span
+            style={{
+              borderRadius: 9999,
+              border: `1px solid ${categoryCfg.color}33`,
+              background: `${categoryCfg.color}15`,
+              color: categoryCfg.color,
+              padding: '1px 6px',
+              fontSize: 10,
+              fontWeight: 500,
+            }}
+          >
+            {categoryCfg.label}
+          </span>
+        )}
+
+        {/* Complexity badge */}
+        {complexityCfg && (
+          <span
+            style={{
+              borderRadius: 9999,
+              border: '1px solid var(--border-subtle)',
+              background: 'var(--bg-surface)',
+              padding: '1px 6px',
+              fontSize: 10,
+              color: 'var(--text-muted)',
+              fontWeight: 500,
+            }}
+          >
+            {complexityCfg.label}
+          </span>
+        )}
       </div>
+
+      {/* Progress bar */}
+      {totalSubtasks > 0 && (
+        <ProgressBar completed={completedSubtasks} total={totalSubtasks} />
+      )}
+
+      {/* Subtask status dots */}
+      {totalSubtasks > 0 && totalSubtasks <= 10 && (
+        <Tooltip text={`${completedSubtasks}/${totalSubtasks} subtasks complete`} position="top">
+          <span style={{ display: 'inline-flex', gap: 3, alignItems: 'center' }}>
+            {task.subtasks.map(s => (
+              <span
+                key={s.id}
+                style={{
+                  width: 6,
+                  height: 6,
+                  borderRadius: '50%',
+                  background:
+                    s.status === 'completed' ? 'var(--success)' :
+                    s.status === 'in_progress' ? 'var(--status-in-progress)' :
+                    s.status === 'failed' ? 'var(--danger, #ef4444)' :
+                    'var(--fg-subtle)',
+                }}
+              />
+            ))}
+          </span>
+        </Tooltip>
+      )}
 
       {/* Footer row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
