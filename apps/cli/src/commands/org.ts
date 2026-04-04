@@ -10,34 +10,35 @@ interface Organization {
   updated_at: string;
 }
 
-interface OrgMember {
-  org_id: string;
-  user_id: string;
-  role: "admin" | "member";
-  created_at: string;
-}
-
-const API_BASE_URL = process.env.HARNESS_API_URL || "http://localhost:3001";
+const API_BASE_URL = process.env.HARNESS_API_URL || "https://harnessprotocol.io";
 
 async function apiRequest<T>(
   path: string,
   options: RequestInit = {},
 ): Promise<T> {
   const url = `${API_BASE_URL}${path}`;
+  const token = process.env.HARNESS_API_TOKEN;
 
   try {
     const response = await fetch(url, {
       ...options,
       headers: {
         "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...options.headers,
       },
     });
 
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error(
+          "Authentication required. Set HARNESS_API_TOKEN with your API token.",
+        );
+      }
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
-        errorData.error || `API request failed: ${response.status} ${response.statusText}`,
+        (errorData as { error?: string }).error ||
+          `API request failed: ${response.status} ${response.statusText}`,
       );
     }
 
@@ -93,7 +94,6 @@ export async function createOrganization(): Promise<void> {
     console.log(chalk.bold("Create a new organization"));
     console.log("");
 
-    // Prompt for organization details
     const slug = await input({
       message: "Organization slug (lowercase, alphanumeric, hyphens only):",
       validate: (value) => {
@@ -118,7 +118,6 @@ export async function createOrganization(): Promise<void> {
       default: "",
     });
 
-    // Confirm creation
     console.log("");
     console.log(chalk.dim("Organization details:"));
     console.log(chalk.dim(`  Slug: ${slug}`));
@@ -138,7 +137,6 @@ export async function createOrganization(): Promise<void> {
       return;
     }
 
-    // Create organization via API
     console.log("");
     console.log(chalk.dim("Creating organization..."));
 
@@ -173,18 +171,14 @@ export async function createOrganization(): Promise<void> {
 }
 
 export async function joinOrganization(slug: string): Promise<void> {
-  try {
-    if (!slug) {
-      console.error(chalk.red("Error: Organization slug is required"));
-      console.log("");
-      console.log(chalk.dim("Usage: harness-kit org join <slug>"));
-      process.exit(1);
-    }
-
-    console.log(chalk.bold(`Join organization: ${slug}`));
+  if (!slug) {
+    console.error(chalk.red("Error: Organization slug is required"));
     console.log("");
+    console.log(chalk.dim("Usage: harness-kit org join <slug>"));
+    process.exit(1);
+  }
 
-    // Fetch organization details first
+  try {
     console.log(chalk.dim("Fetching organization details..."));
 
     const orgs = await apiRequest<Organization[]>("/api/orgs");
@@ -197,38 +191,16 @@ export async function joinOrganization(slug: string): Promise<void> {
     }
 
     console.log("");
-    console.log(chalk.dim("Organization:"));
-    console.log(chalk.dim(`  Name: ${org.name}`));
+    console.log(chalk.bold(`Organization: ${org.name}`));
     if (org.description) {
-      console.log(chalk.dim(`  Description: ${org.description}`));
+      console.log(chalk.dim(`  ${org.description}`));
     }
     console.log("");
-
-    const shouldJoin = await confirm({
-      message: "Request to join this organization?",
-      default: true,
-    });
-
-    if (!shouldJoin) {
-      console.log(chalk.dim("Aborted."));
-      return;
-    }
-
-    // Note: This would require additional API support for join requests
-    // For now, show a message about the process
-    console.log("");
     console.log(
-      chalk.yellow(
-        "Note: Organization join requests require admin approval.",
-      ),
+      chalk.dim("To join this organization, ask an admin to add you as a member."),
     );
-    console.log("");
-    console.log(
-      chalk.dim(
-        "Contact an organization admin to add you as a member, or visit:",
-      ),
-    );
-    console.log(chalk.dim(`  ${API_BASE_URL}/orgs/${slug}`));
+    console.log(chalk.dim("Then visit:"));
+    console.log(chalk.white(`  ${API_BASE_URL}/orgs/${slug}`));
   } catch (error) {
     console.error("");
     console.error(

@@ -147,7 +147,11 @@ export default async function OrgSettingsPage({
           <section className="mb-10">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-xl font-bold">Members</h2>
-              <button className="rounded-lg border border-violet-500/30 bg-violet-500/10 px-4 py-2 text-sm font-medium text-violet-400 transition-colors hover:border-violet-500/50 hover:bg-violet-500/20">
+              <button
+                disabled
+                title="Member invitations coming soon"
+                className="cursor-not-allowed rounded-lg border border-violet-500/30 bg-violet-500/10 px-4 py-2 text-sm font-medium text-violet-400 opacity-50"
+              >
                 Invite Member
               </button>
             </div>
@@ -206,13 +210,19 @@ export default async function OrgSettingsPage({
                       </div>
                       <div className="flex items-center gap-2">
                         <select
-                          className="rounded-lg border border-[#2a2a2e] bg-[#1a1a1e] px-3 py-1.5 text-sm text-gray-300 transition-colors hover:border-violet-500/30 focus:border-violet-500/50 focus:outline-none"
+                          disabled
+                          title="Role changes coming soon"
+                          className="cursor-not-allowed rounded-lg border border-[#2a2a2e] bg-[#1a1a1e] px-3 py-1.5 text-sm text-gray-300 opacity-50 focus:outline-none"
                           defaultValue={member.role}
                         >
                           <option value="member">Member</option>
                           <option value="admin">Admin</option>
                         </select>
-                        <button className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-sm text-red-400 transition-colors hover:border-red-500/50 hover:bg-red-500/20">
+                        <button
+                          disabled
+                          title="Member removal coming soon"
+                          className="cursor-not-allowed rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-sm text-red-400 opacity-50"
+                        >
                           Remove
                         </button>
                       </div>
@@ -274,10 +284,18 @@ export default async function OrgSettingsPage({
                             </div>
                           </div>
                           <div className="flex gap-2">
-                            <button className="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-1.5 text-sm text-green-400 transition-colors hover:border-green-500/50 hover:bg-green-500/20">
+                            <button
+                              disabled
+                              title="Plugin approvals coming soon"
+                              className="cursor-not-allowed rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-1.5 text-sm text-green-400 opacity-50"
+                            >
                               Approve
                             </button>
-                            <button className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-sm text-red-400 transition-colors hover:border-red-500/50 hover:bg-red-500/20">
+                            <button
+                              disabled
+                              title="Plugin approvals coming soon"
+                              className="cursor-not-allowed rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-sm text-red-400 opacity-50"
+                            >
                               Deny
                             </button>
                           </div>
@@ -339,7 +357,11 @@ export default async function OrgSettingsPage({
                               {plugin.version}
                             </div>
                           </div>
-                          <button className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-sm text-red-400 transition-colors hover:border-red-500/50 hover:bg-red-500/20">
+                          <button
+                            disabled
+                            title="Plugin approvals coming soon"
+                            className="cursor-not-allowed rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-sm text-red-400 opacity-50"
+                          >
                             Revoke
                           </button>
                         </div>
@@ -385,7 +407,11 @@ export default async function OrgSettingsPage({
                               v{plugin.version}
                             </div>
                           </div>
-                          <button className="rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-1.5 text-sm text-green-400 transition-colors hover:border-green-500/50 hover:bg-green-500/20">
+                          <button
+                            disabled
+                            title="Plugin approvals coming soon"
+                            className="cursor-not-allowed rounded-lg border border-green-500/30 bg-green-500/10 px-3 py-1.5 text-sm text-green-400 opacity-50"
+                          >
                             Approve
                           </button>
                         </div>

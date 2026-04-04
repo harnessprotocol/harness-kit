@@ -163,7 +163,10 @@ export async function getUserOrganizations(
     throw error;
   }
 
-  return data.map((item: any) => item.organizations);
+  return data.map(
+    (item: { org_id: string; organizations: Organization }) =>
+      item.organizations,
+  );
 }
 
 /**

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase";
 import { getServerSession } from "@/lib/auth";
+import { requireOrgRole, AuthorizationError } from "@/lib/orgs";
+
+const VALID_TYPES = ["skill", "agent", "hook", "script", "knowledge", "rules"] as const;
 
 /**
  * GET /api/orgs/[slug]/plugins
@@ -14,7 +17,6 @@ export async function GET(
     const { slug } = await params;
     const supabase = getServiceSupabase();
 
-    // Get organization
     const { data: org, error: orgError } = await supabase
       .from("organizations")
       .select("id")
@@ -28,13 +30,9 @@ export async function GET(
           { status: 404 }
         );
       }
-      return NextResponse.json(
-        { error: orgError.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: orgError.message }, { status: 500 });
     }
 
-    // Get all plugins for this organization
     const { data: plugins, error: pluginsError } = await supabase
       .from("org_components")
       .select("*")
@@ -42,10 +40,7 @@ export async function GET(
       .order("created_at", { ascending: false });
 
     if (pluginsError) {
-      return NextResponse.json(
-        { error: pluginsError.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: pluginsError.message }, { status: 500 });
     }
 
     return NextResponse.json(plugins);
@@ -59,60 +54,17 @@ export async function GET(
 
 /**
  * POST /api/orgs/[slug]/plugins
- * Publish a new plugin to an organization.
- * Requires authentication and admin role.
+ * Publish a new plugin to an organization. Requires admin role.
  */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    // Check authentication
     const user = await getServerSession();
-    if (!user) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-
     const { slug } = await params;
+    const org = await requireOrgRole(slug, user, "admin");
     const supabase = getServiceSupabase();
-
-    // Get organization
-    const { data: org, error: orgError } = await supabase
-      .from("organizations")
-      .select("id")
-      .eq("slug", slug)
-      .single();
-
-    if (orgError) {
-      if (orgError.code === "PGRST116") {
-        return NextResponse.json(
-          { error: "Organization not found" },
-          { status: 404 }
-        );
-      }
-      return NextResponse.json(
-        { error: orgError.message },
-        { status: 500 }
-      );
-    }
-
-    // Check if user is an admin
-    const { data: member } = await supabase
-      .from("org_members")
-      .select("role")
-      .eq("org_id", org.id)
-      .eq("user_id", user.id)
-      .single();
-
-    if (!member || member.role !== "admin") {
-      return NextResponse.json(
-        { error: "Admin permission required" },
-        { status: 403 }
-      );
-    }
 
     const body = await request.json();
     const {
@@ -128,7 +80,6 @@ export async function POST(
       repo_url,
     } = body;
 
-    // Validate required fields
     if (!pluginSlug || !name) {
       return NextResponse.json(
         { error: "Missing required fields: slug, name" },
@@ -136,7 +87,6 @@ export async function POST(
       );
     }
 
-    // Validate slug format (@org-name/plugin-name)
     const slugPattern = /^@[a-z0-9-]+\/[a-z0-9-]+$/;
     if (!slugPattern.test(pluginSlug)) {
       return NextResponse.json(
@@ -145,7 +95,6 @@ export async function POST(
       );
     }
 
-    // Extract org name from slug and verify it matches
     const orgNameFromSlug = pluginSlug.split("/")[0].substring(1);
     if (orgNameFromSlug !== slug) {
       return NextResponse.json(
@@ -154,16 +103,13 @@ export async function POST(
       );
     }
 
-    // Validate type if provided
-    const validTypes = ["skill", "agent", "hook", "script", "knowledge", "rules"];
-    if (type && !validTypes.includes(type)) {
+    if (type && !VALID_TYPES.includes(type)) {
       return NextResponse.json(
-        { error: `Invalid type. Must be one of: ${validTypes.join(", ")}` },
+        { error: `Invalid type. Must be one of: ${VALID_TYPES.join(", ")}` },
         { status: 400 }
       );
     }
 
-    // Check if plugin with this slug already exists
     const { data: existingPlugin } = await supabase
       .from("org_components")
       .select("slug")
@@ -177,7 +123,7 @@ export async function POST(
       );
     }
 
-    // Create plugin
+    // Issue 4: do not fall back to user.email — email is PII
     const { data: newPlugin, error: insertError } = await supabase
       .from("org_components")
       .insert({
@@ -187,7 +133,7 @@ export async function POST(
         type: type || "skill",
         description: description || "",
         version: version || "0.1.0",
-        author: author || { name: user.user_metadata?.user_name || user.email || "Unknown" },
+        author: author || { name: user!.user_metadata?.user_name || "Unknown" },
         license: license || "Apache-2.0",
         skill_md,
         readme_md,
@@ -197,14 +143,14 @@ export async function POST(
       .single();
 
     if (insertError) {
-      return NextResponse.json(
-        { error: insertError.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: insertError.message }, { status: 500 });
     }
 
     return NextResponse.json(newPlugin, { status: 201 });
   } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json(
       { error: "Failed to publish plugin" },
       { status: 500 }
@@ -214,60 +160,17 @@ export async function POST(
 
 /**
  * PATCH /api/orgs/[slug]/plugins
- * Update an existing plugin.
- * Requires authentication and admin role.
+ * Update an existing plugin. Requires admin role.
  */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    // Check authentication
     const user = await getServerSession();
-    if (!user) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-
     const { slug } = await params;
+    const org = await requireOrgRole(slug, user, "admin");
     const supabase = getServiceSupabase();
-
-    // Get organization
-    const { data: org, error: orgError } = await supabase
-      .from("organizations")
-      .select("id")
-      .eq("slug", slug)
-      .single();
-
-    if (orgError) {
-      if (orgError.code === "PGRST116") {
-        return NextResponse.json(
-          { error: "Organization not found" },
-          { status: 404 }
-        );
-      }
-      return NextResponse.json(
-        { error: orgError.message },
-        { status: 500 }
-      );
-    }
-
-    // Check if user is an admin
-    const { data: member } = await supabase
-      .from("org_members")
-      .select("role")
-      .eq("org_id", org.id)
-      .eq("user_id", user.id)
-      .single();
-
-    if (!member || member.role !== "admin") {
-      return NextResponse.json(
-        { error: "Admin permission required" },
-        { status: 403 }
-      );
-    }
 
     const body = await request.json();
     const {
@@ -283,7 +186,6 @@ export async function PATCH(
       repo_url,
     } = body;
 
-    // Validate required field (slug to identify which plugin to update)
     if (!pluginSlug) {
       return NextResponse.json(
         { error: "Missing required field: slug" },
@@ -291,11 +193,12 @@ export async function PATCH(
       );
     }
 
-    // Check if plugin exists and belongs to this org
+    // Check plugin exists and belongs to this org
     const { data: existingPlugin } = await supabase
       .from("org_components")
       .select("id, org_id")
       .eq("slug", pluginSlug)
+      .eq("org_id", org.id)
       .single();
 
     if (!existingPlugin) {
@@ -305,23 +208,13 @@ export async function PATCH(
       );
     }
 
-    if (existingPlugin.org_id !== org.id) {
+    if (type && !VALID_TYPES.includes(type)) {
       return NextResponse.json(
-        { error: "Plugin does not belong to this organization" },
-        { status: 403 }
-      );
-    }
-
-    // Validate type if provided
-    const validTypes = ["skill", "agent", "hook", "script", "knowledge", "rules"];
-    if (type && !validTypes.includes(type)) {
-      return NextResponse.json(
-        { error: `Invalid type. Must be one of: ${validTypes.join(", ")}` },
+        { error: `Invalid type. Must be one of: ${VALID_TYPES.join(", ")}` },
         { status: 400 }
       );
     }
 
-    // Build update object with only provided fields
     const updates: Record<string, unknown> = {};
     if (name !== undefined) updates.name = name;
     if (type !== undefined) updates.type = type;
@@ -340,23 +233,24 @@ export async function PATCH(
       );
     }
 
-    // Update plugin
+    // Issue 13: scope update by both slug and org_id
     const { data: updatedPlugin, error: updateError } = await supabase
       .from("org_components")
       .update(updates)
       .eq("slug", pluginSlug)
+      .eq("org_id", org.id)
       .select()
       .single();
 
     if (updateError) {
-      return NextResponse.json(
-        { error: updateError.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
     return NextResponse.json(updatedPlugin);
   } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json(
       { error: "Failed to update plugin" },
       { status: 500 }

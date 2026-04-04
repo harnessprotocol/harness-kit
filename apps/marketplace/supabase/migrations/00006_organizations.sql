@@ -11,7 +11,7 @@ create table organizations (
 -- Organization members (with role-based access control)
 create table org_members (
   org_id uuid not null references organizations(id) on delete cascade,
-  user_id text not null,
+  user_id uuid not null references auth.users(id) on delete cascade,
   role text not null check (role in ('admin', 'member')),
   created_at timestamptz not null default now(),
   primary key (org_id, user_id)
@@ -80,27 +80,13 @@ create trigger org_components_updated_at
   before update on org_components
   for each row execute function update_updated_at();
 
--- Atomic install count increment for org_components (placeholder, replaced below with SECURITY DEFINER version)
-create or replace function increment_org_component_install_count(component_slug text)
-returns int as $$
-declare
-  new_count int;
-begin
-  update org_components
-    set install_count = install_count + 1
-    where slug = component_slug
-    returning install_count into new_count;
-  return new_count;
-end;
-$$ language plpgsql;
-
 -- Plugin approvals (track which public plugins are approved/denied for org use)
 create table org_plugin_approvals (
   id uuid primary key default uuid_generate_v4(),
   org_id uuid not null references organizations(id) on delete cascade,
   component_id uuid not null references components(id) on delete cascade,
   status text not null check (status in ('approved', 'denied', 'pending')),
-  approved_by text,
+  approved_by uuid references auth.users(id),
   approved_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),

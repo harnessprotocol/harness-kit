@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase";
 import { getServerSession } from "@/lib/auth";
+import { getOrgBySlug, requireOrgRole, AuthorizationError } from "@/lib/orgs";
 
 /**
  * GET /api/orgs/[slug]
@@ -12,28 +13,16 @@ export async function GET(
 ) {
   try {
     const { slug } = await params;
-    const supabase = getServiceSupabase();
+    const org = await getOrgBySlug(slug);
 
-    const { data, error } = await supabase
-      .from("organizations")
-      .select("*")
-      .eq("slug", slug)
-      .single();
-
-    if (error) {
-      if (error.code === "PGRST116") {
-        return NextResponse.json(
-          { error: "Organization not found" },
-          { status: 404 }
-        );
-      }
+    if (!org) {
       return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
+        { error: "Organization not found" },
+        { status: 404 }
       );
     }
 
-    return NextResponse.json(data);
+    return NextResponse.json(org);
   } catch (error) {
     return NextResponse.json(
       { error: "Failed to fetch organization" },
@@ -44,65 +33,21 @@ export async function GET(
 
 /**
  * PATCH /api/orgs/[slug]
- * Update an organization.
- * Requires authentication and admin role.
+ * Update an organization. Requires admin role.
  */
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    // Check authentication
     const user = await getServerSession();
-    if (!user) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-
     const { slug } = await params;
+    const org = await requireOrgRole(slug, user, "admin");
     const supabase = getServiceSupabase();
-
-    // Get organization
-    const { data: org, error: orgError } = await supabase
-      .from("organizations")
-      .select("id")
-      .eq("slug", slug)
-      .single();
-
-    if (orgError) {
-      if (orgError.code === "PGRST116") {
-        return NextResponse.json(
-          { error: "Organization not found" },
-          { status: 404 }
-        );
-      }
-      return NextResponse.json(
-        { error: orgError.message },
-        { status: 500 }
-      );
-    }
-
-    // Check if user is an admin
-    const { data: member } = await supabase
-      .from("org_members")
-      .select("role")
-      .eq("org_id", org.id)
-      .eq("user_id", user.id)
-      .single();
-
-    if (!member || member.role !== "admin") {
-      return NextResponse.json(
-        { error: "Admin permission required" },
-        { status: 403 }
-      );
-    }
 
     const body = await request.json();
     const { name, description } = body;
 
-    // Build update object (only include provided fields)
     const updates: Record<string, unknown> = {};
     if (name !== undefined) updates.name = name;
     if (description !== undefined) updates.description = description;
@@ -114,7 +59,6 @@ export async function PATCH(
       );
     }
 
-    // Update organization
     const { data: updated, error: updateError } = await supabase
       .from("organizations")
       .update(updates)
@@ -131,6 +75,9 @@ export async function PATCH(
 
     return NextResponse.json(updated);
   } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json(
       { error: "Failed to update organization" },
       { status: 500 }
@@ -140,62 +87,19 @@ export async function PATCH(
 
 /**
  * DELETE /api/orgs/[slug]
- * Delete an organization.
- * Requires authentication and admin role.
+ * Delete an organization. Requires admin role.
+ * Cascade deletes all members and components.
  */
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    // Check authentication
     const user = await getServerSession();
-    if (!user) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-
     const { slug } = await params;
+    const org = await requireOrgRole(slug, user, "admin");
     const supabase = getServiceSupabase();
 
-    // Get organization
-    const { data: org, error: orgError } = await supabase
-      .from("organizations")
-      .select("id")
-      .eq("slug", slug)
-      .single();
-
-    if (orgError) {
-      if (orgError.code === "PGRST116") {
-        return NextResponse.json(
-          { error: "Organization not found" },
-          { status: 404 }
-        );
-      }
-      return NextResponse.json(
-        { error: orgError.message },
-        { status: 500 }
-      );
-    }
-
-    // Check if user is an admin
-    const { data: member } = await supabase
-      .from("org_members")
-      .select("role")
-      .eq("org_id", org.id)
-      .eq("user_id", user.id)
-      .single();
-
-    if (!member || member.role !== "admin") {
-      return NextResponse.json(
-        { error: "Admin permission required" },
-        { status: 403 }
-      );
-    }
-
-    // Delete organization (cascade will handle members and components)
     const { error: deleteError } = await supabase
       .from("organizations")
       .delete()
@@ -208,8 +112,11 @@ export async function DELETE(
       );
     }
 
-    return NextResponse.json({ success: true }, { status: 200 });
+    return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     return NextResponse.json(
       { error: "Failed to delete organization" },
       { status: 500 }
