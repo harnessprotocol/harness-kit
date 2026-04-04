@@ -1,0 +1,33 @@
+name: Build
+
+# Runs on push to main only — provides the build badge and verifies main stays healthy.
+# PR builds are covered by the validate.yml workflow (test-all job).
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
+        # Desktop (Tauri) is excluded — requires Rust + platform-specific system libs.
+        # Desktop is built and tested in the desktop-build-test job in validate.yml.
+        run: pnpm -r --filter=!harness-kit-desktop build
