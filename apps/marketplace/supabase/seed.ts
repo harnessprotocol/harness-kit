@@ -180,6 +180,47 @@ async function seedTags(tagSlugs: string[]): Promise<Map<string, string>> {
   return slugToId;
 }
 
+async function seedOrganizations(): Promise<void> {
+  console.log("Seeding sample organizations...");
+
+  const organizations = [
+    {
+      slug: "acme-corp",
+      name: "Acme Corporation",
+      description:
+        "Enterprise software development team building next-gen cloud platforms",
+    },
+    {
+      slug: "startup-labs",
+      name: "Startup Labs",
+      description:
+        "Early-stage startup building AI-powered developer tools",
+    },
+    {
+      slug: "opensource-collective",
+      name: "Open Source Collective",
+      description:
+        "Community organization maintaining popular open source projects",
+    },
+    {
+      slug: "devtools-inc",
+      name: "DevTools Inc",
+      description:
+        "Developer tooling company creating productivity solutions for engineering teams",
+    },
+  ];
+
+  const { error } = await supabase
+    .from("organizations")
+    .upsert(organizations, { onConflict: "slug" });
+
+  if (error) {
+    throw new Error(`Failed to seed organizations: ${error.message}`);
+  }
+
+  console.log(`  Seeded ${organizations.length} organizations: ${organizations.map((o) => o.slug).join(", ")}`);
+}
+
 async function seedComponents(
   plugins: MarketplaceJson["plugins"],
   categoryMap: Map<string, string>,
@@ -323,7 +364,11 @@ async function main(): Promise<void> {
   const tagMap = await seedTags([...allTags].sort());
   console.log();
 
-  // 4. Seed components with join records
+  // 4. Seed organizations
+  await seedOrganizations();
+  console.log();
+
+  // 5. Seed components with join records
   await seedComponents(marketplace.plugins, categoryMap, tagMap);
 
   console.log("\n=== Seed complete ===");
