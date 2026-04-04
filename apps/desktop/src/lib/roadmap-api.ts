@@ -1,4 +1,15 @@
-import { apiFetch } from './board-api';
+import { apiFetch, BOARD_SERVER_BASE } from './board-api';
+
+/** Fetch that returns null on 404 instead of throwing. */
+async function apiFetchOrNull<T>(path: string): Promise<T | null> {
+  const res = await fetch(`${BOARD_SERVER_BASE}/api/v1${path}`);
+  if (res.status === 404) return null;
+  if (!res.ok) {
+    const err = await res.text().catch(() => res.statusText);
+    throw new Error(`API ${res.status}: ${err}`);
+  }
+  return res.json() as Promise<T>;
+}
 import type {
   Roadmap,
   RoadmapFeature,
@@ -6,10 +17,90 @@ import type {
   Competitor,
 } from './roadmap-types';
 
+export type GenerationPhase = 'analyzing' | 'generating' | 'saving' | 'done';
+
+export interface GenerationEvent {
+  type: 'phase' | 'done' | 'error';
+  phase?: GenerationPhase;
+  label?: string;
+  message?: string;
+}
+
+export function streamRoadmapGeneration(
+  slug: string,
+  onEvent: (event: GenerationEvent) => void,
+): () => void {
+  const url = `${BOARD_SERVER_BASE}/api/v1/projects/${slug}/roadmap/generate`;
+  let aborted = false;
+
+  const es = new EventSource(url);
+
+  // EventSource doesn't support POST — use fetch with SSE manually instead
+  es.close();
+
+  const controller = new AbortController();
+  const { signal } = controller;
+
+  (async () => {
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { Accept: 'text/event-stream' },
+        signal,
+      });
+
+      if (!res.ok || !res.body) {
+        const text = await res.text().catch(() => res.statusText);
+        onEvent({ type: 'error', message: `Server error ${res.status}: ${text}` });
+        return;
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (!aborted) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        const blocks = buffer.split('\n\n');
+        buffer = blocks.pop() ?? '';
+
+        for (const block of blocks) {
+          const lines = block.split('\n');
+          let eventType = '';
+          let data = '';
+          for (const line of lines) {
+            if (line.startsWith('event: ')) eventType = line.slice(7).trim();
+            else if (line.startsWith('data: ')) data = line.slice(6).trim();
+          }
+          if (!eventType || !data) continue;
+          try {
+            const parsed = JSON.parse(data) as Record<string, string>;
+            onEvent({ type: eventType as 'phase' | 'done' | 'error', ...parsed });
+          } catch {
+            // ignore malformed frames
+          }
+        }
+      }
+    } catch (err) {
+      if (!aborted) {
+        onEvent({ type: 'error', message: err instanceof Error ? err.message : String(err) });
+      }
+    }
+  })();
+
+  return () => {
+    aborted = true;
+    controller.abort();
+  };
+}
+
 export const roadmapApi = {
   roadmap: {
     get: (slug: string) =>
-      apiFetch<Roadmap | null>(`/projects/${slug}/roadmap`),
+      apiFetchOrNull<Roadmap>(`/projects/${slug}/roadmap`),
     save: (slug: string, roadmap: Roadmap) =>
       apiFetch<Roadmap>(`/projects/${slug}/roadmap`, {
         method: 'PUT',
@@ -50,7 +141,7 @@ export const roadmapApi = {
   },
   competitors: {
     get: (slug: string) =>
-      apiFetch<CompetitorAnalysis | null>(`/projects/${slug}/competitors`),
+      apiFetchOrNull<CompetitorAnalysis>(`/projects/${slug}/competitors`),
     save: (slug: string, analysis: CompetitorAnalysis) =>
       apiFetch<CompetitorAnalysis>(`/projects/${slug}/competitors`, {
         method: 'PUT',
