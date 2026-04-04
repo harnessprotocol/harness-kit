@@ -80,7 +80,7 @@ export function CommentThread({ comments, onAdd }: Props) {
         <textarea
           value={body}
           onChange={e => setBody(e.target.value)}
-          placeholder="Add a comment\u2026"
+          placeholder="Add a comment..."
           rows={3}
           style={{
             background: 'var(--bg-base)',
@@ -117,7 +117,7 @@ export function CommentThread({ comments, onAdd }: Props) {
             transition: 'opacity 0.1s',
           }}
         >
-          {submitting ? 'Posting\u2026' : 'Comment'}
+          {submitting ? 'Posting...' : 'Comment'}
         </button>
       </form>
     </div>
