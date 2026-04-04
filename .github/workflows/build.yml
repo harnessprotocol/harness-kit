@@ -1,9 +1,9 @@
 name: Build
 
+# Runs on push to main only — provides the build badge and verifies main stays healthy.
+# PR builds are covered by the validate.yml workflow (test-all job).
 on:
   push:
-    branches: [main]
-  pull_request:
     branches: [main]
 
 concurrency:
@@ -29,8 +29,5 @@ jobs:
 
       - name: Build all packages
         # Desktop (Tauri) is excluded — requires Rust + platform-specific system libs.
-        # Build and test the desktop app locally with: pnpm build:desktop
+        # Desktop is built and tested in the desktop-build-test job in validate.yml.
         run: pnpm -r --filter=!harness-kit-desktop build
-
-      - name: Test all packages
-        run: pnpm test:all
