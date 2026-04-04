@@ -10,6 +10,9 @@ concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -30,4 +33,6 @@ jobs:
       - name: Build all packages
         # Desktop (Tauri) is excluded — requires Rust + platform-specific system libs.
         # Desktop is built and tested in the desktop-build-test job in validate.yml.
-        run: pnpm -r --filter=!harness-kit-desktop build
+        # Root package is excluded — its build script is `pnpm -r build` which would
+        # cause a recursive double-build and a next build lock conflict on apps/board.
+        run: pnpm -r --filter=!harness-kit-desktop --filter=!harness-kit build

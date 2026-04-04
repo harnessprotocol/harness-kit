@@ -101,6 +101,14 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Validate plugin_path: only allow safe path characters, no traversal
+  if (!/^[a-zA-Z0-9][a-zA-Z0-9._/-]*$/.test(plugin_path) || plugin_path.includes("..")) {
+    return NextResponse.json(
+      { error: "Invalid plugin_path: must be a relative path with no traversal sequences" },
+      { status: 400 },
+    );
+  }
+
   // Validate repo structure: must have plugin.json
   const manifestPath = `${plugin_path}/.claude-plugin/plugin.json`;
   const manifestRaw = await fetchGitHubFile(repo_url, manifestPath);
