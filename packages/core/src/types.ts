@@ -13,8 +13,14 @@ export interface HarnessMetadata {
   tags?: string[];
 }
 
+/**
+ * Plugin name, optionally scoped to an organization namespace.
+ * Examples: "my-plugin", "@org/my-plugin"
+ */
+export type PluginName = string;
+
 export interface HarnessPlugin {
-  name: string;
+  name: PluginName;
   source: string;
   version?: string;
   description?: string;

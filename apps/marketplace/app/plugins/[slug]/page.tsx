@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import sanitizeHtml from "sanitize-html";
 import { supabase } from "@/lib/supabase";
-import type { Component, Profile, TrustTier } from "@/lib/types";
+import type { Component, ComponentType, Profile, TrustTier } from "@/lib/types";
 import { TrustBadge } from "@/app/components/TrustBadge";
 import { ReviewForm } from "@/app/components/ReviewForm";
 import { ReviewList } from "@/app/components/ReviewList";
@@ -85,57 +85,140 @@ export default async function PluginDetailPage({
   let tags: string[] = [];
   let relatedComponents: Component[] = [];
   let includedInProfiles: Profile[] = [];
+  let organization: { id: string; slug: string; name: string } | null = null;
 
   // Get current user session for reviews
   const user = await getServerSession();
 
+  // Check if this is an org-scoped plugin (starts with @)
+  const isOrgScoped = slug.startsWith("@");
+
   try {
-    // Fetch the component
-    const { data } = await supabase
-      .from("components")
-      .select("*")
-      .eq("slug", slug)
-      .single();
-    component = data as Component | null;
+    if (isOrgScoped) {
+      // Fetch from org_components and join with organization
+      const { data } = await supabase
+        .from("org_components")
+        .select("*, organizations(id, slug, name)")
+        .eq("slug", slug)
+        .single();
 
-    if (component) {
-      // Fetch tags for this component
-      const { data: tagRows } = await supabase
-        .from("component_tags")
-        .select("tag_id, tags(slug)")
-        .eq("component_id", component.id);
+      if (data) {
+        // Map org_component to Component interface
+        component = {
+          id: data.id,
+          slug: data.slug,
+          name: data.name,
+          type: data.type,
+          description: data.description,
+          trust_tier: "community" as TrustTier, // org plugins are always community tier
+          version: data.version,
+          author: data.author,
+          license: data.license,
+          skill_md: data.skill_md,
+          readme_md: data.readme_md,
+          repo_url: data.repo_url,
+          install_count: data.install_count,
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+        };
 
-      if (tagRows) {
-        tags = tagRows
-          .map(
-            (row: Record<string, unknown>) =>
-              (row.tags as { slug: string })?.slug ?? "",
-          )
-          .filter(Boolean);
+        // Extract organization data
+        organization = data.organizations as { id: string; slug: string; name: string };
       }
 
-      // Fetch related components (same type, excluding self)
-      const { data: related } = await supabase
+      if (component) {
+        // Fetch tags for this org component
+        const { data: tagRows } = await supabase
+          .from("org_component_tags")
+          .select("tag_id, tags(slug)")
+          .eq("org_component_id", component.id);
+
+        if (tagRows) {
+          tags = tagRows
+            .map(
+              (row: Record<string, unknown>) =>
+                (row.tags as { slug: string })?.slug ?? "",
+            )
+            .filter(Boolean);
+        }
+
+        // Fetch related org components (same type, excluding self)
+        const { data: related } = await supabase
+          .from("org_components")
+          .select("*")
+          .eq("type", component.type)
+          .neq("id", component.id)
+          .order("install_count", { ascending: false })
+          .limit(5);
+
+        if (related) {
+          relatedComponents = related.map((r: Record<string, unknown>) => ({
+            id: r.id as string,
+            slug: r.slug as string,
+            name: r.name as string,
+            type: r.type as ComponentType,
+            description: r.description as string,
+            trust_tier: "community" as TrustTier,
+            version: r.version as string,
+            author: r.author as { name: string; url?: string },
+            license: r.license as string,
+            skill_md: r.skill_md as string | null,
+            readme_md: r.readme_md as string | null,
+            repo_url: r.repo_url as string | null,
+            install_count: r.install_count as number,
+            created_at: r.created_at as string,
+            updated_at: r.updated_at as string,
+          }));
+        }
+      }
+    } else {
+      // Fetch from regular components table
+      const { data } = await supabase
         .from("components")
         .select("*")
-        .eq("type", component.type)
-        .neq("id", component.id)
-        .order("install_count", { ascending: false })
-        .limit(5);
-      relatedComponents = (related as Component[]) ?? [];
+        .eq("slug", slug)
+        .single();
+      component = data as Component | null;
 
-      // Fetch profiles that include this component
-      const { data: profileRows } = await supabase
-        .from("profile_components")
-        .select("profile_id, profiles(id, slug, name, description)")
-        .eq("component_id", component.id);
+      if (component) {
+        // Fetch tags for this component
+        const { data: tagRows } = await supabase
+          .from("component_tags")
+          .select("tag_id, tags(slug)")
+          .eq("component_id", component.id);
 
-      if (profileRows) {
-        includedInProfiles = profileRows
-          .map(
-            (row: Record<string, unknown>) => row.profiles as Profile,
-          )
-          .filter(Boolean);
+        if (tagRows) {
+          tags = tagRows
+            .map(
+              (row: Record<string, unknown>) =>
+                (row.tags as { slug: string })?.slug ?? "",
+            )
+            .filter(Boolean);
+        }
+
+        // Fetch related components (same type, excluding self)
+        const { data: related } = await supabase
+          .from("components")
+          .select("*")
+          .eq("type", component.type)
+          .neq("id", component.id)
+          .order("install_count", { ascending: false })
+          .limit(5);
+        relatedComponents = (related as Component[]) ?? [];
+
+        // Fetch profiles that include this component
+        const { data: profileRows } = await supabase
+          .from("profile_components")
+          .select("profile_id, profiles(id, slug, name, description)")
+          .eq("component_id", component.id);
+
+        if (profileRows) {
+          includedInProfiles = profileRows
+            .map(
+              (row: Record<string, unknown>) => row.profiles as Profile,
+            )
+            .filter(Boolean);
+        }
       }
     }
   } catch {
@@ -179,6 +262,27 @@ export default async function PluginDetailPage({
           <div className="mb-6">
             <div className="flex flex-wrap items-center gap-3">
               <h1 className="text-3xl font-bold">{component.name}</h1>
+              {organization && (
+                <Link
+                  href={`/orgs/${organization.slug}`}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-violet-500/40 bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-400 transition-colors hover:border-violet-500/60 hover:bg-violet-500/20"
+                >
+                  <svg
+                    className="h-3.5 w-3.5"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                    />
+                  </svg>
+                  {organization.name}
+                </Link>
+              )}
               <TrustBadge tier={component.trust_tier} />
               <span className="rounded-full border border-[#2a2a2e] px-2.5 py-0.5 text-xs capitalize text-gray-400">
                 {component.type}
