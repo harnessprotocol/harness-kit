@@ -292,7 +292,7 @@ export function TaskForm({ open, projectSlug, epics, defaultEpicId, defaultStatu
                     opacity: submitting ? 0.6 : 1,
                   }}
                 >
-                  {submitting ? 'Creating\u2026' : 'Create task'}
+                  {submitting ? 'Creating...' : 'Create task'}
                 </button>
               </div>
             </form>

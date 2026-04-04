@@ -2,6 +2,27 @@ export type TaskStatus = 'backlog' | 'planning' | 'in-progress' | 'ai-review' | 
 export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
 export type EpicStatus = 'active' | 'completed' | 'archived';
 export type CommentAuthor = 'claude' | 'user';
+export type SubtaskStatus = 'pending' | 'in_progress' | 'completed' | 'failed';
+export type TaskCategory = 'feature' | 'bug_fix' | 'refactoring' | 'docs' | 'security' | 'performance' | 'ui_ux' | 'infrastructure' | 'testing';
+export type TaskComplexity = 'trivial' | 'small' | 'medium' | 'large' | 'complex';
+export type ExecutionStatus = 'idle' | 'running' | 'completed' | 'failed' | 'stopped';
+
+export interface TaskExecution {
+  status: ExecutionStatus;
+  harness_id: string;
+  model?: string;
+  started_at?: string;
+  finished_at?: string;
+  exit_code?: number;
+}
+
+export interface Subtask {
+  id: number;
+  title: string;
+  description?: string;
+  status: SubtaskStatus;
+  files: string[];
+}
 
 export interface Comment {
   author: CommentAuthor;
@@ -22,6 +43,13 @@ export interface Task {
   no_worktree?: boolean;
   blocked?: boolean;
   blocked_reason?: string;
+  category?: TaskCategory;
+  complexity?: TaskComplexity;
+  subtasks: Subtask[];
+  next_subtask_id: number;
+  execution?: TaskExecution;
+  default_harness?: string;
+  default_model?: string;
   created_at: string; // ISO 8601
   updated_at: string; // ISO 8601
 }
@@ -45,6 +73,9 @@ export interface Project {
   next_id: number;
   version: 1;
   epics: Epic[];
+  default_harness?: string;
+  default_model?: string;
+  max_concurrent?: number;
   created_at: string;
   updated_at: string;
 }

@@ -4,10 +4,15 @@ import { createRouter } from './routes.js';
 export function createHttpApp(): Express {
   const app = express();
 
-  // CORS — allow the Next.js dev server and any localhost origin
+  // CORS — allow localhost origins and the Tauri webview (tauri://localhost)
   app.use((_req, res, next) => {
     const origin = _req.headers.origin;
-    if (origin && (origin.startsWith('http://localhost') || origin.startsWith('http://127.0.0.1'))) {
+    if (
+      origin &&
+      (origin.startsWith('http://localhost') ||
+        origin.startsWith('http://127.0.0.1') ||
+        origin === 'tauri://localhost')
+    ) {
       res.setHeader('Access-Control-Allow-Origin', origin);
     }
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');

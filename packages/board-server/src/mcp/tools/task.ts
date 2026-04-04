@@ -37,7 +37,7 @@ export const taskTools = [
   },
   {
     name: 'update_task',
-    description: 'Update task title, description, or no_worktree flag',
+    description: 'Update task fields: title, description, category, complexity, or no_worktree flag',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -45,6 +45,8 @@ export const taskTools = [
         task_id: { type: 'number', description: 'Task ID' },
         title: { type: 'string', description: 'New title' },
         description: { type: 'string', description: 'New description' },
+        category: { type: 'string', enum: ['feature', 'bug_fix', 'refactoring', 'docs', 'security', 'performance', 'ui_ux', 'infrastructure', 'testing'], description: 'Task category' },
+        complexity: { type: 'string', enum: ['trivial', 'small', 'medium', 'large', 'complex'], description: 'Task complexity' },
         no_worktree: { type: 'boolean', description: 'Disable auto-worktree for this task' },
       },
       required: ['project', 'task_id'],
@@ -54,12 +56,16 @@ export const taskTools = [
       task_id: z.number(),
       title: z.string().optional(),
       description: z.string().optional(),
+      category: z.enum(['feature', 'bug_fix', 'refactoring', 'docs', 'security', 'performance', 'ui_ux', 'infrastructure', 'testing']).optional(),
+      complexity: z.enum(['trivial', 'small', 'medium', 'large', 'complex']).optional(),
       no_worktree: z.boolean().optional(),
     }),
-    handler: async (args: { project: string; task_id: number; title?: string; description?: string; no_worktree?: boolean }) => {
+    handler: async (args: { project: string; task_id: number; title?: string; description?: string; category?: string; complexity?: string; no_worktree?: boolean }) => {
       const task = store.updateTask(args.project, args.task_id, {
         title: args.title,
         description: args.description,
+        category: args.category as import('../../types.js').TaskCategory,
+        complexity: args.complexity as import('../../types.js').TaskComplexity,
         no_worktree: args.no_worktree,
       });
       return { content: [{ type: 'text' as const, text: JSON.stringify(task, null, 2) }] };
@@ -275,6 +281,119 @@ export const taskTools = [
     handler: async (args: { project: string; task_id: number }) => {
       const task = store.unblockTask(args.project, args.task_id);
       return { content: [{ type: 'text' as const, text: JSON.stringify(task, null, 2) }] };
+    },
+  },
+  // --- Subtask tools ---
+  {
+    name: 'add_subtask',
+    description: 'Add a subtask to a task. Subtasks track implementation steps with their own status and associated files.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        project: { type: 'string', description: 'Project slug' },
+        task_id: { type: 'number', description: 'Task ID' },
+        title: { type: 'string', description: 'Subtask title (3-10 words)' },
+        description: { type: 'string', description: 'Detailed implementation notes' },
+      },
+      required: ['project', 'task_id', 'title'],
+    },
+    schema: z.object({
+      project: z.string(),
+      task_id: z.number(),
+      title: z.string(),
+      description: z.string().optional(),
+    }),
+    handler: async (args: { project: string; task_id: number; title: string; description?: string }) => {
+      const subtask = store.addSubtask(args.project, args.task_id, args.title, args.description);
+      const project = store.readProject(args.project);
+      const found = project ? store.findTask(project, args.task_id) : undefined;
+      const task = found?.task;
+      const completed = task?.subtasks.filter(s => s.status === 'completed').length ?? 0;
+      const total = task?.subtasks.length ?? 0;
+      const text = [
+        JSON.stringify(subtask, null, 2),
+        '',
+        `Progress: ${completed}/${total} subtasks complete (${total > 0 ? Math.round(completed / total * 100) : 0}%)`,
+      ].join('\n');
+      return { content: [{ type: 'text' as const, text }] };
+    },
+  },
+  {
+    name: 'update_subtask',
+    description: 'Update a subtask title, description, or status (pending → in_progress → completed/failed)',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        project: { type: 'string', description: 'Project slug' },
+        task_id: { type: 'number', description: 'Task ID' },
+        subtask_id: { type: 'number', description: 'Subtask ID' },
+        title: { type: 'string', description: 'New subtask title' },
+        description: { type: 'string', description: 'New subtask description' },
+        status: { type: 'string', enum: ['pending', 'in_progress', 'completed', 'failed'], description: 'New subtask status' },
+      },
+      required: ['project', 'task_id', 'subtask_id'],
+    },
+    schema: z.object({
+      project: z.string(),
+      task_id: z.number(),
+      subtask_id: z.number(),
+      title: z.string().optional(),
+      description: z.string().optional(),
+      status: z.enum(['pending', 'in_progress', 'completed', 'failed']).optional(),
+    }),
+    handler: async (args: { project: string; task_id: number; subtask_id: number; title?: string; description?: string; status?: string }) => {
+      const subtask = store.updateSubtask(args.project, args.task_id, args.subtask_id, {
+        title: args.title,
+        description: args.description,
+        status: args.status as import('../../types.js').SubtaskStatus,
+      });
+      return { content: [{ type: 'text' as const, text: JSON.stringify(subtask, null, 2) }] };
+    },
+  },
+  {
+    name: 'remove_subtask',
+    description: 'Delete a subtask from a task',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        project: { type: 'string', description: 'Project slug' },
+        task_id: { type: 'number', description: 'Task ID' },
+        subtask_id: { type: 'number', description: 'Subtask ID' },
+      },
+      required: ['project', 'task_id', 'subtask_id'],
+    },
+    schema: z.object({
+      project: z.string(),
+      task_id: z.number(),
+      subtask_id: z.number(),
+    }),
+    handler: async (args: { project: string; task_id: number; subtask_id: number }) => {
+      store.removeSubtask(args.project, args.task_id, args.subtask_id);
+      return { content: [{ type: 'text' as const, text: `Subtask ${args.subtask_id} removed from task ${args.task_id}` }] };
+    },
+  },
+  {
+    name: 'add_subtask_file',
+    description: 'Associate a file path with a subtask (tracks which files a subtask modifies)',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        project: { type: 'string', description: 'Project slug' },
+        task_id: { type: 'number', description: 'Task ID' },
+        subtask_id: { type: 'number', description: 'Subtask ID' },
+        file_path: { type: 'string', description: 'Relative file path' },
+      },
+      required: ['project', 'task_id', 'subtask_id', 'file_path'],
+    },
+    schema: z.object({
+      project: z.string(),
+      task_id: z.number(),
+      subtask_id: z.number(),
+      file_path: z.string(),
+    }),
+    handler: async (args: { project: string; task_id: number; subtask_id: number; file_path: string }) => {
+      const subtask = store.addSubtaskFile(args.project, args.task_id, args.subtask_id, args.file_path);
+      return { content: [{ type: 'text' as const, text: JSON.stringify(subtask, null, 2) }] };
     },
   },
 ] as const;

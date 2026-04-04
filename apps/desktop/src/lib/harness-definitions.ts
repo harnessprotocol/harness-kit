@@ -29,8 +29,13 @@ export const BUILTIN_HARNESSES: HarnessDefinition[] = [
     name: "Claude Code",
     command: "claude",
     buildCommand: (prompt, model) => {
-      // Interactive mode (no -p) gives full TUI with live streaming.
-      const parts = ["claude", shellQuote(prompt)];
+      // Interactive mode with pre-approved tools so the user doesn't have to
+      // click through permission prompts for every standard coding tool.
+      const allowedTools = [
+        'Read', 'Grep', 'Glob',
+        'Agent', 'Skill',
+      ].join(',');
+      const parts = ["claude", shellQuote(prompt), "--allowedTools", allowedTools];
       if (model) parts.push("--model", shellQuote(model));
       return parts.join(" ");
     },
@@ -66,6 +71,16 @@ export const BUILTIN_HARNESSES: HarnessDefinition[] = [
       return parts.join(" ");
     },
   },
+  {
+    id: "opencode",
+    name: "OpenCode",
+    command: "opencode",
+    buildCommand: (prompt, model) => {
+      const parts = ["opencode", shellQuote(prompt)];
+      if (model) parts.push("--model", shellQuote(model));
+      return parts.join(" ");
+    },
+  },
 ];
 
 // ── Lookup + command builder ────────────────────────────────
@@ -84,4 +99,12 @@ export function buildInvokeCommand(
   const def = harnessMap.get(harnessId);
   if (!def) return null;
   return def.buildCommand(prompt, model);
+}
+
+export function getHarness(id: string): HarnessDefinition | undefined {
+  return harnessMap.get(id);
+}
+
+export function getAllHarnesses(): HarnessDefinition[] {
+  return [...BUILTIN_HARNESSES];
 }
