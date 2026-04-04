@@ -4,8 +4,8 @@ import type { Roadmap, CompetitorAnalysis } from '../lib/roadmap-types';
 import { useWebSocket } from './useWebSocket';
 
 type RoadmapEvent =
-  | { type: 'roadmap_updated'; slug: string; roadmap: Roadmap }
-  | { type: 'competitors_updated'; slug: string; competitorAnalysis: CompetitorAnalysis }
+  | { type: 'roadmap_updated'; slug: string }
+  | { type: 'competitors_updated'; slug: string }
   | { type: 'connected'; message: string };
 
 export function useRoadmapData(slug: string, ready = true) {
@@ -38,13 +38,12 @@ export function useRoadmapData(slug: string, ready = true) {
 
   useWebSocket((evt) => {
     try {
-      const event = JSON.parse(evt.data as string) as RoadmapEvent;
-      if (event.type === 'roadmap_updated' && event.slug === slug && event.roadmap) {
-        setRoadmap(event.roadmap);
-        setLastSyncedAt(new Date());
-      } else if (event.type === 'competitors_updated' && event.slug === slug && event.competitorAnalysis) {
-        setCompetitorAnalysis(event.competitorAnalysis);
-        setLastSyncedAt(new Date());
+      const msg = JSON.parse(evt.data as string) as RoadmapEvent;
+      if (msg.type === 'roadmap_updated' && msg.slug === slug) {
+        fetchAll();
+      }
+      if (msg.type === 'competitors_updated' && msg.slug === slug) {
+        fetchAll();
       }
     } catch {
       // ignore malformed messages

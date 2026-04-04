@@ -1,28 +1,10 @@
+import { apiFetch } from './board-api';
 import type {
   Roadmap,
   RoadmapFeature,
   CompetitorAnalysis,
   Competitor,
 } from './roadmap-types';
-
-const BASE = 'http://localhost:4800/api/v1';
-
-async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
-    ...init,
-  });
-  if (!res.ok) {
-    const err = await res.text().catch(() => res.statusText);
-    throw new Error(`API ${res.status}: ${err}`);
-  }
-  if (res.status === 204) {
-    return undefined as unknown as T;
-  }
-  const body = await res.json() as { data: T } | { error: string };
-  if ('error' in body) throw new Error((body as { error: string }).error);
-  return (body as { data: T }).data;
-}
 
 export const roadmapApi = {
   roadmap: {

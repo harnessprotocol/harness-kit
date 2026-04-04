@@ -12,10 +12,10 @@ export function createRoadmapRouter(): Router {
   router.get('/projects/:slug/roadmap', (req, res) => {
     try {
       const roadmap = roadmapStore.readRoadmap(req.params.slug);
-      if (!roadmap) return res.status(404).json({ error: 'Not found' });
-      res.json({ data: roadmap });
+      if (!roadmap) return res.status(404).json({ message: 'Not found' });
+      res.json(roadmap);
     } catch (err) {
-      res.status(500).json({ error: String(err) });
+      res.status(500).json({ message: String(err) });
     }
   });
 
@@ -30,9 +30,9 @@ export function createRoadmapRouter(): Router {
         id: req.body.id ?? randomUUID(),
       };
       roadmapStore.writeRoadmap(req.params.slug, roadmap);
-      res.json({ data: roadmap });
+      res.json(roadmap);
     } catch (err) {
-      res.status(400).json({ error: String(err) });
+      res.status(400).json({ message: String(err) });
     }
   });
 
@@ -41,20 +41,20 @@ export function createRoadmapRouter(): Router {
   router.get('/projects/:slug/roadmap/features', (req, res) => {
     try {
       const roadmap = roadmapStore.readRoadmap(req.params.slug);
-      if (!roadmap) return res.status(404).json({ error: 'Not found' });
+      if (!roadmap) return res.status(404).json({ message: 'Not found' });
       let features = roadmap.features;
       if (req.query.status) features = features.filter(f => f.status === req.query.status);
       if (req.query.priority) features = features.filter(f => f.priority === req.query.priority);
-      res.json({ data: features });
+      res.json(features);
     } catch (err) {
-      res.status(500).json({ error: String(err) });
+      res.status(500).json({ message: String(err) });
     }
   });
 
   router.post('/projects/:slug/roadmap/features', (req, res) => {
     try {
       const roadmap = roadmapStore.readRoadmap(req.params.slug);
-      if (!roadmap) return res.status(404).json({ error: 'Not found' });
+      if (!roadmap) return res.status(404).json({ message: 'Not found' });
       const feature: RoadmapFeature = {
         dependencies: [],
         acceptanceCriteria: [],
@@ -66,52 +66,52 @@ export function createRoadmapRouter(): Router {
       roadmap.features.push(feature);
       roadmap.updated_at = new Date().toISOString();
       roadmapStore.writeRoadmap(req.params.slug, roadmap);
-      res.status(201).json({ data: feature });
+      res.status(201).json(feature);
     } catch (err) {
-      res.status(400).json({ error: String(err) });
+      res.status(400).json({ message: String(err) });
     }
   });
 
   router.patch('/projects/:slug/roadmap/features/:id', (req, res) => {
     try {
       const roadmap = roadmapStore.readRoadmap(req.params.slug);
-      if (!roadmap) return res.status(404).json({ error: 'Not found' });
+      if (!roadmap) return res.status(404).json({ message: 'Not found' });
       const idx = roadmap.features.findIndex(f => f.id === req.params.id);
-      if (idx === -1) return res.status(404).json({ error: 'Feature not found' });
+      if (idx === -1) return res.status(404).json({ message: 'Feature not found' });
       const { id: _id, ...safeUpdates } = req.body as Record<string, unknown> & { id?: unknown };
       Object.assign(roadmap.features[idx], safeUpdates);
       roadmap.updated_at = new Date().toISOString();
       roadmapStore.writeRoadmap(req.params.slug, roadmap);
-      res.json({ data: roadmap.features[idx] });
+      res.json(roadmap.features[idx]);
     } catch (err) {
-      res.status(400).json({ error: String(err) });
+      res.status(400).json({ message: String(err) });
     }
   });
 
   router.delete('/projects/:slug/roadmap/features/:id', (req, res) => {
     try {
       const roadmap = roadmapStore.readRoadmap(req.params.slug);
-      if (!roadmap) return res.status(404).json({ error: 'Not found' });
+      if (!roadmap) return res.status(404).json({ message: 'Not found' });
       const idx = roadmap.features.findIndex(f => f.id === req.params.id);
-      if (idx === -1) return res.status(404).json({ error: 'Feature not found' });
+      if (idx === -1) return res.status(404).json({ message: 'Feature not found' });
       roadmap.features.splice(idx, 1);
       roadmap.updated_at = new Date().toISOString();
       roadmapStore.writeRoadmap(req.params.slug, roadmap);
       res.status(204).send();
     } catch (err) {
-      res.status(400).json({ error: String(err) });
+      res.status(400).json({ message: String(err) });
     }
   });
 
   router.post('/projects/:slug/roadmap/features/:id/convert', (req, res) => {
     try {
       const { epic_id } = req.body as { epic_id?: number };
-      if (!epic_id) return res.status(400).json({ error: 'epic_id is required' });
+      if (!epic_id) return res.status(400).json({ message: 'epic_id is required' });
 
       const roadmap = roadmapStore.readRoadmap(req.params.slug);
-      if (!roadmap) return res.status(404).json({ error: 'Not found' });
+      if (!roadmap) return res.status(404).json({ message: 'Not found' });
       const featureIdx = roadmap.features.findIndex(f => f.id === req.params.id);
-      if (featureIdx === -1) return res.status(404).json({ error: 'Feature not found' });
+      if (featureIdx === -1) return res.status(404).json({ message: 'Feature not found' });
 
       const feature = roadmap.features[featureIdx];
       const descriptionParts: string[] = [];
@@ -133,9 +133,10 @@ export function createRoadmapRouter(): Router {
       roadmap.updated_at = new Date().toISOString();
       roadmapStore.writeRoadmap(req.params.slug, roadmap);
 
-      res.status(201).json({ data: task });
+      const updatedFeature = roadmap.features[featureIdx];
+      res.status(201).json({ task, feature: updatedFeature });
     } catch (err) {
-      res.status(400).json({ error: String(err) });
+      res.status(400).json({ message: String(err) });
     }
   });
 
@@ -144,10 +145,10 @@ export function createRoadmapRouter(): Router {
   router.get('/projects/:slug/competitors', (req, res) => {
     try {
       const analysis = roadmapStore.readCompetitorAnalysis(req.params.slug);
-      if (!analysis) return res.status(404).json({ error: 'Not found' });
-      res.json({ data: analysis });
+      if (!analysis) return res.status(404).json({ message: 'Not found' });
+      res.json(analysis);
     } catch (err) {
-      res.status(500).json({ error: String(err) });
+      res.status(500).json({ message: String(err) });
     }
   });
 
@@ -158,9 +159,9 @@ export function createRoadmapRouter(): Router {
         created_at: req.body.created_at ?? new Date().toISOString(),
       };
       roadmapStore.writeCompetitorAnalysis(req.params.slug, analysis);
-      res.json({ data: analysis });
+      res.json(analysis);
     } catch (err) {
-      res.status(400).json({ error: String(err) });
+      res.status(400).json({ message: String(err) });
     }
   });
 
@@ -180,9 +181,9 @@ export function createRoadmapRouter(): Router {
       }
       analysis.competitors.push(competitor);
       roadmapStore.writeCompetitorAnalysis(req.params.slug, analysis);
-      res.status(201).json({ data: competitor });
+      res.status(201).json(competitor);
     } catch (err) {
-      res.status(400).json({ error: String(err) });
+      res.status(400).json({ message: String(err) });
     }
   });
 
