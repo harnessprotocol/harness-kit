@@ -21,11 +21,16 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Build all packages
-        run: pnpm -r build
+        # Desktop (Tauri) is excluded — requires Rust + platform-specific system libs.
+        # Build and test the desktop app locally with: pnpm build:desktop
+        run: pnpm -r build --filter=!harness-kit-desktop
+
+      - name: Test all packages
+        run: pnpm test:all
