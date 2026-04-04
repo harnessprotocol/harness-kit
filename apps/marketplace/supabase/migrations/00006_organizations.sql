@@ -93,3 +93,26 @@ begin
   return new_count;
 end;
 $$ language plpgsql;
+
+-- Plugin approvals (track which public plugins are approved/denied for org use)
+create table org_plugin_approvals (
+  id uuid primary key default uuid_generate_v4(),
+  org_id uuid not null references organizations(id) on delete cascade,
+  component_id uuid not null references components(id) on delete cascade,
+  status text not null check (status in ('approved', 'denied', 'pending')),
+  approved_by text,
+  approved_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (org_id, component_id)
+);
+
+-- Indexes for common queries
+create index idx_org_plugin_approvals_org_id on org_plugin_approvals(org_id);
+create index idx_org_plugin_approvals_component_id on org_plugin_approvals(component_id);
+create index idx_org_plugin_approvals_status on org_plugin_approvals(status);
+
+-- Updated_at trigger
+create trigger org_plugin_approvals_updated_at
+  before update on org_plugin_approvals
+  for each row execute function update_updated_at();
