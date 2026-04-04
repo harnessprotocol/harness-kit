@@ -54,7 +54,8 @@ export default async function OrgDetailPage({
         .eq("org_id", organization.id);
 
       if (memberRows) {
-        members = memberRows.map((row: Record<string, unknown>) => ({
+        // Cast: Supabase cannot type cross-schema joins (auth.users) at compile time
+        members = (memberRows as unknown as Record<string, unknown>[]).map((row) => ({
           org_id: row.org_id as string,
           user_id: row.user_id as string,
           role: row.role as "admin" | "member",

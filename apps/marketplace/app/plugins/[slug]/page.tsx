@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import sanitizeHtml from "sanitize-html";
 import { supabase } from "@/lib/supabase";
-import type { Component, Profile, TrustTier } from "@/lib/types";
+import type { Component, ComponentType, Profile, TrustTier } from "@/lib/types";
 import { TrustBadge } from "@/app/components/TrustBadge";
 import { ReviewForm } from "@/app/components/ReviewForm";
 import { ReviewList } from "@/app/components/ReviewList";
@@ -156,7 +156,7 @@ export default async function PluginDetailPage({
             id: r.id as string,
             slug: r.slug as string,
             name: r.name as string,
-            type: r.type as string,
+            type: r.type as ComponentType,
             description: r.description as string,
             trust_tier: "community" as TrustTier,
             version: r.version as string,

@@ -163,10 +163,8 @@ export async function getUserOrganizations(
     throw error;
   }
 
-  return data.map(
-    (item: { org_id: string; organizations: Organization }) =>
-      item.organizations,
-  );
+  // Supabase infers the joined field as any[] — cast to the known shape
+  return data.map((item) => (item.organizations as unknown) as Organization);
 }
 
 /**

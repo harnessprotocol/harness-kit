@@ -48,6 +48,14 @@ export type {
   PanelDetail,
   FileDiffInput,
   FileDiffRow,
+  Organization,
+  OrgMember,
+  OrgComponent,
+  OrgPluginApproval,
+  OrgPluginApprovalStatus,
+  OrgRole,
+  OrgComponentCategory,
+  OrgComponentTag,
 } from "./types.js";
 
 export type {
