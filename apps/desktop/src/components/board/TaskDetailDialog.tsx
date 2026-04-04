@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useState, useCallback, lazy, Suspense } from 'react';
 import { createPortal } from 'react-dom';
+import { useNavigate } from 'react-router-dom';
 import { invoke } from '@tauri-apps/api/core';
 import type { Task, TaskCategory, TaskComplexity, TaskPriority, TaskStatus } from '../../lib/board-api';
 import type { Project } from '../../lib/board-api';
@@ -71,6 +72,7 @@ function EmptyState({ icon, text }: { icon: string; text: string }) {
 
 export function TaskDetailDialog({ task, project, onClose, onTaskUpdated, repoUrl }: Props) {
   const execution = useExecution();
+  const navigate = useNavigate();
 
   const [copied, setCopied] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -350,6 +352,25 @@ export function TaskDetailDialog({ task, project, onClose, onTaskUpdated, repoUr
                       }}>
                         Blocked
                       </span>
+                    )}
+                    {task.linkedFeatureId && (
+                      <button
+                        onClick={() => { onClose(); navigate(`/roadmap/${project.slug}`); }}
+                        style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 4,
+                          fontSize: 11, fontWeight: 500, cursor: 'pointer',
+                          background: 'rgba(37,99,235,0.08)',
+                          color: '#2563eb',
+                          border: '1px solid rgba(37,99,235,0.25)',
+                          borderRadius: 6, padding: '2px 8px',
+                          transition: 'background 0.1s',
+                        }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(37,99,235,0.15)'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(37,99,235,0.08)'; }}
+                        title="View linked roadmap feature"
+                      >
+                        {'↗'} View on Roadmap
+                      </button>
                     )}
                   </div>
                 </div>

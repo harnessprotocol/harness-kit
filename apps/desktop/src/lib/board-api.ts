@@ -129,6 +129,7 @@ export interface Task {
   execution?: TaskExecution;
   default_harness?: string;
   default_model?: string;
+  linkedFeatureId?: string;
   created_at: string;
   updated_at: string;
   // enriched by list_tasks
