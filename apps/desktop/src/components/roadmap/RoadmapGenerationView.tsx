@@ -95,14 +95,15 @@ function PhaseRow({ id, label, activePhase, error }: {
 }
 
 export function RoadmapGenerationView({ projectSlug, onComplete, onCancel }: Props) {
-  const [phase, setPhase] = useState<GenerationPhase | 'idle' | 'done'>('idle');
+  // Start with 'analyzing' active immediately so the pulse is visible before the first SSE event
+  const [phase, setPhase] = useState<GenerationPhase | 'idle' | 'done'>('analyzing');
   const [error, setError] = useState<string | null>(null);
-  const [started, setStarted] = useState(false);
   const cancelRef = useRef<(() => void) | null>(null);
+  const startedRef = useRef(false);
 
   useEffect(() => {
-    if (started) return;
-    setStarted(true);
+    if (startedRef.current) return;
+    startedRef.current = true;
 
     const cancel = streamRoadmapGeneration(projectSlug, (event) => {
       if (event.type === 'phase' && event.phase) {
@@ -118,7 +119,7 @@ export function RoadmapGenerationView({ projectSlug, onComplete, onCancel }: Pro
 
     cancelRef.current = cancel;
     return () => cancel();
-  }, [projectSlug, started, onComplete]);
+  }, [projectSlug, onComplete]);
 
   const handleCancel = () => {
     cancelRef.current?.();

@@ -1,8 +1,17 @@
+import { useState } from 'react';
+
 interface Props {
   onGenerate: () => void;
 }
 
 export function RoadmapEmptyState({ onGenerate }: Props) {
+  const [loading, setLoading] = useState(false);
+
+  const handleClick = () => {
+    setLoading(true);
+    onGenerate();
+  };
+
   return (
     <div
       style={{
@@ -12,6 +21,9 @@ export function RoadmapEmptyState({ onGenerate }: Props) {
         justifyContent: 'center',
       }}
     >
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+      `}</style>
       <div
         style={{
           width: '100%',
@@ -69,26 +81,42 @@ export function RoadmapEmptyState({ onGenerate }: Props) {
         </p>
 
         <button
-          onClick={onGenerate}
+          onClick={handleClick}
+          disabled={loading}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
             gap: 6,
             padding: '8px 20px',
-            background: 'var(--accent)',
-            color: '#fff',
-            border: 'none',
+            background: loading ? 'var(--bg-surface)' : 'var(--accent)',
+            color: loading ? 'var(--text-muted)' : '#fff',
+            border: loading ? '1px solid var(--border-subtle)' : 'none',
             borderRadius: 7,
             fontSize: 13,
             fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'opacity 0.1s',
+            cursor: loading ? 'default' : 'pointer',
+            transition: 'opacity 0.1s, background 0.15s, color 0.15s',
           }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.opacity = '0.85'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.opacity = '1'; }}
+          onMouseEnter={e => { if (!loading) (e.currentTarget as HTMLElement).style.opacity = '0.85'; }}
+          onMouseLeave={e => { if (!loading) (e.currentTarget as HTMLElement).style.opacity = '1'; }}
         >
-          <span style={{ fontSize: 14 }}>{'✦'}</span>
-          Generate Roadmap
+          {loading ? (
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              style={{ animation: 'spin 0.8s linear infinite' }}
+            >
+              <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+            </svg>
+          ) : (
+            <span style={{ fontSize: 14 }}>✦</span>
+          )}
+          {loading ? 'Starting...' : 'Generate Roadmap'}
         </button>
       </div>
     </div>
