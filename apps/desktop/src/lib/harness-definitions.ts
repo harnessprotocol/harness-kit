@@ -3,10 +3,12 @@
 /** Wrap a string in single quotes with proper escaping for POSIX shells. */
 export function shellQuote(s: string): string {
   if (s.length === 0) return "''";
+  // Strip null bytes (would truncate shell arguments and enable injection)
+  const clean = s.replace(/\0/g, '');
   // If the string contains no special characters, return as-is.
-  if (!/['\s"\\$`!#&|;()<>]/.test(s)) return s;
+  if (!/['\s"\\$`!#&|;()<>]/.test(clean)) return clean;
   // Wrap in single quotes, escaping embedded single quotes: ' → '\''
-  return "'" + s.replace(/'/g, "'\\''") + "'";
+  return "'" + clean.replace(/'/g, "'\\''") + "'";
 }
 
 // ── Harness definition type ─────────────────────────────────

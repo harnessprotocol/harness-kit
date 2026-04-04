@@ -153,6 +153,11 @@ pub async fn get_diff_against_commit(
     worktree_path: String,
     base_commit: String,
 ) -> Result<Vec<FileDiffEntry>, String> {
+    // Validate base_commit to prevent flag injection (e.g. "--output=/tmp/evil")
+    if base_commit.starts_with('-') || !base_commit.chars().all(|c| c.is_alphanumeric() || "~^-_/.".contains(c)) {
+        return Err("Invalid base_commit reference".to_string());
+    }
+
     let shell = app.shell();
 
     // Get list of changed files
