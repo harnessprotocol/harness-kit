@@ -1,0 +1,338 @@
+{
+  "feature": "Monorepo Build Health & CI Hardening",
+  "workflow_type": "feature",
+  "workflow_rationale": "Adding build infrastructure capabilities - evals documentation, CI build verification, and contributor documentation. This follows a feature workflow because we're building new capabilities (CI job, docs) rather than refactoring existing code.",
+  "phases": [
+    {
+      "id": "phase-1-evals-docs",
+      "name": "Evals Setup Documentation",
+      "type": "implementation",
+      "description": "Document the Python evals setup process so contributors can run evaluations locally",
+      "depends_on": [],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-1-1",
+          "description": "Create evals/README.md with setup and usage instructions",
+          "service": "evals",
+          "files_to_modify": [],
+          "files_to_create": [
+            "evals/README.md"
+          ],
+          "patterns_from": [
+            ".github/workflows/evals.yml"
+          ],
+          "verification": {
+            "type": "manual",
+            "instructions": "Review evals/README.md to ensure it documents: (1) venv creation, (2) dependency installation, (3) how to run offline tests, (4) how to run with API key"
+          },
+          "status": "completed"
+        }
+      ]
+    },
+    {
+      "id": "phase-2-build-verification",
+      "name": "Build Health Verification",
+      "type": "implementation",
+      "description": "Verify all TypeScript packages and Tauri desktop app build cleanly, fix any issues",
+      "depends_on": [],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-2-1",
+          "description": "Test full monorepo build with pnpm build",
+          "service": "packages",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [
+            "package.json"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "pnpm build",
+            "expected": "All packages build successfully with no errors"
+          },
+          "status": "completed",
+          "notes": "Fixed worktree symlinks via pnpm install. All 10 packages build successfully: shared, core, board-server, chat-relay, board, cli, desktop, marketplace, website. Non-blocking cosmetic warnings present (Next.js lockfile detection, missing optional plugins, Vite chunk size)."
+        },
+        {
+          "id": "subtask-2-2",
+          "description": "Verify desktop Tauri build works",
+          "service": "apps",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [
+            "apps/desktop/package.json"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd apps/desktop && pnpm build",
+            "expected": "Desktop app builds without errors"
+          },
+          "status": "completed",
+          "notes": "Desktop Tauri build successful. TypeScript compilation passed, Vite bundled 1792 modules, built in 2.93s. Non-blocking warnings present (chunk size >500kB, dynamic import patterns) but build succeeded."
+        },
+        {
+          "id": "subtask-2-3",
+          "description": "Verify board-server has no duplicate route issues from dist/ artifacts",
+          "service": "packages",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [
+            "packages/board-server/src"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd packages/board-server && pnpm build && pnpm dev & sleep 3 && pkill -f 'board-server'",
+            "expected": "No duplicate route warnings in server startup"
+          },
+          "status": "completed",
+          "notes": "✅ Verified: No duplicate route warnings. Structure confirmed: src/ contains only .ts files, dist/ properly gitignored, routes registered once in server.ts, tsx watch only watches src/. Dev server started cleanly with no duplicate route warnings."
+        }
+      ]
+    },
+    {
+      "id": "phase-3-ci-build-job",
+      "name": "CI Build Job",
+      "type": "implementation",
+      "description": "Add GitHub Actions workflow to build all packages with pnpm caching",
+      "depends_on": [
+        "phase-2-build-verification"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-3-1",
+          "description": "Create .github/workflows/build.yml with pnpm caching",
+          "service": "ci",
+          "files_to_modify": [],
+          "files_to_create": [
+            ".github/workflows/build.yml"
+          ],
+          "patterns_from": [
+            ".github/workflows/validate.yml",
+            ".github/workflows/evals.yml"
+          ],
+          "verification": {
+            "type": "manual",
+            "instructions": "Review workflow includes: (1) pnpm/action-setup with caching, (2) pnpm install, (3) pnpm build, (4) runs on push/PR to main, (5) reasonable timeout"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-3-2",
+          "description": "Add build badge to README.md",
+          "service": "docs",
+          "files_to_modify": [
+            "README.md"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "README.md"
+          ],
+          "verification": {
+            "type": "manual",
+            "instructions": "Verify build badge added near validate badge at top of README"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-4-contributing-docs",
+      "name": "Contributing Documentation",
+      "type": "implementation",
+      "description": "Create CONTRIBUTING.md with complete build, test, and PR workflow",
+      "depends_on": [
+        "phase-1-evals-docs",
+        "phase-2-build-verification"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-4-1",
+          "description": "Create CONTRIBUTING.md with setup, build, test, and PR guidelines",
+          "service": "docs",
+          "files_to_modify": [],
+          "files_to_create": [
+            "CONTRIBUTING.md"
+          ],
+          "patterns_from": [
+            "package.json",
+            "evals/README.md"
+          ],
+          "verification": {
+            "type": "manual",
+            "instructions": "Review CONTRIBUTING.md includes: (1) Prerequisites (Node, pnpm, Rust), (2) Clone and install steps, (3) Build all packages, (4) Run tests, (5) Evals setup, (6) PR process, (7) Common issues"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-5-integration",
+      "name": "Integration Verification",
+      "type": "integration",
+      "description": "Verify complete build flow works end-to-end from fresh clone",
+      "depends_on": [
+        "phase-3-ci-build-job",
+        "phase-4-contributing-docs"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-5-1",
+          "description": "Test complete setup from CONTRIBUTING.md instructions",
+          "all_services": true,
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "e2e",
+            "steps": [
+              "Fresh clone simulation: rm -rf node_modules && rm -rf pnpm-lock.yaml",
+              "Follow CONTRIBUTING.md: pnpm install",
+              "Build all: pnpm build",
+              "Run tests: pnpm test:all",
+              "Setup evals: cd evals && python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt",
+              "Run offline evals: python runner.py --offline",
+              "Verify build completes in <5 minutes (after cache warm-up)"
+            ]
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-5-2",
+          "description": "Verify CI build workflow passes on main branch",
+          "all_services": true,
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "manual",
+            "instructions": "After PR merge, verify build.yml workflow runs successfully on main and badge shows passing"
+          },
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_phases": 5,
+    "total_subtasks": 9,
+    "services_involved": [
+      "evals",
+      "packages",
+      "apps",
+      "ci",
+      "docs"
+    ],
+    "parallelism": {
+      "max_parallel_phases": 2,
+      "parallel_groups": [
+        {
+          "phases": [
+            "phase-1-evals-docs",
+            "phase-2-build-verification"
+          ],
+          "reason": "Both have no dependencies and work on different files - can run in parallel"
+        }
+      ],
+      "recommended_workers": 2,
+      "speedup_estimate": "1.3x faster than sequential (phases 1-2 run in parallel)"
+    },
+    "startup_command": "python auto-claude/run.py --spec 007 --parallel 2"
+  },
+  "verification_strategy": {
+    "risk_level": "medium",
+    "skip_validation": false,
+    "test_creation_phase": "post_implementation",
+    "test_types_required": [
+      "integration"
+    ],
+    "security_scanning_required": false,
+    "staging_deployment_required": false,
+    "acceptance_criteria": [
+      "All TypeScript packages build successfully with pnpm build",
+      "Evals Python venv documented and can be created",
+      "Board-server has no duplicate route issues",
+      "CI workflow includes build-all job",
+      "Build completes in <5 minutes with cache",
+      "CONTRIBUTING.md documents complete setup"
+    ],
+    "verification_steps": [
+      {
+        "name": "Full Build Test",
+        "command": "pnpm build",
+        "expected_outcome": "All packages build without errors",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Desktop Build Test",
+        "command": "pnpm build:desktop",
+        "expected_outcome": "Tauri desktop app builds successfully",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Evals Setup Test",
+        "command": "cd evals && python3 -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt && python runner.py --offline",
+        "expected_outcome": "Evals environment sets up and runs offline tests",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      }
+    ],
+    "reasoning": "Medium risk infrastructure change requires thorough integration testing but no security scanning. Main risk is breaking existing build workflows."
+  },
+  "qa_acceptance": {
+    "unit_tests": {
+      "required": false,
+      "commands": [],
+      "minimum_coverage": null
+    },
+    "integration_tests": {
+      "required": true,
+      "commands": [
+        "pnpm build",
+        "pnpm test:all"
+      ],
+      "services_to_test": [
+        "packages",
+        "apps",
+        "evals"
+      ]
+    },
+    "e2e_tests": {
+      "required": false,
+      "commands": [],
+      "flows": []
+    },
+    "browser_verification": {
+      "required": false,
+      "pages": []
+    },
+    "database_verification": {
+      "required": false,
+      "checks": []
+    },
+    "ci_verification": {
+      "required": true,
+      "checks": [
+        "build.yml workflow exists",
+        "build.yml includes pnpm caching",
+        "build.yml runs on push/PR to main",
+        "All packages build successfully in CI"
+      ]
+    }
+  },
+  "qa_signoff": null,
+  "status": "in_progress",
+  "planStatus": "in_progress",
+  "xstateState": "planning",
+  "executionPhase": "coding",
+  "updated_at": "2026-04-04T05:00:51.521Z"
+}
