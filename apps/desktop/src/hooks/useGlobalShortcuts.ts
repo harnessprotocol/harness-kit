@@ -9,6 +9,7 @@ export const NAV_PATHS = [
   "/security/permissions",
   "/parity",
   "/board",
+  "/roadmap",
   "/memory",
 ] as const;
 
