@@ -267,6 +267,7 @@ export default function RoadmapPage() {
   const [showCompetitorViewer, setShowCompetitorViewer] = useState(false);
   const [pendingConvertFeature, setPendingConvertFeature] = useState<RoadmapFeature | null>(null);
   const [epicPickerEpics, setEpicPickerEpics] = useState<Epic[] | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // Collect all pain points from competitors indexed by ID
   const painPointsById = useMemo(() => {
@@ -289,49 +290,73 @@ export default function RoadmapPage() {
   // ── Handlers ──
 
   const handleSaveRoadmap = useCallback(async (updated: Roadmap) => {
-    await roadmapApi.roadmap.save(slug!, updated);
-    refetch();
+    try {
+      await roadmapApi.roadmap.save(slug!, updated);
+      refetch();
+    } catch (err) {
+      setActionError(String(err));
+    }
   }, [slug, refetch]);
 
   const handleAddFeature = useCallback(async (data: Omit<RoadmapFeature, 'id'>) => {
-    await roadmapApi.features.add(slug!, data);
-    refetch();
+    try {
+      await roadmapApi.features.add(slug!, data);
+      refetch();
+    } catch (err) {
+      setActionError(String(err));
+    }
   }, [slug, refetch]);
 
   const handleDeleteFeature = useCallback(async (featureId: string) => {
-    await roadmapApi.features.remove(slug!, featureId);
-    setSelectedFeature(null);
-    refetch();
+    try {
+      await roadmapApi.features.remove(slug!, featureId);
+      setSelectedFeature(null);
+      refetch();
+    } catch (err) {
+      setActionError(String(err));
+    }
   }, [slug, refetch]);
 
   const handleAddCompetitor = useCallback(async (competitor: Omit<Competitor, 'id'>) => {
-    await roadmapApi.competitors.add(slug!, competitor);
-    refetch();
+    try {
+      await roadmapApi.competitors.add(slug!, competitor);
+      refetch();
+    } catch (err) {
+      setActionError(String(err));
+    }
   }, [slug, refetch]);
 
   const handleConvertToTask = useCallback(async (feature: RoadmapFeature) => {
-    const project = await api.projects.get(slug!);
-    if (project.epics.length === 0) {
-      alert('No epics found. Create an epic on the Board first.');
-      return;
-    }
-    if (project.epics.length === 1) {
-      const result = await roadmapApi.features.convertToTask(slug!, feature.id, project.epics[0].id);
-      setSelectedFeature(result.feature);
-      refetch();
-    } else {
-      setPendingConvertFeature(feature);
-      setEpicPickerEpics(project.epics);
+    try {
+      const project = await api.projects.get(slug!);
+      if (project.epics.length === 0) {
+        setActionError('No epics found. Create an epic on the Board first.');
+        return;
+      }
+      if (project.epics.length === 1) {
+        const result = await roadmapApi.features.convertToTask(slug!, feature.id, project.epics[0].id);
+        setSelectedFeature(result.feature);
+        refetch();
+      } else {
+        setPendingConvertFeature(feature);
+        setEpicPickerEpics(project.epics);
+      }
+    } catch (err) {
+      setActionError(String(err));
     }
   }, [slug, refetch]);
 
   const handleEpicPick = useCallback(async (epicId: number) => {
     if (!pendingConvertFeature) return;
-    const result = await roadmapApi.features.convertToTask(slug!, pendingConvertFeature.id, epicId);
-    setSelectedFeature(result.feature);
-    setPendingConvertFeature(null);
-    setEpicPickerEpics(null);
-    refetch();
+    try {
+      const result = await roadmapApi.features.convertToTask(slug!, pendingConvertFeature.id, epicId);
+      setSelectedFeature(result.feature);
+      setPendingConvertFeature(null);
+      setEpicPickerEpics(null);
+      refetch();
+    } catch (err) {
+      setActionError(String(err));
+    }
   }, [slug, pendingConvertFeature, refetch]);
 
   const handleGoToTask = useCallback((taskId: number) => {
@@ -408,6 +433,30 @@ export default function RoadmapPage() {
       />
 
       <RoadmapTabs activeTab={activeTab} onTabChange={tab => setActiveTab(tab as TabId)} />
+
+      {/* Action error banner */}
+      {actionError && (
+        <div
+          style={{
+            flexShrink: 0,
+            padding: '8px 16px',
+            background: 'rgba(220,38,38,0.1)',
+            borderBottom: '1px solid rgba(220,38,38,0.2)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+          }}
+        >
+          <span style={{ fontSize: 12, color: '#dc2626' }}>{actionError}</span>
+          <button
+            onClick={() => setActionError(null)}
+            style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: 14, padding: 0 }}
+          >
+            {'✕'}
+          </button>
+        </div>
+      )}
 
       {/* Tab content */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', minHeight: 0 }}>

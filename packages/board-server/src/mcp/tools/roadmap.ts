@@ -43,10 +43,6 @@ export const roadmapTools = [
     }),
     handler: async (args: { project: string; roadmap: Record<string, unknown> }) => {
       const { roadmap: raw } = args;
-      // Runtime validation: required fields
-      if (!raw.id && !raw.projectSlug && !raw.version && !Array.isArray(raw.phases) && !Array.isArray(raw.features)) {
-        // At least one of the key fields must be present; build a specific error if any are missing
-      }
       const missingFields: string[] = [];
       if (!raw.version) missingFields.push('version');
       if (!Array.isArray(raw.phases)) missingFields.push('phases (array)');

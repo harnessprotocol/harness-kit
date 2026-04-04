@@ -23,11 +23,20 @@ export function resetRoadmapDirCache(): void {
   roadmapDirEnsured = false;
 }
 
+/** Reject slugs that could escape the board directory via path traversal. */
+function assertSafeSlug(slug: string): void {
+  if (!/^[a-z0-9][a-z0-9-]*$/.test(slug)) {
+    throw new Error(`Invalid project slug: "${slug}"`);
+  }
+}
+
 function roadmapPath(slug: string): string {
+  assertSafeSlug(slug);
   return path.join(getBoardDir(), `${slug}.roadmap.yaml`);
 }
 
 function competitorsPath(slug: string): string {
+  assertSafeSlug(slug);
   return path.join(getBoardDir(), `${slug}.competitors.yaml`);
 }
 
