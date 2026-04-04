@@ -4,6 +4,10 @@ on:
   pull_request:
     types: [opened, synchronize, reopened]
 
+concurrency:
+  group: dependabot-auto-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 jobs:
   auto-merge:
     if: github.actor == 'dependabot[bot]'
@@ -92,10 +96,11 @@ jobs:
 
       - name: Squash merge and delete branch
         run: |
+          PR_TITLE=$(gh pr view "$PR_NUMBER" --json title --jq '.title')
           gh pr merge "$PR_NUMBER" \
             --squash \
             --delete-branch \
-            --subject "$(gh pr view "$PR_NUMBER" --json title --jq '.title')"
+            --subject "$PR_TITLE"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
