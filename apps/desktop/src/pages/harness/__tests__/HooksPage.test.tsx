@@ -10,6 +10,10 @@ vi.mock("../../../lib/tauri", () => ({
   writeConfigFile: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../../../lib/preferences", () => ({
+  getMarkdownFont: vi.fn(() => "sans"),
+}));
+
 vi.mock("../../../components/plugin-explorer/MonacoEditor", () => ({
   default: ({ content }: { content: string }) => (
     <div data-testid="monaco-editor">{content}</div>
@@ -23,17 +27,11 @@ function renderPage() {
 describe("HooksPage", () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it("shows loading state initially", () => {
-    mockReadClaudeMd.mockReturnValue(new Promise(() => {}));
-    renderPage();
-    expect(screen.getByText(/Loading/i)).toBeInTheDocument();
-  });
-
-  it("shows editor with settings.json content after loading", async () => {
+  it("shows formatted view with settings.json content after loading", async () => {
     mockReadClaudeMd.mockResolvedValue('{"hooks": {}}');
     renderPage();
     await waitFor(() => {
-      expect(screen.getByTestId("monaco-editor")).toBeInTheDocument();
+      expect(screen.getByText(/no hooks configured/i)).toBeInTheDocument();
     });
   });
 

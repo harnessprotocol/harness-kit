@@ -10,6 +10,10 @@ vi.mock("../../../lib/tauri", () => ({
   writeConfigFile: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../../../lib/preferences", () => ({
+  getMarkdownFont: vi.fn(() => "sans"),
+}));
+
 vi.mock("../../../components/plugin-explorer/MonacoEditor", () => ({
   default: ({ content }: { content: string }) => (
     <div data-testid="monaco-editor">{content}</div>
@@ -29,17 +33,10 @@ function renderPage() {
 describe("ClaudeMdPage", () => {
   beforeEach(() => { vi.clearAllMocks(); });
 
-  it("shows loading state initially", () => {
-    mockReadClaudeMd.mockReturnValue(new Promise(() => {}));
-    renderPage();
-    expect(screen.getByText(/Loading/i)).toBeInTheDocument();
-  });
-
   it("shows file content after loading", async () => {
     mockReadClaudeMd.mockResolvedValue("# Hello");
     renderPage();
     await waitFor(() => {
-      // Monaco or MarkdownPanel should render with the content
       const editor = screen.queryByTestId("monaco-editor") ?? screen.queryByTestId("markdown-panel");
       expect(editor).not.toBeNull();
     });

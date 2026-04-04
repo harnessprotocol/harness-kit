@@ -13,7 +13,6 @@ import PluginRow from "./plugins/PluginRow";
 import ImportOverlay from "./plugins/ImportOverlay";
 import ImportBanner, { type ImportStatus } from "./plugins/ImportBanner";
 import UninstallDialog from "./plugins/UninstallDialog";
-import PluginExplorerModal from "../../components/plugin-explorer/PluginExplorerModal";
 import { useChat } from "../../context/ChatContext";
 import { emitChatShare } from "../../lib/chat-events";
 
@@ -36,9 +35,6 @@ export default function PluginsPage() {
 
   // Uninstall state
   const [uninstallTarget, setUninstallTarget] = useState<InstalledPlugin | null>(null);
-
-  // Explorer modal
-  const [explorerPlugin, setExplorerPlugin] = useState<InstalledPlugin | null>(null);
 
   const loadPlugins = useCallback(() => {
     listInstalledPlugins()
@@ -342,7 +338,7 @@ export default function PluginsPage() {
                   update={updates[plugin.name]}
                   index={i}
                   isLast={i === filtered.length - 1}
-                  onClick={() => setExplorerPlugin(plugin)}
+                  onClick={() => navigate(`/harness/plugins/${encodeURIComponent(plugin.name)}`)}
                   onContextMenu={(e) => {
                     setContextMenu({ x: e.clientX, y: e.clientY, plugin });
                   }}
@@ -383,11 +379,6 @@ export default function PluginsPage() {
         onClose={() => setUninstallTarget(null)}
       />
 
-      {/* Plugin Explorer Modal */}
-      <PluginExplorerModal
-        plugin={explorerPlugin}
-        onClose={() => setExplorerPlugin(null)}
-      />
     </div>
   );
 }
