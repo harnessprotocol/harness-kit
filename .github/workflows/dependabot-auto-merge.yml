@@ -13,11 +13,13 @@ jobs:
     if: github.actor == 'dependabot[bot]'
     runs-on: ubuntu-latest
     permissions:
+      checks: read
       contents: write
       pull-requests: write
 
     steps:
       - name: Post opening comment
+        if: github.event.action == 'opened' || github.event.action == 'reopened'
         run: |
           gh pr comment "$PR_NUMBER" --body \
             "🤖 **Dependabot Auto-Merge** detected this PR. Requesting a Copilot review and waiting for CI checks before merging."
@@ -27,6 +29,7 @@ jobs:
           PR_NUMBER: ${{ github.event.pull_request.number }}
 
       - name: Request Copilot review
+        if: github.event.action == 'opened' || github.event.action == 'reopened'
         run: |
           gh pr comment "$PR_NUMBER" --body \
             "@copilot please review this dependency update"
@@ -56,7 +59,7 @@ jobs:
               --jq '[.[] | select(.name != "Dependabot Auto-Merge / auto-merge")] | {
                 total: length,
                 pending: [.[] | select(.state == "PENDING" or .state == "IN_PROGRESS" or .state == "QUEUED" or .conclusion == "")] | length,
-                failed: [.[] | select(.conclusion == "FAILURE" or .conclusion == "CANCELLED" or .conclusion == "TIMED_OUT")] | length,
+                failed: [.[] | select(.conclusion != "" and (.conclusion != "SUCCESS" and .conclusion != "SKIPPED" and .conclusion != "NEUTRAL"))] | length,
                 passed: [.[] | select(.conclusion == "SUCCESS" or .conclusion == "SKIPPED" or .conclusion == "NEUTRAL")] | length
               }')
 
