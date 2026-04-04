@@ -24,11 +24,13 @@ export function resetBoardDirCache(): void {
 }
 
 function projectPath(slug: string): string {
-  // Reject slugs with path traversal characters before building the path
-  if (!/^[a-z0-9][a-z0-9-]*$/.test(slug)) {
+  const dir = getBoardDir();
+  const filePath = path.resolve(dir, `${slug}.yaml`);
+  // Ensure the resolved path stays within the board directory (prevents traversal)
+  if (!filePath.startsWith(dir + path.sep)) {
     throw new Error(`Invalid project slug: ${slug}`);
   }
-  return path.join(getBoardDir(), `${slug}.yaml`);
+  return filePath;
 }
 
 function slugify(name: string): string {

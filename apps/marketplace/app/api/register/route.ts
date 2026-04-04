@@ -33,7 +33,10 @@ async function fetchGitHubFile(
 
   const [, owner, repo] = match;
   const cleanRepo = repo.replace(/\.git$/, "");
-  const url = `https://api.github.com/repos/${owner}/${cleanRepo}/contents/${filePath}`;
+  // Use URL object with a fixed hostname so user-supplied path components
+  // cannot redirect the request to a different host (CodeQL SSRF mitigation).
+  const apiUrl = new URL("https://api.github.com");
+  apiUrl.pathname = `/repos/${owner}/${cleanRepo}/contents/${filePath}`;
 
   const headers: Record<string, string> = {
     Accept: "application/vnd.github.v3.raw",
@@ -44,7 +47,7 @@ async function fetchGitHubFile(
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const res = await fetch(url, { headers });
+  const res = await fetch(apiUrl, { headers });
   if (!res.ok) return null;
   return res.text();
 }

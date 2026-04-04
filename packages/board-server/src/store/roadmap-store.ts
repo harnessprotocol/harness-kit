@@ -23,21 +23,21 @@ export function resetRoadmapDirCache(): void {
   roadmapDirEnsured = false;
 }
 
-/** Reject slugs that could escape the board directory via path traversal. */
-function assertSafeSlug(slug: string): void {
-  if (!/^[a-z0-9][a-z0-9-]*$/.test(slug)) {
-    throw new Error(`Invalid project slug: "${slug}"`);
+function safePath(dir: string, filename: string): string {
+  const filePath = path.resolve(dir, filename);
+  // Ensure the resolved path stays within the board directory (prevents traversal)
+  if (!filePath.startsWith(dir + path.sep)) {
+    throw new Error(`Path traversal detected: ${filename}`);
   }
+  return filePath;
 }
 
 function roadmapPath(slug: string): string {
-  assertSafeSlug(slug);
-  return path.join(getBoardDir(), `${slug}.roadmap.yaml`);
+  return safePath(getBoardDir(), `${slug}.roadmap.yaml`);
 }
 
 function competitorsPath(slug: string): string {
-  assertSafeSlug(slug);
-  return path.join(getBoardDir(), `${slug}.competitors.yaml`);
+  return safePath(getBoardDir(), `${slug}.competitors.yaml`);
 }
 
 export function readRoadmap(slug: string): Roadmap | null {
