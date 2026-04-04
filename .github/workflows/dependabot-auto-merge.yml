@@ -1,0 +1,120 @@
+name: Dependabot Auto-Merge
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: dependabot-auto-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  auto-merge:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      checks: read
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Post opening comment
+        if: github.event.action == 'opened' || github.event.action == 'reopened'
+        run: |
+          gh pr comment "$PR_NUMBER" --body \
+            "🤖 **Dependabot Auto-Merge** detected this PR. Requesting a Copilot review and waiting for CI checks before merging."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+
+      - name: Request Copilot review
+        if: github.event.action == 'opened' || github.event.action == 'reopened'
+        run: |
+          gh pr comment "$PR_NUMBER" --body \
+            "@copilot please review this dependency update"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+
+      - name: Wait for CI checks to pass
+        id: wait-checks
+        run: |
+          echo "Waiting for all CI checks to complete (max 30 minutes)..."
+          DEADLINE=$(( $(date +%s) + 1800 ))
+          # Give the CI system a moment to register checks before the first poll.
+          sleep 20
+
+          while true; do
+            NOW=$(date +%s)
+            if [ "$NOW" -ge "$DEADLINE" ]; then
+              echo "::error::Timed out waiting for CI checks after 30 minutes."
+              exit 1
+            fi
+
+            # Exclude this workflow's own check to avoid a self-referential wait.
+            # The filter value is "<workflow name> / <job name>" — update if either is renamed.
+            STATUS=$(gh pr checks "$PR_NUMBER" --json name,state,conclusion \
+              --jq '[.[] | select(.name != "Dependabot Auto-Merge / auto-merge")] | {
+                total: length,
+                pending: [.[] | select(.state == "PENDING" or .state == "IN_PROGRESS" or .state == "QUEUED" or .conclusion == "")] | length,
+                failed: [.[] | select(.conclusion != "" and (.conclusion != "SUCCESS" and .conclusion != "SKIPPED" and .conclusion != "NEUTRAL"))] | length,
+                passed: [.[] | select(.conclusion == "SUCCESS" or .conclusion == "SKIPPED" or .conclusion == "NEUTRAL")] | length
+              }')
+
+            TOTAL=$(echo "$STATUS" | jq -r '.total')
+            PENDING=$(echo "$STATUS" | jq -r '.pending')
+            FAILED=$(echo "$STATUS" | jq -r '.failed')
+            PASSED=$(echo "$STATUS" | jq -r '.passed')
+
+            echo "Checks — total: $TOTAL, pending: $PENDING, passed: $PASSED, failed: $FAILED"
+
+            if [ "$FAILED" -gt 0 ]; then
+              echo "::error::One or more CI checks failed. Aborting auto-merge."
+              exit 1
+            fi
+
+            # PENDING == 0 covers both "all checks passed" and "no checks defined".
+            if [ "$PENDING" -eq 0 ]; then
+              echo "No pending checks. Proceeding with merge."
+              break
+            fi
+
+            sleep 30
+          done
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+
+      - name: Post pre-merge comment
+        run: |
+          gh pr comment "$PR_NUMBER" --body \
+            "✅ All CI checks passed. Squash-merging now and deleting the branch."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+
+      - name: Squash merge and delete branch
+        run: |
+          PR_TITLE=$(gh pr view "$PR_NUMBER" --json title --jq '.title')
+          gh pr merge "$PR_NUMBER" \
+            --squash \
+            --delete-branch \
+            --subject "$PR_TITLE"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+
+      - name: Post failure comment
+        if: failure()
+        run: |
+          gh pr comment "$PR_NUMBER" --body \
+            "❌ **Auto-merge failed.** Check the [workflow run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for details. Manual intervention may be required."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
