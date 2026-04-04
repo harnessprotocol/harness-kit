@@ -4,6 +4,7 @@ import { useRoadmapData } from '../../hooks/useRoadmapData';
 import { useBoardServerReady } from '../../hooks/useBoardServerReady';
 import { BoardServerOffline } from '../../components/board/BoardServerOffline';
 import { RoadmapEmptyState } from '../../components/roadmap/RoadmapEmptyState';
+import { RoadmapGenerationView } from '../../components/roadmap/RoadmapGenerationView';
 import { RoadmapHeader } from '../../components/roadmap/RoadmapHeader';
 import { RoadmapTabs } from '../../components/roadmap/RoadmapTabs';
 import { RoadmapKanbanView } from '../../components/roadmap/RoadmapKanbanView';
@@ -268,6 +269,7 @@ export default function RoadmapPage() {
   const [pendingConvertFeature, setPendingConvertFeature] = useState<RoadmapFeature | null>(null);
   const [epicPickerEpics, setEpicPickerEpics] = useState<Epic[] | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [showGenerateView, setShowGenerateView] = useState(false);
 
   // Collect all pain points from competitors indexed by ID
   const painPointsById = useMemo(() => {
@@ -403,15 +405,16 @@ export default function RoadmapPage() {
   }
 
   if (!roadmap) {
-    return (
-      <div style={{ height: '100%' }}>
-        <RoadmapEmptyState onGenerate={() => {
-          // The user should ask Claude via MCP to generate a roadmap
-          // We surface a hint for now
-          alert('Ask Claude to generate a roadmap:\n\nget_roadmap(project: "' + slug + '")');
-        }} />
-      </div>
-    );
+    if (showGenerateView) {
+      return (
+        <RoadmapGenerationView
+          projectSlug={slug!}
+          onComplete={() => { setShowGenerateView(false); refetch(); }}
+          onCancel={() => setShowGenerateView(false)}
+        />
+      );
+    }
+    return <RoadmapEmptyState onGenerate={() => setShowGenerateView(true)} />;
   }
 
   return (
