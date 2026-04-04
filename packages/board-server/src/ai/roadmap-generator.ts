@@ -1,4 +1,5 @@
-import { execFile, execFileSync } from 'node:child_process';
+import Anthropic from '@anthropic-ai/sdk';
+import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import * as store from '../store/yaml-store.js';
 import * as roadmapStore from '../store/roadmap-store.js';
@@ -23,56 +24,56 @@ export interface ErrorEvent {
 
 export type RoadmapGeneratorEvent = GenerateEvent | DoneEvent | ErrorEvent;
 
-let _claudePath: string | null = null;
-function findClaude(): string {
-  if (process.env.CLAUDE_PATH) return process.env.CLAUDE_PATH;
-  if (_claudePath) return _claudePath;
-  // Try common install locations, then fall back to PATH lookup
-  const candidates = [
-    `${process.env.HOME}/.local/bin/claude`,
-    '/usr/local/bin/claude',
-    '/opt/homebrew/bin/claude',
-  ];
-  for (const p of candidates) {
-    try {
-      execFileSync('test', ['-x', p]);
-      _claudePath = p;
-      return p;
-    } catch { /* not found */ }
-  }
-  // Last resort: resolve via `which`
-  try {
-    _claudePath = execFileSync('which', ['claude'], { env: { ...process.env, PATH: `/usr/local/bin:/opt/homebrew/bin:${process.env.HOME}/.local/bin:${process.env.PATH}` } }).toString().trim();
-    return _claudePath;
-  } catch {
-    throw new Error('claude CLI not found. Install Claude Code: https://claude.ai/code');
-  }
+// ─── Auth ─────────────────────────────────────────────────────────────────────
+
+interface ClaudeCredentials {
+  accessToken: string;
+  expiresAt: number;
 }
 
-function runClaude(prompt: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const claude = findClaude();
-    const child = execFile(
-      claude,
-      ['-p', '--output-format', 'json', '--model', 'claude-opus-4-6'],
-      { maxBuffer: 16 * 1024 * 1024, timeout: 180_000 },
-      (error, stdout, stderr) => {
-        if (error) {
-          reject(new Error(stderr || error.message));
-          return;
-        }
-        try {
-          const parsed = JSON.parse(stdout) as { result?: string };
-          resolve(parsed.result ?? stdout);
-        } catch {
-          resolve(stdout);
-        }
-      },
-    );
-    child.stdin?.write(prompt);
-    child.stdin?.end();
-  });
+/** Read the Claude Code OAuth token from the macOS keychain. */
+function readKeychainToken(): ClaudeCredentials | null {
+  if (process.platform !== 'darwin') return null;
+  for (const service of ['Claude Code-credentials', 'Claude Code-credentials-518fa12f']) {
+    try {
+      const raw = execFileSync('security', [
+        'find-generic-password', '-s', service, '-w',
+      ], { timeout: 5000 }).toString().trim();
+
+      const parsed = JSON.parse(raw) as Record<string, unknown>;
+      const oauth = parsed.claudeAiOauth as Record<string, unknown> | undefined;
+      if (oauth?.accessToken && typeof oauth.accessToken === 'string') {
+        return {
+          accessToken: oauth.accessToken,
+          expiresAt: typeof oauth.expiresAt === 'number' ? oauth.expiresAt : Infinity,
+        };
+      }
+    } catch {
+      continue;
+    }
+  }
+  return null;
 }
+
+function buildClient(): Anthropic {
+  // Prefer explicit API key
+  if (process.env.ANTHROPIC_API_KEY) {
+    return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  }
+  // Fall back to Claude Code's stored OAuth token
+  const creds = readKeychainToken();
+  if (creds) {
+    if (creds.expiresAt < Date.now()) {
+      throw new Error('Claude Code OAuth token has expired. Re-authenticate with: claude /login');
+    }
+    return new Anthropic({ authToken: creds.accessToken });
+  }
+  throw new Error(
+    'No Anthropic credentials found. Either set ANTHROPIC_API_KEY or authenticate Claude Code.'
+  );
+}
+
+// ─── Generator ────────────────────────────────────────────────────────────────
 
 export async function generateRoadmap(
   slug: string,
@@ -92,7 +93,9 @@ export async function generateRoadmap(
     const taskCount = project.epics.reduce((n, e) => n + e.tasks.length, 0);
     const epicsText = project.epics.map(epic => {
       const tasksText = epic.tasks.length > 0
-        ? epic.tasks.map(t => `      - [${t.status}] ${t.title}${t.description ? ': ' + t.description.slice(0, 120) : ''}`).join('\n')
+        ? epic.tasks.map(t =>
+            `      - [${t.status}] ${t.title}${t.description ? ': ' + t.description.slice(0, 120) : ''}`
+          ).join('\n')
         : '      (no tasks yet)';
       return `  Epic: ${epic.name}\n${tasksText}`;
     }).join('\n\n');
@@ -106,11 +109,22 @@ export async function generateRoadmap(
   // Phase 2: Generate with Claude
   onEvent({ type: 'phase', phase: 'generating', label: 'Generating roadmap with Claude...' });
 
-  const prompt = `Generate a strategic product roadmap for this project.
+  let roadmapJson: Roadmap;
+  try {
+    const client = buildClient();
+
+    const message = await client.messages.create({
+      model: 'claude-opus-4-6',
+      max_tokens: 8192,
+      system: `You are a product strategist. Generate a comprehensive product roadmap as a JSON object.
+CRITICAL: Respond with ONLY a valid JSON object. No explanation, no markdown fences, no text before or after. Pure JSON only.`,
+      messages: [{
+        role: 'user',
+        content: `Generate a strategic product roadmap for this project.
 
 ${projectContext}
 
-Return ONLY a valid JSON object with this structure (use real UUIDs for all id fields):
+Return a JSON object with this exact structure (use real UUIDs for all id fields):
 {
   "version": "1.0",
   "projectName": "<project name>",
@@ -159,13 +173,17 @@ Requirements:
 - Mix priorities: ~40% must, ~35% should, ~20% could, ~5% wont
 - Each feature needs 2-3 user stories and 2-3 acceptance criteria
 - phase.features array must list the ids of features in that phase
-- Base the roadmap on the existing tasks/epics context above
-- Return ONLY the JSON object, no explanation, no markdown fences`;
+- Base the roadmap on the existing tasks/epics context above`,
+      }],
+    });
 
-  let roadmapJson: Roadmap;
-  try {
-    const result = await runClaude(prompt);
-    const rawText = result.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
+    const content = message.content[0];
+    if (content.type !== 'text') {
+      onEvent({ type: 'error', message: 'Unexpected response type from Claude' });
+      return;
+    }
+
+    const rawText = content.text.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '');
     const parsed = JSON.parse(rawText) as Record<string, unknown>;
 
     if (!parsed.version || !Array.isArray(parsed.phases) || !Array.isArray(parsed.features)) {
