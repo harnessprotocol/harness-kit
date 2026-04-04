@@ -163,7 +163,7 @@ describe("useTerminals", () => {
     // Interactive mode (no -p) for full TUI with live streaming
     expect(mockInvoke).toHaveBeenCalledWith("write_terminal", {
       terminalId: "term-1",
-      data: "claude 'fix bug' --model claude-opus-4-6\n",
+      data: "claude 'fix bug' --allowedTools Read,Grep,Glob,Agent,Skill --model claude-opus-4-6\n",
     });
     expect(result.current.sessions[0].status).toBe("running");
     expect(result.current.sessions[0].harnessId).toBe("claude");
