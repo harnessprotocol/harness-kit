@@ -57,21 +57,21 @@ describe("buildInvokeCommand", () => {
 
   // All harnesses use interactive mode (no -p) for full TUI with live streaming.
 
-  it("builds claude command with prompt only", () => {
+  it("builds claude command with prompt and allowedTools", () => {
     expect(buildInvokeCommand("claude", "fix the bug")).toBe(
-      "claude 'fix the bug'",
+      "claude 'fix the bug' --allowedTools Read,Grep,Glob,Agent,Skill",
     );
   });
 
-  it("builds claude command with prompt and model", () => {
+  it("builds claude command with prompt, allowedTools, and model", () => {
     expect(buildInvokeCommand("claude", "fix it", "claude-sonnet-4-6")).toBe(
-      "claude 'fix it' --model claude-sonnet-4-6",
+      "claude 'fix it' --allowedTools Read,Grep,Glob,Agent,Skill --model claude-sonnet-4-6",
     );
   });
 
   it("quotes claude prompt with special characters", () => {
     expect(buildInvokeCommand("claude", "what's this?", "opus")).toBe(
-      "claude 'what'\\''s this?' --model opus",
+      "claude 'what'\\''s this?' --allowedTools Read,Grep,Glob,Agent,Skill --model opus",
     );
   });
 
@@ -125,8 +125,8 @@ describe("buildInvokeCommand", () => {
 
   // ── Registry ────────────────────────────────────────────
 
-  it("has 4 built-in harnesses", () => {
-    expect(BUILTIN_HARNESSES).toHaveLength(4);
+  it("has 5 built-in harnesses", () => {
+    expect(BUILTIN_HARNESSES).toHaveLength(5);
   });
 
   it("all harnesses have unique ids", () => {
