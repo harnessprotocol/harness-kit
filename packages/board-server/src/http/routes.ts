@@ -1,9 +1,12 @@
 import { Router } from 'express';
 import * as store from '../store/yaml-store.js';
 import type { TaskStatus, TaskPriority, TaskCategory, TaskComplexity, SubtaskStatus, EpicStatus, ExecutionStatus } from '../types.js';
+import { createRoadmapRouter } from './roadmap-routes.js';
 
 export function createRouter(): Router {
   const router = Router();
+
+  router.use('/', createRoadmapRouter());
 
   // --- Projects ---
 
