@@ -1,8 +1,29 @@
 # Contributing
 
+Thank you for your interest in contributing to harness-kit! This guide covers everything from initial setup through submitting your first PR.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **Node.js** v24+ ([download](https://nodejs.org/))
+- **pnpm** 10.29.1+ (install via `corepack enable` or `npm install -g pnpm`)
+- **Rust** 1.77.2+ ([install via rustup](https://rustup.rs/)) — required for desktop app
+- **Python** 3.11+ — required for evals
+- **Git** for version control
+
+Verify your installations:
+
+```bash
+node --version   # should show v24+
+pnpm --version   # should show 10.29.1+
+rustc --version  # should show 1.77.2+
+python3 --version # should show 3.11+
+```
+
 ## Quick start
 
-```
+```bash
 git clone --recurse-submodules https://github.com/harnessprotocol/harness-kit.git
 cd harness-kit
 pnpm install
@@ -14,6 +35,159 @@ git checkout -b feat/<plugin-name>
 > If you already cloned without `--recurse-submodules`, run `git submodule update --init` to pull submodules (e.g., `packages/membrain`).
 
 CI runs on every PR. Squash merge only.
+
+---
+
+## Building the project
+
+### Build all packages
+
+```bash
+pnpm build
+```
+
+This builds all packages in dependency order.
+
+### Build specific packages
+
+```bash
+pnpm build:core         # Core library
+pnpm build:cli          # CLI tool
+pnpm build:website      # Documentation website
+pnpm build:marketplace  # Marketplace web app
+pnpm build:desktop      # Desktop app (requires Rust, copies to $HOME/Applications/)
+pnpm build:board        # Board client
+pnpm build:board-server # Board WebSocket server
+```
+
+### Development mode
+
+Run development servers with hot reload:
+
+```bash
+pnpm dev:website        # Documentation site
+pnpm dev:marketplace    # Marketplace web app
+pnpm dev:desktop        # Tauri desktop app
+pnpm dev:board          # Board client
+pnpm dev:board-server   # Board server
+```
+
+---
+
+## Running tests
+
+### All tests
+
+```bash
+# Run all tests across packages
+pnpm test:all
+
+# Run with coverage
+pnpm test:coverage
+```
+
+### Package-specific tests
+
+```bash
+# Core library tests
+pnpm test:core
+
+# Desktop app tests
+pnpm test:desktop        # Runs Rust + unit tests
+pnpm test:desktop:unit   # TypeScript/React tests only
+pnpm test:desktop:rust   # Rust tests only
+pnpm test:desktop:e2e    # End-to-end tests (requires dev server running)
+```
+
+**Note:** Desktop e2e tests require the dev server to be running separately. Run `pnpm dev:desktop` in another terminal before running `pnpm test:desktop:e2e`.
+
+---
+
+## Evals setup
+
+The evals system tests skill behavior across Claude models. See [`evals/README.md`](evals/README.md) for full documentation.
+
+### Quick start
+
+```bash
+cd evals
+
+# Create virtual environment
+python3 -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run offline tests (no API key required)
+python runner.py --offline
+
+# Run with API key (requires ANTHROPIC_API_KEY)
+export ANTHROPIC_API_KEY="your-key-here"
+python runner.py
+```
+
+### Common eval commands
+
+```bash
+# Test a single skill
+python runner.py --skill research
+
+# Structure checks only (lower cost)
+python runner.py --structure-only
+
+# Preview what would run
+python runner.py --dry-run
+```
+
+---
+
+## Common issues
+
+### Build failures
+
+**Issue:** `pnpm install` fails with dependency errors  
+**Solution:** Ensure you're using pnpm 10.29.1+. Run `pnpm --version` to check.
+
+**Issue:** Desktop app build fails  
+**Solution:** Ensure Rust 1.77.2+ is installed. Run `rustc --version` to check.
+
+**Issue:** TypeScript errors after pulling latest changes  
+**Solution:** Rebuild core packages: `pnpm build:core`
+
+**Issue:** Submodule missing (e.g., `packages/membrain`)  
+**Solution:** Run `git submodule update --init --recursive`
+
+### Test failures
+
+**Issue:** Desktop e2e tests fail with "connection refused"  
+**Solution:** Run `pnpm dev:desktop` in a separate terminal before running e2e tests.
+
+**Issue:** Rust tests fail with "test cannot be run in parallel"  
+**Solution:** Rust tests are configured to run with `--test-threads=1` by default in the script.
+
+### Evals issues
+
+**Issue:** `python runner.py` fails with missing dependencies  
+**Solution:** Activate the virtual environment and install requirements:
+```bash
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+**Issue:** Evals fail with API errors  
+**Solution:** Use offline mode during development: `python runner.py --offline`
+
+### Plugin development
+
+**Issue:** Plugin not showing up in marketplace  
+**Solution:** Ensure `source` path in `marketplace.json` is relative to repo root (e.g., `"./plugins/my-plugin"`).
+
+**Issue:** Versions out of sync  
+**Solution:** Versions in `plugin.json` and `marketplace.json` must match exactly.
+
+**Issue:** Plugin installation fails  
+**Solution:** Validate plugin manifest with the schema in `.github/schema/plugin.schema.json`.
 
 ---
 
