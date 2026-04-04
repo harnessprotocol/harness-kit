@@ -6,6 +6,10 @@ interface EditorToolbarProps {
   availableModes: Array<{ key: string; label: string }>;
   onViewModeChange: (mode: string) => void;
   onSave?: () => void;
+  /** Extra controls rendered after the save button (e.g. export menu, version history) */
+  actions?: React.ReactNode;
+  /** Smaller muted text below the filename (e.g. full file path) */
+  subtitle?: string;
 }
 
 function basename(path: string): string {
@@ -20,6 +24,8 @@ export default function EditorToolbar({
   availableModes,
   onViewModeChange,
   onSave,
+  actions,
+  subtitle,
 }: EditorToolbarProps) {
   return (
     <div
@@ -34,22 +40,37 @@ export default function EditorToolbar({
         minHeight: "36px",
       }}
     >
-      {/* Filename + dirty indicator */}
+      {/* Filename + dirty indicator + subtitle */}
       {filePath && (
-        <span style={{
-          fontSize: "12px",
-          color: "var(--fg-base)",
-          fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
-          fontWeight: 500,
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-          whiteSpace: "nowrap",
-        }}>
-          {basename(filePath)}
-          {isDirty && (
-            <span style={{ color: "var(--warning)", marginLeft: "4px" }} title="Unsaved changes">●</span>
+        <div style={{ overflow: "hidden", minWidth: 0 }}>
+          <span style={{
+            fontSize: "12px",
+            color: "var(--fg-base)",
+            fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
+            fontWeight: 500,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            display: "block",
+          }}>
+            {basename(filePath)}
+            {isDirty && (
+              <span style={{ color: "var(--warning)", marginLeft: "4px" }} title="Unsaved changes">●</span>
+            )}
+          </span>
+          {subtitle && (
+            <span style={{
+              fontSize: "10px",
+              color: "var(--fg-subtle)",
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+              display: "block",
+            }}>
+              {subtitle}
+            </span>
           )}
-        </span>
+        </div>
       )}
 
       {/* Spacer */}
@@ -108,6 +129,9 @@ export default function EditorToolbar({
           {saving ? "Saving\u2026" : "Save"}
         </button>
       )}
+
+      {/* Extra actions slot */}
+      {actions}
     </div>
   );
 }

@@ -38,7 +38,6 @@ describe("HarnessFilePage", () => {
   });
 
   it("shows loading state initially", () => {
-    // Promise that never resolves — keeps loading state indefinitely
     mockReadHarnessFile.mockReturnValue(new Promise(() => {}));
     renderPage();
     expect(screen.getByText(/Loading/)).toBeInTheDocument();
@@ -50,7 +49,6 @@ describe("HarnessFilePage", () => {
     await waitFor(() => {
       expect(screen.getByText(/No harness\.yaml found/i)).toBeInTheDocument();
     });
-    // Loading indicator should be gone
     expect(screen.queryByText(/Loading/)).toBeNull();
   });
 
@@ -62,7 +60,7 @@ describe("HarnessFilePage", () => {
     });
     renderPage();
     await waitFor(() => {
-      // The file path is rendered in a <code> element in the header
+      // The file path now appears in the EditorToolbar subtitle
       expect(screen.getByText("~/.claude/harness.yaml")).toBeInTheDocument();
     });
   });

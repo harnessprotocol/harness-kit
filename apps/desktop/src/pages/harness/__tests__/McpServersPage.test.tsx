@@ -10,6 +10,10 @@ vi.mock("../../../lib/tauri", () => ({
   writeConfigFile: vi.fn().mockResolvedValue(undefined),
 }));
 
+vi.mock("../../../lib/preferences", () => ({
+  getMarkdownFont: vi.fn(() => "sans"),
+}));
+
 vi.mock("../../../components/plugin-explorer/MonacoEditor", () => ({
   default: ({ content }: { content: string }) => (
     <div data-testid="monaco-editor">{content}</div>
@@ -26,14 +30,15 @@ describe("McpServersPage", () => {
   it("shows loading state initially", () => {
     mockReadClaudeMd.mockReturnValue(new Promise(() => {}));
     renderPage();
-    expect(screen.getByText(/Loading/i)).toBeInTheDocument();
+    // Toolbar renders the filename immediately; editor content is still loading
+    expect(screen.getByText("mcp.json")).toBeInTheDocument();
   });
 
-  it("shows editor with mcp.json content after loading", async () => {
+  it("shows formatted view with mcp.json content after loading", async () => {
     mockReadClaudeMd.mockResolvedValue('{"mcpServers": {}}');
     renderPage();
     await waitFor(() => {
-      expect(screen.getByTestId("monaco-editor")).toBeInTheDocument();
+      expect(screen.getByText(/no mcp servers configured/i)).toBeInTheDocument();
     });
   });
 

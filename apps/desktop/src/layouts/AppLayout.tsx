@@ -1,5 +1,5 @@
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { open } from "@tauri-apps/plugin-shell";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
@@ -9,6 +9,7 @@ import { initTheme } from "../lib/theme";
 import { initPreferences, getHiddenSections } from "../lib/preferences";
 import { useChat } from "../context/ChatContext";
 import ChatPanel from "../components/chat/ChatPanel";
+import { useClaudeFileList } from "../hooks/useClaudeFileList";
 
 type NavSection = {
   id: string;
@@ -23,13 +24,11 @@ export const NAV_SECTIONS: NavSection[] = [
     label: "Harness",
     path: "/harness/file",
     children: [
-      { label: "Harness File", path: "/harness/file" },
+      { label: "harness.yaml", path: "/harness/file" },
+      { label: "CLAUDE.md", path: "/harness/claude-md" },
       { label: "Plugins", path: "/harness/plugins" },
       { label: "MCP Servers", path: "/harness/mcp" },
       { label: "Hooks", path: "/harness/hooks" },
-      { label: "CLAUDE.md", path: "/harness/claude-md" },
-      { label: "Sync", path: "/harness/sync" },
-      { label: "Config Files", path: "/harness/settings" },
     ],
   },
   {
@@ -95,6 +94,118 @@ export const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
+// Files with dedicated nav items — excluded from the Config Files tree
+const DEDICATED_NAV_FILES = new Set(["harness.yaml", "CLAUDE.md"]);
+
+function HarnessSubnav({ configFiles }: { configFiles: string[] }) {
+  const navigate = useNavigate();
+  const [configExpanded, setConfigExpanded] = useState(true);
+  const staticItems = [
+    { label: "harness.yaml", path: "/harness/file" },
+    { label: "CLAUDE.md", path: "/harness/claude-md" },
+    { label: "Plugins", path: "/harness/plugins" },
+    { label: "MCP Servers", path: "/harness/mcp" },
+    { label: "Hooks", path: "/harness/hooks" },
+  ];
+  const visibleConfigFiles = configFiles.filter((f) => !DEDICATED_NAV_FILES.has(f));
+  const syncItem = { label: "Sync", path: "/harness/sync" };
+  const allItems = [
+    syncItem,
+    ...staticItems,
+    ...(configExpanded ? visibleConfigFiles.map((f) => ({ label: f, path: `/harness/config/${encodeURIComponent(f)}` })) : []),
+  ];
+  const { focusedIndex, onKeyDown } = useArrowNavigation({
+    count: allItems.length,
+    onActivate: (i) => navigate(allItems[i].path),
+  });
+
+  return (
+    <div className="mt-0.5 mb-1" tabIndex={0} onKeyDown={onKeyDown} style={{ outline: "none" }}>
+      {/* Sync — action at top, separated from files below */}
+      <NavLink
+        to="/harness/sync"
+        className={({ isActive }) => `sidebar-subitem${isActive ? " active" : ""}`}
+        style={{
+          display: "flex", alignItems: "center", gap: "5px",
+          ...(focusedIndex === 0 ? { outline: "2px solid var(--accent)", outlineOffset: "-2px", borderRadius: "5px" } : {}),
+        }}
+      >
+        <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.6, flexShrink: 0 }}>
+          <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+        </svg>
+        Sync
+      </NavLink>
+
+      <div style={{ margin: "4px 8px 4px", borderTop: "1px solid var(--separator)" }} />
+
+      {/* Static file items */}
+      {staticItems.map((item, idx) => (
+        <NavLink
+          key={item.path}
+          to={item.path}
+          end={item.path === "/harness/plugins" ? false : undefined}
+          className={({ isActive }) => `sidebar-subitem${isActive ? " active" : ""}`}
+          style={focusedIndex === idx + 1 ? { outline: "2px solid var(--accent)", outlineOffset: "-2px", borderRadius: "5px" } : undefined}
+        >
+          {item.label}
+        </NavLink>
+      ))}
+
+      {/* Config Files section header — collapsible */}
+      {visibleConfigFiles.length > 0 && (
+        <button
+          onClick={() => setConfigExpanded((v) => !v)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            width: "100%",
+            padding: "8px 8px 2px",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            fontSize: "10px",
+            fontWeight: 600,
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+            color: "var(--fg-subtle)",
+          }}
+        >
+          Config Files
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 16 16"
+            fill="currentColor"
+            style={{ transform: configExpanded ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.15s ease", flexShrink: 0 }}
+          >
+            <path d="M8 10.5L2.5 5h11L8 10.5z" />
+          </svg>
+        </button>
+      )}
+
+      {/* Dynamic file items */}
+      {configExpanded && visibleConfigFiles.map((file, idx) => {
+        const path = `/harness/config/${encodeURIComponent(file)}`;
+        const itemIdx = 1 + staticItems.length + idx;
+        return (
+          <NavLink
+            key={file}
+            to={path}
+            className={({ isActive }) => `sidebar-subitem${isActive ? " active" : ""}`}
+            style={{
+              paddingLeft: "20px",
+              ...(focusedIndex === itemIdx ? { outline: "2px solid var(--accent)", outlineOffset: "-2px", borderRadius: "5px" } : {}),
+            }}
+          >
+            {file}
+          </NavLink>
+        );
+      })}
+    </div>
+  );
+}
+
 function SidebarSubnav({ children }: { children: { label: string; path: string }[] }) {
   const navigate = useNavigate();
   const { focusedIndex, onKeyDown } = useArrowNavigation({
@@ -108,6 +219,7 @@ function SidebarSubnav({ children }: { children: { label: string; path: string }
         <NavLink
           key={child.path}
           to={child.path}
+          end={child.path === "/harness/plugins" ? false : undefined}
           className={({ isActive: childActive }) =>
             `sidebar-subitem${childActive ? " active" : ""}`
           }
@@ -137,8 +249,21 @@ export default function AppLayout() {
     });
   }, []);
 
+  const [harnessExpanded, setHarnessExpanded] = useState(
+    () => location.pathname.startsWith("/harness")
+  );
+  // Auto-expand when navigating into harness from another section
+  const prevPathRef = useRef(location.pathname);
+  useEffect(() => {
+    const wasHarness = prevPathRef.current.startsWith("/harness");
+    const isHarness = location.pathname.startsWith("/harness");
+    if (!wasHarness && isHarness) setHarnessExpanded(true);
+    prevPathRef.current = location.pathname;
+  }, [location.pathname]);
+
   useGlobalShortcuts({ navigate, toggleSidebar });
   const { onMouseDown: onResizeMouseDown } = useSidebarResize();
+  const { files: configFiles } = useClaudeFileList();
 
   const [hiddenSections, setHiddenSectionsState] = useState(getHiddenSections);
 
@@ -290,23 +415,45 @@ export default function AppLayout() {
                 const shortcutNum = sectionIndex >= 0 && sectionIndex < 8 ? sectionIndex + 1 : null;
                 return (
                   <div key={section.id} className="mb-0.5">
-                    <NavLink to={section.path} className={`sidebar-item${active ? " active" : ""}`}>
-                      <span style={{ flex: 1 }}>{section.label}</span>
-                      {shortcutNum && !sidebarCollapsed && (
-                        <span
-                          style={{
-                            fontSize: 10,
-                            fontFamily: 'ui-monospace, monospace',
-                            color: 'var(--fg-subtle)',
-                            flexShrink: 0,
-                          }}
+                    {section.id === "harness" ? (
+                      <button
+                        onClick={() => setHarnessExpanded((v) => !v)}
+                        className={`sidebar-item${active ? " active" : ""}`}
+                        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", cursor: "pointer", border: "none", background: "transparent", textAlign: "left" }}
+                      >
+                        <span style={{ flex: 1 }}>{section.label}</span>
+                        <svg
+                          width="10"
+                          height="10"
+                          viewBox="0 0 16 16"
+                          fill="currentColor"
+                          style={{ transform: harnessExpanded ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.15s ease", flexShrink: 0, opacity: 0.6 }}
                         >
-                          {'\u2318'}{shortcutNum}
-                        </span>
-                      )}
-                    </NavLink>
+                          <path d="M8 10.5L2.5 5h11L8 10.5z" />
+                        </svg>
+                      </button>
+                    ) : (
+                      <NavLink to={section.path} className={`sidebar-item${active ? " active" : ""}`}>
+                        <span style={{ flex: 1 }}>{section.label}</span>
+                        {shortcutNum && !sidebarCollapsed && (
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontFamily: 'ui-monospace, monospace',
+                              color: 'var(--fg-subtle)',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {'\u2318'}{shortcutNum}
+                          </span>
+                        )}
+                      </NavLink>
+                    )}
 
-                    {active && section.children && (
+                    {active && section.id === "harness" && harnessExpanded && (
+                      <HarnessSubnav configFiles={configFiles} />
+                    )}
+                    {active && section.children && section.id !== "harness" && (
                       <SidebarSubnav children={section.children} />
                     )}
                   </div>

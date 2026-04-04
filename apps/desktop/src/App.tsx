@@ -9,8 +9,9 @@ import PluginsPage from "./pages/harness/PluginsPage";
 import HooksPage from "./pages/harness/HooksPage";
 import McpServersPage from "./pages/harness/McpServersPage";
 import SettingsPage from "./pages/harness/SettingsPage";
-import FileViewerPage from "./pages/harness/FileViewerPage";
+import PluginExplorerPage from "./pages/harness/PluginExplorerPage";
 import ClaudeMdPage from "./pages/harness/ClaudeMdPage";
+import ConfigFilePage from "./pages/harness/ConfigFilePage";
 import SyncPage from "./pages/harness/SyncPage";
 import MarketplacePage from "./pages/marketplace/MarketplacePage";
 import DashboardPage from "./pages/observatory/DashboardPage";
@@ -65,12 +66,13 @@ export default function App() {
           <Route index element={<DefaultRedirect />} />
           <Route path="harness/file" element={<HarnessFilePage />} />
           <Route path="harness/plugins" element={<PluginsPage />} />
+          <Route path="harness/plugins/:pluginName" element={<PluginExplorerPage />} />
           <Route path="harness/mcp" element={<McpServersPage />} />
           <Route path="harness/hooks" element={<HooksPage />} />
           <Route path="harness/claude-md" element={<ClaudeMdPage />} />
           <Route path="harness/sync" element={<SyncPage />} />
           <Route path="harness/settings" element={<SettingsPage />} />
-          <Route path="harness/settings/:filename" element={<FileViewerPage />} />
+          <Route path="harness/config/:filename" element={<ConfigFilePage />} />
 
           {/* Marketplace */}
           <Route path="marketplace/:slug?" element={<MarketplacePage />} />
