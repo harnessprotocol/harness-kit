@@ -99,9 +99,14 @@ function ExternalLink({ href, children }: { href: string; children: React.ReactN
 
 // ── Env var row ───────────────────────────────────────────────
 
+const SECRET_KEY_RE = /key|token|secret|password|auth|credential/i;
+
 function EnvRow({ name, value }: { name: string; value: string }) {
   const isTemplate = /^\$\{.+\}$/.test(value.trim());
-  const isLikelySecret = !isTemplate && value.length > 20 && /^[A-Za-z0-9_\-+/=]{20,}$/.test(value);
+  const isLikelySecret = !isTemplate && (
+    SECRET_KEY_RE.test(name) ||
+    (value.length > 20 && /^[A-Za-z0-9_\-+/=]{20,}$/.test(value))
+  );
   const display = isLikelySecret ? `${value.slice(0, 4)}${"•".repeat(8)}${value.slice(-4)}` : value;
 
   return (
