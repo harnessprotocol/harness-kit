@@ -80,7 +80,7 @@ create trigger org_components_updated_at
   before update on org_components
   for each row execute function update_updated_at();
 
--- Atomic install count increment for org_components
+-- Atomic install count increment for org_components (placeholder, replaced below with SECURITY DEFINER version)
 create or replace function increment_org_component_install_count(component_slug text)
 returns int as $$
 declare
@@ -116,3 +116,41 @@ create index idx_org_plugin_approvals_status on org_plugin_approvals(status);
 create trigger org_plugin_approvals_updated_at
   before update on org_plugin_approvals
   for each row execute function update_updated_at();
+
+-- Enable RLS on all organization tables
+ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE org_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE org_components ENABLE ROW LEVEL SECURITY;
+ALTER TABLE org_component_categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE org_component_tags ENABLE ROW LEVEL SECURITY;
+ALTER TABLE org_plugin_approvals ENABLE ROW LEVEL SECURITY;
+
+-- Public read access (anon key can SELECT)
+CREATE POLICY "Public read" ON organizations FOR SELECT USING (true);
+CREATE POLICY "Public read" ON org_members FOR SELECT USING (true);
+CREATE POLICY "Public read" ON org_components FOR SELECT USING (true);
+CREATE POLICY "Public read" ON org_component_categories FOR SELECT USING (true);
+CREATE POLICY "Public read" ON org_component_tags FOR SELECT USING (true);
+CREATE POLICY "Public read" ON org_plugin_approvals FOR SELECT USING (true);
+
+-- Writes restricted to service_role only (default when RLS is enabled with no
+-- INSERT/UPDATE/DELETE policies for anon). The service_role key bypasses RLS,
+-- so API routes continue to work without any additional policies.
+
+-- Replace the existing increment_org_component_install_count function with a
+-- SECURITY DEFINER version so it runs with the function owner's privileges
+-- (bypasses RLS for the atomic update). Callable by anon, but scoped to a
+-- single atomic operation.
+CREATE OR REPLACE FUNCTION increment_org_component_install_count(component_slug text)
+RETURNS int AS $$
+DECLARE
+  new_count int;
+BEGIN
+  UPDATE org_components
+    SET install_count = install_count + 1
+    WHERE slug = component_slug
+    RETURNING install_count INTO new_count;
+  RETURN new_count;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER
+   SET search_path = public, pg_temp;
