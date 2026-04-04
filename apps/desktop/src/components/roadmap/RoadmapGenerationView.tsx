@@ -7,17 +7,27 @@ interface Props {
   onCancel: () => void;
 }
 
-const PHASES: { id: GenerationPhase | 'idle'; label: string }[] = [
-  { id: 'analyzing', label: 'Analyzing project' },
-  { id: 'generating', label: 'Generating roadmap' },
-  { id: 'saving', label: 'Saving' },
+const PHASES: { id: GenerationPhase; label: string; subtitle: string }[] = [
+  { id: 'analyzing',  label: 'Analyzing project',       subtitle: 'Reading tasks and epics' },
+  { id: 'generating', label: 'Generating roadmap',       subtitle: 'Claude is thinking...' },
+  { id: 'saving',     label: 'Saving',                   subtitle: 'Writing to disk' },
 ];
 
-function PhaseRow({ id, label, activePhase, error }: {
+const TIMEOUT_MS = 3 * 60 * 1000; // 3 minutes
+
+function formatElapsed(ms: number): string {
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return `${s}s`;
+  return `${Math.floor(s / 60)}m ${s % 60}s`;
+}
+
+function PhaseRow({ id, label, subtitle, activePhase, error, elapsed }: {
   id: GenerationPhase;
   label: string;
-  activePhase: GenerationPhase | 'idle' | 'done';
+  subtitle: string;
+  activePhase: GenerationPhase | 'done';
   error: string | null;
+  elapsed: number;
 }) {
   const idx = PHASES.findIndex(p => p.id === id);
   const activeIdx = PHASES.findIndex(p => p.id === activePhase);
@@ -36,20 +46,20 @@ function PhaseRow({ id, label, activePhase, error }: {
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: 10,
-        padding: '6px 0',
-        opacity: isPending ? 0.4 : 1,
+        gap: 12,
+        padding: '8px 0',
+        opacity: isPending ? 0.35 : 1,
         transition: 'opacity 0.3s',
       }}
     >
-      {/* Status indicator */}
+      {/* Status dot */}
       <div
         style={{
-          width: 20,
-          height: 20,
+          width: 22,
+          height: 22,
           borderRadius: '50%',
-          background: isFailed ? 'rgba(239,68,68,0.15)'
-            : isDone ? 'rgba(var(--accent-rgb, 99,102,241), 0.15)'
+          background: isFailed ? 'rgba(239,68,68,0.12)'
+            : isDone ? 'rgba(99,102,241,0.12)'
             : isActive ? 'var(--bg-surface)'
             : 'transparent',
           border: `1.5px solid ${color}`,
@@ -57,7 +67,7 @@ function PhaseRow({ id, label, activePhase, error }: {
           alignItems: 'center',
           justifyContent: 'center',
           flexShrink: 0,
-          transition: 'all 0.3s',
+          transition: 'all 0.25s',
         }}
       >
         {isDone && !isFailed && (
@@ -72,46 +82,73 @@ function PhaseRow({ id, label, activePhase, error }: {
           </svg>
         )}
         {isActive && !isFailed && (
-          <div
-            style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: 'var(--accent)',
-              animation: 'pulse 1.2s ease-in-out infinite',
-            }}
-          />
+          <div style={{
+            width: 7, height: 7, borderRadius: '50%',
+            background: 'var(--accent)',
+            animation: 'roadmap-pulse 1.2s ease-in-out infinite',
+          }} />
         )}
       </div>
 
-      <span style={{ fontSize: 13, color, transition: 'color 0.3s' }}>
-        {label}
+      {/* Text */}
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: isActive ? 500 : 400, color, transition: 'color 0.25s' }}>
+          {label}
+        </div>
         {isActive && !isFailed && (
-          <span style={{ color: 'var(--text-muted)', marginLeft: 4 }}>...</span>
+          <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
+            {subtitle}
+          </div>
         )}
-      </span>
+      </div>
+
+      {/* Elapsed time on active phase */}
+      {isActive && !isFailed && elapsed > 0 && (
+        <span style={{
+          fontSize: 11,
+          color: 'var(--text-muted)',
+          fontVariantNumeric: 'tabular-nums',
+          flexShrink: 0,
+        }}>
+          {formatElapsed(elapsed)}
+        </span>
+      )}
     </div>
   );
 }
 
 export function RoadmapGenerationView({ projectSlug, onComplete, onCancel }: Props) {
-  // Start with 'analyzing' active immediately so the pulse is visible before the first SSE event
-  const [phase, setPhase] = useState<GenerationPhase | 'idle' | 'done'>('analyzing');
+  const [phase, setPhase] = useState<GenerationPhase | 'done'>('analyzing');
   const [error, setError] = useState<string | null>(null);
+  const [elapsed, setElapsed] = useState(0);
   const cancelRef = useRef<(() => void) | null>(null);
   const startedRef = useRef(false);
+  const startTimeRef = useRef(Date.now());
 
+  // Ticking elapsed timer
+  useEffect(() => {
+    const id = setInterval(() => {
+      const ms = Date.now() - startTimeRef.current;
+      setElapsed(ms);
+      if (ms > TIMEOUT_MS && phase !== 'done') {
+        setError('Generation is taking longer than expected. The API may be overloaded — cancel and try again.');
+      }
+    }, 1000);
+    return () => clearInterval(id);
+  }, [phase]);
+
+  // Start generation
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
 
     const cancel = streamRoadmapGeneration(projectSlug, (event) => {
       if (event.type === 'phase' && event.phase) {
-        setPhase(event.phase);
+        setPhase(event.phase as GenerationPhase);
         setError(null);
       } else if (event.type === 'done') {
         setPhase('done');
-        setTimeout(onComplete, 600);
+        setTimeout(onComplete, 500);
       } else if (event.type === 'error') {
         setError(event.message ?? 'Unknown error');
       }
@@ -127,95 +164,79 @@ export function RoadmapGenerationView({ projectSlug, onComplete, onCancel }: Pro
   };
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        height: '100%',
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}
-    >
+    <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
       <style>{`
-        @keyframes pulse {
+        @keyframes roadmap-pulse {
           0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: 0.5; transform: scale(0.8); }
+          50% { opacity: 0.4; transform: scale(0.75); }
         }
       `}</style>
 
-      <div
-        style={{
-          width: '100%',
-          maxWidth: 400,
-          padding: 32,
-          background: 'var(--bg-elevated)',
-          border: '1px solid var(--border-subtle)',
-          borderRadius: 12,
-        }}
-      >
+      <div style={{
+        width: '100%',
+        maxWidth: 380,
+        padding: '28px 28px 24px',
+        background: 'var(--bg-elevated)',
+        border: '1px solid var(--border-subtle)',
+        borderRadius: 12,
+      }}>
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
-          <div
-            style={{
-              width: 36,
-              height: 36,
-              borderRadius: 8,
-              background: 'var(--bg-surface)',
-              border: '1px solid var(--border-subtle)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'var(--accent)',
-              flexShrink: 0,
-            }}
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 22 }}>
+          <div style={{
+            width: 34, height: 34, borderRadius: 8,
+            background: 'var(--bg-surface)',
+            border: '1px solid var(--border-subtle)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: 'var(--accent)', flexShrink: 0,
+          }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21" />
               <line x1="9" y1="3" x2="9" y2="18" />
               <line x1="15" y1="6" x2="15" y2="21" />
             </svg>
           </div>
-          <div>
+          <div style={{ flex: 1 }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>
               Generating Roadmap
             </div>
-            <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>
-              Claude is analyzing your project
+            <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 1 }}>
+              {phase === 'done' ? 'Complete' : `${formatElapsed(elapsed)} elapsed`}
             </div>
           </div>
         </div>
 
         {/* Phase list */}
-        <div style={{ marginBottom: 20 }}>
+        <div style={{ marginBottom: error ? 14 : 18 }}>
           {PHASES.map(p => (
             <PhaseRow
               key={p.id}
-              id={p.id as GenerationPhase}
+              id={p.id}
               label={p.label}
+              subtitle={p.subtitle}
               activePhase={phase}
               error={error}
+              elapsed={elapsed}
             />
           ))}
         </div>
 
-        {/* Error state */}
+        {/* Error */}
         {error && (
-          <div
-            style={{
-              padding: '10px 12px',
-              background: 'rgba(239,68,68,0.08)',
-              border: '1px solid rgba(239,68,68,0.2)',
-              borderRadius: 7,
-              fontSize: 12,
-              color: '#ef4444',
-              lineHeight: 1.5,
-              marginBottom: 12,
-            }}
-          >
+          <div style={{
+            padding: '10px 12px',
+            background: 'rgba(239,68,68,0.07)',
+            border: '1px solid rgba(239,68,68,0.18)',
+            borderRadius: 7,
+            fontSize: 12,
+            color: '#ef4444',
+            lineHeight: 1.5,
+            marginBottom: 12,
+          }}>
             {error}
           </div>
         )}
 
-        {/* Cancel button — only while in progress */}
+        {/* Cancel/Dismiss */}
         {phase !== 'done' && (
           <button
             onClick={handleCancel}

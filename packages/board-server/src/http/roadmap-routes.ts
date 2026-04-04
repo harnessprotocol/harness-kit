@@ -21,6 +21,10 @@ export function createRoadmapRouter(): Router {
 
     const send = (event: string, data: unknown) => {
       res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+      // Flush immediately — required when compression middleware is active
+      if (typeof (res as unknown as { flush?: () => void }).flush === 'function') {
+        (res as unknown as { flush: () => void }).flush();
+      }
     };
 
     let finished = false;
