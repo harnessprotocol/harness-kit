@@ -78,6 +78,11 @@ export const NAV_SECTIONS: NavSection[] = [
     path: "/board",
   },
   {
+    id: "roadmap",
+    label: "Roadmap",
+    path: "/roadmap",
+  },
+  {
     id: "memory",
     label: "Memory",
     path: "/memory",

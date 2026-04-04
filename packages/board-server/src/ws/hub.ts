@@ -5,6 +5,8 @@ import { FileWatcher } from '../store/file-watcher.js';
 
 export type BoardEvent =
   | { type: 'project_updated'; slug: string; project: ReturnType<typeof store.readProject> }
+  | { type: 'roadmap_updated'; slug: string }
+  | { type: 'competitors_updated'; slug: string }
   | { type: 'connected'; message: string };
 
 export class WsHub {
@@ -24,11 +26,20 @@ export class WsHub {
 
     // When a YAML file changes (externally or via MCP subprocess), push the updated project
     this.watcher.on('change', ({ filename }: { filename: string }) => {
+      if (filename.endsWith('.roadmap.yaml') || filename.endsWith('.competitors.yaml')) return;
       const slug = filename.replace(/\.yaml$/, '');
       const project = store.readProject(slug);
       if (!project) return;
       const event: BoardEvent = { type: 'project_updated', slug, project };
       this.broadcast(event);
+    });
+
+    this.watcher.on('roadmap_updated', ({ slug }: { slug: string }) => {
+      this.broadcast({ type: 'roadmap_updated', slug });
+    });
+
+    this.watcher.on('competitors_updated', ({ slug }: { slug: string }) => {
+      this.broadcast({ type: 'competitors_updated', slug });
     });
 
     this.watcher.on('error', (err: unknown) => {

@@ -25,6 +25,13 @@ export class FileWatcher extends EventEmitter {
       const timer = setTimeout(() => {
         this.debounceTimers.delete(filename);
         this.emit('change', { type: eventType, filename } satisfies FileWatcherEvent);
+        if (filename.endsWith('.roadmap.yaml')) {
+          const slug = filename.replace(/\.roadmap\.yaml$/, '');
+          this.emit('roadmap_updated', { slug });
+        } else if (filename.endsWith('.competitors.yaml')) {
+          const slug = filename.replace(/\.competitors\.yaml$/, '');
+          this.emit('competitors_updated', { slug });
+        }
       }, this.debounceMs);
       this.debounceTimers.set(filename, timer);
     });

@@ -31,7 +31,7 @@ harness-kit/
 │   ├── core/                     ← harness.yaml compile/parse/detect logic
 │   ├── shared/                   ← shared TypeScript types used across apps
 │   ├── ui/                       ← shared React components
-│   ├── board-server/             ← WebSocket server for the kanban board feature
+│   ├── board-server/             ← WebSocket + HTTP server for the Kanban board and Roadmap/Competitor Analysis features
 │   ├── chat-relay/               ← self-hosted WebSocket relay for team chat
 │   └── membrain/                 ← git submodule (siracusa5/membrain) — graph-based memory, excluded from pnpm workspace
 ├── apps/                         ← end-user applications

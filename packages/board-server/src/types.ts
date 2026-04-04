@@ -37,6 +37,7 @@ export interface Task {
   status: TaskStatus;
   priority?: TaskPriority;
   branch?: string;
+  linkedFeatureId?: string;
   worktree_path?: string;
   linked_commits: string[];
   comments: Comment[];

@@ -77,7 +77,7 @@ export function writeProject(project: Project): void {
 export function listProjects(): Project[] {
   ensureBoardDir();
   const boardDir = getBoardDir();
-  const files = fs.readdirSync(boardDir).filter(f => f.endsWith('.yaml'));
+  const files = fs.readdirSync(boardDir).filter(f => f.endsWith('.yaml') && !f.includes('.roadmap') && !f.includes('.competitors'));
   return files.map(f => {
     const raw = fs.readFileSync(path.join(boardDir, f), 'utf-8');
     const project = yaml.load(raw) as Project;
@@ -225,7 +225,7 @@ function withTask(projectSlug: string, taskId: number, fn: (task: Task, epic: Ep
 export function updateTask(
   projectSlug: string,
   taskId: number,
-  updates: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'category' | 'complexity' | 'no_worktree' | 'default_harness' | 'default_model'>>,
+  updates: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'category' | 'complexity' | 'no_worktree' | 'default_harness' | 'default_model' | 'linkedFeatureId'>>,
 ): Task {
   // Strip undefined values so we don't wipe existing fields
   const cleanUpdates = Object.fromEntries(Object.entries(updates).filter(([, v]) => v !== undefined));

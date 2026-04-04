@@ -22,6 +22,8 @@ import SecretsPage from "./pages/security/SecretsPage";
 import AuditLogPage from "./pages/security/AuditLogPage";
 import BoardProjectsPage from "./pages/board/BoardProjectsPage";
 import BoardKanbanPage from "./pages/board/BoardKanbanPage";
+import RoadmapProjectsPage from "./pages/roadmap/RoadmapProjectsPage";
+import RoadmapPage from "./pages/roadmap/RoadmapPage";
 import ParityDashboardPage from "./pages/parity/ParityDashboardPage";
 import MemoryDashboardPage from "./pages/memory/MemoryDashboardPage";
 import MemoryGraphPage from "./pages/memory/MemoryGraphPage";
@@ -93,6 +95,10 @@ export default function App() {
           {/* Board */}
           <Route path="board" element={<BoardProjectsPage />} />
           <Route path="board/:slug" element={<BoardKanbanPage />} />
+
+          {/* Roadmap */}
+          <Route path="roadmap" element={<RoadmapProjectsPage />} />
+          <Route path="roadmap/:slug" element={<RoadmapPage />} />
 
           {/* Memory */}
           <Route path="memory" element={<MemoryDashboardPage />} />
