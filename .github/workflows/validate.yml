@@ -219,9 +219,9 @@ jobs:
               FAILED=1
             fi
 
-            # Extract counts from formatter output
-            critical=$(echo "$output" | grep -oP 'Critical \(\K[0-9]+' || echo "0")
-            warnings=$(echo "$output" | grep -oP 'Warning \(\K[0-9]+' || echo "0")
+            # Extract counts from formatter output (titles: "Critical Issues (N)", "Warnings (N)")
+            critical=$(echo "$output" | grep -oP 'Critical Issues \(\K[0-9]+' || echo "0")
+            warnings=$(echo "$output" | grep -oP 'Warnings \(\K[0-9]+' || echo "0")
 
             SUMMARY="${SUMMARY}\n| ${plugin_name} | ${status} | ${critical} | ${warnings} |"
             echo "--- ${plugin_name}: ${status} (critical=${critical}, warnings=${warnings}) ---"
