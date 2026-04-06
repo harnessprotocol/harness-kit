@@ -41,7 +41,7 @@ Some parts of the plugin system are tied to Claude Code's infrastructure:
 | SKILL.md prompts | Portable now | Plain markdown, works anywhere |
 | Distribution (marketplace install) | Claude Code + Copilot CLI | Both use compatible plugin formats; Copilot CLI reads `.claude-plugin/` natively |
 | Stop hooks | Claude Code only | Hook system is Claude Code-specific |
-| MCP server references (orient, capture-session) | Partially portable | MCP is an open protocol, but wiring varies by tool |
+| MCP server references (orient, capture) | Partially portable | MCP is an open protocol, but wiring varies by tool |
 | Bundled scripts | Portable | Shell scripts, but auto-execution depends on the harness |
 
 ## The vision

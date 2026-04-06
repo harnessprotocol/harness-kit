@@ -371,6 +371,6 @@ Before opening a PR:
 - [ ] `SKILL.md` has YAML frontmatter with `name:` and `description:`
 - [ ] `description:` starts with "Use when" and names the invocation trigger
 - [ ] `README.md` exists in `plugins/<name>/skills/<name>/`
-- [ ] Plugin section added to `README.md` at repo root
+- [ ] Plugin count updated in `README.md` badge and "Browse all N plugins" link if adding a new plugin
 - [ ] PR includes a test plan with at least one test per argument type
 - [ ] If plugin includes agents: `agents/<name>.md` has YAML frontmatter with `name:` and `description:`

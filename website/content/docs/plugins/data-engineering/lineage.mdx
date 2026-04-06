@@ -1,11 +1,11 @@
 ---
 sidebar_position: 4
-title: data-lineage
+title: lineage
 ---
 
-> **[View in Marketplace →](https://marketplace.harnessprotocol.io/plugins/data-lineage)** for install tracking, related plugins, and profiles.
+> **[View in Marketplace →](https://marketplace.harnessprotocol.io/plugins/lineage)** for install tracking, related plugins, and profiles.
 
-# data-lineage
+# lineage
 
 Column-level lineage tracing through SQL, Kafka, Spark, and JDBC codebases.
 
@@ -15,7 +15,7 @@ None — uses only codebase search, file reads, and inline SVG generation. No da
 
 ## What It Does
 
-When you invoke `/data-lineage` with a column name:
+When you invoke `/lineage` with a column name:
 
 1. Searches for SQL definitions (tables, views, migrations) containing the column
 2. Traces view chains recursively to find source tables
@@ -38,25 +38,25 @@ Each trace produces two outputs:
 ### Trace a qualified column
 
 ```
-/data-lineage orders.total_amount
+/lineage orders.total_amount
 ```
 
 ### Trace with full qualification
 
 ```
-/data-lineage reporting.daily_summary.total_amount
+/lineage reporting.daily_summary.total_amount
 ```
 
 ### Trace with context
 
 ```
-/data-lineage customer_id in reporting.daily_summary
+/lineage customer_id in reporting.daily_summary
 ```
 
 ### Trace an unqualified column
 
 ```
-/data-lineage revenue
+/lineage revenue
 ```
 
 If the column exists in multiple tables, you'll be asked which one to trace.
@@ -108,12 +108,12 @@ Self-contained, opens in any browser, requires no dependencies. Can be shared, e
 <Accordions>
 <Accordion title="SKILL.md — Runtime Configuration">
 
-{/* @embed plugins/data-lineage/skills/data-lineage/SKILL.md */}
+{/* @embed plugins/lineage/skills/lineage/SKILL.md */}
 
 </Accordion>
 <Accordion title="README.md — Plugin Documentation">
 
-{/* @embed plugins/data-lineage/skills/data-lineage/README.md */}
+{/* @embed plugins/lineage/skills/lineage/README.md */}
 
 </Accordion>
 </Accordions>

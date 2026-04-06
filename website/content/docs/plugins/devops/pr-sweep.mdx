@@ -1,10 +1,10 @@
 ---
-title: pull-request-sweep
+title: pr-sweep
 ---
 
-> **[View in Marketplace →](https://marketplace.harnessprotocol.io/plugins/pull-request-sweep)** for install tracking, related plugins, and profiles.
+> **[View in Marketplace →](https://marketplace.harnessprotocol.io/plugins/pr-sweep)** for install tracking, related plugins, and profiles.
 
-# pull-request-sweep
+# pr-sweep
 
 Cross-repo PR sweep — discover, triage, review, merge, and report on all your open PRs.
 
@@ -18,12 +18,12 @@ Cross-repo PR sweep — discover, triage, review, merge, and report on all your 
 
 ```
 /plugin marketplace add harnessprotocol/harness-kit
-/plugin install pull-request-sweep@harness-kit
+/plugin install pr-sweep@harness-kit
 ```
 
 ## What It Does
 
-When you invoke `/pull-request-sweep`:
+When you invoke `/pr-sweep`:
 
 1. Discovers all open (non-draft) PRs authored by you across all repos
 2. Enriches each PR with CI status and merge state
@@ -35,7 +35,7 @@ When you invoke `/pull-request-sweep`:
 ## Usage
 
 ```
-/pull-request-sweep
+/pr-sweep
 ```
 
 Or use natural language:
@@ -51,7 +51,7 @@ Sweep my PRs.
 - Never acts on draft PRs
 - Never auto-resolves CHANGES_REQUESTED — flags for human follow-up
 - Safe to run repeatedly — idempotent, already-merged PRs won't reappear
-- Pairs with `/loop 30m /pull-request-sweep` for ongoing PR babysitting
+- Pairs with `/loop 30m /pr-sweep` for ongoing PR babysitting
 
 ## Source Files
 

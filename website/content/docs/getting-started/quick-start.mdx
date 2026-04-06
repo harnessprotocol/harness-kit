@@ -57,8 +57,8 @@ Fetches the repo, saves raw content, and creates a synthesis document.
 ### Trace data lineage
 
 ```
-/plugin install data-lineage@harness-kit
-/data-lineage orders.total_amount
+/plugin install lineage@harness-kit
+/lineage orders.total_amount
 ```
 
 Traces a column through SQL, Kafka, Spark, and JDBC code. Generates an SVG diagram.
@@ -75,8 +75,8 @@ Searches your knowledge graph, docs, and journal for everything related to a top
 ### Capture session facts
 
 ```
-/plugin install capture-session@harness-kit
-/capture-session SQLite chosen over Postgres for local-first storage
+/plugin install capture@harness-kit
+/capture SQLite chosen over Postgres for local-first storage
 ```
 
 Stages important decisions and facts for later reflection.

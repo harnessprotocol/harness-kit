@@ -118,9 +118,14 @@ A Tauri desktop companion that brings the harness concept to a native UI.
 
 - **Sync engine** — compiles `harness.yaml` to platform configs
 - **Plugin explorer** — browse and manage installed plugins
+- **Marketplace** — embedded plugin browser for discovering and installing from the marketplace
 - **Observatory** — live session dashboard with stats and transcripts
 - **Comparator** -- structured evaluation workbench: configure harnesses, run side-by-side comparisons, review file diffs, and judge results across a 4-phase workflow
 - **Harness editor** — inline editing with custom profiles
+- **Board** — kanban project board with real-time Claude-to-web sync
+- **Roadmap** — AI-driven product roadmap with competitor analysis, generated via Claude
+- **Parity** — cross-platform feature parity tracking across AI coding tools
+- **Security** — permissions editor, secrets management, and audit logging
 - **Memory** — knowledge graph viewer via [membrain](https://github.com/siracusa5/membrain) integration
 - **Team chat** — IRC-style chat backed by a self-hosted WebSocket relay
 - **AI Chat** — streaming conversations with local LLMs via Ollama, with session persistence and inline model downloads

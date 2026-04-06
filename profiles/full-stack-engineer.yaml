@@ -15,13 +15,13 @@ author:
 
 components:
   - name: review
-    version: "0.2.0"
+    version: "0.3.0"
   - name: open-pr
     version: "0.1.0"
   - name: merge-pr
     version: "0.1.0"
   - name: pr-sweep
-    version: "0.1.0"
+    version: "0.2.0"
   - name: explain
     version: "0.2.0"
   - name: docgen

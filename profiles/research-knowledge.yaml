@@ -15,11 +15,11 @@ author:
 
 components:
   - name: research
-    version: "0.2.0"
+    version: "0.4.0"
   - name: orient
     version: "0.2.0"
-  - name: capture-session
-    version: "0.2.0"
+  - name: capture
+    version: "0.4.0"
   - name: explain
     version: "0.2.0"
   - name: docgen
