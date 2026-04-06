@@ -21,6 +21,7 @@
     "fetch-schema": "npx tsx scripts/fetch-schema.ts"
   },
   "dependencies": {
+    "@harness-kit/shared": "workspace:*",
     "ajv": "^8",
     "ajv-formats": "^3",
     "yaml": "^2.8.3"
