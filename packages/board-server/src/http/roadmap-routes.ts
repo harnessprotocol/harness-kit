@@ -3,9 +3,52 @@ import { randomUUID } from 'node:crypto';
 import * as roadmapStore from '../store/roadmap-store.js';
 import * as store from '../store/yaml-store.js';
 import type { RoadmapFeature } from '../roadmap-types.js';
+import { generateRoadmap } from '../ai/roadmap-generator.js';
 
 export function createRoadmapRouter(): Router {
   const router = Router();
+
+  // --- Generate ---
+
+  router.post('/projects/:slug/roadmap/generate', async (req, res) => {
+    const { slug } = req.params;
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.flushHeaders();
+
+    const send = (event: string, data: unknown) => {
+      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+      // Flush immediately — required when compression middleware is active
+      if (typeof (res as unknown as { flush?: () => void }).flush === 'function') {
+        (res as unknown as { flush: () => void }).flush();
+      }
+    };
+
+    let finished = false;
+    req.on('close', () => { finished = true; });
+
+    try {
+      await generateRoadmap(slug, (e) => {
+        if (finished) return;
+        if (e.type === 'done') {
+          send('done', { success: true });
+          res.end();
+        } else if (e.type === 'error') {
+          send('error', { message: e.message });
+          res.end();
+        } else {
+          send('phase', { phase: e.phase, label: e.label });
+        }
+      });
+    } catch (err) {
+      if (!finished) {
+        send('error', { message: String(err) });
+        res.end();
+      }
+    }
+  });
 
   // --- Roadmap ---
 

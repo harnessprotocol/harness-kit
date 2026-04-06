@@ -11,7 +11,7 @@ mod membrain_commands;
 #[cfg(test)]
 pub static HOME_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
-use tauri::Manager;
+use tauri::{LogicalSize, Manager};
 use ai::client::OllamaState;
 use commands::terminal::TerminalState;
 use board_server::BoardServerState;
@@ -193,6 +193,19 @@ pub fn run() {
             // membrain server starts on-demand when the user navigates to the
             // Memory section (via useMembrainServerReady hook), not at app launch.
             // This avoids opening a network listener until the Labs feature is enabled.
+
+            // Size the main window to 75% of the primary monitor on launch.
+            if let Some(window) = app.get_webview_window("main") {
+                if let Ok(Some(monitor)) = window.primary_monitor() {
+                    let scale = monitor.scale_factor();
+                    let phys = monitor.size();
+                    let w = phys.width as f64 / scale * 0.75;
+                    let h = phys.height as f64 / scale * 0.75;
+                    let _ = window.set_size(LogicalSize::new(w, h));
+                    let _ = window.center();
+                }
+            }
+
             Ok(())
         })
         .build(tauri::generate_context!())
