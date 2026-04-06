@@ -22,9 +22,10 @@ export type SecurityRule = (context: ScanContext) => RuleResult;
 // ── Pattern definitions ─────────────────────────────────────────
 
 const EXTERNAL_URL_PATTERNS = [
-  /https?:\/\/[^\s"'`]+/gi,
-  /curl\s+[^\s]+/gi,
-  /wget\s+[^\s]+/gi,
+  // Bounded repetition prevents ReDoS on adversarial input
+  /https?:\/\/[^\s"'`]{1,2048}/gi,
+  /curl\s+[^\s]{1,512}/gi,
+  /wget\s+[^\s]{1,512}/gi,
   /fetch\s*\(\s*['"`]https?:\/\//gi,
 ];
 
@@ -50,7 +51,8 @@ const SENSITIVE_ENV_VARS = [
 
 const SUSPICIOUS_SCRIPT_PATTERNS = [
   { pattern: /eval\s*\(/gi, reason: "Dynamic code evaluation (eval)" },
-  { pattern: /exec\s*\(/gi, reason: "Command execution (exec)" },
+  // Negative lookbehind excludes regex .exec() calls (e.g. /foo/.exec(str))
+  { pattern: /(?<!\.)\bexec\s*\(/gi, reason: "Command execution (exec)" },
   { pattern: /system\s*\(/gi, reason: "System command execution" },
   { pattern: /shell\s*=\s*True/gi, reason: "Shell command with shell=True" },
   { pattern: /\|\s*bash/gi, reason: "Piped bash execution" },
@@ -123,15 +125,23 @@ export function detectExternalUrls(context: ScanContext): RuleResult {
     while ((match = regex.exec(content)) !== null) {
       const url = match[0];
 
-      // Skip common safe patterns
-      if (
-        url.includes("example.com") ||
-        url.includes("localhost") ||
-        url.includes("127.0.0.1") ||
-        url.includes("github.com") ||
-        url.includes("gitlab.com")
-      ) {
-        continue;
+      // Skip common safe patterns — use hostname comparison, not includes(),
+      // to prevent bypass via subdomain spoofing (e.g. github.com.evil.com)
+      try {
+        const hostname = new URL(url).hostname.toLowerCase();
+        if (
+          hostname === "example.com" ||
+          hostname === "localhost" ||
+          hostname === "127.0.0.1" ||
+          hostname === "github.com" ||
+          hostname.endsWith(".github.com") ||
+          hostname === "gitlab.com" ||
+          hostname.endsWith(".gitlab.com")
+        ) {
+          continue;
+        }
+      } catch {
+        // Not a parseable URL — include in findings anyway
       }
 
       if (!urls.has(url)) {
