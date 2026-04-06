@@ -7,16 +7,6 @@ pub struct ChatMessage {
     pub content: String,
 }
 
-impl ChatMessage {
-    pub fn user(content: impl Into<String>) -> Self {
-        Self { role: "user".to_string(), content: content.into() }
-    }
-
-    pub fn assistant(content: impl Into<String>) -> Self {
-        Self { role: "assistant".to_string(), content: content.into() }
-    }
-}
-
 /// Chat request payload (snake_case — matches Ollama wire format)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChatRequest {
@@ -24,14 +14,6 @@ pub struct ChatRequest {
     pub messages: Vec<ChatMessage>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stream: Option<bool>,
-}
-
-/// Ollama chat API response (snake_case — matches Ollama wire format)
-#[derive(Debug, Clone, Deserialize)]
-pub struct ChatResponse {
-    pub message: ChatMessage,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub done: Option<bool>,
 }
 
 /// Model info from Ollama /api/tags (snake_case — matches Ollama wire format)
