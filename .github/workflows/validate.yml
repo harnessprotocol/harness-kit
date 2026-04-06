@@ -181,6 +181,66 @@ jobs:
               print('All plugin.json files valid against Protocol schema.')
           "
 
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build CLI
+        run: |
+          pnpm --filter @harness-kit/shared build
+          pnpm --filter @harness-kit/core build
+          pnpm --filter @harness-kit/cli build
+
+      - name: Scan all plugins
+        id: scan
+        run: |
+          FAILED=0
+          SUMMARY=""
+
+          for plugin_dir in plugins/*/; do
+            plugin_name=$(basename "$plugin_dir")
+
+            # Run scan; exit 1 = critical findings, exit 0 = passed or warnings
+            if output=$(node apps/cli/dist/index.js scan "$plugin_dir" 2>&1); then
+              status="passed"
+            else
+              status="failed"
+              FAILED=1
+            fi
+
+            # Extract counts from formatter output
+            critical=$(echo "$output" | grep -oP 'Critical \(\K[0-9]+' || echo "0")
+            warnings=$(echo "$output" | grep -oP 'Warning \(\K[0-9]+' || echo "0")
+
+            SUMMARY="${SUMMARY}\n| ${plugin_name} | ${status} | ${critical} | ${warnings} |"
+            echo "--- ${plugin_name}: ${status} (critical=${critical}, warnings=${warnings}) ---"
+          done
+
+          # Write summary table to job summary
+          {
+            echo "## Security Scan Results"
+            echo ""
+            echo "| Plugin | Status | Critical | Warnings |"
+            echo "| ------ | ------ | -------- | -------- |"
+            echo -e "$SUMMARY"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$FAILED" -eq 1 ]; then
+            echo "::error::One or more plugins have critical security findings. Review the scan output above."
+            exit 1
+          fi
+
   test-all:
     runs-on: ubuntu-latest
     steps:
