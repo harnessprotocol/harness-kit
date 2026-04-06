@@ -155,6 +155,25 @@ pub fn init(data_dir: &Path) -> Result<Db, String> {
         CREATE INDEX IF NOT EXISTS idx_pairwise_votes_comp ON pairwise_votes(comparison_id);
         CREATE INDEX IF NOT EXISTS idx_pairwise_votes_session ON pairwise_votes(session_id);
         CREATE UNIQUE INDEX IF NOT EXISTS idx_pairwise_votes_unique ON pairwise_votes(session_id, dimension);
+
+        CREATE TABLE IF NOT EXISTS ai_sessions (
+            id          TEXT PRIMARY KEY,
+            title       TEXT,
+            model       TEXT,
+            created_at  TEXT NOT NULL,
+            updated_at  TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_ai_sessions_updated ON ai_sessions(updated_at);
+        CREATE INDEX IF NOT EXISTS idx_ai_sessions_created ON ai_sessions(created_at);
+
+        CREATE TABLE IF NOT EXISTS ai_messages (
+            id          TEXT PRIMARY KEY,
+            session_id  TEXT NOT NULL REFERENCES ai_sessions(id) ON DELETE CASCADE,
+            role        TEXT NOT NULL,
+            content     TEXT NOT NULL,
+            timestamp   TEXT NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_ai_messages_session ON ai_messages(session_id, timestamp);
     ",
     )
     .map_err(|e| format!("Failed to run schema: {}", e))?;

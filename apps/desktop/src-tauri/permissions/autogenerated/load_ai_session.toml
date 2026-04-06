@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-load-ai-session"
+description = "Enables the load_ai_session command without any pre-configured scope."
+commands.allow = ["load_ai_session"]
+
+[[permission]]
+identifier = "deny-load-ai-session"
+description = "Denies the load_ai_session command without any pre-configured scope."
+commands.deny = ["load_ai_session"]

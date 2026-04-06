@@ -148,6 +148,17 @@
     "allow-chat-purge-room",
     "allow-chat-start-local-relay",
     "allow-chat-stop-local-relay",
-    "allow-chat-local-relay-running"
+    "allow-chat-local-relay-running",
+    "allow-check-ollama-running",
+    "allow-list-models",
+    "allow-pull-model",
+    "allow-stream-chat",
+    "allow-cancel-ai-stream",
+    "allow-create-ai-session",
+    "allow-update-ai-session-title",
+    "allow-delete-ai-session",
+    "allow-list-ai-sessions",
+    "allow-load-ai-session",
+    "allow-save-ai-message"
   ]
 }
