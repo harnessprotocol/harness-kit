@@ -4,9 +4,12 @@ import sanitizeHtml from "sanitize-html";
 import { supabase } from "@/lib/supabase";
 import type { Component, ComponentType, Profile, TrustTier } from "@/lib/types";
 import { TrustBadge } from "@/app/components/TrustBadge";
+import { SecurityBadge } from "@/app/components/SecurityBadge";
+import { PermissionsSummary } from "@/app/components/PermissionsSummary";
 import { ReviewForm } from "@/app/components/ReviewForm";
 import { ReviewList } from "@/app/components/ReviewList";
 import { getServerSession } from "@/lib/auth";
+import type { SecurityPermissionsSummary } from "@harness-kit/shared";
 
 /**
  * Allowed tags and attributes for sanitizeHtml.
@@ -244,6 +247,16 @@ export default async function PluginDetailPage({
       })
     : null;
 
+  // TODO: Replace with actual security data from database (Phase 4)
+  // For now, using default/empty permissions until database schema is updated
+  const securityPermissions: SecurityPermissionsSummary = {
+    network_access: false,
+    file_writes: false,
+    env_var_reads: [],
+    external_urls: [],
+    filesystem_patterns: [],
+  };
+
   return (
     <div>
       {/* Breadcrumb */}
@@ -284,6 +297,7 @@ export default async function PluginDetailPage({
                 </Link>
               )}
               <TrustBadge tier={component.trust_tier} />
+              <SecurityBadge status="not-scanned" />
               <span className="rounded-full border border-[#2a2a2e] px-2.5 py-0.5 text-xs capitalize text-gray-400">
                 {component.type}
               </span>
@@ -342,6 +356,12 @@ export default async function PluginDetailPage({
               ))}
             </div>
           )}
+
+          {/* Security & Permissions */}
+          <section className="mb-10 rounded-lg border border-[#2a2a2e] bg-[#1a1a1e] p-6">
+            <h2 className="mb-4 text-lg font-semibold">Security & Permissions</h2>
+            <PermissionsSummary permissions={securityPermissions} />
+          </section>
 
           {/* SKILL.md content */}
           {skillHtml && (
