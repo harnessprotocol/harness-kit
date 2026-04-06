@@ -17,6 +17,13 @@ vi.mock("@tauri-apps/api/event", () => ({
   }),
 }));
 
+// Mock preferences — return default (skip) mode so tests are deterministic.
+vi.mock("../../lib/preferences", () => ({
+  getPermissionMode: () => "skip",
+  getAllowedTools: () => ["Read", "Grep", "Glob"],
+  getHarnessPermissionOverrides: () => ({}),
+}));
+
 // ── Wire-format payloads ──────────────────────────────────────
 // These MUST match Rust's serde(rename_all = "camelCase") output.
 // If the Rust struct field names or serde config change, update
@@ -159,11 +166,11 @@ describe("useTerminals", () => {
       await result.current.invokeInTerminal("term-1", "claude", "fix bug", "claude-opus-4-6");
     });
 
-    // Should call write_terminal (not invoke_in_terminal) with the built command
-    // Interactive mode (no -p) for full TUI with live streaming
+    // Should call write_terminal with the built command.
+    // Default permission mode is "skip" (--dangerously-skip-permissions).
     expect(mockInvoke).toHaveBeenCalledWith("write_terminal", {
       terminalId: "term-1",
-      data: "claude 'fix bug' --allowedTools Read,Grep,Glob,Agent,Skill --model claude-opus-4-6\n",
+      data: "claude 'fix bug' --dangerously-skip-permissions --model claude-opus-4-6\n",
     });
     expect(result.current.sessions[0].status).toBe("running");
     expect(result.current.sessions[0].harnessId).toBe("claude");

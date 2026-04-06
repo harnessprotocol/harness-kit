@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import { buildInvokeCommand } from "../lib/harness-definitions";
+import { buildInvokeCommand, type PermissionConfig } from "../lib/harness-definitions";
+import {
+  getPermissionMode,
+  getAllowedTools,
+  getHarnessPermissionOverrides,
+} from "../lib/preferences";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -22,6 +27,21 @@ interface TerminalOutputPayload {
 interface TerminalExitPayload {
   terminalId: string;
   exitCode: number;
+}
+
+// ── Permission config resolver ───────────────────────────────
+
+function resolvePermissionConfig(harnessId: string): PermissionConfig {
+  const overrides = getHarnessPermissionOverrides();
+  const override = overrides[harnessId];
+  const mode = override?.mode ?? getPermissionMode();
+  const tools = override?.allowedTools ?? getAllowedTools();
+
+  switch (mode) {
+    case "auto":          return { mode: "auto" };
+    case "allowed-tools": return { mode: "allowed-tools", tools };
+    default:              return { mode: "skip" };
+  }
 }
 
 // ── Constants ────────────────────────────────────────────────
@@ -143,7 +163,8 @@ export function useTerminals(): UseTerminalsReturn {
     async (id: string, harnessId: string, prompt: string, model?: string) => {
       // NOTE: write_terminal is an unrestricted shell stdin pipe. All command
       // construction MUST go through buildInvokeCommand to ensure proper quoting.
-      const command = buildInvokeCommand(harnessId, prompt, model);
+      const permConfig = resolvePermissionConfig(harnessId);
+      const command = buildInvokeCommand(harnessId, prompt, model, permConfig);
       if (!command) {
         console.error(`Unknown harness: ${harnessId}`);
         return;

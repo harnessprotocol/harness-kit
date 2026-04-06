@@ -22,6 +22,8 @@
 - **Desktop: Comparator v4** — Rebuilt from terminal multiplexer to structured evaluation workbench with 4-phase workflow (Setup → Execution → Results → Judge), session history rail, SQLite persistence, and shared Comparator types
 - **Marketplace: Ratings and reviews** — install counts, trust tiers, and user ratings on plugin detail pages.
 - **CLI: `detect` and `init` commands** — `harness-kit detect` shows which AI coding platforms are active in the current directory; `harness-kit init` scaffolds a new `harness.yaml` interactively.
+- **Desktop: Permission mode selector** — Security → Permissions now has a Task Execution Mode section with three selectable modes: **Skip All** (`--dangerously-skip-permissions`, default), **Auto** (`--permission-mode auto`, requires Claude team/enterprise/API), and **Allowed Tools** (`--allowedTools <list>`, user-curated checklist). Mode and tool list persist in localStorage and apply globally or per-harness via an expandable overrides section. A one-time first-run modal explains the active mode before the first task runs and links to the settings page. A slide-in Tool Approval panel lets users manage the allowed tools list mid-session from within the terminals view.
+- **Desktop: Security → Permissions redesign** — Permission mode cards with icons, flag badges, and clear selected state. Chip remove buttons now use SVG icons. Improved section hierarchy with a clean divider between execution mode and Claude settings.json controls.
 
 ### Changed
 

@@ -1,4 +1,4 @@
-// ── Shell quoting ───────────────────────────────────────────
+// ── Shell quoting ───────────────────────────────────────────────────────────
 
 /** Wrap a string in single quotes with proper escaping for POSIX shells. */
 export function shellQuote(s: string): string {
@@ -11,7 +11,32 @@ export function shellQuote(s: string): string {
   return "'" + clean.replace(/'/g, "'\\''") + "'";
 }
 
-// ── Harness definition type ─────────────────────────────────
+// ── Permission configuration ────────────────────────────────────────────────
+
+export type PermissionMode = "skip" | "auto" | "allowed-tools";
+
+export type PermissionConfig =
+  | { mode: "skip" }
+  | { mode: "auto" }
+  | { mode: "allowed-tools"; tools: string[] };
+
+const DEFAULT_PERMISSION_CONFIG: PermissionConfig = { mode: "skip" };
+
+/** Build the Claude CLI permission flags for a given config. */
+function buildClaudePermissionFlags(config: PermissionConfig): string[] {
+  switch (config.mode) {
+    case "skip":
+      return ["--dangerously-skip-permissions"];
+    case "auto":
+      return ["--permission-mode", "auto"];
+    case "allowed-tools":
+      // Fall back to skip-all if the tools list is empty.
+      if (config.tools.length === 0) return ["--dangerously-skip-permissions"];
+      return ["--allowedTools", config.tools.join(",")];
+  }
+}
+
+// ── Harness definition type ─────────────────────────────────────────────────
 
 export interface HarnessDefinition {
   id: string;
@@ -19,10 +44,10 @@ export interface HarnessDefinition {
   /** CLI binary name (used for detection and display, not invocation). */
   command: string;
   /** Build the full shell command to invoke this harness with a prompt. */
-  buildCommand: (prompt: string, model?: string) => string;
+  buildCommand: (prompt: string, model?: string, config?: PermissionConfig) => string;
 }
 
-// ── Built-in harness definitions ────────────────────────────
+// ── Built-in harness definitions ────────────────────────────────────────────
 // Verified from official docs — see plan for references.
 
 export const BUILTIN_HARNESSES: HarnessDefinition[] = [
@@ -30,14 +55,9 @@ export const BUILTIN_HARNESSES: HarnessDefinition[] = [
     id: "claude",
     name: "Claude Code",
     command: "claude",
-    buildCommand: (prompt, model) => {
-      // Interactive mode with pre-approved tools so the user doesn't have to
-      // click through permission prompts for every standard coding tool.
-      const allowedTools = [
-        'Read', 'Grep', 'Glob',
-        'Agent', 'Skill',
-      ].join(',');
-      const parts = ["claude", shellQuote(prompt), "--allowedTools", allowedTools];
+    buildCommand: (prompt, model, config = DEFAULT_PERMISSION_CONFIG) => {
+      const permFlags = buildClaudePermissionFlags(config);
+      const parts = ["claude", shellQuote(prompt), ...permFlags];
       if (model) parts.push("--model", shellQuote(model));
       return parts.join(" ");
     },
@@ -85,22 +105,24 @@ export const BUILTIN_HARNESSES: HarnessDefinition[] = [
   },
 ];
 
-// ── Lookup + command builder ────────────────────────────────
+// ── Lookup + command builder ────────────────────────────────────────────────
 
 const harnessMap = new Map(BUILTIN_HARNESSES.map((h) => [h.id, h]));
 
 /**
  * Build the shell command string for a given harness invocation.
  * Returns `null` if the harness ID is unknown (caller should handle custom commands).
+ * Permission config applies to Claude Code only — other harnesses ignore it.
  */
 export function buildInvokeCommand(
   harnessId: string,
   prompt: string,
   model?: string,
+  config?: PermissionConfig,
 ): string | null {
   const def = harnessMap.get(harnessId);
   if (!def) return null;
-  return def.buildCommand(prompt, model);
+  return def.buildCommand(prompt, model, config);
 }
 
 export function getHarness(id: string): HarnessDefinition | undefined {
