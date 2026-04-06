@@ -128,7 +128,13 @@ async function collectScannableFiles(
   // File extensions to scan
   const scannableExtensions = [".sh", ".py", ".js", ".ts", ".md"];
 
-  async function walkDirectory(dir: string): Promise<void> {
+  const MAX_DEPTH = 15;
+
+  async function walkDirectory(dir: string, depth = 0): Promise<void> {
+    if (depth > MAX_DEPTH) {
+      return;
+    }
+
     const fullPath = fs.joinPath(pluginDir, dir);
     const exists = await fs.exists(fullPath);
 
@@ -147,7 +153,7 @@ async function collectScannableFiles(
         const isDir = await isDirectory(entryFullPath, fs);
 
         if (isDir) {
-          await walkDirectory(entryPath);
+          await walkDirectory(entryPath, depth + 1);
         } else {
           // Check if file has a scannable extension
           if (scannableExtensions.some((ext) => entry.endsWith(ext))) {
@@ -200,8 +206,9 @@ function analyzeManifestPermissions(
 
   if (permissions?.paths?.writable) {
     for (const path of permissions.paths.writable) {
-      // Flag root or home directory write access as critical
-      if (path === "/" || path === "~" || path === "~/" || path.startsWith("~/")) {
+      // Flag root or home directory write access as critical.
+      // startsWith("~") covers "~", "~/", and named expansions like "~root".
+      if (path === "/" || path.startsWith("~")) {
         findings.push({
           id: randomUUID(),
           severity: "critical",
