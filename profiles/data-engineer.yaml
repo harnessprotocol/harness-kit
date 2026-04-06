@@ -15,20 +15,20 @@ author:
   name: harnessprotocol
 
 components:
-  - name: data-lineage
-    version: "0.2.0"
+  - name: lineage
+    version: "0.3.0"
   - name: research
-    version: "0.2.0"
+    version: "0.4.0"
   - name: orient
     version: "0.2.0"
-  - name: capture-session
-    version: "0.2.0"
+  - name: capture
+    version: "0.4.0"
   - name: explain
     version: "0.2.0"
   - name: docgen
     version: "0.2.0"
   - name: review
-    version: "0.2.0"
+    version: "0.3.0"
 
 knowledge:
   backend: memory-md

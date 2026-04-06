@@ -1,11 +1,11 @@
 ---
 sidebar_position: 6
-title: capture-session
+title: capture
 ---
 
-> **[View in Marketplace →](https://marketplace.harnessprotocol.io/plugins/capture-session)** for install tracking, related plugins, and profiles.
+> **[View in Marketplace →](https://marketplace.harnessprotocol.io/plugins/capture)** for install tracking, related plugins, and profiles.
 
-# capture-session
+# capture
 
 Capture session information into a staging file for later reflection and knowledge graph processing.
 
@@ -17,12 +17,12 @@ None.
 
 | Component | Purpose |
 |-----------|---------|
-| `/capture-session` skill | Manual, on-demand staging from within a conversation |
-| `session-capture.sh` | Automated Stop hook that summarizes sessions at exit |
+| `/capture` skill | Manual, on-demand staging from within a conversation |
+| `session-end.sh` | Automated Stop hook that summarizes sessions at exit |
 
 ## What It Does
 
-When you invoke `/capture-session`:
+When you invoke `/capture`:
 
 1. Parses your argument to determine what to capture
 2. Resolves the staging file (`scripts/session-staging.md` or `~/.claude/session-staging.md`)
@@ -34,7 +34,7 @@ When you invoke `/capture-session`:
 ### Auto-extract (no argument)
 
 ```
-/capture-session
+/capture
 ```
 
 Scans the conversation and extracts 3-8 most important facts — decisions, technical details, status changes, new entities.
@@ -42,14 +42,14 @@ Scans the conversation and extracts 3-8 most important facts — decisions, tech
 ### Stage specific facts
 
 ```
-/capture-session SQLite chosen over Postgres for local-first storage
-/capture-session harness-kit domain purchased at harnesskit.ai, 3-year registration
+/capture SQLite chosen over Postgres for local-first storage
+/capture harness-kit domain purchased at harnesskit.ai, 3-year registration
 ```
 
 ### Filter to decisions only
 
 ```
-/capture-session decisions
+/capture decisions
 ```
 
 Extracts only explicit decisions — architectural choices, plans confirmed, approaches selected.
@@ -57,7 +57,7 @@ Extracts only explicit decisions — architectural choices, plans confirmed, app
 ### Filter to technical facts only
 
 ```
-/capture-session technical
+/capture technical
 ```
 
 Extracts only implementation details, file paths, APIs, schemas, commands.
@@ -75,7 +75,7 @@ The Stop hook automatically summarizes sessions at exit. Add to `~/.claude/hooks
         "hooks": [
           {
             "type": "command",
-            "command": "/path/to/plugins/capture-session/scripts/session-capture.sh"
+            "command": "/path/to/plugins/capture/scripts/session-end.sh"
           }
         ]
       }
@@ -86,14 +86,14 @@ The Stop hook automatically summarizes sessions at exit. Add to `~/.claude/hooks
 
 The `"matcher": ""` field is an empty string, which means the hook fires on every Stop event regardless of context. To restrict it to specific projects, set `matcher` to a glob pattern matching the project path.
 
-After `plugin install capture-session@harness-kit`, the script is at `~/.claude/plugins/capture-session/scripts/session-capture.sh`. For a local clone, use the absolute path to `plugins/capture-session/scripts/session-capture.sh`.
+After `plugin install capture@harness-kit`, the script is at `~/.claude/plugins/capture/scripts/session-end.sh`. For a local clone, use the absolute path to `plugins/capture/scripts/session-end.sh`.
 
 The hook reads the Stop event payload, finds the session transcript, summarizes it, and appends to the staging file. It deduplicates against `<!-- source: manual -->` entries from the same day.
 
 ## Pipeline
 
 ```
-Manual /capture-session  ──┐
+Manual /capture  ──┐
                   ├──▶  session-staging.md  ──▶  daily reflection  ──▶  knowledge graph
 Auto Stop hook ──┘
 ```
@@ -112,7 +112,7 @@ Facts staged here are consumed by the daily reflection.
 
 ## 2026-03-08 23:59
 <!-- source: hook -->
-- Implemented capture-session plugin with 4 argument types
+- Implemented capture plugin with 4 argument types
 - Updated marketplace.json and install.sh
 ```
 
@@ -120,7 +120,7 @@ Facts staged here are consumed by the daily reflection.
 
 ### Why manual staging?
 
-The Stop hook auto-summarizes at session end — useful, but it misses nuance. `/capture-session decisions` lets you control what gets remembered while context is fresh.
+The Stop hook auto-summarizes at session end — useful, but it misses nuance. `/capture decisions` lets you control what gets remembered while context is fresh.
 
 ### Why the same pipeline?
 
@@ -135,12 +135,12 @@ The staging file is a write-ahead log. Modifying existing entries would corrupt 
 <Accordions>
 <Accordion title="SKILL.md — Runtime Configuration">
 
-{/* @embed plugins/capture-session/skills/capture-session/SKILL.md */}
+{/* @embed plugins/capture/skills/capture/SKILL.md */}
 
 </Accordion>
 <Accordion title="README.md — Plugin Documentation">
 
-{/* @embed plugins/capture-session/skills/capture-session/README.md */}
+{/* @embed plugins/capture/skills/capture/README.md */}
 
 </Accordion>
 </Accordions>

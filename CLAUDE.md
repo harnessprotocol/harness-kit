@@ -39,6 +39,8 @@ harness-kit/
 │   ├── board/                    ← web board client
 │   ├── cli/                      ← harness CLI
 │   └── marketplace/              ← Next.js marketplace web app
+├── profiles/                     ← pre-configured harness.yaml bundles for different roles
+├── evals/                        ← automated skill evaluation framework (Python + golden responses)
 ├── harness.yaml                  ← dogfooding config (plugins used to develop this repo)
 ├── install.sh                    ← script fallback for users without plugin marketplace
 ├── CLAUDE.md                     ← this file

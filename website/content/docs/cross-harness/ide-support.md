@@ -31,16 +31,25 @@ Quick reference for feature support by editor — useful when deciding where to 
 | review | ✅ native | ✅ native | ✅ copy SKILL.md | ✅ copy SKILL.md | ✅ copy SKILL.md |
 | docgen | ✅ native | ✅ native | ✅ copy SKILL.md | ✅ copy SKILL.md | ✅ copy SKILL.md |
 | research | ✅ native | ✅ native | ✅ copy SKILL.md | ✅ copy SKILL.md | ✅ copy SKILL.md |
-| data-lineage | ✅ native | ✅ native | ✅ copy SKILL.md | ✅ copy SKILL.md | ✅ copy SKILL.md |
+| lineage | ✅ native | ✅ native | ✅ copy SKILL.md | ✅ copy SKILL.md | ✅ copy SKILL.md |
 | orient | ✅ native | ✅ native | 🔄 MCP required | 🔄 MCP required | ❌ no MCP |
-| capture-session | ✅ native | ✅ native | 🔄 MCP required | 🔄 MCP required | ❌ no MCP |
+| capture | ✅ native | ✅ native | 🔄 MCP required | 🔄 MCP required | ❌ no MCP |
+| membrain | ✅ native | ✅ native | 🔄 MCP required | 🔄 MCP required | ❌ no MCP |
+| open-pr | ✅ native | ✅ native | ✅ copy SKILL.md | ✅ copy SKILL.md | ✅ copy SKILL.md |
+| merge-pr | ✅ native | ✅ native | ✅ copy SKILL.md | ✅ copy SKILL.md | ✅ copy SKILL.md |
+| pr-sweep | ✅ native | ✅ native | ✅ copy SKILL.md | ✅ copy SKILL.md | ✅ copy SKILL.md |
+| harness-share | ✅ native | ✅ native | ✅ copy SKILL.md | ✅ copy SKILL.md | ✅ copy SKILL.md |
+| stats | ✅ native | ✅ native | ✅ copy SKILL.md | ✅ copy SKILL.md | ✅ copy SKILL.md |
+| board | ✅ native | 🔄 MCP required | 🔄 MCP required | 🔄 MCP required | ❌ no MCP |
+| iterm-notify | ✅ native | ❌ hooks only | ❌ hooks only | ❌ hooks only | ❌ hooks only |
+| frontend-design | ✅ native | ✅ native | ✅ copy SKILL.md | ✅ copy SKILL.md | ✅ copy SKILL.md |
 
 > MCP-required plugins work in tools that support MCP servers.
 
 ## MCP as Universal Fallback
 
-MCP has the broadest cross-tool support of any harness-kit feature. The `orient` and `capture-session` plugins depend on MCP Memory Server — any tool supporting MCP (via `.vscode/mcp.json`, `.cursor/mcp.json`, etc.) can run these plugins. MCP is the forward-compatible path for bringing harness-kit capabilities to new editors as support expands.
+MCP has the broadest cross-tool support of any harness-kit feature. The `orient`, `capture`, and `membrain` plugins depend on MCP — any tool supporting MCP (via `.vscode/mcp.json`, `.cursor/mcp.json`, etc.) can run these plugins. MCP is the forward-compatible path for bringing harness-kit capabilities to new editors as support expands.
 
 ## Last Updated
 
-Last updated: 2026-03-09
+Last updated: 2026-04-06

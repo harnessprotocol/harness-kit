@@ -1,4 +1,4 @@
 {
   "title": "DevOps",
-  "pages": ["open-pr", "merge-pr", "pull-request-sweep"]
+  "pages": ["open-pr", "merge-pr", "pr-sweep"]
 }

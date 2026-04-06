@@ -26,7 +26,13 @@ A prompt tells Claude what to do. A SKILL.md specifies how: step ordering, input
 
 ## Does this only work with Claude Code?
 
-The install system targets Claude Code's plugin marketplace. But SKILL.md files are plain markdown — any tool that reads prompt files can use them. VS Code Copilot reads `CLAUDE.md` natively via `chat.useClaudeMdFile`. See the [Cross-Harness setup guide](https://harnesskit.ai/docs/cross-harness/setup-guide) for Cursor, Windsurf, and others.
+The primary install path targets Claude Code's plugin marketplace. But harness-kit has a few other interfaces:
+
+- **Desktop app** (`apps/desktop/`) — a Tauri native app with a full GUI for managing harness configs, browsing plugins, running the observatory, comparator, board, roadmap, and more
+- **CLI** (`harness-kit` command) — `validate`, `compile`, `detect`, and `init` commands for working with `harness.yaml` from any terminal
+- **SKILL.md files** are plain markdown — any tool that reads prompt files can use them. VS Code Copilot reads `CLAUDE.md` natively via `chat.useClaudeMdFile`
+
+See the [Cross-Harness setup guide](https://harnesskit.ai/docs/cross-harness/setup-guide) for Cursor, Windsurf, and others.
 
 ## Is this safe? What does installing a plugin actually do?
 

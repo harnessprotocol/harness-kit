@@ -26,7 +26,7 @@ Marketplace
 
 ## Why everything here is a plugin
 
-Some plugins in this repo are "just" a skill — `explain`, `data-lineage`, and `orient` each contain a single `SKILL.md` with no scripts or hooks. We package them as plugins anyway:
+Some plugins in this repo are "just" a skill — `explain`, `lineage`, and `orient` each contain a single `SKILL.md` with no scripts or hooks. We package them as plugins anyway:
 
 - **Room to grow** — Adding scripts or hooks later is a file addition, not a restructuring. `research` started as a bare skill and grew a prompt-injection scanner and an index rebuild script.
 - **Uniform install** — One mental model: add the marketplace, install by name. Users don't need to know what's inside.

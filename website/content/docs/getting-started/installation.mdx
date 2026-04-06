@@ -20,9 +20,9 @@ Repeat for any plugin you want:
 
 ```
 /plugin install explain@harness-kit
-/plugin install data-lineage@harness-kit
+/plugin install lineage@harness-kit
 /plugin install orient@harness-kit
-/plugin install capture-session@harness-kit
+/plugin install capture@harness-kit
 /plugin install review@harness-kit
 /plugin install docgen@harness-kit
 ```
@@ -64,11 +64,20 @@ For per-tool setup instructions (Copilot, Cursor, Windsurf, MCP wiring), see [Us
 |--------|-------------|
 | research | `gh` CLI (GitHub sources only), Python 3.10+ (index rebuild) |
 | explain | None |
-| data-lineage | None |
+| lineage | None |
 | orient | None (optional: [MCP Memory Server](https://github.com/anthropics/claude-code-memory)) |
-| capture-session | None |
+| capture | None |
 | review | `gh` CLI (PR review only) |
 | docgen | None |
+| open-pr | `gh` CLI |
+| merge-pr | `gh` CLI |
+| pr-sweep | `gh` CLI, review plugin |
+| harness-share | None |
+| stats | Python 3.10+ |
+| board | Node.js (board server) |
+| iterm-notify | macOS, iTerm2, terminal-notifier, jq |
+| membrain | Go 1.25+, membrain MCP server |
+| frontend-design | None |
 
 <Callout type="warn" title="Environment variables">
   Some plugins require environment variables for optional features. See the [Secrets Management guide](/docs/guides/secrets-management) for how to configure them.
