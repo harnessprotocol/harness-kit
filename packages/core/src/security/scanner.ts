@@ -5,8 +5,8 @@ import type {
   SecurityPermissionsSummary,
   SecurityScanStatus,
 } from "@harness-kit/shared";
-import { randomUUID } from "crypto";
 import { readJsonOrDefault } from "../utils/read-json.js";
+import { findingId } from "./rules.js";
 import { runSecurityRules } from "./rules.js";
 
 // ── Plugin manifest types ───────────────────────────────────────
@@ -210,7 +210,7 @@ function analyzeManifestPermissions(
       // startsWith("~") covers "~", "~/", and named expansions like "~root".
       if (path === "/" || path.startsWith("~")) {
         findings.push({
-          id: randomUUID(),
+          id: findingId(),
           severity: "critical",
           category: "permission_request",
           message: `Plugin requests write access to sensitive path: ${path}`,
@@ -220,7 +220,7 @@ function analyzeManifestPermissions(
         });
       } else if (path.includes("**")) {
         findings.push({
-          id: randomUUID(),
+          id: findingId(),
           severity: "warning",
           category: "permission_request",
           message: `Plugin requests broad recursive write access: ${path}`,
@@ -235,7 +235,7 @@ function analyzeManifestPermissions(
   // Check for network permissions with no host restrictions
   if (permissions?.network && !permissions.network["allowed-hosts"]) {
     findings.push({
-      id: randomUUID(),
+      id: findingId(),
       severity: "info",
       category: "permission_request",
       message: "Plugin requests network access without host restrictions",
@@ -250,7 +250,7 @@ function analyzeManifestPermissions(
   for (const envVar of envVars) {
     if (envVar.sensitive) {
       findings.push({
-        id: randomUUID(),
+        id: findingId(),
         severity: "info",
         category: "env_var_exfiltration",
         message: `Plugin declares access to sensitive environment variable: ${envVar.name}`,

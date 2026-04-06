@@ -3,7 +3,11 @@ import type {
   SecurityFindingSeverity,
   SecurityFindingCategory,
 } from "@harness-kit/shared";
-import { randomUUID } from "crypto";
+
+/** Generates a short collision-resistant ID for a finding without requiring crypto imports. */
+export function findingId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+}
 
 // ── Rule interfaces ─────────────────────────────────────────────
 
@@ -79,7 +83,7 @@ function createFinding(
   recommendation?: string,
 ): SecurityFinding {
   return {
-    id: randomUUID(),
+    id: findingId(),
     severity,
     category,
     message,

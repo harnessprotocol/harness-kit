@@ -289,6 +289,9 @@ jobs:
       - name: Run dependency audit
         run: pnpm audit --audit-level=critical
 
+      - name: Build shared package (core dependency)
+        run: pnpm --filter @harness-kit/shared build
+
       - name: Build core package
         run: pnpm --filter @harness-kit/core build
 
