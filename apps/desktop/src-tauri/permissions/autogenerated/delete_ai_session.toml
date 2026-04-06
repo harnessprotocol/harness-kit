@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-delete-ai-session"
+description = "Enables the delete_ai_session command without any pre-configured scope."
+commands.allow = ["delete_ai_session"]
+
+[[permission]]
+identifier = "deny-delete-ai-session"
+description = "Denies the delete_ai_session command without any pre-configured scope."
+commands.deny = ["delete_ai_session"]

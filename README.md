@@ -123,6 +123,7 @@ A Tauri desktop companion that brings the harness concept to a native UI.
 - **Harness editor** — inline editing with custom profiles
 - **Memory** — knowledge graph viewer via [membrain](https://github.com/siracusa5/membrain) integration
 - **Team chat** — IRC-style chat backed by a self-hosted WebSocket relay
+- **AI Chat** — streaming conversations with local LLMs via Ollama, with session persistence and inline model downloads
 
 See [`apps/desktop/`](apps/desktop/) for build instructions. The desktop app is a separate product from the plugin marketplace.
 

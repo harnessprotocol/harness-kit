@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-check-ollama-running"
+description = "Enables the check_ollama_running command without any pre-configured scope."
+commands.allow = ["check_ollama_running"]
+
+[[permission]]
+identifier = "deny-check-ollama-running"
+description = "Denies the check_ollama_running command without any pre-configured scope."
+commands.deny = ["check_ollama_running"]

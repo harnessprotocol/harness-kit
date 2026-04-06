@@ -1,4 +1,4 @@
-import { invoke } from "@tauri-apps/api/core";
+import { invoke, Channel } from "@tauri-apps/api/core";
 import type {
   InstalledPlugin, KnownMarketplace, PluginUpdateInfo, HooksConfig, StatsCache,
   SessionSummary, SessionFacet, ActiveSession, LiveDailyActivity,
@@ -584,4 +584,112 @@ export async function getPanelDiffs(
   panelId: string,
 ): Promise<FileDiffRow[]> {
   return invoke<FileDiffRow[]>("get_panel_diffs", { comparisonId, panelId });
+}
+
+// ── AI Chat commands ─────────────────────────────────────────
+
+export interface OllamaStatus {
+  running: boolean;
+  message: string;
+}
+
+export interface AIModelInfo {
+  name: string;
+  size: number | null;
+  modified_at: string | null;
+}
+
+export interface AIChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface ChatChunk {
+  content: string;
+  done: boolean;
+}
+
+export interface DownloadProgress {
+  model: string;
+  status: string;
+  completed: number | null;
+  total: number | null;
+  done: boolean;
+}
+
+export interface AISessionRow {
+  id: string;
+  title: string | null;
+  model: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AIMessageRow {
+  id: string;
+  sessionId: string;
+  role: string;
+  content: string;
+  timestamp: string;
+}
+
+export interface AISessionDetail {
+  session: AISessionRow;
+  messages: AIMessageRow[];
+}
+
+export async function aiCheckOllama(): Promise<OllamaStatus> {
+  return invoke<OllamaStatus>("check_ollama_running");
+}
+
+export async function aiListModels(): Promise<AIModelInfo[]> {
+  return invoke<AIModelInfo[]>("list_models");
+}
+
+export async function aiPullModel(
+  model: string,
+  channel: Channel<DownloadProgress>,
+): Promise<void> {
+  return invoke<void>("pull_model", { model, channel });
+}
+
+export async function aiStreamChat(
+  model: string,
+  messages: AIChatMessage[],
+  channel: Channel<ChatChunk>,
+): Promise<void> {
+  return invoke<void>("stream_chat", { model, messages, channel });
+}
+
+export async function aiCancelStream(): Promise<void> {
+  return invoke<void>("cancel_ai_stream");
+}
+
+export async function aiCreateSession(id: string, model: string): Promise<void> {
+  return invoke<void>("create_ai_session", { id, model });
+}
+
+export async function aiUpdateSessionTitle(id: string, title: string): Promise<void> {
+  return invoke<void>("update_ai_session_title", { id, title });
+}
+
+export async function aiDeleteSession(id: string): Promise<void> {
+  return invoke<void>("delete_ai_session", { id });
+}
+
+export async function aiListSessions(): Promise<AISessionRow[]> {
+  return invoke<AISessionRow[]>("list_ai_sessions");
+}
+
+export async function aiLoadSession(sessionId: string): Promise<[AISessionRow, AIMessageRow[]]> {
+  return invoke<[AISessionRow, AIMessageRow[]]>("load_ai_session", { sessionId });
+}
+
+export async function aiSaveMessage(
+  id: string,
+  sessionId: string,
+  role: string,
+  content: string,
+): Promise<void> {
+  return invoke<void>("save_ai_message", { id, sessionId, role, content });
 }

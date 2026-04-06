@@ -25,6 +25,7 @@ import BoardKanbanPage from "./pages/board/BoardKanbanPage";
 import RoadmapProjectsPage from "./pages/roadmap/RoadmapProjectsPage";
 import RoadmapPage from "./pages/roadmap/RoadmapPage";
 import ParityDashboardPage from "./pages/parity/ParityDashboardPage";
+import AIChatPage from "./pages/ai/AIChatPage";
 import MemoryDashboardPage from "./pages/memory/MemoryDashboardPage";
 import MemoryGraphPage from "./pages/memory/MemoryGraphPage";
 import MemoryExplorePage from "./pages/memory/MemoryExplorePage";
@@ -99,6 +100,9 @@ export default function App() {
           {/* Roadmap */}
           <Route path="roadmap" element={<RoadmapProjectsPage />} />
           <Route path="roadmap/:slug" element={<RoadmapPage />} />
+
+          {/* AI Chat */}
+          <Route path="ai-chat" element={<AIChatPage />} />
 
           {/* Memory */}
           <Route path="memory" element={<MemoryDashboardPage />} />

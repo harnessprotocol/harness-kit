@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-list-ai-sessions"
+description = "Enables the list_ai_sessions command without any pre-configured scope."
+commands.allow = ["list_ai_sessions"]
+
+[[permission]]
+identifier = "deny-list-ai-sessions"
+description = "Denies the list_ai_sessions command without any pre-configured scope."
+commands.deny = ["list_ai_sessions"]

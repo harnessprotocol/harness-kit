@@ -1,3 +1,4 @@
+mod ai;
 mod commands;
 mod db;
 mod board_server;
@@ -11,6 +12,7 @@ mod membrain_commands;
 pub static HOME_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 use tauri::Manager;
+use ai::client::OllamaState;
 use commands::terminal::TerminalState;
 use board_server::BoardServerState;
 use membrain_commands::MembrainServerState;
@@ -32,6 +34,7 @@ pub fn run() {
         .manage(BoardServerState::new())
         .manage(commands::relay::LocalRelay(tokio::sync::Mutex::new(None)))
         .manage(MembrainServerState::new())
+        .manage(OllamaState::new("http://localhost:11434"))
         .invoke_handler(tauri::generate_handler![
             // Plugins
             commands::plugins::list_installed_plugins,
@@ -167,6 +170,18 @@ pub fn run() {
             commands::relay::chat_start_local_relay,
             commands::relay::chat_stop_local_relay,
             commands::relay::chat_local_relay_running,
+            // AI Chat
+            ai::commands::check_ollama_running,
+            ai::commands::list_models,
+            ai::commands::pull_model,
+            ai::commands::stream_chat,
+            ai::commands::cancel_ai_stream,
+            ai::commands::create_ai_session,
+            ai::commands::update_ai_session_title,
+            ai::commands::delete_ai_session,
+            ai::commands::list_ai_sessions,
+            ai::commands::load_ai_session,
+            ai::commands::save_ai_message,
         ])
         .setup(|app| {
             let state = app.state::<BoardServerState>();

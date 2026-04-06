@@ -83,6 +83,11 @@ export const NAV_SECTIONS: NavSection[] = [
     path: "/roadmap",
   },
   {
+    id: "ai-chat",
+    label: "AI Chat",
+    path: "/ai-chat",
+  },
+  {
     id: "memory",
     label: "Memory",
     path: "/memory",
