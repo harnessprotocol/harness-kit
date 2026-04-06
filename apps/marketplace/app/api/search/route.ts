@@ -2,25 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
-type SearchScope = "component" | "profile";
-type ComponentType = "skill" | "agent" | "hook" | "script" | "knowledge" | "rules";
+const VALID_SCOPES = new Set(["component", "profile"]);
+const VALID_COMPONENT_TYPES = new Set([
+  "skill", "agent", "hook", "script", "knowledge", "rules", "plugin",
+]);
 
 export async function GET(request: NextRequest) {
-  // Start performance monitoring
   const startTime = performance.now();
 
   const { searchParams } = request.nextUrl;
   const query = searchParams.get("q") ?? "";
-  const scope = (searchParams.get("scope") as SearchScope) ?? "component";
-
-  // Pagination parameters
-  const page = parseInt(searchParams.get("page") ?? "1", 10);
-  const limit = Math.min(parseInt(searchParams.get("limit") ?? "20", 10), 100); // Max 100 per page
-
-  // Filter parameters for components
-  const componentType = searchParams.get("type") as ComponentType | null;
-  const category = searchParams.get("category");
-  const minRating = searchParams.get("rating");
 
   if (!query) {
     return NextResponse.json(
@@ -29,11 +20,57 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  if (query.length > 200) {
+    return NextResponse.json(
+      { error: "Query too long (max 200 characters)" },
+      { status: 400 },
+    );
+  }
+
+  const scopeParam = searchParams.get("scope") ?? "component";
+  if (!VALID_SCOPES.has(scopeParam)) {
+    return NextResponse.json(
+      { error: "Invalid scope. Must be 'component' or 'profile'" },
+      { status: 400 },
+    );
+  }
+  const scope = scopeParam as "component" | "profile";
+
+  // Pagination parameters
+  const page = parseInt(searchParams.get("page") ?? "1", 10);
+  const limit = Math.min(parseInt(searchParams.get("limit") ?? "20", 10), 100);
+
   if (page < 1) {
     return NextResponse.json(
       { error: "Page must be >= 1" },
       { status: 400 },
     );
+  }
+
+  // Filter parameters — validated before use
+  const componentTypeParam = searchParams.get("type");
+  if (componentTypeParam !== null && !VALID_COMPONENT_TYPES.has(componentTypeParam)) {
+    return NextResponse.json(
+      { error: `Invalid type filter. Must be one of: ${[...VALID_COMPONENT_TYPES].join(", ")}` },
+      { status: 400 },
+    );
+  }
+  const componentType = componentTypeParam as string | null;
+
+  const category = searchParams.get("category");
+
+  // Parse and validate rating at the boundary
+  let minRating: number | null = null;
+  const ratingParam = searchParams.get("rating");
+  if (ratingParam !== null) {
+    const parsed = parseFloat(ratingParam);
+    if (isNaN(parsed) || parsed < 1 || parsed > 5) {
+      return NextResponse.json(
+        { error: "Rating must be a number between 1 and 5" },
+        { status: 400 },
+      );
+    }
+    minRating = parsed;
   }
 
   // 60 searches per minute per IP
@@ -72,7 +109,7 @@ export async function GET(request: NextRequest) {
       .select("*")
       .textSearch("fts", tsquery)
       .order("name", { ascending: true })
-      .range(offset, offset + limit - 1);
+      .range(offset, offset + limit);  // fetch limit+1 to detect hasMore
 
     if (error) {
       // Fallback to ilike if FTS fails — use parameterized filters
@@ -81,99 +118,62 @@ export async function GET(request: NextRequest) {
         .select("*")
         .or(`name.ilike.%${query.replace(/[,().%_\\]/g, "")}%,description.ilike.%${query.replace(/[,().%_\\]/g, "")}%`)
         .order("name", { ascending: true })
-        .range(offset, offset + limit - 1);
+        .range(offset, offset + limit);  // fetch limit+1 to detect hasMore
 
       if (fallbackError) {
-        return NextResponse.json(
-          { error: `Search failed: ${fallbackError.message}` },
-          { status: 500 },
-        );
+        console.error("[search] profile fallback failed", fallbackError);
+        return NextResponse.json({ error: "Search failed" }, { status: 500 });
       }
 
-      const endTime = performance.now();
-      const responseTime = ((endTime - startTime) / 1000).toFixed(3);
-
-      return NextResponse.json(
-        {
-          type: "profile",
-          results: fallback ?? [],
-          pagination: {
-            page,
-            limit,
-            hasMore: (fallback?.length ?? 0) === limit,
-          },
-        },
-        {
-          headers: {
-            "X-Response-Time": `${responseTime}s`,
-          },
-        }
-      );
+      const results = fallback ?? [];
+      return jsonResponse(startTime, {
+        type: "profile",
+        results: results.slice(0, limit),
+        pagination: { page, limit, hasMore: results.length > limit },
+      });
     }
 
-    const endTime = performance.now();
-    const responseTime = ((endTime - startTime) / 1000).toFixed(3);
-
-    return NextResponse.json(
-      {
-        type: "profile",
-        results: data ?? [],
-        pagination: {
-          page,
-          limit,
-          hasMore: (data?.length ?? 0) === limit,
-        },
-      },
-      {
-        headers: {
-          "X-Response-Time": `${responseTime}s`,
-        },
-      }
-    );
+    const results = data ?? [];
+    return jsonResponse(startTime, {
+      type: "profile",
+      results: results.slice(0, limit),
+      pagination: { page, limit, hasMore: results.length > limit },
+    });
   }
 
   // Default: search components using full-text search with filters
   try {
     const results = await searchComponents(tsquery, query, componentType, category, minRating, page, limit);
-
-    const endTime = performance.now();
-    const responseTime = ((endTime - startTime) / 1000).toFixed(3);
-
-    return NextResponse.json(
-      {
-        type: "component",
-        results: results.data,
-        pagination: {
-          page,
-          limit,
-          hasMore: results.hasMore,
-        },
-      },
-      {
-        headers: {
-          "X-Response-Time": `${responseTime}s`,
-        },
-      }
-    );
-  } catch (error: any) {
-    return NextResponse.json(
-      { error: `Search failed: ${error.message}` },
-      { status: 500 },
-    );
+    return jsonResponse(startTime, {
+      type: "component",
+      results: results.data,
+      pagination: { page, limit, hasMore: results.hasMore },
+    });
+  } catch (err) {
+    console.error("[search] component search failed", err);
+    return NextResponse.json({ error: "Search failed" }, { status: 500 });
   }
+}
+
+function jsonResponse(startTime: number, body: object) {
+  const responseTime = ((performance.now() - startTime) / 1000).toFixed(3);
+  return NextResponse.json(body, {
+    headers: { "X-Response-Time": `${responseTime}s` },
+  });
 }
 
 async function searchComponents(
   tsquery: string,
   rawQuery: string,
-  componentType: ComponentType | null,
+  componentType: string | null,
   category: string | null,
-  minRating: string | null,
+  minRating: number | null,
   page: number,
   limit: number,
 ): Promise<{ data: any[]; hasMore: boolean }> {
   const offset = (page - 1) * limit;
-  // Step 1: Get component IDs that match the category filter (if specified)
+
+  // Step 1: Resolve category filter to component IDs (if specified)
   let categoryComponentIds: string[] | null = null;
   if (category) {
     const { data: categoryData, error: categoryError } = await supabase
@@ -184,31 +184,27 @@ async function searchComponents(
     if (categoryError) throw categoryError;
     categoryComponentIds = categoryData?.map((cc: any) => cc.component_id) ?? [];
 
-    // If category filter is specified but no components match, return empty
     if (categoryComponentIds.length === 0) {
       return { data: [], hasMore: false };
     }
   }
 
-  // Step 2: Build the main component search query with FTS
+  // Step 2: Build and execute the FTS query
   let componentQuery = supabase
     .from("components")
     .select("*")
     .textSearch("fts", tsquery);
 
-  // Apply component type filter
   if (componentType) {
     componentQuery = componentQuery.eq("type", componentType);
   }
 
-  // Apply category filter (if we have matching component IDs)
   if (categoryComponentIds) {
     componentQuery = componentQuery.in("id", categoryComponentIds);
   }
 
-  // Execute the query - fetch extra to determine if there are more pages
-  // When rating filter is present, we need more data for post-filtering
-  const fetchLimit = minRating ? Math.max(limit * 3, 100) : limit + 1;
+  // When a rating filter is active, over-fetch to compensate for post-filter attrition
+  const fetchLimit = minRating !== null ? Math.max(limit * 3, 100) : limit + 1;
 
   const { data: components, error } = await componentQuery
     .order("install_count", { ascending: false })
@@ -235,82 +231,54 @@ async function searchComponents(
 
     if (fallbackError) throw fallbackError;
 
-    // Apply rating filter if specified
-    if (minRating && fallback) {
-      const minRatingNum = parseFloat(minRating);
-      const filteredResults = await filterByRating(fallback, minRatingNum);
-      const hasMore = filteredResults.length > limit;
-      return {
-        data: filteredResults.slice(0, limit),
-        hasMore,
-      };
-    }
-
-    const resultData = fallback ?? [];
-    const hasMore = resultData.length > limit;
-    return {
-      data: resultData.slice(0, limit),
-      hasMore,
-    };
+    return applyRatingFilter(fallback ?? [], minRating, limit);
   }
 
-  // Step 3: Apply rating filter if specified
-  if (minRating && components) {
-    const minRatingNum = parseFloat(minRating);
-    const filteredResults = await filterByRating(components, minRatingNum);
-    const hasMore = filteredResults.length > limit;
-    return {
-      data: filteredResults.slice(0, limit),
-      hasMore,
-    };
-  }
-
-  const resultData = components ?? [];
-  const hasMore = resultData.length > limit;
-  return {
-    data: resultData.slice(0, limit),
-    hasMore,
-  };
+  return applyRatingFilter(components ?? [], minRating, limit);
 }
 
-// Helper function to filter components by minimum average rating
-async function filterByRating(components: any[], minRating: number) {
+async function applyRatingFilter(
+  components: any[],
+  minRating: number | null,
+  limit: number,
+): Promise<{ data: any[]; hasMore: boolean }> {
+  if (minRating === null) {
+    const hasMore = components.length > limit;
+    return { data: components.slice(0, limit), hasMore };
+  }
+
+  const filtered = await filterByRating(components, minRating);
+  const hasMore = filtered.length > limit;
+  return { data: filtered.slice(0, limit), hasMore };
+}
+
+async function filterByRating(components: any[], minRating: number): Promise<any[]> {
   if (components.length === 0) return [];
 
   const componentIds = components.map(c => c.id);
 
-  // Get average ratings for all components
   const { data: ratings } = await supabase
     .from("ratings")
     .select("component_id, rating")
     .in("component_id", componentIds);
 
   if (!ratings || ratings.length === 0) {
-    // No ratings = only return if minRating is 0
-    return minRating === 0 ? components : [];
+    return [];
   }
 
-  // Calculate average rating per component
-  const ratingMap = new Map<string, number>();
-  const countMap = new Map<string, number>();
+  // Compute average rating per component
+  const ratingSum = new Map<string, number>();
+  const ratingCount = new Map<string, number>();
 
-  ratings.forEach(r => {
-    const current = ratingMap.get(r.component_id) || 0;
-    const count = countMap.get(r.component_id) || 0;
-    ratingMap.set(r.component_id, current + r.rating);
-    countMap.set(r.component_id, count + 1);
-  });
+  for (const r of ratings) {
+    ratingSum.set(r.component_id, (ratingSum.get(r.component_id) ?? 0) + r.rating);
+    ratingCount.set(r.component_id, (ratingCount.get(r.component_id) ?? 0) + 1);
+  }
 
-  // Calculate averages and filter
   return components.filter(component => {
-    const totalRating = ratingMap.get(component.id);
-    const count = countMap.get(component.id);
-
-    if (!totalRating || !count) {
-      return minRating === 0; // No ratings = only include if minRating is 0
-    }
-
-    const avgRating = totalRating / count;
-    return avgRating >= minRating;
+    const sum = ratingSum.get(component.id);
+    const count = ratingCount.get(component.id);
+    if (sum === undefined || count === undefined) return false;
+    return sum / count >= minRating;
   });
 }
