@@ -10,6 +10,7 @@ export const NAV_PATHS = [
   "/parity",
   "/board",
   "/roadmap",
+  "/ai-chat",
   "/memory",
 ] as const;
 
