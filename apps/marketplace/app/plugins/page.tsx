@@ -1,26 +1,10 @@
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
-import type { Component, ComponentType, TrustTier } from "@/lib/types";
+import type { Component } from "@/lib/types";
 import { TrustBadge } from "@/app/components/TrustBadge";
 import { StarRating } from "@/app/components/StarRating";
+import { FilterPanel } from "@/app/components/FilterPanel";
 
-const CATEGORIES = [
-  { slug: "research-knowledge", name: "Research & Knowledge" },
-  { slug: "code-quality", name: "Code Quality" },
-  { slug: "data-engineering", name: "Data Engineering" },
-  { slug: "documentation", name: "Documentation" },
-  { slug: "devops", name: "DevOps & Shipping" },
-  { slug: "productivity", name: "Productivity" },
-];
-
-const COMPONENT_TYPES: ComponentType[] = [
-  "skill",
-  "agent",
-  "hook",
-  "script",
-  "knowledge",
-  "rules",
-];
 
 interface SearchParams {
   q?: string;
@@ -175,85 +159,12 @@ export default async function PluginsPage({
 
       <div className="flex gap-8">
         {/* Sidebar filters */}
-        <aside className="hidden w-52 shrink-0 space-y-6 lg:block">
-          {/* Category filter */}
-          <div>
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400">
-              Category
-            </h3>
-            <ul className="space-y-1">
-              {CATEGORIES.map((cat) => (
-                <li key={cat.slug}>
-                  <Link
-                    href={buildUrl({
-                      category:
-                        selectedCategory === cat.slug ? "" : cat.slug,
-                    })}
-                    className={`block rounded-md px-3 py-1.5 text-sm transition-colors ${
-                      selectedCategory === cat.slug
-                        ? "bg-violet-500/20 text-violet-400"
-                        : "text-gray-400 hover:text-gray-200"
-                    }`}
-                  >
-                    {cat.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Type filter */}
-          <div>
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400">
-              Type
-            </h3>
-            <ul className="space-y-1">
-              {COMPONENT_TYPES.map((t) => (
-                <li key={t}>
-                  <Link
-                    href={buildUrl({
-                      type: selectedType === t ? "" : t,
-                    })}
-                    className={`block rounded-md px-3 py-1.5 text-sm capitalize transition-colors ${
-                      selectedType === t
-                        ? "bg-violet-500/20 text-violet-400"
-                        : "text-gray-400 hover:text-gray-200"
-                    }`}
-                  >
-                    {t}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Trust tier filter */}
-          <div>
-            <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400">
-              Trust Tier
-            </h3>
-            <ul className="space-y-1">
-              {(["official", "verified", "community"] as TrustTier[]).map(
-                (tier) => (
-                  <li key={tier}>
-                    <Link
-                      href={buildUrl({
-                        trust: selectedTrust === tier ? "" : tier,
-                      })}
-                      className={`block rounded-md px-3 py-1.5 text-sm capitalize transition-colors ${
-                        selectedTrust === tier
-                          ? "bg-violet-500/20 text-violet-400"
-                          : "text-gray-400 hover:text-gray-200"
-                      }`}
-                    >
-                      {tier}
-                    </Link>
-                  </li>
-                ),
-              )}
-            </ul>
-          </div>
-        </aside>
+        <FilterPanel
+          selectedCategory={selectedCategory}
+          selectedType={selectedType}
+          selectedTrust={selectedTrust}
+          buildUrl={buildUrl}
+        />
 
         {/* Plugin list */}
         <div className="flex-1">
