@@ -72,17 +72,10 @@ fn xml_escape(s: &str) -> String {
         .replace('"', "&quot;")
 }
 
-fn generate_plist(node_path: &str, server_dir: &str, log_dir: &str, anthropic_key: Option<&str>) -> String {
+fn generate_plist(node_path: &str, server_dir: &str, log_dir: &str) -> String {
     let node_path = xml_escape(node_path);
     let server_dir = xml_escape(server_dir);
     let log_dir = xml_escape(log_dir);
-    let anthropic_key_entry = match anthropic_key {
-        Some(k) if !k.is_empty() => format!(
-            "\n    <key>ANTHROPIC_API_KEY</key>\n    <string>{}</string>",
-            xml_escape(k)
-        ),
-        _ => String::new(),
-    };
     format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -121,7 +114,7 @@ fn generate_plist(node_path: &str, server_dir: &str, log_dir: &str, anthropic_ke
   <key>EnvironmentVariables</key>
   <dict>
     <key>BOARD_PORT</key>
-    <string>4800</string>{anthropic_key_entry}
+    <string>4800</string>
   </dict>
 </dict>
 </plist>"#
@@ -146,8 +139,7 @@ pub fn board_server_install() -> Result<String, String> {
         .map_err(|_| "Failed to create log directory".to_string())?;
     let log_dir_str = log_dir.to_string_lossy().to_string();
 
-    let anthropic_key = std::env::var("ANTHROPIC_API_KEY").ok();
-    let plist_content = generate_plist(&node_path, &server_dir_str, &log_dir_str, anthropic_key.as_deref());
+    let plist_content = generate_plist(&node_path, &server_dir_str, &log_dir_str);
     let plist = plist_path();
 
     std::fs::write(&plist, &plist_content)

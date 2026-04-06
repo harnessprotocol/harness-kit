@@ -63,7 +63,9 @@ function buildClient(): Anthropic {
   // Fall back to Claude Code's stored OAuth token
   const creds = readKeychainToken();
   if (creds) {
-    if (creds.expiresAt < Date.now()) {
+    // expiresAt may be in ms (JS standard) or seconds (OAuth standard) — normalise to ms
+    const expiresAtMs = creds.expiresAt > 1e12 ? creds.expiresAt : creds.expiresAt * 1000;
+    if (expiresAtMs < Date.now()) {
       throw new Error('Claude Code OAuth token has expired. Re-authenticate with: claude /login');
     }
     return new Anthropic({ authToken: creds.accessToken });

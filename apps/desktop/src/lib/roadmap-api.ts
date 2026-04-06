@@ -1,4 +1,10 @@
 import { apiFetch, BOARD_SERVER_BASE } from './board-api';
+import type {
+  Roadmap,
+  RoadmapFeature,
+  CompetitorAnalysis,
+  Competitor,
+} from './roadmap-types';
 
 /** Fetch that returns null on 404 instead of throwing. */
 async function apiFetchOrNull<T>(path: string): Promise<T | null> {
@@ -10,12 +16,6 @@ async function apiFetchOrNull<T>(path: string): Promise<T | null> {
   }
   return res.json() as Promise<T>;
 }
-import type {
-  Roadmap,
-  RoadmapFeature,
-  CompetitorAnalysis,
-  Competitor,
-} from './roadmap-types';
 
 export type GenerationPhase = 'analyzing' | 'generating' | 'saving' | 'done';
 
@@ -30,13 +30,9 @@ export function streamRoadmapGeneration(
   slug: string,
   onEvent: (event: GenerationEvent) => void,
 ): () => void {
+  // EventSource only supports GET — use fetch with manual SSE parsing for POST
   const url = `${BOARD_SERVER_BASE}/api/v1/projects/${slug}/roadmap/generate`;
   let aborted = false;
-
-  const es = new EventSource(url);
-
-  // EventSource doesn't support POST — use fetch with SSE manually instead
-  es.close();
 
   const controller = new AbortController();
   const { signal } = controller;
