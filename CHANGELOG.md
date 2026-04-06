@@ -25,6 +25,7 @@
 
 ### Changed
 
+- **Board: task execution permission mode** — Claude Code harness now uses `--permission-mode auto` instead of `--allowedTools Read,Grep,Glob,Agent,Skill`. Auto mode applies AI classifiers to approve non-destructive actions without blocking for human confirmation, eliminating friction on standard coding operations (writes, edits, shell commands) while preserving safety guardrails.
 - **Plugin renamed: `capture-session` → `capture`** — the slash command is now `/capture`. Staging file (`session-staging.md`) unchanged.
 - **Plugin renamed: `data-lineage` → `lineage`** — the slash command is now `/lineage`. SVG output filename pattern unchanged.
 - **Plugin renamed: `pull-request-sweep` → `pr-sweep`** — the slash command is now `/pr-sweep`.
