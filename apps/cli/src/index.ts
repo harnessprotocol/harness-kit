@@ -3,6 +3,7 @@ import { validateCommand } from "./commands/validate.js";
 import { compileCommand } from "./commands/compile.js";
 import { detectCommand } from "./commands/detect.js";
 import { initCommand } from "./commands/init.js";
+import { scanCommand } from "./commands/scan.js";
 import {
   listOrganizations,
   createOrganization,
@@ -69,6 +70,21 @@ program
   .argument("[path]", "Output path for harness.yaml", "harness.yaml")
   .action(async (path: string) => {
     await initCommand(path);
+  });
+
+program
+  .command("scan")
+  .description("Run security scan on a plugin directory")
+  .argument("[path]", "Path to plugin directory", ".")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  harness-kit scan                        Scan current directory
+  harness-kit scan ./plugins/research     Scan a specific plugin`,
+  )
+  .action(async (path: string) => {
+    await scanCommand(path);
   });
 
 const orgCommand = program
