@@ -31,13 +31,9 @@ export const BUILTIN_HARNESSES: HarnessDefinition[] = [
     name: "Claude Code",
     command: "claude",
     buildCommand: (prompt, model) => {
-      // Interactive mode with pre-approved tools so the user doesn't have to
-      // click through permission prompts for every standard coding tool.
-      const allowedTools = [
-        'Read', 'Grep', 'Glob',
-        'Agent', 'Skill',
-      ].join(',');
-      const parts = ["claude", shellQuote(prompt), "--allowedTools", allowedTools];
+      // Auto mode uses AI classifiers to approve non-destructive actions without
+      // blocking on human approval, while still enforcing safety guardrails.
+      const parts = ["claude", shellQuote(prompt), "--permission-mode", "auto"];
       if (model) parts.push("--model", shellQuote(model));
       return parts.join(" ");
     },

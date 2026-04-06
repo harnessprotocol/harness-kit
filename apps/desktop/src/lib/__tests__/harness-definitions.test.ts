@@ -48,6 +48,36 @@ describe("shellQuote", () => {
   it("quotes strings with pipes", () => {
     expect(shellQuote("a | b")).toBe("'a | b'");
   });
+
+  it("strips null bytes before quoting", () => {
+    // Null bytes can truncate shell arguments and enable injection
+    expect(shellQuote("hello\0world")).toBe("helloworld");
+    expect(shellQuote("hello\0 world")).toBe("'hello world'");
+    // A lone null byte strips to an empty string (empty-check runs before strip)
+    expect(shellQuote("\0")).toBe("");
+  });
+
+  it("quotes strings containing newlines", () => {
+    // Newlines are safe inside single quotes (valid POSIX multi-line strings)
+    expect(shellQuote("line1\nline2")).toBe("'line1\nline2'");
+  });
+
+  it("quotes strings containing carriage returns", () => {
+    expect(shellQuote("line1\rline2")).toBe("'line1\rline2'");
+  });
+
+  it("quotes compound injection attempts — semicolons are enclosed in single quotes", () => {
+    // The result must wrap everything in single quotes so `;` is not a shell
+    // command separator. POSIX: content inside '...' is always literal.
+    // Input: '; rm -rf /; echo '
+    // Output: ''\''; rm -rf /; echo '\''' — the semicolons are inside '...' sections
+    const result = shellQuote("'; rm -rf /; echo '");
+    expect(result).toBe("''\\''; rm -rf /; echo '\\'''");
+  });
+
+  it("quotes strings with $() command substitution", () => {
+    expect(shellQuote("$(whoami)")).toBe("'$(whoami)'");
+  });
 });
 
 // ── buildInvokeCommand ──────────────────────────────────────
@@ -57,21 +87,21 @@ describe("buildInvokeCommand", () => {
 
   // All harnesses use interactive mode (no -p) for full TUI with live streaming.
 
-  it("builds claude command with prompt and allowedTools", () => {
+  it("builds claude command with prompt and auto permission mode", () => {
     expect(buildInvokeCommand("claude", "fix the bug")).toBe(
-      "claude 'fix the bug' --allowedTools Read,Grep,Glob,Agent,Skill",
+      "claude 'fix the bug' --permission-mode auto",
     );
   });
 
-  it("builds claude command with prompt, allowedTools, and model", () => {
+  it("builds claude command with prompt, auto permission mode, and model", () => {
     expect(buildInvokeCommand("claude", "fix it", "claude-sonnet-4-6")).toBe(
-      "claude 'fix it' --allowedTools Read,Grep,Glob,Agent,Skill --model claude-sonnet-4-6",
+      "claude 'fix it' --permission-mode auto --model claude-sonnet-4-6",
     );
   });
 
   it("quotes claude prompt with special characters", () => {
     expect(buildInvokeCommand("claude", "what's this?", "opus")).toBe(
-      "claude 'what'\\''s this?' --allowedTools Read,Grep,Glob,Agent,Skill --model opus",
+      "claude 'what'\\''s this?' --permission-mode auto --model opus",
     );
   });
 
@@ -117,6 +147,20 @@ describe("buildInvokeCommand", () => {
     );
   });
 
+  // ── OpenCode ─────────────────────────────────────────────
+
+  it("builds opencode command with positional prompt", () => {
+    expect(buildInvokeCommand("opencode", "add auth")).toBe(
+      "opencode 'add auth'",
+    );
+  });
+
+  it("builds opencode command with model", () => {
+    expect(buildInvokeCommand("opencode", "refactor", "gpt-4o")).toBe(
+      "opencode refactor --model gpt-4o",
+    );
+  });
+
   // ── Unknown harness ─────────────────────────────────────
 
   it("returns null for unknown harness", () => {
@@ -132,5 +176,45 @@ describe("buildInvokeCommand", () => {
   it("all harnesses have unique ids", () => {
     const ids = BUILTIN_HARNESSES.map((h) => h.id);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  // ── Claude permission-mode invariants ────────────────────────
+  // Regression tests: these fail if --permission-mode auto is ever
+  // swapped back for --dangerously-skip-permissions.
+
+  it("claude command always contains --permission-mode auto", () => {
+    const cmd = buildInvokeCommand("claude", "do something");
+    expect(cmd).toContain("--permission-mode auto");
+  });
+
+  it("claude command never contains --dangerously-skip-permissions", () => {
+    const cmd = buildInvokeCommand("claude", "do something");
+    expect(cmd).not.toContain("--dangerously-skip-permissions");
+  });
+
+  it("claude command with model still enforces --permission-mode auto", () => {
+    const cmd = buildInvokeCommand("claude", "task", "claude-opus-4-6");
+    expect(cmd).toContain("--permission-mode auto");
+    expect(cmd).not.toContain("--dangerously-skip-permissions");
+  });
+
+  // ── Model injection prevention ───────────────────────────────
+  // A model value that looks like a shell flag must be quoted so the
+  // shell receives it as a single argument, not separate tokens.
+
+  it("model with embedded flags is shell-quoted, not treated as real flags", () => {
+    const cmd = buildInvokeCommand("claude", "task", "sonnet --dangerously-skip-permissions");
+    expect(cmd).toContain("'sonnet --dangerously-skip-permissions'");
+    expect(cmd).toContain("--permission-mode auto");
+  });
+
+  it("model with spaces is shell-quoted", () => {
+    const cmd = buildInvokeCommand("claude", "task", "claude sonnet");
+    expect(cmd).toContain("'claude sonnet'");
+  });
+
+  it("model with dollar sign is shell-quoted to prevent variable expansion", () => {
+    const cmd = buildInvokeCommand("claude", "task", "$MODEL");
+    expect(cmd).toContain("'$MODEL'");
   });
 });
