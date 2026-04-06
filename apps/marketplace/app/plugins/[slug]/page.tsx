@@ -247,9 +247,7 @@ export default async function PluginDetailPage({
       })
     : null;
 
-  // TODO: Replace with actual security data from database (Phase 4)
-  // For now, using default/empty permissions until database schema is updated
-  const securityPermissions: SecurityPermissionsSummary = {
+  const securityPermissions: SecurityPermissionsSummary = component.security_permissions ?? {
     network_access: false,
     file_writes: false,
     env_var_reads: [],
@@ -297,7 +295,7 @@ export default async function PluginDetailPage({
                 </Link>
               )}
               <TrustBadge tier={component.trust_tier} />
-              <SecurityBadge status="not-scanned" />
+              <SecurityBadge status={component.security_scan_status ?? "not_scanned"} />
               <span className="rounded-full border border-[#2a2a2e] px-2.5 py-0.5 text-xs capitalize text-gray-400">
                 {component.type}
               </span>

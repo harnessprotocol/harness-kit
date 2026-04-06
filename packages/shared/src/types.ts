@@ -36,6 +36,10 @@ export interface Component {
   review_count?: number;
   created_at: string;
   updated_at: string;
+  security_scan_status?: SecurityScanStatus;
+  security_scan_date?: string | null;
+  security_findings?: SecurityFinding[];
+  security_permissions?: SecurityPermissionsSummary;
 }
 
 export interface Profile {
