@@ -88,11 +88,13 @@ export type ExecutionStatus = 'idle' | 'running' | 'completed' | 'failed' | 'sto
 
 export interface TaskExecution {
   status: ExecutionStatus;
-  harness_id: string;
+  harness_id?: string;
   model?: string;
   started_at?: string;
   finished_at?: string;
   exit_code?: number;
+  phase?: string;
+  thread_id?: string;
 }
 
 export interface Subtask {
@@ -101,6 +103,7 @@ export interface Subtask {
   description?: string;
   status: SubtaskStatus;
   files: string[];
+  phase?: string;
 }
 
 export interface Comment {
