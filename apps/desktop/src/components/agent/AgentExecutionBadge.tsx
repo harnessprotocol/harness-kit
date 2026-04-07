@@ -2,6 +2,8 @@
 // Ported from docs/plans/agent-ui-mock.html — .mini-badge, .phase-dot, .phase-label,
 // .mini-progress, .mini-progress-fill
 
+import { useEffect, useState } from 'react';
+import { agentApi } from '../../lib/agent-api';
 
 type Phase = 'spec' | 'planning' | 'coding' | 'qa_review' | 'qa_fixing' | 'done';
 
@@ -26,11 +28,30 @@ const PHASE_LABELS: Record<Phase | string, string> = {
 interface Props {
   phase: string;
   progress: number;
+  /** Optional: when provided, subscribes to WS for live progress updates */
+  taskId?: number;
 }
 
-export function AgentExecutionBadge({ phase, progress }: Props) {
-  const color = PHASE_COLORS[phase] ?? '#6B7FA0';
-  const label = PHASE_LABELS[phase] ?? phase;
+export function AgentExecutionBadge({ phase: phaseProp, progress: progressProp, taskId }: Props) {
+  const [livePhase, setLivePhase] = useState(phaseProp);
+  const [liveProgress, setLiveProgress] = useState(progressProp);
+
+  // Subscribe to WS for live progress if taskId is provided
+  useEffect(() => {
+    if (!taskId) return;
+    setLivePhase(phaseProp);
+    setLiveProgress(progressProp);
+    const unsub = agentApi.subscribe(taskId, (event) => {
+      if (event.type === 'agent_phase') {
+        setLivePhase(event.phase);
+        setLiveProgress(event.progress);
+      }
+    });
+    return unsub;
+  }, [taskId, phaseProp, progressProp]);
+
+  const color = PHASE_COLORS[livePhase] ?? '#6B7FA0';
+  const label = PHASE_LABELS[livePhase] ?? livePhase;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%' }}>
@@ -69,7 +90,7 @@ export function AgentExecutionBadge({ phase, progress }: Props) {
         <div style={{
           height: '100%',
           borderRadius: 2,
-          width: `${Math.min(100, Math.max(0, progress))}%`,
+          width: `${Math.min(100, Math.max(0, liveProgress))}%`,
           background: color,
           boxShadow: `0 0 8px ${color}60`,
           transition: 'width .4s ease',

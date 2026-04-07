@@ -490,7 +490,7 @@ export function TaskDetailDialog({ task, project, onClose, onTaskUpdated, repoUr
 
               {/* ─── OVERVIEW TAB ─── */}
               {activeTab === 'overview' && isAgentTask && (
-                <OverviewTab task={task} projectSlug={project.slug} currentPhase={agentEventLog.phase} />
+                <OverviewTab task={task} projectSlug={project.slug} currentPhase={agentEventLog.phase} onTaskUpdated={onTaskUpdated} />
               )}
 
               {activeTab === 'overview' && !isAgentTask && (

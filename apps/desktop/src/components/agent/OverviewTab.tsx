@@ -6,6 +6,7 @@
 
 import React, { useState } from 'react';
 import { agentApi } from '../../lib/agent-api';
+import { api } from '../../lib/board-api';
 import type { Task } from '../../lib/board-api';
 
 const PHASES = ['spec', 'planning', 'coding', 'qa_review', 'done'] as const;
@@ -25,25 +26,51 @@ interface Props {
   task: Task;
   projectSlug: string;
   currentPhase: string | null;
+  onTaskUpdated?: () => void;
 }
 
-export function OverviewTab({ task, projectSlug, currentPhase }: Props) {
+export function OverviewTab({ task, projectSlug, currentPhase, onTaskUpdated }: Props) {
   const [steering, setSteering] = useState('');
+  const [sending, setSending] = useState(false);
+  const [steerError, setSteerError] = useState<string | null>(null);
 
   const curIdx = ALL_PHASES.indexOf(currentPhase ?? '');
   const active = task.subtasks.find(s => s.status === 'in_progress');
+  const isPaused = task.execution?.status === 'paused';
+
+  const serialTask = {
+    id: task.id, title: task.title, description: task.description,
+    subtasks: task.subtasks.map(s => ({ id: s.id, title: s.title, status: s.status, phase: s.phase })),
+    worktree_path: task.worktree_path, default_model: task.default_model,
+  };
 
   const handleSteer = async () => {
-    if (!steering.trim()) return;
-    await agentApi.steer(projectSlug, task.id, {
-      id: task.id,
-      title: task.title,
-      description: task.description,
-      subtasks: task.subtasks.map(s => ({ id: s.id, title: s.title, status: s.status, phase: s.phase })),
-      worktree_path: task.worktree_path,
-      default_model: task.default_model,
-    }, steering);
-    setSteering('');
+    if (!steering.trim() || sending) return;
+    setSending(true);
+    setSteerError(null);
+    try {
+      const res = await agentApi.steer(projectSlug, task.id, serialTask, steering);
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      setSteering('');
+    } catch (err) {
+      setSteerError(err instanceof Error ? err.message : 'Failed to send message');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handlePause = async () => {
+    await agentApi.pause(projectSlug, task.id);
+    await api.tasks.updateExecution(projectSlug, task.id, { status: 'paused' }).catch(console.error);
+    onTaskUpdated?.();
+  };
+
+  const handleResume = async () => {
+    await agentApi.resume(projectSlug, serialTask);
+    await api.tasks.updateExecution(projectSlug, task.id, {
+      status: 'running', phase: currentPhase ?? 'coding',
+    }).catch(console.error);
+    onTaskUpdated?.();
   };
 
   return (
@@ -183,7 +210,7 @@ export function OverviewTab({ task, projectSlug, currentPhase }: Props) {
           {/* .send-btn */}
           <button
             onClick={handleSteer}
-            disabled={!steering.trim()}
+            disabled={!steering.trim() || sending}
             style={{
               padding: '8px 14px',
               background: '#4B9EFF',
@@ -192,17 +219,25 @@ export function OverviewTab({ task, projectSlug, currentPhase }: Props) {
               color: '#fff',
               fontSize: 12,
               fontWeight: 600,
-              cursor: 'pointer',
+              cursor: steering.trim() && !sending ? 'pointer' : 'not-allowed',
               whiteSpace: 'nowrap',
               fontFamily: 'IBM Plex Sans, sans-serif',
               transition: 'opacity .15s',
               letterSpacing: '.01em',
-              opacity: steering.trim() ? 1 : 0.5,
+              opacity: steering.trim() && !sending ? 1 : 0.5,
             }}
           >
-            Send →
+            {sending ? '…' : 'Send →'}
           </button>
         </div>
+        {steerError && (
+          <div style={{
+            marginTop: 6, fontSize: 11, color: '#F87171',
+            fontFamily: 'IBM Plex Sans, sans-serif',
+          }}>
+            {steerError}
+          </div>
+        )}
       </div>
 
       {/* Control buttons — .control-btns */}
@@ -222,20 +257,38 @@ export function OverviewTab({ task, projectSlug, currentPhase }: Props) {
         >
           ↩ Take Over
         </button>
-        {/* .ctrl-btn.pause (no-op placeholder) */}
-        <button
-          style={{
-            padding: '8px 14px', borderRadius: 6, fontSize: 12, fontWeight: 500,
-            cursor: 'pointer', fontFamily: 'IBM Plex Sans, sans-serif',
-            transition: 'all .15s', border: '1px solid rgba(251,191,36,.2)',
-            background: 'rgba(251,191,36,.08)', color: '#FBBF24',
-            letterSpacing: '.01em',
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(251,191,36,.15)'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(251,191,36,.08)'; }}
-        >
-          ⏸ Pause
-        </button>
+        {/* .ctrl-btn.pause / .ctrl-btn.resume */}
+        {isPaused ? (
+          <button
+            onClick={handleResume}
+            style={{
+              padding: '8px 14px', borderRadius: 6, fontSize: 12, fontWeight: 500,
+              cursor: 'pointer', fontFamily: 'IBM Plex Sans, sans-serif',
+              transition: 'all .15s', border: '1px solid rgba(52,211,153,.3)',
+              background: 'rgba(52,211,153,.1)', color: '#34D399',
+              letterSpacing: '.01em',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(52,211,153,.18)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(52,211,153,.1)'; }}
+          >
+            ▶ Resume
+          </button>
+        ) : (
+          <button
+            onClick={handlePause}
+            style={{
+              padding: '8px 14px', borderRadius: 6, fontSize: 12, fontWeight: 500,
+              cursor: 'pointer', fontFamily: 'IBM Plex Sans, sans-serif',
+              transition: 'all .15s', border: '1px solid rgba(251,191,36,.2)',
+              background: 'rgba(251,191,36,.08)', color: '#FBBF24',
+              letterSpacing: '.01em',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(251,191,36,.15)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'rgba(251,191,36,.08)'; }}
+          >
+            ⏸ Pause
+          </button>
+        )}
         {/* .ctrl-btn.stop */}
         <button
           onClick={() => agentApi.stop(projectSlug, task.id)}

@@ -81,6 +81,7 @@ export function TaskCard({ task, onClick, repoUrl }: Props) {
         <AgentExecutionBadge
           phase={task.execution.phase}
           progress={0}
+          taskId={task.execution.thread_id ? task.id : undefined}
         />
       )}
 

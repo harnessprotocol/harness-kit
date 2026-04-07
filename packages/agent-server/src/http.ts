@@ -1,7 +1,7 @@
 // packages/agent-server/src/http.ts
 import express from 'express';
 import { z } from 'zod';
-import { startAgent, stopAgent, steerAgent } from './runner/runner.js';
+import { startAgent, stopAgent, steerAgent, pauseAgent, resumeAgent } from './runner/runner.js';
 import { isRunning } from './runner/thread-manager.js';
 
 const SerializableTaskSchema = z.object({
@@ -49,6 +49,24 @@ export function createServer() {
   app.post(`${base}/stop`, (req, res) => {
     stopAgent(Number(req.params.taskId));
     res.json({ ok: true });
+  });
+
+  // POST pause — abort the running graph; checkpoint preserves state for resume
+  app.post(`${base}/pause`, (req, res) => {
+    pauseAgent(Number(req.params.taskId));
+    res.json({ ok: true });
+  });
+
+  // POST resume — restart graph from checkpoint
+  app.post(`${base}/resume`, async (req, res) => {
+    const { slug } = req.params;
+    const parsed = SerializableTaskSchema.safeParse(req.body.task);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
+    const opts = req.body.opts ?? {};
+    try {
+      void resumeAgent(slug, parsed.data, opts);
+      res.json({ ok: true });
+    } catch (e) { res.status(400).json({ error: String(e) }); }
   });
 
   // POST steer

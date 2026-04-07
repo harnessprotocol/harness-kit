@@ -60,6 +60,18 @@ export const agentApi = {
     return fetch(url(slug, taskId, 'stop'), { method: 'POST' });
   },
 
+  pause(slug: string, taskId: number) {
+    return fetch(url(slug, taskId, 'pause'), { method: 'POST' });
+  },
+
+  resume(slug: string, task: SerializableTask, opts?: StartAgentOptions) {
+    return fetch(url(slug, task.id, 'resume'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task, opts }),
+    });
+  },
+
   steer(slug: string, taskId: number, task: SerializableTask, message: string) {
     return fetch(url(slug, taskId, 'steer'), {
       method: 'POST',

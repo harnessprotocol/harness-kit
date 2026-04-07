@@ -39,7 +39,11 @@ export function buildClientOptions(): { apiKey?: string; authToken?: string } {
   if (!creds) throw new Error(
     'No Anthropic credentials. Set ANTHROPIC_API_KEY or authenticate Claude Code.'
   );
-  return creds.type === 'apiKey'
-    ? { apiKey: creds.value }
-    : { apiKey: creds.value }; // LangChain uses apiKey for both
+  if (creds.type === 'apiKey') {
+    return { apiKey: creds.value };
+  }
+  // Claude Code OAuth access tokens work with @langchain/anthropic's apiKey field when
+  // pointed at the claude.ai API gateway. The token is sent as x-api-key, which the gateway
+  // accepts. This mirrors how roadmap-generator.ts uses it in board-server.
+  return { apiKey: creds.value };
 }
