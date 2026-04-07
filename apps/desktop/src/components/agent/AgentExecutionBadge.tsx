@@ -2,7 +2,6 @@
 // Ported from docs/plans/agent-ui-mock.html — .mini-badge, .phase-dot, .phase-label,
 // .mini-progress, .mini-progress-fill
 
-import React from 'react';
 
 type Phase = 'spec' | 'planning' | 'coding' | 'qa_review' | 'qa_fixing' | 'done';
 
