@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   readPermissions, updatePermissions,
   listSecurityPresets, applySecurityPreset,
+  detectClaudeAccount,
 } from "../../lib/tauri";
 import type { PermissionsState, SecurityPreset } from "@harness-kit/shared";
 import {
@@ -9,6 +10,7 @@ import {
   getAllowedTools, setAllowedTools,
   getHarnessPermissionOverrides, setHarnessPermissionOverrides,
   resetPermissionDefaults,
+  getAutoModeUnlocked, setAutoModeUnlocked,
   type PermissionMode, type HarnessPermissionOverride,
 } from "../../lib/preferences";
 import { BUILTIN_HARNESSES } from "../../lib/harness-definitions";
@@ -281,7 +283,7 @@ interface ModeCardProps {
   onClick: () => void;
 }
 
-function ModeCard({ id, label, flag, description, icon, accentColor, selected, note, onClick }: ModeCardProps) {
+function ModeCard({ id: _id, label, flag, description, icon, accentColor, selected, note, onClick }: ModeCardProps) {
   return (
     <button
       onClick={onClick}
@@ -358,6 +360,84 @@ function ModeCard({ id, label, flag, description, icon, accentColor, selected, n
   );
 }
 
+// ── Tool entry helpers ────────────────────────────────────────
+
+function parseToolEntry(entry: string): { name: string; scope: string } {
+  const m = entry.match(/^([A-Za-z]+)\((.+)\)$/);
+  if (m) return { name: m[1], scope: m[2] };
+  return { name: entry, scope: "" };
+}
+
+function buildToolEntry(name: string, scope: string): string {
+  const trimmed = scope.trim();
+  return trimmed ? `${name}(${trimmed})` : name;
+}
+
+// ── Current config summary ────────────────────────────────────
+
+function CurrentConfigSummary({
+  mode, tools, overrides,
+}: {
+  mode: PermissionMode;
+  tools: string[];
+  overrides: Record<string, HarnessPermissionOverride>;
+}) {
+  const overrideCount = Object.values(overrides).filter(
+    (o) => o.mode !== undefined || (o.allowedTools && o.allowedTools.length > 0)
+  ).length;
+
+  const modeColor = mode === "skip" ? "#d97706" : mode === "auto" ? "#3b82f6" : "#16a34a";
+  const modeLabel = mode === "skip" ? "Skip All" : mode === "auto" ? "Auto" : "Allowed Tools";
+
+  let detail: React.ReactNode;
+  if (mode === "skip") {
+    detail = <span style={{ color: "var(--fg-muted)" }}>All tool calls proceed without prompting.</span>;
+  } else if (mode === "auto") {
+    detail = <span style={{ color: "var(--fg-muted)" }}>AI classifiers approve non-destructive actions.</span>;
+  } else if (tools.length === 0) {
+    detail = <span style={{ color: "var(--danger)" }}>No tools selected — all actions will prompt.</span>;
+  } else {
+    detail = (
+      <span style={{ color: "var(--fg-muted)", fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
+        {tools.join("  ·  ")}
+      </span>
+    );
+  }
+
+  return (
+    <div style={{
+      marginBottom: "20px",
+      padding: "10px 14px",
+      borderRadius: "8px",
+      background: "var(--bg-surface)",
+      border: "1px solid var(--border-base)",
+      display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "8px",
+    }}>
+      <span style={{
+        fontSize: "10px", fontVariantCaps: "all-small-caps", letterSpacing: "0.05em",
+        color: "var(--fg-subtle)", fontWeight: 500, flexShrink: 0,
+      }}>
+        Active
+      </span>
+      <span style={{
+        fontSize: "11px", fontWeight: 600, color: modeColor,
+        background: `${modeColor}18`, padding: "1px 8px",
+        borderRadius: "10px", flexShrink: 0,
+      }}>
+        {modeLabel}
+      </span>
+      <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        {detail}
+      </span>
+      {overrideCount > 0 && (
+        <span style={{ fontSize: "11px", color: "var(--fg-subtle)", flexShrink: 0 }}>
+          {overrideCount} harness override{overrideCount > 1 ? "s" : ""}
+        </span>
+      )}
+    </div>
+  );
+}
+
 // ── Allowed tools checklist ───────────────────────────────────
 
 function AllowedToolsSection({
@@ -366,63 +446,147 @@ function AllowedToolsSection({
   tools: string[];
   onChange: (next: string[]) => void;
 }) {
-  function toggle(name: string) {
-    onChange(
-      tools.includes(name)
-        ? tools.filter((t) => t !== name)
-        : [...tools, name],
-    );
+  const activeEntries = tools.map(parseToolEntry);
+  const activeNames = new Set(activeEntries.map((e) => e.name));
+  const inactiveTools = TOOL_NAMES.filter((t) => !activeNames.has(t.name));
+
+  function add(name: string) {
+    onChange([...tools, name]);
+  }
+
+  function remove(name: string) {
+    onChange(tools.filter((t) => parseToolEntry(t).name !== name));
+  }
+
+  function updateScope(name: string, scope: string) {
+    onChange(tools.map((t) => {
+      const parsed = parseToolEntry(t);
+      return parsed.name === name ? buildToolEntry(name, scope) : t;
+    }));
   }
 
   return (
-    <div style={{ marginTop: "12px", paddingLeft: "0" }}>
+    <div style={{ marginTop: "12px" }}>
       <p style={{
         fontSize: "11px", fontWeight: 500, fontVariantCaps: "all-small-caps",
-        letterSpacing: "0.04em", color: "var(--fg-subtle)",
-        margin: "0 0 8px",
+        letterSpacing: "0.04em", color: "var(--fg-subtle)", margin: "0 0 8px",
       }}>
         Allowed without prompting
       </p>
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-        gap: "4px",
-      }}>
-        {TOOL_NAMES.map((tool) => {
-          const checked = tools.includes(tool.name);
-          return (
-            <button
-              key={tool.name}
-              onClick={() => toggle(tool.name)}
-              style={{
-                display: "flex", alignItems: "center", gap: "8px",
-                padding: "6px 10px",
-                borderRadius: "5px",
-                border: "1px solid var(--border-subtle)",
-                background: checked ? "var(--accent-light)" : "var(--bg-base)",
-                cursor: "pointer", textAlign: "left",
-              }}
-            >
-              <div style={{
-                width: 13, height: 13, borderRadius: "3px", flexShrink: 0,
-                border: checked ? "none" : "1.5px solid var(--border-strong)",
-                background: checked ? "var(--accent)" : "transparent",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                color: "#fff",
+
+      {/* Active tools — shown as rows with optional scope input */}
+      {activeEntries.length > 0 && (
+        <div style={{ marginBottom: "10px" }}>
+          {/* Column headers */}
+          <div style={{
+            display: "grid", gridTemplateColumns: "100px 1fr auto",
+            gap: "6px", padding: "0 8px 4px",
+          }}>
+            <span style={{ fontSize: "10px", color: "var(--fg-subtle)", fontVariantCaps: "all-small-caps", letterSpacing: "0.04em" }}>
+              Tool
+            </span>
+            <span style={{ fontSize: "10px", color: "var(--fg-subtle)", fontVariantCaps: "all-small-caps", letterSpacing: "0.04em" }}>
+              Scope pattern (optional)
+            </span>
+          </div>
+
+          {activeEntries.map(({ name, scope }) => {
+            const toolDef = TOOL_NAMES.find((t) => t.name === name);
+            return (
+              <div key={name} style={{
+                display: "grid", gridTemplateColumns: "100px 1fr auto",
+                alignItems: "center", gap: "6px",
+                padding: "5px 8px", marginBottom: "3px",
+                borderRadius: "6px",
+                border: "1px solid rgba(99,102,241,0.2)",
+                background: "var(--accent-light)",
               }}>
-                {checked && <IconCheck />}
+                <span style={{
+                  fontSize: "11px", fontWeight: 600,
+                  color: "var(--accent-text)",
+                  fontFamily: "ui-monospace, monospace",
+                }}>
+                  {name}
+                </span>
+                <input
+                  value={scope}
+                  onChange={(e) => updateScope(name, e.target.value)}
+                  placeholder={
+                    toolDef?.scopeHint
+                      ? `e.g. ${toolDef.scopeHint}`
+                      : "all (leave blank for unrestricted)"
+                  }
+                  style={{
+                    fontSize: "11px", padding: "3px 7px",
+                    borderRadius: "4px",
+                    border: "1px solid var(--border-base)",
+                    background: "var(--bg-base)",
+                    color: "var(--fg-base)",
+                    outline: "none",
+                    fontFamily: "ui-monospace, monospace",
+                    width: "100%",
+                    boxSizing: "border-box",
+                  }}
+                />
+                <button
+                  onClick={() => remove(name)}
+                  title={`Remove ${name}`}
+                  style={{
+                    border: "none", background: "none",
+                    color: "var(--fg-subtle)", cursor: "pointer",
+                    padding: "2px 4px", borderRadius: "3px",
+                    fontSize: "14px", lineHeight: 1,
+                    display: "flex", alignItems: "center",
+                  }}
+                >
+                  <IconRemove />
+                </button>
               </div>
-              <span style={{
-                fontSize: "11px", fontWeight: checked ? 500 : 400,
-                color: checked ? "var(--accent-text)" : "var(--fg-muted)",
-                fontFamily: "ui-monospace, monospace",
-              }}>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Inactive tools — compact add buttons */}
+      {inactiveTools.length > 0 && (
+        <div>
+          <p style={{
+            fontSize: "10px", color: "var(--fg-placeholder)",
+            fontVariantCaps: "all-small-caps", letterSpacing: "0.04em",
+            margin: "0 0 5px",
+          }}>
+            {activeEntries.length > 0 ? "Add another tool" : "Select tools"}
+          </p>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+            {inactiveTools.map((tool) => (
+              <button
+                key={tool.name}
+                onClick={() => add(tool.name)}
+                title={tool.hint}
+                style={{
+                  display: "flex", alignItems: "center", gap: "4px",
+                  padding: "4px 9px",
+                  borderRadius: "5px",
+                  border: "1px solid var(--border-subtle)",
+                  background: "var(--bg-base)",
+                  cursor: "pointer",
+                  fontSize: "11px", color: "var(--fg-muted)",
+                  fontFamily: "ui-monospace, monospace",
+                }}
+              >
+                <span style={{ fontSize: "10px", opacity: 0.6 }}>+</span>
                 {tool.name}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {activeEntries.length === 0 && inactiveTools.length === 0 && (
+        <p style={{ fontSize: "11px", color: "var(--fg-placeholder)", margin: 0 }}>
+          All tools are allowed. Remove some to restrict.
+        </p>
+      )}
     </div>
   );
 }
@@ -552,11 +716,15 @@ export default function PermissionsPage() {
   const [presets, setPresets] = useState<SecurityPreset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tauriAvailable] = useState(() =>
+    typeof window !== "undefined" && !!(window as unknown as Record<string, unknown>).__TAURI_INTERNALS__
+  );
   const [saving, setSaving] = useState(false);
   const [confirmPreset, setConfirmPreset] = useState<SecurityPreset | null>(null);
   const [dirty, setDirty] = useState(false);
 
   // HarnessKit permission mode (localStorage)
+  const [autoUnlocked, setAutoUnlockedState] = useState<boolean>(getAutoModeUnlocked);
   const [mode, setMode] = useState<PermissionMode>(getPermissionMode);
   const [allowedTools, setAllowedToolsState] = useState<string[]>(getAllowedTools);
   const [overrides, setOverridesState] = useState<Record<string, HarnessPermissionOverride>>(
@@ -564,6 +732,26 @@ export default function PermissionsPage() {
   );
 
   useEffect(() => {
+    // Tauri APIs are only available in the desktop app. Skip gracefully in browser.
+    if (!tauriAvailable) {
+      setLoading(false);
+      return;
+    }
+    // Detect account plan and auto-unlock Auto mode if eligible.
+    detectClaudeAccount().then((info) => {
+      if (info.auto_mode_available) {
+        setAutoUnlockedState(true);
+        setAutoModeUnlocked(true);
+      } else {
+        // Revoke if account no longer qualifies (e.g. plan downgrade).
+        setAutoUnlockedState(false);
+        setAutoModeUnlocked(false);
+        if (getPermissionMode() === "auto") handleModeChange("skip");
+      }
+    }).catch(() => {
+      // claude CLI not available or not logged in — leave as stored preference.
+    });
+
     Promise.all([readPermissions(), listSecurityPresets()])
       .then(([perms, presetList]) => {
         setPermissions(perms);
@@ -663,33 +851,11 @@ export default function PermissionsPage() {
     }
   }
 
-  if (loading) {
-    return (
-      <div style={{ padding: "20px 24px" }}>
-        <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div style={{ padding: "20px 24px" }}>
-        <h1 className="text-title" style={{ margin: "0 0 16px" }}>Permissions</h1>
-        <div style={{
-          background: "var(--bg-surface)", border: "1px solid var(--danger-light)",
-          borderLeft: "3px solid var(--danger)", borderRadius: "8px",
-          padding: "10px 14px", fontSize: "13px", color: "var(--danger)",
-        }}>
-          {error}
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div style={{ padding: "20px 24px", maxWidth: "700px" }}>
       {/* ── Page header ── */}
-      <div style={{ marginBottom: "24px" }}>
+      <div style={{ marginBottom: "16px" }}>
         <h1 style={{
           fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px",
           color: "var(--fg-base)", margin: "0 0 3px",
@@ -700,6 +866,9 @@ export default function PermissionsPage() {
           Control how much autonomy Claude and other harnesses have when running tasks.
         </p>
       </div>
+
+      {/* ── Active configuration summary ── */}
+      <CurrentConfigSummary mode={mode} tools={allowedTools} overrides={overrides} />
 
       {/* ── Permission Mode section ── */}
       <section style={{ marginBottom: "28px" }}>
@@ -721,17 +890,18 @@ export default function PermissionsPage() {
             selected={mode === "skip"}
             onClick={() => handleModeChange("skip")}
           />
-          <ModeCard
-            id="auto"
-            label="Auto"
-            flag="--permission-mode auto"
-            description="AI classifiers approve non-destructive actions. Higher-risk operations still prompt."
-            icon={<IconAuto />}
-            accentColor="#3b82f6"
-            selected={mode === "auto"}
-            note="Requires Claude team, enterprise, or API plan"
-            onClick={() => handleModeChange("auto")}
-          />
+          {autoUnlocked && (
+            <ModeCard
+              id="auto"
+              label="Auto"
+              flag="--permission-mode auto"
+              description="AI classifiers approve non-destructive actions. Higher-risk operations still prompt."
+              icon={<IconAuto />}
+              accentColor="#3b82f6"
+              selected={mode === "auto"}
+              onClick={() => handleModeChange("auto")}
+            />
+          )}
           <ModeCard
             id="allowed-tools"
             label="Allowed Tools"
@@ -743,6 +913,7 @@ export default function PermissionsPage() {
             onClick={() => handleModeChange("allowed-tools")}
           />
         </div>
+
 
         {/* Allowed tools checklist — visible when mode is allowed-tools */}
         {mode === "allowed-tools" && (
@@ -776,6 +947,29 @@ export default function PermissionsPage() {
 
       {/* ── Claude settings.json section ── */}
       <section>
+        {!tauriAvailable && (
+          <div style={{
+            background: "var(--bg-surface)", border: "1px solid var(--border-base)",
+            borderLeft: "3px solid var(--border-strong)", borderRadius: "8px",
+            padding: "10px 14px", fontSize: "12px", color: "var(--fg-muted)",
+            marginBottom: "14px",
+          }}>
+            Claude settings.json editing requires the desktop app.
+          </div>
+        )}
+        {tauriAvailable && loading && !error && (
+          <p style={{ fontSize: "12px", color: "var(--fg-subtle)", margin: "0 0 14px" }}>Loading…</p>
+        )}
+        {tauriAvailable && error && (
+          <div style={{
+            background: "var(--bg-surface)", border: "1px solid var(--danger-light)",
+            borderLeft: "3px solid var(--danger)", borderRadius: "8px",
+            padding: "10px 14px", fontSize: "12px", color: "var(--danger)",
+            marginBottom: "14px",
+          }}>
+            {error}
+          </div>
+        )}
         <div style={{ marginBottom: "14px" }}>
           <p style={{
             fontSize: "11px", fontWeight: 500, fontVariantCaps: "all-small-caps",
