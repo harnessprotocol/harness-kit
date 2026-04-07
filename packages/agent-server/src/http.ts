@@ -21,6 +21,17 @@ const SteerBodySchema = z.object({
   message: z.string().min(1).max(4000),
 });
 
+const SerializableTaskSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  description: z.string().optional(),
+  subtasks: z.array(z.object({
+    id: z.number(), title: z.string(), status: z.string(), phase: z.string().optional(),
+  })).default([]),
+  worktree_path: z.string().optional(),
+  default_model: z.string().optional(),
+});
+
 export function createServer() {
   const token = getOrCreateToken();
   const app = express();
