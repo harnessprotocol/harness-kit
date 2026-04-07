@@ -753,6 +753,7 @@ export default function PermissionsPage() {
   );
 
   // HarnessKit permission mode (localStorage)
+  const [autoUnlocked, setAutoUnlockedState] = useState<boolean>(getAutoModeUnlocked);
   const [mode, setMode] = useState<PermissionMode>(getPermissionMode);
   const [allowedTools, setAllowedToolsState] = useState<string[]>(getAllowedTools);
   const [overrides, setOverridesState] = useState<Record<string, HarnessPermissionOverride>>(
