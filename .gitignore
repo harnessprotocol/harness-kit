@@ -49,6 +49,9 @@ apps/cli/dist/
 # Board server
 packages/board-server/dist/
 
+# Agent server
+packages/agent-server/dist/
+
 # Auto Claude data directory
 .auto-claude/
 

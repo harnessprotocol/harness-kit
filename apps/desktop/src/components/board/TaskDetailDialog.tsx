@@ -11,6 +11,7 @@ import { CommentThread } from './CommentThread';
 import { ProgressBar } from './ProgressBar';
 import { SubtaskList } from './SubtaskList';
 import { api } from '../../lib/board-api';
+import { agentApi } from '../../lib/agent-api';
 import { useExecution } from '../../contexts/ExecutionContext';
 import { useAgentEvents } from '../../hooks/useAgentEvents';
 import { LogsTab } from '../agent/LogsTab';
@@ -102,8 +103,10 @@ export function TaskDetailDialog({ task, project, onClose, onTaskUpdated, repoUr
   const rawChunks = task ? execution.getOutput(task.id) : [];
   const terminalId = execData?.terminalId ?? '';
 
-  // Agent event stream (port 4801) — only active when task has a thread_id (agent mode)
-  const isAgentTask = !!(task?.execution?.thread_id);
+  // Agent mode: task has a thread_id from a previous run, OR it's currently running
+  // and the selected harness is 'claude' (agent-managed).
+  const isAgentTask = !!(task?.execution?.thread_id) ||
+    (task?.execution?.status === 'running' && selectedHarness === 'claude');
   const agentEventLog = useAgentEvents(isAgentTask ? (task?.id ?? null) : null);
 
   // Reset tab + state when task changes
@@ -190,14 +193,34 @@ export function TaskDetailDialog({ task, project, onClose, onTaskUpdated, repoUr
     setStopping(true);
     try {
       if (isRunning) {
-        await execution.stopTask(project.slug, task.id);
+        if (isAgentTask) {
+          await agentApi.stop(project.slug, task.id);
+          await api.tasks.updateExecution(project.slug, task.id, {
+            status: 'stopped',
+            finished_at: new Date().toISOString(),
+          }).catch(console.error);
+        } else {
+          await execution.stopTask(project.slug, task.id);
+        }
         onTaskUpdated();
       } else {
-        if (!execution.canStartMore(project)) {
-          alert(`Concurrent task limit (${project.max_concurrent ?? 3}) reached.`);
-          return;
+        if (selectedHarness === 'claude') {
+          // Agent-managed execution via agent-server (port 4801)
+          await agentApi.start(project.slug, task);
+          await api.tasks.updateExecution(project.slug, task.id, {
+            status: 'running',
+            phase: 'spec',
+            thread_id: `${project.slug}:${task.id}`,
+            started_at: new Date().toISOString(),
+          });
+        } else {
+          // Legacy PTY-based execution for non-claude harnesses
+          if (!execution.canStartMore(project)) {
+            alert(`Concurrent task limit (${project.max_concurrent ?? 3}) reached.`);
+            return;
+          }
+          await execution.startTask(project.slug, task, project, selectedHarness, selectedModel || undefined);
         }
-        await execution.startTask(project.slug, task, project, selectedHarness, selectedModel || undefined);
         onTaskUpdated();
         setActiveTab('logs');
       }
@@ -206,7 +229,7 @@ export function TaskDetailDialog({ task, project, onClose, onTaskUpdated, repoUr
     } finally {
       setStopping(false);
     }
-  }, [task, starting, isRunning, execution, project, selectedHarness, selectedModel, onTaskUpdated]);
+  }, [task, starting, isRunning, isAgentTask, execution, project, selectedHarness, selectedModel, onTaskUpdated]);
 
   // ── Styles ────────────────────────────────────────────────────
 
