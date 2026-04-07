@@ -12,6 +12,12 @@ import { ProgressBar } from './ProgressBar';
 import { SubtaskList } from './SubtaskList';
 import { api } from '../../lib/board-api';
 import { useExecution } from '../../contexts/ExecutionContext';
+import { useAgentEvents } from '../../hooks/useAgentEvents';
+import { LogsTab } from '../agent/LogsTab';
+import { SubtasksTab } from '../agent/SubtasksTab';
+import { OverviewTab } from '../agent/OverviewTab';
+import { FilesTab } from '../agent/FilesTab';
+import { DiffTab } from '../agent/DiffTab';
 import type { HarnessInfo } from '@harness-kit/shared';
 
 // Lazy-load xterm (heavy) — only mounted when Logs tab is shown
@@ -27,7 +33,7 @@ interface Props {
   repoUrl?: string;
 }
 
-type TabId = 'overview' | 'subtasks' | 'logs' | 'files';
+type TabId = 'overview' | 'subtasks' | 'logs' | 'files' | 'diff';
 
 interface FileDiffEntry {
   filePath: string;
@@ -95,6 +101,10 @@ export function TaskDetailDialog({ task, project, onClose, onTaskUpdated, repoUr
   const execData = task ? execution.getExecution(task.id) : undefined;
   const rawChunks = task ? execution.getOutput(task.id) : [];
   const terminalId = execData?.terminalId ?? '';
+
+  // Agent event stream (port 4801) — only active when task has a thread_id (agent mode)
+  const isAgentTask = !!(task?.execution?.thread_id);
+  const agentEventLog = useAgentEvents(isAgentTask ? (task?.id ?? null) : null);
 
   // Reset tab + state when task changes
   useEffect(() => {
@@ -406,18 +416,40 @@ export function TaskDetailDialog({ task, project, onClose, onTaskUpdated, repoUr
               )}
             </div>
 
-            {/* ── Tab bar ── */}
-            <div className="tab-bar" style={{ padding: '0 20px', flexShrink: 0 }}>
-              {(['overview', 'subtasks', 'logs', 'files'] as TabId[]).map(tab => {
+            {/* ── Tab bar — ported from mock .dlg-tabs / .dlg-tab ── */}
+            <div style={{
+              display: 'flex', padding: '0 20px',
+              borderBottom: '1px solid var(--border-subtle)',
+              background: 'var(--bg-surface)',
+              gap: 4, flexShrink: 0,
+            }}>
+              {(['overview', 'subtasks', 'logs', 'files', 'diff'] as TabId[]).map(tab => {
                 let label = tab.charAt(0).toUpperCase() + tab.slice(1);
                 if (tab === 'subtasks' && totalSubtasks > 0) label = `Subtasks (${totalSubtasks})`;
                 if (tab === 'logs' && execStatus && execStatus !== 'idle') label = `Logs · ${execStatus}`;
                 if (tab === 'files' && fileDiffs.length > 0) label = `Files (${fileDiffs.length})`;
+                const isActive = activeTab === tab;
                 return (
                   <button
                     key={tab}
-                    className={`tab ${activeTab === tab ? 'active' : ''}`}
                     onClick={() => setActiveTab(tab)}
+                    style={{
+                      padding: '10px 12px',
+                      fontSize: 13,
+                      color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
+                      cursor: 'pointer',
+                      borderBottom: `2px solid ${isActive ? 'var(--accent)' : 'transparent'}`,
+                      marginBottom: -1,
+                      transition: 'all .15s',
+                      whiteSpace: 'nowrap',
+                      background: 'transparent',
+                      border: 'none',
+                      borderBottomWidth: 2,
+                      borderBottomStyle: 'solid',
+                      borderBottomColor: isActive ? 'var(--accent)' : 'transparent',
+                      fontFamily: 'inherit',
+                      letterSpacing: '-.01em',
+                    }}
                   >
                     {label}
                   </button>
@@ -427,14 +459,18 @@ export function TaskDetailDialog({ task, project, onClose, onTaskUpdated, repoUr
 
             {/* ── Scrollable body ── */}
             <div style={{
-              flex: 1, overflowY: activeTab === 'logs' ? 'hidden' : 'auto',
-              padding: activeTab === 'logs' ? 0 : '20px',
+              flex: 1, overflowY: (activeTab === 'logs' && !isAgentTask) ? 'hidden' : 'auto',
+              padding: (activeTab === 'logs' || activeTab === 'subtasks' || activeTab === 'diff' || activeTab === 'files') ? 0 : '20px',
               display: 'flex', flexDirection: 'column',
-              gap: activeTab === 'logs' ? 0 : 24,
+              gap: (activeTab === 'logs' || activeTab === 'diff' || activeTab === 'subtasks' || activeTab === 'files') ? 0 : 24,
             }}>
 
               {/* ─── OVERVIEW TAB ─── */}
-              {activeTab === 'overview' && (
+              {activeTab === 'overview' && isAgentTask && (
+                <OverviewTab task={task} projectSlug={project.slug} currentPhase={agentEventLog.phase} />
+              )}
+
+              {activeTab === 'overview' && !isAgentTask && (
                 <>
                   <Section title="Status">
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -607,23 +643,33 @@ export function TaskDetailDialog({ task, project, onClose, onTaskUpdated, repoUr
 
               {/* ─── SUBTASKS TAB ─── */}
               {activeTab === 'subtasks' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {totalSubtasks > 0 && (
-                    <ProgressBar completed={completedCount} total={totalSubtasks} height={6} />
-                  )}
-                  <SubtaskList
-                    subtasks={task.subtasks ?? []}
-                    projectSlug={project.slug}
-                    taskId={task.id}
-                    onUpdated={onTaskUpdated}
-                  />
-                </div>
+                isAgentTask ? (
+                  /* Agent mode — phase-grouped subtask view */
+                  <SubtasksTab task={task} />
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {totalSubtasks > 0 && (
+                      <ProgressBar completed={completedCount} total={totalSubtasks} height={6} />
+                    )}
+                    <SubtaskList
+                      subtasks={task.subtasks ?? []}
+                      projectSlug={project.slug}
+                      taskId={task.id}
+                      onUpdated={onTaskUpdated}
+                    />
+                  </div>
+                )
               )}
 
               {/* ─── LOGS TAB ─── */}
               {activeTab === 'logs' && (
                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                  {isRunning && terminalId ? (
+                  {isAgentTask ? (
+                    /* Agent mode — structured event log */
+                    <div style={{ flex: 1, overflowY: 'auto' }}>
+                      <LogsTab taskId={task.id} events={agentEventLog.events} />
+                    </div>
+                  ) : isRunning && terminalId ? (
                     <Suspense fallback={<div style={{ padding: 20, color: 'var(--text-muted)' }}>Loading terminal...</div>}>
                       <TerminalView terminalId={terminalId} rawChunks={rawChunks} />
                     </Suspense>
@@ -697,6 +743,20 @@ export function TaskDetailDialog({ task, project, onClose, onTaskUpdated, repoUr
                     })
                   )}
                 </div>
+              )}
+
+              {/* ─── DIFF TAB ─── */}
+              {activeTab === 'diff' && (
+                isAgentTask ? (
+                  <DiffTab events={agentEventLog.events} />
+                ) : (
+                  <EmptyState icon="⊟" text="No diff available. This task is not running in agent mode." />
+                )
+              )}
+
+              {/* ─── AGENT FILES TAB (when agent mode) ─── */}
+              {activeTab === 'files' && isAgentTask && (
+                <FilesTab events={agentEventLog.events} />
               )}
             </div>
 

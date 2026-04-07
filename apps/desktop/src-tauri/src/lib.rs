@@ -1,4 +1,5 @@
 mod ai;
+mod agent_server;
 mod commands;
 mod db;
 mod board_server;
@@ -15,6 +16,7 @@ use tauri::{LogicalSize, Manager};
 use ai::client::OllamaState;
 use commands::terminal::TerminalState;
 use board_server::BoardServerState;
+use agent_server::AgentServerState;
 use membrain_commands::MembrainServerState;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -39,6 +41,7 @@ pub fn run() {
         .manage(TerminalState::default())
         .manage(database)
         .manage(BoardServerState::new())
+        .manage(AgentServerState::new())
         .manage(commands::relay::LocalRelay(tokio::sync::Mutex::new(None)))
         .manage(MembrainServerState::new())
         .manage(OllamaState::new("http://localhost:11434"))
@@ -154,6 +157,11 @@ pub fn run() {
             board_server::board_server_install,
             board_server::board_server_start,
             board_server::board_server_restart,
+            // Agent server
+            agent_server::agent_server_check_installed,
+            agent_server::agent_server_install,
+            agent_server::agent_server_start,
+            agent_server::agent_server_restart,
             // membrain
             membrain_commands::membrain_check_installed,
             membrain_commands::membrain_start,
@@ -197,6 +205,12 @@ pub fn run() {
                 eprintln!("[board-server] running on :{}", 4800);
             } else {
                 eprintln!("[board-server] not running — install with: pnpm board:install");
+            }
+            let agent_state = app.state::<AgentServerState>();
+            if agent_state.check() {
+                eprintln!("[agent-server] running on :{}", 4801);
+            } else {
+                eprintln!("[agent-server] not running — install with: pnpm agent:install");
             }
             // membrain server starts on-demand when the user navigates to the
             // Memory section (via useMembrainServerReady hook), not at app launch.
