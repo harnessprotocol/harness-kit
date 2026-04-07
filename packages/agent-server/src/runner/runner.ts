@@ -5,8 +5,11 @@ import { getThreadConfig, getAbort, cancelTask, isRunning } from './thread-manag
 import { emit } from './broadcaster.js';
 import type { SerializableTask, Phase, StartAgentOptions } from '../types.js';
 
+// Module-level graph singleton (checkpointer.setup() is called lazily on first DB access)
 const checkpointer = createCheckpointer();
 const graph = buildGraph(checkpointer);
+
+function getGraph() { return graph; }
 
 // Phase → approximate progress %
 const PHASE_PROGRESS: Record<Phase, number> = {
@@ -30,7 +33,7 @@ export async function startAgent(
   };
 
   try {
-    const stream = await graph.stream(initialState, {
+    const stream = await getGraph().stream(initialState, {
       ...config,
       signal: ac.signal,
       streamMode: 'updates',
@@ -61,13 +64,24 @@ export async function startAgent(
     }
 
     emit({ type: 'agent_done', taskId: task.id, exitCode: 0 });
+    updateBoardStatus(projectSlug, task.id, 'completed').catch(console.error);
   } catch (err) {
     if ((err as Error).name !== 'AbortError') {
       emit({ type: 'agent_error', taskId: task.id, message: String(err) });
+      updateBoardStatus(projectSlug, task.id, 'failed').catch(console.error);
     }
   } finally {
     cancelTask(task.id);
   }
+}
+
+function updateBoardStatus(slug: string, taskId: number, status: string) {
+  const port = process.env.BOARD_SERVER_PORT ?? 4800;
+  return fetch(`http://localhost:${port}/api/v1/projects/${slug}/tasks/${taskId}/execution`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status, finished_at: new Date().toISOString() }),
+  });
 }
 
 export function stopAgent(taskId: number) {
@@ -82,6 +96,6 @@ export async function steerAgent(
 ) {
   // Resume the graph with the steering message injected
   const config = getThreadConfig(projectSlug, taskId);
-  await graph.invoke({ steeringMessage: message, task }, config);
+  await getGraph().invoke({ steeringMessage: message, task }, config);
   emit({ type: 'agent_steered', taskId });
 }

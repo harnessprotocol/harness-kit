@@ -1,15 +1,28 @@
 // packages/agent-server/src/http.ts
 import express from 'express';
+import { z } from 'zod';
 import { startAgent, stopAgent, steerAgent } from './runner/runner.js';
 import { isRunning } from './runner/thread-manager.js';
+
+const SerializableTaskSchema = z.object({
+  id: z.number(),
+  title: z.string(),
+  description: z.string().optional(),
+  subtasks: z.array(z.object({
+    id: z.number(), title: z.string(), status: z.string(), phase: z.string().optional(),
+  })).default([]),
+  worktree_path: z.string().optional(),
+  default_model: z.string().optional(),
+});
 
 export function createServer() {
   const app = express();
   app.use(express.json());
 
-  // CORS
+  // CORS — restrict to Tauri app origins only
   app.use((_req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Origin', 'tauri://localhost');
+    res.header('Vary', 'Origin');
     res.header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
     res.header('Access-Control-Allow-Headers', 'Content-Type');
     next();
@@ -21,11 +34,14 @@ export function createServer() {
   app.post(`${base}/start`, async (req, res) => {
     const { slug } = req.params;
     const taskId = Number(req.params.taskId);
-    const task = req.body.task; // full SerializableTask sent from desktop
+    const parsed = SerializableTaskSchema.safeParse(req.body.task);
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error.message });
+    }
     const opts = req.body.opts ?? {};
     try {
-      startAgent(slug, task, opts); // intentionally not awaited — streams via WS
-      res.json({ ok: true });
+      void startAgent(slug, parsed.data, opts); // intentionally not awaited — streams via WS
+      res.json({ ok: true, taskId });
     } catch (e) { res.status(400).json({ error: String(e) }); }
   });
 

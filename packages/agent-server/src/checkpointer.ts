@@ -9,5 +9,6 @@ const HARNESS_DIR = join(homedir(), '.harness', 'board');
 export function createCheckpointer(): SqliteSaver {
   mkdirSync(HARNESS_DIR, { recursive: true });
   const dbPath = join(HARNESS_DIR, 'agent-checkpoints.sqlite');
+  // SqliteSaver.fromConnString returns a saver that calls setup() lazily on first access
   return SqliteSaver.fromConnString(dbPath);
 }

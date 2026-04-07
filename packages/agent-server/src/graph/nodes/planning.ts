@@ -3,6 +3,7 @@ import { ChatAnthropic } from '@langchain/anthropic';
 import { HumanMessage } from '@langchain/core/messages';
 import { interrupt } from '@langchain/langgraph';
 import { buildClientOptions } from '../../auth.js';
+import { emit } from '../../runner/broadcaster.js';
 import type { AgentStateType } from '../state.js';
 
 interface SubtaskPlan { title: string; description?: string; }
@@ -35,8 +36,10 @@ export async function planningNode(state: AgentStateType): Promise<Partial<Agent
     ? response.content.trim()
     : (response.content[0] as {text?:string}).text?.trim() ?? '[]';
 
+  // Strip markdown fences the model sometimes adds
+  const cleaned = raw.replace(/^```(?:json)?\n?/, '').replace(/\n?```$/, '');
   let subtaskPlans: SubtaskPlan[] = [];
-  try { subtaskPlans = JSON.parse(raw); } catch { subtaskPlans = []; }
+  try { subtaskPlans = JSON.parse(cleaned); } catch { subtaskPlans = []; }
 
   // Write subtasks to board via HTTP API
   const BOARD = `http://localhost:${process.env.BOARD_SERVER_PORT ?? 4800}`;
@@ -48,6 +51,7 @@ export async function planningNode(state: AgentStateType): Promise<Partial<Agent
           body: JSON.stringify({ title: s.title, description: s.description }) }
       );
       const created = await res.json() as { id: number; title: string };
+      emit({ type: 'agent_subtask', taskId: state.task.id, subtaskId: created.id, status: 'pending' });
       return { id: created.id, title: created.title, status: 'pending', phase: 'coding' };
     })
   );
