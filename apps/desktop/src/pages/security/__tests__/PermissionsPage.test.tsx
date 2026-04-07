@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { PermissionsState, SecurityPreset } from "@harness-kit/shared";
@@ -16,6 +16,7 @@ vi.mock("../../../lib/tauri", () => ({
   updatePermissions: (...args: unknown[]) => mockUpdatePermissions(...args),
   listSecurityPresets: () => mockListSecurityPresets(),
   applySecurityPreset: (...args: unknown[]) => mockApplySecurityPreset(...args),
+  detectClaudeAccount: () => Promise.resolve({ logged_in: false, subscription_type: null, auto_mode_available: false }),
 }));
 
 vi.mock("../../../lib/preferences", () => ({
@@ -26,6 +27,8 @@ vi.mock("../../../lib/preferences", () => ({
   getHarnessPermissionOverrides: () => ({}),
   setHarnessPermissionOverrides: vi.fn(),
   resetPermissionDefaults: vi.fn(),
+  getAutoModeUnlocked: () => false,
+  setAutoModeUnlocked: vi.fn(),
   DEFAULT_ALLOWED_TOOLS: ["Read", "Grep", "Glob"],
 }));
 
@@ -86,10 +89,16 @@ function renderPage() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Simulate Tauri desktop environment so tauriAvailable === true
+  (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {};
   mockReadPermissions.mockResolvedValue(EMPTY_PERMISSIONS);
   mockUpdatePermissions.mockResolvedValue(undefined);
   mockListSecurityPresets.mockResolvedValue([STRICT_PRESET, STANDARD_PRESET, PERMISSIVE_PRESET]);
   mockApplySecurityPreset.mockResolvedValue(undefined);
+});
+
+afterEach(() => {
+  delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
 });
 
 // ── Tests ─────────────────────────────────────────────────────
