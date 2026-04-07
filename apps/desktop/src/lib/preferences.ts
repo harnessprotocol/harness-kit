@@ -198,6 +198,7 @@ const KEY_PERMISSION_MODE = "harness-kit-permission-mode";
 const KEY_ALLOWED_TOOLS = "harness-kit-allowed-tools";
 const KEY_PERMISSION_MODE_ACKED = "harness-kit-permission-mode-acked";
 const KEY_HARNESS_PERMISSION_OVERRIDES = "harness-kit-harness-permission-overrides";
+const KEY_AUTO_MODE_UNLOCKED = "harness-kit-auto-mode-unlocked";
 
 export const DEFAULT_ALLOWED_TOOLS: string[] = ["Read", "Grep", "Glob"];
 
@@ -216,7 +217,10 @@ export function getAllowedTools(): string[] {
   if (!raw) return [...DEFAULT_ALLOWED_TOOLS];
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [...DEFAULT_ALLOWED_TOOLS];
+    if (!Array.isArray(parsed)) return [...DEFAULT_ALLOWED_TOOLS];
+    // Validate each entry: ToolName or ToolName(scope) — no shell metacharacters.
+    const valid = /^[A-Za-z]+(\([^)]+\))?$/;
+    return parsed.filter((t): t is string => typeof t === "string" && valid.test(t));
   } catch {
     return [...DEFAULT_ALLOWED_TOOLS];
   }
@@ -260,6 +264,19 @@ export function resetPermissionDefaults() {
   localStorage.removeItem(KEY_ALLOWED_TOOLS);
   localStorage.removeItem(KEY_PERMISSION_MODE_ACKED);
   localStorage.removeItem(KEY_HARNESS_PERMISSION_OVERRIDES);
+}
+
+/** Whether the user has confirmed they have a qualifying plan for Auto mode. */
+export function getAutoModeUnlocked(): boolean {
+  return localStorage.getItem(KEY_AUTO_MODE_UNLOCKED) === "true";
+}
+
+export function setAutoModeUnlocked(unlocked: boolean) {
+  if (unlocked) {
+    localStorage.setItem(KEY_AUTO_MODE_UNLOCKED, "true");
+  } else {
+    localStorage.removeItem(KEY_AUTO_MODE_UNLOCKED);
+  }
 }
 
 // ── Init ─────────────────────────────────────────────────────

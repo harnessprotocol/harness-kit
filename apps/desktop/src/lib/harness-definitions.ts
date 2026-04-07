@@ -30,8 +30,8 @@ function buildClaudePermissionFlags(config: PermissionConfig): string[] {
     case "auto":
       return ["--permission-mode", "auto"];
     case "allowed-tools":
-      // Fall back to skip-all if the tools list is empty.
-      if (config.tools.length === 0) return ["--dangerously-skip-permissions"];
+      // Empty list → no permission flag; Claude prompts for each tool (safest default).
+      if (config.tools.length === 0) return [];
       return ["--allowedTools", config.tools.join(",")];
   }
 }

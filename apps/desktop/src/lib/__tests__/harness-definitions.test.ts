@@ -139,10 +139,10 @@ describe("buildInvokeCommand — { mode: 'allowed-tools' }", () => {
       .toBe("claude 'fix bug' --allowedTools Read,Grep,Glob");
   });
 
-  it("falls back to --dangerously-skip-permissions when tools list is empty", () => {
+  it("uses no permission flags when tools list is empty (Claude prompts for all)", () => {
     const cfg: PermissionConfig = { mode: "allowed-tools", tools: [] };
     expect(buildInvokeCommand("claude", "task", undefined, cfg))
-      .toBe("claude task --dangerously-skip-permissions");
+      .toBe("claude task");
   });
 
   it("includes model after the tools flag", () => {
