@@ -45,6 +45,8 @@ vi.mock("../../../lib/preferences", () => ({
   getHarnessPermissionOverrides: () => ({}),
   setHarnessPermissionOverrides: vi.fn(),
   resetPermissionDefaults: vi.fn(),
+  getAutoModeUnlocked: () => false,
+  setAutoModeUnlocked: vi.fn(),
   DEFAULT_ALLOWED_TOOLS: ["Read", "Grep", "Glob"],
 }));
 
