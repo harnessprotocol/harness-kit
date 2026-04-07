@@ -190,6 +190,95 @@ export function setConfigFilesDetailLevel(level: ConfigFilesDetailLevel) {
   localStorage.setItem(KEY_CONFIG_FILES_DETAIL, level);
 }
 
+// ── Permission Mode ───────────────────────────────────────────
+
+export type PermissionMode = "skip" | "auto" | "allowed-tools";
+
+const KEY_PERMISSION_MODE = "harness-kit-permission-mode";
+const KEY_ALLOWED_TOOLS = "harness-kit-allowed-tools";
+const KEY_PERMISSION_MODE_ACKED = "harness-kit-permission-mode-acked";
+const KEY_HARNESS_PERMISSION_OVERRIDES = "harness-kit-harness-permission-overrides";
+const KEY_AUTO_MODE_UNLOCKED = "harness-kit-auto-mode-unlocked";
+
+export const DEFAULT_ALLOWED_TOOLS: string[] = ["Read", "Grep", "Glob"];
+
+export function getPermissionMode(): PermissionMode {
+  const raw = localStorage.getItem(KEY_PERMISSION_MODE);
+  if (raw === "auto" || raw === "allowed-tools") return raw;
+  return "skip";
+}
+
+export function setPermissionMode(mode: PermissionMode) {
+  localStorage.setItem(KEY_PERMISSION_MODE, mode);
+}
+
+export function getAllowedTools(): string[] {
+  const raw = localStorage.getItem(KEY_ALLOWED_TOOLS);
+  if (!raw) return [...DEFAULT_ALLOWED_TOOLS];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [...DEFAULT_ALLOWED_TOOLS];
+    // Validate each entry: ToolName or ToolName(scope) — no shell metacharacters.
+    const valid = /^[A-Za-z]+(\([^)]+\))?$/;
+    return parsed.filter((t): t is string => typeof t === "string" && valid.test(t));
+  } catch {
+    return [...DEFAULT_ALLOWED_TOOLS];
+  }
+}
+
+export function setAllowedTools(tools: string[]) {
+  localStorage.setItem(KEY_ALLOWED_TOOLS, JSON.stringify(tools));
+}
+
+export function getPermissionModeAcked(): boolean {
+  return localStorage.getItem(KEY_PERMISSION_MODE_ACKED) === "true";
+}
+
+export function setPermissionModeAcked() {
+  localStorage.setItem(KEY_PERMISSION_MODE_ACKED, "true");
+}
+
+export interface HarnessPermissionOverride {
+  mode?: PermissionMode;
+  allowedTools?: string[];
+}
+
+export function getHarnessPermissionOverrides(): Record<string, HarnessPermissionOverride> {
+  const raw = localStorage.getItem(KEY_HARNESS_PERMISSION_OVERRIDES);
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    return typeof parsed === "object" && parsed !== null ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+export function setHarnessPermissionOverrides(overrides: Record<string, HarnessPermissionOverride>) {
+  localStorage.setItem(KEY_HARNESS_PERMISSION_OVERRIDES, JSON.stringify(overrides));
+}
+
+/** Clear allowed tools list, first-run ack, and per-harness overrides back to defaults.
+ *  Does NOT change the selected permission mode — the user keeps their choice. */
+export function resetPermissionDefaults() {
+  localStorage.removeItem(KEY_ALLOWED_TOOLS);
+  localStorage.removeItem(KEY_PERMISSION_MODE_ACKED);
+  localStorage.removeItem(KEY_HARNESS_PERMISSION_OVERRIDES);
+}
+
+/** Whether the user has confirmed they have a qualifying plan for Auto mode. */
+export function getAutoModeUnlocked(): boolean {
+  return localStorage.getItem(KEY_AUTO_MODE_UNLOCKED) === "true";
+}
+
+export function setAutoModeUnlocked(unlocked: boolean) {
+  if (unlocked) {
+    localStorage.setItem(KEY_AUTO_MODE_UNLOCKED, "true");
+  } else {
+    localStorage.removeItem(KEY_AUTO_MODE_UNLOCKED);
+  }
+}
+
 // ── Init ─────────────────────────────────────────────────────
 
 /** Apply all stored preferences on boot. Call once at app startup. */

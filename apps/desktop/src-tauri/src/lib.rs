@@ -25,6 +25,13 @@ pub fn run() {
     let database = db::init(&data_dir).expect("Failed to init database");
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
+            // A second instance was launched — focus the existing window instead.
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }))
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
@@ -68,6 +75,7 @@ pub fn run() {
             commands::profiles::delete_custom_profile,
             // Settings
             commands::settings::list_claude_dir,
+            commands::settings::detect_claude_account,
             // Observatory
             commands::observatory::read_stats_cache,
             commands::observatory::list_sessions_summary,

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { PermissionsState, SecurityPreset } from "@harness-kit/shared";
@@ -16,6 +16,20 @@ vi.mock("../../../lib/tauri", () => ({
   updatePermissions: (...args: unknown[]) => mockUpdatePermissions(...args),
   listSecurityPresets: () => mockListSecurityPresets(),
   applySecurityPreset: (...args: unknown[]) => mockApplySecurityPreset(...args),
+  detectClaudeAccount: () => Promise.resolve({ logged_in: false, subscription_type: null, auto_mode_available: false }),
+}));
+
+vi.mock("../../../lib/preferences", () => ({
+  getPermissionMode: () => "skip",
+  setPermissionMode: vi.fn(),
+  getAllowedTools: () => ["Read", "Grep", "Glob"],
+  setAllowedTools: vi.fn(),
+  getHarnessPermissionOverrides: () => ({}),
+  setHarnessPermissionOverrides: vi.fn(),
+  resetPermissionDefaults: vi.fn(),
+  getAutoModeUnlocked: () => false,
+  setAutoModeUnlocked: vi.fn(),
+  DEFAULT_ALLOWED_TOOLS: ["Read", "Grep", "Glob"],
 }));
 
 // ── Fixtures ──────────────────────────────────────────────────
@@ -75,26 +89,32 @@ function renderPage() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Simulate Tauri desktop environment so tauriAvailable === true
+  (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {};
   mockReadPermissions.mockResolvedValue(EMPTY_PERMISSIONS);
   mockUpdatePermissions.mockResolvedValue(undefined);
   mockListSecurityPresets.mockResolvedValue([STRICT_PRESET, STANDARD_PRESET, PERMISSIVE_PRESET]);
   mockApplySecurityPreset.mockResolvedValue(undefined);
 });
 
+afterEach(() => {
+  delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
+});
+
 // ── Tests ─────────────────────────────────────────────────────
 
 describe("PermissionsPage — loading state", () => {
-  it("shows 'Loading...' before data arrives", () => {
+  it("shows 'Loading…' before data arrives", () => {
     mockReadPermissions.mockReturnValue(new Promise(() => {}));
     mockListSecurityPresets.mockReturnValue(new Promise(() => {}));
     renderPage();
-    expect(screen.getByText("Loading...")).toBeInTheDocument();
+    expect(screen.getByText("Loading…")).toBeInTheDocument();
   });
 
-  it("hides 'Loading...' after data loads", async () => {
+  it("hides 'Loading…' after data loads", async () => {
     renderPage();
     await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
+      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
     );
   });
 });
@@ -190,7 +210,7 @@ describe("PermissionsPage — preset buttons", () => {
     renderPage();
     // Wait for load to finish
     await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
+      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
     );
     expect(screen.queryByText("Quick preset")).not.toBeInTheDocument();
   });
@@ -204,7 +224,7 @@ describe("PermissionsPage — permissions display", () => {
   it("renders the page heading", async () => {
     renderPage();
     await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
+      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
     );
     expect(screen.getByText("Permissions")).toBeInTheDocument();
   });
@@ -245,7 +265,7 @@ describe("PermissionsPage — permissions display", () => {
 describe("PermissionsPage — Save button state", () => {
   it("Save button starts disabled (not dirty)", async () => {
     renderPage();
-    const saveBtn = await screen.findByRole("button", { name: "Save Permissions" });
+    const saveBtn = await screen.findByRole("button", { name: "Save to settings.json" });
     expect(saveBtn).toBeDisabled();
   });
 
@@ -255,7 +275,7 @@ describe("PermissionsPage — Save button state", () => {
 
     // Wait for the page to finish loading
     await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
+      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
     );
 
     // Type in the Allow input and click Add
@@ -263,7 +283,7 @@ describe("PermissionsPage — Save button state", () => {
     fireEvent.change(inputs[0], { target: { value: "Read" } });
     fireEvent.click(screen.getAllByRole("button", { name: "Add" })[0]);
 
-    const saveBtn = screen.getByRole("button", { name: "Save Permissions" });
+    const saveBtn = screen.getByRole("button", { name: "Save to settings.json" });
     expect(saveBtn).not.toBeDisabled();
   });
 
@@ -272,7 +292,7 @@ describe("PermissionsPage — Save button state", () => {
     renderPage();
 
     await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
+      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
     );
 
     // Dirty the state by adding a tool
@@ -280,7 +300,7 @@ describe("PermissionsPage — Save button state", () => {
     fireEvent.change(inputs[0], { target: { value: "Read" } });
     fireEvent.click(screen.getAllByRole("button", { name: "Add" })[0]);
 
-    const saveBtn = screen.getByRole("button", { name: "Save Permissions" });
+    const saveBtn = screen.getByRole("button", { name: "Save to settings.json" });
     fireEvent.click(saveBtn);
 
     await waitFor(() => {
@@ -326,7 +346,7 @@ describe("PermissionsPage — add/remove items", () => {
     renderPage();
 
     await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
+      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
     );
 
     const hostInput = screen.getByPlaceholderText("Add host…");
@@ -344,7 +364,7 @@ describe("PermissionsPage — add/remove items", () => {
     renderPage();
 
     await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
+      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
     );
 
     const hostInput = screen.getByPlaceholderText("Add host…");
@@ -359,7 +379,7 @@ describe("PermissionsPage — section labels", () => {
   it("shows Tools section label", async () => {
     renderPage();
     await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
+      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
     );
     expect(screen.getByText("Tools")).toBeInTheDocument();
   });
@@ -367,7 +387,7 @@ describe("PermissionsPage — section labels", () => {
   it("shows Paths section label", async () => {
     renderPage();
     await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
+      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
     );
     expect(screen.getByText("Paths")).toBeInTheDocument();
   });
@@ -375,7 +395,7 @@ describe("PermissionsPage — section labels", () => {
   it("shows Network section label", async () => {
     renderPage();
     await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
+      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
     );
     expect(screen.getByText(/Network/)).toBeInTheDocument();
   });

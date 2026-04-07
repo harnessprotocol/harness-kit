@@ -15,8 +15,8 @@ export default defineConfig(async () => ({
     port: 1422,
     strictPort: true,
     watch: {
-      // 3. tell vite to ignore watching `src-tauri`
-      ignored: ["**/src-tauri/**"],
+      // 3. tell vite to ignore watching `src-tauri` and worktree artifacts
+      ignored: ["**/src-tauri/**", "**/.auto-claude/**"],
     },
   },
 

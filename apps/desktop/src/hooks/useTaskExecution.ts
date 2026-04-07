@@ -2,7 +2,12 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { api } from '../lib/board-api';
-import { buildInvokeCommand } from '../lib/harness-definitions';
+import { buildInvokeCommand, type PermissionConfig } from '../lib/harness-definitions';
+import {
+  getPermissionMode,
+  getAllowedTools,
+  getHarnessPermissionOverrides,
+} from '../lib/preferences';
 import type { Task, Project, ExecutionStatus } from '../lib/board-api';
 
 // ── Types ────────────────────────────────────────────────────
@@ -39,6 +44,25 @@ export interface UseTaskExecutionReturn {
 
 const MAX_RAW_CHUNKS = 5000;
 const DEFAULT_MAX_CONCURRENT = 3;
+
+// ── Permission config resolver ───────────────────────────────
+
+/**
+ * Build the PermissionConfig for a given harness by merging the global mode
+ * with any harness-level override the user has configured.
+ */
+function resolvePermissionConfig(harnessId: string): PermissionConfig {
+  const overrides = getHarnessPermissionOverrides();
+  const override = overrides[harnessId];
+  const mode = override?.mode ?? getPermissionMode();
+  const tools = override?.allowedTools ?? getAllowedTools();
+
+  switch (mode) {
+    case "auto":        return { mode: "auto" };
+    case "allowed-tools": return { mode: "allowed-tools", tools };
+    default:            return { mode: "skip" };
+  }
+}
 
 // ── Prompt builder ───────────────────────────────────────────
 
@@ -128,7 +152,8 @@ export function useTaskExecution(): UseTaskExecutionReturn {
     const terminalId = await invoke<string>('create_terminal', { projectPath: workDir ?? '' });
 
     const prompt = buildPrompt(task);
-    const command = buildInvokeCommand(resolvedHarness, prompt, resolvedModel);
+    const permConfig = resolvePermissionConfig(resolvedHarness);
+    const command = buildInvokeCommand(resolvedHarness, prompt, resolvedModel, permConfig);
     if (!command) throw new Error(`Unknown harness: ${resolvedHarness}`);
 
     executionsRef.current.set(task.id, {
