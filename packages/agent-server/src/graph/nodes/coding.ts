@@ -61,7 +61,8 @@ export async function codingNode(state: AgentStateType): Promise<Partial<AgentSt
     for (const tc of response.tool_calls) {
       const t = tools.find(x => x.name === tc.name);
       if (!t) continue;
-      const result = await t.invoke(tc.args as Record<string,unknown>);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await (t as any).invoke(tc.args as Record<string,unknown>);
       const { ToolMessage } = await import('@langchain/core/messages');
       currentMessages.push(new ToolMessage({ content: String(result), tool_call_id: tc.id! }));
     }

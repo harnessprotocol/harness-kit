@@ -30,7 +30,7 @@ export async function startAgent(
   };
 
   try {
-    const stream = graph.stream(initialState, {
+    const stream = await graph.stream(initialState, {
       ...config,
       signal: ac.signal,
       streamMode: 'updates',
@@ -39,9 +39,10 @@ export async function startAgent(
     for await (const update of stream) {
       if (ac.signal.aborted) break;
 
-      const nodeNames = Object.keys(update) as string[];
+      const updateAny = update as Record<string, unknown>;
+      const nodeNames = Object.keys(updateAny);
       for (const nodeName of nodeNames) {
-        const nodeState = update[nodeName] as Record<string,unknown>;
+        const nodeState = updateAny[nodeName] as Record<string,unknown>;
         const phase = nodeState.phase as Phase | undefined;
         if (phase) {
           emit({ type: 'agent_phase', taskId: task.id, phase,
