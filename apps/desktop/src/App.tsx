@@ -34,6 +34,7 @@ import MemoryKnowledgePage from "./pages/memory/MemoryKnowledgePage";
 import MemoryContextPage from "./pages/memory/MemoryContextPage";
 import MemoryTracePage from "./pages/memory/MemoryTracePage";
 import MemorySettingsPage from "./pages/memory/MemorySettingsPage";
+import AgentsPage from "./pages/agents/AgentsPage";
 
 function DefaultRedirect() {
   const defaultSection = getDefaultSection();
@@ -81,6 +82,9 @@ export default function App() {
           <Route path="marketplace/:slug?" element={<MarketplacePage />} />
           <Route path="observatory" element={<DashboardPage />} />
           <Route path="observatory/sessions" element={<SessionsPage />} />
+
+          {/* Agents */}
+          <Route path="agents" element={<AgentsPage />} />
 
           {/* Terminals */}
           <Route path="terminals" element={<ComparatorPage />} />

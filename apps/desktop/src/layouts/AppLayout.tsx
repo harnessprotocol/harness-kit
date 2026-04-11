@@ -49,6 +49,12 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    id: "agents",
+    label: "Agents",
+    path: "/agents",
+    children: [],
+  },
+  {
     id: "terminals",
     label: "Comparator",
     path: "/terminals",

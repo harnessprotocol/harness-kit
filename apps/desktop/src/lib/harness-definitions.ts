@@ -103,6 +103,56 @@ export const BUILTIN_HARNESSES: HarnessDefinition[] = [
       return parts.join(" ");
     },
   },
+  {
+    id: "goose",
+    name: "Goose",
+    command: "goose",
+    buildCommand: (prompt, model) => {
+      const parts = ["goose", "run", "--with-stdin", shellQuote(prompt)];
+      if (model) parts.push("--provider", shellQuote(model));
+      return parts.join(" ");
+    },
+  },
+  {
+    id: "gemini",
+    name: "Gemini CLI",
+    command: "gemini",
+    buildCommand: (prompt, model) => {
+      const parts = ["gemini", shellQuote(prompt)];
+      if (model) parts.push("--model", shellQuote(model));
+      return parts.join(" ");
+    },
+  },
+  {
+    id: "aider",
+    name: "Aider",
+    command: "aider",
+    buildCommand: (prompt, model) => {
+      // --message sends a prompt non-interactively; --no-auto-commits avoids side effects
+      const parts = ["aider", "--message", shellQuote(prompt), "--no-auto-commits"];
+      if (model) parts.push("--model", shellQuote(model));
+      return parts.join(" ");
+    },
+  },
+  {
+    id: "amazon-q",
+    name: "Amazon Q",
+    command: "q",
+    buildCommand: (prompt, _model) => {
+      // Amazon Q uses `q chat` for interactive sessions
+      return ["q", "chat", "--message", shellQuote(prompt)].join(" ");
+    },
+  },
+  {
+    id: "open-interpreter",
+    name: "Open Interpreter",
+    command: "interpreter",
+    buildCommand: (prompt, model) => {
+      const parts = ["interpreter", "--message", shellQuote(prompt)];
+      if (model) parts.push("--model", shellQuote(model));
+      return parts.join(" ");
+    },
+  },
 ];
 
 // ── Lookup + command builder ────────────────────────────────────────────────

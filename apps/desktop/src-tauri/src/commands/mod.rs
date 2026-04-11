@@ -22,3 +22,4 @@ pub mod relay;
 pub mod pairwise;
 pub mod comparator;
 pub mod comparator_panels;
+pub mod agents;

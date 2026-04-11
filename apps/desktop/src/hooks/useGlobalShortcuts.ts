@@ -5,6 +5,7 @@ export const NAV_PATHS = [
   "/harness/plugins",
   "/marketplace",
   "/observatory",
+  "/agents",
   "/comparator",
   "/security/permissions",
   "/parity",

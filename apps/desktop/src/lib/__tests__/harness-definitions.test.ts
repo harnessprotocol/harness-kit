@@ -227,8 +227,8 @@ describe("buildInvokeCommand — other harnesses", () => {
 // ── Registry ─────────────────────────────────────────────────────────────────
 
 describe("BUILTIN_HARNESSES registry", () => {
-  it("has 5 built-in harnesses", () => {
-    expect(BUILTIN_HARNESSES).toHaveLength(5);
+  it("has 10 built-in harnesses", () => {
+    expect(BUILTIN_HARNESSES).toHaveLength(10);
   });
 
   it("all harnesses have unique ids", () => {
