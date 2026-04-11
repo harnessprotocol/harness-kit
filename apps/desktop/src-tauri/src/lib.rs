@@ -121,6 +121,11 @@ pub fn run() {
             commands::comparator::list_comparisons,
             commands::comparator::get_comparison,
             commands::comparator::delete_comparison,
+            commands::comparator::tag_comparison_task_type,
+            commands::comparator::get_harness_recommendations,
+            // Harness health / resilience
+            commands::agents::record_harness_launch_result,
+            commands::agents::get_harness_health,
             // Comparator panels
             commands::comparator_panels::save_panel,
             commands::comparator_panels::update_panel_result,

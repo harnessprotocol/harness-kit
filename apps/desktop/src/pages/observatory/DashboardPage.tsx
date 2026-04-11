@@ -7,8 +7,11 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import HKTooltip from "../../components/Tooltip";
+import AccountStatusBadge from "../../components/AccountStatusBadge";
 import { useObservatoryData } from "../../hooks/useObservatoryData";
 import { formatNumber, formatDate, formatHour, shortModelName } from "../../lib/format";
+import { detectClaudeAccount } from "../../lib/tauri";
+import type { ClaudeAccountInfo } from "../../lib/tauri";
 import type { DailyActivity, DailyModelTokens, ModelUsageEntry } from "@harness-kit/shared";
 import { estimateTotalCost, formatCost } from "../../lib/pricing";
 import { getBudgetGuard, type BudgetGuardConfig } from "../../lib/preferences";
@@ -424,6 +427,8 @@ export default function DashboardPage() {
   const [chartOverrides, setChartOverrides] = useState<Record<string, DateRange | null>>({});
   const [accentColor, setAccentColor] = useState(getAccentColor);
   const reducedMotion = useReducedMotion();
+  const [account, setAccount] = useState<ClaudeAccountInfo | null>(null);
+  const [accountLoading, setAccountLoading] = useState(true);
 
   const cutoffDate = cache?.lastComputedDate;
 
@@ -444,6 +449,14 @@ export default function DashboardPage() {
   // Re-read accent on mount to pick up dynamic theme
   useEffect(() => {
     setAccentColor(getAccentColor());
+  }, []);
+
+  // Detect Claude account on mount
+  useEffect(() => {
+    detectClaudeAccount()
+      .then(setAccount)
+      .catch(() => setAccount({ loggedIn: false }))
+      .finally(() => setAccountLoading(false));
   }, []);
 
   // Merge cache + live stats data
@@ -621,6 +634,20 @@ export default function DashboardPage() {
     }));
   }, [mergedHourCounts]);
 
+  // Sum all tokens for the current calendar month across merged model usage
+  const monthlyTokens = useMemo(() => {
+    const thisMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+    let total = 0;
+    for (const d of mergedDailyTokens) {
+      if (d.date.startsWith(thisMonth)) {
+        for (const t of Object.values(d.tokensByModel ?? {})) {
+          total += t;
+        }
+      }
+    }
+    return total;
+  }, [mergedDailyTokens]);
+
   // Effective "last updated" — combines cache date + live scan
   const effectiveLastUpdated = useMemo(() => {
     if (lastRefreshed) return lastRefreshed;
@@ -748,6 +775,11 @@ export default function DashboardPage() {
           tooltip="Estimated cost based on Anthropic public pricing. Actual billing may differ."
           accent="#9333ea"
         />
+      </div>
+
+      {/* Account status */}
+      <div style={{ marginBottom: "18px" }}>
+        <AccountStatusBadge account={account} monthlyTokens={monthlyTokens} loading={accountLoading} />
       </div>
 
       {/* Messages chart — full width, hero chart */}

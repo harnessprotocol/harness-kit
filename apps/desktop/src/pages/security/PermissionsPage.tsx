@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import {
   readPermissions, updatePermissions,
   listSecurityPresets, applySecurityPreset,
   detectClaudeAccount,
 } from "../../lib/tauri";
-import type { PermissionsState, SecurityPreset } from "@harness-kit/shared";
+import type { PermissionsState, SecurityPreset, HarnessHealthRecord } from "@harness-kit/shared";
 import {
   getPermissionMode, setPermissionMode,
   getAllowedTools, setAllowedTools,
@@ -12,7 +13,9 @@ import {
   resetPermissionDefaults,
   getAutoModeUnlocked, setAutoModeUnlocked,
   getBudgetGuard, setBudgetGuard,
+  getResilienceConfig, setResilienceConfig,
   type PermissionMode, type HarnessPermissionOverride, type BudgetGuardConfig,
+  type ResilienceProfile, type ResilienceConfigMap,
 } from "../../lib/preferences";
 import { BUILTIN_HARNESSES } from "../../lib/harness-definitions";
 import { TOOL_NAMES } from "../../lib/tool-names";
@@ -709,6 +712,12 @@ const PRESET_COLORS: Record<string, string> = {
   Permissive: "#d97706",
 };
 
+const PROFILE_LABELS: Record<ResilienceProfile, string> = {
+  conservative: "Conservative",
+  balanced: "Balanced",
+  aggressive: "Aggressive",
+};
+
 // ── Page ──────────────────────────────────────────────────────
 
 export default function PermissionsPage() {
@@ -723,6 +732,8 @@ export default function PermissionsPage() {
   const [saving, setSaving] = useState(false);
   const [confirmPreset, setConfirmPreset] = useState<SecurityPreset | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [harnessHealth, setHarnessHealth] = useState<HarnessHealthRecord[]>([]);
+  const [resilienceConfig, setResilienceConfigState] = useState<ResilienceConfigMap>(() => getResilienceConfig());
 
   const [budgetGuard, setBudgetGuardState] = useState<BudgetGuardConfig>(() => getBudgetGuard());
 
@@ -772,6 +783,12 @@ export default function PermissionsPage() {
       .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    invoke<HarnessHealthRecord[]>("get_harness_health")
+      .then(setHarnessHealth)
+      .catch(() => {});
+  }, []);
+
   function handleModeChange(next: PermissionMode) {
     setMode(next);
     setPermissionMode(next);
@@ -791,6 +808,27 @@ export default function PermissionsPage() {
     resetPermissionDefaults();
     setAllowedToolsState(["Read", "Grep", "Glob"]);
     setOverridesState({});
+  }
+
+  function handleResilienceProfileChange(harnessId: string, profile: ResilienceProfile) {
+    const next = {
+      ...resilienceConfig,
+      [harnessId]: { ...(resilienceConfig[harnessId] ?? { profile: "balanced" }), profile },
+    };
+    setResilienceConfigState(next);
+    setResilienceConfig(next);
+  }
+
+  function handleFallbackChange(harnessId: string, fallbackHarnessId: string) {
+    const next = {
+      ...resilienceConfig,
+      [harnessId]: {
+        ...(resilienceConfig[harnessId] ?? { profile: "balanced" as ResilienceProfile }),
+        fallbackHarnessId: fallbackHarnessId || undefined,
+      },
+    };
+    setResilienceConfigState(next);
+    setResilienceConfig(next);
   }
 
   // ── Claude settings.json helpers ────────────────────────────
@@ -1254,6 +1292,124 @@ export default function PermissionsPage() {
                 Limits are checked against estimated cost using Anthropic public pricing.
               </p>
             </>
+          )}
+        </div>
+      </section>
+
+      {/* ── Divider ── */}
+      <div style={{ height: "1px", background: "var(--separator)", marginBottom: "24px" }} />
+
+      {/* ── Harness Resilience Profiles section ── */}
+      <section>
+        <div style={{
+          background: "var(--bg-surface)",
+          border: "1px solid var(--border-base)",
+          borderRadius: "8px",
+          overflow: "hidden",
+        }}>
+          <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-base)" }}>
+            <p style={{ fontSize: "11px", fontWeight: 500, fontVariantCaps: "all-small-caps", letterSpacing: "0.03em", color: "var(--fg-subtle)", margin: 0 }}>
+              Harness Resilience Profiles
+            </p>
+          </div>
+
+          {harnessHealth.length === 0 ? (
+            <div style={{ padding: "14px 16px", fontSize: "12px", color: "var(--fg-subtle)" }}>
+              No harness launch history yet. Health data appears after your first comparison.
+            </div>
+          ) : (
+            <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: "12px" }}>
+              {harnessHealth.map((rec) => {
+                const cfg = resilienceConfig[rec.harnessId];
+                const profile = cfg?.profile ?? "balanced";
+                const fallback = cfg?.fallbackHarnessId ?? "";
+                const otherHarnesses = harnessHealth
+                  .filter((r) => r.harnessId !== rec.harnessId)
+                  .map((r) => r.harnessId);
+
+                return (
+                  <div
+                    key={rec.harnessId}
+                    data-testid={`resilience-row-${rec.harnessId}`}
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "6px",
+                      padding: "10px 12px",
+                      background: "var(--bg-elevated)",
+                      borderRadius: "6px",
+                      border: "1px solid var(--border-subtle)",
+                    }}
+                  >
+                    {/* Header row */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                      <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--fg-base)", flex: 1 }}>
+                        {rec.harnessId}
+                      </span>
+                      <span style={{
+                        fontSize: "10px",
+                        color: rec.consecutiveFailures > 0 ? "var(--danger)" : "var(--fg-subtle)",
+                      }}>
+                        {rec.consecutiveFailures > 0
+                          ? `${rec.consecutiveFailures} consecutive failure${rec.consecutiveFailures !== 1 ? "s" : ""}`
+                          : `${rec.totalLaunches} launch${rec.totalLaunches !== 1 ? "es" : ""}, no failures`}
+                      </span>
+                    </div>
+
+                    {/* Profile selector */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                      <span style={{ fontSize: "10px", color: "var(--fg-subtle)", minWidth: "60px" }}>Profile</span>
+                      <div style={{ display: "flex", gap: "4px" }}>
+                        {(["conservative", "balanced", "aggressive"] as ResilienceProfile[]).map((p) => (
+                          <button
+                            key={p}
+                            data-testid={`profile-btn-${rec.harnessId}-${p}`}
+                            onClick={() => handleResilienceProfileChange(rec.harnessId, p)}
+                            style={{
+                              fontSize: "10px",
+                              fontWeight: profile === p ? 600 : 400,
+                              padding: "2px 8px",
+                              borderRadius: "4px",
+                              border: `1px solid ${profile === p ? "var(--accent)" : "var(--border-base)"}`,
+                              background: profile === p ? "rgba(91,80,232,0.12)" : "transparent",
+                              color: profile === p ? "var(--accent-text)" : "var(--fg-muted)",
+                              cursor: "pointer",
+                            }}
+                          >
+                            {PROFILE_LABELS[p]}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Fallback selector */}
+                    {otherHarnesses.length > 0 && (
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <span style={{ fontSize: "10px", color: "var(--fg-subtle)", minWidth: "60px" }}>Fallback</span>
+                        <select
+                          value={fallback}
+                          onChange={(e) => handleFallbackChange(rec.harnessId, e.target.value)}
+                          style={{
+                            fontSize: "11px",
+                            padding: "2px 6px",
+                            borderRadius: "4px",
+                            border: "1px solid var(--border-base)",
+                            background: "var(--bg-base)",
+                            color: "var(--fg-base)",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <option value="">None</option>
+                          {otherHarnesses.map((id) => (
+                            <option key={id} value={id}>{id}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           )}
         </div>
       </section>

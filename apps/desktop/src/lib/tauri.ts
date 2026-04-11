@@ -161,10 +161,6 @@ export async function deleteCustomProfile(id: string): Promise<void> {
 
 // ── Settings / directory commands ────────────────────────────
 
-export async function listClaudeDir(): Promise<string[]> {
-  return invoke<string[]>("list_claude_dir");
-}
-
 export interface ClaudeAccountInfo {
   logged_in: boolean;
   subscription_type: string | null;
@@ -173,6 +169,10 @@ export interface ClaudeAccountInfo {
 
 export async function detectClaudeAccount(): Promise<ClaudeAccountInfo> {
   return invoke<ClaudeAccountInfo>("detect_claude_account");
+}
+
+export async function listClaudeDir(): Promise<string[]> {
+  return invoke<string[]>("list_claude_dir");
 }
 
 // ── Observatory commands ──────────────────────────────────────

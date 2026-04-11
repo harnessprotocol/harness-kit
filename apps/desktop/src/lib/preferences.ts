@@ -306,6 +306,36 @@ export function setBudgetGuard(config: BudgetGuardConfig): void {
   window.dispatchEvent(new CustomEvent("harness-kit-prefs-changed"));
 }
 
+// ── Resilience Profiles ──────────────────────────────────────
+
+export type ResilienceProfile = "conservative" | "balanced" | "aggressive";
+
+export interface HarnessResilienceConfig {
+  /** Determines when fallback is triggered. */
+  profile: ResilienceProfile;
+  /** Harness ID to fall back to when the primary fails. */
+  fallbackHarnessId?: string;
+}
+
+/** Per-harness config keyed by harness ID. */
+export type ResilienceConfigMap = Record<string, HarnessResilienceConfig>;
+
+const RESILIENCE_CONFIG_KEY = "harness-kit-resilience-config";
+
+export function getResilienceConfig(): ResilienceConfigMap {
+  const raw = localStorage.getItem(RESILIENCE_CONFIG_KEY);
+  if (!raw) return {};
+  try {
+    return JSON.parse(raw) as ResilienceConfigMap;
+  } catch {
+    return {};
+  }
+}
+
+export function setResilienceConfig(config: ResilienceConfigMap): void {
+  localStorage.setItem(RESILIENCE_CONFIG_KEY, JSON.stringify(config));
+}
+
 // ── Init ─────────────────────────────────────────────────────
 
 /** Apply all stored preferences on boot. Call once at app startup. */
