@@ -2,7 +2,7 @@
 import { buildGraph } from '../graph/graph.js';
 import { createCheckpointer } from '../checkpointer.js';
 import { getThreadConfig, getAbort, cancelTask, isRunning } from './thread-manager.js';
-import { emit } from './broadcaster.js';
+import { emit, clearSubscribers } from './broadcaster.js';
 import type { SerializableTask, Phase, StartAgentOptions } from '../types.js';
 
 // Module-level graph singleton (checkpointer.setup() is called lazily on first DB access)
@@ -64,6 +64,7 @@ export async function startAgent(
     }
   } finally {
     cancelTask(task.id);
+    clearSubscribers(task.id);
   }
 }
 
@@ -126,6 +127,7 @@ export async function resumeAgent(
     }
   } finally {
     cancelTask(task.id);
+    clearSubscribers(task.id);
   }
 }
 

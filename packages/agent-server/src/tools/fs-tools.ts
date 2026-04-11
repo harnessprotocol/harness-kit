@@ -63,8 +63,10 @@ export function validateBashCommand(cmd: string): boolean {
   if (!ALLOWED_BASE_COMMANDS.has(basename)) return false;
   // Block pipe-into-interpreter (download-and-execute attack vector)
   if (/\|\s*(bash|sh|zsh|fish|node|python3?|ruby|perl)\b/.test(trimmed)) return false;
-  // Block rm targeting root (/) or home (~) directly
-  if (basename === 'rm' && /\s[\/~]\s*$/.test(trimmed)) return false;
+  // Block rm/rmdir targeting any absolute path (/) or home-relative path (~/).
+  // Agents must use relative paths within the worktree; absolute paths have no safe
+  // use case here and create an unbounded destructive surface.
+  if ((basename === 'rm' || basename === 'rmdir') && /\s[\/~]/.test(trimmed)) return false;
   return true;
 }
 

@@ -11,6 +11,11 @@ export function subscribe(taskId: number, sink: EventSink) {
   return () => sinks.get(taskId)?.delete(sink);
 }
 
+/** Remove the subscriber set for a completed task to prevent unbounded map growth. */
+export function clearSubscribers(taskId: number) {
+  sinks.delete(taskId);
+}
+
 export function emit(event: AgentEvent) {
   sinks.get(event.taskId)?.forEach(s => s(event));
 }

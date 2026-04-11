@@ -10,7 +10,13 @@ export async function qaReviewNode(state: AgentStateType): Promise<Partial<Agent
   if (state.handoffRequested) { interrupt('handoff'); }
 
   const workDir = state.task.worktree_path ?? process.cwd();
-  const fsTools = buildFsTools(workDir, ['read_file', 'list_directory', 'bash']);
+  // QA reviewer only needs read access + bash to run tests.
+  // Intersect with state.allowedTools if permission mode is active.
+  const QA_TOOLS = ['read_file', 'list_directory', 'bash'];
+  const qaTools = state.allowedTools
+    ? QA_TOOLS.filter(t => state.allowedTools!.includes(t))
+    : QA_TOOLS;
+  const fsTools = buildFsTools(workDir, qaTools);
   const model = new ChatAnthropic({ ...buildClientOptions(),
     modelName: state.task.default_model ?? 'claude-opus-4-6', maxTokens: 4096 }).bindTools(fsTools);
 

@@ -62,7 +62,7 @@ fn find_server_dir() -> Result<PathBuf, String> {
         dir = d.parent().map(|p| p.to_path_buf());
         depth += 1;
     }
-    Err("Agent server not found — run `pnpm build:agent-server` first".to_string())
+    Err("Agent server not found — run `cd packages/agent-server && pnpm build` first".to_string())
 }
 
 fn xml_escape(s: &str) -> String {
