@@ -279,6 +279,33 @@ export function setAutoModeUnlocked(unlocked: boolean) {
   }
 }
 
+// ── Budget Guard ─────────────────────────────────────────────
+
+export interface BudgetGuardConfig {
+  enabled: boolean;
+  dailyTokenLimit?: number;
+  dailyEstimatedCostUSD?: number;
+}
+
+const BUDGET_GUARD_KEY = "harness-kit-budget-guard";
+
+const BUDGET_GUARD_DEFAULT: BudgetGuardConfig = { enabled: false };
+
+export function getBudgetGuard(): BudgetGuardConfig {
+  const raw = localStorage.getItem(BUDGET_GUARD_KEY);
+  if (!raw) return { ...BUDGET_GUARD_DEFAULT };
+  try {
+    return JSON.parse(raw) as BudgetGuardConfig;
+  } catch {
+    return { ...BUDGET_GUARD_DEFAULT };
+  }
+}
+
+export function setBudgetGuard(config: BudgetGuardConfig): void {
+  localStorage.setItem(BUDGET_GUARD_KEY, JSON.stringify(config));
+  window.dispatchEvent(new CustomEvent("harness-kit-prefs-changed"));
+}
+
 // ── Init ─────────────────────────────────────────────────────
 
 /** Apply all stored preferences on boot. Call once at app startup. */

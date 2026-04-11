@@ -10,6 +10,10 @@ import HKTooltip from "../../components/Tooltip";
 import { useObservatoryData } from "../../hooks/useObservatoryData";
 import { formatNumber, formatDate, formatHour, shortModelName } from "../../lib/format";
 import type { DailyActivity, DailyModelTokens, ModelUsageEntry } from "@harness-kit/shared";
+import { estimateTotalCost, formatCost } from "../../lib/pricing";
+import { getBudgetGuard } from "../../lib/preferences";
+import CostBreakdownSection from "../../components/observatory/CostBreakdownSection";
+import BudgetAlertBanner from "../../components/observatory/BudgetAlertBanner";
 
 const MODEL_COLORS = ["#5b50e8", "#0d9488", "#ea580c", "#16a34a", "#2563eb", "#e11d48"];
 
@@ -521,6 +525,39 @@ export default function DashboardPage() {
     };
   }, [mergedModelUsage]);
 
+  const totalEstimatedCost = useMemo(() =>
+    estimateTotalCost(mergedModelUsage),
+    [mergedModelUsage],
+  );
+
+  const budgetGuard = useMemo(() => getBudgetGuard(), []);
+
+  const todayModelUsage = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    const todayEntry = liveStats?.dailyModelTokens?.find((d) => d.date === today);
+    return todayEntry?.tokensByModel
+      ? Object.fromEntries(
+          Object.entries(todayEntry.tokensByModel).map(([model, tokens]) => [
+            model,
+            { inputTokens: tokens, outputTokens: 0 },
+          ])
+        )
+      : {};
+  }, [liveStats]);
+
+  const costToday = useMemo(() => estimateTotalCost(todayModelUsage), [todayModelUsage]);
+  const tokensToday = useMemo(() =>
+    Object.values(todayModelUsage).reduce((sum, u) => sum + (u.inputTokens ?? 0), 0),
+    [todayModelUsage],
+  );
+
+  const budgetExceeded = useMemo(() => {
+    if (!budgetGuard.enabled) return false;
+    const tokenOver = budgetGuard.dailyTokenLimit != null && tokensToday > budgetGuard.dailyTokenLimit;
+    const costOver  = budgetGuard.dailyEstimatedCostUSD != null && costToday > budgetGuard.dailyEstimatedCostUSD;
+    return tokenOver || costOver;
+  }, [budgetGuard, tokensToday, costToday]);
+
   const { dailyTokensChartData, allModelNames } = useMemo(() => {
     if (!mergedDailyTokens.length) return { dailyTokensChartData: [], allModelNames: [] };
 
@@ -662,6 +699,16 @@ export default function DashboardPage() {
         onResetOverrides={() => setChartOverrides({})}
       />
 
+      {/* Budget alert — shown above stats when daily limit is exceeded */}
+      {budgetExceeded && (
+        <BudgetAlertBanner
+          tokensToday={tokensToday}
+          tokenLimit={budgetGuard.dailyTokenLimit}
+          costToday={costToday}
+          costLimit={budgetGuard.dailyEstimatedCostUSD}
+        />
+      )}
+
       {/* Stats bar */}
       <div style={{ display: "flex", gap: "10px", marginBottom: "18px", flexWrap: "wrap" }}>
         <StatCard label="Sessions" value={formatNumber(cache?.totalSessions ?? 0)} tooltip="Unique Claude Code sessions" accent="#5b50e8" />
@@ -678,6 +725,13 @@ export default function DashboardPage() {
           sub="read / total input"
           tooltip="Cache read tokens as a percentage of total input tokens"
           accent="#16a34a"
+        />
+        <StatCard
+          label="Est. Cost"
+          value={formatCost(totalEstimatedCost)}
+          sub="all time"
+          tooltip="Estimated cost based on Anthropic public pricing. Actual billing may differ."
+          accent="#9333ea"
         />
       </div>
 
@@ -827,6 +881,9 @@ export default function DashboardPage() {
           )}
         </ChartCard>
       </div>
+
+      {/* Cost breakdown table */}
+      <CostBreakdownSection modelUsage={mergedModelUsage} />
     </div>
   );
 }
