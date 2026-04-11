@@ -206,7 +206,11 @@ export function TaskDetailDialog({ task, project, onClose, onTaskUpdated, repoUr
       } else {
         if (selectedHarness === 'claude') {
           // Agent-managed execution via agent-server (port 4801)
-          await agentApi.start(project.slug, task);
+          const startRes = await agentApi.start(project.slug, task);
+          if (!startRes.ok) {
+            const body = await startRes.json().catch(() => ({})) as { error?: string };
+            throw new Error(body.error ?? `Agent server returned ${startRes.status}`);
+          }
           await api.tasks.updateExecution(project.slug, task.id, {
             status: 'running',
             phase: 'spec',

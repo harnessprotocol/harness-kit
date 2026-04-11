@@ -32,6 +32,7 @@ harness-kit/
 │   ├── shared/                   ← shared TypeScript types used across apps
 │   ├── ui/                       ← shared React components
 │   ├── board-server/             ← WebSocket + HTTP server for the Kanban board and Roadmap/Competitor Analysis features
+│   ├── agent-server/             ← LangGraph execution engine for per-card agent runs (port 4801)
 │   ├── chat-relay/               ← self-hosted WebSocket relay for team chat
 │   └── membrain/                 ← git submodule (siracusa5/membrain) — graph-based memory, excluded from pnpm workspace
 ├── apps/                         ← end-user applications

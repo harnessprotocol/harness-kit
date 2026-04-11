@@ -15,6 +15,8 @@ export const AgentState = Annotation.Root({
   qaAttempts:       Annotation<number>({ default: () => 0, reducer: (_a: number, b: number) => b }),
   task:             Annotation<SerializableTask>({ reducer: (_a: SerializableTask, b: SerializableTask) => b } as never),
   projectSlug:      Annotation<string>({ reducer: (_a: string, b: string) => b } as never),
+  /** Tool allowlist from StartAgentOptions — undefined means all tools enabled */
+  allowedTools:     Annotation<string[] | undefined>({ default: () => undefined, reducer: (_a, b) => b }),
 });
 
 export type AgentStateType = typeof AgentState.State;

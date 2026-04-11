@@ -30,6 +30,7 @@ export async function startAgent(
     task,
     projectSlug,
     phase: 'spec' as Phase,
+    allowedTools: opts.allowedTools,
   };
 
   try {
@@ -50,15 +51,6 @@ export async function startAgent(
         if (phase) {
           emit({ type: 'agent_phase', taskId: task.id, phase,
             progress: PHASE_PROGRESS[phase] ?? 50 });
-        }
-        // Emit thought from last message if present
-        const msgs = nodeState.messages as Array<{content?:string}> | undefined;
-        if (msgs?.length) {
-          const last = msgs.at(-1);
-          if (last?.content && typeof last.content === 'string') {
-            emit({ type: 'agent_thought', taskId: task.id,
-              text: last.content, timestamp: new Date().toISOString() });
-          }
         }
       }
     }
@@ -143,6 +135,7 @@ export async function steerAgent(
   message: string,
   task: SerializableTask
 ) {
+  if (isRunning(taskId)) throw new Error(`Task ${taskId} is running — pause before steering`);
   // Resume the graph with the steering message injected
   const config = getThreadConfig(projectSlug, taskId);
   await getGraph().invoke({ steeringMessage: message, task }, config);

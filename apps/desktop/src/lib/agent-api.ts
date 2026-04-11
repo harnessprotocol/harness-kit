@@ -1,6 +1,8 @@
 // apps/desktop/src/lib/agent-api.ts
 // Typed HTTP + WebSocket client for the agent-server on port 4801.
 
+import { invoke } from '@tauri-apps/api/core';
+
 export type Phase =
   | 'spec' | 'planning' | 'coding' | 'qa_review' | 'qa_fixing';
 
@@ -43,50 +45,77 @@ export interface StartAgentOptions {
 
 const AGENT_BASE = 'http://localhost:4801';
 
+// Lazily fetched token — resolved once and cached for the session lifetime.
+let _tokenPromise: Promise<string> | null = null;
+
+function getToken(): Promise<string> {
+  if (!_tokenPromise) {
+    _tokenPromise = invoke<string>('get_agent_server_token');
+  }
+  return _tokenPromise;
+}
+
 function url(slug: string, taskId: number, path: string) {
   return `${AGENT_BASE}/projects/${slug}/tasks/${taskId}/${path}`;
 }
 
+async function authHeaders(): Promise<Record<string, string>> {
+  const token = await getToken();
+  return { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` };
+}
+
 export const agentApi = {
-  start(slug: string, task: SerializableTask, opts?: StartAgentOptions) {
+  async start(slug: string, task: SerializableTask, opts?: StartAgentOptions) {
     return fetch(url(slug, task.id, 'start'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await authHeaders(),
       body: JSON.stringify({ task, opts }),
     });
   },
 
-  stop(slug: string, taskId: number) {
-    return fetch(url(slug, taskId, 'stop'), { method: 'POST' });
+  async stop(slug: string, taskId: number) {
+    const token = await getToken();
+    return fetch(url(slug, taskId, 'stop'), {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
   },
 
-  pause(slug: string, taskId: number) {
-    return fetch(url(slug, taskId, 'pause'), { method: 'POST' });
+  async pause(slug: string, taskId: number) {
+    const token = await getToken();
+    return fetch(url(slug, taskId, 'pause'), {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}` },
+    });
   },
 
-  resume(slug: string, task: SerializableTask, opts?: StartAgentOptions) {
+  async resume(slug: string, task: SerializableTask, opts?: StartAgentOptions) {
     return fetch(url(slug, task.id, 'resume'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await authHeaders(),
       body: JSON.stringify({ task, opts }),
     });
   },
 
-  steer(slug: string, taskId: number, task: SerializableTask, message: string) {
+  async steer(slug: string, taskId: number, task: SerializableTask, message: string) {
     return fetch(url(slug, taskId, 'steer'), {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: await authHeaders(),
       body: JSON.stringify({ task, message }),
     });
   },
 
-  status(slug: string, taskId: number) {
-    return fetch(url(slug, taskId, 'status')).then(r => r.json() as Promise<{ running: boolean }>);
+  async status(slug: string, taskId: number) {
+    const token = await getToken();
+    return fetch(url(slug, taskId, 'status'), {
+      headers: { 'Authorization': `Bearer ${token}` },
+    }).then(r => r.json() as Promise<{ running: boolean }>);
   },
 
   /** Open a WebSocket and receive AgentEvents for a task */
-  subscribe(taskId: number, onEvent: (e: AgentEvent) => void): () => void {
-    const ws = new WebSocket(`ws://localhost:4801/ws?taskId=${taskId}`);
+  async subscribe(taskId: number, onEvent: (e: AgentEvent) => void): Promise<() => void> {
+    const token = await getToken();
+    const ws = new WebSocket(`ws://localhost:4801/ws?taskId=${taskId}&token=${token}`);
     ws.onmessage = (e) => {
       try { onEvent(JSON.parse(e.data as string) as AgentEvent); } catch { /* skip */ }
     };

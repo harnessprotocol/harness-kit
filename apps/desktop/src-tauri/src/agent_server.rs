@@ -121,6 +121,18 @@ fn generate_plist(node_path: &str, server_dir: &str, log_dir: &str) -> String {
     )
 }
 
+const TOKEN_FILE: &str = ".harness-kit/agent-server.token";
+
+#[tauri::command]
+pub fn get_agent_server_token() -> Result<String, String> {
+    let path = dirs::home_dir()
+        .ok_or("No home directory")?
+        .join(TOKEN_FILE);
+    std::fs::read_to_string(&path)
+        .map(|s| s.trim().to_string())
+        .map_err(|_| "Agent server token not found — start the agent server first".to_string())
+}
+
 #[tauri::command]
 pub fn agent_server_check_installed() -> bool {
     plist_path().exists()

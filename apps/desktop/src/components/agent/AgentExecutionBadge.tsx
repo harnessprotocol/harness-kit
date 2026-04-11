@@ -41,13 +41,21 @@ export function AgentExecutionBadge({ phase: phaseProp, progress: progressProp, 
     if (!taskId) return;
     setLivePhase(phaseProp);
     setLiveProgress(progressProp);
-    const unsub = agentApi.subscribe(taskId, (event) => {
+    let cleanup: (() => void) | null = null;
+    let cancelled = false;
+    agentApi.subscribe(taskId, (event) => {
       if (event.type === 'agent_phase') {
         setLivePhase(event.phase);
         setLiveProgress(event.progress);
       }
+    }).then(unsub => {
+      if (cancelled) { unsub(); return; }
+      cleanup = unsub;
     });
-    return unsub;
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
   }, [taskId, phaseProp, progressProp]);
 
   const color = PHASE_COLORS[livePhase] ?? '#6B7FA0';

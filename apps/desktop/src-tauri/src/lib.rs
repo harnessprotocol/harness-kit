@@ -158,6 +158,7 @@ pub fn run() {
             board_server::board_server_start,
             board_server::board_server_restart,
             // Agent server
+            agent_server::get_agent_server_token,
             agent_server::agent_server_check_installed,
             agent_server::agent_server_install,
             agent_server::agent_server_start,

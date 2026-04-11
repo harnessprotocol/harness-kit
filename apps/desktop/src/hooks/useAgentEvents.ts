@@ -20,18 +20,26 @@ export function useAgentEvents(taskId: number | null): AgentEventLog {
 
   useEffect(() => {
     if (!taskId) return;
-    setIsRunning(true);
-    const unsub = agentApi.subscribe(taskId, (event) => {
+    let cleanup: (() => void) | null = null;
+    let cancelled = false;
+    agentApi.subscribe(taskId, (event) => {
       setEvents(prev => [...prev, event]);
       if (event.type === 'agent_phase') {
         setPhase(event.phase);
         setProgress(event.progress);
+        setIsRunning(true);
       }
       if (event.type === 'agent_done' || event.type === 'agent_error') {
         setIsRunning(false);
       }
+    }).then(unsub => {
+      if (cancelled) { unsub(); return; }
+      cleanup = unsub;
     });
-    return unsub;
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
   }, [taskId]);
 
   return { events, phase, progress, isRunning };

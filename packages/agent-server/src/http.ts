@@ -3,6 +3,7 @@ import express from 'express';
 import { z } from 'zod';
 import { startAgent, stopAgent, steerAgent, pauseAgent, resumeAgent } from './runner/runner.js';
 import { isRunning } from './runner/thread-manager.js';
+import { getOrCreateToken } from './token.js';
 
 const SerializableTaskSchema = z.object({
   id: z.number(),
@@ -15,7 +16,13 @@ const SerializableTaskSchema = z.object({
   default_model: z.string().optional(),
 });
 
+const SteerBodySchema = z.object({
+  task: SerializableTaskSchema,
+  message: z.string().min(1).max(4000),
+});
+
 export function createServer() {
+  const token = getOrCreateToken();
   const app = express();
   app.use(express.json());
 
@@ -24,7 +31,20 @@ export function createServer() {
     res.header('Access-Control-Allow-Origin', 'tauri://localhost');
     res.header('Vary', 'Origin');
     res.header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
+    res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+    next();
+  });
+
+  // Handle CORS preflight
+  app.options('*', (_req, res) => res.sendStatus(204));
+
+  // Auth middleware — all routes require Bearer token.
+  // Token is stored in ~/.harness-kit/agent-server.token (mode 0600).
+  app.use((req, res, next) => {
+    const auth = req.headers['authorization'];
+    if (auth !== `Bearer ${token}`) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
     next();
   });
 
@@ -73,9 +93,12 @@ export function createServer() {
   app.post(`${base}/steer`, async (req, res) => {
     const { slug } = req.params;
     const taskId = Number(req.params.taskId);
-    const { message, task } = req.body;
-    await steerAgent(slug, taskId, message, task);
-    res.json({ ok: true });
+    const parsed = SteerBodySchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ error: parsed.error.message });
+    try {
+      await steerAgent(slug, taskId, parsed.data.message, parsed.data.task);
+      res.json({ ok: true });
+    } catch (e) { res.status(400).json({ error: String(e) }); }
   });
 
   // GET status

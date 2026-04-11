@@ -27,7 +27,7 @@ export async function codingNode(state: AgentStateType): Promise<Partial<AgentSt
   if (state.handoffRequested) { interrupt('handoff'); }
 
   const workDir = state.task.worktree_path ?? process.cwd();
-  const fsTools = buildFsTools(workDir);
+  const fsTools = buildFsTools(workDir, state.allowedTools);
   const boardTools = await buildBoardTools();
   const tools = [...fsTools, ...boardTools];
 
