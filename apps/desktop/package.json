@@ -20,7 +20,6 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@harness-kit/core": "workspace:*",
     "@harness-kit/shared": "workspace:*",
-    "@harness-kit/ui": "workspace:*",
     "@monaco-editor/react": "^4.6.0",
     "@supabase/supabase-js": "^2",
     "@tauri-apps/api": "^2",
