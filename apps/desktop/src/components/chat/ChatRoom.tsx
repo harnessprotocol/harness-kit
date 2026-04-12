@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useChat } from "../../context/ChatContext";
+import { useChat } from "../../contexts/ChatContext";
 import MessageList from "./MessageList";
 import ChatInput from "./ChatInput";
 import SharesTab from "./SharesTab";

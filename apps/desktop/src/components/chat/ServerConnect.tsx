@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useChat } from "../../context/ChatContext";
+import { useChat } from "../../contexts/ChatContext";
 import { chatStartLocalRelay } from "../../lib/tauri";
 
 const DEFAULT_URL = "ws://localhost:4801";

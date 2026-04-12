@@ -13,7 +13,7 @@ import PluginRow from "./plugins/PluginRow";
 import ImportOverlay from "./plugins/ImportOverlay";
 import ImportBanner, { type ImportStatus } from "./plugins/ImportBanner";
 import UninstallDialog from "./plugins/UninstallDialog";
-import { useChat } from "../../context/ChatContext";
+import { useChat } from "../../contexts/ChatContext";
 import { emitChatShare } from "../../lib/chat-events";
 
 export default function PluginsPage() {

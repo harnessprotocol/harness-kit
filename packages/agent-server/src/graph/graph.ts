@@ -15,7 +15,7 @@ function shouldQa(_state: AgentStateType): 'qa_review' | typeof END {
 }
 
 function qaOutcome(state: AgentStateType): 'qa_fixing' | typeof END {
-  if (state.qaAttempts >= 99) return END;   // passed
+  if (state.qaPassed) return END;
   if (state.qaAttempts >= 3) return END;    // too many retries, surface to human
   return 'qa_fixing';
 }
