@@ -13,7 +13,7 @@
     "fumadocs-mdx": "^14.2.10",
     "fumadocs-ui": "^16.6.17",
     "mdast-util-from-markdown": "^2.0.3",
-    "next": "^16.1.7",
+    "next": "^16.2.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
