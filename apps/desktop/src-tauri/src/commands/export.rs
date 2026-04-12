@@ -198,9 +198,9 @@ pub fn get_comparator_analytics(db: State<'_, Db>) -> Result<AnalyticsData, Stri
         .query_row(
             "SELECT COUNT(DISTINCT comparison_id) FROM evaluations",
             [],
-            |row| row.get(0),
+            |row| row.get::<_, i64>(0),
         )
-        .unwrap_or(0);
+        .unwrap_or(0) as u64;
 
     if total_comparisons == 0 {
         return Ok(AnalyticsData {
