@@ -30,6 +30,8 @@ vi.mock("../../../lib/preferences", () => ({
   getAutoModeUnlocked: () => false,
   setAutoModeUnlocked: vi.fn(),
   DEFAULT_ALLOWED_TOOLS: ["Read", "Grep", "Glob"],
+  getBudgetGuard: () => ({ enabled: false }),
+  setBudgetGuard: vi.fn(),
 }));
 
 // ── Fixtures ──────────────────────────────────────────────────

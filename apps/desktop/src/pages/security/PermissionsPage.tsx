@@ -11,7 +11,8 @@ import {
   getHarnessPermissionOverrides, setHarnessPermissionOverrides,
   resetPermissionDefaults,
   getAutoModeUnlocked, setAutoModeUnlocked,
-  type PermissionMode, type HarnessPermissionOverride,
+  getBudgetGuard, setBudgetGuard,
+  type PermissionMode, type HarnessPermissionOverride, type BudgetGuardConfig,
 } from "../../lib/preferences";
 import { BUILTIN_HARNESSES } from "../../lib/harness-definitions";
 import { TOOL_NAMES } from "../../lib/tool-names";
@@ -723,6 +724,16 @@ export default function PermissionsPage() {
   const [confirmPreset, setConfirmPreset] = useState<SecurityPreset | null>(null);
   const [dirty, setDirty] = useState(false);
 
+  const [budgetGuard, setBudgetGuardState] = useState<BudgetGuardConfig>(() => getBudgetGuard());
+
+  function handleBudgetGuardChange(update: Partial<BudgetGuardConfig>) {
+    setBudgetGuardState((prev) => {
+      const next = { ...prev, ...update };
+      setBudgetGuard(next);
+      return next;
+    });
+  }
+
   // HarnessKit permission mode (localStorage)
   const [autoUnlocked, setAutoUnlockedState] = useState<boolean>(getAutoModeUnlocked);
   const [mode, setMode] = useState<PermissionMode>(getPermissionMode);
@@ -1163,6 +1174,88 @@ export default function PermissionsPage() {
             </button>
           </>
         )}
+      </section>
+
+      {/* ── Daily Budget Guard ─────────────────────────────────── */}
+      <section style={{ marginTop: "32px" }}>
+        <h2 style={{ fontSize: "14px", fontWeight: 600, color: "var(--fg-base)", margin: "0 0 12px" }}>
+          Daily Budget Guard
+        </h2>
+        <div style={{
+          background: "var(--bg-surface)",
+          border: "1px solid var(--border-base)",
+          borderRadius: "8px",
+          padding: "16px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "14px",
+        }}>
+          {/* Enable toggle */}
+          <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
+            <input
+              type="checkbox"
+              checked={budgetGuard.enabled}
+              onChange={(e) => handleBudgetGuardChange({ enabled: e.target.checked })}
+              style={{ accentColor: "var(--accent)", width: "14px", height: "14px" }}
+            />
+            <span style={{ fontSize: "13px", color: "var(--fg-base)", fontWeight: 500 }}>
+              Enable daily budget alerts
+            </span>
+          </label>
+
+          {budgetGuard.enabled && (
+            <>
+              {/* Token limit */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Daily token limit (optional)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step={10000}
+                  placeholder="e.g. 500000"
+                  value={budgetGuard.dailyTokenLimit ?? ""}
+                  onChange={(e) => handleBudgetGuardChange({
+                    dailyTokenLimit: e.target.value ? Number(e.target.value) : undefined,
+                  })}
+                  style={{
+                    fontSize: "13px", padding: "7px 10px", borderRadius: "6px",
+                    border: "1px solid var(--border-base)", background: "var(--bg-elevated)",
+                    color: "var(--fg-base)", width: "200px",
+                  }}
+                />
+              </div>
+
+              {/* Cost limit */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
+                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Daily cost limit in USD (optional)
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  placeholder="e.g. 5.00"
+                  value={budgetGuard.dailyEstimatedCostUSD ?? ""}
+                  onChange={(e) => handleBudgetGuardChange({
+                    dailyEstimatedCostUSD: e.target.value ? Number(e.target.value) : undefined,
+                  })}
+                  style={{
+                    fontSize: "13px", padding: "7px 10px", borderRadius: "6px",
+                    border: "1px solid var(--border-base)", background: "var(--bg-elevated)",
+                    color: "var(--fg-base)", width: "200px",
+                  }}
+                />
+              </div>
+
+              <p style={{ margin: 0, fontSize: "12px", color: "var(--fg-subtle)" }}>
+                When today's usage exceeds a limit, an alert banner appears in Observatory.
+                Limits are checked against estimated cost using Anthropic public pricing.
+              </p>
+            </>
+          )}
+        </div>
       </section>
     </div>
   );
