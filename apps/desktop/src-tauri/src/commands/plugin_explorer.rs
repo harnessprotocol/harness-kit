@@ -341,7 +341,7 @@ pub fn export_plugin_as_zip(plugin_path: String, save_path: String) -> Result<()
         .map_err(|e| format!("Failed to create zip file: {}", e))?;
     let mut zip_writer = zip::ZipWriter::new(file);
 
-    let options = zip::write::FileOptions::default()
+    let options = zip::write::SimpleFileOptions::default()
         .compression_method(zip::CompressionMethod::Deflated);
 
     for entry in WalkDir::new(source).into_iter().filter_entry(|e| {
