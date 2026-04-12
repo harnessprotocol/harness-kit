@@ -1,110 +1,41 @@
 version: 2
 updates:
-  # GitHub Actions
+  # GitHub Actions — weekly is fine, these move slowly
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 2
     groups:
       actions:
         patterns:
           - "*"
 
-  # Root workspace
+  # Root pnpm workspace — covers all workspace packages via shared lockfile
+  # (apps/board, apps/cli, apps/desktop, apps/marketplace, packages/*, evals/fixtures, etc.)
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "daily"
+    open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       npm_and_yarn:
         patterns:
           - "*"
 
-  # apps/board
-  - package-ecosystem: "npm"
-    directory: "/apps/board"
-    schedule:
-      interval: "weekly"
-    groups:
-      npm_and_yarn:
-        patterns:
-          - "*"
-
-  # apps/cli
-  - package-ecosystem: "npm"
-    directory: "/apps/cli"
-    schedule:
-      interval: "weekly"
-    groups:
-      npm_and_yarn:
-        patterns:
-          - "*"
-
-  # apps/desktop
-  - package-ecosystem: "npm"
-    directory: "/apps/desktop"
-    schedule:
-      interval: "weekly"
-    groups:
-      npm_and_yarn:
-        patterns:
-          - "*"
-
-  # apps/marketplace
-  - package-ecosystem: "npm"
-    directory: "/apps/marketplace"
-    schedule:
-      interval: "weekly"
-    groups:
-      npm_and_yarn:
-        patterns:
-          - "*"
-
-  # website
+  # website — standalone pnpm-lock.yaml, must be listed separately
   - package-ecosystem: "npm"
     directory: "/website"
     schedule:
-      interval: "weekly"
-    groups:
-      npm_and_yarn:
-        patterns:
-          - "*"
-
-  # packages/board-server
-  - package-ecosystem: "npm"
-    directory: "/packages/board-server"
-    schedule:
-      interval: "weekly"
-    groups:
-      npm_and_yarn:
-        patterns:
-          - "*"
-
-  # packages/chat-relay
-  - package-ecosystem: "npm"
-    directory: "/packages/chat-relay"
-    schedule:
-      interval: "weekly"
-    groups:
-      npm_and_yarn:
-        patterns:
-          - "*"
-
-  # packages/core
-  - package-ecosystem: "npm"
-    directory: "/packages/core"
-    schedule:
-      interval: "weekly"
-    groups:
-      npm_and_yarn:
-        patterns:
-          - "*"
-
-  # evals/fixtures/express-app
-  - package-ecosystem: "npm"
-    directory: "/evals/fixtures/express-app"
-    schedule:
-      interval: "weekly"
+      interval: "daily"
+    open-pull-requests-limit: 2
+    ignore:
+      - dependency-name: "*"
+        update-types: ["version-update:semver-major"]
     groups:
       npm_and_yarn:
         patterns:
@@ -114,17 +45,20 @@ updates:
   - package-ecosystem: "cargo"
     directory: "/apps/desktop/src-tauri"
     schedule:
-      interval: "weekly"
+      interval: "daily"
+    open-pull-requests-limit: 2
     groups:
       cargo:
         patterns:
           - "*"
 
-  # Python evals
+  # Python evals — weekly, low churn
   - package-ecosystem: "pip"
     directory: "/evals"
     schedule:
       interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 1
     groups:
       pip:
         patterns:
