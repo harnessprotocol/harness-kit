@@ -50,6 +50,9 @@ function normalizeTask(task: Task): Task {
   if (!task.next_subtask_id) task.next_subtask_id = 1;
   if (!task.linked_commits) task.linked_commits = [];
   if (!task.comments) task.comments = [];
+  task.execution = task.execution ?? undefined;
+  // phase and thread_id on execution are optional — no default needed
+  // phase on subtasks is optional — no default needed
   return task;
 }
 

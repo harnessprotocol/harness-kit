@@ -4,6 +4,7 @@ import { CATEGORY_CONFIG, COMPLEXITY_CONFIG } from '../../lib/board-task-meta';
 import { openInClaudeCode } from '../../lib/open-in-claude';
 import { ProgressBar } from './ProgressBar';
 import { Tooltip } from './Tooltip';
+import { AgentExecutionBadge } from '../agent/AgentExecutionBadge';
 
 interface Props {
   task: Task;
@@ -74,6 +75,15 @@ export function TaskCard({ task, onClick, repoUrl }: Props) {
           #{task.id}
         </span>
       </div>
+
+      {/* Agent execution badge — shown when running with a phase */}
+      {task.execution?.status === 'running' && task.execution.phase && (
+        <AgentExecutionBadge
+          phase={task.execution.phase}
+          progress={0}
+          taskId={task.execution.thread_id ? task.id : undefined}
+        />
+      )}
 
       {/* Description preview */}
       {task.description && (

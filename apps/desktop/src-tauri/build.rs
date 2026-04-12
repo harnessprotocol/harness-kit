@@ -101,6 +101,12 @@ fn main() {
                 "board_server_install",
                 "board_server_start",
                 "board_server_restart",
+                // Agent server
+                "get_agent_server_token",
+                "agent_server_check_installed",
+                "agent_server_install",
+                "agent_server_start",
+                "agent_server_restart",
                 // membrain
                 "membrain_check_installed",
                 "membrain_start",

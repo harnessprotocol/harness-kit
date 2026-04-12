@@ -1023,6 +1023,16 @@ body {
   opacity: 1 !important;
 }
 
+/* ── Agent execution animations (ported from docs/plans/agent-ui-mock.html) ── */
+@keyframes agent-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: .5; transform: scale(.8); }
+}
+
+@keyframes agent-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

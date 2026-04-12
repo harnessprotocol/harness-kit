@@ -84,15 +84,17 @@ export type EpicStatus = 'active' | 'completed' | 'archived';
 export type SubtaskStatus = 'pending' | 'in_progress' | 'completed' | 'failed';
 export type TaskCategory = 'feature' | 'bug_fix' | 'refactoring' | 'docs' | 'security' | 'performance' | 'ui_ux' | 'infrastructure' | 'testing';
 export type TaskComplexity = 'trivial' | 'small' | 'medium' | 'large' | 'complex';
-export type ExecutionStatus = 'idle' | 'running' | 'completed' | 'failed' | 'stopped';
+export type ExecutionStatus = 'idle' | 'running' | 'paused' | 'completed' | 'failed' | 'stopped';
 
 export interface TaskExecution {
   status: ExecutionStatus;
-  harness_id: string;
+  harness_id?: string;
   model?: string;
   started_at?: string;
   finished_at?: string;
   exit_code?: number;
+  phase?: string;
+  thread_id?: string;
 }
 
 export interface Subtask {
@@ -101,6 +103,7 @@ export interface Subtask {
   description?: string;
   status: SubtaskStatus;
   files: string[];
+  phase?: string;
 }
 
 export interface Comment {
