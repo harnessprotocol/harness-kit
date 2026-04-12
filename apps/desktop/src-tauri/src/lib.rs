@@ -218,7 +218,7 @@ pub fn run() {
             }
             let agent_state = app.state::<AgentServerState>();
             if agent_state.check() {
-                eprintln!("[agent-server] running on :{}", 4801);
+                eprintln!("[agent-server] running on :{}", 4802);
             } else {
                 eprintln!("[agent-server] not running — install with: pnpm agent:install");
             }

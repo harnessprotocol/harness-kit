@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { useChat } from "../../context/ChatContext";
+import { useChat } from "../../contexts/ChatContext";
 import { emitChatShare } from "../../lib/chat-events";
 import { compile, detectPlatforms, parseHarness } from "@harness-kit/core";
 import type { CompileResult, DetectedPlatform, TargetPlatform } from "@harness-kit/core";

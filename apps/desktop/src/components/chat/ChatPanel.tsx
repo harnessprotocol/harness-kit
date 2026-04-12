@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useChat } from "../../context/ChatContext";
+import { useChat } from "../../contexts/ChatContext";
 import ServerConnect from "./ServerConnect";
 import ChatLobby from "./ChatLobby";
 import ChatRoom from "./ChatRoom";

@@ -28,10 +28,10 @@ export async function qaReviewNode(state: AgentStateType): Promise<Partial<Agent
   const content = typeof response.content === 'string' ? response.content : '';
   const passed = content.toLowerCase().includes('pass') && !content.toLowerCase().includes('fail');
 
-  // Update graph routing signal via qaAttempts — if passed, set high so routing skips qa_fixing
   return {
     phase: passed ? 'qa_review' : 'qa_fixing',
-    qaAttempts: passed ? 99 : state.qaAttempts + 1, // 99 = "passed, skip retry"
+    qaPassed: passed,
+    qaAttempts: passed ? state.qaAttempts : state.qaAttempts + 1,
     messages: [response],
   };
 }

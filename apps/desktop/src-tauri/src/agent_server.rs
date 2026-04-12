@@ -2,7 +2,7 @@ use std::net::TcpListener;
 use std::process::Command;
 use std::path::PathBuf;
 
-const PORT: u16 = 4801;
+const PORT: u16 = 4802;
 const PLIST_LABEL: &str = "com.harness-kit.agent-server";
 const MAX_TRAVERSAL_DEPTH: usize = 10;
 
@@ -114,7 +114,7 @@ fn generate_plist(node_path: &str, server_dir: &str, log_dir: &str) -> String {
   <key>EnvironmentVariables</key>
   <dict>
     <key>AGENT_SERVER_PORT</key>
-    <string>4801</string>
+    <string>4802</string>
   </dict>
 </dict>
 </plist>"#

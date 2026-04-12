@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import React from "react";
-import { ChatProvider } from "../../context/ChatContext";
+import { ChatProvider } from "../../contexts/ChatContext";
 import { useChatRelay } from "../useChatRelay";
 import type { ServerMessage } from "@harness-kit/shared";
 

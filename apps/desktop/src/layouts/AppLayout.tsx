@@ -7,7 +7,7 @@ import { useArrowNavigation } from "../hooks/useArrowNavigation";
 import { useSidebarResize } from "../hooks/useSidebarResize";
 import { initTheme } from "../lib/theme";
 import { initPreferences, getHiddenSections } from "../lib/preferences";
-import { useChat } from "../context/ChatContext";
+import { useChat } from "../contexts/ChatContext";
 import ChatPanel from "../components/chat/ChatPanel";
 import { useClaudeFileList } from "../hooks/useClaudeFileList";
 
