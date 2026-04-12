@@ -11,7 +11,7 @@ import { useObservatoryData } from "../../hooks/useObservatoryData";
 import { formatNumber, formatDate, formatHour, shortModelName } from "../../lib/format";
 import type { DailyActivity, DailyModelTokens, ModelUsageEntry } from "@harness-kit/shared";
 import { estimateTotalCost, formatCost } from "../../lib/pricing";
-import { getBudgetGuard } from "../../lib/preferences";
+import { getBudgetGuard, type BudgetGuardConfig } from "../../lib/preferences";
 import CostBreakdownSection from "../../components/observatory/CostBreakdownSection";
 import BudgetAlertBanner from "../../components/observatory/BudgetAlertBanner";
 
@@ -530,11 +530,26 @@ export default function DashboardPage() {
     [mergedModelUsage],
   );
 
-  const budgetGuard = useMemo(() => getBudgetGuard(), []);
+  const [budgetGuard, setBudgetGuardLocal] = useState<BudgetGuardConfig>(() => getBudgetGuard());
+
+  useEffect(() => {
+    function onPrefsChanged() {
+      setBudgetGuardLocal(getBudgetGuard());
+    }
+    window.addEventListener("harness-kit-prefs-changed", onPrefsChanged);
+    return () => window.removeEventListener("harness-kit-prefs-changed", onPrefsChanged);
+  }, []);
 
   const todayModelUsage = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10);
     const todayEntry = liveStats?.dailyModelTokens?.find((d) => d.date === today);
+    // NOTE: tokensByModel values are TOTAL tokens (input + output + cache_read +
+    // cache_creation) as accumulated by observatory.rs. There is no per-day
+    // input/output split in this data structure. We expose the total as
+    // `inputTokens` so that token-limit checks and the daily cost estimate have
+    // a value to work with. The cost estimate will be an approximation priced
+    // at input rates only; use the all-time `mergedModelUsage` for accurate
+    // split-rate cost figures.
     return todayEntry?.tokensByModel
       ? Object.fromEntries(
           Object.entries(todayEntry.tokensByModel).map(([model, tokens]) => [
