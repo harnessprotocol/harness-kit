@@ -6,6 +6,7 @@ import type {
   ComparisonPhase,
 } from "@harness-kit/shared";
 import { buildInvokeCommand } from "../lib/harness-definitions";
+import { getResilienceConfig } from "../lib/preferences";
 import {
   saveComparison,
   savePanel,
@@ -29,6 +30,8 @@ export interface PanelState {
   exitCode?: number;
   durationMs?: number;
   startedAt: number;
+  /** Set when this panel's primary harness failed and a fallback was launched. */
+  fallbackReason?: string;
 }
 
 export interface ComparisonState {
@@ -69,6 +72,7 @@ export interface UseComparatorReturn {
     workingDir: string;
     pinnedCommit: string | null;
     harnesses: Array<{ id: string; name: string; model: string | null }>;
+    taskType?: string;
   }) => Promise<void>;
 
   // Execution
@@ -149,19 +153,93 @@ export function useComparator(): UseComparatorReturn {
       setActive((prev) => {
         if (!prev) return prev;
 
-        const updatedPanels = prev.panels.map((p) => {
-          if (p.terminalId !== terminalId) return p;
-          const durationMs = now - p.startedAt;
-          const status = exitCode === 0 ? ("completed" as const) : ("failed" as const);
+        const exitedPanel = prev.panels.find((p) => p.terminalId === terminalId);
+        if (!exitedPanel) return prev;
 
-          // Persist panel result to backend.
-          updatePanelResult(prev.id, p.id, exitCode, durationMs, status).catch(console.error);
+        // Record health result (best-effort — don't block state update).
+        invoke("record_harness_launch_result", {
+          harnessId: exitedPanel.harnessId,
+          exitCode,
+        }).catch(() => {});
 
-          return { ...p, status, exitCode, durationMs };
-        });
+        // Check resilience config for fallback on failure.
+        let fallbackPanel: PanelState | null = null;
+        if (exitCode !== 0) {
+          const resilienceConfig = getResilienceConfig();
+          const cfg = resilienceConfig[exitedPanel.harnessId];
+          if (cfg?.fallbackHarnessId) {
+            const fallbackId = cfg.fallbackHarnessId;
+            // Only fall back if no panel for this harness is already running.
+            const alreadyRunning = prev.panels.some(
+              (p) => p.harnessId === fallbackId && p.status === "running",
+            );
+            if (!alreadyRunning) {
+              const panelId = crypto.randomUUID();
+              const newTerminalId = `fallback-${panelId}`;
+              fallbackPanel = {
+                id: panelId,
+                terminalId: newTerminalId,
+                harnessId: fallbackId,
+                harnessName: fallbackId,
+                model: exitedPanel.model,
+                status: "running" as const,
+                startedAt: now,
+              };
+
+              // Launch PTY for fallback harness.
+              (async () => {
+                try {
+                  const tid = await invoke<string>("create_terminal", {
+                    projectPath: prev.workingDir,
+                  });
+                  rawChunksRef.current.set(tid, []);
+                  const command = buildInvokeCommand(
+                    fallbackId,
+                    prev.prompt,
+                    exitedPanel.model ?? undefined,
+                  );
+                  if (command) {
+                    await invoke("write_terminal", { terminalId: tid, data: command + "\n" });
+                  }
+                  // Update the fallback panel with the real terminalId.
+                  setActive((s) => {
+                    if (!s) return s;
+                    return {
+                      ...s,
+                      panels: s.panels.map((p) =>
+                        p.id === panelId ? { ...p, terminalId: tid } : p,
+                      ),
+                    };
+                  });
+                } catch (e) {
+                  console.error("Failed to launch fallback harness:", e);
+                }
+              })();
+            }
+          }
+        }
+
+        const durationMs = now - exitedPanel.startedAt;
+        const status = exitCode === 0 ? ("completed" as const) : ("failed" as const);
+        const fallbackReason = fallbackPanel
+          ? `Primary failed (exit ${exitCode}), switching to ${fallbackPanel.harnessName}`
+          : undefined;
+
+        // Persist panel result to backend.
+        updatePanelResult(prev.id, exitedPanel.id, exitCode, durationMs, status).catch(console.error);
+
+        const updatedPanels = prev.panels.map((p) =>
+          p.terminalId === terminalId
+            ? { ...p, status, exitCode, durationMs, fallbackReason }
+            : p,
+        );
+
+        const allPanels = fallbackPanel
+          ? [...updatedPanels, fallbackPanel]
+          : updatedPanels;
 
         // Check if all panels have finished.
-        const allDone = updatedPanels.every((p) => p.status !== "running");
+        const allDone = allPanels.every((p) => p.status !== "running");
 
         if (allDone) {
           // Transition to results phase and mark comparison as completed.
@@ -171,7 +249,7 @@ export function useComparator(): UseComparatorReturn {
           loadSessions().catch(console.error);
         }
 
-        return { ...prev, panels: updatedPanels };
+        return { ...prev, panels: allPanels };
       });
     });
 
@@ -202,12 +280,21 @@ export function useComparator(): UseComparatorReturn {
       workingDir: string;
       pinnedCommit: string | null;
       harnesses: Array<{ id: string; name: string; model: string | null }>;
+      taskType?: string;
     }) => {
       const comparisonId = crypto.randomUUID();
       const createdAt = new Date().toISOString();
 
       // Persist comparison to backend.
       await saveComparison(comparisonId, opts.title, opts.prompt, opts.workingDir, opts.pinnedCommit);
+
+      // Tag task type if provided (best-effort — don't block if it fails).
+      if (opts.taskType) {
+        invoke("tag_comparison_task_type", {
+          comparisonId,
+          taskType: opts.taskType,
+        }).catch((e) => console.warn("tag_comparison_task_type failed:", e));
+      }
 
       // Create a panel + terminal for each harness.
       const panels: PanelState[] = [];

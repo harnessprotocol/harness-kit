@@ -1,10 +1,15 @@
-import { useCallback, useRef, useState } from "react";
-import type { ComparisonPhase, ComparisonSummary } from "@harness-kit/shared";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { ComparisonPhase, ComparisonSummary, HarnessRecommendation, TaskType } from "@harness-kit/shared";
+import { invoke } from "@tauri-apps/api/core";
 import { useComparator } from "../../hooks/useComparator";
 import SetupPhase from "./SetupPhase";
 import ExecutionPhase from "./ExecutionPhase";
 import ResultsPhase from "./ResultsPhase";
 import JudgePhase from "./JudgePhase";
+import RecommendationsPanel, { TaskTypeSelector } from "../../components/comparator/RecommendationsPanel";
+import AccountStatusBadge from "../../components/AccountStatusBadge";
+import { detectClaudeAccount } from "../../lib/tauri";
+import type { ClaudeAccountInfo } from "../../lib/tauri";
 
 // ── Design Tokens ───────────────────────────────────────────
 
@@ -518,6 +523,50 @@ export default function ComparatorPage() {
     outputTick,
   } = useComparator();
 
+  // ── Account state ────────────────────────────────────────────
+
+  const [account, setAccount] = useState<ClaudeAccountInfo | null>(null);
+  const [accountLoading, setAccountLoading] = useState(true);
+
+  useEffect(() => {
+    detectClaudeAccount()
+      .then(setAccount)
+      .catch(() => setAccount({ logged_in: false, subscription_type: null, auto_mode_available: false }))
+      .finally(() => setAccountLoading(false));
+  }, []);
+
+  // ── Task-fit routing state ──────────────────────────────────
+
+  const [taskType, setTaskType] = useState<TaskType | null>(null);
+  const [recommendations, setRecommendations] = useState<HarnessRecommendation[]>([]);
+  const [recLoading, setRecLoading] = useState(false);
+
+  useEffect(() => {
+    if (!taskType) {
+      setRecommendations([]);
+      return;
+    }
+    setRecLoading(true);
+    invoke<HarnessRecommendation[]>("get_harness_recommendations", { taskType })
+      .then(setRecommendations)
+      .catch(() => setRecommendations([]))
+      .finally(() => setRecLoading(false));
+  }, [taskType]);
+
+  // Reset task type when moving to a new setup phase
+  useEffect(() => {
+    if (phase === "setup") setTaskType(null);
+  }, [phase]);
+
+  // ── Wrapped start that threads taskType into startComparison ─
+
+  const handleStart = useCallback(
+    (opts: Parameters<typeof startComparison>[0]) => {
+      return startComparison({ ...opts, taskType: taskType ?? undefined });
+    },
+    [startComparison, taskType],
+  );
+
   // ── New comparison handler ──────────────────────────────────
 
   const handleNewComparison = useCallback(() => {
@@ -547,7 +596,31 @@ export default function ComparatorPage() {
   function renderPhaseContent() {
     switch (phase) {
       case "setup":
-        return <SetupPhase onStart={startComparison} />;
+        return (
+          <div>
+            {/* Account badge + task type selector — above the setup form */}
+            <div style={{ padding: "16px 24px 0", display: "flex", flexDirection: "column", gap: "10px" }}>
+              <AccountStatusBadge account={account} monthlyTokens={0} loading={accountLoading} />
+              <span style={{
+                fontSize: "11px",
+                fontWeight: 600,
+                color: "var(--fg-subtle)",
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                fontFamily: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif',
+              }}>
+                Task type (optional)
+              </span>
+              <TaskTypeSelector selected={taskType} onChange={setTaskType} />
+              <RecommendationsPanel
+                taskType={taskType}
+                recommendations={recommendations}
+                loading={recLoading}
+              />
+            </div>
+            <SetupPhase onStart={handleStart} />
+          </div>
+        );
       case "execution":
         return active ? (
           <ExecutionPhase
@@ -575,7 +648,7 @@ export default function ComparatorPage() {
           <PhasePlaceholder phase="judge" />
         );
       default:
-        return <SetupPhase onStart={startComparison} />;
+        return <SetupPhase onStart={handleStart} />;
     }
   }
 

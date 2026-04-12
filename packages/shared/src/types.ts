@@ -520,3 +520,32 @@ export interface FileDiffRow {
   diffText: string;
   changeType: string;
 }
+
+// ── Task-fit routing ─────────────────────────────────────────
+
+export type TaskType =
+  | "coding"
+  | "review"
+  | "planning"
+  | "analysis"
+  | "debugging"
+  | "documentation";
+
+export interface HarnessRecommendation {
+  harnessId: string;
+  harnessName: string;
+  taskType: TaskType;
+  winRate: number;
+  sessionCount: number;
+  avgDurationMs?: number;
+}
+
+// ── Harness health (resilience profiles) ────────────────────
+
+export interface HarnessHealthRecord {
+  harnessId: string;
+  lastExitCode: number | null;
+  lastFailureAt: string | null;
+  consecutiveFailures: number;
+  totalLaunches: number;
+}

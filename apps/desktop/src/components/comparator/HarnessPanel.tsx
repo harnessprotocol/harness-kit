@@ -489,6 +489,32 @@ export default function HarnessPanel({ panel, rawChunks, outputTick, onSend: _on
         <div style={dotStyle} />
       </div>
 
+      {/* Fallback banner — shown when primary harness failed and a fallback was launched */}
+      {panel.fallbackReason && (
+        <div
+          data-testid="fallback-banner"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            padding: "5px 10px",
+            background: "rgba(234, 88, 12, 0.10)",
+            borderBottom: `1px solid rgba(234, 88, 12, 0.25)`,
+            fontSize: 10,
+            fontFamily: fontStack,
+            color: tokens.warning,
+            flexShrink: 0,
+          }}
+        >
+          <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M8 2L14 14H2L8 2z" />
+            <line x1="8" y1="7" x2="8" y2="10" />
+            <line x1="8" y1="12" x2="8.01" y2="12" />
+          </svg>
+          {panel.fallbackReason}
+        </div>
+      )}
+
       {/* Tab bar */}
       <div style={styles.tabBar}>
         {TABS.map((tab) => {

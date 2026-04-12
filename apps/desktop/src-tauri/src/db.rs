@@ -186,6 +186,14 @@ pub fn init(data_dir: &Path) -> Result<Db, String> {
         }
     }
 
+    // Migration: add task_type column to comparisons (for task-fit routing)
+    if let Err(e) = conn.execute_batch("ALTER TABLE comparisons ADD COLUMN task_type TEXT;") {
+        let msg = e.to_string();
+        if !msg.contains("duplicate column name") {
+            return Err(format!("Migration failed (task_type): {}", msg));
+        }
+    }
+
     Ok(Db {
         conn: Mutex::new(conn),
     })
