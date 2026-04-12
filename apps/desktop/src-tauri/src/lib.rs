@@ -199,6 +199,8 @@ pub fn run() {
             ai::commands::list_ai_sessions,
             ai::commands::load_ai_session,
             ai::commands::save_ai_message,
+            // Agents
+            commands::agents::detect_agents,
         ])
         .setup(|app| {
             let state = app.state::<BoardServerState>();
