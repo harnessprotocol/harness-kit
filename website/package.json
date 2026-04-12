@@ -9,24 +9,24 @@
     "start": "next start"
   },
   "dependencies": {
-    "fumadocs-core": "^16.6.17",
-    "fumadocs-mdx": "^14.2.10",
-    "fumadocs-ui": "^16.6.17",
+    "fumadocs-core": "^16.7.12",
+    "fumadocs-mdx": "^14.2.11",
+    "fumadocs-ui": "^16.7.12",
     "mdast-util-from-markdown": "^2.0.3",
     "next": "^16.2.3",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
     "unist-util-visit": "^5.1.0"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.0.0",
-    "@types/node": "^22.0.0",
+    "@tailwindcss/postcss": "^4.2.2",
+    "@types/node": "^22.19.17",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "postcss": "^8.0.0",
-    "tailwindcss": "^4.0.0",
+    "postcss": "^8.5.9",
+    "tailwindcss": "^4.2.2",
     "typescript": "^5.0.0"
   }
 }
