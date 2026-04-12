@@ -35,7 +35,12 @@
   "pnpm": {
     "overrides": {
       "picomatch": ">=4.0.4",
-      "dompurify": ">=3.3.2"
+      "dompurify": ">=3.3.2",
+      "vite": ">=6.4.2",
+      "esbuild": ">=0.25.0",
+      "hono": ">=4.12.12",
+      "@hono/node-server": ">=1.19.13",
+      "langsmith": ">=0.5.18"
     }
   }
 }
