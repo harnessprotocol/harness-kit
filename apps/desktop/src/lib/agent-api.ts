@@ -1,5 +1,5 @@
 // apps/desktop/src/lib/agent-api.ts
-// Typed HTTP + WebSocket client for the agent-server on port 4801.
+// Typed HTTP + WebSocket client for the agent-server on port 4802.
 
 import { invoke } from '@tauri-apps/api/core';
 
@@ -43,7 +43,7 @@ export interface StartAgentOptions {
   allowedTools?: string[];
 }
 
-const AGENT_BASE = 'http://localhost:4801';
+const AGENT_BASE = 'http://localhost:4802';
 
 // Lazily fetched token — resolved once and cached for the session lifetime.
 let _tokenPromise: Promise<string> | null = null;
@@ -115,7 +115,7 @@ export const agentApi = {
   /** Open a WebSocket and receive AgentEvents for a task */
   async subscribe(taskId: number, onEvent: (e: AgentEvent) => void): Promise<() => void> {
     const token = await getToken();
-    const ws = new WebSocket(`ws://localhost:4801/ws?taskId=${taskId}&token=${token}`);
+    const ws = new WebSocket(`ws://localhost:4802/ws?taskId=${taskId}&token=${token}`);
     ws.onmessage = (e) => {
       try { onEvent(JSON.parse(e.data as string) as AgentEvent); } catch { /* skip */ }
     };
