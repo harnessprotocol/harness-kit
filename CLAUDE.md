@@ -12,7 +12,7 @@ harness-kit/
 │   ├── schema/
 │   │   └── plugin.schema.json    ← Protocol JSON Schema for plugin manifest validation
 │   └── workflows/
-│       └── validate.yml          ← CI: manifest parsing, version alignment, schema validation
+│       └── validate.yml          ← CI: manifest parsing, version alignment, schema validation, builds, tests
 ├── plugins/                      ← one directory per plugin (marketplace)
 │   ├── research/
 │   │   ├── .claude-plugin/
@@ -30,14 +30,11 @@ harness-kit/
 ├── packages/                     ← shared libraries and standalone servers
 │   ├── core/                     ← harness.yaml compile/parse/detect logic
 │   ├── shared/                   ← shared TypeScript types used across apps
-│   ├── ui/                       ← shared React components
 │   ├── board-server/             ← WebSocket + HTTP server for the Kanban board and Roadmap/Competitor Analysis features
-│   ├── agent-server/             ← LangGraph execution engine for per-card agent runs (port 4801)
-│   ├── chat-relay/               ← self-hosted WebSocket relay for team chat
-│   └── membrain/                 ← git submodule (siracusa5/membrain) — graph-based memory, excluded from pnpm workspace
+│   ├── agent-server/             ← LangGraph execution engine for per-card agent runs (port 4802)
+│   ├── chat-relay/               ← self-hosted WebSocket relay for team chat (port 4801)
 ├── apps/                         ← end-user applications
 │   ├── desktop/                  ← Tauri desktop app (React + Rust)
-│   ├── board/                    ← web board client
 │   ├── cli/                      ← harness CLI
 │   └── marketplace/              ← Next.js marketplace web app
 ├── profiles/                     ← pre-configured harness.yaml bundles for different roles

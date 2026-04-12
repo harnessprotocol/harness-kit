@@ -24,15 +24,13 @@ python3 --version # should show 3.11+
 ## Quick start
 
 ```bash
-git clone --recurse-submodules https://github.com/harnessprotocol/harness-kit.git
+git clone https://github.com/harnessprotocol/harness-kit.git
 cd harness-kit
 pnpm install
 git checkout -b feat/<plugin-name>
 # implement plugin (see CLAUDE.md for full 5-step guide)
 # open PR against main
 ```
-
-> If you already cloned without `--recurse-submodules`, run `git submodule update --init` to pull submodules (e.g., `packages/membrain`).
 
 CI runs on every PR. Squash merge only.
 
@@ -46,17 +44,14 @@ CI runs on every PR. Squash merge only.
 pnpm build
 ```
 
-This builds all packages in dependency order.
+This builds all packages in dependency order using Turborepo (caches outputs — re-runs are near-instant).
 
 ### Build specific packages
 
 ```bash
-pnpm build:core         # Core library
-pnpm build:cli          # CLI tool
 pnpm build:website      # Documentation website
 pnpm build:marketplace  # Marketplace web app
 pnpm build:desktop      # Desktop app (requires Rust, copies to $HOME/Applications/)
-pnpm build:board        # Board client
 pnpm build:board-server # Board WebSocket server
 ```
 
@@ -68,7 +63,6 @@ Run development servers with hot reload:
 pnpm dev:website        # Documentation site
 pnpm dev:marketplace    # Marketplace web app
 pnpm dev:desktop        # Tauri desktop app
-pnpm dev:board          # Board client
 pnpm dev:board-server   # Board server
 ```
 
@@ -153,10 +147,7 @@ python runner.py --dry-run
 **Solution:** Ensure Rust 1.77.2+ is installed. Run `rustc --version` to check.
 
 **Issue:** TypeScript errors after pulling latest changes  
-**Solution:** Rebuild core packages: `pnpm build:core`
-
-**Issue:** Submodule missing (e.g., `packages/membrain`)  
-**Solution:** Run `git submodule update --init --recursive`
+**Solution:** Rebuild core packages: `pnpm turbo run build --filter=@harness-kit/cli...`
 
 ### Test failures
 
