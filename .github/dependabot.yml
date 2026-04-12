@@ -1,0 +1,131 @@
+version: 2
+updates:
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns:
+          - "*"
+
+  # Root workspace
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      npm_and_yarn:
+        patterns:
+          - "*"
+
+  # apps/board
+  - package-ecosystem: "npm"
+    directory: "/apps/board"
+    schedule:
+      interval: "weekly"
+    groups:
+      npm_and_yarn:
+        patterns:
+          - "*"
+
+  # apps/cli
+  - package-ecosystem: "npm"
+    directory: "/apps/cli"
+    schedule:
+      interval: "weekly"
+    groups:
+      npm_and_yarn:
+        patterns:
+          - "*"
+
+  # apps/desktop
+  - package-ecosystem: "npm"
+    directory: "/apps/desktop"
+    schedule:
+      interval: "weekly"
+    groups:
+      npm_and_yarn:
+        patterns:
+          - "*"
+
+  # apps/marketplace
+  - package-ecosystem: "npm"
+    directory: "/apps/marketplace"
+    schedule:
+      interval: "weekly"
+    groups:
+      npm_and_yarn:
+        patterns:
+          - "*"
+
+  # website
+  - package-ecosystem: "npm"
+    directory: "/website"
+    schedule:
+      interval: "weekly"
+    groups:
+      npm_and_yarn:
+        patterns:
+          - "*"
+
+  # packages/board-server
+  - package-ecosystem: "npm"
+    directory: "/packages/board-server"
+    schedule:
+      interval: "weekly"
+    groups:
+      npm_and_yarn:
+        patterns:
+          - "*"
+
+  # packages/chat-relay
+  - package-ecosystem: "npm"
+    directory: "/packages/chat-relay"
+    schedule:
+      interval: "weekly"
+    groups:
+      npm_and_yarn:
+        patterns:
+          - "*"
+
+  # packages/core
+  - package-ecosystem: "npm"
+    directory: "/packages/core"
+    schedule:
+      interval: "weekly"
+    groups:
+      npm_and_yarn:
+        patterns:
+          - "*"
+
+  # evals/fixtures/express-app
+  - package-ecosystem: "npm"
+    directory: "/evals/fixtures/express-app"
+    schedule:
+      interval: "weekly"
+    groups:
+      npm_and_yarn:
+        patterns:
+          - "*"
+
+  # Rust / Tauri desktop
+  - package-ecosystem: "cargo"
+    directory: "/apps/desktop/src-tauri"
+    schedule:
+      interval: "weekly"
+    groups:
+      cargo:
+        patterns:
+          - "*"
+
+  # Python evals
+  - package-ecosystem: "pip"
+    directory: "/evals"
+    schedule:
+      interval: "weekly"
+    groups:
+      pip:
+        patterns:
+          - "*"

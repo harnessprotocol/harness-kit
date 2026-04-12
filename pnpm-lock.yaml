@@ -342,7 +342,7 @@ importers:
         specifier: ^4.1.0
         version: 4.1.1
       ws:
-        specifier: ^8.16.0
+        specifier: ^8.17.1
         version: 8.19.0
       zod:
         specifier: ^3.22.4
@@ -385,7 +385,7 @@ importers:
         specifier: workspace:*
         version: link:../shared
       ws:
-        specifier: ^8.16.0
+        specifier: ^8.17.1
         version: 8.19.0
     devDependencies:
       '@types/node':
