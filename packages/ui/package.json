@@ -9,13 +9,13 @@
     "./tokens.css": "./src/theme/tokens.css"
   },
   "dependencies": {
-    "react": "^19.0.0"
+    "react": "^19.2.5"
   },
   "devDependencies": {
     "@types/react": "^19.0.0",
     "typescript": "^5.6.2"
   },
   "peerDependencies": {
-    "react": "^19.0.0"
+    "react": "^19.2.5"
   }
 }

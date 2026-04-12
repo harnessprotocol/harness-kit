@@ -19,7 +19,7 @@
     "commander": "^13"
   },
   "devDependencies": {
-    "@types/node": "^25.5.0",
+    "@types/node": "^22.19.17",
     "@vitest/coverage-v8": "^3",
     "tsup": "^8",
     "typescript": "^5",
