@@ -1,4 +1,5 @@
 use std::process::Command;
+use tokio::task::JoinSet;
 use tokio::time::{timeout, Duration};
 
 #[derive(serde::Serialize, Clone)]
@@ -158,41 +159,58 @@ fn get_version(binary: &str) -> Option<String> {
 
 #[tauri::command]
 pub async fn detect_agents() -> Result<Vec<AgentInfo>, String> {
-    let mut results = Vec::with_capacity(KNOWN_AGENTS.len());
+    let mut set = JoinSet::new();
 
     for def in KNOWN_AGENTS {
-        let installed = which(def.binary);
-        let version = if installed {
-            // 3-second timeout to avoid hanging on misbehaving binaries
-            let binary = def.binary.to_string();
-            let version_result = timeout(
-                Duration::from_secs(3),
-                tokio::task::spawn_blocking(move || get_version(&binary)),
-            )
-            .await;
+        let id          = def.id.to_string();
+        let name        = def.name.to_string();
+        let binary      = def.binary.to_string();
+        let protocol    = def.protocol.to_string();
+        let description = def.description.to_string();
+        let already_in  = BUILTIN_HARNESS_IDS.contains(&def.id);
 
-            match version_result {
-                Ok(Ok(v)) => v,
-                _ => None,
+        set.spawn(async move {
+            let bin_check = binary.clone();
+            let installed = tokio::task::spawn_blocking(move || which(&bin_check))
+                .await
+                .unwrap_or(false);
+
+            let version = if installed {
+                let bin_ver = binary.clone();
+                match timeout(
+                    Duration::from_secs(3),
+                    tokio::task::spawn_blocking(move || get_version(&bin_ver)),
+                )
+                .await
+                {
+                    Ok(Ok(v)) => v,
+                    _ => None,
+                }
+            } else {
+                None
+            };
+
+            AgentInfo {
+                id,
+                name,
+                binary,
+                installed,
+                version,
+                protocol,
+                description,
+                add_to_comparator: !already_in && installed,
             }
-        } else {
-            None
-        };
-
-        let already_in_comparator = BUILTIN_HARNESS_IDS.contains(&def.id);
-
-        results.push(AgentInfo {
-            id: def.id.to_string(),
-            name: def.name.to_string(),
-            binary: def.binary.to_string(),
-            installed,
-            version,
-            protocol: def.protocol.to_string(),
-            description: def.description.to_string(),
-            add_to_comparator: !already_in_comparator && installed,
         });
     }
 
+    let mut results = Vec::with_capacity(KNOWN_AGENTS.len());
+    while let Some(res) = set.join_next().await {
+        if let Ok(info) = res {
+            results.push(info);
+        }
+    }
+
+    results.sort_by(|a, b| a.name.cmp(&b.name));
     Ok(results)
 }
 

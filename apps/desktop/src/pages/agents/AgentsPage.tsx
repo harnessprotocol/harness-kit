@@ -226,7 +226,6 @@ function AgentCard({ agent, onAddToComparator }: {
 export default function AgentsPage() {
   const [agents, setAgents] = useState<AgentInfo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [addedIds, setAddedIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     invoke<AgentInfo[]>("detect_agents")
@@ -235,8 +234,7 @@ export default function AgentsPage() {
   }, []);
 
   function handleAddToComparator(id: string) {
-    setAddedIds((prev) => new Set(prev).add(id));
-    // Mark the agent as no longer addable
+    // Mark the agent as no longer addable (prevents double-clicks)
     setAgents((prev) =>
       prev
         ? prev.map((a) => (a.id === id ? { ...a, addToComparator: false } : a))
