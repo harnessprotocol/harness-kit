@@ -12,19 +12,19 @@
     "@dnd-kit/sortable": "^8.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "clsx": "^2.1.1",
-    "framer-motion": "^11.0.0",
-    "lucide-react": "^1.7.0",
+    "framer-motion": "^12.38.0",
+    "lucide-react": "^1.8.0",
     "next": "^16.2.3",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.0.0",
-    "@types/node": "^22.0.0",
+    "@tailwindcss/postcss": "^4.2.2",
+    "@types/node": "^25.6.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "tailwindcss": "^4.0.0",
-    "typescript": "^5.4.0"
+    "tailwindcss": "^4.2.2",
+    "typescript": "^6.0.2"
   }
 }
