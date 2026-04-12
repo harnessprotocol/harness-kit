@@ -66,7 +66,7 @@ export default function AccountStatusBadge({ account, monthlyTokens, loading }: 
     >
       {loggedIn ? (
         <>
-          {/* Connected indicator */}
+          {/* Detected indicator — presence of ~/.claude/ directory */}
           <span
             data-testid="account-connected-dot"
             style={{
@@ -81,9 +81,9 @@ export default function AccountStatusBadge({ account, monthlyTokens, loading }: 
             data-testid="account-connected-label"
             style={{ fontSize: "12px", fontWeight: 500, color: "var(--fg-base)" }}
           >
-            Claude
+            Claude Code
           </span>
-          {/* Monthly token counter */}
+          {/* Locally tracked token counter (not API quota) */}
           <span
             data-testid="account-token-count"
             style={{
@@ -95,7 +95,7 @@ export default function AccountStatusBadge({ account, monthlyTokens, loading }: 
               padding: "1px 6px",
             }}
           >
-            {formatTokenCount(monthlyTokens)} tokens this month
+            {formatTokenCount(monthlyTokens)} tokens tracked this month
           </span>
         </>
       ) : (

@@ -1,6 +1,10 @@
+use std::collections::HashMap;
+use std::path::PathBuf;
 use std::process::Command;
 use tokio::task::JoinSet;
 use tokio::time::{timeout, Duration};
+
+// ── Agent discovery types ────────────────────────────────────
 
 #[derive(serde::Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
@@ -157,6 +161,8 @@ fn get_version(binary: &str) -> Option<String> {
         .find(|l| !l.is_empty())
 }
 
+/// Detect all known CLI agents in parallel. All 14 checks run concurrently;
+/// worst-case latency is ~3s (the per-agent timeout) rather than 14 × 3s.
 #[tauri::command]
 pub async fn detect_agents() -> Result<Vec<AgentInfo>, String> {
     let mut set = JoinSet::new();
@@ -214,14 +220,107 @@ pub async fn detect_agents() -> Result<Vec<AgentInfo>, String> {
     Ok(results)
 }
 
+// ── Harness health / resilience types ───────────────────────
+
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct HarnessHealthRecord {
+    pub harness_id: String,
+    pub last_exit_code: Option<i32>,
+    pub last_failure_at: Option<String>,
+    pub consecutive_failures: u32,
+    pub total_launches: u64,
+}
+
+// ── Harness health helpers ───────────────────────────────────
+
+fn health_file_path() -> Result<PathBuf, String> {
+    dirs::home_dir()
+        .ok_or_else(|| "Could not resolve home directory".to_string())
+        .map(|h| h.join(".harness-kit").join("harness-health.json"))
+}
+
+fn read_health_map(path: &PathBuf) -> HashMap<String, HarnessHealthRecord> {
+    std::fs::read_to_string(path)
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default()
+}
+
+/// Write atomically: serialise to a .tmp file then rename into place.
+/// A mid-write crash leaves the previous health file intact.
+fn write_health_map(path: &PathBuf, map: &HashMap<String, HarnessHealthRecord>) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent)
+            .map_err(|e| format!("Failed to create dir: {}", e))?;
+    }
+    let json = serde_json::to_string_pretty(map)
+        .map_err(|e| format!("Failed to serialize health map: {}", e))?;
+    let tmp = path.with_extension("tmp");
+    std::fs::write(&tmp, &json)
+        .map_err(|e| format!("Failed to write temp health file: {}", e))?;
+    std::fs::rename(&tmp, path)
+        .map_err(|e| format!("Failed to rename health file: {}", e))
+}
+
+// ── Harness health commands ──────────────────────────────────
+
+/// Record the result of a harness launch. Increments consecutive_failures on
+/// non-zero exit codes and resets to 0 on success.
+#[tauri::command]
+pub fn record_harness_launch_result(harness_id: String, exit_code: i32) -> Result<(), String> {
+    let path = health_file_path()?;
+    let mut map = read_health_map(&path);
+
+    let id = harness_id.clone();
+    let record = map.entry(id).or_insert_with(|| HarnessHealthRecord {
+        harness_id: harness_id.clone(),
+        last_exit_code: None,
+        last_failure_at: None,
+        consecutive_failures: 0,
+        total_launches: 0,
+    });
+
+    record.total_launches += 1;
+    record.last_exit_code = Some(exit_code);
+
+    if exit_code != 0 {
+        record.consecutive_failures += 1;
+        record.last_failure_at = Some(
+            chrono::Utc::now().format("%Y-%m-%dT%H:%M:%SZ").to_string(),
+        );
+    } else {
+        record.consecutive_failures = 0;
+    }
+
+    write_health_map(&path, &map)
+}
+
+/// Return health records for all known harnesses. Returns empty vec if no
+/// health file exists yet.
+#[tauri::command]
+pub fn get_harness_health() -> Result<Vec<HarnessHealthRecord>, String> {
+    let path = health_file_path()?;
+    if !path.exists() {
+        return Ok(vec![]);
+    }
+    let map = read_health_map(&path);
+    let mut records: Vec<HarnessHealthRecord> = map.into_values().collect();
+    records.sort_by(|a, b| a.harness_id.cmp(&b.harness_id));
+    Ok(records)
+}
+
+// ── Tests ────────────────────────────────────────────────────
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::env;
+
+    // ── detect_agents tests ──────────────────────────────────
 
     #[test]
     fn detect_agents_returns_all_known_agents() {
-        // We can't invoke the async command in a unit test without a Tauri context,
-        // but we can verify the static definition list has the expected number of entries.
         assert_eq!(KNOWN_AGENTS.len(), 14);
     }
 
@@ -238,7 +337,6 @@ mod tests {
 
     #[test]
     fn agent_version_parse_handles_missing_binary() {
-        // binary that doesn't exist → which() returns false → version is None
         let installed = which("__definitely_not_installed_binary__");
         assert!(!installed);
     }
@@ -253,5 +351,74 @@ mod tests {
                 agent.protocol
             );
         }
+    }
+
+    // ── harness health tests ─────────────────────────────────
+
+    fn with_temp_home<F: FnOnce()>(f: F) {
+        let _lock = crate::HOME_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+        let tmp = tempfile::TempDir::new().unwrap();
+        let prev = env::var("HOME").ok();
+        env::set_var("HOME", tmp.path());
+
+        f();
+
+        match prev {
+            Some(h) => env::set_var("HOME", h),
+            None => env::remove_var("HOME"),
+        }
+    }
+
+    #[test]
+    fn get_harness_health_returns_empty_when_no_file() {
+        with_temp_home(|| {
+            let result = get_harness_health().unwrap();
+            assert!(result.is_empty());
+        });
+    }
+
+    #[test]
+    fn record_creates_file_and_increments_on_failure() {
+        with_temp_home(|| {
+            record_harness_launch_result("claude".to_string(), 1).unwrap();
+            let health = get_harness_health().unwrap();
+            assert_eq!(health.len(), 1);
+            let rec = &health[0];
+            assert_eq!(rec.harness_id, "claude");
+            assert_eq!(rec.total_launches, 1);
+            assert_eq!(rec.consecutive_failures, 1);
+            assert_eq!(rec.last_exit_code, Some(1));
+            assert!(rec.last_failure_at.is_some());
+        });
+    }
+
+    #[test]
+    fn record_resets_consecutive_failures_on_success() {
+        with_temp_home(|| {
+            record_harness_launch_result("codex".to_string(), 1).unwrap();
+            record_harness_launch_result("codex".to_string(), 1).unwrap();
+            record_harness_launch_result("codex".to_string(), 0).unwrap();
+
+            let health = get_harness_health().unwrap();
+            let rec = health.iter().find(|r| r.harness_id == "codex").unwrap();
+            assert_eq!(rec.consecutive_failures, 0);
+            assert_eq!(rec.total_launches, 3);
+            assert_eq!(rec.last_exit_code, Some(0));
+        });
+    }
+
+    #[test]
+    fn record_tracks_multiple_harnesses_independently() {
+        with_temp_home(|| {
+            record_harness_launch_result("claude".to_string(), 0).unwrap();
+            record_harness_launch_result("codex".to_string(), 1).unwrap();
+
+            let health = get_harness_health().unwrap();
+            assert_eq!(health.len(), 2);
+            let claude = health.iter().find(|r| r.harness_id == "claude").unwrap();
+            let codex = health.iter().find(|r| r.harness_id == "codex").unwrap();
+            assert_eq!(claude.consecutive_failures, 0);
+            assert_eq!(codex.consecutive_failures, 1);
+        });
     }
 }

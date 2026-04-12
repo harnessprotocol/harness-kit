@@ -123,6 +123,8 @@ pub fn run() {
             commands::comparator::delete_comparison,
             commands::comparator::tag_comparison_task_type,
             commands::comparator::get_harness_recommendations,
+            // Agents
+            commands::agents::detect_agents,
             // Harness health / resilience
             commands::agents::record_harness_launch_result,
             commands::agents::get_harness_health,
