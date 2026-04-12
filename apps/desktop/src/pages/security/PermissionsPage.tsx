@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import {
   readPermissions, updatePermissions,
   listSecurityPresets, applySecurityPreset,
-  detectClaudeAccount,
+  detectClaudeAccount, getHarnessHealth,
 } from "../../lib/tauri";
 import type { PermissionsState, SecurityPreset, HarnessHealthRecord } from "@harness-kit/shared";
 import {
@@ -784,7 +783,7 @@ export default function PermissionsPage() {
   }, []);
 
   useEffect(() => {
-    invoke<HarnessHealthRecord[]>("get_harness_health")
+    getHarnessHealth()
       .then(setHarnessHealth)
       .catch(() => {});
   }, []);
