@@ -29,7 +29,7 @@ vi.mock("recharts", () => ({
 let mockReadStatsCache: () => Promise<unknown>;
 let mockReadLiveActivity: () => Promise<unknown>;
 let mockComputeLiveStats: () => Promise<unknown>;
-const mockDetectClaudeAccount = vi.fn().mockResolvedValue({ loggedIn: true });
+const mockDetectClaudeAccount = vi.fn().mockResolvedValue({ logged_in: true, subscription_type: null, auto_mode_available: false });
 
 vi.mock("../../../lib/tauri", () => ({
   get readStatsCache() { return mockReadStatsCache; },

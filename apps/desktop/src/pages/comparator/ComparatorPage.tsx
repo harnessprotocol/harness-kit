@@ -531,7 +531,7 @@ export default function ComparatorPage() {
   useEffect(() => {
     detectClaudeAccount()
       .then(setAccount)
-      .catch(() => setAccount({ loggedIn: false }))
+      .catch(() => setAccount({ logged_in: false, subscription_type: null, auto_mode_available: false }))
       .finally(() => setAccountLoading(false));
   }, []);
 
