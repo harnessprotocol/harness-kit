@@ -32,7 +32,7 @@ harness-kit/
 │   ├── shared/                   ← shared TypeScript types used across apps
 │   ├── board-server/             ← WebSocket + HTTP server for the Kanban board and Roadmap/Competitor Analysis features
 │   ├── agent-server/             ← LangGraph execution engine for per-card agent runs (port 4802)
-│   ├── chat-relay/               ← self-hosted WebSocket relay for team chat (port 4801)
+│   └── chat-relay/               ← self-hosted WebSocket relay for team chat (port 4801)
 ├── apps/                         ← end-user applications
 │   ├── desktop/                  ← Tauri desktop app (React + Rust)
 │   ├── cli/                      ← harness CLI
