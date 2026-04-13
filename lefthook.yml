@@ -3,7 +3,7 @@ pre-commit:
   commands:
     lint:
       glob: "**/*.{ts,tsx,js,jsx,mjs,cjs,json}"
-      run: npx biome check --no-errors-on-unmatched {staged_files}
+      run: npx biome check --no-errors-on-unmatched --diagnostic-level=error {staged_files}
 
 commit-msg:
   commands:
