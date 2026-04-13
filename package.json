@@ -12,6 +12,7 @@
     "dev:board-server": "pnpm --filter board-server dev",
     "build:board-server": "pnpm --filter board-server build",
     "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
     "test:all": "turbo run test",
     "test:coverage": "pnpm -r test -- --coverage",
     "test:desktop:unit": "pnpm --filter harness-kit-desktop test",

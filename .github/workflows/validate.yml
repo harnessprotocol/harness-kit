@@ -181,6 +181,24 @@ jobs:
               print('All plugin.json files valid against Protocol schema.')
           "
 
+  typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Type check all packages
+        run: pnpm turbo run typecheck
+
   security-scan:
     runs-on: ubuntu-latest
     steps:
@@ -328,9 +346,6 @@ jobs:
         run: |
           pnpm --filter @harness-kit/shared build
           pnpm --filter @harness-kit/core build
-
-      - name: TypeScript check (desktop)
-        run: pnpm --filter harness-kit-desktop exec tsc --noEmit
 
       - name: Run desktop tests
         run: pnpm --filter harness-kit-desktop test
