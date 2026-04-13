@@ -198,9 +198,9 @@ pub fn get_comparator_analytics(db: State<'_, Db>) -> Result<AnalyticsData, Stri
         .query_row(
             "SELECT COUNT(DISTINCT comparison_id) FROM evaluations",
             [],
-            |row| row.get(0),
+            |row| row.get::<_, i64>(0),
         )
-        .unwrap_or(0);
+        .unwrap_or(0) as u64;
 
     if total_comparisons == 0 {
         return Ok(AnalyticsData {
@@ -231,7 +231,7 @@ pub fn get_comparator_analytics(db: State<'_, Db>) -> Result<AnalyticsData, Stri
             Ok((
                 row.get::<_, String>(0)?,
                 row.get::<_, String>(1)?,
-                row.get::<_, u64>(2)?,
+                row.get::<_, i64>(2)? as u64,
             ))
         })
         .map_err(|e| e.to_string())?
@@ -250,7 +250,7 @@ pub fn get_comparator_analytics(db: State<'_, Db>) -> Result<AnalyticsData, Stri
 
     let totals: std::collections::HashMap<String, u64> = total_stmt
         .query_map([], |row| {
-            Ok((row.get::<_, String>(0)?, row.get::<_, u64>(1)?))
+            Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as u64))
         })
         .map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
@@ -289,7 +289,7 @@ pub fn get_comparator_analytics(db: State<'_, Db>) -> Result<AnalyticsData, Stri
         .map_err(|e| e.to_string())?;
 
     let model_wins: Vec<(String, u64)> = model_win_stmt
-        .query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, u64>(1)?)))
+        .query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as u64)))
         .map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?;
@@ -305,7 +305,7 @@ pub fn get_comparator_analytics(db: State<'_, Db>) -> Result<AnalyticsData, Stri
         .map_err(|e| e.to_string())?;
 
     let model_totals: std::collections::HashMap<String, u64> = model_total_stmt
-        .query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, u64>(1)?)))
+        .query_map([], |row| Ok((row.get::<_, String>(0)?, row.get::<_, i64>(1)? as u64)))
         .map_err(|e| e.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|e| e.to_string())?
