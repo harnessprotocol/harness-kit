@@ -77,11 +77,11 @@ pub type SharedRelayState = Arc<Mutex<RelayState>>;
 
 fn generate_code() -> String {
     use rand::Rng;
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
     let consonants: Vec<char> = "BCDFGHJKLMNPQRSTVWXYZ".chars().collect();
     let alphanum: Vec<char> = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".chars().collect();
-    let prefix: String = (0..3).map(|_| consonants[rng.gen_range(0..consonants.len())]).collect();
-    let suffix: String = (0..3).map(|_| alphanum[rng.gen_range(0..alphanum.len())]).collect();
+    let prefix: String = (0..3).map(|_| consonants[rng.random_range(0..consonants.len())]).collect();
+    let suffix: String = (0..3).map(|_| alphanum[rng.random_range(0..alphanum.len())]).collect();
     format!("{}-{}", prefix, suffix)
 }
 
