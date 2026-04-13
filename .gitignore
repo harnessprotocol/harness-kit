@@ -32,6 +32,7 @@ apps/marketplace/supabase/.temp/
 
 # Shared package build output
 packages/shared/dist/
+packages/shared/shared
 
 # Playwright MCP
 .playwright-mcp/
