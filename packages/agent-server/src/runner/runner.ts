@@ -68,9 +68,22 @@ export async function startAgent(
   }
 }
 
+function sanitizeProjectSlug(slug: string): string {
+  if (!/^[A-Za-z0-9_-]+$/.test(slug)) {
+    throw new Error('Invalid project slug');
+  }
+  return slug;
+}
+
 function updateBoardStatus(slug: string, taskId: number, status: string) {
   const port = process.env.BOARD_SERVER_PORT ?? 4800;
-  return fetch(`http://localhost:${port}/api/v1/projects/${slug}/tasks/${taskId}/execution`, {
+  const safeSlug = sanitizeProjectSlug(slug);
+  const url = new URL(
+    `/api/v1/projects/${encodeURIComponent(safeSlug)}/tasks/${encodeURIComponent(String(taskId))}/execution`,
+    `http://localhost:${port}`
+  );
+
+  return fetch(url.toString(), {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status, finished_at: new Date().toISOString() }),
