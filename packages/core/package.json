@@ -27,7 +27,7 @@
     "yaml": "^2.8.3"
   },
   "devDependencies": {
-    "@types/node": "^22.19.15",
+    "@types/node": "^22.19.17",
     "@vitest/coverage-v8": "^4",
     "tsup": "^8",
     "typescript": "^5",
