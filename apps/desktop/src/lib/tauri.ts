@@ -175,16 +175,6 @@ export async function listClaudeDir(): Promise<string[]> {
   return invoke<string[]>("list_claude_dir");
 }
 
-export interface ClaudeAccountInfo {
-  logged_in: boolean;
-  subscription_type: string | null;
-  auto_mode_available: boolean;
-}
-
-export async function detectClaudeAccount(): Promise<ClaudeAccountInfo> {
-  return invoke<ClaudeAccountInfo>("detect_claude_account");
-}
-
 // ── Observatory commands ──────────────────────────────────────
 
 export async function readStatsCache(): Promise<StatsCache> {
