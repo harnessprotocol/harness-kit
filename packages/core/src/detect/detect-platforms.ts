@@ -21,18 +21,12 @@ const INDICATORS: PlatformIndicator[] = [
   },
   {
     platform: "copilot",
-    paths: [
-      ".github/copilot-instructions.md",
-      ".vscode/mcp.json",
-      ".github/skills",
-    ],
+    paths: [".github/copilot-instructions.md", ".vscode/mcp.json", ".github/skills"],
     ambiguousPaths: [".github"],
   },
 ];
 
-export async function detectPlatforms(
-  fs: FsProvider,
-): Promise<DetectedPlatform[]> {
+export async function detectPlatforms(fs: FsProvider): Promise<DetectedPlatform[]> {
   const cwd = fs.cwd();
   const results: DetectedPlatform[] = [];
 

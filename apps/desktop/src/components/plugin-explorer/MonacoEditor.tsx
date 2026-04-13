@@ -1,6 +1,6 @@
-import { useRef, useEffect, useCallback } from "react";
-import Editor, { type OnMount, type Monaco } from "@monaco-editor/react";
+import Editor, { type Monaco, type OnMount } from "@monaco-editor/react";
 import type { editor } from "monaco-editor";
+import { useCallback, useEffect, useRef } from "react";
 
 const EXT_TO_LANGUAGE: Record<string, string> = {
   md: "markdown",
@@ -51,26 +51,35 @@ interface MonacoEditorProps {
   readOnly?: boolean;
 }
 
-export default function MonacoEditor({ filePath, content, onChange, onSave, readOnly = false }: MonacoEditorProps) {
+export default function MonacoEditor({
+  filePath,
+  content,
+  onChange,
+  onSave,
+  readOnly = false,
+}: MonacoEditorProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const themeRef = useRef(getMonacoTheme());
 
-  const handleMount: OnMount = useCallback((editor, monaco) => {
-    editorRef.current = editor;
-    monacoRef.current = monaco;
+  const handleMount: OnMount = useCallback(
+    (editor, monaco) => {
+      editorRef.current = editor;
+      monacoRef.current = monaco;
 
-    // Register Cmd+S save action
-    editor.addAction({
-      id: "harness-kit-save",
-      label: "Save File",
-      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
-      run: () => onSave(),
-    });
+      // Register Cmd+S save action
+      editor.addAction({
+        id: "harness-kit-save",
+        label: "Save File",
+        keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
+        run: () => onSave(),
+      });
 
-    // Set initial theme
-    monaco.editor.setTheme(getMonacoTheme());
-  }, [onSave]);
+      // Set initial theme
+      monaco.editor.setTheme(getMonacoTheme());
+    },
+    [onSave],
+  );
 
   // Watch for dark/light mode changes via MutationObserver
   useEffect(() => {
@@ -103,10 +112,16 @@ export default function MonacoEditor({ filePath, content, onChange, onSave, read
       onChange={(value) => onChange(value ?? "")}
       onMount={handleMount}
       loading={
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "center",
-          height: "100%", color: "var(--fg-subtle)", fontSize: "12px",
-        }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            height: "100%",
+            color: "var(--fg-subtle)",
+            fontSize: "12px",
+          }}
+        >
           Loading editor...
         </div>
       }

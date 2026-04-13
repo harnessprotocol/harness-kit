@@ -1,19 +1,18 @@
 import { useEffect, useState } from "react";
+import { type ConfigFilesDetailLevel, getConfigFilesDetailLevel } from "../lib/preferences";
 import { listClaudeDir } from "../lib/tauri";
-import {
-  getConfigFilesDetailLevel,
-  type ConfigFilesDetailLevel,
-} from "../lib/preferences";
 
 // ── File filtering ────────────────────────────────────────────
 
 const TEXT_EXTENSIONS = new Set([".md", ".json", ".yaml", ".yml", ".sh", ".txt", ".toml", ".mjs"]);
-const HIDDEN_PATTERNS: RegExp[] = [
-  /^security_warnings_state_/,
-  /^statsig-/,
-  /^stats-cache\.json$/,
-];
-const ESSENTIALS = new Set(["CLAUDE.md", "AGENT.md", "SOUL.md", "settings.json", "keybindings.json"]);
+const HIDDEN_PATTERNS: RegExp[] = [/^security_warnings_state_/, /^statsig-/, /^stats-cache\.json$/];
+const ESSENTIALS = new Set([
+  "CLAUDE.md",
+  "AGENT.md",
+  "SOUL.md",
+  "settings.json",
+  "keybindings.json",
+]);
 
 export function extOf(name: string): string {
   const idx = name.lastIndexOf(".");
@@ -22,9 +21,10 @@ export function extOf(name: string): string {
 
 export function filterFiles(files: string[], level: ConfigFilesDetailLevel): string[] {
   if (level === "essentials") return files.filter((f) => ESSENTIALS.has(f));
-  if (level === "text-files") return files.filter(
-    (f) => TEXT_EXTENSIONS.has(extOf(f)) && !HIDDEN_PATTERNS.some((p) => p.test(f))
-  );
+  if (level === "text-files")
+    return files.filter(
+      (f) => TEXT_EXTENSIONS.has(extOf(f)) && !HIDDEN_PATTERNS.some((p) => p.test(f)),
+    );
   return files;
 }
 

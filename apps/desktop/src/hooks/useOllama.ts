@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from "react";
 import { Channel } from "@tauri-apps/api/core";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  type AIModelInfo,
   aiCheckOllama,
   aiListModels,
   aiPullModel,
-  type AIModelInfo,
   type DownloadProgress,
 } from "../lib/tauri";
 
@@ -33,7 +33,9 @@ export function useOllama(): OllamaState {
 
   useEffect(() => {
     mountedRef.current = true;
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -52,7 +54,9 @@ export function useOllama(): OllamaState {
           setError(null);
           // Eagerly load model list once connected
           aiListModels()
-            .then((m) => { if (mountedRef.current) setModels(m); })
+            .then((m) => {
+              if (mountedRef.current) setModels(m);
+            })
             .catch(() => {});
         } else {
           pollCount.current += 1;
@@ -73,7 +77,10 @@ export function useOllama(): OllamaState {
 
     check();
     const id = setInterval(check, POLL_INTERVAL_MS);
-    return () => { alive = false; clearInterval(id); };
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
   }, [running, timedOut]);
 
   const retry = useCallback(() => {

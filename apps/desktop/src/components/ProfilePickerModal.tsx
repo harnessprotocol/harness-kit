@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { PROFILES } from "../lib/profiles";
+import { useEffect, useState } from "react";
 import type { HarnessProfile } from "../lib/profiles";
-import { listCustomProfiles, getCustomProfile, deleteCustomProfile } from "../lib/tauri";
+import { PROFILES } from "../lib/profiles";
 import type { CustomProfile } from "../lib/tauri";
+import { deleteCustomProfile, getCustomProfile, listCustomProfiles } from "../lib/tauri";
 
 interface ProfilePickerModalProps {
   open: boolean;
@@ -21,7 +21,9 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
 
   useEffect(() => {
     if (!open) return;
-    listCustomProfiles().then(setCustomProfiles).catch(() => {});
+    listCustomProfiles()
+      .then(setCustomProfiles)
+      .catch(() => {});
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
     }
@@ -58,11 +60,17 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
   }
 
   const sectionLabel = (text: string) => (
-    <div style={{
-      fontSize: "10px", fontWeight: 600, textTransform: "uppercase",
-      letterSpacing: "0.5px", color: "var(--fg-subtle)",
-      padding: "8px 0 6px", marginTop: "4px",
-    }}>
+    <div
+      style={{
+        fontSize: "10px",
+        fontWeight: 600,
+        textTransform: "uppercase",
+        letterSpacing: "0.5px",
+        color: "var(--fg-subtle)",
+        padding: "8px 0 6px",
+        marginTop: "4px",
+      }}
+    >
       {text}
     </div>
   );
@@ -107,30 +115,42 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
             }}
           >
             {/* Header */}
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "14px 16px",
-              borderBottom: "1px solid var(--border-base)",
-              flexShrink: 0,
-            }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "14px 16px",
+                borderBottom: "1px solid var(--border-base)",
+                flexShrink: 0,
+              }}
+            >
               <div>
-                <p style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: "var(--fg-base)" }}>
+                <p
+                  style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: "var(--fg-base)" }}
+                >
                   Choose a profile
                 </p>
                 <p style={{ margin: "2px 0 0", fontSize: "11px", color: "var(--fg-muted)" }}>
-                  Pre-configured harness.yaml for different roles. Opens in the editor for customization.
+                  Pre-configured harness.yaml for different roles. Opens in the editor for
+                  customization.
                 </p>
               </div>
               <button
                 onClick={onClose}
                 style={{
-                  width: "24px", height: "24px",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  borderRadius: "6px", border: "none",
-                  background: "transparent", color: "var(--fg-subtle)",
-                  cursor: "pointer", fontSize: "14px", flexShrink: 0,
+                  width: "24px",
+                  height: "24px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  borderRadius: "6px",
+                  border: "none",
+                  background: "transparent",
+                  color: "var(--fg-subtle)",
+                  cursor: "pointer",
+                  fontSize: "14px",
+                  flexShrink: 0,
                 }}
               >
                 ✕
@@ -140,12 +160,32 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
             {/* Content */}
             <div style={{ overflowY: "auto", padding: "0 16px 16px" }}>
               {deleteError && (
-                <div style={{ margin: "10px 0 0", padding: "8px 12px", borderRadius: "6px", background: "var(--bg-surface)", border: "1px solid var(--danger)", fontSize: "11px", color: "var(--danger)" }}>
+                <div
+                  style={{
+                    margin: "10px 0 0",
+                    padding: "8px 12px",
+                    borderRadius: "6px",
+                    background: "var(--bg-surface)",
+                    border: "1px solid var(--danger)",
+                    fontSize: "11px",
+                    color: "var(--danger)",
+                  }}
+                >
                   Failed to delete profile: {deleteError}
                 </div>
               )}
               {loadError && (
-                <div style={{ margin: "10px 0 0", padding: "8px 12px", borderRadius: "6px", background: "var(--bg-surface)", border: "1px solid var(--danger)", fontSize: "11px", color: "var(--danger)" }}>
+                <div
+                  style={{
+                    margin: "10px 0 0",
+                    padding: "8px 12px",
+                    borderRadius: "6px",
+                    background: "var(--bg-surface)",
+                    border: "1px solid var(--danger)",
+                    fontSize: "11px",
+                    color: "var(--danger)",
+                  }}
+                >
                   Failed to load profile: {loadError}
                 </div>
               )}
@@ -153,7 +193,14 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
               {customProfiles.length > 0 && (
                 <>
                   {sectionLabel("Your Profiles")}
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px", marginBottom: "4px" }}>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(2, 1fr)",
+                      gap: "10px",
+                      marginBottom: "4px",
+                    }}
+                  >
                     {customProfiles.map((profile) => (
                       <button
                         key={profile.id}
@@ -168,7 +215,10 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
                           padding: "14px",
                           borderRadius: "8px",
                           border: `1px solid ${hovered === `custom-${profile.id}` ? "var(--accent)" : "var(--border-base)"}`,
-                          background: hovered === `custom-${profile.id}` ? "var(--bg-elevated)" : "var(--bg-base)",
+                          background:
+                            hovered === `custom-${profile.id}`
+                              ? "var(--bg-elevated)"
+                              : "var(--bg-base)",
                           cursor: loadingId === profile.id ? "wait" : "pointer",
                           textAlign: "left",
                           transition: "border-color 0.1s, background 0.1s",
@@ -176,10 +226,19 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
                           opacity: loadingId === profile.id ? 0.6 : 1,
                         }}
                       >
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "space-between" }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            justifyContent: "space-between",
+                          }}
+                        >
                           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                             <span style={{ fontSize: "20px", lineHeight: 1 }}>📄</span>
-                            <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)" }}>
+                            <span
+                              style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)" }}
+                            >
                               {profile.name}
                             </span>
                           </div>
@@ -187,29 +246,45 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
                             onClick={(e) => handleDelete(profile.id, e)}
                             disabled={deletingId === profile.id}
                             style={{
-                              padding: "2px 6px", borderRadius: "4px",
+                              padding: "2px 6px",
+                              borderRadius: "4px",
                               border: "1px solid var(--border-base)",
                               background: "var(--bg-elevated)",
                               color: "var(--fg-subtle)",
-                              fontSize: "10px", cursor: "pointer", flexShrink: 0,
+                              fontSize: "10px",
+                              cursor: "pointer",
+                              flexShrink: 0,
                             }}
                           >
                             {deletingId === profile.id ? "…" : "Delete"}
                           </button>
                         </div>
                         {profile.description && (
-                          <p style={{ margin: 0, fontSize: "11px", color: "var(--fg-muted)", lineHeight: "1.5" }}>
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: "11px",
+                              color: "var(--fg-muted)",
+                              lineHeight: "1.5",
+                            }}
+                          >
                             {profile.description}
                           </p>
                         )}
-                        <span style={{
-                          padding: "1px 6px", borderRadius: "4px",
-                          fontSize: "9px", fontWeight: 600,
-                          textTransform: "uppercase", letterSpacing: "0.3px",
-                          background: "var(--bg-elevated)", color: "var(--fg-subtle)",
-                          border: "1px solid var(--border-base)",
-                          alignSelf: "flex-start",
-                        }}>
+                        <span
+                          style={{
+                            padding: "1px 6px",
+                            borderRadius: "4px",
+                            fontSize: "9px",
+                            fontWeight: 600,
+                            textTransform: "uppercase",
+                            letterSpacing: "0.3px",
+                            background: "var(--bg-elevated)",
+                            color: "var(--fg-subtle)",
+                            border: "1px solid var(--border-base)",
+                            alignSelf: "flex-start",
+                          }}
+                        >
                           custom
                         </span>
                       </button>
@@ -246,7 +321,14 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
                         {profile.name}
                       </span>
                     </div>
-                    <p style={{ margin: 0, fontSize: "11px", color: "var(--fg-muted)", lineHeight: "1.5" }}>
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: "11px",
+                        color: "var(--fg-muted)",
+                        lineHeight: "1.5",
+                      }}
+                    >
                       {profile.description}
                     </p>
                     <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>

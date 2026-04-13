@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { resolve } from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { validateCommand } from "../src/commands/validate.js";
 import { CliTestEnv } from "./helpers/cli-test-env.js";
 

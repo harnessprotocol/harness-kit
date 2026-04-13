@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { WebSocketServer, WebSocket } from "ws";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { WebSocket, WebSocketServer } from "ws";
+import type { ClientMessage, Member, ServerMessage } from "../protocol.js";
 import { ChatRelay } from "../relay.js";
-import type { ClientMessage, ServerMessage, Member } from "../protocol.js";
 
 // ── WebSocket mock ────────────────────────────────────────────
 //
@@ -19,13 +19,13 @@ vi.mock("ws", () => {
 
     // Simulate sending a message to the server
     _simulateMessage(data: string) {
-      const messageHandler = this.on.mock.calls.find(call => call[0] === "message")?.[1];
+      const messageHandler = this.on.mock.calls.find((call) => call[0] === "message")?.[1];
       if (messageHandler) messageHandler(Buffer.from(data));
     }
 
     // Simulate disconnect
     _simulateClose() {
-      const closeHandler = this.on.mock.calls.find(call => call[0] === "close")?.[1];
+      const closeHandler = this.on.mock.calls.find((call) => call[0] === "close")?.[1];
       if (closeHandler) closeHandler();
     }
   }
@@ -36,7 +36,7 @@ vi.mock("ws", () => {
 
     // Simulate a new connection
     _simulateConnection(ws: MockWebSocket) {
-      const connectionHandler = this.on.mock.calls.find(call => call[0] === "connection")?.[1];
+      const connectionHandler = this.on.mock.calls.find((call) => call[0] === "connection")?.[1];
       if (connectionHandler) connectionHandler(ws);
     }
   }
@@ -69,7 +69,7 @@ function parseLastSentMessage(ws: WebSocket): ServerMessage | null {
 
 function getAllSentMessages(ws: WebSocket): ServerMessage[] {
   const mockSend = ws.send as ReturnType<typeof vi.fn>;
-  return mockSend.mock.calls.map(call => JSON.parse(call[0] as string) as ServerMessage);
+  return mockSend.mock.calls.map((call) => JSON.parse(call[0] as string) as ServerMessage);
 }
 
 function clearSentMessages(ws: WebSocket): void {
@@ -122,7 +122,7 @@ describe("ChatRelay room creation", () => {
     (ws as any)._simulateMessage(JSON.stringify(msg));
 
     const messages = getAllSentMessages(ws);
-    const createdMsg = messages.find(m => m.type === "room_created");
+    const createdMsg = messages.find((m) => m.type === "room_created");
     expect(createdMsg).toBeDefined();
     expect(createdMsg).toHaveProperty("code");
     expect((createdMsg as any).code).toMatch(/^[BCDFGHJKLMNPQRSTVWXYZ]{3}-[A-Z0-9]{3}$/);
@@ -133,7 +133,7 @@ describe("ChatRelay room creation", () => {
     (ws as any)._simulateMessage(JSON.stringify(msg));
 
     const messages = getAllSentMessages(ws);
-    const createdMsg = messages.find(m => m.type === "room_created");
+    const createdMsg = messages.find((m) => m.type === "room_created");
     expect(createdMsg).toBeDefined();
     expect((createdMsg as any).name).toBe("Test Room");
   });
@@ -172,7 +172,7 @@ describe("ChatRelay room creation", () => {
     (ws as any)._simulateMessage(JSON.stringify(msg));
 
     const messages = getAllSentMessages(ws);
-    const joinedMsg = messages.find(m => m.type === "room_joined");
+    const joinedMsg = messages.find((m) => m.type === "room_joined");
     expect(joinedMsg).toBeDefined();
     expect((joinedMsg as any).members).toHaveLength(1);
     expect((joinedMsg as any).members[0].nickname).toBe("alice");
@@ -199,7 +199,7 @@ describe("ChatRelay room joining", () => {
     const createMsg: ClientMessage = { type: "create_room", nickname: "alice" };
     (ws1 as any)._simulateMessage(JSON.stringify(createMsg));
 
-    const createdMsg = getAllSentMessages(ws1).find(m => m.type === "room_created");
+    const createdMsg = getAllSentMessages(ws1).find((m) => m.type === "room_created");
     const roomCode = (createdMsg as any).code;
 
     clearSentMessages(ws1);
@@ -209,7 +209,7 @@ describe("ChatRelay room joining", () => {
     (ws2 as any)._simulateMessage(JSON.stringify(joinMsg));
 
     const messages = getAllSentMessages(ws2);
-    const joinedMsg = messages.find(m => m.type === "room_joined");
+    const joinedMsg = messages.find((m) => m.type === "room_joined");
     expect(joinedMsg).toBeDefined();
     expect((joinedMsg as any).members).toHaveLength(2);
   });
@@ -219,7 +219,7 @@ describe("ChatRelay room joining", () => {
     const createMsg: ClientMessage = { type: "create_room", nickname: "alice" };
     (ws1 as any)._simulateMessage(JSON.stringify(createMsg));
 
-    const createdMsg = getAllSentMessages(ws1).find(m => m.type === "room_created");
+    const createdMsg = getAllSentMessages(ws1).find((m) => m.type === "room_created");
     const roomCode = (createdMsg as any).code;
 
     // Try to join with empty nickname
@@ -245,7 +245,7 @@ describe("ChatRelay room joining", () => {
     const createMsg: ClientMessage = { type: "create_room", nickname: "alice" };
     (ws1 as any)._simulateMessage(JSON.stringify(createMsg));
 
-    const createdMsg = getAllSentMessages(ws1).find(m => m.type === "room_created");
+    const createdMsg = getAllSentMessages(ws1).find((m) => m.type === "room_created");
     const roomCode = (createdMsg as any).code;
 
     // Try to join with same nickname
@@ -262,7 +262,7 @@ describe("ChatRelay room joining", () => {
     const createMsg: ClientMessage = { type: "create_room", nickname: "alice" };
     (ws1 as any)._simulateMessage(JSON.stringify(createMsg));
 
-    const createdMsg = getAllSentMessages(ws1).find(m => m.type === "room_created");
+    const createdMsg = getAllSentMessages(ws1).find((m) => m.type === "room_created");
     const roomCode = (createdMsg as any).code;
 
     // Send a chat message
@@ -274,7 +274,7 @@ describe("ChatRelay room joining", () => {
     (ws2 as any)._simulateMessage(JSON.stringify(joinMsg));
 
     const messages = getAllSentMessages(ws2);
-    const joinedMsg = messages.find(m => m.type === "room_joined");
+    const joinedMsg = messages.find((m) => m.type === "room_joined");
     expect(joinedMsg).toBeDefined();
     expect((joinedMsg as any).history).toBeDefined();
     expect((joinedMsg as any).history.length).toBeGreaterThan(0);
@@ -285,7 +285,7 @@ describe("ChatRelay room joining", () => {
     const createMsg: ClientMessage = { type: "create_room", nickname: "alice" };
     (ws1 as any)._simulateMessage(JSON.stringify(createMsg));
 
-    const createdMsg = getAllSentMessages(ws1).find(m => m.type === "room_created");
+    const createdMsg = getAllSentMessages(ws1).find((m) => m.type === "room_created");
     const roomCode = (createdMsg as any).code;
 
     clearSentMessages(ws1);
@@ -295,7 +295,9 @@ describe("ChatRelay room joining", () => {
     (ws2 as any)._simulateMessage(JSON.stringify(joinMsg));
 
     const messages = getAllSentMessages(ws1);
-    const systemMsg = messages.find(m => m.type === "message" && (m as any).message?.type === "system");
+    const systemMsg = messages.find(
+      (m) => m.type === "message" && (m as any).message?.type === "system",
+    );
     expect(systemMsg).toBeDefined();
     expect((systemMsg as any).message.event).toBe("join");
     expect((systemMsg as any).message.nickname).toBe("bob");
@@ -306,7 +308,7 @@ describe("ChatRelay room joining", () => {
     const createMsg: ClientMessage = { type: "create_room", nickname: "alice" };
     (ws1 as any)._simulateMessage(JSON.stringify(createMsg));
 
-    const createdMsg = getAllSentMessages(ws1).find(m => m.type === "room_created");
+    const createdMsg = getAllSentMessages(ws1).find((m) => m.type === "room_created");
     const roomCode = (createdMsg as any).code;
 
     clearSentMessages(ws1);
@@ -316,7 +318,7 @@ describe("ChatRelay room joining", () => {
     (ws2 as any)._simulateMessage(JSON.stringify(joinMsg));
 
     const messages = getAllSentMessages(ws1);
-    const presenceMsg = messages.find(m => m.type === "presence");
+    const presenceMsg = messages.find((m) => m.type === "presence");
     expect(presenceMsg).toBeDefined();
     expect((presenceMsg as any).members).toHaveLength(2);
   });
@@ -342,7 +344,7 @@ describe("ChatRelay room leaving", () => {
     const createMsg: ClientMessage = { type: "create_room", nickname: "alice" };
     (ws1 as any)._simulateMessage(JSON.stringify(createMsg));
 
-    const createdMsg = getAllSentMessages(ws1).find(m => m.type === "room_created");
+    const createdMsg = getAllSentMessages(ws1).find((m) => m.type === "room_created");
     const roomCode = (createdMsg as any).code;
 
     const joinMsg: ClientMessage = { type: "join_room", code: roomCode, nickname: "bob" };
@@ -355,7 +357,9 @@ describe("ChatRelay room leaving", () => {
     (ws2 as any)._simulateMessage(JSON.stringify(leaveMsg));
 
     const messages = getAllSentMessages(ws1);
-    const systemMsg = messages.find(m => m.type === "message" && (m as any).message?.type === "system");
+    const systemMsg = messages.find(
+      (m) => m.type === "message" && (m as any).message?.type === "system",
+    );
     expect(systemMsg).toBeDefined();
     expect((systemMsg as any).message.event).toBe("leave");
     expect((systemMsg as any).message.nickname).toBe("bob");
@@ -366,7 +370,7 @@ describe("ChatRelay room leaving", () => {
     const createMsg: ClientMessage = { type: "create_room", nickname: "alice" };
     (ws1 as any)._simulateMessage(JSON.stringify(createMsg));
 
-    const createdMsg = getAllSentMessages(ws1).find(m => m.type === "room_created");
+    const createdMsg = getAllSentMessages(ws1).find((m) => m.type === "room_created");
     const roomCode = (createdMsg as any).code;
 
     const joinMsg: ClientMessage = { type: "join_room", code: roomCode, nickname: "bob" };
@@ -379,7 +383,7 @@ describe("ChatRelay room leaving", () => {
     (ws2 as any)._simulateMessage(JSON.stringify(leaveMsg));
 
     const messages = getAllSentMessages(ws1);
-    const presenceMsg = messages.find(m => m.type === "presence");
+    const presenceMsg = messages.find((m) => m.type === "presence");
     expect(presenceMsg).toBeDefined();
     expect((presenceMsg as any).members).toHaveLength(1);
     expect((presenceMsg as any).members[0].nickname).toBe("alice");
@@ -390,7 +394,7 @@ describe("ChatRelay room leaving", () => {
     const createMsg: ClientMessage = { type: "create_room", nickname: "alice" };
     (ws1 as any)._simulateMessage(JSON.stringify(createMsg));
 
-    const createdMsg = getAllSentMessages(ws1).find(m => m.type === "room_created");
+    const createdMsg = getAllSentMessages(ws1).find((m) => m.type === "room_created");
     const roomCode = (createdMsg as any).code;
 
     const joinMsg: ClientMessage = { type: "join_room", code: roomCode, nickname: "bob" };
@@ -402,7 +406,9 @@ describe("ChatRelay room leaving", () => {
     (ws2 as any)._simulateClose();
 
     const messages = getAllSentMessages(ws1);
-    const systemMsg = messages.find(m => m.type === "message" && (m as any).message?.type === "system");
+    const systemMsg = messages.find(
+      (m) => m.type === "message" && (m as any).message?.type === "system",
+    );
     expect(systemMsg).toBeDefined();
     expect((systemMsg as any).message.event).toBe("leave");
   });
@@ -427,7 +433,7 @@ describe("ChatRelay chat messages", () => {
     const createMsg: ClientMessage = { type: "create_room", nickname: "alice" };
     (ws1 as any)._simulateMessage(JSON.stringify(createMsg));
 
-    const createdMsg = getAllSentMessages(ws1).find(m => m.type === "room_created");
+    const createdMsg = getAllSentMessages(ws1).find((m) => m.type === "room_created");
     roomCode = (createdMsg as any).code;
 
     const joinMsg: ClientMessage = { type: "join_room", code: roomCode, nickname: "bob" };
@@ -444,8 +450,8 @@ describe("ChatRelay chat messages", () => {
     const messages1 = getAllSentMessages(ws1);
     const messages2 = getAllSentMessages(ws2);
 
-    const msg1 = messages1.find(m => m.type === "message" && (m as any).message?.type === "chat");
-    const msg2 = messages2.find(m => m.type === "message" && (m as any).message?.type === "chat");
+    const msg1 = messages1.find((m) => m.type === "message" && (m as any).message?.type === "chat");
+    const msg2 = messages2.find((m) => m.type === "message" && (m as any).message?.type === "chat");
 
     expect(msg1).toBeDefined();
     expect(msg2).toBeDefined();
@@ -494,7 +500,7 @@ describe("ChatRelay share messages", () => {
     const createMsg: ClientMessage = { type: "create_room", nickname: "alice" };
     (ws1 as any)._simulateMessage(JSON.stringify(createMsg));
 
-    const createdMsg = getAllSentMessages(ws1).find(m => m.type === "room_created");
+    const createdMsg = getAllSentMessages(ws1).find((m) => m.type === "room_created");
     const roomCode = (createdMsg as any).code;
 
     const joinMsg: ClientMessage = { type: "join_room", code: roomCode, nickname: "bob" };
@@ -516,8 +522,12 @@ describe("ChatRelay share messages", () => {
     const messages1 = getAllSentMessages(ws1);
     const messages2 = getAllSentMessages(ws2);
 
-    const msg1 = messages1.find(m => m.type === "message" && (m as any).message?.type === "share");
-    const msg2 = messages2.find(m => m.type === "message" && (m as any).message?.type === "share");
+    const msg1 = messages1.find(
+      (m) => m.type === "message" && (m as any).message?.type === "share",
+    );
+    const msg2 = messages2.find(
+      (m) => m.type === "message" && (m as any).message?.type === "share",
+    );
 
     expect(msg1).toBeDefined();
     expect(msg2).toBeDefined();
@@ -603,7 +613,7 @@ describe("ChatRelay typing indicators", () => {
     const createMsg: ClientMessage = { type: "create_room", nickname: "alice" };
     (ws1 as any)._simulateMessage(JSON.stringify(createMsg));
 
-    const createdMsg = getAllSentMessages(ws1).find(m => m.type === "room_created");
+    const createdMsg = getAllSentMessages(ws1).find((m) => m.type === "room_created");
     const roomCode = (createdMsg as any).code;
 
     const joinMsg: ClientMessage = { type: "join_room", code: roomCode, nickname: "bob" };
@@ -618,7 +628,7 @@ describe("ChatRelay typing indicators", () => {
     (ws1 as any)._simulateMessage(JSON.stringify(typingMsg));
 
     const messages = getAllSentMessages(ws2);
-    const typingUpdate = messages.find(m => m.type === "typing_update");
+    const typingUpdate = messages.find((m) => m.type === "typing_update");
     expect(typingUpdate).toBeDefined();
     expect((typingUpdate as any).nickname).toBe("alice");
     expect((typingUpdate as any).typing).toBe(true);
@@ -629,7 +639,7 @@ describe("ChatRelay typing indicators", () => {
     (ws1 as any)._simulateMessage(JSON.stringify(typingMsg));
 
     const messages = getAllSentMessages(ws1);
-    const typingUpdate = messages.find(m => m.type === "typing_update");
+    const typingUpdate = messages.find((m) => m.type === "typing_update");
     expect(typingUpdate).toBeUndefined();
   });
 
@@ -702,7 +712,7 @@ describe("ChatRelay message routing", () => {
     const createMsg1: ClientMessage = { type: "create_room", nickname: "alice" };
     (room1Ws1 as any)._simulateMessage(JSON.stringify(createMsg1));
 
-    const createdMsg1 = getAllSentMessages(room1Ws1).find(m => m.type === "room_created");
+    const createdMsg1 = getAllSentMessages(room1Ws1).find((m) => m.type === "room_created");
     const roomCode1 = (createdMsg1 as any).code;
 
     // Join room 1
@@ -724,12 +734,12 @@ describe("ChatRelay message routing", () => {
     // Room 1 members should receive it
     const messages1 = getAllSentMessages(room1Ws1);
     const messages2 = getAllSentMessages(room1Ws2);
-    expect(messages1.find(m => m.type === "message")).toBeDefined();
-    expect(messages2.find(m => m.type === "message")).toBeDefined();
+    expect(messages1.find((m) => m.type === "message")).toBeDefined();
+    expect(messages2.find((m) => m.type === "message")).toBeDefined();
 
     // Room 2 member should not receive it
     const messages3 = getAllSentMessages(room2Ws1);
-    expect(messages3.find(m => m.type === "message")).toBeUndefined();
+    expect(messages3.find((m) => m.type === "message")).toBeUndefined();
   });
 });
 
@@ -755,7 +765,11 @@ describe("ChatRelay grace timer", () => {
 
   it("starts grace timer when room becomes empty", () => {
     // Create room
-    const createMsg: ClientMessage = { type: "create_room", nickname: "alice", keepAliveMinutes: 1 };
+    const createMsg: ClientMessage = {
+      type: "create_room",
+      nickname: "alice",
+      keepAliveMinutes: 1,
+    };
     (ws1 as any)._simulateMessage(JSON.stringify(createMsg));
 
     // Leave room
@@ -768,10 +782,14 @@ describe("ChatRelay grace timer", () => {
 
   it("cancels grace timer when user rejoins", () => {
     // Create room
-    const createMsg: ClientMessage = { type: "create_room", nickname: "alice", keepAliveMinutes: 1 };
+    const createMsg: ClientMessage = {
+      type: "create_room",
+      nickname: "alice",
+      keepAliveMinutes: 1,
+    };
     (ws1 as any)._simulateMessage(JSON.stringify(createMsg));
 
-    const createdMsg = getAllSentMessages(ws1).find(m => m.type === "room_created");
+    const createdMsg = getAllSentMessages(ws1).find((m) => m.type === "room_created");
     const roomCode = (createdMsg as any).code;
 
     // Leave room
@@ -784,7 +802,7 @@ describe("ChatRelay grace timer", () => {
 
     // Should successfully join (room wasn't deleted)
     const messages = getAllSentMessages(ws2);
-    const joinedMsg = messages.find(m => m.type === "room_joined");
+    const joinedMsg = messages.find((m) => m.type === "room_joined");
     expect(joinedMsg).toBeDefined();
   });
 });

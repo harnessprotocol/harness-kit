@@ -26,10 +26,7 @@ export function getAvailableViewModes(
   return [{ key: "editor", label: "Editor" }];
 }
 
-export function getDefaultViewMode(
-  filePath: string | null,
-  isHarnessYaml?: boolean,
-): string {
+export function getDefaultViewMode(filePath: string | null, isHarnessYaml?: boolean): string {
   if (isHarnessYaml) return "formatted";
   if (filePath && isMarkdownFile(filePath)) return "formatted";
   return "editor";

@@ -16,7 +16,8 @@ export interface McpServerMeta {
 const PACKAGE_META: Record<string, McpServerMeta> = {
   "@modelcontextprotocol/server-github": {
     displayName: "GitHub",
-    description: "Search repos, manage issues and PRs, read files, and interact with GitHub resources.",
+    description:
+      "Search repos, manage issues and PRs, read files, and interact with GitHub resources.",
     iconSlug: "github",
     iconBg: "#24292e",
     docsUrl: "https://github.com/modelcontextprotocol/servers/tree/main/src/github",
@@ -99,7 +100,8 @@ const PACKAGE_META: Record<string, McpServerMeta> = {
   },
   "@modelcontextprotocol/server-everything": {
     displayName: "Everything (test)",
-    description: "Test server that exercises the full MCP spec — prompts, resources, tools, sampling.",
+    description:
+      "Test server that exercises the full MCP spec — prompts, resources, tools, sampling.",
     iconBg: "#6B7280",
     sourceUrl: "https://github.com/modelcontextprotocol/servers",
   },
@@ -202,27 +204,27 @@ const PACKAGE_META: Record<string, McpServerMeta> = {
 
 // Fuzzy fallback: keyed by lowercase server name
 const NAME_META: Record<string, McpServerMeta> = {
-  grafana:    PACKAGE_META["mcp-grafana"],
-  github:     PACKAGE_META["@modelcontextprotocol/server-github"],
-  gitlab:     PACKAGE_META["@modelcontextprotocol/server-gitlab"],
-  slack:      PACKAGE_META["@modelcontextprotocol/server-slack"],
-  postgres:   PACKAGE_META["@modelcontextprotocol/server-postgres"],
+  grafana: PACKAGE_META["mcp-grafana"],
+  github: PACKAGE_META["@modelcontextprotocol/server-github"],
+  gitlab: PACKAGE_META["@modelcontextprotocol/server-gitlab"],
+  slack: PACKAGE_META["@modelcontextprotocol/server-slack"],
+  postgres: PACKAGE_META["@modelcontextprotocol/server-postgres"],
   postgresql: PACKAGE_META["@modelcontextprotocol/server-postgres"],
-  sqlite:     PACKAGE_META["@modelcontextprotocol/server-sqlite"],
+  sqlite: PACKAGE_META["@modelcontextprotocol/server-sqlite"],
   filesystem: PACKAGE_META["@modelcontextprotocol/server-filesystem"],
-  supabase:   PACKAGE_META["@supabase/mcp-server-supabase"],
-  tauri:      PACKAGE_META["@hypothesi/tauri-mcp-server"],
-  notion:     PACKAGE_META["@notionhq/notion-mcp-server"],
-  linear:     PACKAGE_META["@linear/mcp-server"],
-  brave:      PACKAGE_META["@modelcontextprotocol/server-brave-search"],
-  puppeteer:  PACKAGE_META["@modelcontextprotocol/server-puppeteer"],
+  supabase: PACKAGE_META["@supabase/mcp-server-supabase"],
+  tauri: PACKAGE_META["@hypothesi/tauri-mcp-server"],
+  notion: PACKAGE_META["@notionhq/notion-mcp-server"],
+  linear: PACKAGE_META["@linear/mcp-server"],
+  brave: PACKAGE_META["@modelcontextprotocol/server-brave-search"],
+  puppeteer: PACKAGE_META["@modelcontextprotocol/server-puppeteer"],
   playwright: PACKAGE_META["@playwright/mcp"],
-  redis:      PACKAGE_META["mcp-server-redis"],
-  mongodb:    PACKAGE_META["mongodb-mcp-server"],
+  redis: PACKAGE_META["mcp-server-redis"],
+  mongodb: PACKAGE_META["mongodb-mcp-server"],
   kubernetes: PACKAGE_META["mcp-server-kubernetes"],
-  fetch:      PACKAGE_META["@modelcontextprotocol/server-fetch"],
-  memory:     PACKAGE_META["@modelcontextprotocol/server-memory"],
-  context7:   PACKAGE_META["@context7/mcp"],
+  fetch: PACKAGE_META["@modelcontextprotocol/server-fetch"],
+  memory: PACKAGE_META["@modelcontextprotocol/server-memory"],
+  context7: PACKAGE_META["@context7/mcp"],
 };
 
 export function lookupMcpServer(name: string, config: ClaudeMcpServer): McpServerMeta | null {
@@ -245,8 +247,14 @@ export function lookupMcpServer(name: string, config: ClaudeMcpServer): McpServe
 
 // Deterministic avatar color derived from the server name
 const AVATAR_COLORS = [
-  "#7C3AED", "#2563EB", "#059669", "#D97706",
-  "#DC2626", "#0891B2", "#DB2777", "#374151",
+  "#7C3AED",
+  "#2563EB",
+  "#059669",
+  "#D97706",
+  "#DC2626",
+  "#0891B2",
+  "#DB2777",
+  "#374151",
 ];
 
 export function getAvatarColor(name: string): string {

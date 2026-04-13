@@ -1,10 +1,10 @@
-import type { Task, TaskPriority } from '../../lib/board-api';
-import { COLUMN_META } from '../../lib/board-columns';
-import { CATEGORY_CONFIG, COMPLEXITY_CONFIG } from '../../lib/board-task-meta';
-import { openInClaudeCode } from '../../lib/open-in-claude';
-import { ProgressBar } from './ProgressBar';
-import { Tooltip } from './Tooltip';
-import { AgentExecutionBadge } from '../agent/AgentExecutionBadge';
+import type { Task, TaskPriority } from "../../lib/board-api";
+import { COLUMN_META } from "../../lib/board-columns";
+import { CATEGORY_CONFIG, COMPLEXITY_CONFIG } from "../../lib/board-task-meta";
+import { openInClaudeCode } from "../../lib/open-in-claude";
+import { AgentExecutionBadge } from "../agent/AgentExecutionBadge";
+import { ProgressBar } from "./ProgressBar";
+import { Tooltip } from "./Tooltip";
 
 interface Props {
   task: Task;
@@ -12,11 +12,34 @@ interface Props {
   repoUrl?: string;
 }
 
-const PRIORITY_CONFIG: Record<TaskPriority, { label: string; color: string; bg: string; border: string }> = {
-  critical: { label: 'Critical', color: '#dc2626', bg: 'rgba(239,68,68,0.1)', border: 'rgba(239,68,68,0.2)' },
-  high: { label: 'High', color: '#ea580c', bg: 'rgba(249,115,22,0.1)', border: 'rgba(249,115,22,0.2)' },
-  medium: { label: 'Medium', color: '#ca8a04', bg: 'rgba(234,179,8,0.1)', border: 'rgba(234,179,8,0.2)' },
-  low: { label: 'Low', color: 'var(--text-muted)', bg: 'rgba(107,114,128,0.1)', border: 'rgba(107,114,128,0.2)' },
+const PRIORITY_CONFIG: Record<
+  TaskPriority,
+  { label: string; color: string; bg: string; border: string }
+> = {
+  critical: {
+    label: "Critical",
+    color: "#dc2626",
+    bg: "rgba(239,68,68,0.1)",
+    border: "rgba(239,68,68,0.2)",
+  },
+  high: {
+    label: "High",
+    color: "#ea580c",
+    bg: "rgba(249,115,22,0.1)",
+    border: "rgba(249,115,22,0.2)",
+  },
+  medium: {
+    label: "Medium",
+    color: "#ca8a04",
+    bg: "rgba(234,179,8,0.1)",
+    border: "rgba(234,179,8,0.2)",
+  },
+  low: {
+    label: "Low",
+    color: "var(--text-muted)",
+    bg: "rgba(107,114,128,0.1)",
+    border: "rgba(107,114,128,0.2)",
+  },
 };
 
 function relativeTime(dateStr: string): string {
@@ -24,7 +47,7 @@ function relativeTime(dateStr: string): string {
   const then = new Date(dateStr).getTime();
   const diffMs = now - then;
   const diffSec = Math.floor(diffMs / 1000);
-  if (diffSec < 60) return 'just now';
+  if (diffSec < 60) return "just now";
   const diffMin = Math.floor(diffSec / 60);
   if (diffMin < 60) return `${diffMin}m ago`;
   const diffHr = Math.floor(diffMin / 60);
@@ -38,7 +61,7 @@ function relativeTime(dateStr: string): string {
 export function TaskCard({ task, onClick, repoUrl }: Props) {
   const statusMeta = COLUMN_META[task.status];
   const priorityCfg = task.priority ? PRIORITY_CONFIG[task.priority] : null;
-  const completedSubtasks = task.subtasks?.filter(s => s.status === 'completed').length ?? 0;
+  const completedSubtasks = task.subtasks?.filter((s) => s.status === "completed").length ?? 0;
   const totalSubtasks = task.subtasks?.length ?? 0;
   const categoryCfg = task.category ? CATEGORY_CONFIG[task.category] : null;
   const complexityCfg = task.complexity ? COMPLEXITY_CONFIG[task.complexity] : null;
@@ -47,37 +70,48 @@ export function TaskCard({ task, onClick, repoUrl }: Props) {
     <div
       onClick={onClick}
       style={{
-        background: 'var(--bg-elevated)',
-        border: `1px solid ${task.blocked ? 'var(--blocked)' : 'var(--border)'}`,
+        background: "var(--bg-elevated)",
+        border: `1px solid ${task.blocked ? "var(--blocked)" : "var(--border)"}`,
         borderRadius: 8,
         padding: 10,
-        cursor: 'pointer',
-        transition: 'border-color 0.1s, background 0.1s',
-        display: 'flex',
-        flexDirection: 'column',
+        cursor: "pointer",
+        transition: "border-color 0.1s, background 0.1s",
+        display: "flex",
+        flexDirection: "column",
         gap: 6,
       }}
-      onMouseEnter={e => {
-        (e.currentTarget as HTMLElement).style.borderColor = task.blocked ? 'var(--blocked)' : 'var(--accent)';
-        (e.currentTarget as HTMLElement).style.background = 'var(--bg-hover)';
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLElement).style.borderColor = task.blocked
+          ? "var(--blocked)"
+          : "var(--accent)";
+        (e.currentTarget as HTMLElement).style.background = "var(--bg-hover)";
       }}
-      onMouseLeave={e => {
-        (e.currentTarget as HTMLElement).style.borderColor = task.blocked ? 'var(--blocked)' : 'var(--border)';
-        (e.currentTarget as HTMLElement).style.background = 'var(--bg-elevated)';
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLElement).style.borderColor = task.blocked
+          ? "var(--blocked)"
+          : "var(--border)";
+        (e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)";
       }}
     >
       {/* Header: title + id */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-        <span style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4, color: 'var(--text-primary)' }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: 8,
+        }}
+      >
+        <span
+          style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4, color: "var(--text-primary)" }}
+        >
           {task.title}
         </span>
-        <span style={{ fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>
-          #{task.id}
-        </span>
+        <span style={{ fontSize: 11, color: "var(--text-muted)", flexShrink: 0 }}>#{task.id}</span>
       </div>
 
       {/* Agent execution badge — shown when running with a phase */}
-      {task.execution?.status === 'running' && task.execution.phase && (
+      {task.execution?.status === "running" && task.execution.phase && (
         <AgentExecutionBadge
           phase={task.execution.phase}
           progress={0}
@@ -92,11 +126,11 @@ export function TaskCard({ task, onClick, repoUrl }: Props) {
             margin: 0,
             fontSize: 11,
             lineHeight: 1.6,
-            color: 'var(--text-secondary)',
-            overflow: 'hidden',
-            display: '-webkit-box',
+            color: "var(--text-secondary)",
+            overflow: "hidden",
+            display: "-webkit-box",
             WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
+            WebkitBoxOrient: "vertical",
           }}
         >
           {task.description}
@@ -104,28 +138,28 @@ export function TaskCard({ task, onClick, repoUrl }: Props) {
       )}
 
       {/* Badges row: status, priority, epic */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
         {/* Status badge */}
         <span
           style={{
-            display: 'inline-flex',
-            alignItems: 'center',
+            display: "inline-flex",
+            alignItems: "center",
             gap: 4,
             borderRadius: 9999,
-            border: '1px solid var(--border-subtle)',
-            background: 'var(--bg-surface)',
-            padding: '1px 6px',
+            border: "1px solid var(--border-subtle)",
+            background: "var(--bg-surface)",
+            padding: "1px 6px",
             fontSize: 10,
             fontWeight: 500,
-            color: 'var(--text-muted)',
+            color: "var(--text-muted)",
           }}
         >
           <span
             style={{
-              display: 'inline-block',
+              display: "inline-block",
               width: 6,
               height: 6,
-              borderRadius: '50%',
+              borderRadius: "50%",
               backgroundColor: statusMeta?.color,
             }}
           />
@@ -140,11 +174,11 @@ export function TaskCard({ task, onClick, repoUrl }: Props) {
               border: `1px solid ${priorityCfg.border}`,
               background: priorityCfg.bg,
               color: priorityCfg.color,
-              padding: '1px 6px',
+              padding: "1px 6px",
               fontSize: 10,
               fontWeight: 600,
-              textTransform: 'uppercase',
-              letterSpacing: '0.05em',
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
             }}
           >
             {priorityCfg.label}
@@ -156,11 +190,11 @@ export function TaskCard({ task, onClick, repoUrl }: Props) {
           <span
             style={{
               borderRadius: 9999,
-              border: '1px solid var(--border-subtle)',
-              background: 'var(--bg-surface)',
-              padding: '1px 6px',
+              border: "1px solid var(--border-subtle)",
+              background: "var(--bg-surface)",
+              padding: "1px 6px",
               fontSize: 11,
-              color: 'var(--text-muted)',
+              color: "var(--text-muted)",
             }}
           >
             {task.epic_name}
@@ -175,7 +209,7 @@ export function TaskCard({ task, onClick, repoUrl }: Props) {
               border: `1px solid ${categoryCfg.color}33`,
               background: `${categoryCfg.color}15`,
               color: categoryCfg.color,
-              padding: '1px 6px',
+              padding: "1px 6px",
               fontSize: 10,
               fontWeight: 500,
             }}
@@ -189,11 +223,11 @@ export function TaskCard({ task, onClick, repoUrl }: Props) {
           <span
             style={{
               borderRadius: 9999,
-              border: '1px solid var(--border-subtle)',
-              background: 'var(--bg-surface)',
-              padding: '1px 6px',
+              border: "1px solid var(--border-subtle)",
+              background: "var(--bg-surface)",
+              padding: "1px 6px",
               fontSize: 10,
-              color: 'var(--text-muted)',
+              color: "var(--text-muted)",
               fontWeight: 500,
             }}
           >
@@ -203,26 +237,27 @@ export function TaskCard({ task, onClick, repoUrl }: Props) {
       </div>
 
       {/* Progress bar */}
-      {totalSubtasks > 0 && (
-        <ProgressBar completed={completedSubtasks} total={totalSubtasks} />
-      )}
+      {totalSubtasks > 0 && <ProgressBar completed={completedSubtasks} total={totalSubtasks} />}
 
       {/* Subtask status dots */}
       {totalSubtasks > 0 && totalSubtasks <= 10 && (
         <Tooltip text={`${completedSubtasks}/${totalSubtasks} subtasks complete`} position="top">
-          <span style={{ display: 'inline-flex', gap: 3, alignItems: 'center' }}>
-            {task.subtasks.map(s => (
+          <span style={{ display: "inline-flex", gap: 3, alignItems: "center" }}>
+            {task.subtasks.map((s) => (
               <span
                 key={s.id}
                 style={{
                   width: 6,
                   height: 6,
-                  borderRadius: '50%',
+                  borderRadius: "50%",
                   background:
-                    s.status === 'completed' ? 'var(--success)' :
-                    s.status === 'in_progress' ? 'var(--status-in-progress)' :
-                    s.status === 'failed' ? 'var(--danger, #ef4444)' :
-                    'var(--fg-subtle)',
+                    s.status === "completed"
+                      ? "var(--success)"
+                      : s.status === "in_progress"
+                        ? "var(--status-in-progress)"
+                        : s.status === "failed"
+                          ? "var(--danger, #ef4444)"
+                          : "var(--fg-subtle)",
                 }}
               />
             ))}
@@ -231,7 +266,7 @@ export function TaskCard({ task, onClick, repoUrl }: Props) {
       )}
 
       {/* Footer row */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 2 }}>
         {/* Blocked indicator */}
         {task.blocked && (
           <Tooltip text="Blocked — click to see reason" position="top">
@@ -239,12 +274,12 @@ export function TaskCard({ task, onClick, repoUrl }: Props) {
               style={{
                 fontSize: 10,
                 fontWeight: 600,
-                color: 'var(--blocked)',
-                background: 'rgba(220, 38, 38, 0.1)',
+                color: "var(--blocked)",
+                background: "rgba(220, 38, 38, 0.1)",
                 borderRadius: 4,
-                padding: '1px 5px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.04em',
+                padding: "1px 5px",
+                textTransform: "uppercase",
+                letterSpacing: "0.04em",
               }}
             >
               Blocked
@@ -253,25 +288,29 @@ export function TaskCard({ task, onClick, repoUrl }: Props) {
         )}
 
         {/* Branch */}
-        {task.branch && (
-          repoUrl ? (
+        {task.branch &&
+          (repoUrl ? (
             <a
               href={`${repoUrl}/tree/${task.branch}`}
               target="_blank"
               rel="noopener noreferrer"
-              onClick={e => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
               style={{
                 fontSize: 11,
-                color: 'var(--text-muted)',
-                fontFamily: 'monospace',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
+                color: "var(--text-muted)",
+                fontFamily: "monospace",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
                 maxWidth: 140,
-                textDecoration: 'none',
+                textDecoration: "none",
               }}
-              onMouseEnter={e => { (e.target as HTMLElement).style.color = 'var(--accent)'; }}
-              onMouseLeave={e => { (e.target as HTMLElement).style.color = 'var(--text-muted)'; }}
+              onMouseEnter={(e) => {
+                (e.target as HTMLElement).style.color = "var(--accent)";
+              }}
+              onMouseLeave={(e) => {
+                (e.target as HTMLElement).style.color = "var(--text-muted)";
+              }}
             >
               {task.branch}
             </a>
@@ -279,18 +318,17 @@ export function TaskCard({ task, onClick, repoUrl }: Props) {
             <span
               style={{
                 fontSize: 11,
-                color: 'var(--text-muted)',
-                fontFamily: 'monospace',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
+                color: "var(--text-muted)",
+                fontFamily: "monospace",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
                 maxWidth: 140,
               }}
             >
               {task.branch}
             </span>
-          )
-        )}
+          ))}
 
         {/* Spacer */}
         <div style={{ flex: 1 }} />
@@ -298,7 +336,15 @@ export function TaskCard({ task, onClick, repoUrl }: Props) {
         {/* Comment count */}
         {task.comments.length > 0 && (
           <Tooltip text={`${task.comments.length} comment(s) — click to view`} position="top">
-            <span style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 11, color: 'var(--text-muted)' }}>
+            <span
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 3,
+                fontSize: 11,
+                color: "var(--text-muted)",
+              }}
+            >
               {task.comments.length}
             </span>
           </Tooltip>
@@ -306,36 +352,41 @@ export function TaskCard({ task, onClick, repoUrl }: Props) {
 
         {/* Relative timestamp */}
         <Tooltip text={new Date(task.updated_at).toLocaleString()} position="top">
-          <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>
+          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>
             {relativeTime(task.updated_at)}
           </span>
         </Tooltip>
 
         {/* Open in Claude Code */}
-        {(['backlog', 'planning', 'in-progress'] as string[]).includes(task.status) && (
+        {(["backlog", "planning", "in-progress"] as string[]).includes(task.status) && (
           <Tooltip text="Open in Claude Code" position="top">
             <button
-              onClick={e => {
+              onClick={(e) => {
                 e.stopPropagation();
                 openInClaudeCode(task);
               }}
               style={{
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--fg-subtle, var(--text-muted))',
-                cursor: 'pointer',
+                background: "transparent",
+                border: "none",
+                color: "var(--fg-subtle, var(--text-muted))",
+                cursor: "pointer",
                 fontSize: 12,
                 lineHeight: 1,
                 padding: 2,
                 borderRadius: 4,
-                display: 'inline-flex',
-                alignItems: 'center',
-                transition: 'color 0.15s',
+                display: "inline-flex",
+                alignItems: "center",
+                transition: "color 0.15s",
               }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--accent)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--fg-subtle, var(--text-muted))'; }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.color = "var(--accent)";
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.color =
+                  "var(--fg-subtle, var(--text-muted))";
+              }}
             >
-              {'\u25B6'}
+              {"\u25B6"}
             </button>
           </Tooltip>
         )}

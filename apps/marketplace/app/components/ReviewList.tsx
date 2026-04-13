@@ -1,8 +1,8 @@
+import type { User } from "@supabase/supabase-js";
 import sanitizeHtml from "sanitize-html";
 import { supabase } from "@/lib/supabase";
-import { StarRating } from "./StarRating";
 import { FlagButton } from "./FlagButton";
-import type { User } from "@supabase/supabase-js";
+import { StarRating } from "./StarRating";
 
 interface Review {
   id: string;
@@ -98,10 +98,7 @@ export async function ReviewList({ componentId, user }: ReviewListProps) {
         const avatarUrl = `https://github.com/${review.user_name}.png`;
 
         return (
-          <div
-            key={review.id}
-            className="rounded-lg border border-gray-700 bg-[#1a1a1e] p-6"
-          >
+          <div key={review.id} className="rounded-lg border border-gray-700 bg-[#1a1a1e] p-6">
             {/* Header: Author info and rating */}
             <div className="mb-3 flex items-start justify-between gap-4">
               <div className="flex items-center gap-3">
@@ -123,9 +120,7 @@ export async function ReviewList({ componentId, user }: ReviewListProps) {
                     @{review.user_name}
                   </a>
                   {/* Timestamp */}
-                  <p className="text-xs text-gray-500">
-                    {formatTimestamp(review.created_at)}
-                  </p>
+                  <p className="text-xs text-gray-500">{formatTimestamp(review.created_at)}</p>
                 </div>
               </div>
 
@@ -135,9 +130,7 @@ export async function ReviewList({ componentId, user }: ReviewListProps) {
 
             {/* Review title */}
             {review.title && (
-              <h4 className="mb-2 text-base font-semibold text-gray-100">
-                {review.title}
-              </h4>
+              <h4 className="mb-2 text-base font-semibold text-gray-100">{review.title}</h4>
             )}
 
             {/* Review content */}
@@ -152,7 +145,8 @@ export async function ReviewList({ componentId, user }: ReviewListProps) {
                 {/* Helpful count */}
                 {review.helpful_count > 0 && (
                   <span>
-                    {review.helpful_count} {review.helpful_count === 1 ? "person" : "people"} found this helpful
+                    {review.helpful_count} {review.helpful_count === 1 ? "person" : "people"} found
+                    this helpful
                   </span>
                 )}
               </div>

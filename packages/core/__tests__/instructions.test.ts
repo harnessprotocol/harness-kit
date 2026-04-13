@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { compileInstructions } from "../src/compile/instructions.js";
-import { MockFsProvider } from "./helpers/mock-fs.js";
 import type { HarnessConfig } from "../src/types.js";
+import { MockFsProvider } from "./helpers/mock-fs.js";
 
 function makeConfig(overrides: Partial<HarnessConfig> = {}): HarnessConfig {
   return {

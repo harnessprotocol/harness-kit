@@ -1,16 +1,20 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
+  appendMarkerBlock,
   buildMarkerBlock,
   findMarkerBlock,
-  replaceMarkerBlock,
-  appendMarkerBlock,
   findOrphanedMarkerBlocks,
   removeOrphanedBlocks,
+  replaceMarkerBlock,
 } from "../src/compile/markers.js";
 
 describe("buildMarkerBlock", () => {
   it("wraps content in markers", () => {
-    const result = buildMarkerBlock("my-harness", "operational", "## Commands\n- Build: `npm run build`");
+    const result = buildMarkerBlock(
+      "my-harness",
+      "operational",
+      "## Commands\n- Build: `npm run build`",
+    );
     expect(result).toBe(
       "<!-- BEGIN harness:my-harness:operational -->\n## Commands\n- Build: `npm run build`\n<!-- END harness:my-harness:operational -->",
     );
@@ -76,7 +80,12 @@ describe("replaceMarkerBlock", () => {
 
 describe("appendMarkerBlock", () => {
   it("appends to existing content", () => {
-    const result = appendMarkerBlock("# Existing\n\nSome content", "test", "operational", "new stuff");
+    const result = appendMarkerBlock(
+      "# Existing\n\nSome content",
+      "test",
+      "operational",
+      "new stuff",
+    );
     expect(result).toContain("# Existing");
     expect(result).toContain("<!-- BEGIN harness:test:operational -->");
     expect(result).toContain("new stuff");

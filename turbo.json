@@ -15,6 +15,14 @@
       "dependsOn": ["^build"],
       "cache": false,
       "persistent": true
+    },
+    "//#lint": {
+      "outputs": [],
+      "inputs": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.mjs", "**/*.json", "biome.json"]
+    },
+    "//#format:check": {
+      "outputs": [],
+      "inputs": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.mjs", "**/*.json", "biome.json"]
     }
   }
 }

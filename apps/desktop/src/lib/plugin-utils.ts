@@ -13,7 +13,11 @@ export function relativeDate(dateStr: string | undefined): string {
   return `${Math.floor(months / 12)}y ago`;
 }
 
-export function formatComponentCounts(counts?: { skills: number; agents: number; scripts: number }): string {
+export function formatComponentCounts(counts?: {
+  skills: number;
+  agents: number;
+  scripts: number;
+}): string {
   if (!counts) return "";
   const parts: string[] = [];
   if (counts.skills > 0) parts.push(`${counts.skills} skill${counts.skills !== 1 ? "s" : ""}`);

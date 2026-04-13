@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import SyncPage from "../SyncPage";
 
 vi.mock("../../../contexts/ChatContext", () => ({
@@ -36,7 +36,16 @@ vi.mock("@harness-kit/core", () => ({
 }));
 
 vi.mock("../../../lib/harness-generator", () => ({
-  generateHarnessYaml: vi.fn(() => ({ yaml: 'version: "1"\n# generated', summary: { mcpServerCount: 2, allowCount: 16, denyCount: 0, mcpSource: "~/.claude/mcp.json", settingsSource: "~/.claude/settings.local.json" } })),
+  generateHarnessYaml: vi.fn(() => ({
+    yaml: 'version: "1"\n# generated',
+    summary: {
+      mcpServerCount: 2,
+      allowCount: 16,
+      denyCount: 0,
+      mcpSource: "~/.claude/mcp.json",
+      settingsSource: "~/.claude/settings.local.json",
+    },
+  })),
   HARNESS_TEMPLATE: 'version: "1"\n# template',
 }));
 
@@ -48,8 +57,12 @@ vi.mock("../../../lib/sync-fs", () => ({
 vi.mock("framer-motion", () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => children,
   motion: {
-    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement> & { children?: React.ReactNode }) =>
-      <div {...props}>{children}</div>,
+    div: ({
+      children,
+      ...props
+    }: React.HTMLAttributes<HTMLDivElement> & { children?: React.ReactNode }) => (
+      <div {...props}>{children}</div>
+    ),
   },
 }));
 
@@ -97,7 +110,11 @@ describe("SyncPage", () => {
   });
 
   it("shows harness.yaml found state when file exists", async () => {
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.claude/harness.yaml" });
+    mockReadHarnessFile.mockResolvedValue({
+      found: true,
+      content: 'version: "1"',
+      path: "/home/user/.claude/harness.yaml",
+    });
 
     renderPage();
 

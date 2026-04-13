@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import MemoryGraphPage from "../MemoryGraphPage";
 
 // ── Mocks ─────────────────────────────────────────────────────
@@ -8,7 +8,9 @@ import MemoryGraphPage from "../MemoryGraphPage";
 let mockGetMembrainEnabled: () => boolean;
 
 vi.mock("../../../lib/preferences", () => ({
-  get getMembrainEnabled() { return mockGetMembrainEnabled; },
+  get getMembrainEnabled() {
+    return mockGetMembrainEnabled;
+  },
   setMembrainEnabled: vi.fn(),
 }));
 

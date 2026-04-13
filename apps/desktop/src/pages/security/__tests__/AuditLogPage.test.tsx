@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
 import type { AuditEntry } from "@harness-kit/shared";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import AuditLogPage from "../AuditLogPage";
 
 // ── Mocks ─────────────────────────────────────────────────────
@@ -90,36 +90,26 @@ describe("AuditLogPage — loading state", () => {
 
   it("hides 'Loading...' after entries load", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading...")).not.toBeInTheDocument());
   });
 });
 
 describe("AuditLogPage — basic render", () => {
   it("renders without crashing", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading...")).not.toBeInTheDocument());
     expect(screen.getByText("Audit Log")).toBeInTheDocument();
   });
 
   it("shows the page description", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
-    );
-    expect(
-      screen.getByText(/Track permission changes, secret operations/),
-    ).toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByText("Loading...")).not.toBeInTheDocument());
+    expect(screen.getByText(/Track permission changes, secret operations/)).toBeInTheDocument();
   });
 
   it("renders the table header columns", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading...")).not.toBeInTheDocument());
     expect(screen.getByText("Timestamp")).toBeInTheDocument();
     expect(screen.getByText("Event")).toBeInTheDocument();
     expect(screen.getByText("Summary")).toBeInTheDocument();
@@ -177,9 +167,7 @@ describe("AuditLogPage — entries list", () => {
 describe("AuditLogPage — filter pills", () => {
   it("renders All, Permissions, and Secrets filter pills", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading...")).not.toBeInTheDocument());
     expect(screen.getByRole("button", { name: "All" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Permissions" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Secrets" })).toBeInTheDocument();
@@ -187,24 +175,29 @@ describe("AuditLogPage — filter pills", () => {
 
   it("All pill is active by default", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading...")).not.toBeInTheDocument());
     expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByRole("button", { name: "Permissions" })).toHaveAttribute("aria-pressed", "false");
-    expect(screen.getByRole("button", { name: "Secrets" })).toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("button", { name: "Permissions" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+    expect(screen.getByRole("button", { name: "Secrets" })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
   });
 
   it("clicking Permissions pill makes it active", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading...")).not.toBeInTheDocument());
 
     fireEvent.click(screen.getByRole("button", { name: "Permissions" }));
 
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Permissions" })).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByRole("button", { name: "Permissions" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
       expect(screen.getByRole("button", { name: "All" })).toHaveAttribute("aria-pressed", "false");
     });
   });
@@ -212,9 +205,7 @@ describe("AuditLogPage — filter pills", () => {
   it("clicking Secrets pill calls listAuditEntries with 'secrets' category", async () => {
     renderPage();
     // Wait for first load to complete
-    await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading...")).not.toBeInTheDocument());
 
     fireEvent.click(screen.getByRole("button", { name: "Secrets" }));
 
@@ -227,9 +218,7 @@ describe("AuditLogPage — filter pills", () => {
 
   it("clicking Permissions pill calls listAuditEntries with 'permissions' category", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading...")).not.toBeInTheDocument());
 
     fireEvent.click(screen.getByRole("button", { name: "Permissions" }));
 
@@ -242,14 +231,15 @@ describe("AuditLogPage — filter pills", () => {
 
   it("clicking All pill calls listAuditEntries with no category (undefined)", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading...")).not.toBeInTheDocument());
 
     // Switch to Secrets first, then back to All
     fireEvent.click(screen.getByRole("button", { name: "Secrets" }));
     await waitFor(() =>
-      expect(screen.getByRole("button", { name: "Secrets" })).toHaveAttribute("aria-pressed", "true"),
+      expect(screen.getByRole("button", { name: "Secrets" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      ),
     );
 
     fireEvent.click(screen.getByRole("button", { name: "All" }));
@@ -275,7 +265,7 @@ describe("AuditLogPage — row expansion", () => {
 
     await waitFor(() => {
       // The details JSON should be pretty-printed and visible
-      expect(screen.getByText(/\"tool\".*\"Bash\"/s)).toBeInTheDocument();
+      expect(screen.getByText(/"tool".*"Bash"/s)).toBeInTheDocument();
     });
   });
 
@@ -285,11 +275,11 @@ describe("AuditLogPage — row expansion", () => {
 
     const summaryEl = screen.getByText("Added Bash to deny list");
     fireEvent.click(summaryEl);
-    await waitFor(() => expect(screen.getByText(/\"tool\"/)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText(/"tool"/)).toBeInTheDocument());
 
     fireEvent.click(summaryEl);
     await waitFor(() => {
-      expect(screen.queryByText(/\"tool\"/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/"tool"/)).not.toBeInTheDocument();
     });
   });
 
@@ -314,30 +304,22 @@ describe("AuditLogPage — clear entries", () => {
 
   it("shows 'Clear old entries' button", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading...")).not.toBeInTheDocument());
     expect(screen.getByRole("button", { name: "Clear old entries" })).toBeInTheDocument();
   });
 
   it("clicking 'Clear old entries' shows a confirmation prompt", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading...")).not.toBeInTheDocument());
 
     fireEvent.click(screen.getByRole("button", { name: "Clear old entries" }));
 
-    expect(
-      await screen.findByText(/Clear entries older than 30 days\?/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Clear entries older than 30 days\?/)).toBeInTheDocument();
   });
 
   it("confirmation prompt shows Confirm and Cancel buttons", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading...")).not.toBeInTheDocument());
 
     fireEvent.click(screen.getByRole("button", { name: "Clear old entries" }));
 
@@ -348,9 +330,7 @@ describe("AuditLogPage — clear entries", () => {
 
   it("clicking Cancel dismisses the confirmation prompt", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading...")).not.toBeInTheDocument());
 
     fireEvent.click(screen.getByRole("button", { name: "Clear old entries" }));
     await screen.findByText(/Clear entries older than 30 days\?/);
@@ -365,9 +345,7 @@ describe("AuditLogPage — clear entries", () => {
 
   it("clicking Confirm calls clearAuditEntries with an ISO date string", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading...")).not.toBeInTheDocument());
 
     fireEvent.click(screen.getByRole("button", { name: "Clear old entries" }));
     await screen.findByText(/Clear entries older than 30 days\?/);
@@ -387,9 +365,7 @@ describe("AuditLogPage — clear entries", () => {
 describe("AuditLogPage — pagination", () => {
   it("does not show pagination when no entries exist", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading...")).not.toBeInTheDocument());
     expect(screen.queryByRole("button", { name: "Prev" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Next" })).not.toBeInTheDocument();
   });

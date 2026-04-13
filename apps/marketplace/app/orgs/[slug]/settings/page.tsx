@@ -1,11 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import type {
-  Organization,
-  OrgPluginApproval,
-  Component,
-} from "@/lib/types";
+import type { Component, Organization, OrgPluginApproval } from "@/lib/types";
 
 interface OrgMemberWithUser {
   org_id: string;
@@ -26,11 +22,7 @@ interface PluginApprovalWithComponent extends OrgPluginApproval {
   components: Component;
 }
 
-export default async function OrgSettingsPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function OrgSettingsPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
   let organization: Organization | null = null;
@@ -71,8 +63,10 @@ export default async function OrgSettingsPage({
           users: {
             id: (row.users as Record<string, unknown>)?.id as string,
             email: (row.users as Record<string, unknown>)?.email as string,
-            user_metadata: (row.users as Record<string, unknown>)
-              ?.raw_user_meta_data as { name?: string; avatar_url?: string },
+            user_metadata: (row.users as Record<string, unknown>)?.raw_user_meta_data as {
+              name?: string;
+              avatar_url?: string;
+            },
           },
         }));
       }
@@ -90,8 +84,7 @@ export default async function OrgSettingsPage({
         .order("created_at", { ascending: false });
 
       if (approvalData) {
-        pluginApprovals =
-          approvalData as unknown as PluginApprovalWithComponent[];
+        pluginApprovals = approvalData as unknown as PluginApprovalWithComponent[];
       }
     }
   } catch {
@@ -102,12 +95,8 @@ export default async function OrgSettingsPage({
     notFound();
   }
 
-  const pendingApprovals = pluginApprovals.filter(
-    (a) => a.status === "pending",
-  );
-  const approvedPlugins = pluginApprovals.filter(
-    (a) => a.status === "approved",
-  );
+  const pendingApprovals = pluginApprovals.filter((a) => a.status === "pending");
+  const approvedPlugins = pluginApprovals.filter((a) => a.status === "approved");
   const deniedPlugins = pluginApprovals.filter((a) => a.status === "denied");
 
   return (
@@ -118,10 +107,7 @@ export default async function OrgSettingsPage({
           Organizations
         </Link>
         <span className="mx-2">/</span>
-        <Link
-          href={`/orgs/${organization.slug}`}
-          className="hover:text-gray-300"
-        >
+        <Link href={`/orgs/${organization.slug}`} className="hover:text-gray-300">
           {organization.name}
         </Link>
         <span className="mx-2">/</span>
@@ -168,9 +154,7 @@ export default async function OrgSettingsPage({
                     member.users.email?.split("@")[0] ||
                     "Unknown";
                   const avatarUrl = member.users.user_metadata?.avatar_url;
-                  const joinedDate = new Date(
-                    member.created_at,
-                  ).toLocaleDateString("en-US", {
+                  const joinedDate = new Date(member.created_at).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
                     year: "numeric",
@@ -195,9 +179,7 @@ export default async function OrgSettingsPage({
                         )}
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-gray-200">
-                              {displayName}
-                            </span>
+                            <span className="font-medium text-gray-200">{displayName}</span>
                             {member.role === "admin" && (
                               <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-xs text-violet-400">
                                 Admin
@@ -251,13 +233,14 @@ export default async function OrgSettingsPage({
                 <div className="space-y-3">
                   {pendingApprovals.map((approval) => {
                     const plugin = approval.components;
-                    const requestedDate = new Date(
-                      approval.created_at,
-                    ).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    });
+                    const requestedDate = new Date(approval.created_at).toLocaleDateString(
+                      "en-US",
+                      {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      },
+                    );
 
                     return (
                       <div
@@ -267,9 +250,7 @@ export default async function OrgSettingsPage({
                         <div className="flex items-start justify-between gap-4">
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <h4 className="font-semibold text-gray-100">
-                                {plugin.name}
-                              </h4>
+                              <h4 className="font-semibold text-gray-100">{plugin.name}</h4>
                               <span className="rounded-full border border-[#2a2a2e] px-2 py-0.5 text-xs capitalize text-gray-400">
                                 {plugin.type}
                               </span>
@@ -277,9 +258,7 @@ export default async function OrgSettingsPage({
                                 Pending
                               </span>
                             </div>
-                            <p className="mt-1 text-sm text-gray-400">
-                              {plugin.description}
-                            </p>
+                            <p className="mt-1 text-sm text-gray-400">{plugin.description}</p>
                             <div className="mt-2 text-xs text-gray-500">
                               Requested {requestedDate} · v{plugin.version}
                             </div>
@@ -322,14 +301,11 @@ export default async function OrgSettingsPage({
                   {approvedPlugins.map((approval) => {
                     const plugin = approval.components;
                     const approvedDate = approval.approved_at
-                      ? new Date(approval.approved_at).toLocaleDateString(
-                          "en-US",
-                          {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          },
-                        )
+                      ? new Date(approval.approved_at).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
                       : null;
 
                     return (
@@ -340,9 +316,7 @@ export default async function OrgSettingsPage({
                         <div className="flex items-start justify-between gap-4">
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <h4 className="font-semibold text-gray-100">
-                                {plugin.name}
-                              </h4>
+                              <h4 className="font-semibold text-gray-100">{plugin.name}</h4>
                               <span className="rounded-full border border-[#2a2a2e] px-2 py-0.5 text-xs capitalize text-gray-400">
                                 {plugin.type}
                               </span>
@@ -350,12 +324,9 @@ export default async function OrgSettingsPage({
                                 Approved
                               </span>
                             </div>
-                            <p className="mt-1 text-sm text-gray-400">
-                              {plugin.description}
-                            </p>
+                            <p className="mt-1 text-sm text-gray-400">{plugin.description}</p>
                             <div className="mt-2 text-xs text-gray-500">
-                              {approvedDate && `Approved ${approvedDate} · `}v
-                              {plugin.version}
+                              {approvedDate && `Approved ${approvedDate} · `}v{plugin.version}
                             </div>
                           </div>
                           <button
@@ -391,9 +362,7 @@ export default async function OrgSettingsPage({
                         <div className="flex items-start justify-between gap-4">
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
-                              <h4 className="font-semibold text-gray-100">
-                                {plugin.name}
-                              </h4>
+                              <h4 className="font-semibold text-gray-100">{plugin.name}</h4>
                               <span className="rounded-full border border-[#2a2a2e] px-2 py-0.5 text-xs capitalize text-gray-400">
                                 {plugin.type}
                               </span>
@@ -401,12 +370,8 @@ export default async function OrgSettingsPage({
                                 Denied
                               </span>
                             </div>
-                            <p className="mt-1 text-sm text-gray-400">
-                              {plugin.description}
-                            </p>
-                            <div className="mt-2 text-xs text-gray-500">
-                              v{plugin.version}
-                            </div>
+                            <p className="mt-1 text-sm text-gray-400">{plugin.description}</p>
+                            <div className="mt-2 text-xs text-gray-500">v{plugin.version}</div>
                           </div>
                           <button
                             disabled
@@ -436,9 +401,7 @@ export default async function OrgSettingsPage({
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Total Members</span>
-                  <span className="font-medium text-gray-200">
-                    {members.length}
-                  </span>
+                  <span className="font-medium text-gray-200">{members.length}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Admins</span>
@@ -448,15 +411,11 @@ export default async function OrgSettingsPage({
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Pending Approvals</span>
-                  <span className="font-medium text-yellow-400">
-                    {pendingApprovals.length}
-                  </span>
+                  <span className="font-medium text-yellow-400">{pendingApprovals.length}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Approved Plugins</span>
-                  <span className="font-medium text-green-400">
-                    {approvedPlugins.length}
-                  </span>
+                  <span className="font-medium text-green-400">{approvedPlugins.length}</span>
                 </div>
               </div>
             </div>
@@ -487,27 +446,20 @@ export default async function OrgSettingsPage({
               <div className="space-y-2 text-sm">
                 <div>
                   <div className="text-gray-500">Name</div>
-                  <div className="font-medium text-gray-200">
-                    {organization.name}
-                  </div>
+                  <div className="font-medium text-gray-200">{organization.name}</div>
                 </div>
                 <div>
                   <div className="text-gray-500">Slug</div>
-                  <div className="font-mono text-xs text-gray-300">
-                    {organization.slug}
-                  </div>
+                  <div className="font-mono text-xs text-gray-300">{organization.slug}</div>
                 </div>
                 <div>
                   <div className="text-gray-500">Created</div>
                   <div className="text-gray-200">
-                    {new Date(organization.created_at).toLocaleDateString(
-                      "en-US",
-                      {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      },
-                    )}
+                    {new Date(organization.created_at).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
                   </div>
                 </div>
               </div>

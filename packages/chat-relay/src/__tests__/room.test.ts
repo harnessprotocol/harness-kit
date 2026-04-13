@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { AnyMessage, Member, ServerMessage } from "../protocol.js";
 import { Room } from "../room.js";
-import type { Member, ServerMessage, AnyMessage } from "../protocol.js";
 
 // ── WebSocket mock ────────────────────────────────────────────
 //
@@ -18,7 +18,10 @@ vi.mock("ws", () => {
 });
 
 // Helper: create a fake socket whose readyState is OPEN (1)
-function makeFakeSocket(readyState: number = 1): { readyState: number; send: ReturnType<typeof vi.fn> } {
+function makeFakeSocket(readyState: number = 1): {
+  readyState: number;
+  send: ReturnType<typeof vi.fn>;
+} {
   return { readyState, send: vi.fn() };
 }
 

@@ -1,13 +1,13 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import type {
-  ClientMessage,
-  ServerMessage,
   AnyMessage,
-  Member,
   ChatMessage,
+  ClientMessage,
+  Member,
+  ServerMessage,
+  ShareAction,
   ShareMessage,
   SystemMessage,
-  ShareAction,
 } from "../protocol.js";
 
 describe("ClientMessage serialization", () => {
@@ -192,7 +192,9 @@ describe("ServerMessage serialization", () => {
     const parsed = JSON.parse(json) as ServerMessage;
 
     expect(parsed.type).toBe("room_error");
-    expect((parsed as Extract<ServerMessage, { type: "room_error" }>).error).toBe("Nickname already taken");
+    expect((parsed as Extract<ServerMessage, { type: "room_error" }>).error).toBe(
+      "Nickname already taken",
+    );
   });
 
   it("serializes message wrapper with ChatMessage", () => {
@@ -232,7 +234,9 @@ describe("ServerMessage serialization", () => {
 
     expect(parsed.type).toBe("presence");
     expect((parsed as Extract<ServerMessage, { type: "presence" }>).members).toHaveLength(1);
-    expect((parsed as Extract<ServerMessage, { type: "presence" }>).members[0].nickname).toBe("alice");
+    expect((parsed as Extract<ServerMessage, { type: "presence" }>).members[0].nickname).toBe(
+      "alice",
+    );
   });
 
   it("serializes typing_update message", () => {
@@ -445,7 +449,9 @@ describe("Protocol edge cases", () => {
     const json = JSON.stringify(msg);
     const parsed = JSON.parse(json) as ClientMessage;
 
-    expect((parsed as Extract<ClientMessage, { type: "create_room" }>).nickname).toBe("alice_123-🎉");
+    expect((parsed as Extract<ClientMessage, { type: "create_room" }>).nickname).toBe(
+      "alice_123-🎉",
+    );
   });
 
   it("handles multiline text in chat body", () => {

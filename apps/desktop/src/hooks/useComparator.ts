@@ -1,20 +1,17 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import type { ComparisonPhase, ComparisonSummary } from "@harness-kit/shared";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
-import type {
-  ComparisonSummary,
-  ComparisonPhase,
-} from "@harness-kit/shared";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { buildInvokeCommand } from "../lib/harness-definitions";
 import { getResilienceConfig } from "../lib/preferences";
 import {
+  deleteComparison,
+  getComparison,
+  listComparisons,
   saveComparison,
   savePanel,
-  listComparisons,
-  getComparison,
-  deleteComparison,
-  updateComparisonTitle,
   updateComparisonStatus,
+  updateComparisonTitle,
   updatePanelResult,
 } from "../lib/tauri";
 
@@ -226,17 +223,15 @@ export function useComparator(): UseComparatorReturn {
           : undefined;
 
         // Persist panel result to backend.
-        updatePanelResult(prev.id, exitedPanel.id, exitCode, durationMs, status).catch(console.error);
-
-        const updatedPanels = prev.panels.map((p) =>
-          p.terminalId === terminalId
-            ? { ...p, status, exitCode, durationMs, fallbackReason }
-            : p,
+        updatePanelResult(prev.id, exitedPanel.id, exitCode, durationMs, status).catch(
+          console.error,
         );
 
-        const allPanels = fallbackPanel
-          ? [...updatedPanels, fallbackPanel]
-          : updatedPanels;
+        const updatedPanels = prev.panels.map((p) =>
+          p.terminalId === terminalId ? { ...p, status, exitCode, durationMs, fallbackReason } : p,
+        );
+
+        const allPanels = fallbackPanel ? [...updatedPanels, fallbackPanel] : updatedPanels;
 
         // Check if all panels have finished.
         const allDone = allPanels.every((p) => p.status !== "running");
@@ -286,7 +281,13 @@ export function useComparator(): UseComparatorReturn {
       const createdAt = new Date().toISOString();
 
       // Persist comparison to backend.
-      await saveComparison(comparisonId, opts.title, opts.prompt, opts.workingDir, opts.pinnedCommit);
+      await saveComparison(
+        comparisonId,
+        opts.title,
+        opts.prompt,
+        opts.workingDir,
+        opts.pinnedCommit,
+      );
 
       // Tag task type if provided (best-effort — don't block if it fails).
       if (opts.taskType) {
@@ -306,7 +307,9 @@ export function useComparator(): UseComparatorReturn {
         await savePanel(panelId, comparisonId, harness.id, harness.name, harness.model);
 
         // Create PTY terminal for this panel.
-        const terminalId = await invoke<string>("create_terminal", { projectPath: opts.workingDir });
+        const terminalId = await invoke<string>("create_terminal", {
+          projectPath: opts.workingDir,
+        });
         rawChunksRef.current.set(terminalId, []);
 
         const panel: PanelState = {
@@ -366,25 +369,22 @@ export function useComparator(): UseComparatorReturn {
 
   // ── Broadcast a prompt to all running panels ────────────────
 
-  const broadcastToAll = useCallback(
-    async (prompt: string) => {
-      const current = activeRef.current;
-      if (!current) return;
+  const broadcastToAll = useCallback(async (prompt: string) => {
+    const current = activeRef.current;
+    if (!current) return;
 
-      const running = current.panels.filter((p) => p.status === "running");
-      await Promise.all(
-        running.map((panel) => {
-          const command = buildInvokeCommand(panel.harnessId, prompt, panel.model ?? undefined);
-          if (!command) return Promise.resolve();
-          return invoke("write_terminal", {
-            terminalId: panel.terminalId,
-            data: command + "\n",
-          });
-        }),
-      );
-    },
-    [],
-  );
+    const running = current.panels.filter((p) => p.status === "running");
+    await Promise.all(
+      running.map((panel) => {
+        const command = buildInvokeCommand(panel.harnessId, prompt, panel.model ?? undefined);
+        if (!command) return Promise.resolve();
+        return invoke("write_terminal", {
+          terminalId: panel.terminalId,
+          data: command + "\n",
+        });
+      }),
+    );
+  }, []);
 
   // ── End the active session ──────────────────────────────────
 
@@ -415,54 +415,58 @@ export function useComparator(): UseComparatorReturn {
 
   // ── Load a past comparison ──────────────────────────────────
 
-  const loadComparison = useCallback(async (id: string) => {
-    try {
-      // Destroy terminals from any currently-active live comparison.
-      const current = activeRef.current;
-      if (current) {
-        for (const panel of current.panels) {
-          if (panel.terminalId) {
-            invoke("destroy_terminal", { terminalId: panel.terminalId }).catch(() => {});
+  const loadComparison = useCallback(
+    async (id: string) => {
+      try {
+        // Destroy terminals from any currently-active live comparison.
+        const current = activeRef.current;
+        if (current) {
+          for (const panel of current.panels) {
+            if (panel.terminalId) {
+              invoke("destroy_terminal", { terminalId: panel.terminalId }).catch(() => {});
+            }
           }
         }
+
+        const detail = await getComparison(id);
+        if (!detail) {
+          console.error("Comparison not found:", id);
+          await loadSessions(); // Refresh sidebar (entry may be stale)
+          return;
+        }
+
+        const panels: PanelState[] = detail.panels.map((p) => ({
+          id: p.id,
+          terminalId: "", // No live terminal for past sessions.
+          harnessId: p.harnessId,
+          harnessName: p.harnessName,
+          model: p.model,
+          status:
+            p.status === "cancelled" ? ("failed" as const) : (p.status as PanelState["status"]),
+          exitCode: p.exitCode ?? undefined,
+          durationMs: p.durationMs ?? undefined,
+          startedAt: 0,
+        }));
+
+        const state: ComparisonState = {
+          id: detail.id,
+          title: detail.title ?? "",
+          prompt: detail.prompt,
+          workingDir: detail.workingDir,
+          pinnedCommit: detail.pinnedCommit,
+          phase: "results",
+          panels,
+          createdAt: detail.createdAt,
+        };
+
+        setActive(state);
+        setPhase("results");
+      } catch (err) {
+        console.error("Failed to load comparison:", err);
       }
-
-      const detail = await getComparison(id);
-      if (!detail) {
-        console.error("Comparison not found:", id);
-        await loadSessions(); // Refresh sidebar (entry may be stale)
-        return;
-      }
-
-      const panels: PanelState[] = detail.panels.map((p) => ({
-        id: p.id,
-        terminalId: "", // No live terminal for past sessions.
-        harnessId: p.harnessId,
-        harnessName: p.harnessName,
-        model: p.model,
-        status: p.status === "cancelled" ? ("failed" as const) : (p.status as PanelState["status"]),
-        exitCode: p.exitCode ?? undefined,
-        durationMs: p.durationMs ?? undefined,
-        startedAt: 0,
-      }));
-
-      const state: ComparisonState = {
-        id: detail.id,
-        title: detail.title ?? "",
-        prompt: detail.prompt,
-        workingDir: detail.workingDir,
-        pinnedCommit: detail.pinnedCommit,
-        phase: "results",
-        panels,
-        createdAt: detail.createdAt,
-      };
-
-      setActive(state);
-      setPhase("results");
-    } catch (err) {
-      console.error("Failed to load comparison:", err);
-    }
-  }, [loadSessions]);
+    },
+    [loadSessions],
+  );
 
   // ── Delete a session ────────────────────────────────────────
 

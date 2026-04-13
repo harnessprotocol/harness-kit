@@ -1,13 +1,12 @@
-import type { FsProvider } from "../fs-provider.js";
 import type {
-  SecurityReport,
   SecurityFinding,
   SecurityPermissionsSummary,
+  SecurityReport,
   SecurityScanStatus,
 } from "@harness-kit/shared";
+import type { FsProvider } from "../fs-provider.js";
 import { readJsonOrDefault } from "../utils/read-json.js";
-import { findingId } from "./rules.js";
-import { runSecurityRules } from "./rules.js";
+import { findingId, runSecurityRules } from "./rules.js";
 
 // ── Plugin manifest types ───────────────────────────────────────
 
@@ -53,11 +52,10 @@ export async function scanPlugin(options: ScanOptions): Promise<SecurityReport> 
 
   // Read plugin manifest
   const manifestPath = fs.joinPath(pluginDir, ".claude-plugin/plugin.json");
-  const { data: manifest, existed } = await readJsonOrDefault<PluginManifest>(
-    fs,
-    manifestPath,
-    { name: "unknown", version: "0.0.0" },
-  );
+  const { data: manifest, existed } = await readJsonOrDefault<PluginManifest>(fs, manifestPath, {
+    name: "unknown",
+    version: "0.0.0",
+  });
 
   if (!existed) {
     throw new Error(`Plugin manifest not found: ${manifestPath}`);
@@ -88,9 +86,7 @@ export async function scanPlugin(options: ScanOptions): Promise<SecurityReport> 
   const permissions = buildPermissionsSummary(manifest, findings);
 
   // Filter findings by severity if needed
-  const filteredFindings = includeInfo
-    ? findings
-    : findings.filter((f) => f.severity !== "info");
+  const filteredFindings = includeInfo ? findings : findings.filter((f) => f.severity !== "info");
 
   // Calculate severity counts
   const criticalCount = filteredFindings.filter((f) => f.severity === "critical").length;
@@ -116,10 +112,7 @@ export async function scanPlugin(options: ScanOptions): Promise<SecurityReport> 
 
 // ── Helper functions ────────────────────────────────────────────
 
-async function collectScannableFiles(
-  pluginDir: string,
-  fs: FsProvider,
-): Promise<string[]> {
+async function collectScannableFiles(pluginDir: string, fs: FsProvider): Promise<string[]> {
   const scannableFiles: string[] = [];
 
   // Directories to scan

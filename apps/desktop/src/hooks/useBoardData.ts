@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
-import { api } from '../lib/board-api';
-import type { Project } from '../lib/board-api';
-import { useWebSocket } from './useWebSocket';
+import { useCallback, useEffect, useState } from "react";
+import type { Project } from "../lib/board-api";
+import { api } from "../lib/board-api";
+import { useWebSocket } from "./useWebSocket";
 
 type BoardEvent =
-  | { type: 'project_updated'; slug: string; project: Project }
-  | { type: 'connected'; message: string };
+  | { type: "project_updated"; slug: string; project: Project }
+  | { type: "connected"; message: string };
 
 export function useBoardData(slug: string, ready = true) {
   const [project, setProject] = useState<Project | null>(null);
@@ -14,13 +14,14 @@ export function useBoardData(slug: string, ready = true) {
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
 
   const fetchProject = useCallback(() => {
-    api.projects.get(slug)
-      .then(p => {
+    api.projects
+      .get(slug)
+      .then((p) => {
         setProject(p);
         setError(null);
         setLastSyncedAt(new Date());
       })
-      .catch(err => setError(String(err)))
+      .catch((err) => setError(String(err)))
       .finally(() => setLoading(false));
   }, [slug]);
 
@@ -33,7 +34,7 @@ export function useBoardData(slug: string, ready = true) {
   useWebSocket((evt) => {
     try {
       const event = JSON.parse(evt.data as string) as BoardEvent;
-      if (event.type === 'project_updated' && event.slug === slug && event.project) {
+      if (event.type === "project_updated" && event.slug === slug && event.project) {
         setProject(event.project);
         setLastSyncedAt(new Date());
       }

@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
 import type { AnyMessage } from "@harness-kit/shared";
+import { useEffect, useRef } from "react";
 import MessageItem from "./MessageItem";
 
 interface Props {
@@ -36,11 +36,7 @@ export default function MessageList({ messages, currentNickname }: Props) {
         </div>
       )}
       {messages.map((msg) => (
-        <MessageItem
-          key={msg.id}
-          message={msg}
-          currentNickname={currentNickname}
-        />
+        <MessageItem key={msg.id} message={msg} currentNickname={currentNickname} />
       ))}
       <div ref={bottomRef} />
     </div>

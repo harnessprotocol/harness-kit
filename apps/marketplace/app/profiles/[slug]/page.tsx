@@ -1,14 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { TrustBadge } from "@/app/components/TrustBadge";
 import { supabase } from "@/lib/supabase";
 import type { Component, Profile } from "@/lib/types";
-import { TrustBadge } from "@/app/components/TrustBadge";
 
-export default async function ProfileDetailPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function ProfileDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
   let profile: Profile | null = null;
@@ -18,11 +14,7 @@ export default async function ProfileDetailPage({
 
   try {
     // Fetch the profile
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("slug", slug)
-      .single();
+    const { data } = await supabase.from("profiles").select("*").eq("slug", slug).single();
     profile = data as Profile | null;
 
     if (profile) {
@@ -36,9 +28,7 @@ export default async function ProfileDetailPage({
 
       if (componentRows) {
         components = componentRows
-          .map(
-            (row: Record<string, unknown>) => row.components as Component,
-          )
+          .map((row: Record<string, unknown>) => row.components as Component)
           .filter(Boolean);
       }
 
@@ -50,10 +40,7 @@ export default async function ProfileDetailPage({
 
       if (tagRows) {
         tags = tagRows
-          .map(
-            (row: Record<string, unknown>) =>
-              (row.tags as { slug: string })?.slug ?? "",
-          )
+          .map((row: Record<string, unknown>) => (row.tags as { slug: string })?.slug ?? "")
           .filter(Boolean);
       }
 
@@ -127,13 +114,9 @@ export default async function ProfileDetailPage({
 
       {/* Components in this profile */}
       <section className="mb-10">
-        <h2 className="mb-4 text-xl font-bold">
-          Plugins ({components.length})
-        </h2>
+        <h2 className="mb-4 text-xl font-bold">Plugins ({components.length})</h2>
         {components.length === 0 ? (
-          <p className="text-sm text-gray-500">
-            No plugins listed for this profile yet.
-          </p>
+          <p className="text-sm text-gray-500">No plugins listed for this profile yet.</p>
         ) : (
           <div className="space-y-3">
             {components.map((component) => (
@@ -144,21 +127,15 @@ export default async function ProfileDetailPage({
               >
                 <div>
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold group-hover:text-violet-400">
-                      {component.name}
-                    </h3>
+                    <h3 className="font-semibold group-hover:text-violet-400">{component.name}</h3>
                     <TrustBadge tier={component.trust_tier} />
                     <span className="rounded-full border border-[#2a2a2e] px-2 py-0.5 text-xs capitalize text-gray-500">
                       {component.type}
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-gray-400">
-                    {component.description}
-                  </p>
+                  <p className="mt-1 text-sm text-gray-400">{component.description}</p>
                 </div>
-                <span className="shrink-0 text-xs text-gray-500">
-                  v{component.version}
-                </span>
+                <span className="shrink-0 text-xs text-gray-500">v{component.version}</span>
               </Link>
             ))}
           </div>
@@ -181,8 +158,7 @@ export default async function ProfileDetailPage({
           Install Profile
         </h2>
         <p className="mb-3 text-sm text-gray-400">
-          Copy the harness.yaml above into your project, or install components
-          individually:
+          Copy the harness.yaml above into your project, or install components individually:
         </p>
         <div className="space-y-2">
           {components.map((component) => (
@@ -207,12 +183,8 @@ export default async function ProfileDetailPage({
                 href={`/profiles/${related.slug}`}
                 className="group rounded-xl border border-[#2a2a2e] bg-[#1a1a1e] p-4 transition-colors hover:border-violet-500/40"
               >
-                <h3 className="font-semibold group-hover:text-violet-400">
-                  {related.name}
-                </h3>
-                <p className="mt-1 text-sm text-gray-400">
-                  {related.description}
-                </p>
+                <h3 className="font-semibold group-hover:text-violet-400">{related.name}</h3>
+                <p className="mt-1 text-sm text-gray-400">{related.description}</p>
               </Link>
             ))}
           </div>

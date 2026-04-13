@@ -10,14 +10,7 @@ const CATEGORIES = [
   { slug: "productivity", name: "Productivity" },
 ];
 
-const COMPONENT_TYPES: ComponentType[] = [
-  "skill",
-  "agent",
-  "hook",
-  "script",
-  "knowledge",
-  "rules",
-];
+const COMPONENT_TYPES: ComponentType[] = ["skill", "agent", "hook", "script", "knowledge", "rules"];
 
 const TRUST_TIERS: TrustTier[] = ["official", "verified", "community"];
 
@@ -63,9 +56,7 @@ export function FilterPanel({
 
       {/* Type filter */}
       <div>
-        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400">
-          Type
-        </h3>
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-gray-400">Type</h3>
         <ul className="space-y-1">
           {COMPONENT_TYPES.map((t) => (
             <li key={t}>
@@ -110,7 +101,6 @@ export function FilterPanel({
           ))}
         </ul>
       </div>
-
     </aside>
   );
 }

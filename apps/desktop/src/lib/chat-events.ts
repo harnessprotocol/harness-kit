@@ -9,9 +9,7 @@ export interface ChatShareEvent {
 }
 
 export function emitChatShare(event: ChatShareEvent): void {
-  window.dispatchEvent(
-    new CustomEvent("harness-kit-chat-share", { detail: event })
-  );
+  window.dispatchEvent(new CustomEvent("harness-kit-chat-share", { detail: event }));
 }
 
 export function onChatShare(handler: (event: ChatShareEvent) => void): () => void {

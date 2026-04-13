@@ -1,7 +1,7 @@
 import type { AnyMessage } from "@harness-kit/shared";
 import ChatBubble from "./ChatBubble";
-import SystemEvent from "./SystemEvent";
 import ShareCard from "./ShareCard";
+import SystemEvent from "./SystemEvent";
 
 interface Props {
   message: AnyMessage;
@@ -10,12 +10,7 @@ interface Props {
 
 export default function MessageItem({ message, currentNickname }: Props) {
   if (message.type === "chat") {
-    return (
-      <ChatBubble
-        message={message}
-        isOwn={message.nickname === currentNickname}
-      />
-    );
+    return <ChatBubble message={message} isOwn={message.nickname === currentNickname} />;
   }
 
   if (message.type === "system") {

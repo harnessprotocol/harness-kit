@@ -1,8 +1,8 @@
-import fs from 'node:fs';
-import { EventEmitter } from 'node:events';
+import { EventEmitter } from "node:events";
+import fs from "node:fs";
 
 export type FileWatcherEvent = {
-  type: 'change' | 'rename';
+  type: "change" | "rename";
   filename: string; // just the basename, e.g. "my-project.yaml"
 };
 
@@ -11,7 +11,10 @@ export class FileWatcher extends EventEmitter {
   private debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
   private debounceMs: number;
 
-  constructor(private dir: string, debounceMs = 150) {
+  constructor(
+    private dir: string,
+    debounceMs = 150,
+  ) {
     super();
     this.debounceMs = debounceMs;
   }
@@ -19,25 +22,25 @@ export class FileWatcher extends EventEmitter {
   start(): void {
     if (this.watcher) return;
     this.watcher = fs.watch(this.dir, { persistent: false }, (eventType, filename) => {
-      if (!filename || !filename.endsWith('.yaml')) return;
+      if (!filename || !filename.endsWith(".yaml")) return;
       const existing = this.debounceTimers.get(filename);
       if (existing) clearTimeout(existing);
       const timer = setTimeout(() => {
         this.debounceTimers.delete(filename);
-        this.emit('change', { type: eventType, filename } satisfies FileWatcherEvent);
-        if (filename.endsWith('.roadmap.yaml')) {
-          const slug = filename.replace(/\.roadmap\.yaml$/, '');
-          this.emit('roadmap_updated', { slug });
-        } else if (filename.endsWith('.competitors.yaml')) {
-          const slug = filename.replace(/\.competitors\.yaml$/, '');
-          this.emit('competitors_updated', { slug });
+        this.emit("change", { type: eventType, filename } satisfies FileWatcherEvent);
+        if (filename.endsWith(".roadmap.yaml")) {
+          const slug = filename.replace(/\.roadmap\.yaml$/, "");
+          this.emit("roadmap_updated", { slug });
+        } else if (filename.endsWith(".competitors.yaml")) {
+          const slug = filename.replace(/\.competitors\.yaml$/, "");
+          this.emit("competitors_updated", { slug });
         }
       }, this.debounceMs);
       this.debounceTimers.set(filename, timer);
     });
 
-    this.watcher.on('error', (err) => {
-      this.emit('error', err);
+    this.watcher.on("error", (err) => {
+      this.emit("error", err);
     });
   }
 

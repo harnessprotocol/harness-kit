@@ -1,8 +1,19 @@
-import Link from 'next/link';
+import Link from "next/link";
 
 /* ── Lucide SVG icons (inline, no package needed) ── */
 const DownloadIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
     <polyline points="7 10 12 15 17 10" />
     <line x1="12" y1="15" x2="12" y2="3" />
@@ -10,7 +21,18 @@ const DownloadIcon = () => (
 );
 
 const WorkflowIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
     <rect x="3" y="3" width="8" height="8" rx="2" />
     <path d="M7 11v4a2 2 0 0 0 2 2h4" />
     <rect x="13" y="13" width="8" height="8" rx="2" />
@@ -18,7 +40,18 @@ const WorkflowIcon = () => (
 );
 
 const ShareIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
     <circle cx="18" cy="5" r="3" />
     <circle cx="6" cy="12" r="3" />
     <circle cx="18" cy="19" r="3" />
@@ -29,19 +62,18 @@ const ShareIcon = () => (
 
 const features = [
   {
-    title: 'Install once, use everywhere',
-    description:
-      'Install by name. Plugins follow you across every project without manual setup.',
+    title: "Install once, use everywhere",
+    description: "Install by name. Plugins follow you across every project without manual setup.",
     icon: <DownloadIcon />,
   },
   {
-    title: 'More than prompts',
+    title: "More than prompts",
     description:
-      'Each plugin encodes a complete workflow — what to gather, how to analyze it, what to produce.',
+      "Each plugin encodes a complete workflow — what to gather, how to analyze it, what to produce.",
     icon: <WorkflowIcon />,
   },
   {
-    title: 'Share your setup',
+    title: "Share your setup",
     description:
       "Export your full setup as a harness.yaml. Share it with a teammate and they're running the same workflows.",
     icon: <ShareIcon />,
@@ -50,69 +82,63 @@ const features = [
 
 const plugins = [
   {
-    name: 'research',
-    description:
-      'Process any source into a structured, compounding knowledge base.',
-    href: '/docs/plugins/research',
+    name: "research",
+    description: "Process any source into a structured, compounding knowledge base.",
+    href: "/docs/plugins/research",
   },
   {
-    name: 'explain',
-    description:
-      'Layered explanations of files, functions, directories, or concepts.',
-    href: '/docs/plugins/explain',
+    name: "explain",
+    description: "Layered explanations of files, functions, directories, or concepts.",
+    href: "/docs/plugins/explain",
   },
   {
-    name: 'data-lineage',
-    description:
-      'Column-level lineage tracing through SQL, Kafka, Spark, and JDBC.',
-    href: '/docs/plugins/data-lineage',
+    name: "data-lineage",
+    description: "Column-level lineage tracing through SQL, Kafka, Spark, and JDBC.",
+    href: "/docs/plugins/data-lineage",
   },
   {
-    name: 'orient',
-    description:
-      'Topic-focused session orientation across graph, knowledge, and research.',
-    href: '/docs/plugins/orient',
+    name: "orient",
+    description: "Topic-focused session orientation across graph, knowledge, and research.",
+    href: "/docs/plugins/orient",
   },
   {
-    name: 'capture-session',
-    description:
-      'Capture session information into a staging file for later reflection.',
-    href: '/docs/plugins/capture-session',
+    name: "capture-session",
+    description: "Capture session information into a staging file for later reflection.",
+    href: "/docs/plugins/capture-session",
   },
   {
-    name: 'review',
-    description:
-      'Code review for a branch, PR, or path — severity labels and cross-file analysis.',
-    href: '/docs/plugins/review',
+    name: "review",
+    description: "Code review for a branch, PR, or path — severity labels and cross-file analysis.",
+    href: "/docs/plugins/review",
   },
   {
-    name: 'docgen',
-    description:
-      'Generate or update README, API docs, architecture overview, or changelog.',
-    href: '/docs/plugins/docgen',
+    name: "docgen",
+    description: "Generate or update README, API docs, architecture overview, or changelog.",
+    href: "/docs/plugins/docgen",
   },
 ];
 
 const heroCards = [
   {
-    title: 'Getting Started',
-    description: 'Install your first plugin in under a minute.',
-    href: '/docs/getting-started/installation',
+    title: "Getting Started",
+    description: "Install your first plugin in under a minute.",
+    href: "/docs/getting-started/installation",
   },
   {
-    title: 'Browse Plugins',
-    description: '7 plugins shipping today. Each packages a proven workflow.',
-    href: '/docs/plugins/overview',
+    title: "Browse Plugins",
+    description: "7 plugins shipping today. Each packages a proven workflow.",
+    href: "/docs/plugins/overview",
   },
   {
-    title: 'Architecture',
-    description: 'How skills, plugins, and the registry fit together.',
-    href: '/docs/concepts/architecture',
+    title: "Architecture",
+    description: "How skills, plugins, and the registry fit together.",
+    href: "/docs/concepts/architecture",
   },
   {
-    title: 'Cross-Harness',
-    description: 'One config, every tool. Designed for portability across Claude Code, Copilot, Cursor, and more.',
-    href: '/docs/cross-harness/setup-guide',
+    title: "Cross-Harness",
+    description:
+      "One config, every tool. Designed for portability across Claude Code, Copilot, Cursor, and more.",
+    href: "/docs/cross-harness/setup-guide",
   },
 ];
 
@@ -122,12 +148,11 @@ export default function HomePage() {
       {/* Nav */}
       <nav className="sticky top-0 z-50 border-b border-fd-border/30 bg-fd-background/80 backdrop-blur-xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center gap-2.5 font-bold text-fd-foreground no-underline">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 32 32"
-              className="size-7"
-            >
+          <Link
+            href="/"
+            className="flex items-center gap-2.5 font-bold text-fd-foreground no-underline"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" className="size-7">
               <rect width="32" height="32" rx="6" fill="#0d0d12" />
               <text
                 x="16"
@@ -178,23 +203,22 @@ export default function HomePage() {
 
         <div className="relative mx-auto max-w-4xl px-6 pb-16 pt-28 text-center">
           <h1 className="font-display mb-5 text-5xl font-bold tracking-tight text-fd-foreground sm:text-6xl lg:text-7xl">
-            Your harness,{' '}
+            Your harness,{" "}
             <span className="bg-gradient-to-r from-violet-400 to-purple-500 bg-clip-text text-transparent">
               everywhere
             </span>
           </h1>
           <p className="mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-fd-muted-foreground">
-            The configuration framework for AI coding tools.
-            Install workflows by name, share your setup across teams and machines,
-            and never rebuild from scratch again.
+            The configuration framework for AI coding tools. Install workflows by name, share your
+            setup across teams and machines, and never rebuild from scratch again.
           </p>
 
           {/* Command box with gradient border */}
           <div className="relative mx-auto mb-8 inline-block">
             <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-violet-500/30 via-purple-500/20 to-indigo-500/30 blur-[1px]" />
             <div className="relative rounded-xl border border-white/5 bg-fd-card px-6 py-3.5 font-mono text-sm text-fd-foreground">
-              <span className="text-fd-muted-foreground">$</span>{' '}
-              /plugin marketplace add harnessprotocol/harness-kit
+              <span className="text-fd-muted-foreground">$</span> /plugin marketplace add
+              harnessprotocol/harness-kit
             </div>
           </div>
 
@@ -225,7 +249,12 @@ export default function HomePage() {
               className="group relative overflow-hidden rounded-xl border border-fd-border/50 bg-fd-card/80 p-6 no-underline backdrop-blur-sm transition-all duration-300 hover:border-fd-primary/30 hover:shadow-lg hover:shadow-violet-500/10"
             >
               {/* Gradient border overlay */}
-              <div className="pointer-events-none absolute inset-0 rounded-xl opacity-0 transition-opacity duration-300 group-hover:opacity-100" style={{ background: 'linear-gradient(164deg, rgba(139,122,255,0.08), transparent 60%)' }} />
+              <div
+                className="pointer-events-none absolute inset-0 rounded-xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+                style={{
+                  background: "linear-gradient(164deg, rgba(139,122,255,0.08), transparent 60%)",
+                }}
+              />
               <div className="relative">
                 <h3 className="font-display mb-2 text-lg font-semibold text-fd-foreground">
                   {card.title}
@@ -262,17 +291,13 @@ export default function HomePage() {
                 <div className="mb-4 flex size-10 items-center justify-center rounded-lg bg-fd-accent text-fd-primary">
                   {f.icon}
                 </div>
-                <h3 className="font-display mb-2 font-semibold text-fd-foreground">
-                  {f.title}
-                </h3>
-                <p className="text-sm leading-relaxed text-fd-muted-foreground">
-                  {f.description}
-                </p>
+                <h3 className="font-display mb-2 font-semibold text-fd-foreground">{f.title}</h3>
+                <p className="text-sm leading-relaxed text-fd-muted-foreground">{f.description}</p>
               </div>
             ))}
           </div>
           <p className="mt-12 text-center text-sm text-fd-muted-foreground">
-            harness-kit is the reference implementation of the{' '}
+            harness-kit is the reference implementation of the{" "}
             <a
               href="https://harnessprotocol.ai"
               className="text-fd-primary no-underline hover:underline"
@@ -304,9 +329,7 @@ export default function HomePage() {
               <h4 className="mb-1.5 font-mono text-sm font-semibold text-fd-primary brightness-110">
                 {p.name}
               </h4>
-              <p className="text-sm leading-relaxed text-fd-muted-foreground">
-                {p.description}
-              </p>
+              <p className="text-sm leading-relaxed text-fd-muted-foreground">{p.description}</p>
             </Link>
           ))}
         </div>
@@ -320,11 +343,7 @@ export default function HomePage() {
           {/* Brand */}
           <div>
             <div className="mb-3 flex items-center gap-2 font-bold text-fd-foreground">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 32 32"
-                className="size-6"
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" className="size-6">
                 <rect width="32" height="32" rx="6" fill="#0d0d12" />
                 <text
                   x="16"
@@ -349,12 +368,18 @@ export default function HomePage() {
             <h5 className="mb-3 font-semibold text-fd-foreground">Resources</h5>
             <ul className="space-y-2 text-fd-muted-foreground">
               <li>
-                <Link href="/docs" className="transition-colors hover:text-fd-foreground no-underline">
+                <Link
+                  href="/docs"
+                  className="transition-colors hover:text-fd-foreground no-underline"
+                >
                   Documentation
                 </Link>
               </li>
               <li>
-                <Link href="/docs/plugins/overview" className="transition-colors hover:text-fd-foreground no-underline">
+                <Link
+                  href="/docs/plugins/overview"
+                  className="transition-colors hover:text-fd-foreground no-underline"
+                >
                   Plugins
                 </Link>
               </li>

@@ -1,5 +1,5 @@
-import { lazy, Suspense, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { lazy, Suspense, useState } from "react";
 import MarkdownPanel from "../MarkdownPanel";
 
 const MonacoEditor = lazy(() => import("./MonacoEditor"));
@@ -18,10 +18,15 @@ function isMarkdown(path: string): boolean {
 
 function ShimmerSkeleton() {
   return (
-    <div style={{
-      display: "flex", flexDirection: "column", gap: "8px",
-      padding: "16px", flex: 1,
-    }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px",
+        padding: "16px",
+        flex: 1,
+      }}
+    >
       {Array.from({ length: 12 }).map((_, i) => (
         <div
           key={i}
@@ -40,15 +45,27 @@ function ShimmerSkeleton() {
   );
 }
 
-export default function FileViewer({ filePath, content, loading, onChange, onSave }: FileViewerProps) {
+export default function FileViewer({
+  filePath,
+  content,
+  loading,
+  onChange,
+  onSave,
+}: FileViewerProps) {
   const [mdView, setMdView] = useState<"editor" | "preview">("editor");
 
   if (!filePath) {
     return (
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "center",
-        flex: 1, color: "var(--fg-subtle)", fontSize: "12px",
-      }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flex: 1,
+          color: "var(--fg-subtle)",
+          fontSize: "12px",
+        }}
+      >
         Select a file to view
       </div>
     );
@@ -60,10 +77,16 @@ export default function FileViewer({ filePath, content, loading, onChange, onSav
 
   if (content === null) {
     return (
-      <div style={{
-        display: "flex", alignItems: "center", justifyContent: "center",
-        flex: 1, color: "var(--fg-subtle)", fontSize: "12px",
-      }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flex: 1,
+          color: "var(--fg-subtle)",
+          fontSize: "12px",
+        }}
+      >
         Unable to load file
       </div>
     );
@@ -75,18 +98,25 @@ export default function FileViewer({ filePath, content, loading, onChange, onSav
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
       {/* Markdown tab toggle */}
       {isMd && (
-        <div style={{
-          display: "flex", gap: "2px", padding: "6px 12px",
-          borderBottom: "1px solid var(--border-subtle)",
-          flexShrink: 0,
-        }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "2px",
+            padding: "6px 12px",
+            borderBottom: "1px solid var(--border-subtle)",
+            flexShrink: 0,
+          }}
+        >
           {(["editor", "preview"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setMdView(tab)}
               style={{
-                fontSize: "10px", fontWeight: mdView === tab ? 600 : 400,
-                padding: "3px 8px", borderRadius: "4px", border: "none",
+                fontSize: "10px",
+                fontWeight: mdView === tab ? 600 : 400,
+                padding: "3px 8px",
+                borderRadius: "4px",
+                border: "none",
                 background: mdView === tab ? "var(--bg-elevated)" : "transparent",
                 color: mdView === tab ? "var(--fg-base)" : "var(--fg-subtle)",
                 cursor: "pointer",

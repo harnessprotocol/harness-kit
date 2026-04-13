@@ -1,33 +1,24 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServiceSupabase } from "@/lib/supabase";
+import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth";
-import { getOrgBySlug, requireOrgRole, AuthorizationError } from "@/lib/orgs";
+import { AuthorizationError, getOrgBySlug, requireOrgRole } from "@/lib/orgs";
+import { getServiceSupabase } from "@/lib/supabase";
 
 /**
  * GET /api/orgs/[slug]
  * Get a specific organization by slug.
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await params;
     const org = await getOrgBySlug(slug);
 
     if (!org) {
-      return NextResponse.json(
-        { error: "Organization not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Organization not found" }, { status: 404 });
     }
 
     return NextResponse.json(org);
   } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to fetch organization" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch organization" }, { status: 500 });
   }
 }
 
@@ -37,7 +28,7 @@ export async function GET(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ slug: string }> },
 ) {
   try {
     const user = await getServerSession();
@@ -53,10 +44,7 @@ export async function PATCH(
     if (description !== undefined) updates.description = description;
 
     if (Object.keys(updates).length === 0) {
-      return NextResponse.json(
-        { error: "No fields to update" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No fields to update" }, { status: 400 });
     }
 
     const { data: updated, error: updateError } = await supabase
@@ -67,10 +55,7 @@ export async function PATCH(
       .single();
 
     if (updateError) {
-      return NextResponse.json(
-        { error: updateError.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
     return NextResponse.json(updated);
@@ -78,10 +63,7 @@ export async function PATCH(
     if (error instanceof AuthorizationError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    return NextResponse.json(
-      { error: "Failed to update organization" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update organization" }, { status: 500 });
   }
 }
 
@@ -92,7 +74,7 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ slug: string }> },
 ) {
   try {
     const user = await getServerSession();
@@ -100,16 +82,10 @@ export async function DELETE(
     const org = await requireOrgRole(slug, user, "admin");
     const supabase = getServiceSupabase();
 
-    const { error: deleteError } = await supabase
-      .from("organizations")
-      .delete()
-      .eq("id", org.id);
+    const { error: deleteError } = await supabase.from("organizations").delete().eq("id", org.id);
 
     if (deleteError) {
-      return NextResponse.json(
-        { error: deleteError.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: deleteError.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
@@ -117,9 +93,6 @@ export async function DELETE(
     if (error instanceof AuthorizationError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    return NextResponse.json(
-      { error: "Failed to delete organization" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to delete organization" }, { status: 500 });
   }
 }

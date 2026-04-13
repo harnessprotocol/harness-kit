@@ -1,6 +1,6 @@
-import { visit } from 'unist-util-visit';
-import fs from 'node:fs';
-import path from 'node:path';
+import fs from "node:fs";
+import path from "node:path";
+import { visit } from "unist-util-visit";
 
 // Remark plugin that replaces @embed directives with file contents at build time.
 //
@@ -18,16 +18,11 @@ export function remarkEmbed({ root } = {}) {
     const replacements = [];
 
     visit(tree, (node, index, parent) => {
-      if (
-        node.type !== 'mdxFlowExpression' &&
-        node.type !== 'mdxTextExpression'
-      ) {
+      if (node.type !== "mdxFlowExpression" && node.type !== "mdxTextExpression") {
         return;
       }
 
-      const match = node.value?.match(
-        /\/\*\s*@embed\s+(.+?)\s*\*\//
-      );
+      const match = node.value?.match(/\/\*\s*@embed\s+(.+?)\s*\*\//);
       if (!match) return;
 
       const relativePath = match[1].trim();
@@ -35,18 +30,16 @@ export function remarkEmbed({ root } = {}) {
 
       if (!fs.existsSync(absolutePath)) {
         console.warn(
-          `[remark-embed] File not found: ${absolutePath} (referenced in ${file.path || 'unknown'})`
+          `[remark-embed] File not found: ${absolutePath} (referenced in ${file.path || "unknown"})`,
         );
         return;
       }
 
       let content;
       try {
-        content = fs.readFileSync(absolutePath, 'utf-8');
+        content = fs.readFileSync(absolutePath, "utf-8");
       } catch (err) {
-        console.warn(
-          `[remark-embed] Could not read ${absolutePath}: ${err.message}`
-        );
+        console.warn(`[remark-embed] Could not read ${absolutePath}: ${err.message}`);
         return;
       }
 
@@ -57,34 +50,36 @@ export function remarkEmbed({ root } = {}) {
       const escapedContent = JSON.stringify(content);
 
       const jsxNode = {
-        type: 'mdxJsxFlowElement',
-        name: 'MarkdownViewer',
+        type: "mdxJsxFlowElement",
+        name: "MarkdownViewer",
         attributes: [
           {
-            type: 'mdxJsxAttribute',
-            name: 'content',
+            type: "mdxJsxAttribute",
+            name: "content",
             value: {
-              type: 'mdxJsxAttributeValueExpression',
+              type: "mdxJsxAttributeValueExpression",
               value: escapedContent,
               data: {
                 estree: {
-                  type: 'Program',
-                  sourceType: 'module',
-                  body: [{
-                    type: 'ExpressionStatement',
-                    expression: {
-                      type: 'Literal',
-                      value: content,
-                      raw: escapedContent,
+                  type: "Program",
+                  sourceType: "module",
+                  body: [
+                    {
+                      type: "ExpressionStatement",
+                      expression: {
+                        type: "Literal",
+                        value: content,
+                        raw: escapedContent,
+                      },
                     },
-                  }],
+                  ],
                 },
               },
             },
           },
           {
-            type: 'mdxJsxAttribute',
-            name: 'filename',
+            type: "mdxJsxAttribute",
+            name: "filename",
             value: filename,
           },
         ],
@@ -109,7 +104,7 @@ export function remarkEmbed({ root } = {}) {
 function findRepoRoot(startDir) {
   let dir = startDir;
   while (dir !== path.dirname(dir)) {
-    if (fs.existsSync(path.join(dir, '.git'))) {
+    if (fs.existsSync(path.join(dir, ".git"))) {
       return dir;
     }
     dir = path.dirname(dir);

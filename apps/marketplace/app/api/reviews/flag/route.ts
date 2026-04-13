@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 function getServiceSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -21,10 +21,7 @@ export async function POST(request: NextRequest) {
   // Require authentication
   const user = await getServerSession();
   if (!user) {
-    return NextResponse.json(
-      { error: "Authentication required" },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
 
   // Rate limit: 10 flags per hour per user
@@ -44,10 +41,7 @@ export async function POST(request: NextRequest) {
   try {
     payload = await request.json();
   } catch {
-    return NextResponse.json(
-      { error: "Invalid JSON body" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
   const { review_id, reason } = payload;
@@ -61,7 +55,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Validate reason is one of the allowed values
-  if (!VALID_REASONS.includes(reason as typeof VALID_REASONS[number])) {
+  if (!VALID_REASONS.includes(reason as (typeof VALID_REASONS)[number])) {
     return NextResponse.json(
       { error: `Reason must be one of: ${VALID_REASONS.join(", ")}` },
       { status: 400 },
@@ -71,10 +65,7 @@ export async function POST(request: NextRequest) {
   // Validate review_id is a valid UUID format
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   if (!uuidRegex.test(review_id)) {
-    return NextResponse.json(
-      { error: "Invalid review_id format" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Invalid review_id format" }, { status: 400 });
   }
 
   // Check if review exists
@@ -85,10 +76,7 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (reviewError || !review) {
-    return NextResponse.json(
-      { error: "Review not found" },
-      { status: 404 },
-    );
+    return NextResponse.json({ error: "Review not found" }, { status: 404 });
   }
 
   // Check if user has already flagged this review
@@ -100,10 +88,7 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (existingFlag) {
-    return NextResponse.json(
-      { error: "You have already flagged this review" },
-      { status: 409 },
-    );
+    return NextResponse.json({ error: "You have already flagged this review" }, { status: 409 });
   }
 
   // Insert flag into review_flags table

@@ -1,19 +1,10 @@
+import type { McpServer } from "@harness-kit/core";
+import { parseHarness } from "@harness-kit/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { parseHarness } from "@harness-kit/core";
-import type { McpServer } from "@harness-kit/core";
-import {
-  readMcpConfig,
-  writeMcpConfig,
-  readHarnessFile,
-  writeHarnessFile,
-} from "../lib/tauri";
-import {
-  inferTransport,
-  toClaudeFormat,
-  toHarnessFormat,
-} from "../lib/mcp-types";
 import type { ClaudeMcpServer, McpTransport } from "../lib/mcp-types";
+import { inferTransport, toClaudeFormat, toHarnessFormat } from "../lib/mcp-types";
+import { readHarnessFile, readMcpConfig, writeHarnessFile, writeMcpConfig } from "../lib/tauri";
 
 // ── Public types ──────────────────────────────────────────────────────────────
 
@@ -71,10 +62,7 @@ export function useMcpServers(): UseMcpServersReturn {
     setError(null);
 
     try {
-      const [mcpResult, harnessResult] = await Promise.all([
-        readMcpConfig(),
-        readHarnessFile(),
-      ]);
+      const [mcpResult, harnessResult] = await Promise.all([readMcpConfig(), readHarnessFile()]);
 
       // Parse mcp.json servers
       let parsedMcp: Record<string, ClaudeMcpServer> = {};
@@ -122,9 +110,13 @@ export function useMcpServers(): UseMcpServersReturn {
     }
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
-  const reload = useCallback(() => { load(); }, [load]);
+  const reload = useCallback(() => {
+    load();
+  }, [load]);
 
   // ── Derived entries (no network call on source switch) ──────────────────────
 
@@ -178,7 +170,7 @@ export function useMcpServers(): UseMcpServersReturn {
     try {
       const content = harnessContentRef.current;
       // Parse to plain JS object (lose comments, but simpler and predictable)
-      const parsed = content ? (parseYaml(content) as Record<string, unknown>) ?? {} : {};
+      const parsed = content ? ((parseYaml(content) as Record<string, unknown>) ?? {}) : {};
       const current = (parsed["mcp-servers"] ?? {}) as Record<string, McpServer>;
       const newServers = fn(current);
 
@@ -197,44 +189,53 @@ export function useMcpServers(): UseMcpServersReturn {
 
   // ── Public mutation API ─────────────────────────────────────────────────────
 
-  const addServer = useCallback(async (name: string, config: ClaudeMcpServer) => {
-    if (activeSource === "mcp.json") {
-      await writeMcp({ ...mcpServersRef.current, [name]: config });
-    } else {
-      await modifyHarness((servers) => ({
-        ...servers,
-        [name]: toHarnessFormat(config),
-      }));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSource]);
+  const addServer = useCallback(
+    async (name: string, config: ClaudeMcpServer) => {
+      if (activeSource === "mcp.json") {
+        await writeMcp({ ...mcpServersRef.current, [name]: config });
+      } else {
+        await modifyHarness((servers) => ({
+          ...servers,
+          [name]: toHarnessFormat(config),
+        }));
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [activeSource],
+  );
 
-  const updateServer = useCallback(async (name: string, config: ClaudeMcpServer) => {
-    if (activeSource === "mcp.json") {
-      await writeMcp({ ...mcpServersRef.current, [name]: config });
-    } else {
-      await modifyHarness((servers) => ({
-        ...servers,
-        [name]: toHarnessFormat(config),
-      }));
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSource]);
+  const updateServer = useCallback(
+    async (name: string, config: ClaudeMcpServer) => {
+      if (activeSource === "mcp.json") {
+        await writeMcp({ ...mcpServersRef.current, [name]: config });
+      } else {
+        await modifyHarness((servers) => ({
+          ...servers,
+          [name]: toHarnessFormat(config),
+        }));
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [activeSource],
+  );
 
-  const removeServer = useCallback(async (name: string) => {
-    if (activeSource === "mcp.json") {
-      const updated = { ...mcpServersRef.current };
-      delete updated[name];
-      await writeMcp(updated);
-    } else {
-      await modifyHarness((servers) => {
-        const updated = { ...servers };
+  const removeServer = useCallback(
+    async (name: string) => {
+      if (activeSource === "mcp.json") {
+        const updated = { ...mcpServersRef.current };
         delete updated[name];
-        return updated;
-      });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSource]);
+        await writeMcp(updated);
+      } else {
+        await modifyHarness((servers) => {
+          const updated = { ...servers };
+          delete updated[name];
+          return updated;
+        });
+      }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    },
+    [activeSource],
+  );
 
   // ── Return ──────────────────────────────────────────────────────────────────
 

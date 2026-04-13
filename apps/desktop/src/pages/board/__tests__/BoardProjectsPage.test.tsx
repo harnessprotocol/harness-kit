@@ -1,8 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import BoardProjectsPage from "../BoardProjectsPage";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Project } from "../../../lib/board-api";
+import BoardProjectsPage from "../BoardProjectsPage";
 
 // ── Mock useBoardServerReady ───────────────────────────────────
 

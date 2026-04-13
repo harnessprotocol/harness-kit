@@ -1,5 +1,5 @@
-import { renderHook, act, waitFor } from "@testing-library/react";
-import { describe, it, expect, vi, beforeEach, type Mock } from "vitest";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
 import { useTerminals } from "../useTerminals";
 
 // ── Tauri mocks ────────────────────────────────────────────────
@@ -96,8 +96,12 @@ describe("useTerminals", () => {
 
     const { result } = renderHook(() => useTerminals());
 
-    await act(async () => { await result.current.createTerminal("/a"); });
-    await act(async () => { await result.current.createTerminal("/b"); });
+    await act(async () => {
+      await result.current.createTerminal("/a");
+    });
+    await act(async () => {
+      await result.current.createTerminal("/b");
+    });
 
     expect(result.current.sessions[0].title).toBe("Terminal 1");
     expect(result.current.sessions[1].title).toBe("Terminal 2");
@@ -114,7 +118,9 @@ describe("useTerminals", () => {
 
     // Fill to max (12)
     for (let i = 0; i < 12; i++) {
-      await act(async () => { await result.current.createTerminal("/p"); });
+      await act(async () => {
+        await result.current.createTerminal("/p");
+      });
     }
     expect(result.current.sessions).toHaveLength(12);
 
@@ -130,10 +136,14 @@ describe("useTerminals", () => {
   it("destroyTerminal removes a session and invokes backend", async () => {
     const { result } = renderHook(() => useTerminals());
 
-    await act(async () => { await result.current.createTerminal("/p"); });
+    await act(async () => {
+      await result.current.createTerminal("/p");
+    });
     expect(result.current.sessions).toHaveLength(1);
 
-    act(() => { result.current.destroyTerminal("term-1"); });
+    act(() => {
+      result.current.destroyTerminal("term-1");
+    });
 
     expect(mockInvoke).toHaveBeenCalledWith("destroy_terminal", { terminalId: "term-1" });
     expect(result.current.sessions).toHaveLength(0);
@@ -144,7 +154,9 @@ describe("useTerminals", () => {
   it("assignHarness updates session harnessId and model", async () => {
     const { result } = renderHook(() => useTerminals());
 
-    await act(async () => { await result.current.createTerminal("/p"); });
+    await act(async () => {
+      await result.current.createTerminal("/p");
+    });
 
     act(() => {
       result.current.assignHarness("term-1", "claude", "claude-sonnet-4-6");
@@ -161,7 +173,9 @@ describe("useTerminals", () => {
   it("invokeInTerminal builds command and writes to terminal", async () => {
     const { result } = renderHook(() => useTerminals());
 
-    await act(async () => { await result.current.createTerminal("/p"); });
+    await act(async () => {
+      await result.current.createTerminal("/p");
+    });
     await act(async () => {
       await result.current.invokeInTerminal("term-1", "claude", "fix bug", "claude-opus-4-6");
     });
@@ -185,17 +199,26 @@ describe("useTerminals", () => {
 
     const { result } = renderHook(() => useTerminals());
 
-    await act(async () => { await result.current.createTerminal("/p"); });
-    await act(async () => { await result.current.createTerminal("/p"); });
+    await act(async () => {
+      await result.current.createTerminal("/p");
+    });
+    await act(async () => {
+      await result.current.createTerminal("/p");
+    });
 
     // Only assign harness to first terminal
-    act(() => { result.current.assignHarness("t-1", "claude", "sonnet"); });
+    act(() => {
+      result.current.assignHarness("t-1", "claude", "sonnet");
+    });
 
-    await act(async () => { await result.current.invokeAll("test prompt"); });
+    await act(async () => {
+      await result.current.invokeAll("test prompt");
+    });
 
     // Should only write to t-1 (has harness), not t-2
     const writeCalls = (mockInvoke as Mock).mock.calls.filter(
-      (c: unknown[]) => c[0] === "write_terminal" && (c[1] as { data: string }).data.includes("claude"),
+      (c: unknown[]) =>
+        c[0] === "write_terminal" && (c[1] as { data: string }).data.includes("claude"),
     );
     expect(writeCalls).toHaveLength(1);
     expect(writeCalls[0][1].terminalId).toBe("t-1");
@@ -206,11 +229,15 @@ describe("useTerminals", () => {
   it("terminal://output stores chunks and increments outputTick", async () => {
     const { result } = renderHook(() => useTerminals());
 
-    await act(async () => { await result.current.createTerminal("/p"); });
+    await act(async () => {
+      await result.current.createTerminal("/p");
+    });
 
     const tickBefore = result.current.outputTick;
 
-    act(() => { emitOutput("term-1", "hello world"); });
+    act(() => {
+      emitOutput("term-1", "hello world");
+    });
 
     expect(result.current.outputTick).toBe(tickBefore + 1);
     expect(result.current.getRawChunks("term-1")).toEqual(["hello world"]);
@@ -219,7 +246,9 @@ describe("useTerminals", () => {
   it("terminal://output accumulates multiple chunks", async () => {
     const { result } = renderHook(() => useTerminals());
 
-    await act(async () => { await result.current.createTerminal("/p"); });
+    await act(async () => {
+      await result.current.createTerminal("/p");
+    });
 
     act(() => {
       emitOutput("term-1", "chunk1");
@@ -233,9 +262,13 @@ describe("useTerminals", () => {
   it("terminal://exit sets status to exited with exit code", async () => {
     const { result } = renderHook(() => useTerminals());
 
-    await act(async () => { await result.current.createTerminal("/p"); });
+    await act(async () => {
+      await result.current.createTerminal("/p");
+    });
 
-    act(() => { emitExit("term-1", 0); });
+    act(() => {
+      emitExit("term-1", 0);
+    });
 
     await waitFor(() => {
       expect(result.current.sessions[0]).toMatchObject({
@@ -248,9 +281,13 @@ describe("useTerminals", () => {
   it("terminal://exit with non-zero exit code", async () => {
     const { result } = renderHook(() => useTerminals());
 
-    await act(async () => { await result.current.createTerminal("/p"); });
+    await act(async () => {
+      await result.current.createTerminal("/p");
+    });
 
-    act(() => { emitExit("term-1", 1); });
+    act(() => {
+      emitExit("term-1", 1);
+    });
 
     await waitFor(() => {
       expect(result.current.sessions[0].exitCode).toBe(1);

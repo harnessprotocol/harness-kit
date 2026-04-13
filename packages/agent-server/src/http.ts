@@ -1,33 +1,24 @@
 // packages/agent-server/src/http.ts
-import express from 'express';
-import { z } from 'zod';
-import { startAgent, stopAgent, steerAgent, pauseAgent, resumeAgent } from './runner/runner.js';
-import { isRunning } from './runner/thread-manager.js';
-import { getOrCreateToken } from './token.js';
+import express from "express";
+import { z } from "zod";
+import { pauseAgent, resumeAgent, startAgent, steerAgent, stopAgent } from "./runner/runner.js";
+import { isRunning } from "./runner/thread-manager.js";
+import { getOrCreateToken } from "./token.js";
 
 const SerializableTaskSchema = z.object({
   id: z.number(),
   title: z.string(),
   description: z.string().optional(),
-  subtasks: z.array(z.object({
-    id: z.number(), title: z.string(), status: z.string(), phase: z.string().optional(),
-  })).default([]),
-  worktree_path: z.string().optional(),
-  default_model: z.string().optional(),
-});
-
-const SteerBodySchema = z.object({
-  task: SerializableTaskSchema,
-  message: z.string().min(1).max(4000),
-});
-
-const SerializableTaskSchema = z.object({
-  id: z.number(),
-  title: z.string(),
-  description: z.string().optional(),
-  subtasks: z.array(z.object({
-    id: z.number(), title: z.string(), status: z.string(), phase: z.string().optional(),
-  })).default([]),
+  subtasks: z
+    .array(
+      z.object({
+        id: z.number(),
+        title: z.string(),
+        status: z.string(),
+        phase: z.string().optional(),
+      }),
+    )
+    .default([]),
   worktree_path: z.string().optional(),
   default_model: z.string().optional(),
 });
@@ -44,27 +35,27 @@ export function createServer() {
 
   // CORS — restrict to Tauri app origins only
   app.use((_req, res, next) => {
-    res.header('Access-Control-Allow-Origin', 'tauri://localhost');
-    res.header('Vary', 'Origin');
-    res.header('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+    res.header("Access-Control-Allow-Origin", "tauri://localhost");
+    res.header("Vary", "Origin");
+    res.header("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type,Authorization");
     next();
   });
 
   // Handle CORS preflight
-  app.options('*', (_req, res) => res.sendStatus(204));
+  app.options("*", (_req, res) => res.sendStatus(204));
 
   // Auth middleware — all routes require Bearer token.
   // Token is stored in ~/.harness-kit/agent-server.token (mode 0600).
   app.use((req, res, next) => {
-    const auth = req.headers['authorization'];
+    const auth = req.headers["authorization"];
     if (auth !== `Bearer ${token}`) {
-      return res.status(401).json({ error: 'Unauthorized' });
+      return res.status(401).json({ error: "Unauthorized" });
     }
     next();
   });
 
-  const base = '/projects/:slug/tasks/:taskId';
+  const base = "/projects/:slug/tasks/:taskId";
 
   // POST start
   app.post(`${base}/start`, async (req, res) => {
@@ -78,7 +69,9 @@ export function createServer() {
     try {
       void startAgent(slug, parsed.data, opts); // intentionally not awaited — streams via WS
       res.json({ ok: true, taskId });
-    } catch (e) { res.status(400).json({ error: String(e) }); }
+    } catch (e) {
+      res.status(400).json({ error: String(e) });
+    }
   });
 
   // POST stop
@@ -102,7 +95,9 @@ export function createServer() {
     try {
       void resumeAgent(slug, parsed.data, opts);
       res.json({ ok: true });
-    } catch (e) { res.status(400).json({ error: String(e) }); }
+    } catch (e) {
+      res.status(400).json({ error: String(e) });
+    }
   });
 
   // POST steer
@@ -114,7 +109,9 @@ export function createServer() {
     try {
       await steerAgent(slug, taskId, parsed.data.message, parsed.data.task);
       res.json({ ok: true });
-    } catch (e) { res.status(400).json({ error: String(e) }); }
+    } catch (e) {
+      res.status(400).json({ error: String(e) });
+    }
   });
 
   // GET status

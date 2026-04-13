@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import HooksPage from "../HooksPage";
 
 const mockReadClaudeMd = vi.fn().mockResolvedValue('{"hooks": {}}');
@@ -15,17 +15,21 @@ vi.mock("../../../lib/preferences", () => ({
 }));
 
 vi.mock("../../../components/plugin-explorer/MonacoEditor", () => ({
-  default: ({ content }: { content: string }) => (
-    <div data-testid="monaco-editor">{content}</div>
-  ),
+  default: ({ content }: { content: string }) => <div data-testid="monaco-editor">{content}</div>,
 }));
 
 function renderPage() {
-  return render(<MemoryRouter><HooksPage /></MemoryRouter>);
+  return render(
+    <MemoryRouter>
+      <HooksPage />
+    </MemoryRouter>,
+  );
 }
 
 describe("HooksPage", () => {
-  beforeEach(() => { vi.clearAllMocks(); });
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
 
   it("shows formatted view with settings.json content after loading", async () => {
     mockReadClaudeMd.mockResolvedValue('{"hooks": {}}');

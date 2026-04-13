@@ -11,7 +11,8 @@ export const PROFILES: HarnessProfile[] = [
   {
     id: "software-engineer",
     name: "Software Engineer",
-    description: "Full-stack development, code review, and debugging. Full tool access with read/write/bash.",
+    description:
+      "Full-stack development, code review, and debugging. Full tool access with read/write/bash.",
     icon: "⌨️",
     tags: ["code", "bash", "git"],
     yaml: `version: "1"
@@ -45,7 +46,8 @@ permissions:
   {
     id: "data-engineer",
     name: "Data Engineer",
-    description: "Data pipelines, analytics, SQL, and Python. Focus on correctness and reproducibility.",
+    description:
+      "Data pipelines, analytics, SQL, and Python. Focus on correctness and reproducibility.",
     icon: "📊",
     tags: ["data", "sql", "python", "pipelines"],
     yaml: `version: "1"
@@ -144,7 +146,8 @@ permissions:
   {
     id: "content-creator",
     name: "Content Creator",
-    description: "Writing, editing, and long-form content. Minimal tool access, strong writing focus.",
+    description:
+      "Writing, editing, and long-form content. Minimal tool access, strong writing focus.",
     icon: "✍️",
     tags: ["writing", "editing", "content"],
     yaml: `version: "1"

@@ -1,30 +1,27 @@
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import {
-  CallToolRequestSchema,
-  ListToolsRequestSchema,
-} from '@modelcontextprotocol/sdk/types.js';
-import { projectTools } from './tools/project.js';
-import { epicTools } from './tools/epic.js';
-import { taskTools } from './tools/task.js';
-import { roadmapTools } from './tools/roadmap.js';
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { epicTools } from "./tools/epic.js";
+import { projectTools } from "./tools/project.js";
+import { roadmapTools } from "./tools/roadmap.js";
+import { taskTools } from "./tools/task.js";
 
 const allTools = [...projectTools, ...epicTools, ...taskTools, ...roadmapTools];
 
 type AnyTool = (typeof allTools)[number];
-type ToolName = AnyTool['name'];
+type ToolName = AnyTool["name"];
 type ToolMap = Map<string, AnyTool>;
 
-const toolMap: ToolMap = new Map(allTools.map(t => [t.name, t]));
+const toolMap: ToolMap = new Map(allTools.map((t) => [t.name, t]));
 
 export function createMcpServer() {
   const server = new Server(
-    { name: 'harness-board', version: '0.1.0' },
+    { name: "harness-board", version: "0.1.0" },
     { capabilities: { tools: {} } },
   );
 
   server.setRequestHandler(ListToolsRequestSchema, async () => ({
-    tools: allTools.map(t => ({
+    tools: allTools.map((t) => ({
       name: t.name,
       description: t.description,
       inputSchema: t.inputSchema,
@@ -36,7 +33,7 @@ export function createMcpServer() {
     const tool = toolMap.get(name);
     if (!tool) {
       return {
-        content: [{ type: 'text' as const, text: `Unknown tool: ${name}` }],
+        content: [{ type: "text" as const, text: `Unknown tool: ${name}` }],
         isError: true,
       };
     }
@@ -47,7 +44,7 @@ export function createMcpServer() {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       return {
-        content: [{ type: 'text' as const, text: `Error: ${message}` }],
+        content: [{ type: "text" as const, text: `Error: ${message}` }],
         isError: true,
       };
     }
@@ -65,6 +62,6 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error('MCP server fatal error:', err);
+  console.error("MCP server fatal error:", err);
   process.exit(1);
 });

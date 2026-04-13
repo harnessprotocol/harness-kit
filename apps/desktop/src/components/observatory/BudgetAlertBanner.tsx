@@ -20,9 +20,9 @@ export default function BudgetAlertBanner({
 }: Props) {
   const [dismissed, setDismissed] = useState(false);
 
-  const tokenOver  = tokenLimit != null && tokensToday > tokenLimit;
-  const costOver   = costLimit  != null && costToday  > costLimit;
-  const isOver     = tokenOver || costOver;
+  const tokenOver = tokenLimit != null && tokensToday > tokenLimit;
+  const costOver = costLimit != null && costToday > costLimit;
+  const isOver = tokenOver || costOver;
 
   if (!isOver || dismissed) return null;
 
@@ -33,9 +33,7 @@ export default function BudgetAlertBanner({
     );
   }
   if (costOver && costLimit != null) {
-    messages.push(
-      `${formatCost(costToday)} today (limit: ${formatCost(costLimit)})`,
-    );
+    messages.push(`${formatCost(costToday)} today (limit: ${formatCost(costLimit)})`);
   }
 
   function handleDismiss() {
@@ -65,9 +63,7 @@ export default function BudgetAlertBanner({
       <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
         <span style={{ fontSize: "16px", flexShrink: 0 }}>⚠</span>
         <div>
-          <span style={{ fontWeight: 600, color: "#d97706" }}>
-            Daily budget exceeded:&nbsp;
-          </span>
+          <span style={{ fontWeight: 600, color: "#d97706" }}>Daily budget exceeded:&nbsp;</span>
           {messages.join(" · ")}
         </div>
       </div>

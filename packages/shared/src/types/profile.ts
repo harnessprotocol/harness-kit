@@ -1,6 +1,6 @@
 // ── Profile YAML (harness profile definitions) ─────────────
 
-import type { Author } from './core.js';
+import type { Author } from "./core.js";
 
 export interface ProfileYaml {
   name: string;

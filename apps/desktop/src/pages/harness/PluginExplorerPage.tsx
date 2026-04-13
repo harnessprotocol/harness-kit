@@ -1,17 +1,17 @@
+import type { InstalledPlugin } from "@harness-kit/shared";
+import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
-import { listInstalledPlugins } from "../../lib/tauri";
-import type { InstalledPlugin } from "@harness-kit/shared";
-import { usePluginExplorer } from "../../hooks/usePluginExplorer";
-import { getAvailableViewModes, getDefaultViewMode } from "../../lib/viewModes";
-import type { FileEditorState } from "../../hooks/useFileEditor";
-import SplitPane from "../../components/file-explorer/SplitPane";
 import EditorPane from "../../components/file-explorer/EditorPane";
-import FileTree from "../../components/plugin-explorer/FileTree";
+import SplitPane from "../../components/file-explorer/SplitPane";
 import ExportMenu from "../../components/plugin-explorer/ExportMenu";
+import FileTree from "../../components/plugin-explorer/FileTree";
 import SaveConfirmPopover from "../../components/plugin-explorer/SaveConfirmPopover";
 import VersionHistoryPopover from "../../components/plugin-explorer/VersionHistoryPopover";
+import type { FileEditorState } from "../../hooks/useFileEditor";
+import { usePluginExplorer } from "../../hooks/usePluginExplorer";
+import { listInstalledPlugins } from "../../lib/tauri";
+import { getAvailableViewModes, getDefaultViewMode } from "../../lib/viewModes";
 
 export default function PluginExplorerPage() {
   const { pluginName } = useParams<{ pluginName: string }>();
@@ -56,19 +56,22 @@ export default function PluginExplorerPage() {
   }, [explorer]);
 
   // Adapt usePluginExplorer to FileEditorState interface
-  const editorState: FileEditorState = useMemo(() => ({
-    content: explorer.fileContent,
-    originalContent: null,
-    loading: explorer.fileLoading,
-    saving: explorer.saving,
-    savedRecently: explorer.savedRecently,
-    error: explorer.error,
-    isDirty: explorer.dirty,
-    updateContent: explorer.updateContent,
-    saveFile: explorer.saveFile,
-    revertFile: explorer.revertFile,
-    reload: () => {},
-  }), [explorer]);
+  const editorState: FileEditorState = useMemo(
+    () => ({
+      content: explorer.fileContent,
+      originalContent: null,
+      loading: explorer.fileLoading,
+      saving: explorer.saving,
+      savedRecently: explorer.savedRecently,
+      error: explorer.error,
+      isDirty: explorer.dirty,
+      updateContent: explorer.updateContent,
+      saveFile: explorer.saveFile,
+      revertFile: explorer.revertFile,
+      reload: () => {},
+    }),
+    [explorer],
+  );
 
   const availableModes = getAvailableViewModes(explorer.selectedPath);
 
@@ -111,30 +114,44 @@ export default function PluginExplorerPage() {
         onRestore={explorer.restoreVersion}
       />
 
-      <ExportMenu
-        onExportZip={explorer.exportAsZip}
-        onExportFolder={explorer.exportToFolder}
-      />
+      <ExportMenu onExportZip={explorer.exportAsZip} onExportFolder={explorer.exportToFolder} />
     </div>
   );
 
   // ── Left panel ──────────────────────────────────────────────
 
   const leftPanel = (
-    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0, overflow: "hidden" }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        flex: 1,
+        minHeight: 0,
+        overflow: "hidden",
+      }}
+    >
       {/* Back link */}
       <button
         onClick={() => navigate("/harness/plugins")}
         style={{
-          display: "flex", alignItems: "center", gap: "4px",
+          display: "flex",
+          alignItems: "center",
+          gap: "4px",
           padding: "8px 12px 4px",
-          background: "none", border: "none", cursor: "pointer",
-          fontSize: "11px", color: "var(--fg-subtle)",
+          background: "none",
+          border: "none",
+          cursor: "pointer",
+          fontSize: "11px",
+          color: "var(--fg-subtle)",
           textAlign: "left",
         }}
       >
         <svg width="10" height="10" viewBox="0 0 20 20" fill="currentColor">
-          <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+          <path
+            fillRule="evenodd"
+            d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+            clipRule="evenodd"
+          />
         </svg>
         Installed Plugins
       </button>
@@ -146,20 +163,30 @@ export default function PluginExplorerPage() {
             <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)" }}>
               {plugin.name}
             </span>
-            <span style={{
-              fontSize: "10px", fontFamily: "ui-monospace, monospace",
-              padding: "1px 5px", borderRadius: "4px",
-              background: "var(--bg-elevated)", color: "var(--fg-subtle)",
-              border: "1px solid var(--border-subtle)",
-            }}>
+            <span
+              style={{
+                fontSize: "10px",
+                fontFamily: "ui-monospace, monospace",
+                padding: "1px 5px",
+                borderRadius: "4px",
+                background: "var(--bg-elevated)",
+                color: "var(--fg-subtle)",
+                border: "1px solid var(--border-subtle)",
+              }}
+            >
               {plugin.version}
             </span>
           </div>
           {plugin.category && (
-            <span style={{
-              fontSize: "10px", fontWeight: 500, color: "var(--fg-muted)",
-              display: "inline-block", marginTop: "2px",
-            }}>
+            <span
+              style={{
+                fontSize: "10px",
+                fontWeight: 500,
+                color: "var(--fg-muted)",
+                display: "inline-block",
+                marginTop: "2px",
+              }}
+            >
               {plugin.category}
             </span>
           )}
@@ -181,7 +208,16 @@ export default function PluginExplorerPage() {
 
   if (loadingPlugin) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--fg-subtle)", fontSize: "13px" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100%",
+          color: "var(--fg-subtle)",
+          fontSize: "13px",
+        }}
+      >
         Loading plugin...
       </div>
     );
@@ -189,15 +225,28 @@ export default function PluginExplorerPage() {
 
   if (!plugin) {
     return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "8px" }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100%",
+          gap: "8px",
+        }}
+      >
         <p style={{ fontSize: "13px", color: "var(--fg-muted)" }}>
           Plugin "{pluginName}" not found.
         </p>
         <button
           onClick={() => navigate("/harness/plugins")}
           style={{
-            fontSize: "12px", color: "var(--accent-text)", background: "none",
-            border: "none", cursor: "pointer", textDecoration: "underline",
+            fontSize: "12px",
+            color: "var(--accent-text)",
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            textDecoration: "underline",
           }}
         >
           Back to Installed Plugins
@@ -208,7 +257,16 @@ export default function PluginExplorerPage() {
 
   if (explorer.loading) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "var(--fg-subtle)", fontSize: "13px" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100%",
+          color: "var(--fg-subtle)",
+          fontSize: "13px",
+        }}
+      >
         Loading plugin files...
       </div>
     );

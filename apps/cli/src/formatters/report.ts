@@ -1,11 +1,8 @@
-import chalk from "chalk";
 import type { CompileReport, CompileResult, TargetPlatform } from "@harness-kit/core";
 import { buildReport } from "@harness-kit/core";
+import chalk from "chalk";
 
-export function formatCompileReport(
-  result: CompileResult,
-  dryRun: boolean,
-): string {
+export function formatCompileReport(result: CompileResult, dryRun: boolean): string {
   const report = buildReport(result);
   return formatReport(report, dryRun);
 }
@@ -17,12 +14,8 @@ function formatReport(report: CompileReport, dryRun: boolean): string {
     lines.push(chalk.yellow("[DRY RUN]") + " Preview — no files were written.\n");
   }
 
-  lines.push(
-    `Compiled harness: ${chalk.bold(report.harnessName)}`,
-  );
-  lines.push(
-    `Targets: ${report.targets.map(formatTarget).join(", ")}\n`,
-  );
+  lines.push(`Compiled harness: ${chalk.bold(report.harnessName)}`);
+  lines.push(`Targets: ${report.targets.map(formatTarget).join(", ")}\n`);
 
   // Group entries by platform
   let currentPlatform: TargetPlatform | null = null;

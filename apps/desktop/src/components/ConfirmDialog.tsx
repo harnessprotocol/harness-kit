@@ -36,10 +36,7 @@ export default function ConfirmDialog({
 
   return createPortal(
     <div className="confirm-overlay" onPointerDown={onCancel}>
-      <div
-        className="confirm-card"
-        onPointerDown={(e) => e.stopPropagation()}
-      >
+      <div className="confirm-card" onPointerDown={(e) => e.stopPropagation()}>
         <div className="confirm-title">{title}</div>
         <div className="confirm-message">{message}</div>
         <div className="confirm-actions">

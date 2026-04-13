@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { readClaudeMd } from "../../lib/tauri";
+import { useNavigate, useParams } from "react-router-dom";
 import MarkdownPanel from "../../components/MarkdownPanel";
+import { readClaudeMd } from "../../lib/tauri";
 
 function extOf(name: string): string {
   const idx = name.lastIndexOf(".");
@@ -48,17 +48,26 @@ export default function FileViewerPage() {
         >
           ← Config Files
         </button>
-        <h1 style={{
-          fontSize: "17px",
-          fontWeight: 600,
-          letterSpacing: "-0.3px",
-          color: "var(--fg-base)",
-          margin: 0,
-          fontFamily: "ui-monospace, monospace",
-        }}>
+        <h1
+          style={{
+            fontSize: "17px",
+            fontWeight: 600,
+            letterSpacing: "-0.3px",
+            color: "var(--fg-base)",
+            margin: 0,
+            fontFamily: "ui-monospace, monospace",
+          }}
+        >
           {name}
         </h1>
-        <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0", fontFamily: "ui-monospace, monospace" }}>
+        <p
+          style={{
+            fontSize: "12px",
+            color: "var(--fg-muted)",
+            margin: "3px 0 0",
+            fontFamily: "ui-monospace, monospace",
+          }}
+        >
           ~/.claude/{name}
         </p>
       </div>
@@ -66,14 +75,16 @@ export default function FileViewerPage() {
       {loading && <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</p>}
 
       {error && (
-        <div style={{
-          background: "var(--bg-surface)",
-          border: "1px solid var(--border-base)",
-          borderRadius: "8px",
-          padding: "10px 14px",
-          fontSize: "13px",
-          color: "var(--danger)",
-        }}>
+        <div
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-base)",
+            borderRadius: "8px",
+            padding: "10px 14px",
+            fontSize: "13px",
+            color: "var(--danger)",
+          }}
+        >
           {error}
         </div>
       )}

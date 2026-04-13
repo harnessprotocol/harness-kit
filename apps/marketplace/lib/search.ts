@@ -1,5 +1,5 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Component, ComponentType, TrustTier } from "@harness-kit/shared";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Parameters for searching components in the marketplace.
@@ -96,9 +96,7 @@ export async function searchComponents(
   const offset = params.offset ?? 0;
 
   // Start with base query
-  let query = supabase
-    .from("components")
-    .select("*", { count: "exact" });
+  let query = supabase.from("components").select("*", { count: "exact" });
 
   // Apply full-text search if query provided
   if (params.query) {

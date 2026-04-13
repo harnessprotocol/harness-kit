@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
-import type { Component } from "@/lib/types";
+import { CategoryIcon } from "@/app/components/CategoryIcon";
 import { HeroSearch } from "@/app/components/HeroSearch";
 import { StatsBar } from "@/app/components/StatsBar";
-import { CategoryIcon } from "@/app/components/CategoryIcon";
 import { TrustBadge } from "@/app/components/TrustBadge";
+import { supabase } from "@/lib/supabase";
+import type { Component } from "@/lib/types";
 
 const CATEGORIES = [
   {
@@ -91,9 +91,7 @@ function PluginCard({ component }: { component: Component }) {
           </span>
           <TrustBadge tier={component.trust_tier} />
         </div>
-        <p className="mt-1 truncate text-xs text-gray-500">
-          {component.description}
-        </p>
+        <p className="mt-1 truncate text-xs text-gray-500">{component.description}</p>
       </div>
       <div className="shrink-0 text-right text-xs text-gray-500">
         {component.install_count.toLocaleString()}
@@ -109,14 +107,8 @@ export default async function HomePage() {
 
   try {
     const [trendingResult, countResult] = await Promise.all([
-      supabase
-        .from("components")
-        .select("*")
-        .order("install_count", { ascending: false })
-        .limit(8),
-      supabase
-        .from("components")
-        .select("*", { count: "exact", head: true }),
+      supabase.from("components").select("*").order("install_count", { ascending: false }).limit(8),
+      supabase.from("components").select("*", { count: "exact", head: true }),
     ]);
 
     trending = (trendingResult.data as Component[]) ?? [];
@@ -126,10 +118,7 @@ export default async function HomePage() {
     }
 
     if (trending.length > 0) {
-      const trendingTotal = trending.reduce(
-        (sum, c) => sum + c.install_count,
-        0
-      );
+      const trendingTotal = trending.reduce((sum, c) => sum + c.install_count, 0);
       // Use trending total as a floor; if we have more plugins, estimate conservatively
       totalInstalls =
         pluginCount > trending.length
@@ -158,8 +147,7 @@ export default async function HomePage() {
             </span>
           </h1>
           <p className="mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-gray-400">
-            Browse, search, and install skills, agents, and configuration —
-            the parts worth sharing.
+            Browse, search, and install skills, agents, and configuration — the parts worth sharing.
           </p>
 
           <HeroSearch />
@@ -227,12 +215,8 @@ export default async function HomePage() {
         {/* ── Categories ────────────────────────────────────────────── */}
         <section className={trending.length > 0 ? "border-t border-[#1e1e22] py-20" : "py-20"}>
           <div className="mb-10 text-center">
-            <h2 className="font-display mb-2 text-2xl font-bold">
-              Browse by category
-            </h2>
-            <p className="text-sm text-gray-400">
-              Find the right plugin for your workflow
-            </p>
+            <h2 className="font-display mb-2 text-2xl font-bold">Browse by category</h2>
+            <p className="text-sm text-gray-400">Find the right plugin for your workflow</p>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -249,9 +233,7 @@ export default async function HomePage() {
                   <h3 className="font-display font-semibold text-gray-100 transition-colors duration-200 group-hover:text-violet-400">
                     {cat.name}
                   </h3>
-                  <p className="mt-1 text-sm text-gray-400">
-                    {cat.description}
-                  </p>
+                  <p className="mt-1 text-sm text-gray-400">{cat.description}</p>
                 </div>
               </Link>
             ))}
@@ -261,12 +243,8 @@ export default async function HomePage() {
         {/* ── How it works ──────────────────────────────────────────── */}
         <section className="border-t border-[#1e1e22] py-20">
           <div className="mb-12 text-center">
-            <h2 className="font-display mb-2 text-2xl font-bold">
-              How it works
-            </h2>
-            <p className="text-sm text-gray-400">
-              Three steps to extend your Claude Code setup
-            </p>
+            <h2 className="font-display mb-2 text-2xl font-bold">How it works</h2>
+            <p className="text-sm text-gray-400">Three steps to extend your Claude Code setup</p>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-3">
@@ -289,15 +267,13 @@ export default async function HomePage() {
                   <line x1="12" y1="19" x2="20" y2="19" />
                 </svg>
               </div>
-              <div className="mb-1 text-xs font-medium text-violet-400">
-                Step 1
-              </div>
+              <div className="mb-1 text-xs font-medium text-violet-400">Step 1</div>
               <h3 className="font-display mb-2 font-semibold text-gray-100">
                 Browse the marketplace
               </h3>
               <p className="text-sm leading-relaxed text-gray-400">
-                Search by name, category, or use case. Every plugin is open
-                source and ready to install.
+                Search by name, category, or use case. Every plugin is open source and ready to
+                install.
               </p>
             </div>
 
@@ -321,12 +297,8 @@ export default async function HomePage() {
                   <line x1="12" y1="15" x2="12" y2="3" />
                 </svg>
               </div>
-              <div className="mb-1 text-xs font-medium text-violet-400">
-                Step 2
-              </div>
-              <h3 className="font-display mb-2 font-semibold text-gray-100">
-                Install by name
-              </h3>
+              <div className="mb-1 text-xs font-medium text-violet-400">Step 2</div>
+              <h3 className="font-display mb-2 font-semibold text-gray-100">Install by name</h3>
               <p className="text-sm leading-relaxed text-gray-400">
                 Run{" "}
                 <code className="rounded bg-[#1a1a1e] px-1.5 py-0.5 font-mono text-xs text-gray-300">
@@ -354,15 +326,11 @@ export default async function HomePage() {
                   <path d="m13 2-3 6.5H4l6 4.5-2.5 7L13 16l5.5 4-2.5-7 6-4.5h-6z" />
                 </svg>
               </div>
-              <div className="mb-1 text-xs font-medium text-violet-400">
-                Step 3
-              </div>
-              <h3 className="font-display mb-2 font-semibold text-gray-100">
-                Start using it
-              </h3>
+              <div className="mb-1 text-xs font-medium text-violet-400">Step 3</div>
+              <h3 className="font-display mb-2 font-semibold text-gray-100">Start using it</h3>
               <p className="text-sm leading-relaxed text-gray-400">
-                Invoke your new skill with a slash command. It&apos;s ready
-                immediately — no restart required.
+                Invoke your new skill with a slash command. It&apos;s ready immediately — no restart
+                required.
               </p>
             </div>
           </div>

@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { MemoryRouter, Routes, Route } from "react-router-dom";
-import type { Component, Category } from "@harness-kit/shared";
+import type { Category, Component } from "@harness-kit/shared";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import MarketplacePage from "../MarketplacePage";
 
 // ── Fixtures ─────────────────────────────────────────────────
@@ -114,8 +114,7 @@ function createBuilder(data: unknown, error: unknown = null) {
     rej?: Parameters<Promise<unknown>["then"]>[1],
   ) => promise.then(ful, rej);
   builder.catch = (rej: Parameters<Promise<unknown>["catch"]>[0]) => promise.catch(rej);
-  builder.finally = (fin: Parameters<Promise<unknown>["finally"]>[0]) =>
-    promise.finally(fin);
+  builder.finally = (fin: Parameters<Promise<unknown>["finally"]>[0]) => promise.finally(fin);
   return builder;
 }
 
@@ -129,9 +128,7 @@ function makeListMockClient() {
     tags: mockTags,
   };
   return {
-    from: vi.fn().mockImplementation((table: string) =>
-      createBuilder(tableData[table] ?? []),
-    ),
+    from: vi.fn().mockImplementation((table: string) => createBuilder(tableData[table] ?? [])),
   };
 }
 
@@ -145,12 +142,14 @@ function makeListMockClient() {
  * Each `from("components")` call creates a fresh builder with its own `calledNeq`
  * closure so the three query shapes can be told apart reliably.
  */
-function makeDetailMockClient(overrides: {
-  component?: Component | null;
-  detailTags?: string[];
-  related?: typeof mockRelated;
-  componentError?: { message: string } | null;
-} = {}) {
+function makeDetailMockClient(
+  overrides: {
+    component?: Component | null;
+    detailTags?: string[];
+    related?: typeof mockRelated;
+    componentError?: { message: string } | null;
+  } = {},
+) {
   const {
     component = mockComponents[0],
     detailTags: tagSlugs = mockDetailTags,
@@ -177,11 +176,12 @@ function makeDetailMockClient(overrides: {
         builder.select = () => builder;
         builder.order = () => builder;
         builder.eq = () => builder;
-        builder.neq = () => { calledNeq = true; return builder; };
+        builder.neq = () => {
+          calledNeq = true;
+          return builder;
+        };
         builder.limit = () => builder;
-        builder.single = vi
-          .fn()
-          .mockResolvedValue({ data: component, error: componentError });
+        builder.single = vi.fn().mockResolvedValue({ data: component, error: componentError });
         // list or related — differentiated by whether .neq() was called
         builder.then = (
           ful: Parameters<Promise<unknown>["then"]>[0],
@@ -265,9 +265,7 @@ describe("MarketplacePage — list panel", () => {
 
     it("hides loading indicator after data loads", async () => {
       renderMarketplace();
-      await waitFor(() =>
-        expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
-      );
+      await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
     });
   });
 
@@ -462,9 +460,7 @@ describe("MarketplacePage — list panel", () => {
       await screen.findByText("Research");
 
       const items = screen.getAllByText(/installs$/);
-      const counts = items.map((el) =>
-        parseInt(el.textContent!.replace(/[^0-9]/g, ""), 10),
-      );
+      const counts = items.map((el) => parseInt(el.textContent!.replace(/[^0-9]/g, ""), 10));
       for (let i = 0; i < counts.length - 1; i++) {
         expect(counts[i]).toBeGreaterThanOrEqual(counts[i + 1]);
       }
@@ -514,9 +510,7 @@ describe("MarketplacePage — list panel", () => {
   describe("error state", () => {
     it("shows error message when Supabase returns an error", async () => {
       mockSupabase = {
-        from: vi.fn().mockReturnValue(
-          createBuilder(null, { message: "Connection refused" }),
-        ),
+        from: vi.fn().mockReturnValue(createBuilder(null, { message: "Connection refused" })),
       };
 
       renderMarketplace();
@@ -525,9 +519,7 @@ describe("MarketplacePage — list panel", () => {
 
     it("does not show plugin list on error", async () => {
       mockSupabase = {
-        from: vi.fn().mockReturnValue(
-          createBuilder(null, { message: "Error" }),
-        ),
+        from: vi.fn().mockReturnValue(createBuilder(null, { message: "Error" })),
       };
 
       renderMarketplace();
@@ -550,7 +542,9 @@ describe("MarketplacePage — detail panel", () => {
       const row = await screen.findByText("Research");
       fireEvent.click(row.closest("button")!);
 
-      expect(await screen.findByText("Process any source into a knowledge base")).toBeInTheDocument();
+      expect(
+        await screen.findByText("Process any source into a knowledge base"),
+      ).toBeInTheDocument();
     });
 
     it("highlights the selected plugin row", async () => {
@@ -630,9 +624,7 @@ describe("MarketplacePage — detail panel", () => {
 
     it("renders install command", async () => {
       renderMarketplace("/marketplace/research");
-      expect(
-        await screen.findByText("/plugin install research@harness-kit"),
-      ).toBeInTheDocument();
+      expect(await screen.findByText("/plugin install research@harness-kit")).toBeInTheDocument();
     });
 
     it("renders author name", async () => {

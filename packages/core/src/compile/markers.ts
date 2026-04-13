@@ -3,11 +3,7 @@ import type { OrphanedBlock } from "../types.js";
 const BEGIN_RE = /^<!-- BEGIN harness:([^:]+):([^ ]+) -->$/;
 const END_RE = /^<!-- END harness:([^:]+):([^ ]+) -->$/;
 
-export function buildMarkerBlock(
-  name: string,
-  slot: string,
-  content: string,
-): string {
+export function buildMarkerBlock(name: string, slot: string, content: string): string {
   const begin = `<!-- BEGIN harness:${name}:${slot} -->`;
   const end = `<!-- END harness:${name}:${slot} -->`;
   return `${begin}\n${content}\n${end}`;
@@ -135,10 +131,7 @@ export function findOrphanedMarkerBlocks(
   return orphans;
 }
 
-export function removeOrphanedBlocks(
-  fileContent: string,
-  orphans: OrphanedBlock[],
-): string {
+export function removeOrphanedBlocks(fileContent: string, orphans: OrphanedBlock[]): string {
   const lines = fileContent.split("\n");
   // Collect line ranges to remove (convert 1-indexed to 0-indexed)
   const removeSet = new Set<number>();

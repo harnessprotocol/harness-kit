@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { buildReport } from "../src/report/report.js";
 import type { CompileResult } from "../src/types.js";
 
@@ -17,10 +17,38 @@ describe("buildReport", () => {
   it("sorts entries by platform order then slot order", () => {
     const result = makeResult({
       files: [
-        { path: ".cursor/mcp.json", content: "{}", action: "create", platform: "cursor", slot: "mcp-servers", linesAdded: 1 },
-        { path: "CLAUDE.md", content: "ops", action: "create", platform: "claude-code", slot: "operational", linesAdded: 10 },
-        { path: ".cursor/rules/harness.mdc", content: "ops", action: "create", platform: "cursor", slot: "operational", linesAdded: 10 },
-        { path: "AGENT.md", content: "beh", action: "create", platform: "claude-code", slot: "behavioral", linesAdded: 5 },
+        {
+          path: ".cursor/mcp.json",
+          content: "{}",
+          action: "create",
+          platform: "cursor",
+          slot: "mcp-servers",
+          linesAdded: 1,
+        },
+        {
+          path: "CLAUDE.md",
+          content: "ops",
+          action: "create",
+          platform: "claude-code",
+          slot: "operational",
+          linesAdded: 10,
+        },
+        {
+          path: ".cursor/rules/harness.mdc",
+          content: "ops",
+          action: "create",
+          platform: "cursor",
+          slot: "operational",
+          linesAdded: 10,
+        },
+        {
+          path: "AGENT.md",
+          content: "beh",
+          action: "create",
+          platform: "claude-code",
+          slot: "behavioral",
+          linesAdded: 5,
+        },
       ],
     });
 
@@ -37,7 +65,14 @@ describe("buildReport", () => {
   it("formats MCP server counts", () => {
     const result = makeResult({
       files: [
-        { path: ".mcp.json", content: "{}", action: "create", platform: "claude-code", slot: "mcp-servers", linesAdded: 3 },
+        {
+          path: ".mcp.json",
+          content: "{}",
+          action: "create",
+          platform: "claude-code",
+          slot: "mcp-servers",
+          linesAdded: 3,
+        },
       ],
     });
 
@@ -48,7 +83,14 @@ describe("buildReport", () => {
   it("formats single server count without plural", () => {
     const result = makeResult({
       files: [
-        { path: ".mcp.json", content: "{}", action: "create", platform: "claude-code", slot: "mcp-servers", linesAdded: 1 },
+        {
+          path: ".mcp.json",
+          content: "{}",
+          action: "create",
+          platform: "claude-code",
+          slot: "mcp-servers",
+          linesAdded: 1,
+        },
       ],
     });
 
@@ -63,7 +105,13 @@ describe("buildReport", () => {
 
     const result = makeResult({
       files: [
-        { path: ".claude/settings.json", content, action: "create", platform: "claude-code", slot: "permissions" },
+        {
+          path: ".claude/settings.json",
+          content,
+          action: "create",
+          platform: "claude-code",
+          slot: "permissions",
+        },
       ],
     });
 
@@ -74,8 +122,21 @@ describe("buildReport", () => {
   it("omits skipped files", () => {
     const result = makeResult({
       files: [
-        { path: "CLAUDE.md", content: "ops", action: "skip", platform: "claude-code", slot: "operational" },
-        { path: "AGENT.md", content: "beh", action: "create", platform: "claude-code", slot: "behavioral", linesAdded: 5 },
+        {
+          path: "CLAUDE.md",
+          content: "ops",
+          action: "skip",
+          platform: "claude-code",
+          slot: "operational",
+        },
+        {
+          path: "AGENT.md",
+          content: "beh",
+          action: "create",
+          platform: "claude-code",
+          slot: "behavioral",
+          linesAdded: 5,
+        },
       ],
     });
 
@@ -98,7 +159,13 @@ describe("buildReport", () => {
   it("formats skills as copied", () => {
     const result = makeResult({
       files: [
-        { path: ".cursor/skills/explain/SKILL.md", content: "# Explain", action: "create", platform: "cursor", slot: "skills" },
+        {
+          path: ".cursor/skills/explain/SKILL.md",
+          content: "# Explain",
+          action: "create",
+          platform: "cursor",
+          slot: "skills",
+        },
       ],
     });
 

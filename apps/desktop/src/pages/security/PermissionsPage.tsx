@@ -1,29 +1,51 @@
-import React, { useEffect, useRef, useState } from "react";
-import {
-  readPermissions, updatePermissions,
-  listSecurityPresets, applySecurityPreset,
-  detectClaudeAccount, getHarnessHealth,
-} from "../../lib/tauri";
-import type { PermissionsState, SecurityPreset, HarnessHealthRecord } from "@harness-kit/shared";
-import {
-  getPermissionMode, setPermissionMode,
-  getAllowedTools, setAllowedTools,
-  getHarnessPermissionOverrides, setHarnessPermissionOverrides,
-  resetPermissionDefaults,
-  getAutoModeUnlocked, setAutoModeUnlocked,
-  getBudgetGuard, setBudgetGuard,
-  getResilienceConfig, setResilienceConfig,
-  type PermissionMode, type HarnessPermissionOverride, type BudgetGuardConfig,
-  type ResilienceProfile, type ResilienceConfigMap,
-} from "../../lib/preferences";
+import type { HarnessHealthRecord, PermissionsState, SecurityPreset } from "@harness-kit/shared";
+import type React from "react";
+import { useEffect, useRef, useState } from "react";
 import { BUILTIN_HARNESSES } from "../../lib/harness-definitions";
+import {
+  type BudgetGuardConfig,
+  getAllowedTools,
+  getAutoModeUnlocked,
+  getBudgetGuard,
+  getHarnessPermissionOverrides,
+  getPermissionMode,
+  getResilienceConfig,
+  type HarnessPermissionOverride,
+  type PermissionMode,
+  type ResilienceConfigMap,
+  type ResilienceProfile,
+  resetPermissionDefaults,
+  setAllowedTools,
+  setAutoModeUnlocked,
+  setBudgetGuard,
+  setHarnessPermissionOverrides,
+  setPermissionMode,
+  setResilienceConfig,
+} from "../../lib/preferences";
+import {
+  applySecurityPreset,
+  detectClaudeAccount,
+  getHarnessHealth,
+  listSecurityPresets,
+  readPermissions,
+  updatePermissions,
+} from "../../lib/tauri";
 import { TOOL_NAMES } from "../../lib/tool-names";
 
 // ── Icons ─────────────────────────────────────────────────────
 
 function IconSkip() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
       <line x1="9" y1="9" x2="15" y2="15" />
       <line x1="15" y1="9" x2="9" y2="15" />
@@ -33,7 +55,16 @@ function IconSkip() {
 
 function IconAuto() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M12 3l1.88 5.78 5.88.04-4.77 3.47 1.82 5.78L12 15.08l-4.81 3.0 1.82-5.78L4.24 8.82l5.88-.04z" />
     </svg>
   );
@@ -41,7 +72,16 @@ function IconAuto() {
 
 function IconTools() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <line x1="4" y1="6" x2="20" y2="6" />
       <line x1="4" y1="12" x2="14" y2="12" />
       <line x1="4" y1="18" x2="11" y2="18" />
@@ -53,7 +93,15 @@ function IconTools() {
 
 function IconRemove() {
   return (
-    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+    >
       <line x1="18" y1="6" x2="6" y2="18" />
       <line x1="6" y1="6" x2="18" y2="18" />
     </svg>
@@ -62,7 +110,16 @@ function IconRemove() {
 
 function IconCheck() {
   return (
-    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <polyline points="20 6 9 17 4 12" />
     </svg>
   );
@@ -71,8 +128,13 @@ function IconCheck() {
 function IconChevron({ open }: { open: boolean }) {
   return (
     <svg
-      width="12" height="12" viewBox="0 0 24 24" fill="none"
-      stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+      width="12"
+      height="12"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
       style={{ transform: open ? "rotate(90deg)" : "none", transition: "transform 200ms" }}
     >
       <polyline points="9 18 15 12 9 6" />
@@ -112,34 +174,52 @@ const HOST_SUGGESTIONS: { value: string; hint: string }[] = [
 
 // ── Chip ─────────────────────────────────────────────────────
 
-function Chip({ label, color, onRemove }: {
+function Chip({
+  label,
+  color,
+  onRemove,
+}: {
   label: string;
   color: "green" | "red" | "amber";
   onRemove: () => void;
 }) {
   const colors = {
     green: { bg: "rgba(22,163,74,0.08)", border: "rgba(22,163,74,0.22)", text: "#16a34a" },
-    red:   { bg: "rgba(220,38,38,0.08)",  border: "rgba(220,38,38,0.22)",  text: "#dc2626" },
-    amber: { bg: "rgba(217,119,6,0.08)",  border: "rgba(217,119,6,0.22)",  text: "#d97706" },
+    red: { bg: "rgba(220,38,38,0.08)", border: "rgba(220,38,38,0.22)", text: "#dc2626" },
+    amber: { bg: "rgba(217,119,6,0.08)", border: "rgba(217,119,6,0.22)", text: "#d97706" },
   };
   const c = colors[color];
   return (
-    <span style={{
-      display: "inline-flex", alignItems: "center", gap: "5px",
-      fontSize: "11px", fontWeight: 500, padding: "2px 7px 2px 8px",
-      borderRadius: "4px", border: `1px solid ${c.border}`,
-      background: c.bg, color: c.text,
-      fontFamily: "ui-monospace, monospace",
-    }}>
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "5px",
+        fontSize: "11px",
+        fontWeight: 500,
+        padding: "2px 7px 2px 8px",
+        borderRadius: "4px",
+        border: `1px solid ${c.border}`,
+        background: c.bg,
+        color: c.text,
+        fontFamily: "ui-monospace, monospace",
+      }}
+    >
       {label}
       <button
         onClick={onRemove}
         aria-label={`Remove ${label}`}
         style={{
-          border: "none", background: "none", color: c.text,
-          cursor: "pointer", padding: 0, display: "flex",
-          alignItems: "center", justifyContent: "center",
-          opacity: 0.7, lineHeight: 1,
+          border: "none",
+          background: "none",
+          color: c.text,
+          cursor: "pointer",
+          padding: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          opacity: 0.7,
+          lineHeight: 1,
         }}
       >
         <IconRemove />
@@ -150,7 +230,12 @@ function Chip({ label, color, onRemove }: {
 
 // ── SuggestInput ──────────────────────────────────────────────
 
-function SuggestInput({ onAdd, placeholder, suggestions, existing }: {
+function SuggestInput({
+  onAdd,
+  placeholder,
+  suggestions,
+  existing,
+}: {
   onAdd: (v: string) => void;
   placeholder: string;
   suggestions: { value: string; hint: string }[];
@@ -164,7 +249,8 @@ function SuggestInput({ onAdd, placeholder, suggestions, existing }: {
   const filtered = suggestions.filter(
     (s) =>
       !existing.includes(s.value) &&
-      (value === "" || s.value.toLowerCase().includes(value.toLowerCase()) ||
+      (value === "" ||
+        s.value.toLowerCase().includes(value.toLowerCase()) ||
         s.hint.toLowerCase().includes(value.toLowerCase())),
   );
 
@@ -208,23 +294,37 @@ function SuggestInput({ onAdd, placeholder, suggestions, existing }: {
       <div style={{ display: "flex", gap: "4px" }}>
         <input
           value={value}
-          onChange={(e) => { setValue(e.target.value); setOpen(true); setHighlightIdx(-1); }}
+          onChange={(e) => {
+            setValue(e.target.value);
+            setOpen(true);
+            setHighlightIdx(-1);
+          }}
           onFocus={() => setOpen(true)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           style={{
-            flex: 1, fontSize: "11px", padding: "5px 8px",
-            borderRadius: "5px", border: "1px solid var(--border-base)",
-            background: "var(--bg-base)", color: "var(--fg-base)",
+            flex: 1,
+            fontSize: "11px",
+            padding: "5px 8px",
+            borderRadius: "5px",
+            border: "1px solid var(--border-base)",
+            background: "var(--bg-base)",
+            color: "var(--fg-base)",
             outline: "none",
           }}
         />
         <button
-          onClick={() => { if (value.trim()) select(value.trim()); }}
+          onClick={() => {
+            if (value.trim()) select(value.trim());
+          }}
           style={{
-            fontSize: "11px", padding: "5px 10px", borderRadius: "5px",
-            border: "1px solid var(--border-base)", background: "var(--bg-surface)",
-            color: "var(--fg-muted)", cursor: "pointer",
+            fontSize: "11px",
+            padding: "5px 10px",
+            borderRadius: "5px",
+            border: "1px solid var(--border-base)",
+            background: "var(--bg-surface)",
+            color: "var(--fg-muted)",
+            cursor: "pointer",
           }}
         >
           Add
@@ -232,33 +332,50 @@ function SuggestInput({ onAdd, placeholder, suggestions, existing }: {
       </div>
 
       {open && filtered.length > 0 && (
-        <div style={{
-          position: "absolute", top: "100%", left: 0, right: "46px",
-          marginTop: "2px", zIndex: 20,
-          background: "var(--bg-elevated)",
-          border: "1px solid var(--border-base)",
-          borderRadius: "6px",
-          boxShadow: "var(--shadow-md)",
-          maxHeight: "180px", overflowY: "auto",
-        }}>
+        <div
+          style={{
+            position: "absolute",
+            top: "100%",
+            left: 0,
+            right: "46px",
+            marginTop: "2px",
+            zIndex: 20,
+            background: "var(--bg-elevated)",
+            border: "1px solid var(--border-base)",
+            borderRadius: "6px",
+            boxShadow: "var(--shadow-md)",
+            maxHeight: "180px",
+            overflowY: "auto",
+          }}
+        >
           {filtered.map((s, i) => (
             <button
               key={s.value}
-              onPointerDown={(e) => { e.preventDefault(); select(s.value); }}
+              onPointerDown={(e) => {
+                e.preventDefault();
+                select(s.value);
+              }}
               style={{
-                display: "flex", justifyContent: "space-between", alignItems: "center",
-                width: "100%", padding: "5px 10px",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                width: "100%",
+                padding: "5px 10px",
                 border: "none",
                 borderBottom: i < filtered.length - 1 ? "1px solid var(--separator)" : "none",
                 background: i === highlightIdx ? "var(--accent-light)" : "transparent",
-                cursor: "pointer", textAlign: "left",
+                cursor: "pointer",
+                textAlign: "left",
               }}
             >
-              <span style={{
-                fontSize: "11px", fontWeight: 500,
-                color: i === highlightIdx ? "var(--accent-text)" : "var(--fg-base)",
-                fontFamily: "ui-monospace, monospace",
-              }}>
+              <span
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 500,
+                  color: i === highlightIdx ? "var(--accent-text)" : "var(--fg-base)",
+                  fontFamily: "ui-monospace, monospace",
+                }}
+              >
                 {s.value}
               </span>
               <span style={{ fontSize: "10px", color: "var(--fg-subtle)", marginLeft: "8px" }}>
@@ -286,17 +403,29 @@ interface ModeCardProps {
   onClick: () => void;
 }
 
-function ModeCard({ id: _id, label, flag, description, icon, accentColor, selected, note, onClick }: ModeCardProps) {
+function ModeCard({
+  id: _id,
+  label,
+  flag,
+  description,
+  icon,
+  accentColor,
+  selected,
+  note,
+  onClick,
+}: ModeCardProps) {
   return (
     <button
       onClick={onClick}
       style={{
-        display: "flex", flexDirection: "column", alignItems: "flex-start",
-        textAlign: "left", padding: "14px", cursor: "pointer",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "flex-start",
+        textAlign: "left",
+        padding: "14px",
+        cursor: "pointer",
         background: selected ? `${accentColor}0d` : "var(--bg-surface)",
-        border: selected
-          ? `1.5px solid ${accentColor}`
-          : "1.5px solid var(--border-base)",
+        border: selected ? `1.5px solid ${accentColor}` : "1.5px solid var(--border-base)",
         borderRadius: "8px",
         transition: "border-color 150ms, background 150ms",
         gap: "8px",
@@ -306,56 +435,75 @@ function ModeCard({ id: _id, label, flag, description, icon, accentColor, select
     >
       {/* Icon + label row */}
       <div style={{ display: "flex", alignItems: "center", gap: "8px", width: "100%" }}>
-        <div style={{ color: selected ? accentColor : "var(--fg-muted)" }}>
-          {icon}
-        </div>
-        <span style={{
-          fontSize: "12px", fontWeight: 600,
-          color: selected ? accentColor : "var(--fg-base)",
-          flex: 1,
-        }}>
+        <div style={{ color: selected ? accentColor : "var(--fg-muted)" }}>{icon}</div>
+        <span
+          style={{
+            fontSize: "12px",
+            fontWeight: 600,
+            color: selected ? accentColor : "var(--fg-base)",
+            flex: 1,
+          }}
+        >
           {label}
         </span>
         {selected && (
-          <div style={{
-            width: 16, height: 16, borderRadius: "50%",
-            background: accentColor,
-            display: "flex", alignItems: "center", justifyContent: "center",
-            color: "#fff", flexShrink: 0,
-          }}>
+          <div
+            style={{
+              width: 16,
+              height: 16,
+              borderRadius: "50%",
+              background: accentColor,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "#fff",
+              flexShrink: 0,
+            }}
+          >
             <IconCheck />
           </div>
         )}
       </div>
 
       {/* Description */}
-      <div style={{
-        fontSize: "11px", color: "var(--fg-muted)", lineHeight: 1.5,
-        paddingLeft: "26px",
-      }}>
+      <div
+        style={{
+          fontSize: "11px",
+          color: "var(--fg-muted)",
+          lineHeight: 1.5,
+          paddingLeft: "26px",
+        }}
+      >
         {description}
       </div>
 
       {/* Flag badge */}
       <div style={{ paddingLeft: "26px" }}>
-        <code style={{
-          fontSize: "10px", fontFamily: "ui-monospace, monospace",
-          color: selected ? accentColor : "var(--fg-subtle)",
-          background: selected ? `${accentColor}14` : "var(--bg-base)",
-          border: `1px solid ${selected ? `${accentColor}30` : "var(--border-subtle)"}`,
-          borderRadius: "3px", padding: "1px 5px",
-        }}>
+        <code
+          style={{
+            fontSize: "10px",
+            fontFamily: "ui-monospace, monospace",
+            color: selected ? accentColor : "var(--fg-subtle)",
+            background: selected ? `${accentColor}14` : "var(--bg-base)",
+            border: `1px solid ${selected ? `${accentColor}30` : "var(--border-subtle)"}`,
+            borderRadius: "3px",
+            padding: "1px 5px",
+          }}
+        >
           {flag}
         </code>
       </div>
 
       {/* Optional note (e.g. plan requirement) */}
       {note && (
-        <div style={{
-          paddingLeft: "26px",
-          fontSize: "10px", color: "var(--fg-subtle)",
-          fontStyle: "italic",
-        }}>
+        <div
+          style={{
+            paddingLeft: "26px",
+            fontSize: "10px",
+            color: "var(--fg-subtle)",
+            fontStyle: "italic",
+          }}
+        >
           {note}
         </div>
       )}
@@ -379,14 +527,16 @@ function buildToolEntry(name: string, scope: string): string {
 // ── Current config summary ────────────────────────────────────
 
 function CurrentConfigSummary({
-  mode, tools, overrides,
+  mode,
+  tools,
+  overrides,
 }: {
   mode: PermissionMode;
   tools: string[];
   overrides: Record<string, HarnessPermissionOverride>;
 }) {
   const overrideCount = Object.values(overrides).filter(
-    (o) => o.mode !== undefined || (o.allowedTools && o.allowedTools.length > 0)
+    (o) => o.mode !== undefined || (o.allowedTools && o.allowedTools.length > 0),
   ).length;
 
   const modeColor = mode === "skip" ? "#d97706" : mode === "auto" ? "#3b82f6" : "#16a34a";
@@ -394,42 +544,81 @@ function CurrentConfigSummary({
 
   let detail: React.ReactNode;
   if (mode === "skip") {
-    detail = <span style={{ color: "var(--fg-muted)" }}>All tool calls proceed without prompting.</span>;
+    detail = (
+      <span style={{ color: "var(--fg-muted)" }}>All tool calls proceed without prompting.</span>
+    );
   } else if (mode === "auto") {
-    detail = <span style={{ color: "var(--fg-muted)" }}>AI classifiers approve non-destructive actions.</span>;
+    detail = (
+      <span style={{ color: "var(--fg-muted)" }}>
+        AI classifiers approve non-destructive actions.
+      </span>
+    );
   } else if (tools.length === 0) {
-    detail = <span style={{ color: "var(--danger)" }}>No tools selected — all actions will prompt.</span>;
+    detail = (
+      <span style={{ color: "var(--danger)" }}>No tools selected — all actions will prompt.</span>
+    );
   } else {
     detail = (
-      <span style={{ color: "var(--fg-muted)", fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
+      <span
+        style={{
+          color: "var(--fg-muted)",
+          fontFamily: "ui-monospace, monospace",
+          fontSize: "11px",
+        }}
+      >
         {tools.join("  ·  ")}
       </span>
     );
   }
 
   return (
-    <div style={{
-      marginBottom: "20px",
-      padding: "10px 14px",
-      borderRadius: "8px",
-      background: "var(--bg-surface)",
-      border: "1px solid var(--border-base)",
-      display: "flex", flexWrap: "wrap", alignItems: "baseline", gap: "8px",
-    }}>
-      <span style={{
-        fontSize: "10px", fontVariantCaps: "all-small-caps", letterSpacing: "0.05em",
-        color: "var(--fg-subtle)", fontWeight: 500, flexShrink: 0,
-      }}>
+    <div
+      style={{
+        marginBottom: "20px",
+        padding: "10px 14px",
+        borderRadius: "8px",
+        background: "var(--bg-surface)",
+        border: "1px solid var(--border-base)",
+        display: "flex",
+        flexWrap: "wrap",
+        alignItems: "baseline",
+        gap: "8px",
+      }}
+    >
+      <span
+        style={{
+          fontSize: "10px",
+          fontVariantCaps: "all-small-caps",
+          letterSpacing: "0.05em",
+          color: "var(--fg-subtle)",
+          fontWeight: 500,
+          flexShrink: 0,
+        }}
+      >
         Active
       </span>
-      <span style={{
-        fontSize: "11px", fontWeight: 600, color: modeColor,
-        background: `${modeColor}18`, padding: "1px 8px",
-        borderRadius: "10px", flexShrink: 0,
-      }}>
+      <span
+        style={{
+          fontSize: "11px",
+          fontWeight: 600,
+          color: modeColor,
+          background: `${modeColor}18`,
+          padding: "1px 8px",
+          borderRadius: "10px",
+          flexShrink: 0,
+        }}
+      >
         {modeLabel}
       </span>
-      <span style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+      <span
+        style={{
+          flex: 1,
+          minWidth: 0,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
         {detail}
       </span>
       {overrideCount > 0 && (
@@ -444,7 +633,8 @@ function CurrentConfigSummary({
 // ── Allowed tools checklist ───────────────────────────────────
 
 function AllowedToolsSection({
-  tools, onChange,
+  tools,
+  onChange,
 }: {
   tools: string[];
   onChange: (next: string[]) => void;
@@ -462,18 +652,26 @@ function AllowedToolsSection({
   }
 
   function updateScope(name: string, scope: string) {
-    onChange(tools.map((t) => {
-      const parsed = parseToolEntry(t);
-      return parsed.name === name ? buildToolEntry(name, scope) : t;
-    }));
+    onChange(
+      tools.map((t) => {
+        const parsed = parseToolEntry(t);
+        return parsed.name === name ? buildToolEntry(name, scope) : t;
+      }),
+    );
   }
 
   return (
     <div style={{ marginTop: "12px" }}>
-      <p style={{
-        fontSize: "11px", fontWeight: 500, fontVariantCaps: "all-small-caps",
-        letterSpacing: "0.04em", color: "var(--fg-subtle)", margin: "0 0 8px",
-      }}>
+      <p
+        style={{
+          fontSize: "11px",
+          fontWeight: 500,
+          fontVariantCaps: "all-small-caps",
+          letterSpacing: "0.04em",
+          color: "var(--fg-subtle)",
+          margin: "0 0 8px",
+        }}
+      >
         Allowed without prompting
       </p>
 
@@ -481,14 +679,32 @@ function AllowedToolsSection({
       {activeEntries.length > 0 && (
         <div style={{ marginBottom: "10px" }}>
           {/* Column headers */}
-          <div style={{
-            display: "grid", gridTemplateColumns: "100px 1fr auto",
-            gap: "6px", padding: "0 8px 4px",
-          }}>
-            <span style={{ fontSize: "10px", color: "var(--fg-subtle)", fontVariantCaps: "all-small-caps", letterSpacing: "0.04em" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "100px 1fr auto",
+              gap: "6px",
+              padding: "0 8px 4px",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "10px",
+                color: "var(--fg-subtle)",
+                fontVariantCaps: "all-small-caps",
+                letterSpacing: "0.04em",
+              }}
+            >
               Tool
             </span>
-            <span style={{ fontSize: "10px", color: "var(--fg-subtle)", fontVariantCaps: "all-small-caps", letterSpacing: "0.04em" }}>
+            <span
+              style={{
+                fontSize: "10px",
+                color: "var(--fg-subtle)",
+                fontVariantCaps: "all-small-caps",
+                letterSpacing: "0.04em",
+              }}
+            >
               Scope pattern (optional)
             </span>
           </div>
@@ -496,19 +712,28 @@ function AllowedToolsSection({
           {activeEntries.map(({ name, scope }) => {
             const toolDef = TOOL_NAMES.find((t) => t.name === name);
             return (
-              <div key={name} style={{
-                display: "grid", gridTemplateColumns: "100px 1fr auto",
-                alignItems: "center", gap: "6px",
-                padding: "5px 8px", marginBottom: "3px",
-                borderRadius: "6px",
-                border: "1px solid rgba(99,102,241,0.2)",
-                background: "var(--accent-light)",
-              }}>
-                <span style={{
-                  fontSize: "11px", fontWeight: 600,
-                  color: "var(--accent-text)",
-                  fontFamily: "ui-monospace, monospace",
-                }}>
+              <div
+                key={name}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "100px 1fr auto",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "5px 8px",
+                  marginBottom: "3px",
+                  borderRadius: "6px",
+                  border: "1px solid rgba(99,102,241,0.2)",
+                  background: "var(--accent-light)",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    color: "var(--accent-text)",
+                    fontFamily: "ui-monospace, monospace",
+                  }}
+                >
                   {name}
                 </span>
                 <input
@@ -520,7 +745,8 @@ function AllowedToolsSection({
                       : "all (leave blank for unrestricted)"
                   }
                   style={{
-                    fontSize: "11px", padding: "3px 7px",
+                    fontSize: "11px",
+                    padding: "3px 7px",
                     borderRadius: "4px",
                     border: "1px solid var(--border-base)",
                     background: "var(--bg-base)",
@@ -535,11 +761,16 @@ function AllowedToolsSection({
                   onClick={() => remove(name)}
                   title={`Remove ${name}`}
                   style={{
-                    border: "none", background: "none",
-                    color: "var(--fg-subtle)", cursor: "pointer",
-                    padding: "2px 4px", borderRadius: "3px",
-                    fontSize: "14px", lineHeight: 1,
-                    display: "flex", alignItems: "center",
+                    border: "none",
+                    background: "none",
+                    color: "var(--fg-subtle)",
+                    cursor: "pointer",
+                    padding: "2px 4px",
+                    borderRadius: "3px",
+                    fontSize: "14px",
+                    lineHeight: 1,
+                    display: "flex",
+                    alignItems: "center",
                   }}
                 >
                   <IconRemove />
@@ -553,11 +784,15 @@ function AllowedToolsSection({
       {/* Inactive tools — compact add buttons */}
       {inactiveTools.length > 0 && (
         <div>
-          <p style={{
-            fontSize: "10px", color: "var(--fg-placeholder)",
-            fontVariantCaps: "all-small-caps", letterSpacing: "0.04em",
-            margin: "0 0 5px",
-          }}>
+          <p
+            style={{
+              fontSize: "10px",
+              color: "var(--fg-placeholder)",
+              fontVariantCaps: "all-small-caps",
+              letterSpacing: "0.04em",
+              margin: "0 0 5px",
+            }}
+          >
             {activeEntries.length > 0 ? "Add another tool" : "Select tools"}
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
@@ -567,13 +802,16 @@ function AllowedToolsSection({
                 onClick={() => add(tool.name)}
                 title={tool.hint}
                 style={{
-                  display: "flex", alignItems: "center", gap: "4px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
                   padding: "4px 9px",
                   borderRadius: "5px",
                   border: "1px solid var(--border-subtle)",
                   background: "var(--bg-base)",
                   cursor: "pointer",
-                  fontSize: "11px", color: "var(--fg-muted)",
+                  fontSize: "11px",
+                  color: "var(--fg-muted)",
                   fontFamily: "ui-monospace, monospace",
                 }}
               >
@@ -597,7 +835,8 @@ function AllowedToolsSection({
 // ── Per-harness overrides ─────────────────────────────────────
 
 function HarnessOverridesSection({
-  overrides, onChange,
+  overrides,
+  onChange,
 }: {
   overrides: Record<string, HarnessPermissionOverride>;
   onChange: (next: Record<string, HarnessPermissionOverride>) => void;
@@ -627,29 +866,40 @@ function HarnessOverridesSection({
       <button
         onClick={() => setOpen((o) => !o)}
         style={{
-          display: "flex", alignItems: "center", gap: "6px",
-          background: "none", border: "none", padding: 0, cursor: "pointer",
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+          background: "none",
+          border: "none",
+          padding: 0,
+          cursor: "pointer",
           color: "var(--fg-subtle)",
         }}
       >
         <IconChevron open={open} />
-        <span style={{
-          fontSize: "11px", fontWeight: 500,
-          fontVariantCaps: "all-small-caps", letterSpacing: "0.04em",
-          color: "var(--fg-subtle)",
-        }}>
+        <span
+          style={{
+            fontSize: "11px",
+            fontWeight: 500,
+            fontVariantCaps: "all-small-caps",
+            letterSpacing: "0.04em",
+            color: "var(--fg-subtle)",
+          }}
+        >
           Per-harness overrides
         </span>
       </button>
 
       {open && (
-        <div style={{
-          marginTop: "10px",
-          background: "var(--bg-surface)",
-          border: "1px solid var(--border-base)",
-          borderRadius: "7px",
-          overflow: "hidden",
-        }}>
+        <div
+          style={{
+            marginTop: "10px",
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-base)",
+            borderRadius: "7px",
+            overflow: "hidden",
+          }}
+        >
           {BUILTIN_HARNESSES.map((harness, i) => {
             const override = overrides[harness.id];
             const effective = override?.mode;
@@ -657,9 +907,12 @@ function HarnessOverridesSection({
               <div
                 key={harness.id}
                 style={{
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
                   padding: "9px 12px",
-                  borderBottom: i < BUILTIN_HARNESSES.length - 1 ? "1px solid var(--separator)" : "none",
+                  borderBottom:
+                    i < BUILTIN_HARNESSES.length - 1 ? "1px solid var(--separator)" : "none",
                 }}
               >
                 <span style={{ fontSize: "12px", fontWeight: 500, color: "var(--fg-base)" }}>
@@ -669,11 +922,14 @@ function HarnessOverridesSection({
                   <button
                     onClick={() => setHarnessMode(harness.id, undefined)}
                     style={{
-                      fontSize: "10px", padding: "3px 8px", borderRadius: "4px",
+                      fontSize: "10px",
+                      padding: "3px 8px",
+                      borderRadius: "4px",
                       border: "1px solid var(--border-base)",
                       background: effective === undefined ? "var(--bg-base)" : "transparent",
                       color: effective === undefined ? "var(--fg-base)" : "var(--fg-subtle)",
-                      cursor: "pointer", fontWeight: effective === undefined ? 500 : 400,
+                      cursor: "pointer",
+                      fontWeight: effective === undefined ? 500 : 400,
                     }}
                   >
                     Global
@@ -683,11 +939,14 @@ function HarnessOverridesSection({
                       key={m.value}
                       onClick={() => setHarnessMode(harness.id, m.value)}
                       style={{
-                        fontSize: "10px", padding: "3px 8px", borderRadius: "4px",
+                        fontSize: "10px",
+                        padding: "3px 8px",
+                        borderRadius: "4px",
                         border: "1px solid var(--border-base)",
                         background: effective === m.value ? "var(--accent-light)" : "transparent",
                         color: effective === m.value ? "var(--accent-text)" : "var(--fg-subtle)",
-                        cursor: "pointer", fontWeight: effective === m.value ? 500 : 400,
+                        cursor: "pointer",
+                        fontWeight: effective === m.value ? 500 : 400,
                       }}
                     >
                       {m.label}
@@ -725,14 +984,18 @@ export default function PermissionsPage() {
   const [presets, setPresets] = useState<SecurityPreset[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tauriAvailable] = useState(() =>
-    typeof window !== "undefined" && !!(window as unknown as Record<string, unknown>).__TAURI_INTERNALS__
+  const [tauriAvailable] = useState(
+    () =>
+      typeof window !== "undefined" &&
+      !!(window as unknown as Record<string, unknown>).__TAURI_INTERNALS__,
   );
   const [saving, setSaving] = useState(false);
   const [confirmPreset, setConfirmPreset] = useState<SecurityPreset | null>(null);
   const [dirty, setDirty] = useState(false);
   const [harnessHealth, setHarnessHealth] = useState<HarnessHealthRecord[]>([]);
-  const [resilienceConfig, setResilienceConfigState] = useState<ResilienceConfigMap>(() => getResilienceConfig());
+  const [resilienceConfig, setResilienceConfigState] = useState<ResilienceConfigMap>(() =>
+    getResilienceConfig(),
+  );
 
   const [budgetGuard, setBudgetGuardState] = useState<BudgetGuardConfig>(() => getBudgetGuard());
 
@@ -767,19 +1030,21 @@ export default function PermissionsPage() {
       return;
     }
     // Detect account plan and auto-unlock Auto mode if eligible.
-    detectClaudeAccount().then((info) => {
-      if (info.auto_mode_available) {
-        setAutoUnlockedState(true);
-        setAutoModeUnlocked(true);
-      } else {
-        // Revoke if account no longer qualifies (e.g. plan downgrade).
-        setAutoUnlockedState(false);
-        setAutoModeUnlocked(false);
-        if (getPermissionMode() === "auto") handleModeChange("skip");
-      }
-    }).catch(() => {
-      // claude CLI not available or not logged in — leave as stored preference.
-    });
+    detectClaudeAccount()
+      .then((info) => {
+        if (info.auto_mode_available) {
+          setAutoUnlockedState(true);
+          setAutoModeUnlocked(true);
+        } else {
+          // Revoke if account no longer qualifies (e.g. plan downgrade).
+          setAutoUnlockedState(false);
+          setAutoModeUnlocked(false);
+          if (getPermissionMode() === "auto") handleModeChange("skip");
+        }
+      })
+      .catch(() => {
+        // claude CLI not available or not logged in — leave as stored preference.
+      });
 
     Promise.all([readPermissions(), listSecurityPresets()])
       .then(([perms, presetList]) => {
@@ -907,15 +1172,19 @@ export default function PermissionsPage() {
     }
   }
 
-
   return (
     <div style={{ padding: "20px 24px", maxWidth: "700px" }}>
       {/* ── Page header ── */}
       <div style={{ marginBottom: "16px" }}>
-        <h1 style={{
-          fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px",
-          color: "var(--fg-base)", margin: "0 0 3px",
-        }}>
+        <h1
+          style={{
+            fontSize: "17px",
+            fontWeight: 600,
+            letterSpacing: "-0.3px",
+            color: "var(--fg-base)",
+            margin: "0 0 3px",
+          }}
+        >
           Permissions
         </h1>
         <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: 0 }}>
@@ -928,10 +1197,16 @@ export default function PermissionsPage() {
 
       {/* ── Permission Mode section ── */}
       <section style={{ marginBottom: "28px" }}>
-        <p style={{
-          fontSize: "11px", fontWeight: 500, fontVariantCaps: "all-small-caps",
-          letterSpacing: "0.04em", color: "var(--fg-subtle)", margin: "0 0 10px",
-        }}>
+        <p
+          style={{
+            fontSize: "11px",
+            fontWeight: 500,
+            fontVariantCaps: "all-small-caps",
+            letterSpacing: "0.04em",
+            color: "var(--fg-subtle)",
+            margin: "0 0 10px",
+          }}
+        >
           Task execution mode
         </p>
 
@@ -970,7 +1245,6 @@ export default function PermissionsPage() {
           />
         </div>
 
-
         {/* Allowed tools checklist — visible when mode is allowed-tools */}
         {mode === "allowed-tools" && (
           <AllowedToolsSection tools={allowedTools} onChange={handleToolsChange} />
@@ -984,9 +1258,13 @@ export default function PermissionsPage() {
           <button
             onClick={handleReset}
             style={{
-              fontSize: "11px", color: "var(--fg-subtle)",
-              background: "none", border: "none", padding: 0,
-              cursor: "pointer", textDecoration: "underline",
+              fontSize: "11px",
+              color: "var(--fg-subtle)",
+              background: "none",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              textDecoration: "underline",
               textUnderlineOffset: "2px",
             }}
           >
@@ -1004,33 +1282,53 @@ export default function PermissionsPage() {
       {/* ── Claude settings.json section ── */}
       <section>
         {!tauriAvailable && (
-          <div style={{
-            background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-            borderLeft: "3px solid var(--border-strong)", borderRadius: "8px",
-            padding: "10px 14px", fontSize: "12px", color: "var(--fg-muted)",
-            marginBottom: "14px",
-          }}>
+          <div
+            style={{
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border-base)",
+              borderLeft: "3px solid var(--border-strong)",
+              borderRadius: "8px",
+              padding: "10px 14px",
+              fontSize: "12px",
+              color: "var(--fg-muted)",
+              marginBottom: "14px",
+            }}
+          >
             Claude settings.json editing requires the desktop app.
           </div>
         )}
         {tauriAvailable && loading && !error && (
-          <p style={{ fontSize: "12px", color: "var(--fg-subtle)", margin: "0 0 14px" }}>Loading…</p>
+          <p style={{ fontSize: "12px", color: "var(--fg-subtle)", margin: "0 0 14px" }}>
+            Loading…
+          </p>
         )}
         {tauriAvailable && error && (
-          <div style={{
-            background: "var(--bg-surface)", border: "1px solid var(--danger-light)",
-            borderLeft: "3px solid var(--danger)", borderRadius: "8px",
-            padding: "10px 14px", fontSize: "12px", color: "var(--danger)",
-            marginBottom: "14px",
-          }}>
+          <div
+            style={{
+              background: "var(--bg-surface)",
+              border: "1px solid var(--danger-light)",
+              borderLeft: "3px solid var(--danger)",
+              borderRadius: "8px",
+              padding: "10px 14px",
+              fontSize: "12px",
+              color: "var(--danger)",
+              marginBottom: "14px",
+            }}
+          >
             {error}
           </div>
         )}
         <div style={{ marginBottom: "14px" }}>
-          <p style={{
-            fontSize: "11px", fontWeight: 500, fontVariantCaps: "all-small-caps",
-            letterSpacing: "0.04em", color: "var(--fg-subtle)", margin: "0 0 2px",
-          }}>
+          <p
+            style={{
+              fontSize: "11px",
+              fontWeight: 500,
+              fontVariantCaps: "all-small-caps",
+              letterSpacing: "0.04em",
+              color: "var(--fg-subtle)",
+              margin: "0 0 2px",
+            }}
+          >
             Claude settings.json
           </p>
           <p style={{ fontSize: "11px", color: "var(--fg-placeholder)", margin: 0 }}>
@@ -1052,11 +1350,21 @@ export default function PermissionsPage() {
                     border: "1px solid var(--border-base)",
                     borderLeft: `3px solid ${PRESET_COLORS[preset.name] ?? "var(--border-base)"}`,
                     borderRadius: "6px",
-                    cursor: "pointer", textAlign: "left",
+                    cursor: "pointer",
+                    textAlign: "left",
                   }}
                 >
-                  <div style={{ fontSize: "11px", fontWeight: 600, color: "var(--fg-base)" }}>{preset.name}</div>
-                  <div style={{ fontSize: "10px", color: "var(--fg-subtle)", marginTop: "1px", lineHeight: 1.3 }}>
+                  <div style={{ fontSize: "11px", fontWeight: 600, color: "var(--fg-base)" }}>
+                    {preset.name}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "10px",
+                      color: "var(--fg-subtle)",
+                      marginTop: "1px",
+                      lineHeight: 1.3,
+                    }}
+                  >
                     {preset.description}
                   </div>
                 </button>
@@ -1067,12 +1375,18 @@ export default function PermissionsPage() {
 
         {/* Preset confirm */}
         {confirmPreset && (
-          <div style={{
-            background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-            borderRadius: "8px", padding: "12px 14px", marginBottom: "14px",
-          }}>
+          <div
+            style={{
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border-base)",
+              borderRadius: "8px",
+              padding: "12px 14px",
+              marginBottom: "14px",
+            }}
+          >
             <p style={{ fontSize: "12px", color: "var(--fg-base)", margin: "0 0 10px" }}>
-              Apply <strong>{confirmPreset.name}</strong> preset? This will overwrite current settings.
+              Apply <strong>{confirmPreset.name}</strong> preset? This will overwrite current
+              settings.
             </p>
             <div style={{ display: "flex", gap: "6px" }}>
               <button
@@ -1092,43 +1406,77 @@ export default function PermissionsPage() {
         {permissions && (
           <>
             {/* Unified card */}
-            <div style={{
-              background: "var(--bg-surface)",
-              border: "1px solid var(--border-base)",
-              borderRadius: "10px",
-              overflow: "hidden",
-              marginBottom: "14px",
-            }}>
+            <div
+              style={{
+                background: "var(--bg-surface)",
+                border: "1px solid var(--border-base)",
+                borderRadius: "10px",
+                overflow: "hidden",
+                marginBottom: "14px",
+              }}
+            >
               {/* Tools */}
               <div style={{ padding: "14px 16px" }}>
-                <p style={{
-                  fontSize: "11px", fontWeight: 500, fontVariantCaps: "all-small-caps",
-                  letterSpacing: "0.04em", color: "var(--fg-subtle)", margin: "0 0 12px",
-                }}>
+                <p
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 500,
+                    fontVariantCaps: "all-small-caps",
+                    letterSpacing: "0.04em",
+                    color: "var(--fg-subtle)",
+                    margin: "0 0 12px",
+                  }}
+                >
                   Tools
                 </p>
                 {(() => {
-                  const allTools = [...permissions.tools.allow, ...permissions.tools.deny, ...permissions.tools.ask];
-                  const rows: { key: "allow" | "deny" | "ask"; label: string; color: string; chipColor: "green" | "red" | "amber" }[] = [
+                  const allTools = [
+                    ...permissions.tools.allow,
+                    ...permissions.tools.deny,
+                    ...permissions.tools.ask,
+                  ];
+                  const rows: {
+                    key: "allow" | "deny" | "ask";
+                    label: string;
+                    color: string;
+                    chipColor: "green" | "red" | "amber";
+                  }[] = [
                     { key: "allow", label: "Allow", color: "#16a34a", chipColor: "green" },
-                    { key: "deny",  label: "Deny",  color: "#dc2626", chipColor: "red"   },
-                    { key: "ask",   label: "Ask",   color: "#d97706", chipColor: "amber" },
+                    { key: "deny", label: "Deny", color: "#dc2626", chipColor: "red" },
+                    { key: "ask", label: "Ask", color: "#d97706", chipColor: "amber" },
                   ];
                   return (
                     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                       {rows.map(({ key, label, color, chipColor }) => (
                         <div key={key} style={{ display: "flex", gap: "10px" }}>
-                          <span style={{
-                            fontSize: "11px", fontWeight: 600, color,
-                            minWidth: "38px", paddingTop: "5px",
-                          }}>
+                          <span
+                            style={{
+                              fontSize: "11px",
+                              fontWeight: 600,
+                              color,
+                              minWidth: "38px",
+                              paddingTop: "5px",
+                            }}
+                          >
                             {label}
                           </span>
                           <div style={{ flex: 1 }}>
                             {permissions.tools[key].length > 0 && (
-                              <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "4px" }}>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  flexWrap: "wrap",
+                                  gap: "4px",
+                                  marginBottom: "4px",
+                                }}
+                              >
                                 {permissions.tools[key].map((t) => (
-                                  <Chip key={t} label={t} color={chipColor} onRemove={() => removeFromList(key, t)} />
+                                  <Chip
+                                    key={t}
+                                    label={t}
+                                    color={chipColor}
+                                    onRemove={() => removeFromList(key, t)}
+                                  />
                                 ))}
                               </div>
                             )}
@@ -1150,10 +1498,16 @@ export default function PermissionsPage() {
 
               {/* Paths */}
               <div style={{ padding: "14px 16px" }}>
-                <p style={{
-                  fontSize: "11px", fontWeight: 500, fontVariantCaps: "all-small-caps",
-                  letterSpacing: "0.04em", color: "var(--fg-subtle)", margin: "0 0 12px",
-                }}>
+                <p
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 500,
+                    fontVariantCaps: "all-small-caps",
+                    letterSpacing: "0.04em",
+                    color: "var(--fg-subtle)",
+                    margin: "0 0 12px",
+                  }}
+                >
                   Paths
                 </p>
                 {(() => {
@@ -1161,26 +1515,78 @@ export default function PermissionsPage() {
                   return (
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
                       <div>
-                        <p style={{ fontSize: "11px", fontWeight: 600, color: "#16a34a", margin: "0 0 6px" }}>Writable</p>
+                        <p
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: 600,
+                            color: "#16a34a",
+                            margin: "0 0 6px",
+                          }}
+                        >
+                          Writable
+                        </p>
                         {permissions.paths.writable.length > 0 && (
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "4px" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              flexWrap: "wrap",
+                              gap: "4px",
+                              marginBottom: "4px",
+                            }}
+                          >
                             {permissions.paths.writable.map((p) => (
-                              <Chip key={p} label={p} color="green" onRemove={() => removeFromList("writable", p)} />
+                              <Chip
+                                key={p}
+                                label={p}
+                                color="green"
+                                onRemove={() => removeFromList("writable", p)}
+                              />
                             ))}
                           </div>
                         )}
-                        <SuggestInput onAdd={(v) => addToList("writable", v)} placeholder="Add path…" suggestions={PATH_SUGGESTIONS} existing={allPaths} />
+                        <SuggestInput
+                          onAdd={(v) => addToList("writable", v)}
+                          placeholder="Add path…"
+                          suggestions={PATH_SUGGESTIONS}
+                          existing={allPaths}
+                        />
                       </div>
                       <div>
-                        <p style={{ fontSize: "11px", fontWeight: 600, color: "#d97706", margin: "0 0 6px" }}>Read-only</p>
+                        <p
+                          style={{
+                            fontSize: "11px",
+                            fontWeight: 600,
+                            color: "#d97706",
+                            margin: "0 0 6px",
+                          }}
+                        >
+                          Read-only
+                        </p>
                         {permissions.paths.readonly.length > 0 && (
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "4px" }}>
+                          <div
+                            style={{
+                              display: "flex",
+                              flexWrap: "wrap",
+                              gap: "4px",
+                              marginBottom: "4px",
+                            }}
+                          >
                             {permissions.paths.readonly.map((p) => (
-                              <Chip key={p} label={p} color="amber" onRemove={() => removeFromList("readonly", p)} />
+                              <Chip
+                                key={p}
+                                label={p}
+                                color="amber"
+                                onRemove={() => removeFromList("readonly", p)}
+                              />
                             ))}
                           </div>
                         )}
-                        <SuggestInput onAdd={(v) => addToList("readonly", v)} placeholder="Add path…" suggestions={PATH_SUGGESTIONS} existing={allPaths} />
+                        <SuggestInput
+                          onAdd={(v) => addToList("readonly", v)}
+                          placeholder="Add path…"
+                          suggestions={PATH_SUGGESTIONS}
+                          existing={allPaths}
+                        />
                       </div>
                     </div>
                   );
@@ -1191,20 +1597,38 @@ export default function PermissionsPage() {
 
               {/* Network */}
               <div style={{ padding: "14px 16px" }}>
-                <p style={{
-                  fontSize: "11px", fontWeight: 500, fontVariantCaps: "all-small-caps",
-                  letterSpacing: "0.04em", color: "var(--fg-subtle)", margin: "0 0 12px",
-                }}>
+                <p
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 500,
+                    fontVariantCaps: "all-small-caps",
+                    letterSpacing: "0.04em",
+                    color: "var(--fg-subtle)",
+                    margin: "0 0 12px",
+                  }}
+                >
                   Network — Allowed Hosts
                 </p>
                 {permissions.network.allowedHosts.length > 0 && (
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "4px" }}>
+                  <div
+                    style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "4px" }}
+                  >
                     {permissions.network.allowedHosts.map((h) => (
-                      <Chip key={h} label={h} color="green" onRemove={() => removeFromList("allowedHosts", h)} />
+                      <Chip
+                        key={h}
+                        label={h}
+                        color="green"
+                        onRemove={() => removeFromList("allowedHosts", h)}
+                      />
                     ))}
                   </div>
                 )}
-                <SuggestInput onAdd={(v) => addToList("allowedHosts", v)} placeholder="Add host…" suggestions={HOST_SUGGESTIONS} existing={permissions.network.allowedHosts} />
+                <SuggestInput
+                  onAdd={(v) => addToList("allowedHosts", v)}
+                  placeholder="Add host…"
+                  suggestions={HOST_SUGGESTIONS}
+                  existing={permissions.network.allowedHosts}
+                />
               </div>
             </div>
 
@@ -1223,18 +1647,22 @@ export default function PermissionsPage() {
 
       {/* ── Daily Budget Guard ─────────────────────────────────── */}
       <section style={{ marginTop: "32px" }}>
-        <h2 style={{ fontSize: "14px", fontWeight: 600, color: "var(--fg-base)", margin: "0 0 12px" }}>
+        <h2
+          style={{ fontSize: "14px", fontWeight: 600, color: "var(--fg-base)", margin: "0 0 12px" }}
+        >
           Daily Budget Guard
         </h2>
-        <div style={{
-          background: "var(--bg-surface)",
-          border: "1px solid var(--border-base)",
-          borderRadius: "8px",
-          padding: "16px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "14px",
-        }}>
+        <div
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-base)",
+            borderRadius: "8px",
+            padding: "16px",
+            display: "flex",
+            flexDirection: "column",
+            gap: "14px",
+          }}
+        >
           {/* Enable toggle */}
           <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer" }}>
             <input
@@ -1252,7 +1680,15 @@ export default function PermissionsPage() {
             <>
               {/* Token limit */}
               <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                <label
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    color: "var(--fg-subtle)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                  }}
+                >
                   Daily token limit (optional)
                 </label>
                 <input
@@ -1261,20 +1697,34 @@ export default function PermissionsPage() {
                   step={10000}
                   placeholder="e.g. 500000"
                   value={budgetGuard.dailyTokenLimit ?? ""}
-                  onChange={(e) => handleBudgetGuardChange({
-                    dailyTokenLimit: e.target.value ? Number(e.target.value) : undefined,
-                  })}
+                  onChange={(e) =>
+                    handleBudgetGuardChange({
+                      dailyTokenLimit: e.target.value ? Number(e.target.value) : undefined,
+                    })
+                  }
                   style={{
-                    fontSize: "13px", padding: "7px 10px", borderRadius: "6px",
-                    border: "1px solid var(--border-base)", background: "var(--bg-elevated)",
-                    color: "var(--fg-base)", width: "200px",
+                    fontSize: "13px",
+                    padding: "7px 10px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-base)",
+                    background: "var(--bg-elevated)",
+                    color: "var(--fg-base)",
+                    width: "200px",
                   }}
                 />
               </div>
 
               {/* Cost limit */}
               <div style={{ display: "flex", flexDirection: "column", gap: "5px" }}>
-                <label style={{ fontSize: "11px", fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                <label
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 600,
+                    color: "var(--fg-subtle)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                  }}
+                >
                   Daily cost limit in USD (optional)
                 </label>
                 <input
@@ -1283,20 +1733,26 @@ export default function PermissionsPage() {
                   step={0.5}
                   placeholder="e.g. 5.00"
                   value={budgetGuard.dailyEstimatedCostUSD ?? ""}
-                  onChange={(e) => handleBudgetGuardChange({
-                    dailyEstimatedCostUSD: e.target.value ? Number(e.target.value) : undefined,
-                  })}
+                  onChange={(e) =>
+                    handleBudgetGuardChange({
+                      dailyEstimatedCostUSD: e.target.value ? Number(e.target.value) : undefined,
+                    })
+                  }
                   style={{
-                    fontSize: "13px", padding: "7px 10px", borderRadius: "6px",
-                    border: "1px solid var(--border-base)", background: "var(--bg-elevated)",
-                    color: "var(--fg-base)", width: "200px",
+                    fontSize: "13px",
+                    padding: "7px 10px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--border-base)",
+                    background: "var(--bg-elevated)",
+                    color: "var(--fg-base)",
+                    width: "200px",
                   }}
                 />
               </div>
 
               <p style={{ margin: 0, fontSize: "12px", color: "var(--fg-subtle)" }}>
-                When today's usage exceeds a limit, an alert banner appears in Observatory.
-                Limits are checked against estimated cost using Anthropic public pricing.
+                When today's usage exceeds a limit, an alert banner appears in Observatory. Limits
+                are checked against estimated cost using Anthropic public pricing.
               </p>
             </>
           )}
@@ -1308,14 +1764,25 @@ export default function PermissionsPage() {
 
       {/* ── Harness Resilience Profiles section ── */}
       <section>
-        <div style={{
-          background: "var(--bg-surface)",
-          border: "1px solid var(--border-base)",
-          borderRadius: "8px",
-          overflow: "hidden",
-        }}>
+        <div
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-base)",
+            borderRadius: "8px",
+            overflow: "hidden",
+          }}
+        >
           <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-base)" }}>
-            <p style={{ fontSize: "11px", fontWeight: 500, fontVariantCaps: "all-small-caps", letterSpacing: "0.03em", color: "var(--fg-subtle)", margin: 0 }}>
+            <p
+              style={{
+                fontSize: "11px",
+                fontWeight: 500,
+                fontVariantCaps: "all-small-caps",
+                letterSpacing: "0.03em",
+                color: "var(--fg-subtle)",
+                margin: 0,
+              }}
+            >
               Harness Resilience Profiles
             </p>
           </div>
@@ -1325,7 +1792,14 @@ export default function PermissionsPage() {
               No harness launch history yet. Health data appears after your first comparison.
             </div>
           ) : (
-            <div style={{ padding: "14px 16px", display: "flex", flexDirection: "column", gap: "12px" }}>
+            <div
+              style={{
+                padding: "14px 16px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "12px",
+              }}
+            >
               {harnessHealth.map((rec) => {
                 const cfg = resilienceConfig[rec.harnessId];
                 const profile = cfg?.profile ?? "balanced";
@@ -1350,13 +1824,22 @@ export default function PermissionsPage() {
                   >
                     {/* Header row */}
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span style={{ fontSize: "12px", fontWeight: 600, color: "var(--fg-base)", flex: 1 }}>
+                      <span
+                        style={{
+                          fontSize: "12px",
+                          fontWeight: 600,
+                          color: "var(--fg-base)",
+                          flex: 1,
+                        }}
+                      >
                         {rec.harnessId}
                       </span>
-                      <span style={{
-                        fontSize: "10px",
-                        color: rec.consecutiveFailures > 0 ? "var(--danger)" : "var(--fg-subtle)",
-                      }}>
+                      <span
+                        style={{
+                          fontSize: "10px",
+                          color: rec.consecutiveFailures > 0 ? "var(--danger)" : "var(--fg-subtle)",
+                        }}
+                      >
                         {rec.consecutiveFailures > 0
                           ? `${rec.consecutiveFailures} consecutive failure${rec.consecutiveFailures !== 1 ? "s" : ""}`
                           : `${rec.totalLaunches} launch${rec.totalLaunches !== 1 ? "es" : ""}, no failures`}
@@ -1365,34 +1848,44 @@ export default function PermissionsPage() {
 
                     {/* Profile selector */}
                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                      <span style={{ fontSize: "10px", color: "var(--fg-subtle)", minWidth: "60px" }}>Profile</span>
+                      <span
+                        style={{ fontSize: "10px", color: "var(--fg-subtle)", minWidth: "60px" }}
+                      >
+                        Profile
+                      </span>
                       <div style={{ display: "flex", gap: "4px" }}>
-                        {(["conservative", "balanced", "aggressive"] as ResilienceProfile[]).map((p) => (
-                          <button
-                            key={p}
-                            data-testid={`profile-btn-${rec.harnessId}-${p}`}
-                            onClick={() => handleResilienceProfileChange(rec.harnessId, p)}
-                            style={{
-                              fontSize: "10px",
-                              fontWeight: profile === p ? 600 : 400,
-                              padding: "2px 8px",
-                              borderRadius: "4px",
-                              border: `1px solid ${profile === p ? "var(--accent)" : "var(--border-base)"}`,
-                              background: profile === p ? "rgba(91,80,232,0.12)" : "transparent",
-                              color: profile === p ? "var(--accent-text)" : "var(--fg-muted)",
-                              cursor: "pointer",
-                            }}
-                          >
-                            {PROFILE_LABELS[p]}
-                          </button>
-                        ))}
+                        {(["conservative", "balanced", "aggressive"] as ResilienceProfile[]).map(
+                          (p) => (
+                            <button
+                              key={p}
+                              data-testid={`profile-btn-${rec.harnessId}-${p}`}
+                              onClick={() => handleResilienceProfileChange(rec.harnessId, p)}
+                              style={{
+                                fontSize: "10px",
+                                fontWeight: profile === p ? 600 : 400,
+                                padding: "2px 8px",
+                                borderRadius: "4px",
+                                border: `1px solid ${profile === p ? "var(--accent)" : "var(--border-base)"}`,
+                                background: profile === p ? "rgba(91,80,232,0.12)" : "transparent",
+                                color: profile === p ? "var(--accent-text)" : "var(--fg-muted)",
+                                cursor: "pointer",
+                              }}
+                            >
+                              {PROFILE_LABELS[p]}
+                            </button>
+                          ),
+                        )}
                       </div>
                     </div>
 
                     {/* Fallback selector */}
                     {otherHarnesses.length > 0 && (
                       <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                        <span style={{ fontSize: "10px", color: "var(--fg-subtle)", minWidth: "60px" }}>Fallback</span>
+                        <span
+                          style={{ fontSize: "10px", color: "var(--fg-subtle)", minWidth: "60px" }}
+                        >
+                          Fallback
+                        </span>
                         <select
                           value={fallback}
                           onChange={(e) => handleFallbackChange(rec.harnessId, e.target.value)}
@@ -1408,7 +1901,9 @@ export default function PermissionsPage() {
                         >
                           <option value="">None</option>
                           {otherHarnesses.map((id) => (
-                            <option key={id} value={id}>{id}</option>
+                            <option key={id} value={id}>
+                              {id}
+                            </option>
                           ))}
                         </select>
                       </div>

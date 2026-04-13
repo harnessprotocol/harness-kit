@@ -1,15 +1,22 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { ComparisonPhase, ComparisonSummary, HarnessRecommendation, TaskType } from "@harness-kit/shared";
+import type {
+  ComparisonPhase,
+  ComparisonSummary,
+  HarnessRecommendation,
+  TaskType,
+} from "@harness-kit/shared";
 import { invoke } from "@tauri-apps/api/core";
-import { useComparator } from "../../hooks/useComparator";
-import SetupPhase from "./SetupPhase";
-import ExecutionPhase from "./ExecutionPhase";
-import ResultsPhase from "./ResultsPhase";
-import JudgePhase from "./JudgePhase";
-import RecommendationsPanel, { TaskTypeSelector } from "../../components/comparator/RecommendationsPanel";
+import { useCallback, useEffect, useRef, useState } from "react";
 import AccountStatusBadge from "../../components/AccountStatusBadge";
-import { detectClaudeAccount } from "../../lib/tauri";
+import RecommendationsPanel, {
+  TaskTypeSelector,
+} from "../../components/comparator/RecommendationsPanel";
+import { useComparator } from "../../hooks/useComparator";
 import type { ClaudeAccountInfo } from "../../lib/tauri";
+import { detectClaudeAccount } from "../../lib/tauri";
+import ExecutionPhase from "./ExecutionPhase";
+import JudgePhase from "./JudgePhase";
+import ResultsPhase from "./ResultsPhase";
+import SetupPhase from "./SetupPhase";
 
 // ── Design Tokens ───────────────────────────────────────────
 
@@ -309,7 +316,16 @@ function formatSessionTime(iso: string): string {
 
 function CheckIcon() {
   return (
-    <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <polyline points="3 8 7 12 13 4" />
     </svg>
   );
@@ -319,7 +335,15 @@ function CheckIcon() {
 
 function PlusIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+    >
       <line x1="8" y1="2" x2="8" y2="14" />
       <line x1="2" y1="8" x2="14" y2="8" />
     </svg>
@@ -350,7 +374,11 @@ function PhaseStepper({
             ? { background: tokens.success, color: "#fff", border: `2px solid ${tokens.success}` }
             : isActive
               ? { background: tokens.accent, color: "#fff", border: `2px solid ${tokens.accent}` }
-              : { background: "transparent", color: tokens.fgPlaceholder, border: `2px solid ${tokens.borderStrong}` }),
+              : {
+                  background: "transparent",
+                  color: tokens.fgPlaceholder,
+                  border: `2px solid ${tokens.borderStrong}`,
+                }),
         };
 
         // Label styling
@@ -373,13 +401,20 @@ function PhaseStepper({
               role="button"
               style={styles.stepRow}
               onClick={() => onPhaseClick(p.key)}
-              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onPhaseClick(p.key); } }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = tokens.hoverBg; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onPhaseClick(p.key);
+                }
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = tokens.hoverBg;
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = "transparent";
+              }}
             >
-              <div style={dotStyle}>
-                {isDone ? <CheckIcon /> : p.step}
-              </div>
+              <div style={dotStyle}>{isDone ? <CheckIcon /> : p.step}</div>
               <span style={labelStyle}>{p.label}</span>
             </div>
             {i < PHASES.length - 1 && <div className="stepper-line-animated" style={lineStyle} />}
@@ -411,11 +446,7 @@ function SessionCard({
 
   const cardStyle: React.CSSProperties = {
     ...styles.sessionCard,
-    background: isActive
-      ? tokens.accentLight
-      : hovered
-        ? tokens.hoverBg
-        : "transparent",
+    background: isActive ? tokens.accentLight : hovered ? tokens.hoverBg : "transparent",
   };
 
   const dotStyle: React.CSSProperties = {
@@ -432,15 +463,18 @@ function SessionCard({
       onMouseLeave={() => setHovered(false)}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <span style={styles.sessionTitle}>
-          {session.title || "Untitled comparison"}
-        </span>
+        <span style={styles.sessionTitle}>{session.title || "Untitled comparison"}</span>
         {(hovered || confirmDelete) && (
           <button
             style={{
               ...styles.deleteBtn,
               ...(confirmDelete
-                ? { background: "rgba(220, 38, 38, 0.1)", color: tokens.danger, width: "auto", padding: "0 4px" }
+                ? {
+                    background: "rgba(220, 38, 38, 0.1)",
+                    color: tokens.danger,
+                    width: "auto",
+                    padding: "0 4px",
+                  }
                 : deleteHovered
                   ? { background: "rgba(220, 38, 38, 0.1)", color: tokens.danger }
                   : {}),
@@ -463,7 +497,15 @@ function SessionCard({
             {confirmDelete ? (
               <span style={{ fontSize: 9, fontWeight: 600, color: tokens.danger }}>Delete?</span>
             ) : (
-              <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <svg
+                width="10"
+                height="10"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
                 <line x1="4" y1="4" x2="12" y2="12" />
                 <line x1="12" y1="4" x2="4" y2="12" />
               </svg>
@@ -475,7 +517,9 @@ function SessionCard({
         <div className="comparator-pulse-dot" style={dotStyle} />
         <span style={styles.sessionTime}>{formatSessionTime(session.createdAt)}</span>
         {session.harnessNames.map((name) => (
-          <span key={name} style={styles.harnessBadge}>{name}</span>
+          <span key={name} style={styles.harnessBadge}>
+            {name}
+          </span>
         ))}
       </div>
     </div>
@@ -531,7 +575,9 @@ export default function ComparatorPage() {
   useEffect(() => {
     detectClaudeAccount()
       .then(setAccount)
-      .catch(() => setAccount({ logged_in: false, subscription_type: null, auto_mode_available: false }))
+      .catch(() =>
+        setAccount({ logged_in: false, subscription_type: null, auto_mode_available: false }),
+      )
       .finally(() => setAccountLoading(false));
   }, []);
 
@@ -570,7 +616,7 @@ export default function ComparatorPage() {
   // ── New comparison handler ──────────────────────────────────
 
   const handleNewComparison = useCallback(() => {
-    if (active && active.panels.some(p => p.status === "running")) {
+    if (active && active.panels.some((p) => p.status === "running")) {
       endSession();
     } else {
       setPhase("setup");
@@ -599,16 +645,25 @@ export default function ComparatorPage() {
         return (
           <div>
             {/* Account badge + task type selector — above the setup form */}
-            <div style={{ padding: "16px 24px 0", display: "flex", flexDirection: "column", gap: "10px" }}>
+            <div
+              style={{
+                padding: "16px 24px 0",
+                display: "flex",
+                flexDirection: "column",
+                gap: "10px",
+              }}
+            >
               <AccountStatusBadge account={account} monthlyTokens={0} loading={accountLoading} />
-              <span style={{
-                fontSize: "11px",
-                fontWeight: 600,
-                color: "var(--fg-subtle)",
-                textTransform: "uppercase",
-                letterSpacing: "0.06em",
-                fontFamily: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif',
-              }}>
+              <span
+                style={{
+                  fontSize: "11px",
+                  fontWeight: 600,
+                  color: "var(--fg-subtle)",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif',
+                }}
+              >
                 Task type (optional)
               </span>
               <TaskTypeSelector selected={taskType} onChange={setTaskType} />
@@ -642,11 +697,7 @@ export default function ComparatorPage() {
           <PhasePlaceholder phase="results" />
         );
       case "judge":
-        return active ? (
-          <JudgePhase active={active} />
-        ) : (
-          <PhasePlaceholder phase="judge" />
-        );
+        return active ? <JudgePhase active={active} /> : <PhasePlaceholder phase="judge" />;
       default:
         return <SetupPhase onStart={handleStart} />;
     }
@@ -688,26 +739,39 @@ export default function ComparatorPage() {
         {/* Session list */}
         <div style={styles.sessionsList} className="comparator-rail">
           {sessions.length === 0 ? (
-            <div style={{
-              padding: "24px 12px",
-              textAlign: "center",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 8,
-            }}>
-              <div style={{
-                width: 36,
-                height: 36,
-                borderRadius: 8,
-                background: tokens.bgElevated,
+            <div
+              style={{
+                padding: "24px 12px",
+                textAlign: "center",
                 display: "flex",
+                flexDirection: "column",
                 alignItems: "center",
-                justifyContent: "center",
-                color: tokens.fgPlaceholder,
-              }}>
+                gap: 8,
+              }}
+            >
+              <div
+                style={{
+                  width: 36,
+                  height: 36,
+                  borderRadius: 8,
+                  background: tokens.bgElevated,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: tokens.fgPlaceholder,
+                }}
+              >
                 {/* Split comparison icon */}
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
                   <rect x="2" y="3" width="20" height="18" rx="2" />
                   <path d="M12 3v18" />
                 </svg>
@@ -715,7 +779,14 @@ export default function ComparatorPage() {
               <span style={{ fontSize: 11, color: tokens.fgPlaceholder, fontFamily: fontStack }}>
                 No sessions yet
               </span>
-              <span style={{ fontSize: 10, color: tokens.fgPlaceholder, opacity: 0.7, fontFamily: fontStack }}>
+              <span
+                style={{
+                  fontSize: 10,
+                  color: tokens.fgPlaceholder,
+                  opacity: 0.7,
+                  fontFamily: fontStack,
+                }}
+              >
                 Click <strong>New Comparison</strong> to start
               </span>
             </div>
@@ -734,9 +805,7 @@ export default function ComparatorPage() {
       </div>
 
       {/* ── Content area ─────────────────────────────────────── */}
-      <div style={styles.content}>
-        {renderPhaseContent()}
-      </div>
+      <div style={styles.content}>{renderPhaseContent()}</div>
     </div>
   );
 }

@@ -1,10 +1,10 @@
-import { Tooltip } from './Tooltip';
+import { Tooltip } from "./Tooltip";
 
-export type ViewMode = 'columns' | 'swimlane';
+export type ViewMode = "columns" | "swimlane";
 
 const VIEW_TOOLTIPS: Record<ViewMode, string> = {
-  columns: 'Column view — tasks grouped by status',
-  swimlane: 'Swimlane view — rows by epic, columns by status',
+  columns: "Column view — tasks grouped by status",
+  swimlane: "Swimlane view — rows by epic, columns by status",
 };
 
 interface Props {
@@ -16,41 +16,41 @@ export function ViewToggle({ mode, onChange }: Props) {
   return (
     <div
       style={{
-        display: 'flex',
-        background: 'var(--bg-elevated)',
+        display: "flex",
+        background: "var(--bg-elevated)",
         borderRadius: 6,
-        border: '1px solid var(--border-subtle)',
+        border: "1px solid var(--border-subtle)",
         padding: 2,
         gap: 2,
       }}
     >
-      {(['columns', 'swimlane'] as ViewMode[]).map(v => (
+      {(["columns", "swimlane"] as ViewMode[]).map((v) => (
         <Tooltip key={v} text={VIEW_TOOLTIPS[v]} position="bottom">
           <button
             onClick={() => onChange(v)}
-            title={v === 'columns' ? 'Column view' : 'Swimlane view'}
+            title={v === "columns" ? "Column view" : "Swimlane view"}
             style={{
-              padding: '4px 10px',
+              padding: "4px 10px",
               borderRadius: 4,
-              border: 'none',
-              background: mode === v ? 'var(--bg-hover)' : 'transparent',
-              color: mode === v ? 'var(--text-primary)' : 'var(--text-muted)',
+              border: "none",
+              background: mode === v ? "var(--bg-hover)" : "transparent",
+              color: mode === v ? "var(--text-primary)" : "var(--text-muted)",
               fontSize: 12,
               fontWeight: mode === v ? 600 : 400,
-              cursor: 'pointer',
-              transition: 'all 0.1s',
-              display: 'flex',
-              alignItems: 'center',
+              cursor: "pointer",
+              transition: "all 0.1s",
+              display: "flex",
+              alignItems: "center",
               gap: 5,
             }}
           >
-            {v === 'columns' ? (
+            {v === "columns" ? (
               <>
-                <span style={{ fontSize: 13 }}>{'\u2833'}</span> Columns
+                <span style={{ fontSize: 13 }}>{"\u2833"}</span> Columns
               </>
             ) : (
               <>
-                <span style={{ fontSize: 13 }}>{'\u2261'}</span> Swimlane
+                <span style={{ fontSize: 13 }}>{"\u2261"}</span> Swimlane
               </>
             )}
           </button>

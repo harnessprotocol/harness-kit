@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
 import type { HarnessInfo } from "@harness-kit/shared";
+import { invoke } from "@tauri-apps/api/core";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -268,7 +268,10 @@ const styles = {
 function GitBranchIcon() {
   return (
     <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor">
-      <path fillRule="evenodd" d="M11.75 2.5a.75.75 0 100 1.5.75.75 0 000-1.5zm-2.25.75a2.25 2.25 0 113 2.122V6A2.5 2.5 0 0110 8.5H6a1 1 0 00-1 1v1.128a2.251 2.251 0 11-1.5 0V5.372a2.25 2.25 0 111.5 0v1.836A2.492 2.492 0 016 7h4a1 1 0 001-1v-.628A2.25 2.25 0 019.5 3.25zM4.25 12a.75.75 0 100 1.5.75.75 0 000-1.5zM3.5 3.25a.75.75 0 111.5 0 .75.75 0 01-1.5 0z" />
+      <path
+        fillRule="evenodd"
+        d="M11.75 2.5a.75.75 0 100 1.5.75.75 0 000-1.5zm-2.25.75a2.25 2.25 0 113 2.122V6A2.5 2.5 0 0110 8.5H6a1 1 0 00-1 1v1.128a2.251 2.251 0 11-1.5 0V5.372a2.25 2.25 0 111.5 0v1.836A2.492 2.492 0 016 7h4a1 1 0 001-1v-.628A2.25 2.25 0 019.5 3.25zM4.25 12a.75.75 0 100 1.5.75.75 0 000-1.5zM3.5 3.25a.75.75 0 111.5 0 .75.75 0 01-1.5 0z"
+      />
     </svg>
   );
 }
@@ -474,9 +477,7 @@ export default function SetupPhase({ onStart }: SetupPhaseProps) {
                   </span>
                 )}
                 {gitInfo.currentCommit && (
-                  <span style={styles.gitCommit}>
-                    {gitInfo.currentCommit.slice(0, 7)}
-                  </span>
+                  <span style={styles.gitCommit}>{gitInfo.currentCommit.slice(0, 7)}</span>
                 )}
               </>
             )}
@@ -486,12 +487,14 @@ export default function SetupPhase({ onStart }: SetupPhaseProps) {
         {/* ── Harnesses ──────────────────────────────────────── */}
         <div>
           <div style={styles.sectionLabel}>Harnesses</div>
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 8,
-          }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 8,
+            }}
+          >
             {/* Global model selector */}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <label
@@ -655,7 +658,12 @@ function HarnessCard({
       role="button"
       style={cardStyle}
       onClick={onToggle}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onToggle(); } }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onToggle();
+        }
+      }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
@@ -709,7 +717,16 @@ function HarnessCard({
             justifyContent: "center",
           }}
         >
-          <svg width="8" height="8" viewBox="0 0 16 16" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="8"
+            height="8"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="#fff"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <polyline points="3 8 7 12 13 4" />
           </svg>
         </div>

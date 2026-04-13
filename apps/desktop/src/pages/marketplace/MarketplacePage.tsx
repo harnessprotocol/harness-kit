@@ -1,14 +1,9 @@
-import { useEffect, useState, useMemo } from "react";
+import type { Category, Component, ComponentCategory, ComponentType } from "@harness-kit/shared";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { supabase } from "../../lib/supabase";
 import MarkdownPanel from "../../components/MarkdownPanel";
+import { supabase } from "../../lib/supabase";
 import { TrustBadge, TypeBadge } from "./components/PluginBadges";
-import type {
-  Component,
-  Category,
-  ComponentType,
-  ComponentCategory,
-} from "@harness-kit/shared";
 
 type ComponentTag = { component_id: string; tag_id: string };
 type TagRow = { id: string; slug: string };
@@ -59,7 +54,11 @@ export default function MarketplacePage() {
     }
 
     Promise.all([
-      supabase.from("components").select("id, slug, name, type, description, trust_tier, version, author, license, install_count, updated_at"),
+      supabase
+        .from("components")
+        .select(
+          "id, slug, name, type, description, trust_tier, version, author, license, install_count, updated_at",
+        ),
       supabase.from("categories").select("*").order("display_order"),
       supabase.from("component_categories").select("component_id, category_id"),
       supabase.from("component_tags").select("component_id, tag_id"),
@@ -158,9 +157,7 @@ export default function MarketplacePage() {
     if (query.trim()) {
       const q = query.toLowerCase();
       results = results.filter(
-        (c) =>
-          c.name.toLowerCase().includes(q) ||
-          c.description.toLowerCase().includes(q),
+        (c) => c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q),
       );
     }
 
@@ -180,9 +177,7 @@ export default function MarketplacePage() {
       const tagObj = tags.find((t) => t.slug === selectedTag);
       if (tagObj) {
         const ids = new Set(
-          componentTags
-            .filter((ct) => ct.tag_id === tagObj.id)
-            .map((ct) => ct.component_id),
+          componentTags.filter((ct) => ct.tag_id === tagObj.id).map((ct) => ct.component_id),
         );
         results = results.filter((c) => ids.has(c.id));
       }
@@ -193,16 +188,24 @@ export default function MarketplacePage() {
     }
 
     if (sortBy === "recent") {
-      results.sort(
-        (a, b) =>
-          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
-      );
+      results.sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
     } else {
       results.sort((a, b) => b.install_count - a.install_count);
     }
 
     return results;
-  }, [components, categories, componentCategories, componentTags, tags, query, selectedCategory, selectedTag, selectedType, sortBy]);
+  }, [
+    components,
+    categories,
+    componentCategories,
+    componentTags,
+    tags,
+    query,
+    selectedCategory,
+    selectedTag,
+    selectedType,
+    sortBy,
+  ]);
 
   function toggleCategory(slug: string) {
     setSelectedCategory((prev) => (prev === slug ? "" : slug));
@@ -253,27 +256,39 @@ export default function MarketplacePage() {
   if (!supabase) {
     return (
       <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
-        <div style={{ width: "40%", borderRight: "1px solid var(--border-base)", padding: "20px 20px", overflowY: "auto" }}>
+        <div
+          style={{
+            width: "40%",
+            borderRight: "1px solid var(--border-base)",
+            padding: "20px 20px",
+            overflowY: "auto",
+          }}
+        >
           <PageHeader />
-          <div style={{
-            background: "var(--bg-surface)",
-            border: "1px solid var(--border-base)",
-            borderRadius: "8px",
-            padding: "32px 16px",
-            textAlign: "center",
-          }}>
+          <div
+            style={{
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border-base)",
+              borderRadius: "8px",
+              padding: "32px 16px",
+              textAlign: "center",
+            }}
+          >
             <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0 }}>
               Supabase not configured.
             </p>
             <p style={{ fontSize: "11px", color: "var(--fg-subtle)", margin: "4px 0 0" }}>
-              Add <code style={{ fontFamily: "ui-monospace, monospace" }}>VITE_SUPABASE_URL</code> and{" "}
-              <code style={{ fontFamily: "ui-monospace, monospace" }}>VITE_SUPABASE_ANON_KEY</code> to{" "}
-              <code style={{ fontFamily: "ui-monospace, monospace" }}>apps/desktop/.env</code>.
+              Add <code style={{ fontFamily: "ui-monospace, monospace" }}>VITE_SUPABASE_URL</code>{" "}
+              and{" "}
+              <code style={{ fontFamily: "ui-monospace, monospace" }}>VITE_SUPABASE_ANON_KEY</code>{" "}
+              to <code style={{ fontFamily: "ui-monospace, monospace" }}>apps/desktop/.env</code>.
             </p>
           </div>
         </div>
         <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>Select a plugin to view details</p>
+          <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>
+            Select a plugin to view details
+          </p>
         </div>
       </div>
     );
@@ -282,36 +297,42 @@ export default function MarketplacePage() {
   return (
     <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
       {/* ── Master panel ── */}
-      <div style={{
-        width: "40%",
-        minWidth: "260px",
-        display: "flex",
-        flexDirection: "column",
-        borderRight: "1px solid var(--border-base)",
-        overflow: "hidden",
-      }}>
+      <div
+        style={{
+          width: "40%",
+          minWidth: "260px",
+          display: "flex",
+          flexDirection: "column",
+          borderRight: "1px solid var(--border-base)",
+          overflow: "hidden",
+        }}
+      >
         {/* Fixed header + filters */}
         <div style={{ padding: "20px 20px 0", flexShrink: 0 }}>
           <PageHeader />
 
           {/* Active tag filter banner */}
           {selectedTag && (
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
-              marginBottom: "10px",
-              fontSize: "11px",
-              color: "var(--fg-muted)",
-            }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                marginBottom: "10px",
+                fontSize: "11px",
+                color: "var(--fg-muted)",
+              }}
+            >
               <span>Filtered by tag:</span>
-              <span style={{
-                padding: "1px 8px",
-                borderRadius: "10px",
-                border: "1px solid var(--accent)",
-                color: "var(--accent-text)",
-                fontSize: "10px",
-              }}>
+              <span
+                style={{
+                  padding: "1px 8px",
+                  borderRadius: "10px",
+                  border: "1px solid var(--accent)",
+                  color: "var(--accent-text)",
+                  fontSize: "10px",
+                }}
+              >
                 {selectedTag}
               </span>
               <button
@@ -382,17 +403,22 @@ export default function MarketplacePage() {
           </div>
 
           {/* Sort + count */}
-          <div style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: "10px",
-          }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: "10px",
+            }}
+          >
             <span style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>
               {listLoading ? "" : `${filtered.length} plugin${filtered.length === 1 ? "" : "s"}`}
             </span>
             <div style={{ display: "flex", gap: "2px" }}>
-              <button onClick={() => setSortBy("installs")} style={sortTabStyle(sortBy === "installs")}>
+              <button
+                onClick={() => setSortBy("installs")}
+                style={sortTabStyle(sortBy === "installs")}
+              >
                 Installs
               </button>
               <button onClick={() => setSortBy("recent")} style={sortTabStyle(sortBy === "recent")}>
@@ -404,34 +430,47 @@ export default function MarketplacePage() {
 
         {/* Scrollable list */}
         <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
-          {listLoading && (
-            <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</p>
-          )}
+          {listLoading && <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</p>}
 
           {listError && (
-            <div style={{
-              background: "var(--bg-surface)",
-              border: "1px solid var(--border-base)",
-              borderRadius: "8px",
-              padding: "10px 14px",
-              fontSize: "13px",
-              color: "var(--danger)",
-            }}>
+            <div
+              style={{
+                background: "var(--bg-surface)",
+                border: "1px solid var(--border-base)",
+                borderRadius: "8px",
+                padding: "10px 14px",
+                fontSize: "13px",
+                color: "var(--danger)",
+              }}
+            >
               {listError}
             </div>
           )}
 
           {!listLoading && !listError && filtered.length === 0 && (
-            <div style={{
-              background: "var(--bg-surface)",
-              border: "1px solid var(--border-base)",
-              borderRadius: "8px",
-              padding: "32px 16px",
-              textAlign: "center",
-            }}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ color: "var(--fg-subtle)", marginBottom: "10px" }}>
-                <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.5"/>
-                <path d="M16.5 16.5L21 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+            <div
+              style={{
+                background: "var(--bg-surface)",
+                border: "1px solid var(--border-base)",
+                borderRadius: "8px",
+                padding: "32px 16px",
+                textAlign: "center",
+              }}
+            >
+              <svg
+                width="32"
+                height="32"
+                viewBox="0 0 24 24"
+                fill="none"
+                style={{ color: "var(--fg-subtle)", marginBottom: "10px" }}
+              >
+                <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.5" />
+                <path
+                  d="M16.5 16.5L21 21"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                />
               </svg>
               <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0 }}>
                 No plugins found.
@@ -456,7 +495,14 @@ export default function MarketplacePage() {
                   }}
                 >
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        flexWrap: "wrap",
+                      }}
+                    >
                       <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--fg-base)" }}>
                         {plugin.name}
                       </span>
@@ -464,24 +510,40 @@ export default function MarketplacePage() {
                       <TypeBadge type={plugin.type} />
                     </div>
                     {plugin.description && (
-                      <p style={{
-                        fontSize: "11px",
-                        color: "var(--fg-muted)",
-                        margin: "2px 0 0",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                        maxWidth: "280px",
-                      }}>
+                      <p
+                        style={{
+                          fontSize: "11px",
+                          color: "var(--fg-muted)",
+                          margin: "2px 0 0",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                          maxWidth: "280px",
+                        }}
+                      >
                         {plugin.description}
                       </p>
                     )}
                   </div>
                   <div style={{ flexShrink: 0, marginLeft: "12px", textAlign: "right" }}>
-                    <div style={{ fontSize: "11px", fontFamily: "ui-monospace, monospace", color: "var(--fg-subtle)", fontVariantNumeric: "tabular-nums" }}>
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        fontFamily: "ui-monospace, monospace",
+                        color: "var(--fg-subtle)",
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
                       v{plugin.version}
                     </div>
-                    <div style={{ fontSize: "10px", color: "var(--fg-subtle)", marginTop: "1px", fontVariantNumeric: "tabular-nums" }}>
+                    <div
+                      style={{
+                        fontSize: "10px",
+                        color: "var(--fg-subtle)",
+                        marginTop: "1px",
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
                       {plugin.install_count.toLocaleString()} installs
                     </div>
                   </div>
@@ -495,12 +557,14 @@ export default function MarketplacePage() {
       {/* ── Detail panel ── */}
       <div style={{ flex: 1, overflowY: "auto", minWidth: 0 }}>
         {!selectedSlug ? (
-          <div style={{
-            height: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}>
+          <div
+            style={{
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
             <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>
               Select a plugin to view details
             </p>
@@ -511,13 +575,15 @@ export default function MarketplacePage() {
           </div>
         ) : notFound || !detail ? (
           <div style={{ padding: "20px 24px" }}>
-            <div style={{
-              background: "var(--bg-surface)",
-              border: "1px solid var(--border-base)",
-              borderRadius: "8px",
-              padding: "32px 16px",
-              textAlign: "center",
-            }}>
+            <div
+              style={{
+                background: "var(--bg-surface)",
+                border: "1px solid var(--border-base)",
+                borderRadius: "8px",
+                padding: "32px 16px",
+                textAlign: "center",
+              }}
+            >
               <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0 }}>
                 Plugin not found.
               </p>
@@ -548,26 +614,30 @@ export default function MarketplacePage() {
             {/* Header */}
             <div style={{ marginBottom: "14px" }}>
               <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
-                <h1 style={{
-                  fontSize: "17px",
-                  fontWeight: 600,
-                  letterSpacing: "-0.3px",
-                  color: "var(--fg-base)",
-                  margin: 0,
-                }}>
+                <h1
+                  style={{
+                    fontSize: "17px",
+                    fontWeight: 600,
+                    letterSpacing: "-0.3px",
+                    color: "var(--fg-base)",
+                    margin: 0,
+                  }}
+                >
                   {detail.name}
                 </h1>
                 <TrustBadge tier={detail.trust_tier} />
                 <TypeBadge type={detail.type} />
               </div>
               {/* Description hero */}
-              <div style={{
-                marginTop: "10px",
-                background: "var(--bg-surface)",
-                border: "1px solid var(--border-base)",
-                borderRadius: "8px",
-                padding: "12px 14px",
-              }}>
+              <div
+                style={{
+                  marginTop: "10px",
+                  background: "var(--bg-surface)",
+                  border: "1px solid var(--border-base)",
+                  borderRadius: "8px",
+                  padding: "12px 14px",
+                }}
+              >
                 <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0 }}>
                   {detail.description}
                 </p>
@@ -575,14 +645,16 @@ export default function MarketplacePage() {
             </div>
 
             {/* Stats bar */}
-            <div style={{
-              display: "flex",
-              gap: "14px",
-              flexWrap: "wrap",
-              fontSize: "11px",
-              color: "var(--fg-subtle)",
-              marginBottom: "14px",
-            }}>
+            <div
+              style={{
+                display: "flex",
+                gap: "14px",
+                flexWrap: "wrap",
+                fontSize: "11px",
+                color: "var(--fg-subtle)",
+                marginBottom: "14px",
+              }}
+            >
               <span>{detail.install_count.toLocaleString()} installs</span>
               <span style={{ fontFamily: "ui-monospace, monospace" }}>v{detail.version}</span>
               {detail.license && <span>{detail.license}</span>}
@@ -616,33 +688,39 @@ export default function MarketplacePage() {
               {/* Main column */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 {/* Install command */}
-                <div style={{
-                  marginBottom: "16px",
-                  background: "var(--bg-surface)",
-                  border: "1px solid var(--border-base)",
-                  borderRadius: "8px",
-                  padding: "10px 12px",
-                }}>
-                  <p style={{
-                    fontSize: "10px",
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    color: "var(--fg-subtle)",
-                    margin: "0 0 6px",
-                  }}>
+                <div
+                  style={{
+                    marginBottom: "16px",
+                    background: "var(--bg-surface)",
+                    border: "1px solid var(--border-base)",
+                    borderRadius: "8px",
+                    padding: "10px 12px",
+                  }}
+                >
+                  <p
+                    style={{
+                      fontSize: "10px",
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      color: "var(--fg-subtle)",
+                      margin: "0 0 6px",
+                    }}
+                  >
                     Install
                   </p>
-                  <code style={{
-                    display: "block",
-                    background: "var(--bg-base)",
-                    borderRadius: "5px",
-                    padding: "7px 9px",
-                    fontSize: "10px",
-                    fontFamily: "ui-monospace, monospace",
-                    color: "var(--accent-text)",
-                    wordBreak: "break-all",
-                  }}>
+                  <code
+                    style={{
+                      display: "block",
+                      background: "var(--bg-base)",
+                      borderRadius: "5px",
+                      padding: "7px 9px",
+                      fontSize: "10px",
+                      fontFamily: "ui-monospace, monospace",
+                      color: "var(--accent-text)",
+                      wordBreak: "break-all",
+                    }}
+                  >
                     /plugin install {detail.slug}@harness-kit
                   </code>
                 </div>
@@ -661,26 +739,36 @@ export default function MarketplacePage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                   {/* Author */}
                   {detail.author?.name && (
-                    <div style={{
-                      background: "var(--bg-surface)",
-                      border: "1px solid var(--border-base)",
-                      borderRadius: "8px",
-                      padding: "10px 12px",
-                    }}>
-                      <p style={{
-                        fontSize: "10px",
-                        fontWeight: 600,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.05em",
-                        color: "var(--fg-subtle)",
-                        margin: "0 0 6px",
-                      }}>Author</p>
+                    <div
+                      style={{
+                        background: "var(--bg-surface)",
+                        border: "1px solid var(--border-base)",
+                        borderRadius: "8px",
+                        padding: "10px 12px",
+                      }}
+                    >
+                      <p
+                        style={{
+                          fontSize: "10px",
+                          fontWeight: 600,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          color: "var(--fg-subtle)",
+                          margin: "0 0 6px",
+                        }}
+                      >
+                        Author
+                      </p>
                       {detail.author.url ? (
                         <a
                           href={detail.author.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          style={{ fontSize: "12px", color: "var(--accent-text)", textDecoration: "none" }}
+                          style={{
+                            fontSize: "12px",
+                            color: "var(--accent-text)",
+                            textDecoration: "none",
+                          }}
                         >
                           {detail.author.name}
                         </a>
@@ -694,12 +782,14 @@ export default function MarketplacePage() {
 
                   {/* GitHub link */}
                   {detail.repo_url && (
-                    <div style={{
-                      background: "var(--bg-surface)",
-                      border: "1px solid var(--border-base)",
-                      borderRadius: "8px",
-                      padding: "10px 12px",
-                    }}>
+                    <div
+                      style={{
+                        background: "var(--bg-surface)",
+                        border: "1px solid var(--border-base)",
+                        borderRadius: "8px",
+                        padding: "10px 12px",
+                      }}
+                    >
                       <a
                         href={detail.repo_url}
                         target="_blank"
@@ -721,20 +811,26 @@ export default function MarketplacePage() {
 
                   {/* Related plugins */}
                   {related.length > 0 && (
-                    <div style={{
-                      background: "var(--bg-surface)",
-                      border: "1px solid var(--border-base)",
-                      borderRadius: "8px",
-                      padding: "10px 12px",
-                    }}>
-                      <p style={{
-                        fontSize: "10px",
-                        fontWeight: 600,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.05em",
-                        color: "var(--fg-subtle)",
-                        margin: "0 0 6px",
-                      }}>Related</p>
+                    <div
+                      style={{
+                        background: "var(--bg-surface)",
+                        border: "1px solid var(--border-base)",
+                        borderRadius: "8px",
+                        padding: "10px 12px",
+                      }}
+                    >
+                      <p
+                        style={{
+                          fontSize: "10px",
+                          fontWeight: 600,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.05em",
+                          color: "var(--fg-subtle)",
+                          margin: "0 0 6px",
+                        }}
+                      >
+                        Related
+                      </p>
                       <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
                         {related.map((r) => (
                           <li key={r.id} style={{ marginBottom: "6px" }}>
@@ -751,17 +847,25 @@ export default function MarketplacePage() {
                                 gap: "6px",
                               }}
                             >
-                              <span style={{
-                                fontSize: "12px",
-                                color: "var(--accent-text)",
-                                textAlign: "left",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}>
+                              <span
+                                style={{
+                                  fontSize: "12px",
+                                  color: "var(--accent-text)",
+                                  textAlign: "left",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
+                              >
                                 {r.name}
                               </span>
-                              <span style={{ fontSize: "10px", color: "var(--fg-subtle)", flexShrink: 0 }}>
+                              <span
+                                style={{
+                                  fontSize: "10px",
+                                  color: "var(--fg-subtle)",
+                                  flexShrink: 0,
+                                }}
+                              >
                                 {r.install_count.toLocaleString()}
                               </span>
                             </button>
@@ -783,13 +887,15 @@ export default function MarketplacePage() {
 function PageHeader() {
   return (
     <div style={{ marginBottom: "16px" }}>
-      <h1 style={{
-        fontSize: "17px",
-        fontWeight: 600,
-        letterSpacing: "-0.3px",
-        color: "var(--fg-base)",
-        margin: 0,
-      }}>
+      <h1
+        style={{
+          fontSize: "17px",
+          fontWeight: 600,
+          letterSpacing: "-0.3px",
+          color: "var(--fg-base)",
+          margin: 0,
+        }}
+      >
         Browse Plugins
       </h1>
       <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>

@@ -1,9 +1,9 @@
 import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
 import { parse as parseYaml } from "yaml";
-import harnessSchema from "./harness.schema.json" with { type: "json" };
 import type { ValidationError, ValidationResult } from "../types.js";
 import { isLegacyFormat } from "../utils/legacy.js";
+import harnessSchema from "./harness.schema.json" with { type: "json" };
 
 const ajv = new Ajv2020({ allErrors: true, verbose: true });
 addFormats(ajv);
@@ -12,17 +12,20 @@ const validate = ajv.compile(harnessSchema);
 
 const COMMON_FIXES: Record<string, string> = {
   "/version": 'Change version: 1 to version: "1" (add quotes).',
-  "/metadata/name":
-    "Add a metadata.name field (lowercase kebab-case, max 64 characters).",
+  "/metadata/name": "Add a metadata.name field (lowercase kebab-case, max 64 characters).",
   "/metadata/description": "Add a metadata.description field (max 256 characters).",
   "/metadata": "Add a metadata section with name and description fields.",
 };
 
-function getFix(schemaPath: string, keyword: string, params: Record<string, unknown>): string | undefined {
+function getFix(
+  schemaPath: string,
+  keyword: string,
+  params: Record<string, unknown>,
+): string | undefined {
   if (keyword === "additionalProperties" && typeof params.additionalProperty === "string") {
     const prop = params.additionalProperty;
     if (prop === "marketplace" || prop === "marketplaces") {
-      return 'Use source: owner/repo instead of marketplace: key.';
+      return "Use source: owner/repo instead of marketplace: key.";
     }
     return `Remove unknown property '${prop}', or check for typos.`;
   }
@@ -47,9 +50,7 @@ function getFix(schemaPath: string, keyword: string, params: Record<string, unkn
 
 function formatPath(instancePath: string): string {
   if (!instancePath) return "(root)";
-  return instancePath
-    .replace(/^\//, "")
-    .replace(/\//g, " → ");
+  return instancePath.replace(/^\//, "").replace(/\//g, " → ");
 }
 
 export function validateHarness(config: unknown): ValidationResult {
@@ -65,11 +66,7 @@ export function validateHarness(config: unknown): ValidationResult {
   const errors: ValidationError[] = (validate.errors ?? []).map((err) => ({
     path: formatPath(err.instancePath),
     message: err.message ?? "Unknown validation error",
-    fix: getFix(
-      err.schemaPath,
-      err.keyword,
-      (err.params as Record<string, unknown>) ?? {},
-    ),
+    fix: getFix(err.schemaPath, err.keyword, (err.params as Record<string, unknown>) ?? {}),
   }));
 
   return { valid: false, errors, isLegacyFormat: legacy };

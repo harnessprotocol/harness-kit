@@ -1,7 +1,7 @@
 import type {
   SecurityFinding,
-  SecurityFindingSeverity,
   SecurityFindingCategory,
+  SecurityFindingSeverity,
 } from "@harness-kit/shared";
 
 /** Generates a short collision-resistant ID for a finding without requiring crypto imports. */
@@ -105,9 +105,7 @@ function extractCodeSnippet(content: string, index: number, length: number): str
 }
 
 function isSensitiveEnvVar(varName: string): boolean {
-  return SENSITIVE_ENV_VARS.some((sensitive) =>
-    varName.toUpperCase().includes(sensitive),
-  );
+  return SENSITIVE_ENV_VARS.some((sensitive) => varName.toUpperCase().includes(sensitive));
 }
 
 // ── Security rules ──────────────────────────────────────────────

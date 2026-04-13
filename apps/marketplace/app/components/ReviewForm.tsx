@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import type { User } from "@supabase/supabase-js";
-import { StarRating } from "./StarRating";
+import { useState } from "react";
 import { SignInButton } from "./SignInButton";
+import { StarRating } from "./StarRating";
 
 interface ReviewFormProps {
   user: User | null;
@@ -23,9 +23,7 @@ export function ReviewForm({ user, componentSlug }: ReviewFormProps) {
   if (!user) {
     return (
       <div className="rounded-lg border border-gray-700 bg-[#1a1a1e] p-6">
-        <h3 className="mb-2 text-lg font-semibold text-gray-100">
-          Write a Review
-        </h3>
+        <h3 className="mb-2 text-lg font-semibold text-gray-100">Write a Review</h3>
         <p className="mb-4 text-sm text-gray-400">
           Sign in with GitHub to submit a review for this plugin.
         </p>
@@ -95,29 +93,18 @@ export function ReviewForm({ user, componentSlug }: ReviewFormProps) {
 
   return (
     <div className="rounded-lg border border-gray-700 bg-[#1a1a1e] p-6">
-      <h3 className="mb-4 text-lg font-semibold text-gray-100">
-        Write a Review
-      </h3>
+      <h3 className="mb-4 text-lg font-semibold text-gray-100">Write a Review</h3>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Rating selector */}
         <div>
-          <label className="mb-2 block text-sm font-medium text-gray-300">
-            Rating
-          </label>
-          <StarRating
-            rating={rating}
-            interactive={true}
-            onChange={setRating}
-          />
+          <label className="mb-2 block text-sm font-medium text-gray-300">Rating</label>
+          <StarRating rating={rating} interactive={true} onChange={setRating} />
         </div>
 
         {/* Review text */}
         <div>
-          <label
-            htmlFor="review-text"
-            className="mb-2 block text-sm font-medium text-gray-300"
-          >
+          <label htmlFor="review-text" className="mb-2 block text-sm font-medium text-gray-300">
             Review
           </label>
           <textarea

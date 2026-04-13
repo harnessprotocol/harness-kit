@@ -41,7 +41,14 @@ function BackupRow({
       <td style={{ padding: "7px 10px", fontSize: "11px", color: "var(--fg-subtle)" }}>
         {backup.platforms.join(", ")}
       </td>
-      <td style={{ padding: "7px 10px", fontSize: "11px", color: "var(--fg-subtle)", textAlign: "right" }}>
+      <td
+        style={{
+          padding: "7px 10px",
+          fontSize: "11px",
+          color: "var(--fg-subtle)",
+          textAlign: "right",
+        }}
+      >
         {fileCount} file{fileCount !== 1 ? "s" : ""}
       </td>
       <td style={{ padding: "7px 10px", textAlign: "right" }}>
@@ -94,12 +101,14 @@ export default function BackupHistory({ backups, projectDir, onRestored }: Backu
   if (filtered.length === 0 && !expanded) return null;
 
   return (
-    <div style={{
-      background: "var(--bg-surface)",
-      border: "1px solid var(--border-base)",
-      borderRadius: "8px",
-      overflow: "hidden",
-    }}>
+    <div
+      style={{
+        background: "var(--bg-surface)",
+        border: "1px solid var(--border-base)",
+        borderRadius: "8px",
+        overflow: "hidden",
+      }}
+    >
       {/* Header */}
       <button
         onClick={() => setExpanded((v) => !v)}
@@ -130,7 +139,11 @@ export default function BackupHistory({ backups, projectDir, onRestored }: Backu
             color: "var(--fg-subtle)",
           }}
         >
-          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+          <path
+            fillRule="evenodd"
+            d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+            clipRule="evenodd"
+          />
         </svg>
       </button>
 
@@ -143,27 +156,84 @@ export default function BackupHistory({ backups, projectDir, onRestored }: Backu
           )}
 
           {filtered.length === 0 ? (
-            <p style={{ padding: "12px 14px", fontSize: "12px", color: "var(--fg-subtle)", margin: 0 }}>
+            <p
+              style={{
+                padding: "12px 14px",
+                fontSize: "12px",
+                color: "var(--fg-subtle)",
+                margin: 0,
+              }}
+            >
               No backups for this project yet.
             </p>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", borderTop: "1px solid var(--border-base)" }}>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                borderTop: "1px solid var(--border-base)",
+              }}
+            >
               <thead>
                 <tr style={{ background: "var(--bg-elevated)" }}>
-                  <th style={{ padding: "5px 10px", textAlign: "left", fontSize: "10px", fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.3px" }}>When</th>
-                  <th style={{ padding: "5px 10px", textAlign: "left", fontSize: "10px", fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.3px" }}>Harness</th>
-                  <th style={{ padding: "5px 10px", textAlign: "left", fontSize: "10px", fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.3px" }}>Platforms</th>
-                  <th style={{ padding: "5px 10px", textAlign: "right", fontSize: "10px", fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.3px" }}>Files</th>
+                  <th
+                    style={{
+                      padding: "5px 10px",
+                      textAlign: "left",
+                      fontSize: "10px",
+                      fontWeight: 600,
+                      color: "var(--fg-subtle)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.3px",
+                    }}
+                  >
+                    When
+                  </th>
+                  <th
+                    style={{
+                      padding: "5px 10px",
+                      textAlign: "left",
+                      fontSize: "10px",
+                      fontWeight: 600,
+                      color: "var(--fg-subtle)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.3px",
+                    }}
+                  >
+                    Harness
+                  </th>
+                  <th
+                    style={{
+                      padding: "5px 10px",
+                      textAlign: "left",
+                      fontSize: "10px",
+                      fontWeight: 600,
+                      color: "var(--fg-subtle)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.3px",
+                    }}
+                  >
+                    Platforms
+                  </th>
+                  <th
+                    style={{
+                      padding: "5px 10px",
+                      textAlign: "right",
+                      fontSize: "10px",
+                      fontWeight: 600,
+                      color: "var(--fg-subtle)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.3px",
+                    }}
+                  >
+                    Files
+                  </th>
                   <th style={{ padding: "5px 10px" }} />
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((b) => (
-                  <BackupRow
-                    key={b.id}
-                    backup={b}
-                    onRestore={handleRestore}
-                  />
+                  <BackupRow key={b.id} backup={b} onRestore={handleRestore} />
                 ))}
               </tbody>
             </table>
@@ -173,28 +243,47 @@ export default function BackupHistory({ backups, projectDir, onRestored }: Backu
 
       {/* Restore confirmation */}
       {confirmId && (
-        <div style={{
-          padding: "12px 14px",
-          borderTop: "1px solid var(--border-base)",
-          background: "var(--bg-elevated)",
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-          flexWrap: "wrap",
-        }}>
+        <div
+          style={{
+            padding: "12px 14px",
+            borderTop: "1px solid var(--border-base)",
+            background: "var(--bg-elevated)",
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            flexWrap: "wrap",
+          }}
+        >
           <span style={{ fontSize: "12px", color: "var(--fg-base)", flex: 1 }}>
             Restore this backup? A safety backup of current files will be created first.
           </span>
           <button
             onClick={() => setConfirmId(null)}
-            style={{ padding: "4px 10px", borderRadius: "5px", border: "1px solid var(--border-base)", background: "var(--bg-surface)", color: "var(--fg-base)", fontSize: "11px", cursor: "pointer" }}
+            style={{
+              padding: "4px 10px",
+              borderRadius: "5px",
+              border: "1px solid var(--border-base)",
+              background: "var(--bg-surface)",
+              color: "var(--fg-base)",
+              fontSize: "11px",
+              cursor: "pointer",
+            }}
           >
             Cancel
           </button>
           <button
             onClick={confirmRestore}
             disabled={!!restoring}
-            style={{ padding: "4px 10px", borderRadius: "5px", border: "none", background: "var(--accent)", color: "var(--accent-text, #fff)", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
+            style={{
+              padding: "4px 10px",
+              borderRadius: "5px",
+              border: "none",
+              background: "var(--accent)",
+              color: "var(--accent-text, #fff)",
+              fontSize: "11px",
+              fontWeight: 600,
+              cursor: "pointer",
+            }}
           >
             {restoring ? "Restoring…" : "Confirm Restore"}
           </button>

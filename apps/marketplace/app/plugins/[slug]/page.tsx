@@ -1,15 +1,15 @@
+import type { SecurityPermissionsSummary } from "@harness-kit/shared";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import sanitizeHtml from "sanitize-html";
-import { supabase } from "@/lib/supabase";
-import type { Component, ComponentType, Profile, TrustTier } from "@/lib/types";
-import { TrustBadge } from "@/app/components/TrustBadge";
-import { SecurityBadge } from "@/app/components/SecurityBadge";
 import { PermissionsSummary } from "@/app/components/PermissionsSummary";
 import { ReviewForm } from "@/app/components/ReviewForm";
 import { ReviewList } from "@/app/components/ReviewList";
+import { SecurityBadge } from "@/app/components/SecurityBadge";
+import { TrustBadge } from "@/app/components/TrustBadge";
 import { getServerSession } from "@/lib/auth";
-import type { SecurityPermissionsSummary } from "@harness-kit/shared";
+import { supabase } from "@/lib/supabase";
+import type { Component, ComponentType, Profile, TrustTier } from "@/lib/types";
 
 /**
  * Allowed tags and attributes for sanitizeHtml.
@@ -38,22 +38,10 @@ function renderMarkdown(md: string): string {
       '<pre class="overflow-x-auto rounded-lg bg-[#111] p-4 text-sm"><code>$2</code></pre>',
     )
     // Headings
-    .replace(
-      /^#### (.+)$/gm,
-      '<h4 class="mt-6 mb-2 text-base font-semibold">$1</h4>',
-    )
-    .replace(
-      /^### (.+)$/gm,
-      '<h3 class="mt-8 mb-3 text-lg font-semibold">$1</h3>',
-    )
-    .replace(
-      /^## (.+)$/gm,
-      '<h2 class="mt-10 mb-4 text-xl font-bold">$1</h2>',
-    )
-    .replace(
-      /^# (.+)$/gm,
-      '<h1 class="mt-10 mb-4 text-2xl font-bold">$1</h1>',
-    )
+    .replace(/^#### (.+)$/gm, '<h4 class="mt-6 mb-2 text-base font-semibold">$1</h4>')
+    .replace(/^### (.+)$/gm, '<h3 class="mt-8 mb-3 text-lg font-semibold">$1</h3>')
+    .replace(/^## (.+)$/gm, '<h2 class="mt-10 mb-4 text-xl font-bold">$1</h2>')
+    .replace(/^# (.+)$/gm, '<h1 class="mt-10 mb-4 text-2xl font-bold">$1</h1>')
     // Bold
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     // Inline code
@@ -77,11 +65,7 @@ function renderMarkdown(md: string): string {
   return html;
 }
 
-export default async function PluginDetailPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function PluginDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
   let component: Component | null = null;
@@ -138,10 +122,7 @@ export default async function PluginDetailPage({
 
         if (tagRows) {
           tags = tagRows
-            .map(
-              (row: Record<string, unknown>) =>
-                (row.tags as { slug: string })?.slug ?? "",
-            )
+            .map((row: Record<string, unknown>) => (row.tags as { slug: string })?.slug ?? "")
             .filter(Boolean);
         }
 
@@ -176,11 +157,7 @@ export default async function PluginDetailPage({
       }
     } else {
       // Fetch from regular components table
-      const { data } = await supabase
-        .from("components")
-        .select("*")
-        .eq("slug", slug)
-        .single();
+      const { data } = await supabase.from("components").select("*").eq("slug", slug).single();
       component = data as Component | null;
 
       if (component) {
@@ -192,10 +169,7 @@ export default async function PluginDetailPage({
 
         if (tagRows) {
           tags = tagRows
-            .map(
-              (row: Record<string, unknown>) =>
-                (row.tags as { slug: string })?.slug ?? "",
-            )
+            .map((row: Record<string, unknown>) => (row.tags as { slug: string })?.slug ?? "")
             .filter(Boolean);
         }
 
@@ -217,9 +191,7 @@ export default async function PluginDetailPage({
 
         if (profileRows) {
           includedInProfiles = profileRows
-            .map(
-              (row: Record<string, unknown>) => row.profiles as Profile,
-            )
+            .map((row: Record<string, unknown>) => row.profiles as Profile)
             .filter(Boolean);
         }
       }
@@ -300,9 +272,7 @@ export default async function PluginDetailPage({
                 {component.type}
               </span>
             </div>
-            <p className="mt-3 text-lg text-gray-400">
-              {component.description}
-            </p>
+            <p className="mt-3 text-lg text-gray-400">{component.description}</p>
           </div>
 
           {/* Stats bar */}
@@ -325,11 +295,7 @@ export default async function PluginDetailPage({
             </span>
             {component.average_rating !== undefined && component.average_rating > 0 && (
               <span className="inline-flex items-center gap-1">
-                <svg
-                  className="h-3.5 w-3.5"
-                  fill="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="h-3.5 w-3.5" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                 </svg>
                 {component.average_rating.toFixed(1)} ({component.review_count})
@@ -483,10 +449,7 @@ export default async function PluginDetailPage({
                 <ul className="space-y-2.5">
                   {relatedComponents.map((related) => (
                     <li key={related.id}>
-                      <Link
-                        href={`/plugins/${related.slug}`}
-                        className="group block"
-                      >
+                      <Link href={`/plugins/${related.slug}`} className="group block">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium text-gray-200 group-hover:text-violet-400">
                             {related.name}

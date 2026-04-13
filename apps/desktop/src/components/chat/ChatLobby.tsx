@@ -1,8 +1,12 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useChat } from "../../contexts/ChatContext";
 
 function getStoredNick(): string {
-  try { return localStorage.getItem("harness-kit-chat-nick") ?? ""; } catch { return ""; }
+  try {
+    return localStorage.getItem("harness-kit-chat-nick") ?? "";
+  } catch {
+    return "";
+  }
 }
 
 function formatDate(iso: string): string {
@@ -74,7 +78,10 @@ export default function ChatLobby() {
             + New room
           </button>
         ) : (
-          <form onSubmit={handleCreate} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+          <form
+            onSubmit={handleCreate}
+            style={{ display: "flex", flexDirection: "column", gap: "6px" }}
+          >
             <input
               type="text"
               className="form-input"
@@ -121,7 +128,10 @@ export default function ChatLobby() {
         >
           Join Room
         </div>
-        <form onSubmit={handleJoin} style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+        <form
+          onSubmit={handleJoin}
+          style={{ display: "flex", flexDirection: "column", gap: "6px" }}
+        >
           <input
             type="text"
             className="form-input"

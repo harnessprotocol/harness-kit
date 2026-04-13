@@ -1,14 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
-import { api } from '../lib/board-api';
-import { buildInvokeCommand, type PermissionConfig } from '../lib/harness-definitions';
+import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { ExecutionStatus, Project, Task } from "../lib/board-api";
+import { api } from "../lib/board-api";
+import { buildInvokeCommand, type PermissionConfig } from "../lib/harness-definitions";
 import {
-  getPermissionMode,
   getAllowedTools,
   getHarnessPermissionOverrides,
-} from '../lib/preferences';
-import type { Task, Project, ExecutionStatus } from '../lib/board-api';
+  getPermissionMode,
+} from "../lib/preferences";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -31,7 +31,13 @@ interface TerminalExitPayload {
 }
 
 export interface UseTaskExecutionReturn {
-  startTask: (projectSlug: string, task: Task, project: Project, harnessId?: string, model?: string) => Promise<void>;
+  startTask: (
+    projectSlug: string,
+    task: Task,
+    project: Project,
+    harnessId?: string,
+    model?: string,
+  ) => Promise<void>;
   stopTask: (projectSlug: string, taskId: number) => Promise<void>;
   getOutput: (taskId: number) => string[];
   isRunning: (taskId: number) => boolean;
@@ -58,9 +64,12 @@ function resolvePermissionConfig(harnessId: string): PermissionConfig {
   const tools = override?.allowedTools ?? getAllowedTools();
 
   switch (mode) {
-    case "auto":        return { mode: "auto" };
-    case "allowed-tools": return { mode: "allowed-tools", tools };
-    default:            return { mode: "skip" };
+    case "auto":
+      return { mode: "auto" };
+    case "allowed-tools":
+      return { mode: "allowed-tools", tools };
+    default:
+      return { mode: "skip" };
   }
 }
 
@@ -69,9 +78,9 @@ function resolvePermissionConfig(harnessId: string): PermissionConfig {
 function buildPrompt(task: Task): string {
   let prompt = `Work on board task #${task.id}: ${task.title}`;
   if (task.description) prompt += `\n\n${task.description}`;
-  const pending = task.subtasks.filter(s => s.status === 'pending' || s.status === 'in_progress');
+  const pending = task.subtasks.filter((s) => s.status === "pending" || s.status === "in_progress");
   if (pending.length > 0) {
-    prompt += `\n\nPending subtasks:\n${pending.map(s => `- ${s.title}`).join('\n')}`;
+    prompt += `\n\nPending subtasks:\n${pending.map((s) => `- ${s.title}`).join("\n")}`;
   }
   return prompt;
 }
@@ -91,7 +100,7 @@ export function useTaskExecution(): UseTaskExecutionReturn {
   // ── Event listeners (registered once) ───────────────────────
 
   useEffect(() => {
-    const unlistenOutput = listen<TerminalOutputPayload>('terminal://output', (event) => {
+    const unlistenOutput = listen<TerminalOutputPayload>("terminal://output", (event) => {
       const { terminalId, data } = event.payload;
       const taskId = terminalToTaskRef.current.get(terminalId);
       if (taskId === undefined) return;
@@ -101,10 +110,10 @@ export function useTaskExecution(): UseTaskExecutionReturn {
       if (exec.rawChunks.length > MAX_RAW_CHUNKS) {
         exec.rawChunks.splice(0, exec.rawChunks.length - MAX_RAW_CHUNKS);
       }
-      setOutputTick(t => (t + 1) & 0x7fffffff);
+      setOutputTick((t) => (t + 1) & 0x7fffffff);
     });
 
-    const unlistenExit = listen<TerminalExitPayload>('terminal://exit', async (event) => {
+    const unlistenExit = listen<TerminalExitPayload>("terminal://exit", async (event) => {
       const { terminalId, exitCode } = event.payload;
       const taskId = terminalToTaskRef.current.get(terminalId);
       if (taskId === undefined) return;
@@ -113,72 +122,78 @@ export function useTaskExecution(): UseTaskExecutionReturn {
       executionsRef.current.delete(taskId);
       terminalToTaskRef.current.delete(terminalId);
       taskProjectRef.current.delete(taskId);
-      setOutputTick(t => (t + 1) & 0x7fffffff);
+      setOutputTick((t) => (t + 1) & 0x7fffffff);
 
       if (slug) {
-        const status: ExecutionStatus = exitCode === 0 ? 'completed' : 'failed';
-        await api.tasks.updateExecution(slug, taskId, {
-          status,
-          finished_at: new Date().toISOString(),
-          exit_code: exitCode,
-        }).catch(console.error);
+        const status: ExecutionStatus = exitCode === 0 ? "completed" : "failed";
+        await api.tasks
+          .updateExecution(slug, taskId, {
+            status,
+            finished_at: new Date().toISOString(),
+            exit_code: exitCode,
+          })
+          .catch(console.error);
       }
     });
 
     return () => {
-      unlistenOutput.then(fn => fn());
-      unlistenExit.then(fn => fn());
+      unlistenOutput.then((fn) => fn());
+      unlistenExit.then((fn) => fn());
     };
   }, []);
 
   // ── startTask ────────────────────────────────────────────────
 
-  const startTask = useCallback(async (
-    projectSlug: string,
-    task: Task,
-    project: Project,
-    harnessId?: string,
-    model?: string,
-  ) => {
-    const maxConcurrent = project.max_concurrent ?? DEFAULT_MAX_CONCURRENT;
-    if (executionsRef.current.size >= maxConcurrent) {
-      throw new Error(`Concurrent task limit (${maxConcurrent}) reached`);
-    }
+  const startTask = useCallback(
+    async (
+      projectSlug: string,
+      task: Task,
+      project: Project,
+      harnessId?: string,
+      model?: string,
+    ) => {
+      const maxConcurrent = project.max_concurrent ?? DEFAULT_MAX_CONCURRENT;
+      if (executionsRef.current.size >= maxConcurrent) {
+        throw new Error(`Concurrent task limit (${maxConcurrent}) reached`);
+      }
 
-    const resolvedHarness = harnessId ?? task.default_harness ?? project.default_harness ?? 'claude';
-    const resolvedModel = model ?? task.default_model ?? project.default_model ?? undefined;
+      const resolvedHarness =
+        harnessId ?? task.default_harness ?? project.default_harness ?? "claude";
+      const resolvedModel = model ?? task.default_model ?? project.default_model ?? undefined;
 
-    const workDir = task.worktree_path ?? undefined;
-    const terminalId = await invoke<string>('create_terminal', { projectPath: workDir ?? '' });
+      const workDir = task.worktree_path ?? undefined;
+      const terminalId = await invoke<string>("create_terminal", { projectPath: workDir ?? "" });
 
-    const prompt = buildPrompt(task);
-    const permConfig = resolvePermissionConfig(resolvedHarness);
-    const command = buildInvokeCommand(resolvedHarness, prompt, resolvedModel, permConfig);
-    if (!command) throw new Error(`Unknown harness: ${resolvedHarness}`);
+      const prompt = buildPrompt(task);
+      const permConfig = resolvePermissionConfig(resolvedHarness);
+      const command = buildInvokeCommand(resolvedHarness, prompt, resolvedModel, permConfig);
+      if (!command) throw new Error(`Unknown harness: ${resolvedHarness}`);
 
-    executionsRef.current.set(task.id, {
-      terminalId,
-      rawChunks: [],
-      harnessId: resolvedHarness,
-      model: resolvedModel,
-      startedAt: Date.now(),
-    });
-    terminalToTaskRef.current.set(terminalId, task.id);
-    taskProjectRef.current.set(task.id, projectSlug);
-    setOutputTick(t => (t + 1) & 0x7fffffff);
-
-    await invoke('write_terminal', { terminalId, data: command + '\n' });
-
-    await Promise.all([
-      api.tasks.updateExecution(projectSlug, task.id, {
-        status: 'running',
-        harness_id: resolvedHarness,
+      executionsRef.current.set(task.id, {
+        terminalId,
+        rawChunks: [],
+        harnessId: resolvedHarness,
         model: resolvedModel,
-        started_at: new Date().toISOString(),
-      }),
-      api.tasks.update(projectSlug, task.id, { status: 'in-progress' }),
-    ]);
-  }, []);
+        startedAt: Date.now(),
+      });
+      terminalToTaskRef.current.set(terminalId, task.id);
+      taskProjectRef.current.set(task.id, projectSlug);
+      setOutputTick((t) => (t + 1) & 0x7fffffff);
+
+      await invoke("write_terminal", { terminalId, data: command + "\n" });
+
+      await Promise.all([
+        api.tasks.updateExecution(projectSlug, task.id, {
+          status: "running",
+          harness_id: resolvedHarness,
+          model: resolvedModel,
+          started_at: new Date().toISOString(),
+        }),
+        api.tasks.update(projectSlug, task.id, { status: "in-progress" }),
+      ]);
+    },
+    [],
+  );
 
   // ── stopTask ─────────────────────────────────────────────────
 
@@ -186,17 +201,19 @@ export function useTaskExecution(): UseTaskExecutionReturn {
     const exec = executionsRef.current.get(taskId);
     if (!exec) return;
 
-    await invoke('destroy_terminal', { terminalId: exec.terminalId }).catch(console.error);
+    await invoke("destroy_terminal", { terminalId: exec.terminalId }).catch(console.error);
 
     executionsRef.current.delete(taskId);
     terminalToTaskRef.current.delete(exec.terminalId);
     taskProjectRef.current.delete(taskId);
-    setOutputTick(t => (t + 1) & 0x7fffffff);
+    setOutputTick((t) => (t + 1) & 0x7fffffff);
 
-    await api.tasks.updateExecution(projectSlug, taskId, {
-      status: 'stopped',
-      finished_at: new Date().toISOString(),
-    }).catch(console.error);
+    await api.tasks
+      .updateExecution(projectSlug, taskId, {
+        status: "stopped",
+        finished_at: new Date().toISOString(),
+      })
+      .catch(console.error);
   }, []);
 
   // ── Accessors ────────────────────────────────────────────────

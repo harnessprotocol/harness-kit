@@ -29,21 +29,21 @@ export default function ExtendsSection({ extends_ }: ExtendsSectionProps) {
       <div className="row-list">
         {extends_.map((entry, i) => (
           <div key={`${entry.source}-${i}`} className="row-list-item">
-            <code style={{
-              fontFamily: "ui-monospace, monospace",
-              fontSize: "12px",
-              color: "var(--fg-base)",
-              flex: 1,
-              minWidth: 0,
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-              whiteSpace: "nowrap",
-            }}>
+            <code
+              style={{
+                fontFamily: "ui-monospace, monospace",
+                fontSize: "12px",
+                color: "var(--fg-base)",
+                flex: 1,
+                minWidth: 0,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
               {entry.source}
             </code>
-            {entry.version && (
-              <span style={versionBadgeStyle}>{entry.version}</span>
-            )}
+            {entry.version && <span style={versionBadgeStyle}>{entry.version}</span>}
           </div>
         ))}
       </div>

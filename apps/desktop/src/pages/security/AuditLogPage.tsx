@@ -1,8 +1,8 @@
-import { useEffect, useState, useCallback } from "react";
-import { listAuditEntries, clearAuditEntries } from "../../lib/tauri";
 import type { AuditEntry } from "@harness-kit/shared";
-import { useArrowNavigation } from "../../hooks/useArrowNavigation";
+import { useCallback, useEffect, useState } from "react";
 import ContextMenu from "../../components/ContextMenu";
+import { useArrowNavigation } from "../../hooks/useArrowNavigation";
+import { clearAuditEntries, listAuditEntries } from "../../lib/tauri";
 
 const PAGE_SIZE = 25;
 
@@ -41,11 +41,17 @@ function EventBadge({ eventType }: { eventType: string }) {
   const label = eventType.replace(/_/g, " ");
 
   return (
-    <span style={{
-      fontSize: "10px", fontWeight: 500, padding: "1px 7px",
-      borderRadius: "4px", background: c.bg, color: c.text,
-      whiteSpace: "nowrap",
-    }}>
+    <span
+      style={{
+        fontSize: "10px",
+        fontWeight: 500,
+        padding: "1px 7px",
+        borderRadius: "4px",
+        background: c.bg,
+        color: c.text,
+        whiteSpace: "nowrap",
+      }}
+    >
       {label}
     </span>
   );
@@ -55,7 +61,10 @@ function formatTimestamp(ts: string): string {
   try {
     const d = new Date(ts);
     return d.toLocaleString(undefined, {
-      month: "short", day: "numeric", hour: "2-digit", minute: "2-digit",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   } catch {
     return ts;
@@ -70,7 +79,11 @@ export default function AuditLogPage() {
   const [page, setPage] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; entry: AuditEntry } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    entry: AuditEntry;
+  } | null>(null);
 
   const { focusedIndex: auditFocusedIndex, onKeyDown: onAuditKeyDown } = useArrowNavigation({
     count: entries.length,
@@ -119,7 +132,15 @@ export default function AuditLogPage() {
     <div style={{ padding: "20px 24px" }}>
       {/* Header */}
       <div style={{ marginBottom: "16px" }}>
-        <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
+        <h1
+          style={{
+            fontSize: "17px",
+            fontWeight: 600,
+            letterSpacing: "-0.3px",
+            color: "var(--fg-base)",
+            margin: 0,
+          }}
+        >
           Audit Log
         </h1>
         <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>
@@ -128,11 +149,17 @@ export default function AuditLogPage() {
       </div>
 
       {error && (
-        <div style={{
-          background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-          borderRadius: "8px", padding: "10px 14px", fontSize: "13px",
-          color: "var(--danger)", marginBottom: "16px",
-        }}>
+        <div
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-base)",
+            borderRadius: "8px",
+            padding: "10px 14px",
+            fontSize: "13px",
+            color: "var(--danger)",
+            marginBottom: "16px",
+          }}
+        >
           {error}
         </div>
       )}
@@ -140,8 +167,16 @@ export default function AuditLogPage() {
       {/* Filter bar */}
       <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "16px" }}>
         <Pill label="All" active={filter === "all"} onClick={() => handleFilterChange("all")} />
-        <Pill label="Permissions" active={filter === "permissions"} onClick={() => handleFilterChange("permissions")} />
-        <Pill label="Secrets" active={filter === "secrets"} onClick={() => handleFilterChange("secrets")} />
+        <Pill
+          label="Permissions"
+          active={filter === "permissions"}
+          onClick={() => handleFilterChange("permissions")}
+        />
+        <Pill
+          label="Secrets"
+          active={filter === "secrets"}
+          onClick={() => handleFilterChange("secrets")}
+        />
 
         <div style={{ flex: 1 }} />
 
@@ -149,9 +184,13 @@ export default function AuditLogPage() {
           <button
             onClick={() => setConfirmClear(true)}
             style={{
-              fontSize: "11px", padding: "3px 10px", borderRadius: "5px",
-              border: "1px solid var(--border-base)", background: "transparent",
-              color: "var(--fg-muted)", cursor: "pointer",
+              fontSize: "11px",
+              padding: "3px 10px",
+              borderRadius: "5px",
+              border: "1px solid var(--border-base)",
+              background: "transparent",
+              color: "var(--fg-muted)",
+              cursor: "pointer",
             }}
           >
             Clear old entries
@@ -164,8 +203,12 @@ export default function AuditLogPage() {
             <button
               onClick={handleClear}
               style={{
-                fontSize: "11px", padding: "2px 8px", borderRadius: "4px",
-                border: "none", background: "var(--danger)", color: "#fff",
+                fontSize: "11px",
+                padding: "2px 8px",
+                borderRadius: "4px",
+                border: "none",
+                background: "var(--danger)",
+                color: "#fff",
                 cursor: "pointer",
               }}
             >
@@ -174,9 +217,13 @@ export default function AuditLogPage() {
             <button
               onClick={() => setConfirmClear(false)}
               style={{
-                fontSize: "11px", padding: "2px 8px", borderRadius: "4px",
-                border: "1px solid var(--border-base)", background: "transparent",
-                color: "var(--fg-muted)", cursor: "pointer",
+                fontSize: "11px",
+                padding: "2px 8px",
+                borderRadius: "4px",
+                border: "1px solid var(--border-base)",
+                background: "transparent",
+                color: "var(--fg-muted)",
+                cursor: "pointer",
               }}
             >
               Cancel
@@ -190,17 +237,26 @@ export default function AuditLogPage() {
         tabIndex={0}
         onKeyDown={onAuditKeyDown}
         style={{
-          background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-          borderRadius: "8px", overflow: "hidden",
+          background: "var(--bg-surface)",
+          border: "1px solid var(--border-base)",
+          borderRadius: "8px",
+          overflow: "hidden",
         }}
       >
         {/* Header row */}
-        <div style={{
-          display: "grid", gridTemplateColumns: "140px 130px 1fr 80px",
-          padding: "6px 16px", borderBottom: "1px solid var(--separator)",
-          fontSize: "10px", fontWeight: 600, textTransform: "uppercase",
-          letterSpacing: "0.05em", color: "var(--fg-subtle)",
-        }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "140px 130px 1fr 80px",
+            padding: "6px 16px",
+            borderBottom: "1px solid var(--separator)",
+            fontSize: "10px",
+            fontWeight: 600,
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+            color: "var(--fg-subtle)",
+          }}
+        >
           <span>Timestamp</span>
           <span>Event</span>
           <span>Summary</span>
@@ -213,8 +269,19 @@ export default function AuditLogPage() {
           </div>
         ) : entries.length === 0 ? (
           <div style={{ padding: "24px 16px", textAlign: "center" }}>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ color: "var(--fg-subtle)", marginBottom: "10px" }}>
-              <path d="M12 3L4 6v6c0 4.418 3.582 8 8 9 4.418-1 8-4.582 8-9V6l-8-3z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
+            <svg
+              width="32"
+              height="32"
+              viewBox="0 0 24 24"
+              fill="none"
+              style={{ color: "var(--fg-subtle)", marginBottom: "10px" }}
+            >
+              <path
+                d="M12 3L4 6v6c0 4.418 3.582 8 8 9 4.418-1 8-4.582 8-9V6l-8-3z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinejoin="round"
+              />
             </svg>
             <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0 }}>
               No audit entries found.
@@ -233,39 +300,50 @@ export default function AuditLogPage() {
                   setContextMenu({ x: e.clientX, y: e.clientY, entry });
                 }}
                 style={{
-                  display: "grid", gridTemplateColumns: "140px 130px 1fr 80px",
-                  padding: "7px 16px", borderBottom: "1px solid var(--separator)",
+                  display: "grid",
+                  gridTemplateColumns: "140px 130px 1fr 80px",
+                  padding: "7px 16px",
+                  borderBottom: "1px solid var(--separator)",
                   cursor: entry.details ? "pointer" : "default",
                   transition: "background 0.1s",
                   outline: auditFocusedIndex === idx ? "2px solid var(--accent)" : "none",
                   outlineOffset: "-2px",
                 }}
-                onMouseEnter={(e) => { if (entry.details) e.currentTarget.style.background = "var(--hover-bg)"; }}
-                onMouseLeave={(e) => { if (entry.details) e.currentTarget.style.background = "transparent"; }}
+                onMouseEnter={(e) => {
+                  if (entry.details) e.currentTarget.style.background = "var(--hover-bg)";
+                }}
+                onMouseLeave={(e) => {
+                  if (entry.details) e.currentTarget.style.background = "transparent";
+                }}
               >
                 <span style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>
                   {formatTimestamp(entry.timestamp)}
                 </span>
                 <EventBadge eventType={entry.eventType} />
-                <span style={{ fontSize: "12px", color: "var(--fg-base)" }}>
-                  {entry.summary}
-                </span>
-                <span style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>
-                  {entry.source}
-                </span>
+                <span style={{ fontSize: "12px", color: "var(--fg-base)" }}>{entry.summary}</span>
+                <span style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>{entry.source}</span>
               </div>
 
               {/* Expanded details */}
               {expandedId === entry.id && entry.details && (
-                <div style={{
-                  padding: "10px 16px", borderBottom: "1px solid var(--separator)",
-                  background: "var(--bg-base)",
-                }}>
-                  <pre style={{
-                    fontSize: "11px", fontFamily: "ui-monospace, monospace",
-                    color: "var(--fg-muted)", margin: 0, whiteSpace: "pre-wrap",
-                    wordBreak: "break-word", lineHeight: 1.5,
-                  }}>
+                <div
+                  style={{
+                    padding: "10px 16px",
+                    borderBottom: "1px solid var(--separator)",
+                    background: "var(--bg-base)",
+                  }}
+                >
+                  <pre
+                    style={{
+                      fontSize: "11px",
+                      fontFamily: "ui-monospace, monospace",
+                      color: "var(--fg-muted)",
+                      margin: 0,
+                      whiteSpace: "pre-wrap",
+                      wordBreak: "break-word",
+                      lineHeight: 1.5,
+                    }}
+                  >
                     {(() => {
                       try {
                         return JSON.stringify(JSON.parse(entry.details!), null, 2);
@@ -283,28 +361,40 @@ export default function AuditLogPage() {
 
       {/* Pagination */}
       {!loading && entries.length > 0 && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", marginTop: "12px" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "12px",
+            marginTop: "12px",
+          }}
+        >
           <button
             onClick={() => setPage((p) => Math.max(0, p - 1))}
             disabled={page === 0}
             style={{
-              fontSize: "11px", padding: "4px 10px", borderRadius: "5px",
-              border: "1px solid var(--border-base)", background: "transparent",
+              fontSize: "11px",
+              padding: "4px 10px",
+              borderRadius: "5px",
+              border: "1px solid var(--border-base)",
+              background: "transparent",
               color: page === 0 ? "var(--fg-subtle)" : "var(--fg-muted)",
               cursor: page === 0 ? "default" : "pointer",
             }}
           >
             Prev
           </button>
-          <span style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>
-            Page {page + 1}
-          </span>
+          <span style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>Page {page + 1}</span>
           <button
             onClick={() => setPage((p) => p + 1)}
             disabled={entries.length < PAGE_SIZE}
             style={{
-              fontSize: "11px", padding: "4px 10px", borderRadius: "5px",
-              border: "1px solid var(--border-base)", background: "transparent",
+              fontSize: "11px",
+              padding: "4px 10px",
+              borderRadius: "5px",
+              border: "1px solid var(--border-base)",
+              background: "transparent",
               color: entries.length < PAGE_SIZE ? "var(--fg-subtle)" : "var(--fg-muted)",
               cursor: entries.length < PAGE_SIZE ? "default" : "pointer",
             }}
@@ -319,8 +409,18 @@ export default function AuditLogPage() {
           x={contextMenu.x}
           y={contextMenu.y}
           items={[
-            ...(contextMenu.entry.details ? [{ label: "Copy details", onClick: () => navigator.clipboard.writeText(contextMenu.entry.details!) }] : []),
-            { label: "Copy summary", onClick: () => navigator.clipboard.writeText(contextMenu.entry.summary) },
+            ...(contextMenu.entry.details
+              ? [
+                  {
+                    label: "Copy details",
+                    onClick: () => navigator.clipboard.writeText(contextMenu.entry.details!),
+                  },
+                ]
+              : []),
+            {
+              label: "Copy summary",
+              onClick: () => navigator.clipboard.writeText(contextMenu.entry.summary),
+            },
           ]}
           onClose={() => setContextMenu(null)}
         />

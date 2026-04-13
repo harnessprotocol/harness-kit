@@ -1,16 +1,24 @@
-import { Router } from 'express';
-import * as store from '../store/yaml-store.js';
-import type { TaskStatus, TaskPriority, TaskCategory, TaskComplexity, SubtaskStatus, EpicStatus, ExecutionStatus } from '../types.js';
-import { createRoadmapRouter } from './roadmap-routes.js';
+import { Router } from "express";
+import * as store from "../store/yaml-store.js";
+import type {
+  EpicStatus,
+  ExecutionStatus,
+  SubtaskStatus,
+  TaskCategory,
+  TaskComplexity,
+  TaskPriority,
+  TaskStatus,
+} from "../types.js";
+import { createRoadmapRouter } from "./roadmap-routes.js";
 
 export function createRouter(): Router {
   const router = Router();
 
-  router.use('/', createRoadmapRouter());
+  router.use("/", createRoadmapRouter());
 
   // --- Projects ---
 
-  router.get('/projects', (_req, res) => {
+  router.get("/projects", (_req, res) => {
     try {
       res.json(store.listProjects());
     } catch (err) {
@@ -18,7 +26,7 @@ export function createRouter(): Router {
     }
   });
 
-  router.post('/projects', (req, res) => {
+  router.post("/projects", (req, res) => {
     try {
       const { name, description, color, repo_url } = req.body as {
         name: string;
@@ -26,7 +34,7 @@ export function createRouter(): Router {
         color?: string;
         repo_url?: string;
       };
-      if (!name) return res.status(400).json({ error: 'name is required' });
+      if (!name) return res.status(400).json({ error: "name is required" });
       const project = store.createProject({ name, description, color, repo_url });
       res.status(201).json(project);
     } catch (err) {
@@ -34,7 +42,7 @@ export function createRouter(): Router {
     }
   });
 
-  router.patch('/projects/:slug', (req, res) => {
+  router.patch("/projects/:slug", (req, res) => {
     try {
       const { description, color, repo_url } = req.body as {
         description?: string;
@@ -48,24 +56,28 @@ export function createRouter(): Router {
     }
   });
 
-  router.patch('/projects/:slug/settings', (req, res) => {
+  router.patch("/projects/:slug/settings", (req, res) => {
     try {
       const { default_harness, default_model, max_concurrent } = req.body as {
         default_harness?: string;
         default_model?: string;
         max_concurrent?: number;
       };
-      const project = store.updateProjectSettings(req.params.slug, { default_harness, default_model, max_concurrent });
+      const project = store.updateProjectSettings(req.params.slug, {
+        default_harness,
+        default_model,
+        max_concurrent,
+      });
       res.json(project);
     } catch (err) {
       res.status(400).json({ error: String(err) });
     }
   });
 
-  router.get('/projects/:slug', (req, res) => {
+  router.get("/projects/:slug", (req, res) => {
     try {
       const project = store.readProject(req.params.slug);
-      if (!project) return res.status(404).json({ error: 'Not found' });
+      if (!project) return res.status(404).json({ error: "Not found" });
       res.json(project);
     } catch (err) {
       res.status(500).json({ error: String(err) });
@@ -74,10 +86,10 @@ export function createRouter(): Router {
 
   // --- Epics ---
 
-  router.post('/projects/:slug/epics', (req, res) => {
+  router.post("/projects/:slug/epics", (req, res) => {
     try {
       const { name, description } = req.body as { name: string; description?: string };
-      if (!name) return res.status(400).json({ error: 'name is required' });
+      if (!name) return res.status(400).json({ error: "name is required" });
       const epic = store.createEpic(req.params.slug, name, description);
       res.status(201).json(epic);
     } catch (err) {
@@ -85,7 +97,7 @@ export function createRouter(): Router {
     }
   });
 
-  router.patch('/projects/:slug/epics/:epicId', (req, res) => {
+  router.patch("/projects/:slug/epics/:epicId", (req, res) => {
     try {
       const epicId = Number(req.params.epicId);
       const { status } = req.body as { status: EpicStatus };
@@ -98,7 +110,7 @@ export function createRouter(): Router {
 
   // --- Tasks ---
 
-  router.get('/projects/:slug/tasks', (req, res) => {
+  router.get("/projects/:slug/tasks", (req, res) => {
     try {
       const epicId = req.query.epic_id ? Number(req.query.epic_id) : undefined;
       const status = req.query.status as TaskStatus | undefined;
@@ -109,11 +121,11 @@ export function createRouter(): Router {
     }
   });
 
-  router.post('/projects/:slug/epics/:epicId/tasks', (req, res) => {
+  router.post("/projects/:slug/epics/:epicId/tasks", (req, res) => {
     try {
       const epicId = Number(req.params.epicId);
       const { title, description } = req.body as { title: string; description?: string };
-      if (!title) return res.status(400).json({ error: 'title is required' });
+      if (!title) return res.status(400).json({ error: "title is required" });
       const task = store.createTask(req.params.slug, epicId, title, description);
       res.status(201).json(task);
     } catch (err) {
@@ -121,10 +133,20 @@ export function createRouter(): Router {
     }
   });
 
-  router.patch('/projects/:slug/tasks/:taskId', (req, res) => {
+  router.patch("/projects/:slug/tasks/:taskId", (req, res) => {
     try {
       const taskId = Number(req.params.taskId);
-      const { title, description, status, priority, category, complexity, no_worktree, default_harness, default_model } = req.body as {
+      const {
+        title,
+        description,
+        status,
+        priority,
+        category,
+        complexity,
+        no_worktree,
+        default_harness,
+        default_model,
+      } = req.body as {
         title?: string;
         description?: string;
         status?: TaskStatus;
@@ -135,7 +157,20 @@ export function createRouter(): Router {
         default_harness?: string;
         default_model?: string;
       };
-      const updates: Partial<Pick<import('../types.js').Task, 'title' | 'description' | 'status' | 'priority' | 'category' | 'complexity' | 'no_worktree' | 'default_harness' | 'default_model'>> = {};
+      const updates: Partial<
+        Pick<
+          import("../types.js").Task,
+          | "title"
+          | "description"
+          | "status"
+          | "priority"
+          | "category"
+          | "complexity"
+          | "no_worktree"
+          | "default_harness"
+          | "default_model"
+        >
+      > = {};
       if (title !== undefined) updates.title = title;
       if (description !== undefined) updates.description = description;
       if (status !== undefined) updates.status = status;
@@ -152,7 +187,7 @@ export function createRouter(): Router {
     }
   });
 
-  router.patch('/projects/:slug/tasks/:taskId/execution', (req, res) => {
+  router.patch("/projects/:slug/tasks/:taskId/execution", (req, res) => {
     try {
       const taskId = Number(req.params.taskId);
       const { status, harness_id, model, started_at, finished_at, exit_code } = req.body as {
@@ -163,7 +198,14 @@ export function createRouter(): Router {
         finished_at?: string;
         exit_code?: number;
       };
-      const task = store.updateTaskExecution(req.params.slug, taskId, { status, harness_id, model, started_at, finished_at, exit_code });
+      const task = store.updateTaskExecution(req.params.slug, taskId, {
+        status,
+        harness_id,
+        model,
+        started_at,
+        finished_at,
+        exit_code,
+      });
       res.json(task);
     } catch (err) {
       res.status(400).json({ error: String(err) });
@@ -172,11 +214,11 @@ export function createRouter(): Router {
 
   // --- Comments ---
 
-  router.post('/projects/:slug/tasks/:taskId/comments', (req, res) => {
+  router.post("/projects/:slug/tasks/:taskId/comments", (req, res) => {
     try {
       const taskId = Number(req.params.taskId);
-      const { author, body } = req.body as { author: 'claude' | 'user'; body: string };
-      if (!author || !body) return res.status(400).json({ error: 'author and body are required' });
+      const { author, body } = req.body as { author: "claude" | "user"; body: string };
+      if (!author || !body) return res.status(400).json({ error: "author and body are required" });
       const comment = store.addComment(req.params.slug, taskId, author, body);
       res.status(201).json(comment);
     } catch (err) {
@@ -186,11 +228,11 @@ export function createRouter(): Router {
 
   // --- Subtasks ---
 
-  router.post('/projects/:slug/tasks/:taskId/subtasks', (req, res) => {
+  router.post("/projects/:slug/tasks/:taskId/subtasks", (req, res) => {
     try {
       const taskId = Number(req.params.taskId);
       const { title, description } = req.body as { title: string; description?: string };
-      if (!title) return res.status(400).json({ error: 'title is required' });
+      if (!title) return res.status(400).json({ error: "title is required" });
       const subtask = store.addSubtask(req.params.slug, taskId, title, description);
       res.status(201).json(subtask);
     } catch (err) {
@@ -198,7 +240,7 @@ export function createRouter(): Router {
     }
   });
 
-  router.patch('/projects/:slug/tasks/:taskId/subtasks/:subtaskId', (req, res) => {
+  router.patch("/projects/:slug/tasks/:taskId/subtasks/:subtaskId", (req, res) => {
     try {
       const taskId = Number(req.params.taskId);
       const subtaskId = Number(req.params.subtaskId);
@@ -207,14 +249,18 @@ export function createRouter(): Router {
         description?: string;
         status?: SubtaskStatus;
       };
-      const subtask = store.updateSubtask(req.params.slug, taskId, subtaskId, { title, description, status });
+      const subtask = store.updateSubtask(req.params.slug, taskId, subtaskId, {
+        title,
+        description,
+        status,
+      });
       res.json(subtask);
     } catch (err) {
       res.status(400).json({ error: String(err) });
     }
   });
 
-  router.delete('/projects/:slug/tasks/:taskId/subtasks/:subtaskId', (req, res) => {
+  router.delete("/projects/:slug/tasks/:taskId/subtasks/:subtaskId", (req, res) => {
     try {
       const taskId = Number(req.params.taskId);
       const subtaskId = Number(req.params.subtaskId);

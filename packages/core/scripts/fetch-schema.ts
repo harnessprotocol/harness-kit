@@ -7,11 +7,10 @@
  */
 
 import { writeFileSync } from "node:fs";
-import { resolve, dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-const SCHEMA_URL =
-  "https://harnessprotocol.ai/schema/v1/harness.schema.json";
+const SCHEMA_URL = "https://harnessprotocol.ai/schema/v1/harness.schema.json";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const OUTPUT = resolve(__dirname, "../src/schema/harness.schema.json");

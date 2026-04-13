@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import type { RoadmapFeature } from '../../lib/roadmap-types';
+import { useState } from "react";
 import {
-  ROADMAP_PRIORITY_CONFIG,
   ROADMAP_COMPLEXITY_CONFIG,
   ROADMAP_IMPACT_CONFIG,
-} from '../../lib/roadmap-constants';
+  ROADMAP_PRIORITY_CONFIG,
+} from "../../lib/roadmap-constants";
+import type { RoadmapFeature } from "../../lib/roadmap-types";
 
 interface Props {
   feature: RoadmapFeature;
@@ -25,20 +25,26 @@ export function FeatureCard({ feature, onSelect, isDragging }: Props) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
-        background: isDragging ? 'var(--bg-hover)' : hovered ? 'var(--bg-hover)' : 'var(--bg-elevated)',
-        border: `1px solid ${hovered && !isDragging ? 'var(--accent)' : 'var(--border)'}`,
+        background: isDragging
+          ? "var(--bg-hover)"
+          : hovered
+            ? "var(--bg-hover)"
+            : "var(--bg-elevated)",
+        border: `1px solid ${hovered && !isDragging ? "var(--accent)" : "var(--border)"}`,
         borderRadius: 8,
         padding: 10,
-        cursor: 'pointer',
-        transition: 'border-color 0.1s, background 0.1s',
-        display: 'flex',
-        flexDirection: 'column',
+        cursor: "pointer",
+        transition: "border-color 0.1s, background 0.1s",
+        display: "flex",
+        flexDirection: "column",
         gap: 6,
         opacity: isDragging ? 0.85 : 1,
       }}
     >
       {/* Title */}
-      <span style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4, color: 'var(--text-primary)' }}>
+      <span
+        style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4, color: "var(--text-primary)" }}
+      >
         {feature.title}
       </span>
 
@@ -49,11 +55,11 @@ export function FeatureCard({ feature, onSelect, isDragging }: Props) {
             margin: 0,
             fontSize: 11,
             lineHeight: 1.6,
-            color: 'var(--text-secondary)',
-            overflow: 'hidden',
-            display: '-webkit-box',
+            color: "var(--text-secondary)",
+            overflow: "hidden",
+            display: "-webkit-box",
             WebkitLineClamp: 2,
-            WebkitBoxOrient: 'vertical',
+            WebkitBoxOrient: "vertical",
           }}
         >
           {feature.description}
@@ -61,7 +67,7 @@ export function FeatureCard({ feature, onSelect, isDragging }: Props) {
       )}
 
       {/* Badges row */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 5 }}>
+      <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 5 }}>
         {/* Priority badge */}
         <span
           style={{
@@ -69,11 +75,11 @@ export function FeatureCard({ feature, onSelect, isDragging }: Props) {
             border: `1px solid ${priorityCfg.border}`,
             background: priorityCfg.bg,
             color: priorityCfg.color,
-            padding: '1px 6px',
+            padding: "1px 6px",
             fontSize: 10,
             fontWeight: 600,
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
           }}
         >
           {priorityCfg.label}
@@ -83,9 +89,9 @@ export function FeatureCard({ feature, onSelect, isDragging }: Props) {
         <span
           style={{
             borderRadius: 9999,
-            border: '1px solid var(--border-subtle)',
-            background: 'var(--bg-surface)',
-            padding: '1px 6px',
+            border: "1px solid var(--border-subtle)",
+            background: "var(--bg-surface)",
+            padding: "1px 6px",
             fontSize: 10,
             fontWeight: 500,
             color: complexityCfg.color,
@@ -98,9 +104,9 @@ export function FeatureCard({ feature, onSelect, isDragging }: Props) {
         <span
           style={{
             borderRadius: 9999,
-            border: '1px solid var(--border-subtle)',
-            background: 'var(--bg-surface)',
-            padding: '1px 6px',
+            border: "1px solid var(--border-subtle)",
+            background: "var(--bg-surface)",
+            padding: "1px 6px",
             fontSize: 10,
             fontWeight: 500,
             color: impactCfg.color,
@@ -114,11 +120,11 @@ export function FeatureCard({ feature, onSelect, isDragging }: Props) {
           <span
             style={{
               borderRadius: 9999,
-              border: '1px solid var(--border-subtle)',
-              background: 'var(--bg-surface)',
-              padding: '1px 6px',
+              border: "1px solid var(--border-subtle)",
+              background: "var(--bg-surface)",
+              padding: "1px 6px",
               fontSize: 10,
-              color: 'var(--text-muted)',
+              color: "var(--text-muted)",
             }}
           >
             {feature.phaseId}
@@ -130,16 +136,16 @@ export function FeatureCard({ feature, onSelect, isDragging }: Props) {
           <span
             style={{
               borderRadius: 9999,
-              border: '1px solid rgba(37,99,235,0.3)',
-              background: 'rgba(37,99,235,0.08)',
-              color: '#2563eb',
-              padding: '1px 6px',
+              border: "1px solid rgba(37,99,235,0.3)",
+              background: "rgba(37,99,235,0.08)",
+              color: "#2563eb",
+              padding: "1px 6px",
               fontSize: 10,
               fontWeight: 500,
             }}
             title="Has competitor insights"
           >
-            {'↗'} Insight
+            {"↗"} Insight
           </span>
         )}
 
@@ -148,10 +154,10 @@ export function FeatureCard({ feature, onSelect, isDragging }: Props) {
           <span
             style={{
               borderRadius: 9999,
-              border: '1px solid rgba(22,163,74,0.3)',
-              background: 'rgba(22,163,74,0.08)',
-              color: '#16a34a',
-              padding: '1px 6px',
+              border: "1px solid rgba(22,163,74,0.3)",
+              background: "rgba(22,163,74,0.08)",
+              color: "#16a34a",
+              padding: "1px 6px",
               fontSize: 10,
               fontWeight: 500,
             }}

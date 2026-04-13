@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { ComparisonState } from "../../hooks/useComparator";
 import HarnessPanel from "../../components/comparator/HarnessPanel";
+import type { ComparisonState } from "../../hooks/useComparator";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -338,7 +338,9 @@ export default function ExecutionPhase({
         />
         <span style={styles.pipeSep}>|</span>
         {harnessNames.map((name) => (
-          <span key={name} style={styles.harnessBadge}>{name}</span>
+          <span key={name} style={styles.harnessBadge}>
+            {name}
+          </span>
         ))}
         <div style={{ flex: 1 }} />
         <span style={styles.elapsedTimer}>{formatElapsed(elapsed)}</span>

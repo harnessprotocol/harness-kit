@@ -1,6 +1,10 @@
 // ── Core enums ──────────────────────────────────────────────
 
-import type { SecurityScanStatus, SecurityFinding, SecurityPermissionsSummary } from './security.js';
+import type {
+  SecurityFinding,
+  SecurityPermissionsSummary,
+  SecurityScanStatus,
+} from "./security.js";
 
 export type ComponentType =
   | "skill"

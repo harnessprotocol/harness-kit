@@ -1,16 +1,12 @@
 import type { FsProvider } from "../../src/fs-provider.js";
-import { posixJoin, posixDirname } from "../../src/utils/posix-path.js";
+import { posixDirname, posixJoin } from "../../src/utils/posix-path.js";
 
 export class MockFsProvider implements FsProvider {
   private files: Map<string, string>;
   private _cwd: string;
   private _homedir: string;
 
-  constructor(
-    initialFiles: Record<string, string> = {},
-    cwd = "/project",
-    homedir = "/home/user",
-  ) {
+  constructor(initialFiles: Record<string, string> = {}, cwd = "/project", homedir = "/home/user") {
     this.files = new Map(Object.entries(initialFiles));
     this._cwd = cwd;
     this._homedir = homedir;

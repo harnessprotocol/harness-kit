@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
+import type { ServerMessage } from "@harness-kit/shared";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import React from "react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ChatProvider } from "../../contexts/ChatContext";
 import { useChatRelay } from "../useChatRelay";
-import type { ServerMessage } from "@harness-kit/shared";
 
 // ── Tauri mock ────────────────────────────────────────────────
 
@@ -39,14 +39,30 @@ class MockWebSocket {
   send = mockWsInstance.send;
   close = mockWsInstance.close;
   readyState = mockWsInstance.readyState;
-  set onopen(fn: ((ev: Event) => void) | null) { mockWsInstance.onopen = fn; }
-  get onopen() { return mockWsInstance.onopen; }
-  set onmessage(fn: ((ev: MessageEvent) => void) | null) { mockWsInstance.onmessage = fn; }
-  get onmessage() { return mockWsInstance.onmessage; }
-  set onclose(fn: ((ev: CloseEvent) => void) | null) { mockWsInstance.onclose = fn; }
-  get onclose() { return mockWsInstance.onclose; }
-  set onerror(fn: ((ev: Event) => void) | null) { mockWsInstance.onerror = fn; }
-  get onerror() { return mockWsInstance.onerror; }
+  set onopen(fn: ((ev: Event) => void) | null) {
+    mockWsInstance.onopen = fn;
+  }
+  get onopen() {
+    return mockWsInstance.onopen;
+  }
+  set onmessage(fn: ((ev: MessageEvent) => void) | null) {
+    mockWsInstance.onmessage = fn;
+  }
+  get onmessage() {
+    return mockWsInstance.onmessage;
+  }
+  set onclose(fn: ((ev: CloseEvent) => void) | null) {
+    mockWsInstance.onclose = fn;
+  }
+  get onclose() {
+    return mockWsInstance.onclose;
+  }
+  set onerror(fn: ((ev: Event) => void) | null) {
+    mockWsInstance.onerror = fn;
+  }
+  get onerror() {
+    return mockWsInstance.onerror;
+  }
 }
 
 vi.stubGlobal("WebSocket", MockWebSocket);
@@ -71,9 +87,7 @@ function fireOpen() {
 /** Simulate a ServerMessage arriving from the relay */
 function fireMessage(msg: ServerMessage) {
   act(() => {
-    mockWsInstance.onmessage?.(
-      new MessageEvent("message", { data: JSON.stringify(msg) }),
-    );
+    mockWsInstance.onmessage?.(new MessageEvent("message", { data: JSON.stringify(msg) }));
   });
 }
 
@@ -134,44 +148,46 @@ describe("connect()", () => {
 describe("createRoom()", () => {
   it("sends create_room message with nickname when connected", () => {
     const { result } = renderChat();
-    act(() => { result.current.connect("ws://localhost:8080"); });
+    act(() => {
+      result.current.connect("ws://localhost:8080");
+    });
     fireOpen();
 
-    act(() => { result.current.createRoom("alice"); });
+    act(() => {
+      result.current.createRoom("alice");
+    });
 
     expect(mockWsInstance.send).toHaveBeenCalledWith(
       expect.stringContaining('"type":"create_room"'),
     );
-    expect(mockWsInstance.send).toHaveBeenCalledWith(
-      expect.stringContaining('"nickname":"alice"'),
-    );
+    expect(mockWsInstance.send).toHaveBeenCalledWith(expect.stringContaining('"nickname":"alice"'));
   });
 });
 
 describe("joinRoom()", () => {
   it("sends join_room message with code and nickname when connected", () => {
     const { result } = renderChat();
-    act(() => { result.current.connect("ws://localhost:8080"); });
+    act(() => {
+      result.current.connect("ws://localhost:8080");
+    });
     fireOpen();
 
-    act(() => { result.current.joinRoom("ABCD", "bob"); });
+    act(() => {
+      result.current.joinRoom("ABCD", "bob");
+    });
 
-    expect(mockWsInstance.send).toHaveBeenCalledWith(
-      expect.stringContaining('"type":"join_room"'),
-    );
-    expect(mockWsInstance.send).toHaveBeenCalledWith(
-      expect.stringContaining('"code":"ABCD"'),
-    );
-    expect(mockWsInstance.send).toHaveBeenCalledWith(
-      expect.stringContaining('"nickname":"bob"'),
-    );
+    expect(mockWsInstance.send).toHaveBeenCalledWith(expect.stringContaining('"type":"join_room"'));
+    expect(mockWsInstance.send).toHaveBeenCalledWith(expect.stringContaining('"code":"ABCD"'));
+    expect(mockWsInstance.send).toHaveBeenCalledWith(expect.stringContaining('"nickname":"bob"'));
   });
 });
 
 describe("sendChat()", () => {
   it("sends chat message when in_room", async () => {
     const { result } = renderChat();
-    act(() => { result.current.connect("ws://localhost:8080"); });
+    act(() => {
+      result.current.connect("ws://localhost:8080");
+    });
     fireOpen();
 
     localStorage.setItem("harness-kit-chat-nick", "alice");
@@ -189,11 +205,11 @@ describe("sendChat()", () => {
     });
 
     mockWsInstance.send.mockReset();
-    act(() => { result.current.sendChat("hello world"); });
+    act(() => {
+      result.current.sendChat("hello world");
+    });
 
-    expect(mockWsInstance.send).toHaveBeenCalledWith(
-      expect.stringContaining('"type":"chat"'),
-    );
+    expect(mockWsInstance.send).toHaveBeenCalledWith(expect.stringContaining('"type":"chat"'));
     expect(mockWsInstance.send).toHaveBeenCalledWith(
       expect.stringContaining('"body":"hello world"'),
     );
@@ -204,7 +220,9 @@ describe("sendChat()", () => {
     // Never connect — wsRef.current is null
     mockWsInstance.send.mockReset();
 
-    act(() => { result.current.sendChat("should not send"); });
+    act(() => {
+      result.current.sendChat("should not send");
+    });
 
     expect(mockWsInstance.send).not.toHaveBeenCalled();
   });
@@ -213,7 +231,9 @@ describe("sendChat()", () => {
 describe("room_joined ServerMessage", () => {
   it("transitions state to in_room with correct roomCode and nickname", async () => {
     const { result } = renderChat();
-    act(() => { result.current.connect("ws://localhost:8080"); });
+    act(() => {
+      result.current.connect("ws://localhost:8080");
+    });
     fireOpen();
 
     // Set localStorage nick so the hook can pick it up
@@ -231,7 +251,10 @@ describe("room_joined ServerMessage", () => {
       expect(result.current.state.status).toBe("in_room");
     });
 
-    const state = result.current.state as Extract<typeof result.current.state, { status: "in_room" }>;
+    const state = result.current.state as Extract<
+      typeof result.current.state,
+      { status: "in_room" }
+    >;
     expect(state.roomCode).toBe("R001");
     expect(state.nickname).toBe("carol");
   });
@@ -240,7 +263,9 @@ describe("room_joined ServerMessage", () => {
 describe("message ServerMessage", () => {
   it("appends incoming chat message to state.messages", async () => {
     const { result } = renderChat();
-    act(() => { result.current.connect("ws://localhost:8080"); });
+    act(() => {
+      result.current.connect("ws://localhost:8080");
+    });
     fireOpen();
 
     localStorage.setItem("harness-kit-chat-nick", "alice");
@@ -283,7 +308,9 @@ describe("message ServerMessage", () => {
 describe("unreadCount", () => {
   it("increments when panel is closed (isOpen=false) and a message arrives", async () => {
     const { result } = renderChat();
-    act(() => { result.current.connect("ws://localhost:8080"); });
+    act(() => {
+      result.current.connect("ws://localhost:8080");
+    });
     fireOpen();
 
     localStorage.setItem("harness-kit-chat-nick", "alice");
@@ -295,7 +322,9 @@ describe("unreadCount", () => {
       history: [],
     });
 
-    await waitFor(() => { expect(result.current.state.status).toBe("in_room"); });
+    await waitFor(() => {
+      expect(result.current.state.status).toBe("in_room");
+    });
 
     // Panel is closed (default)
     expect(result.current.isOpen).toBe(false);
@@ -312,12 +341,16 @@ describe("unreadCount", () => {
       },
     });
 
-    await waitFor(() => { expect(result.current.unreadCount).toBe(1); });
+    await waitFor(() => {
+      expect(result.current.unreadCount).toBe(1);
+    });
   });
 
   it("resets to 0 when setOpen(true) is called", async () => {
     const { result } = renderChat();
-    act(() => { result.current.connect("ws://localhost:8080"); });
+    act(() => {
+      result.current.connect("ws://localhost:8080");
+    });
     fireOpen();
 
     localStorage.setItem("harness-kit-chat-nick", "alice");
@@ -329,7 +362,9 @@ describe("unreadCount", () => {
       history: [],
     });
 
-    await waitFor(() => { expect(result.current.state.status).toBe("in_room"); });
+    await waitFor(() => {
+      expect(result.current.state.status).toBe("in_room");
+    });
 
     fireMessage({
       type: "message",
@@ -343,9 +378,13 @@ describe("unreadCount", () => {
       },
     });
 
-    await waitFor(() => { expect(result.current.unreadCount).toBeGreaterThan(0); });
+    await waitFor(() => {
+      expect(result.current.unreadCount).toBeGreaterThan(0);
+    });
 
-    act(() => { result.current.setOpen(true); });
+    act(() => {
+      result.current.setOpen(true);
+    });
     expect(result.current.unreadCount).toBe(0);
   });
 });
@@ -353,7 +392,9 @@ describe("unreadCount", () => {
 describe("leaveRoom()", () => {
   it("sends leave_room and transitions back to connected", async () => {
     const { result } = renderChat();
-    act(() => { result.current.connect("ws://localhost:8080"); });
+    act(() => {
+      result.current.connect("ws://localhost:8080");
+    });
     fireOpen();
 
     localStorage.setItem("harness-kit-chat-nick", "alice");
@@ -365,10 +406,14 @@ describe("leaveRoom()", () => {
       history: [],
     });
 
-    await waitFor(() => { expect(result.current.state.status).toBe("in_room"); });
+    await waitFor(() => {
+      expect(result.current.state.status).toBe("in_room");
+    });
 
     mockWsInstance.send.mockReset();
-    act(() => { result.current.leaveRoom(); });
+    act(() => {
+      result.current.leaveRoom();
+    });
 
     expect(mockWsInstance.send).toHaveBeenCalledWith(
       expect.stringContaining('"type":"leave_room"'),

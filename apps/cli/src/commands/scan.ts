@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { scanPlugin, formatSecurityReport } from "@harness-kit/core";
+import { formatSecurityReport, scanPlugin } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
 
 export async function scanCommand(pluginPath?: string): Promise<void> {
@@ -43,7 +43,9 @@ export async function scanCommand(pluginPath?: string): Promise<void> {
   const formattedReport = formatSecurityReport(report);
 
   console.log(`\n${"=".repeat(60)}`);
-  console.log(`Security Scan Report: ${formattedReport.plugin_name} v${formattedReport.plugin_version}`);
+  console.log(
+    `Security Scan Report: ${formattedReport.plugin_name} v${formattedReport.plugin_version}`,
+  );
   console.log(`Status: ${formattedReport.scan_status}`);
   console.log(`Date: ${new Date(formattedReport.scan_date).toLocaleString()}`);
   console.log(`${"=".repeat(60)}\n`);
@@ -58,7 +60,9 @@ export async function scanCommand(pluginPath?: string): Promise<void> {
     for (const finding of section.findings) {
       console.log(`\n• ${finding.message}`);
       if (finding.file_path) {
-        console.log(`  File: ${finding.file_path}${finding.line_number ? `:${finding.line_number}` : ""}`);
+        console.log(
+          `  File: ${finding.file_path}${finding.line_number ? `:${finding.line_number}` : ""}`,
+        );
       }
       if (finding.code_snippet) {
         console.log(`  Code: ${finding.code_snippet}`);

@@ -1,9 +1,11 @@
+import type { CompileResult, DetectedPlatform, TargetPlatform } from "@harness-kit/core";
+import { compile, detectPlatforms, parseHarness } from "@harness-kit/core";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useChat } from "../../contexts/ChatContext";
 import { emitChatShare } from "../../lib/chat-events";
-import { compile, detectPlatforms, parseHarness } from "@harness-kit/core";
-import type { CompileResult, DetectedPlatform, TargetPlatform } from "@harness-kit/core";
+import { SyncFsProvider } from "../../lib/sync-fs";
+import type { BackupManifest } from "../../lib/tauri";
 import {
   readHarnessFile,
   syncCreateBackup,
@@ -11,10 +13,8 @@ import {
   syncListBackups,
   syncWriteFiles,
 } from "../../lib/tauri";
-import type { BackupManifest } from "../../lib/tauri";
-import { SyncFsProvider } from "../../lib/sync-fs";
-import SyncPreview from "./sync/SyncPreview";
 import BackupHistory from "./sync/BackupHistory";
+import SyncPreview from "./sync/SyncPreview";
 
 const ALL_PLATFORMS: TargetPlatform[] = ["claude-code", "cursor", "copilot"];
 const PLATFORM_LABELS: Record<TargetPlatform, string> = {
@@ -28,19 +28,34 @@ const MAX_RECENT = 10;
 type Phase = "idle" | "previewing" | "previewed" | "applying" | "applied";
 
 function getRecentDirs(): string[] {
-  try { return JSON.parse(localStorage.getItem(RECENT_DIRS_KEY) ?? "[]"); } catch { return []; }
+  try {
+    return JSON.parse(localStorage.getItem(RECENT_DIRS_KEY) ?? "[]");
+  } catch {
+    return [];
+  }
 }
 function saveRecentDir(dir: string) {
   const dirs = getRecentDirs().filter((d) => d !== dir);
   dirs.unshift(dir);
-  try { localStorage.setItem(RECENT_DIRS_KEY, JSON.stringify(dirs.slice(0, MAX_RECENT))); } catch {}
+  try {
+    localStorage.setItem(RECENT_DIRS_KEY, JSON.stringify(dirs.slice(0, MAX_RECENT)));
+  } catch {}
 }
 
 // ── Small helpers ─────────────────────────────────────────────
 
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div style={{ fontSize: "10px", fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: "8px" }}>
+    <div
+      style={{
+        fontSize: "10px",
+        fontWeight: 600,
+        color: "var(--fg-subtle)",
+        textTransform: "uppercase",
+        letterSpacing: "0.5px",
+        marginBottom: "8px",
+      }}
+    >
       {children}
     </div>
   );
@@ -48,13 +63,15 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
-    <div style={{
-      background: "var(--bg-surface)",
-      border: "1px solid var(--border-base)",
-      borderRadius: "8px",
-      padding: "14px 16px",
-      ...style,
-    }}>
+    <div
+      style={{
+        background: "var(--bg-surface)",
+        border: "1px solid var(--border-base)",
+        borderRadius: "8px",
+        padding: "14px 16px",
+        ...style,
+      }}
+    >
       {children}
     </div>
   );
@@ -118,8 +135,14 @@ export default function SyncPage() {
       .finally(() => setHarnessLoading(false));
   }, []);
 
-  useEffect(() => { loadHarness(); }, [loadHarness]);
-  useEffect(() => { syncListBackups().then(setBackups).catch(() => {}); }, []);
+  useEffect(() => {
+    loadHarness();
+  }, [loadHarness]);
+  useEffect(() => {
+    syncListBackups()
+      .then(setBackups)
+      .catch(() => {});
+  }, []);
 
   // Debounced dir validation + platform detection
   const handleDirChange = useCallback((dir: string) => {
@@ -136,15 +159,21 @@ export default function SyncPage() {
       setDirChecking(true);
       try {
         const exists = await syncFileExists(dir, ".");
-        if (!exists) { setDirValid(false); return; }
+        if (!exists) {
+          setDirValid(false);
+          return;
+        }
         setDirValid(true);
         saveRecentDir(dir);
         const fs = new SyncFsProvider(dir);
         const detected = await detectPlatforms(fs);
         setDetectedPlatforms(detected);
         setSelectedTargets(new Set(detected.map((d) => d.platform)));
-      } catch { setDirValid(false); }
-      finally { setDirChecking(false); }
+      } catch {
+        setDirValid(false);
+      } finally {
+        setDirChecking(false);
+      }
     }, 300);
   }, []);
 
@@ -159,7 +188,8 @@ export default function SyncPage() {
   function toggleTarget(platform: TargetPlatform) {
     setSelectedTargets((prev) => {
       const next = new Set(prev);
-      if (next.has(platform)) next.delete(platform); else next.add(platform);
+      if (next.has(platform)) next.delete(platform);
+      else next.add(platform);
       return next;
     });
   }
@@ -184,8 +214,15 @@ export default function SyncPage() {
     setPhase("applying");
     setApplyError(null);
     try {
-      const overwritePaths = previewResult.files.filter((f) => f.action === "update").map((f) => f.path);
-      const backup = await syncCreateBackup(projectDir, harnessName, [...selectedTargets], overwritePaths);
+      const overwritePaths = previewResult.files
+        .filter((f) => f.action === "update")
+        .map((f) => f.path);
+      const backup = await syncCreateBackup(
+        projectDir,
+        harnessName,
+        [...selectedTargets],
+        overwritePaths,
+      );
       setAppliedBackupId(backup.id);
       const writes = previewResult.files
         .filter((f) => f.action === "create" || f.action === "update")
@@ -213,12 +250,27 @@ export default function SyncPage() {
 
   return (
     <>
-      <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px", maxWidth: "720px" }}>
-
+      <div
+        style={{
+          padding: "20px 24px",
+          display: "flex",
+          flexDirection: "column",
+          gap: "16px",
+          maxWidth: "720px",
+        }}
+      >
         {/* Header */}
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
           <div>
-            <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
+            <h1
+              style={{
+                fontSize: "17px",
+                fontWeight: 600,
+                letterSpacing: "-0.3px",
+                color: "var(--fg-base)",
+                margin: 0,
+              }}
+            >
               Sync
             </h1>
             <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>
@@ -229,12 +281,19 @@ export default function SyncPage() {
           <Link
             to="/harness/file"
             style={{
-              display: "flex", alignItems: "center", gap: "5px",
-              padding: "5px 11px", borderRadius: "6px",
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+              padding: "5px 11px",
+              borderRadius: "6px",
               border: "1px solid var(--border-base)",
               background: "var(--bg-elevated)",
-              color: "var(--fg-base)", fontSize: "11px", fontWeight: 500,
-              cursor: "pointer", textDecoration: "none", flexShrink: 0,
+              color: "var(--fg-base)",
+              fontSize: "11px",
+              fontWeight: 500,
+              cursor: "pointer",
+              textDecoration: "none",
+              flexShrink: 0,
             }}
           >
             <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
@@ -247,29 +306,58 @@ export default function SyncPage() {
         {/* No harness.yaml — empty state */}
         {!harnessLoading && !harnessContent && (
           <Card>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", padding: "16px 0 8px", textAlign: "center" }}>
-              <div style={{
-                width: "40px", height: "40px", borderRadius: "10px",
-                background: "var(--bg-elevated)", border: "1px solid var(--border-base)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "20px",
-              }}>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "10px",
+                padding: "16px 0 8px",
+                textAlign: "center",
+              }}
+            >
+              <div
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "10px",
+                  background: "var(--bg-elevated)",
+                  border: "1px solid var(--border-base)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "20px",
+                }}
+              >
                 🧰
               </div>
               <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)", margin: 0 }}>
                 No harness.yaml found
               </p>
-              <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: 0, maxWidth: "400px", lineHeight: "1.5" }}>
+              <p
+                style={{
+                  fontSize: "12px",
+                  color: "var(--fg-muted)",
+                  margin: 0,
+                  maxWidth: "400px",
+                  lineHeight: "1.5",
+                }}
+              >
                 Create your harness.yaml first, then come back to sync it to your projects.
               </p>
               <Link
                 to="/harness/file"
                 style={{
-                  padding: "7px 14px", borderRadius: "6px",
+                  padding: "7px 14px",
+                  borderRadius: "6px",
                   border: "none",
-                  background: "var(--accent)", color: "var(--accent-text, #fff)",
-                  fontSize: "12px", fontWeight: 600, cursor: "pointer",
-                  textDecoration: "none", marginTop: "4px",
+                  background: "var(--accent)",
+                  color: "var(--accent-text, #fff)",
+                  fontSize: "12px",
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  textDecoration: "none",
+                  marginTop: "4px",
                 }}
               >
                 Create harness.yaml
@@ -283,15 +371,33 @@ export default function SyncPage() {
           <Card style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <SectionLabel>Harness Source</SectionLabel>
-              <div style={{ display: "flex", alignItems: "baseline", gap: "8px", flexWrap: "wrap" }}>
-                <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--fg-base)" }}>{harnessName}</span>
+              <div
+                style={{ display: "flex", alignItems: "baseline", gap: "8px", flexWrap: "wrap" }}
+              >
+                <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--fg-base)" }}>
+                  {harnessName}
+                </span>
                 {harnessDescription && (
-                  <span style={{ fontSize: "12px", color: "var(--fg-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <span
+                    style={{
+                      fontSize: "12px",
+                      color: "var(--fg-muted)",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
                     {harnessDescription}
                   </span>
                 )}
               </div>
-              <code style={{ fontSize: "10px", color: "var(--fg-subtle)", fontFamily: "ui-monospace, monospace" }}>
+              <code
+                style={{
+                  fontSize: "10px",
+                  color: "var(--fg-subtle)",
+                  fontFamily: "ui-monospace, monospace",
+                }}
+              >
                 {harnessPath}
               </code>
             </div>
@@ -311,19 +417,28 @@ export default function SyncPage() {
                   onChange={(e) => handleDirChange(e.target.value)}
                   placeholder="~/repos/my-project"
                   style={{
-                    flex: 1, padding: "6px 10px", borderRadius: "6px",
+                    flex: 1,
+                    padding: "6px 10px",
+                    borderRadius: "6px",
                     border: `1px solid ${dirValid ? "var(--accent)" : "var(--border-base)"}`,
-                    background: "var(--bg-elevated)", color: "var(--fg-base)",
-                    fontSize: "12px", fontFamily: "ui-monospace, monospace", outline: "none",
+                    background: "var(--bg-elevated)",
+                    color: "var(--fg-base)",
+                    fontSize: "12px",
+                    fontFamily: "ui-monospace, monospace",
+                    outline: "none",
                   }}
                 />
                 <button
                   onClick={openDirectoryPicker}
                   style={{
-                    padding: "6px 12px", borderRadius: "6px",
+                    padding: "6px 12px",
+                    borderRadius: "6px",
                     border: "1px solid var(--border-base)",
-                    background: "var(--bg-elevated)", color: "var(--fg-base)",
-                    fontSize: "12px", cursor: "pointer", whiteSpace: "nowrap",
+                    background: "var(--bg-elevated)",
+                    color: "var(--fg-base)",
+                    fontSize: "12px",
+                    cursor: "pointer",
+                    whiteSpace: "nowrap",
                   }}
                 >
                   Browse…
@@ -332,12 +447,20 @@ export default function SyncPage() {
 
               {/* Status / recent */}
               {projectDir && !dirChecking && (
-                <p style={{ margin: "5px 0 0", fontSize: "11px", color: dirValid ? "var(--accent)" : "var(--danger)" }}>
+                <p
+                  style={{
+                    margin: "5px 0 0",
+                    fontSize: "11px",
+                    color: dirValid ? "var(--accent)" : "var(--danger)",
+                  }}
+                >
                   {dirValid ? "✓ Directory found" : "✗ Directory not found"}
                 </p>
               )}
               {dirChecking && (
-                <p style={{ margin: "5px 0 0", fontSize: "11px", color: "var(--fg-subtle)" }}>Checking…</p>
+                <p style={{ margin: "5px 0 0", fontSize: "11px", color: "var(--fg-subtle)" }}>
+                  Checking…
+                </p>
               )}
               {!projectDir && recentDirs.length > 0 && (
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "6px" }}>
@@ -346,11 +469,18 @@ export default function SyncPage() {
                       key={d}
                       onClick={() => handleDirChange(d)}
                       style={{
-                        padding: "2px 8px", borderRadius: "4px",
+                        padding: "2px 8px",
+                        borderRadius: "4px",
                         border: "1px solid var(--border-base)",
-                        background: "var(--bg-elevated)", color: "var(--fg-subtle)",
-                        fontSize: "10px", fontFamily: "ui-monospace, monospace", cursor: "pointer",
-                        maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                        background: "var(--bg-elevated)",
+                        color: "var(--fg-subtle)",
+                        fontSize: "10px",
+                        fontFamily: "ui-monospace, monospace",
+                        cursor: "pointer",
+                        maxWidth: "200px",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
                       }}
                     >
                       {d}
@@ -372,24 +502,31 @@ export default function SyncPage() {
                       key={platform}
                       onClick={() => toggleTarget(platform)}
                       style={{
-                        display: "flex", alignItems: "center", gap: "5px",
-                        padding: "5px 12px", borderRadius: "6px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "5px",
+                        padding: "5px 12px",
+                        borderRadius: "6px",
                         border: `1px solid ${checked ? "var(--accent)" : "var(--border-base)"}`,
                         background: checked ? "var(--accent-light, #1a1a2e)" : "var(--bg-elevated)",
                         color: checked ? "var(--accent)" : "var(--fg-subtle)",
-                        fontSize: "12px", fontWeight: checked ? 600 : 400, cursor: "pointer",
+                        fontSize: "12px",
+                        fontWeight: checked ? 600 : 400,
+                        cursor: "pointer",
                         transition: "all 0.1s",
                       }}
                     >
-                      <span style={{
-                        width: "6px", height: "6px", borderRadius: "50%",
-                        background: checked ? "var(--accent)" : "var(--border-base)",
-                        flexShrink: 0,
-                      }} />
+                      <span
+                        style={{
+                          width: "6px",
+                          height: "6px",
+                          borderRadius: "50%",
+                          background: checked ? "var(--accent)" : "var(--border-base)",
+                          flexShrink: 0,
+                        }}
+                      />
                       {PLATFORM_LABELS[platform]}
-                      {detected && (
-                        <span style={{ fontSize: "9px", opacity: 0.7 }}>detected</span>
-                      )}
+                      {detected && <span style={{ fontSize: "9px", opacity: 0.7 }}>detected</span>}
                     </button>
                   );
                 })}
@@ -402,10 +539,13 @@ export default function SyncPage() {
                 onClick={handlePreview}
                 disabled={!canPreview}
                 style={{
-                  padding: "7px 18px", borderRadius: "6px", border: "none",
+                  padding: "7px 18px",
+                  borderRadius: "6px",
+                  border: "none",
                   background: canPreview ? "var(--accent)" : "var(--bg-elevated)",
                   color: canPreview ? "var(--accent-text, #fff)" : "var(--fg-subtle)",
-                  fontSize: "12px", fontWeight: 600,
+                  fontSize: "12px",
+                  fontWeight: 600,
                   cursor: canPreview ? "pointer" : "not-allowed",
                   transition: "all 0.1s",
                 }}
@@ -433,20 +573,43 @@ export default function SyncPage() {
               onApply={handleApply}
             />
             {applyError && (
-              <p style={{ fontSize: "12px", color: "var(--danger)", margin: "8px 0 0" }}>{applyError}</p>
+              <p style={{ fontSize: "12px", color: "var(--danger)", margin: "8px 0 0" }}>
+                {applyError}
+              </p>
             )}
           </div>
         )}
 
         {/* Success banner */}
         {phase === "applied" && (
-          <Card style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
+          <Card
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "12px",
+              flexWrap: "wrap",
+            }}
+          >
             <div>
-              <p style={{ margin: "0 0 2px", fontSize: "13px", fontWeight: 600, color: "var(--accent)" }}>
+              <p
+                style={{
+                  margin: "0 0 2px",
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: "var(--accent)",
+                }}
+              >
                 Sync complete
               </p>
               {appliedBackupId && (
-                <code style={{ fontSize: "10px", color: "var(--fg-subtle)", fontFamily: "ui-monospace, monospace" }}>
+                <code
+                  style={{
+                    fontSize: "10px",
+                    color: "var(--fg-subtle)",
+                    fontFamily: "ui-monospace, monospace",
+                  }}
+                >
                   backup: {appliedBackupId}
                 </code>
               )}
@@ -455,7 +618,10 @@ export default function SyncPage() {
               {chatState.status === "in_room" && (
                 <button
                   onClick={() => {
-                    const fileCount = previewResult?.files.filter((f) => f.action === "create" || f.action === "update").length ?? 0;
+                    const fileCount =
+                      previewResult?.files.filter(
+                        (f) => f.action === "create" || f.action === "update",
+                      ).length ?? 0;
                     emitChatShare({
                       action: "sync_applied",
                       target: harnessName,
@@ -467,11 +633,14 @@ export default function SyncPage() {
                     setTimeout(() => setSharedToRoom(false), 2000);
                   }}
                   style={{
-                    padding: "5px 12px", borderRadius: "6px",
+                    padding: "5px 12px",
+                    borderRadius: "6px",
                     border: "1px solid var(--accent)",
                     background: sharedToRoom ? "var(--accent)" : "transparent",
                     color: sharedToRoom ? "var(--accent-text, #fff)" : "var(--accent)",
-                    fontSize: "12px", cursor: "pointer", fontWeight: 500,
+                    fontSize: "12px",
+                    cursor: "pointer",
+                    fontWeight: 500,
                     transition: "all 0.15s",
                   }}
                 >
@@ -481,10 +650,13 @@ export default function SyncPage() {
               <button
                 onClick={handleReset}
                 style={{
-                  padding: "5px 12px", borderRadius: "6px",
+                  padding: "5px 12px",
+                  borderRadius: "6px",
                   border: "1px solid var(--border-base)",
-                  background: "var(--bg-elevated)", color: "var(--fg-base)",
-                  fontSize: "12px", cursor: "pointer",
+                  background: "var(--bg-elevated)",
+                  color: "var(--fg-base)",
+                  fontSize: "12px",
+                  cursor: "pointer",
                 }}
               >
                 Sync again
@@ -498,12 +670,14 @@ export default function SyncPage() {
           <BackupHistory
             backups={backups}
             projectDir={projectDir}
-            onRestored={() => syncListBackups().then(setBackups).catch(() => {})}
+            onRestored={() =>
+              syncListBackups()
+                .then(setBackups)
+                .catch(() => {})
+            }
           />
         )}
-
       </div>
-
     </>
   );
 }

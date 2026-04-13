@@ -1,12 +1,12 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  formatNumber,
-  formatDuration,
-  formatDate,
-  formatTimestamp,
-  formatHour,
-  shortModelName,
   daysBetween,
+  formatDate,
+  formatDuration,
+  formatHour,
+  formatNumber,
+  formatTimestamp,
+  shortModelName,
 } from "../format";
 
 // ── formatNumber ──────────────────────────────────────────────

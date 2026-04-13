@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import SettingsPage from "../SettingsPage";
 
 // ── Mocks ──────────────────────────────────────────────────────
@@ -24,15 +24,11 @@ vi.mock("../../../lib/preferences", () => ({
 
 // Monaco and MarkdownPanel are heavy lazy imports — replace with stubs
 vi.mock("../../../components/plugin-explorer/MonacoEditor", () => ({
-  default: ({ content }: { content: string }) => (
-    <div data-testid="monaco-editor">{content}</div>
-  ),
+  default: ({ content }: { content: string }) => <div data-testid="monaco-editor">{content}</div>,
 }));
 
 vi.mock("../../../components/MarkdownPanel", () => ({
-  default: ({ content }: { content: string }) => (
-    <div data-testid="markdown-panel">{content}</div>
-  ),
+  default: ({ content }: { content: string }) => <div data-testid="markdown-panel">{content}</div>,
 }));
 
 function renderPage() {

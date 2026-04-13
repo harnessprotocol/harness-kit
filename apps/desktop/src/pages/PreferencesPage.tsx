@@ -1,41 +1,56 @@
-import { useEffect, useState } from "react";
-import { open } from "@tauri-apps/plugin-shell";
 import { getVersion } from "@tauri-apps/api/app";
+import { open } from "@tauri-apps/plugin-shell";
+import { useEffect, useState } from "react";
 import Tooltip from "../components/Tooltip";
 import { NAV_SECTIONS } from "../layouts/AppLayout";
 import {
-  getFontSize, setFontSize, FONT_SIZE_MIN, FONT_SIZE_MAX,
-  getDensity, setDensity,
-  getDefaultSection, setDefaultSection,
-  getHiddenSections, setHiddenSections,
-  getObservatoryRefresh, setObservatoryRefresh,
-  getMarkdownFont, setMarkdownFont,
-  getConfirmSave, setConfirmSave,
-  getMembrainEnabled, setMembrainEnabled,
-  getConfigFilesDetailLevel, setConfigFilesDetailLevel,
-  type Density,
-  type MarkdownFont,
   type ConfigFilesDetailLevel,
+  type Density,
+  FONT_SIZE_MAX,
+  FONT_SIZE_MIN,
+  getConfigFilesDetailLevel,
+  getConfirmSave,
+  getDefaultSection,
+  getDensity,
+  getFontSize,
+  getHiddenSections,
+  getMarkdownFont,
+  getMembrainEnabled,
+  getObservatoryRefresh,
+  type MarkdownFont,
+  setConfigFilesDetailLevel,
+  setConfirmSave,
+  setDefaultSection,
+  setDensity,
+  setFontSize,
+  setHiddenSections,
+  setMarkdownFont,
+  setMembrainEnabled,
+  setObservatoryRefresh,
 } from "../lib/preferences";
 import {
-  getTheme, setTheme,
-  getAccent, setAccent,
   ACCENT_PRESETS,
   type AccentName,
+  getAccent,
+  getTheme,
+  setAccent,
+  setTheme,
 } from "../lib/theme";
 
 // ── Local helper components ─────────────────────────────────────
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
   return (
-    <p style={{
-      fontSize: "10px",
-      fontWeight: 600,
-      textTransform: "uppercase",
-      letterSpacing: "0.05em",
-      color: "var(--fg-subtle)",
-      margin: "0 0 12px",
-    }}>
+    <p
+      style={{
+        fontSize: "10px",
+        fontWeight: 600,
+        textTransform: "uppercase",
+        letterSpacing: "0.05em",
+        color: "var(--fg-subtle)",
+        margin: "0 0 12px",
+      }}
+    >
       {children}
     </p>
   );
@@ -51,27 +66,25 @@ function SettingRow({
   children: React.ReactNode;
 }) {
   return (
-    <div style={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "space-between",
-      padding: "10px 0",
-      borderBottom: "1px solid var(--separator)",
-      gap: "24px",
-    }}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        padding: "10px 0",
+        borderBottom: "1px solid var(--separator)",
+        gap: "24px",
+      }}
+    >
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: "13px", fontWeight: 500, color: "var(--fg-base)" }}>
-          {label}
-        </div>
+        <div style={{ fontSize: "13px", fontWeight: 500, color: "var(--fg-base)" }}>{label}</div>
         {description && (
           <div style={{ fontSize: "11px", color: "var(--fg-muted)", marginTop: "2px" }}>
             {description}
           </div>
         )}
       </div>
-      <div style={{ flexShrink: 0 }}>
-        {children}
-      </div>
+      <div style={{ flexShrink: 0 }}>{children}</div>
     </div>
   );
 }
@@ -117,7 +130,9 @@ export default function PreferencesPage() {
   const [appVersion, setAppVersion] = useState("0.0.0");
 
   useEffect(() => {
-    getVersion().then(setAppVersion).catch(() => {});
+    getVersion()
+      .then(setAppVersion)
+      .catch(() => {});
   }, []);
 
   const [theme, setThemeState] = useState(getTheme);
@@ -168,9 +183,9 @@ export default function PreferencesPage() {
       if (visibleCount <= 1) return;
       next.add(sectionId);
       // Reset default section if it was just hidden
-      const hiddenSection = NAV_SECTIONS.find(s => s.id === sectionId);
+      const hiddenSection = NAV_SECTIONS.find((s) => s.id === sectionId);
       if (hiddenSection && defaultSection === hiddenSection.path) {
-        const firstVisible = NAV_SECTIONS.find(s => !next.has(s.id));
+        const firstVisible = NAV_SECTIONS.find((s) => !next.has(s.id));
         if (firstVisible) handleDefaultSection(firstVisible.path);
       }
     }
@@ -210,13 +225,15 @@ export default function PreferencesPage() {
     <div style={{ padding: "20px 24px", maxWidth: "640px" }}>
       {/* Header */}
       <div style={{ marginBottom: "24px" }}>
-        <h1 style={{
-          fontSize: "17px",
-          fontWeight: 600,
-          letterSpacing: "-0.3px",
-          color: "var(--fg-base)",
-          margin: 0,
-        }}>
+        <h1
+          style={{
+            fontSize: "17px",
+            fontWeight: 600,
+            letterSpacing: "-0.3px",
+            color: "var(--fg-base)",
+            margin: 0,
+          }}
+        >
           Preferences
         </h1>
         <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>
@@ -242,7 +259,9 @@ export default function PreferencesPage() {
 
         <SettingRow label="Accent color" description="Applies across the entire interface">
           <div style={{ display: "flex", gap: "6px" }}>
-            {(Object.entries(ACCENT_PRESETS) as [AccentName, typeof ACCENT_PRESETS[AccentName]][]).map(([name, preset]) => (
+            {(
+              Object.entries(ACCENT_PRESETS) as [AccentName, (typeof ACCENT_PRESETS)[AccentName]][]
+            ).map(([name, preset]) => (
               <Tooltip key={name} content={preset.label}>
                 <button
                   onClick={() => handleSetAccent(name)}
@@ -288,14 +307,16 @@ export default function PreferencesPage() {
             >
               -
             </button>
-            <span style={{
-              fontSize: "12px",
-              fontWeight: 600,
-              color: "var(--fg-base)",
-              minWidth: "32px",
-              textAlign: "center",
-              fontVariantNumeric: "tabular-nums",
-            }}>
+            <span
+              style={{
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "var(--fg-base)",
+                minWidth: "32px",
+                textAlign: "center",
+                fontVariantNumeric: "tabular-nums",
+              }}
+            >
               {fontSize}px
             </span>
             <button
@@ -346,7 +367,7 @@ export default function PreferencesPage() {
             onChange={(e) => handleDefaultSection(e.target.value)}
             style={{ width: "auto", minWidth: "140px" }}
           >
-            {NAV_SECTIONS.filter(s => !hiddenSections.has(s.id)).map((s) => (
+            {NAV_SECTIONS.filter((s) => !hiddenSections.has(s.id)).map((s) => (
               <option key={s.id} value={s.path}>
                 {s.label}
               </option>
@@ -354,7 +375,10 @@ export default function PreferencesPage() {
           </select>
         </SettingRow>
 
-        <SettingRow label="Visible sections" description="Toggle which sections appear in the sidebar">
+        <SettingRow
+          label="Visible sections"
+          description="Toggle which sections appear in the sidebar"
+        >
           <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
             {NAV_SECTIONS.map((s) => {
               const isHidden = hiddenSections.has(s.id);
@@ -392,7 +416,10 @@ export default function PreferencesPage() {
       <div style={{ marginBottom: "28px" }}>
         <SectionHeader>Behavior</SectionHeader>
 
-        <SettingRow label="Observatory auto-refresh" description="How often the dashboard reloads data">
+        <SettingRow
+          label="Observatory auto-refresh"
+          description="How often the dashboard reloads data"
+        >
           <Segmented
             options={[
               { value: 0, label: "Off" },
@@ -465,17 +492,19 @@ export default function PreferencesPage() {
           description="Connect to your local membrain knowledge graph. Personal use — requires mem binary."
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              padding: "2px 6px",
-              borderRadius: 4,
-              background: "var(--accent-light)",
-              color: "var(--accent-text)",
-              border: "1px solid var(--accent)",
-            }}>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: "0.06em",
+                textTransform: "uppercase",
+                padding: "2px 6px",
+                borderRadius: 4,
+                background: "var(--accent-light)",
+                color: "var(--accent-text)",
+                border: "1px solid var(--accent)",
+              }}
+            >
               Alpha
             </span>
             <Segmented
@@ -494,10 +523,12 @@ export default function PreferencesPage() {
       <div>
         <SectionHeader>About</SectionHeader>
 
-        <div style={{
-          padding: "10px 0",
-          borderBottom: "1px solid var(--separator)",
-        }}>
+        <div
+          style={{
+            padding: "10px 0",
+            borderBottom: "1px solid var(--separator)",
+          }}
+        >
           <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)" }}>
             harness-kit
           </span>
@@ -506,11 +537,13 @@ export default function PreferencesPage() {
           </span>
         </div>
 
-        <div style={{
-          display: "flex",
-          gap: "16px",
-          padding: "10px 0",
-        }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "16px",
+            padding: "10px 0",
+          }}
+        >
           <button
             onClick={() => open("https://github.com/harnessprotocol/harness-kit/releases")}
             style={{

@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
-import ChatBubble from "../ChatBubble";
 import type { ChatMessage } from "@harness-kit/shared";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import ChatBubble from "../ChatBubble";
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -41,9 +41,7 @@ describe("ChatBubble own-message styling", () => {
     render(<ChatBubble message={makeMessage({ nickname: "alice" })} isOwn={true} />);
     // Find the nickname span — it should have the accent color
     const spans = document.querySelectorAll("span");
-    const nicknameSpan = Array.from(spans).find(
-      (el) => el.textContent === "alice:",
-    );
+    const nicknameSpan = Array.from(spans).find((el) => el.textContent === "alice:");
     expect(nicknameSpan).toBeDefined();
     expect(nicknameSpan!.style.color).toBe("var(--accent-text)");
   });
@@ -51,9 +49,7 @@ describe("ChatBubble own-message styling", () => {
   it("other message: nickname has fg-base color", () => {
     render(<ChatBubble message={makeMessage({ nickname: "bob" })} isOwn={false} />);
     const spans = document.querySelectorAll("span");
-    const nicknameSpan = Array.from(spans).find(
-      (el) => el.textContent === "bob:",
-    );
+    const nicknameSpan = Array.from(spans).find((el) => el.textContent === "bob:");
     expect(nicknameSpan).toBeDefined();
     expect(nicknameSpan!.style.color).toBe("var(--fg-base)");
   });

@@ -246,9 +246,8 @@ function parseToolEvents(chunks: string[], startTime: number): ToolEvent[] {
       const match = chunk.match(pattern);
       if (match) {
         // Approximate timestamp based on chunk position.
-        const elapsed = startTime > 0
-          ? Math.floor(((now - startTime) * i) / Math.max(chunks.length, 1))
-          : 0;
+        const elapsed =
+          startTime > 0 ? Math.floor(((now - startTime) * i) / Math.max(chunks.length, 1)) : 0;
         const key = `${match[1] || "tool"}-${i}`;
         if (!seen.has(key)) {
           seen.add(key);
@@ -279,7 +278,16 @@ function formatElapsed(ms: number): string {
 
 function TerminalIcon() {
   return (
-    <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <polyline points="4 6 7 9 4 12" />
       <line x1="9" y1="12" x2="12" y2="12" />
     </svg>
@@ -288,7 +296,16 @@ function TerminalIcon() {
 
 function ActivityIcon() {
   return (
-    <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <polyline points="2 8 5 4 8 10 11 6 14 8" />
     </svg>
   );
@@ -296,7 +313,16 @@ function ActivityIcon() {
 
 function FilesIcon() {
   return (
-    <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="10"
+      height="10"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M9 2H4a1 1 0 00-1 1v10a1 1 0 001 1h8a1 1 0 001-1V6L9 2z" />
       <polyline points="9 2 9 6 13 6" />
     </svg>
@@ -313,7 +339,12 @@ const TABS: { key: TabKey; label: string; icon: () => React.ReactNode }[] = [
 
 // ── Component ───────────────────────────────────────────────
 
-export default function HarnessPanel({ panel, rawChunks, outputTick, onSend: _onSend }: HarnessPanelProps) {
+export default function HarnessPanel({
+  panel,
+  rawChunks,
+  outputTick,
+  onSend: _onSend,
+}: HarnessPanelProps) {
   injectHarnessPanelCSS();
 
   const [activeTab, setActiveTab] = useState<TabKey>("terminal");
@@ -363,9 +394,7 @@ export default function HarnessPanel({ panel, rawChunks, outputTick, onSend: _on
   const dotStyle: React.CSSProperties = {
     ...styles.statusDot,
     background: dotColor,
-    ...(panel.status === "running"
-      ? { animation: "harness-pulse 2s ease-in-out infinite" }
-      : {}),
+    ...(panel.status === "running" ? { animation: "harness-pulse 2s ease-in-out infinite" } : {}),
   };
 
   // ── Render tab content ─────────────────────────────────────
@@ -439,9 +468,7 @@ export default function HarnessPanel({ panel, rawChunks, outputTick, onSend: _on
                   <span style={{ color: tokens.fgSubtle, minWidth: 32, textAlign: "right" }}>
                     {formatElapsed(evt.timestamp)}
                   </span>
-                  <span style={{ color: tokens.accent, fontWeight: 500 }}>
-                    {evt.detail}
-                  </span>
+                  <span style={{ color: tokens.accent, fontWeight: 500 }}>{evt.detail}</span>
                   <span>{evt.tool}</span>
                 </div>
               ))
@@ -506,7 +533,16 @@ export default function HarnessPanel({ panel, rawChunks, outputTick, onSend: _on
             flexShrink: 0,
           }}
         >
-          <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
             <path d="M8 2L14 14H2L8 2z" />
             <line x1="8" y1="7" x2="8" y2="10" />
             <line x1="8" y1="12" x2="8.01" y2="12" />
@@ -545,18 +581,14 @@ export default function HarnessPanel({ panel, rawChunks, outputTick, onSend: _on
       </div>
 
       {/* Tab content */}
-      <div style={styles.tabContent}>
-        {renderTabContent()}
-      </div>
+      <div style={styles.tabContent}>{renderTabContent()}</div>
 
       {/* Metrics strip */}
       <div style={styles.metrics}>
         <span style={styles.metricItem}>
           <FilesIcon /> {panel.status === "running" ? "--" : "0"} files
         </span>
-        <span style={styles.metricItem}>
-          {toolEvents.length} tools
-        </span>
+        <span style={styles.metricItem}>{toolEvents.length} tools</span>
         <div style={{ flex: 1 }} />
 
         {/* 5-star rating */}

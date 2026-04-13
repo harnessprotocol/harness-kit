@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { getMarkdownFont } from "../lib/preferences";
@@ -106,9 +106,17 @@ export default function MarkdownPanel({
         }}
       >
         {view === "preview" ? (
-          <div className="markdown-body" style={mdFont === "mono" ? {
-            fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
-          } : undefined}>
+          <div
+            className="markdown-body"
+            style={
+              mdFont === "mono"
+                ? {
+                    fontFamily:
+                      "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
+                  }
+                : undefined
+            }
+          >
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
           </div>
         ) : (
