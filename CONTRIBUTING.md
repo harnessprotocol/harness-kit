@@ -84,7 +84,7 @@ pnpm test:coverage
 
 ```bash
 # Core library tests
-pnpm test:core
+pnpm turbo run test --filter=@harness-kit/core...
 
 # Desktop app tests
 pnpm test:desktop        # Runs Rust + unit tests
