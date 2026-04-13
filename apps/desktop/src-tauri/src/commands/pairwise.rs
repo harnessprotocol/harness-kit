@@ -219,8 +219,8 @@ pub fn get_pairwise_analytics(
 
     // Total votes
     let total_votes: u64 = conn
-        .query_row("SELECT COUNT(*) FROM pairwise_votes", [], |row| row.get(0))
-        .unwrap_or(0);
+        .query_row("SELECT COUNT(*) FROM pairwise_votes", [], |row| row.get::<_, i64>(0))
+        .unwrap_or(0) as u64;
 
     if total_votes == 0 {
         return Ok(PairwiseAnalytics {
