@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { compileCommand } from "../src/commands/compile.js";
 import { CliTestEnv } from "./helpers/cli-test-env.js";
 
@@ -315,5 +315,4 @@ describe("compile command", () => {
       expect(env.exitCode).toBeNull();
     });
   });
-
 });

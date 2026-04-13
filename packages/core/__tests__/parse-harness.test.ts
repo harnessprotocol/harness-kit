@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
 import { parseHarness } from "../src/parser/parse-harness.js";
 
 const FIXTURES = resolve(import.meta.dirname, "fixtures");
@@ -11,9 +11,7 @@ function loadFixture(name: string): string {
 
 describe("parseHarness", () => {
   it("parses a valid harness.yaml", () => {
-    const { config, isLegacyFormat } = parseHarness(
-      loadFixture("valid-harness.yaml"),
-    );
+    const { config, isLegacyFormat } = parseHarness(loadFixture("valid-harness.yaml"));
     expect(isLegacyFormat).toBe(false);
     expect(config.version).toBe("1");
     expect(config.metadata?.name).toBe("my-harness");
@@ -23,9 +21,7 @@ describe("parseHarness", () => {
   });
 
   it("detects legacy format (integer version)", () => {
-    const { config, isLegacyFormat } = parseHarness(
-      loadFixture("legacy-harness.yaml"),
-    );
+    const { config, isLegacyFormat } = parseHarness(loadFixture("legacy-harness.yaml"));
     expect(isLegacyFormat).toBe(true);
     // version is parsed as integer by YAML
     expect(config.version).toBe(1 as unknown as string);

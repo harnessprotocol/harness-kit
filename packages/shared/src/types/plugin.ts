@@ -20,7 +20,7 @@ export interface PluginManifest {
 
 // ── Marketplace manifest (marketplace.json) ─────────────────
 
-import type { Author } from './core.js';
+import type { Author } from "./core.js";
 
 export interface MarketplaceCategory {
   slug: string;

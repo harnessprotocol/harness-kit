@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServiceSupabase } from "@/lib/supabase";
+import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth";
-import { requireOrgRole, AuthorizationError } from "@/lib/orgs";
+import { AuthorizationError, requireOrgRole } from "@/lib/orgs";
+import { getServiceSupabase } from "@/lib/supabase";
 
 const VALID_TYPES = ["skill", "agent", "hook", "script", "knowledge", "rules"] as const;
 
@@ -9,10 +9,7 @@ const VALID_TYPES = ["skill", "agent", "hook", "script", "knowledge", "rules"] a
  * GET /api/orgs/[slug]/plugins
  * List all plugins for an organization.
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await params;
     const supabase = getServiceSupabase();
@@ -25,10 +22,7 @@ export async function GET(
 
     if (orgError) {
       if (orgError.code === "PGRST116") {
-        return NextResponse.json(
-          { error: "Organization not found" },
-          { status: 404 }
-        );
+        return NextResponse.json({ error: "Organization not found" }, { status: 404 });
       }
       return NextResponse.json({ error: orgError.message }, { status: 500 });
     }
@@ -45,10 +39,7 @@ export async function GET(
 
     return NextResponse.json(plugins);
   } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to fetch organization plugins" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch organization plugins" }, { status: 500 });
   }
 }
 
@@ -58,7 +49,7 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ slug: string }> },
 ) {
   try {
     const user = await getServerSession();
@@ -81,17 +72,14 @@ export async function POST(
     } = body;
 
     if (!pluginSlug || !name) {
-      return NextResponse.json(
-        { error: "Missing required fields: slug, name" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing required fields: slug, name" }, { status: 400 });
     }
 
     const slugPattern = /^@[a-z0-9-]+\/[a-z0-9-]+$/;
     if (!slugPattern.test(pluginSlug)) {
       return NextResponse.json(
         { error: "Invalid slug format. Must be @org-name/plugin-name" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -99,14 +87,14 @@ export async function POST(
     if (orgNameFromSlug !== slug) {
       return NextResponse.json(
         { error: "Plugin slug must match organization name" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (type && !VALID_TYPES.includes(type)) {
       return NextResponse.json(
         { error: `Invalid type. Must be one of: ${VALID_TYPES.join(", ")}` },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -117,10 +105,7 @@ export async function POST(
       .single();
 
     if (existingPlugin) {
-      return NextResponse.json(
-        { error: "Plugin with this slug already exists" },
-        { status: 409 }
-      );
+      return NextResponse.json({ error: "Plugin with this slug already exists" }, { status: 409 });
     }
 
     // Issue 4: do not fall back to user.email — email is PII
@@ -151,10 +136,7 @@ export async function POST(
     if (error instanceof AuthorizationError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    return NextResponse.json(
-      { error: "Failed to publish plugin" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to publish plugin" }, { status: 500 });
   }
 }
 
@@ -164,7 +146,7 @@ export async function POST(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ slug: string }> },
 ) {
   try {
     const user = await getServerSession();
@@ -187,10 +169,7 @@ export async function PATCH(
     } = body;
 
     if (!pluginSlug) {
-      return NextResponse.json(
-        { error: "Missing required field: slug" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing required field: slug" }, { status: 400 });
     }
 
     // Check plugin exists and belongs to this org
@@ -202,16 +181,13 @@ export async function PATCH(
       .single();
 
     if (!existingPlugin) {
-      return NextResponse.json(
-        { error: "Plugin not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Plugin not found" }, { status: 404 });
     }
 
     if (type && !VALID_TYPES.includes(type)) {
       return NextResponse.json(
         { error: `Invalid type. Must be one of: ${VALID_TYPES.join(", ")}` },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -227,10 +203,7 @@ export async function PATCH(
     if (repo_url !== undefined) updates.repo_url = repo_url;
 
     if (Object.keys(updates).length === 0) {
-      return NextResponse.json(
-        { error: "No fields to update" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No fields to update" }, { status: 400 });
     }
 
     // Issue 13: scope update by both slug and org_id
@@ -251,9 +224,6 @@ export async function PATCH(
     if (error instanceof AuthorizationError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    return NextResponse.json(
-      { error: "Failed to update plugin" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update plugin" }, { status: 500 });
   }
 }

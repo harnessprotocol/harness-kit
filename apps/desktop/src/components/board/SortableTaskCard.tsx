@@ -1,7 +1,7 @@
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import type { Task } from '../../lib/board-api';
-import { TaskCard } from './TaskCard';
+import { useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import type { Task } from "../../lib/board-api";
+import { TaskCard } from "./TaskCard";
 
 interface Props {
   task: Task;
@@ -10,14 +10,9 @@ interface Props {
 }
 
 export function SortableTaskCard({ task, onClick, repoUrl }: Props) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: `task-${task.id}` });
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: `task-${task.id}`,
+  });
 
   return (
     <div
@@ -26,7 +21,7 @@ export function SortableTaskCard({ task, onClick, repoUrl }: Props) {
         transform: CSS.Transform.toString(transform),
         transition,
         opacity: isDragging ? 0.4 : 1,
-        cursor: isDragging ? 'grabbing' : 'grab',
+        cursor: isDragging ? "grabbing" : "grab",
       }}
       {...attributes}
       {...listeners}

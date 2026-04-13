@@ -19,9 +19,7 @@ export function parseHarness(yamlString: string): ParseResult {
   }
 
   if (raw === null || raw === undefined || typeof raw !== "object") {
-    throw new Error(
-      "harness.yaml is empty or does not contain a YAML mapping.",
-    );
+    throw new Error("harness.yaml is empty or does not contain a YAML mapping.");
   }
 
   const doc = raw as Record<string, unknown>;

@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
 import { parseHarness } from "../src/parser/parse-harness.js";
 import { validateHarness } from "../src/schema/validate.js";
 
@@ -27,9 +27,7 @@ describe("validateHarness", () => {
   });
 
   it("detects legacy format", () => {
-    const { config, isLegacyFormat } = parseHarness(
-      loadFixture("legacy-harness.yaml"),
-    );
+    const { config, isLegacyFormat } = parseHarness(loadFixture("legacy-harness.yaml"));
     expect(isLegacyFormat).toBe(true);
     const result = validateHarness(config);
     expect(result.isLegacyFormat).toBe(true);
@@ -38,7 +36,9 @@ describe("validateHarness", () => {
   it("fails when version is missing", () => {
     const result = validateHarness({ metadata: { name: "test", description: "test" } });
     expect(result.valid).toBe(false);
-    expect(result.errors.some((e) => e.message.includes("version") || e.path.includes("version"))).toBe(true);
+    expect(
+      result.errors.some((e) => e.message.includes("version") || e.path.includes("version")),
+    ).toBe(true);
   });
 
   it("fails when metadata is missing on a profile", () => {

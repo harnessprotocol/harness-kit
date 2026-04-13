@@ -1,8 +1,8 @@
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import InvokeDialog from "../InvokeDialog";
 import type { HarnessInfo } from "@harness-kit/shared";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import InvokeDialog from "../InvokeDialog";
 
 // ── Fixtures ───────────────────────────────────────────────────
 
@@ -212,12 +212,8 @@ describe("InvokeDialog", () => {
     await userEvent.type(textarea, "old prompt");
 
     // Close and reopen
-    rerender(
-      <InvokeDialog {...defaults} open={false} />,
-    );
-    rerender(
-      <InvokeDialog {...defaults} open={true} />,
-    );
+    rerender(<InvokeDialog {...defaults} open={false} />);
+    rerender(<InvokeDialog {...defaults} open={true} />);
 
     const newTextarea = screen.getByPlaceholderText("Describe the task...") as HTMLTextAreaElement;
     expect(newTextarea.value).toBe("");

@@ -43,30 +43,36 @@ export default function EditorToolbar({
       {/* Filename + dirty indicator + subtitle */}
       {filePath && (
         <div style={{ overflow: "hidden", minWidth: 0 }}>
-          <span style={{
-            fontSize: "12px",
-            color: "var(--fg-base)",
-            fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
-            fontWeight: 500,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-            display: "block",
-          }}>
-            {basename(filePath)}
-            {isDirty && (
-              <span style={{ color: "var(--warning)", marginLeft: "4px" }} title="Unsaved changes">●</span>
-            )}
-          </span>
-          {subtitle && (
-            <span style={{
-              fontSize: "10px",
-              color: "var(--fg-subtle)",
+          <span
+            style={{
+              fontSize: "12px",
+              color: "var(--fg-base)",
+              fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace",
+              fontWeight: 500,
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
               display: "block",
-            }}>
+            }}
+          >
+            {basename(filePath)}
+            {isDirty && (
+              <span style={{ color: "var(--warning)", marginLeft: "4px" }} title="Unsaved changes">
+                ●
+              </span>
+            )}
+          </span>
+          {subtitle && (
+            <span
+              style={{
+                fontSize: "10px",
+                color: "var(--fg-subtle)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                display: "block",
+              }}
+            >
               {subtitle}
             </span>
           )}
@@ -78,13 +84,15 @@ export default function EditorToolbar({
 
       {/* View mode toggle */}
       {availableModes.length > 1 && (
-        <div style={{
-          display: "flex",
-          gap: "1px",
-          background: "var(--bg-elevated)",
-          borderRadius: "5px",
-          padding: "2px",
-        }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "1px",
+            background: "var(--bg-elevated)",
+            borderRadius: "5px",
+            padding: "2px",
+          }}
+        >
           {availableModes.map(({ key, label }) => (
             <button
               key={key}

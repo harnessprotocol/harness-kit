@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { type NextRequest, NextResponse } from "next/server";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 function getServiceSupabase() {
@@ -21,14 +21,9 @@ interface PluginManifest {
 }
 
 /** Fetch raw file from a GitHub repo URL + path. */
-async function fetchGitHubFile(
-  repoUrl: string,
-  filePath: string,
-): Promise<string | null> {
+async function fetchGitHubFile(repoUrl: string, filePath: string): Promise<string | null> {
   // Parse "https://github.com/owner/repo" into API URL
-  const match = repoUrl.match(
-    /github\.com\/([^/]+)\/([^/]+)/,
-  );
+  const match = repoUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
   if (!match) return null;
 
   const [, owner, repo] = match;
@@ -70,18 +65,12 @@ export async function POST(request: NextRequest) {
   // Require API key for registration to prevent spam
   const apiKey = process.env.REGISTER_API_KEY;
   if (!apiKey) {
-    return NextResponse.json(
-      { error: "Registration not configured" },
-      { status: 503 },
-    );
+    return NextResponse.json({ error: "Registration not configured" }, { status: 503 });
   }
 
   const authHeader = request.headers.get("authorization") ?? "";
   if (authHeader !== `Bearer ${apiKey}`) {
-    return NextResponse.json(
-      { error: "Invalid or missing API key" },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: "Invalid or missing API key" }, { status: 401 });
   }
 
   const supabase = getServiceSupabase();
@@ -89,10 +78,7 @@ export async function POST(request: NextRequest) {
   try {
     payload = await request.json();
   } catch {
-    return NextResponse.json(
-      { error: "Invalid JSON body" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
   const { repo_url, plugin_path } = payload;
@@ -129,17 +115,13 @@ export async function POST(request: NextRequest) {
   try {
     manifest = JSON.parse(manifestRaw);
   } catch {
-    return NextResponse.json(
-      { error: "Could not parse plugin.json" },
-      { status: 422 },
-    );
+    return NextResponse.json({ error: "Could not parse plugin.json" }, { status: 422 });
   }
 
   if (!manifest.name || !manifest.description || !manifest.version) {
     return NextResponse.json(
       {
-        error:
-          "plugin.json must include name, description, and version fields",
+        error: "plugin.json must include name, description, and version fields",
       },
       { status: 422 },
     );

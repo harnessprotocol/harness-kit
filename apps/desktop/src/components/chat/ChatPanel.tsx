@@ -1,8 +1,8 @@
 import { useEffect } from "react";
 import { useChat } from "../../contexts/ChatContext";
-import ServerConnect from "./ServerConnect";
 import ChatLobby from "./ChatLobby";
 import ChatRoom from "./ChatRoom";
+import ServerConnect from "./ServerConnect";
 
 export default function ChatPanel() {
   const { setOpen, state } = useChat();
@@ -56,10 +56,7 @@ export default function ChatPanel() {
               width: "6px",
               height: "6px",
               borderRadius: "50%",
-              background:
-                state.status === "in_room"
-                  ? "var(--success)"
-                  : "var(--fg-subtle)",
+              background: state.status === "in_room" ? "var(--success)" : "var(--fg-subtle)",
             }}
           />
         )}

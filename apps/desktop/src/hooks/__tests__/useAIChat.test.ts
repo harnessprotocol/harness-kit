@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { renderHook, act, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ChatChunk } from "../../lib/tauri";
 
 // ── Mocks ─────────────────────────────────────────────────────
@@ -90,7 +90,13 @@ describe("initial state", () => {
 
   it("loads existing sessions on mount", async () => {
     const sessions = [
-      { id: "s1", title: "Session 1", model: "llama3.2:3b", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+      {
+        id: "s1",
+        title: "Session 1",
+        model: "llama3.2:3b",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
     ];
     mockAiListSessions.mockResolvedValue(sessions);
 
@@ -109,7 +115,10 @@ describe("createSession()", () => {
       sessionId = await result.current.createSession("llama3.2:3b");
     });
 
-    expect(mockAiCreateSession).toHaveBeenCalledWith(expect.stringContaining("test-uuid"), "llama3.2:3b");
+    expect(mockAiCreateSession).toHaveBeenCalledWith(
+      expect.stringContaining("test-uuid"),
+      "llama3.2:3b",
+    );
     expect(result.current.currentSession).not.toBeNull();
     expect(result.current.currentSession?.model).toBe("llama3.2:3b");
     expect(result.current.sessions).toHaveLength(1);
@@ -173,10 +182,28 @@ describe("renameSession()", () => {
 
 describe("loadSession()", () => {
   it("sets currentSession and messages from loaded data", async () => {
-    const session = { id: "s1", title: "Loaded", model: "llama3.2:3b", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const session = {
+      id: "s1",
+      title: "Loaded",
+      model: "llama3.2:3b",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
     const msgs = [
-      { id: "m1", sessionId: "s1", role: "user", content: "hello", timestamp: new Date().toISOString() },
-      { id: "m2", sessionId: "s1", role: "assistant", content: "hi there", timestamp: new Date().toISOString() },
+      {
+        id: "m1",
+        sessionId: "s1",
+        role: "user",
+        content: "hello",
+        timestamp: new Date().toISOString(),
+      },
+      {
+        id: "m2",
+        sessionId: "s1",
+        role: "assistant",
+        content: "hi there",
+        timestamp: new Date().toISOString(),
+      },
     ];
     mockAiLoadSession.mockResolvedValue([session, msgs]);
 
@@ -218,7 +245,12 @@ describe("sendMessage() — streaming", () => {
 
     // sendMessage resolves only after we drive chunks via channelOnMessage
     let streamResolve!: () => void;
-    mockAiStreamChat.mockImplementation(() => new Promise<void>(res => { streamResolve = res; }));
+    mockAiStreamChat.mockImplementation(
+      () =>
+        new Promise<void>((res) => {
+          streamResolve = res;
+        }),
+    );
 
     // Start sending (don't await — it won't resolve until stream is driven)
     act(() => {
@@ -263,7 +295,12 @@ describe("sendMessage() — streaming", () => {
     });
 
     let streamResolve!: () => void;
-    mockAiStreamChat.mockImplementation(() => new Promise<void>(res => { streamResolve = res; }));
+    mockAiStreamChat.mockImplementation(
+      () =>
+        new Promise<void>((res) => {
+          streamResolve = res;
+        }),
+    );
 
     act(() => {
       void result.current.sendMessage("Tell me about Rust", "llama3.2:3b");
@@ -271,15 +308,16 @@ describe("sendMessage() — streaming", () => {
 
     await waitFor(() => expect(result.current.isStreaming).toBe(true));
 
-    await act(async () => { channelOnMessage!({ content: "Rust is...", done: true }); });
-    await act(async () => { streamResolve(); });
+    await act(async () => {
+      channelOnMessage!({ content: "Rust is...", done: true });
+    });
+    await act(async () => {
+      streamResolve();
+    });
 
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
 
-    expect(mockAiUpdateSessionTitle).toHaveBeenCalledWith(
-      expect.any(String),
-      "Tell me about Rust",
-    );
+    expect(mockAiUpdateSessionTitle).toHaveBeenCalledWith(expect.any(String), "Tell me about Rust");
   });
 
   it("sets error state when aiStreamChat rejects", async () => {
@@ -315,7 +353,13 @@ describe("refreshSessions()", () => {
     await waitFor(() => expect(mockAiListSessions).toHaveBeenCalled());
 
     const fresh = [
-      { id: "fresh1", title: "Fresh", model: "llama3.2:3b", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
+      {
+        id: "fresh1",
+        title: "Fresh",
+        model: "llama3.2:3b",
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
     ];
     mockAiListSessions.mockResolvedValue(fresh);
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import type { ClaudeMcpServer, ClaudeMcpStdio, ClaudeMcpNetwork } from "../../lib/mcp-types";
+import type { ClaudeMcpNetwork, ClaudeMcpServer, ClaudeMcpStdio } from "../../lib/mcp-types";
 import { isNetworkServer } from "../../lib/mcp-types";
 import KeyValueEditor, { type KeyValuePair } from "./KeyValueEditor";
 
@@ -58,9 +58,7 @@ export default function McpServerForm({
     initialServer && !isNetworkServer(initialServer) ? initialServer.command : "",
   );
   const [argsText, setArgsText] = useState(
-    initialServer && !isNetworkServer(initialServer)
-      ? (initialServer.args ?? []).join("\n")
-      : "",
+    initialServer && !isNetworkServer(initialServer) ? (initialServer.args ?? []).join("\n") : "",
   );
   const [envPairs, setEnvPairs] = useState<KeyValuePair[]>(
     initialServer && !isNetworkServer(initialServer) && initialServer.env
@@ -93,15 +91,28 @@ export default function McpServerForm({
     if (initialServer && !isNet && !isNetworkServer(initialServer)) {
       setCommand((initialServer as ClaudeMcpStdio).command ?? "");
       setArgsText(((initialServer as ClaudeMcpStdio).args ?? []).join("\n"));
-      setEnvPairs(Object.entries((initialServer as ClaudeMcpStdio).env ?? {}).map(([key, value]) => ({ key, value })));
+      setEnvPairs(
+        Object.entries((initialServer as ClaudeMcpStdio).env ?? {}).map(([key, value]) => ({
+          key,
+          value,
+        })),
+      );
     } else {
-      setCommand(""); setArgsText(""); setEnvPairs([]);
+      setCommand("");
+      setArgsText("");
+      setEnvPairs([]);
     }
     if (initialServer && isNet) {
       setUrl((initialServer as ClaudeMcpNetwork).url ?? "");
-      setHeaderPairs(Object.entries((initialServer as ClaudeMcpNetwork).headers ?? {}).map(([key, value]) => ({ key, value })));
+      setHeaderPairs(
+        Object.entries((initialServer as ClaudeMcpNetwork).headers ?? {}).map(([key, value]) => ({
+          key,
+          value,
+        })),
+      );
     } else {
-      setUrl(""); setHeaderPairs([]);
+      setUrl("");
+      setHeaderPairs([]);
     }
   }, [open, initialName, initialServer]);
 
@@ -165,9 +176,7 @@ export default function McpServerForm({
         style={{ width: "480px", maxHeight: "80vh", overflowY: "auto" }}
         onPointerDown={(e) => e.stopPropagation()}
       >
-        <div className="confirm-title">
-          {mode === "add" ? "Add MCP Server" : "Edit MCP Server"}
-        </div>
+        <div className="confirm-title">{mode === "add" ? "Add MCP Server" : "Edit MCP Server"}</div>
 
         {/* Server name */}
         {fieldLabel("Server name")}
@@ -241,11 +250,7 @@ export default function McpServerForm({
             </div>
 
             {fieldLabel("Environment variables")}
-            <KeyValueEditor
-              pairs={envPairs}
-              onChange={setEnvPairs}
-              keyPlaceholder="ENV_VAR"
-            />
+            <KeyValueEditor pairs={envPairs} onChange={setEnvPairs} keyPlaceholder="ENV_VAR" />
           </>
         )}
 
@@ -275,11 +280,7 @@ export default function McpServerForm({
           <button className="btn btn-secondary btn-sm" onClick={onCancel}>
             Cancel
           </button>
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={handleSave}
-            disabled={!isValid}
-          >
+          <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={!isValid}>
             Save
           </button>
         </div>

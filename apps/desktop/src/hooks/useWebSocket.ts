@@ -1,7 +1,7 @@
-import { useEffect, useRef, useCallback } from 'react';
-import { BOARD_SERVER_BASE } from '../lib/board-api';
+import { useCallback, useEffect, useRef } from "react";
+import { BOARD_SERVER_BASE } from "../lib/board-api";
 
-const WS_URL = BOARD_SERVER_BASE.replace(/^http/, 'ws') + '/ws';
+const WS_URL = BOARD_SERVER_BASE.replace(/^http/, "ws") + "/ws";
 
 export function useWebSocket(onMessage: (event: MessageEvent) => void) {
   const wsRef = useRef<WebSocket | null>(null);

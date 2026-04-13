@@ -1,5 +1,5 @@
+import type { ShareAction, ShareMessage } from "@harness-kit/shared";
 import { useState } from "react";
-import type { ShareMessage, ShareAction } from "@harness-kit/shared";
 
 const ACTION_ICONS: Record<ShareAction, string> = {
   harness_updated: "✦",
@@ -71,10 +71,21 @@ export default function ShareCard({ message }: Props) {
         >
           {ACTION_ICONS[message.action]}
         </span>
-        <span style={{ color: "var(--fg-base)", fontWeight: 500, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+        <span
+          style={{
+            color: "var(--fg-base)",
+            fontWeight: 500,
+            flex: 1,
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
           <span style={{ color: "var(--fg-muted)" }}>{message.nickname}</span>
           {" shared "}
-          <span style={{ fontFamily: "ui-monospace, monospace", color: "var(--fg-base)" }}>{message.target}</span>
+          <span style={{ fontFamily: "ui-monospace, monospace", color: "var(--fg-base)" }}>
+            {message.target}
+          </span>
         </span>
         <span style={{ color: "var(--fg-subtle)", fontSize: "10px", flexShrink: 0 }}>
           [{formatTime(message.timestamp)}]
@@ -82,12 +93,17 @@ export default function ShareCard({ message }: Props) {
       </div>
 
       {/* Action label row */}
-      <div style={{ padding: "0 10px 6px", paddingLeft: "29px", color: "var(--fg-muted)", fontSize: "11px" }}>
+      <div
+        style={{
+          padding: "0 10px 6px",
+          paddingLeft: "29px",
+          color: "var(--fg-muted)",
+          fontSize: "11px",
+        }}
+      >
         {ACTION_LABELS[message.action]}
         {message.detail && (
-          <span style={{ color: "var(--fg-subtle)", marginLeft: "6px" }}>
-            — {message.detail}
-          </span>
+          <span style={{ color: "var(--fg-subtle)", marginLeft: "6px" }}>— {message.detail}</span>
         )}
       </div>
 

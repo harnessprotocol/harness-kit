@@ -25,49 +25,49 @@ const FONTS = {
 };
 
 const HK_THEME_DARK = {
-  name: 'harness-kit',
+  name: "harness-kit",
   colors: {
-    bg:        '#211f1c',
-    surface:   '#282622',
-    fg:        '#f2f1ed',
-    muted:     '#9a9590',
-    subtle:    '#6e6a64',
-    accent:    '#7b72f0',
-    highlight: '#9d96f5',
-    secondary: '#9d96f5',
-    success:   '#16a34a',
-    warning:   '#d97706',
-    error:     '#dc2626',
+    bg: "#211f1c",
+    surface: "#282622",
+    fg: "#f2f1ed",
+    muted: "#9a9590",
+    subtle: "#6e6a64",
+    accent: "#7b72f0",
+    highlight: "#9d96f5",
+    secondary: "#9d96f5",
+    success: "#16a34a",
+    warning: "#d97706",
+    error: "#dc2626",
   },
   fonts: FONTS,
-  ui: { radius: '6px', sidebar_width: '200px' },
+  ui: { radius: "6px", sidebar_width: "200px" },
 };
 
 const HK_THEME_LIGHT = {
-  name: 'harness-kit-light',
+  name: "harness-kit-light",
   colors: {
-    bg:        '#f4f2ef',
-    surface:   '#faf9f7',
-    fg:        '#181714',
-    muted:     '#5c5a56',
-    subtle:    '#9a9892',
-    accent:    '#5b50e8',
-    highlight: '#4338d4',
-    secondary: '#4338d4',
-    success:   '#16a34a',
-    warning:   '#d97706',
-    error:     '#dc2626',
+    bg: "#f4f2ef",
+    surface: "#faf9f7",
+    fg: "#181714",
+    muted: "#5c5a56",
+    subtle: "#9a9892",
+    accent: "#5b50e8",
+    highlight: "#4338d4",
+    secondary: "#4338d4",
+    success: "#16a34a",
+    warning: "#d97706",
+    error: "#dc2626",
   },
   fonts: FONTS,
-  ui: { radius: '6px', sidebar_width: '200px' },
+  ui: { radius: "6px", sidebar_width: "200px" },
 };
 
 /** Push the HK-matched theme to membrain. Best-effort — never throws. */
 export function syncMembrainTheme(): void {
-  const isDark = document.documentElement.classList.contains('dark');
+  const isDark = document.documentElement.classList.contains("dark");
   fetch(`${MEMBRAIN_API}/theme`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(isDark ? HK_THEME_DARK : HK_THEME_LIGHT),
   }).catch(() => {});
 }

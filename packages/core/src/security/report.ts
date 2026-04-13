@@ -1,4 +1,4 @@
-import type { SecurityReport, SecurityFinding } from "@harness-kit/shared";
+import type { SecurityFinding, SecurityReport } from "@harness-kit/shared";
 
 // ── Report formatting types ─────────────────────────────────────
 

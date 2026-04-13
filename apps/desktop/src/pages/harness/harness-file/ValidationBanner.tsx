@@ -1,5 +1,5 @@
-import type { CSSProperties } from "react";
 import type { ValidationResult } from "@harness-kit/core";
+import type { CSSProperties } from "react";
 
 interface ValidationBannerProps {
   result: ValidationResult;
@@ -34,11 +34,7 @@ export default function ValidationBanner({ result }: ValidationBannerProps) {
       padding: "10px 12px",
       fontSize: "13px",
     };
-    return (
-      <div style={style}>
-        Legacy format detected — consider upgrading to Protocol v1
-      </div>
-    );
+    return <div style={style}>Legacy format detected — consider upgrading to Protocol v1</div>;
   }
 
   const MAX_SHOWN = 5;
@@ -68,9 +64,7 @@ export default function ValidationBanner({ result }: ValidationBannerProps) {
         {shown.map((err, i) => (
           <li key={i}>{err.message}</li>
         ))}
-        {overflow > 0 && (
-          <li style={{ color: "var(--fg-muted)" }}>+{overflow} more</li>
-        )}
+        {overflow > 0 && <li style={{ color: "var(--fg-muted)" }}>+{overflow} more</li>}
       </ul>
     </div>
   );

@@ -1,5 +1,5 @@
+import { confirm, input } from "@inquirer/prompts";
 import chalk from "chalk";
-import { input, confirm } from "@inquirer/prompts";
 
 interface Organization {
   id: string;
@@ -12,10 +12,7 @@ interface Organization {
 
 const API_BASE_URL = process.env.HARNESS_API_URL || "https://harnessprotocol.io";
 
-async function apiRequest<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<T> {
+async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
   const url = `${API_BASE_URL}${path}`;
   const token = process.env.HARNESS_API_TOKEN;
 
@@ -31,9 +28,7 @@ async function apiRequest<T>(
 
     if (!response.ok) {
       if (response.status === 401) {
-        throw new Error(
-          "Authentication required. Set HARNESS_API_TOKEN with your API token.",
-        );
+        throw new Error("Authentication required. Set HARNESS_API_TOKEN with your API token.");
       }
       const errorData = await response.json().catch(() => ({}));
       throw new Error(
@@ -61,11 +56,7 @@ export async function listOrganizations(): Promise<void> {
     if (orgs.length === 0) {
       console.log(chalk.dim("No organizations found."));
       console.log("");
-      console.log(
-        chalk.dim(
-          `Create one with ${chalk.white("harness-kit org create")}`,
-        ),
-      );
+      console.log(chalk.dim(`Create one with ${chalk.white("harness-kit org create")}`));
       return;
     }
 
@@ -81,10 +72,7 @@ export async function listOrganizations(): Promise<void> {
       console.log("");
     }
   } catch (error) {
-    console.error(
-      chalk.red("Error:"),
-      error instanceof Error ? error.message : String(error),
-    );
+    console.error(chalk.red("Error:"), error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 }
@@ -155,17 +143,10 @@ export async function createOrganization(): Promise<void> {
     console.log(chalk.dim(`  Slug: ${org.slug}`));
     console.log(chalk.dim(`  Name: ${org.name}`));
     console.log("");
-    console.log(
-      chalk.dim(
-        `View at: ${chalk.white(`${API_BASE_URL}/orgs/${org.slug}`)}`,
-      ),
-    );
+    console.log(chalk.dim(`View at: ${chalk.white(`${API_BASE_URL}/orgs/${org.slug}`)}`));
   } catch (error) {
     console.error("");
-    console.error(
-      chalk.red("Error:"),
-      error instanceof Error ? error.message : String(error),
-    );
+    console.error(chalk.red("Error:"), error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 }
@@ -196,17 +177,12 @@ export async function joinOrganization(slug: string): Promise<void> {
       console.log(chalk.dim(`  ${org.description}`));
     }
     console.log("");
-    console.log(
-      chalk.dim("To join this organization, ask an admin to add you as a member."),
-    );
+    console.log(chalk.dim("To join this organization, ask an admin to add you as a member."));
     console.log(chalk.dim("Then visit:"));
     console.log(chalk.white(`  ${API_BASE_URL}/orgs/${slug}`));
   } catch (error) {
     console.error("");
-    console.error(
-      chalk.red("Error:"),
-      error instanceof Error ? error.message : String(error),
-    );
+    console.error(chalk.red("Error:"), error instanceof Error ? error.message : String(error));
     process.exit(1);
   }
 }

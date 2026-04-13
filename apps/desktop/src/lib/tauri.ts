@@ -1,13 +1,29 @@
-import { invoke, Channel } from "@tauri-apps/api/core";
 import type {
-  InstalledPlugin, KnownMarketplace, PluginUpdateInfo, HooksConfig, StatsCache,
-  SessionSummary, SessionFacet, ActiveSession, LiveDailyActivity,
-  LiveStats, SessionTranscript,
-  HarnessInfo, HarnessHealthRecord,
-  PermissionsState, SecurityPreset, KeychainSecretInfo,
-  EnvConfigEntry, AuditEntry, FileTreeNode,
-  ComparisonSummary, ComparisonDetail, FileDiffInput, FileDiffRow,
+  ActiveSession,
+  AuditEntry,
+  ComparisonDetail,
+  ComparisonSummary,
+  EnvConfigEntry,
+  FileDiffInput,
+  FileDiffRow,
+  FileTreeNode,
+  HarnessHealthRecord,
+  HarnessInfo,
+  HooksConfig,
+  InstalledPlugin,
+  KeychainSecretInfo,
+  KnownMarketplace,
+  LiveDailyActivity,
+  LiveStats,
+  PermissionsState,
+  PluginUpdateInfo,
+  SecurityPreset,
+  SessionFacet,
+  SessionSummary,
+  SessionTranscript,
+  StatsCache,
 } from "@harness-kit/shared";
+import { type Channel, invoke } from "@tauri-apps/api/core";
 
 // ── Plugin commands ──────────────────────────────────────────
 
@@ -64,11 +80,18 @@ export interface HistoryEntry {
   content: string;
 }
 
-export async function readFileHistory(pluginName: string, filePath: string): Promise<HistoryEntry[]> {
+export async function readFileHistory(
+  pluginName: string,
+  filePath: string,
+): Promise<HistoryEntry[]> {
   return invoke<HistoryEntry[]>("read_file_history", { pluginName, filePath });
 }
 
-export async function pushFileHistory(pluginName: string, filePath: string, content: string): Promise<void> {
+export async function pushFileHistory(
+  pluginName: string,
+  filePath: string,
+  content: string,
+): Promise<void> {
   return invoke<void>("push_file_history", { pluginName, filePath, content });
 }
 
@@ -175,6 +198,16 @@ export async function listClaudeDir(): Promise<string[]> {
   return invoke<string[]>("list_claude_dir");
 }
 
+export interface ClaudeAccountInfo {
+  logged_in: boolean;
+  subscription_type: string | null;
+  auto_mode_available: boolean;
+}
+
+export async function detectClaudeAccount(): Promise<ClaudeAccountInfo> {
+  return invoke<ClaudeAccountInfo>("detect_claude_account");
+}
+
 // ── Observatory commands ──────────────────────────────────────
 
 export async function readStatsCache(): Promise<StatsCache> {
@@ -201,7 +234,10 @@ export async function computeLiveStats(sinceDate?: string): Promise<LiveStats> {
   return invoke<LiveStats>("compute_live_stats", { sinceDate: sinceDate ?? null });
 }
 
-export async function readSessionTranscript(sessionId: string, project: string): Promise<SessionTranscript> {
+export async function readSessionTranscript(
+  sessionId: string,
+  project: string,
+): Promise<SessionTranscript> {
   return invoke<SessionTranscript>("read_session_transcript", { sessionId, project });
 }
 
@@ -250,7 +286,9 @@ export async function writeEnvConfig(entries: EnvConfigEntry[]): Promise<void> {
 }
 
 export async function listAuditEntries(
-  limit: number, offset: number, category?: string,
+  limit: number,
+  offset: number,
+  category?: string,
 ): Promise<AuditEntry[]> {
   return invoke<AuditEntry[]>("list_audit_entries", { limit, offset, category });
 }
@@ -303,7 +341,12 @@ export async function syncCreateBackup(
   platforms: string[],
   filePaths: string[],
 ): Promise<BackupManifest> {
-  return invoke<BackupManifest>("sync_create_backup", { projectDir, harnessName, platforms, filePaths });
+  return invoke<BackupManifest>("sync_create_backup", {
+    projectDir,
+    harnessName,
+    platforms,
+    filePaths,
+  });
 }
 
 export async function syncListBackups(): Promise<BackupManifest[]> {
@@ -544,7 +587,10 @@ export async function listComparisons(
   limit?: number,
   offset?: number,
 ): Promise<ComparisonSummary[]> {
-  return invoke<ComparisonSummary[]>("list_comparisons", { limit: limit ?? 50, offset: offset ?? 0 });
+  return invoke<ComparisonSummary[]>("list_comparisons", {
+    limit: limit ?? 50,
+    offset: offset ?? 0,
+  });
 }
 
 export async function getComparison(id: string): Promise<ComparisonDetail | null> {
@@ -574,7 +620,13 @@ export async function updatePanelResult(
   durationMs: number,
   status: string,
 ): Promise<void> {
-  return invoke<void>("update_panel_result", { comparisonId, panelId, exitCode, durationMs, status });
+  return invoke<void>("update_panel_result", {
+    comparisonId,
+    panelId,
+    exitCode,
+    durationMs,
+    status,
+  });
 }
 
 export async function saveFileDiffs(
@@ -589,10 +641,7 @@ export async function getComparisonDiffs(comparisonId: string): Promise<FileDiff
   return invoke<FileDiffRow[]>("get_comparison_diffs", { comparisonId });
 }
 
-export async function getPanelDiffs(
-  comparisonId: string,
-  panelId: string,
-): Promise<FileDiffRow[]> {
+export async function getPanelDiffs(comparisonId: string, panelId: string): Promise<FileDiffRow[]> {
   return invoke<FileDiffRow[]>("get_panel_diffs", { comparisonId, panelId });
 }
 
@@ -710,6 +759,9 @@ export async function getHarnessHealth(): Promise<HarnessHealthRecord[]> {
   return invoke<HarnessHealthRecord[]>("get_harness_health");
 }
 
-export async function recordHarnessLaunchResult(harnessId: string, exitCode: number): Promise<void> {
+export async function recordHarnessLaunchResult(
+  harnessId: string,
+  exitCode: number,
+): Promise<void> {
   return invoke<void>("record_harness_launch_result", { harnessId, exitCode });
 }

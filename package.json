@@ -13,6 +13,10 @@
     "build:board-server": "pnpm --filter board-server build",
     "build": "turbo run build",
     "typecheck": "turbo run typecheck",
+    "lint": "biome ci .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "format:check": "biome format .",
     "test:all": "turbo run test",
     "test:coverage": "pnpm -r test -- --coverage",
     "test:desktop:unit": "pnpm --filter harness-kit-desktop test",
@@ -23,10 +27,15 @@
     "board:uninstall": "pnpm --filter board-server launchd:uninstall",
     "board:status": "pnpm --filter board-server launchd:status",
     "board:logs": "pnpm --filter board-server launchd:logs",
-    "board:restart": "pnpm --filter board-server launchd:restart"
+    "board:restart": "pnpm --filter board-server launchd:restart",
+    "prepare": "[ -z \"$CI\" ] && lefthook install --force || true"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.11",
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
     "@vitest/coverage-v8": "^4",
+    "lefthook": "^2.1.5",
     "turbo": "^2.9.6"
   },
   "pnpm": {

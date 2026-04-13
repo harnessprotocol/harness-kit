@@ -1,8 +1,15 @@
-import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
+import type { LiveDailyActivity, LiveStats, StatsCache } from "@harness-kit/shared";
 import type { ReactNode } from "react";
-import { readStatsCache, readLiveActivity, computeLiveStats } from "../lib/tauri";
-import type { StatsCache, LiveDailyActivity, LiveStats } from "@harness-kit/shared";
-import { createElement } from "react";
+import {
+  createContext,
+  createElement,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+import { computeLiveStats, readLiveActivity, readStatsCache } from "../lib/tauri";
 
 const POLL_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 const MIN_REFETCH_MS = 60 * 1000; // skip poll if fetched within 60s
@@ -58,9 +65,10 @@ export function ObservatoryProvider({ children }: { children: ReactNode }) {
       if (statsResult.status === "fulfilled") setLiveStats(statsResult.value);
 
       // Only set error if all three fail
-      const allFailed = cacheResult.status === "rejected"
-        && activityResult.status === "rejected"
-        && statsResult.status === "rejected";
+      const allFailed =
+        cacheResult.status === "rejected" &&
+        activityResult.status === "rejected" &&
+        statsResult.status === "rejected";
       if (allFailed) {
         setError(String((cacheResult as PromiseRejectedResult).reason));
       } else {
@@ -95,7 +103,16 @@ export function ObservatoryProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(interval);
   }, [fetchAll]);
 
-  const value: ObservatoryData = { cache, liveActivity, liveStats, loading, isRefreshing, error, lastRefreshed, refresh };
+  const value: ObservatoryData = {
+    cache,
+    liveActivity,
+    liveStats,
+    loading,
+    isRefreshing,
+    error,
+    lastRefreshed,
+    refresh,
+  };
 
   return createElement(ObservatoryContext.Provider, { value }, children);
 }

@@ -1,15 +1,7 @@
-import type { ReactNode } from "react";
 import type { SecurityPermissionsSummary } from "@harness-kit/shared";
+import type { ReactNode } from "react";
 
-function Permission({
-  icon,
-  label,
-  active,
-}: {
-  icon: ReactNode;
-  label: string;
-  active: boolean;
-}) {
+function Permission({ icon, label, active }: { icon: ReactNode; label: string; active: boolean }) {
   return (
     <div
       className={`flex items-center gap-1.5 text-sm ${active ? "text-amber-400" : "text-gray-400"}`}
@@ -20,11 +12,7 @@ function Permission({
   );
 }
 
-export function PermissionsSummary({
-  permissions,
-}: {
-  permissions: SecurityPermissionsSummary;
-}) {
+export function PermissionsSummary({ permissions }: { permissions: SecurityPermissionsSummary }) {
   return (
     <div className="flex flex-wrap items-center gap-6 text-sm sm:gap-8">
       <Permission

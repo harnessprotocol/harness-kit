@@ -97,17 +97,13 @@ export default function KeyValueEditor({
             }}
             onMouseEnter={(e) => {
               if (!disabled) {
-                (e.currentTarget as HTMLButtonElement).style.color =
-                  "var(--danger)";
-                (e.currentTarget as HTMLButtonElement).style.background =
-                  "var(--hover-bg)";
+                (e.currentTarget as HTMLButtonElement).style.color = "var(--danger)";
+                (e.currentTarget as HTMLButtonElement).style.background = "var(--hover-bg)";
               }
             }}
             onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.color =
-                "var(--fg-subtle)";
-              (e.currentTarget as HTMLButtonElement).style.background =
-                "transparent";
+              (e.currentTarget as HTMLButtonElement).style.color = "var(--fg-subtle)";
+              (e.currentTarget as HTMLButtonElement).style.background = "transparent";
             }}
           >
             ×

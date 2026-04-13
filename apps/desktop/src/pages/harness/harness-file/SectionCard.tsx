@@ -48,9 +48,7 @@ export default function SectionCard({ label, explanation, count, children }: Sec
     <div>
       <div style={labelStyle}>
         <span>{label}</span>
-        {count !== undefined && (
-          <span style={countBadgeStyle}>{count}</span>
-        )}
+        {count !== undefined && <span style={countBadgeStyle}>{count}</span>}
       </div>
       <p style={explanationStyle}>{explanation}</p>
       <div style={cardStyle}>{children}</div>

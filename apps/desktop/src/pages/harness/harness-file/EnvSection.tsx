@@ -1,5 +1,5 @@
-import type { CSSProperties } from "react";
 import type { EnvDeclaration } from "@harness-kit/core";
+import type { CSSProperties } from "react";
 import SectionCard from "./SectionCard";
 
 interface EnvSectionProps {
@@ -34,36 +34,38 @@ export default function EnvSection({ env }: EnvSectionProps) {
           <div key={decl.name} className="row-list-item">
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: "flex", alignItems: "center", gap: "6px", flexWrap: "wrap" }}>
-                <code style={{
-                  fontFamily: "ui-monospace, monospace",
-                  fontSize: "12px",
-                  color: "var(--fg-base)",
-                }}>
+                <code
+                  style={{
+                    fontFamily: "ui-monospace, monospace",
+                    fontSize: "12px",
+                    color: "var(--fg-base)",
+                  }}
+                >
                   {decl.name}
                 </code>
-                {decl.required && (
-                  <span style={requiredBadgeStyle}>required</span>
-                )}
-                {decl.sensitive && (
-                  <span style={sensitiveBadgeStyle}>sensitive</span>
-                )}
+                {decl.required && <span style={requiredBadgeStyle}>required</span>}
+                {decl.sensitive && <span style={sensitiveBadgeStyle}>sensitive</span>}
               </div>
               {decl.description && (
-                <p style={{
-                  fontSize: "11px",
-                  color: "var(--fg-muted)",
-                  margin: "2px 0 0",
-                }}>
+                <p
+                  style={{
+                    fontSize: "11px",
+                    color: "var(--fg-muted)",
+                    margin: "2px 0 0",
+                  }}
+                >
                   {decl.description}
                 </p>
               )}
               {decl.default !== undefined && !decl.sensitive && (
-                <p style={{
-                  fontSize: "11px",
-                  fontStyle: "italic",
-                  color: "var(--fg-subtle)",
-                  margin: "2px 0 0",
-                }}>
+                <p
+                  style={{
+                    fontSize: "11px",
+                    fontStyle: "italic",
+                    color: "var(--fg-subtle)",
+                    margin: "2px 0 0",
+                  }}
+                >
                   default: {decl.default}
                 </p>
               )}

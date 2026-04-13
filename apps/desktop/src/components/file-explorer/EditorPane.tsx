@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { lazy, Suspense } from "react";
 import type { FileEditorState } from "../../hooks/useFileEditor";
 import EditorToolbar from "./EditorToolbar";
 
@@ -9,10 +9,15 @@ const MarkdownPanel = lazy(() => import("../MarkdownPanel"));
 
 function ShimmerSkeleton() {
   return (
-    <div style={{
-      display: "flex", flexDirection: "column", gap: "8px",
-      padding: "16px", flex: 1,
-    }}>
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "8px",
+        padding: "16px",
+        flex: 1,
+      }}
+    >
       {Array.from({ length: 12 }).map((_, i) => (
         <div
           key={i}
@@ -76,10 +81,17 @@ export default function EditorPane({
       <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
         {/* Empty state */}
         {!filePath && (
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "center",
-            flex: 1, height: "100%", color: "var(--fg-subtle)", fontSize: "12px",
-          }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flex: 1,
+              height: "100%",
+              color: "var(--fg-subtle)",
+              fontSize: "12px",
+            }}
+          >
             Select a file to view
           </div>
         )}
@@ -96,8 +108,13 @@ export default function EditorPane({
             <button
               onClick={editor.reload}
               style={{
-                fontSize: "12px", color: "var(--accent-text)", background: "none",
-                border: "none", padding: 0, cursor: "pointer", textDecoration: "underline",
+                fontSize: "12px",
+                color: "var(--accent-text)",
+                background: "none",
+                border: "none",
+                padding: 0,
+                cursor: "pointer",
+                textDecoration: "underline",
               }}
             >
               Reload
@@ -141,11 +158,13 @@ export default function EditorPane({
                   </Suspense>
                 </div>
                 {/* Divider */}
-                <div style={{
-                  width: "1px",
-                  flexShrink: 0,
-                  background: "var(--border-base)",
-                }} />
+                <div
+                  style={{
+                    width: "1px",
+                    flexShrink: 0,
+                    background: "var(--border-base)",
+                  }}
+                />
                 {/* Right: live preview */}
                 <div style={{ flex: 1, minWidth: 0, overflow: "auto", padding: "0 4px" }}>
                   <Suspense fallback={<ShimmerSkeleton />}>
@@ -156,19 +175,24 @@ export default function EditorPane({
             )}
 
             {viewMode === "raw" && (
-              <div style={{
-                height: "100%", overflow: "auto",
-                padding: "14px 16px",
-              }}>
-                <pre style={{
-                  margin: 0,
-                  fontFamily: "ui-monospace, monospace",
-                  fontSize: "11px",
-                  lineHeight: "1.6",
-                  color: "var(--fg-muted)",
-                  whiteSpace: "pre-wrap",
-                  wordBreak: "break-word",
-                }}>
+              <div
+                style={{
+                  height: "100%",
+                  overflow: "auto",
+                  padding: "14px 16px",
+                }}
+              >
+                <pre
+                  style={{
+                    margin: 0,
+                    fontFamily: "ui-monospace, monospace",
+                    fontSize: "11px",
+                    lineHeight: "1.6",
+                    color: "var(--fg-muted)",
+                    whiteSpace: "pre-wrap",
+                    wordBreak: "break-word",
+                  }}
+                >
                   {editor.content}
                 </pre>
               </div>

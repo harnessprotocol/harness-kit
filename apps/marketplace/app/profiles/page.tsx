@@ -1,7 +1,7 @@
 import Link from "next/link";
+import { TrustBadge } from "@/app/components/TrustBadge";
 import { supabase } from "@/lib/supabase";
 import type { Profile } from "@/lib/types";
-import { TrustBadge } from "@/app/components/TrustBadge";
 
 interface ProfileWithCounts extends Profile {
   component_count?: number;
@@ -61,9 +61,7 @@ export default async function ProfilesPage({
       {/* Profile list */}
       {profiles.length === 0 ? (
         <div className="rounded-xl border border-[#2a2a2e] bg-[#1a1a1e] py-16 text-center">
-          <p className="text-gray-400">
-            No profiles found. Connect Supabase to load data.
-          </p>
+          <p className="text-gray-400">No profiles found. Connect Supabase to load data.</p>
         </div>
       ) : (
         <div className="rounded-xl border border-[#2a2a2e]">
@@ -80,9 +78,7 @@ export default async function ProfilesPage({
                   </span>
                   <TrustBadge tier={profile.trust_tier} />
                   {profile.author && (
-                    <span className="text-xs text-gray-500">
-                      {profile.author.name}
-                    </span>
+                    <span className="text-xs text-gray-500">{profile.author.name}</span>
                   )}
                   {profile.component_count !== undefined && (
                     <span className="text-xs text-gray-500">
@@ -91,9 +87,7 @@ export default async function ProfilesPage({
                     </span>
                   )}
                 </div>
-                <p className="mt-1 line-clamp-2 text-sm text-gray-400">
-                  {profile.description}
-                </p>
+                <p className="mt-1 line-clamp-2 text-sm text-gray-400">{profile.description}</p>
               </div>
             </Link>
           ))}

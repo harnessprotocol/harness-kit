@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { type NextRequest, NextResponse } from "next/server";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 function getServiceSupabase() {
@@ -19,19 +19,13 @@ export async function POST(request: NextRequest) {
   try {
     payload = await request.json();
   } catch {
-    return NextResponse.json(
-      { error: "Invalid JSON body" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
   const { slug } = payload;
 
   if (!slug) {
-    return NextResponse.json(
-      { error: "Missing required field: slug" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Missing required field: slug" }, { status: 400 });
   }
 
   // 5 installs per slug per IP per hour
@@ -48,8 +42,9 @@ export async function POST(request: NextRequest) {
   }
 
   // Atomically increment install_count to avoid race conditions
-  const { data: updated, error: updateError } = await supabase
-    .rpc("increment_install_count", { component_slug: slug });
+  const { data: updated, error: updateError } = await supabase.rpc("increment_install_count", {
+    component_slug: slug,
+  });
 
   if (updateError) {
     // Fallback: try direct update if RPC not available
@@ -60,10 +55,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (fetchError || !component) {
-      return NextResponse.json(
-        { error: `Plugin not found: ${slug}` },
-        { status: 404 },
-      );
+      return NextResponse.json({ error: `Plugin not found: ${slug}` }, { status: 404 });
     }
 
     const { error: fallbackError } = await supabase

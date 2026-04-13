@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { WebSocket, WebSocketServer } from "ws";
+import { WebSocket, type WebSocketServer } from "ws";
 import type { ClientMessage, Member, ServerMessage, SystemMessage } from "./protocol.js";
 import { Room } from "./room.js";
 
@@ -76,19 +76,30 @@ export class ChatRelay {
         break;
       default: {
         const _exhaustive: never = msg;
-        console.warn("[chat-relay] unknown message type:", (_exhaustive as ClientMessage));
+        console.warn("[chat-relay] unknown message type:", _exhaustive as ClientMessage);
       }
     }
   }
 
-  private handleCreateRoom(ws: WebSocket, nickname: string, name?: string, keepAliveMinutes?: number): void {
+  private handleCreateRoom(
+    ws: WebSocket,
+    nickname: string,
+    name?: string,
+    keepAliveMinutes?: number,
+  ): void {
     if (!nickname || nickname.length > 32) {
-      const errMsg: ServerMessage = { type: "room_error", error: "nickname must be 1–32 characters" };
+      const errMsg: ServerMessage = {
+        type: "room_error",
+        error: "nickname must be 1–32 characters",
+      };
       if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(errMsg));
       return;
     }
     if (name !== undefined && name.length > 64) {
-      const errMsg: ServerMessage = { type: "room_error", error: "room name must be ≤ 64 characters" };
+      const errMsg: ServerMessage = {
+        type: "room_error",
+        error: "room name must be ≤ 64 characters",
+      };
       if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(errMsg));
       return;
     }
@@ -115,7 +126,10 @@ export class ChatRelay {
 
   private handleJoinRoom(ws: WebSocket, code: string, nickname: string): void {
     if (!nickname || nickname.length > 32) {
-      const errMsg: ServerMessage = { type: "room_error", error: "nickname must be 1–32 characters" };
+      const errMsg: ServerMessage = {
+        type: "room_error",
+        error: "nickname must be 1–32 characters",
+      };
       if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(errMsg));
       return;
     }
@@ -220,7 +234,9 @@ export class ChatRelay {
     }
 
     if (typeof body !== "string" || body.length > 4_000) {
-      ws.send(JSON.stringify({ type: "room_error", error: "Message body too long (max 4000 chars)" }));
+      ws.send(
+        JSON.stringify({ type: "room_error", error: "Message body too long (max 4000 chars)" }),
+      );
       return;
     }
 
@@ -239,10 +255,7 @@ export class ChatRelay {
     room.lastActivity = new Date();
   }
 
-  private handleShare(
-    ws: WebSocket,
-    msg: Extract<ClientMessage, { type: "share" }>
-  ): void {
+  private handleShare(ws: WebSocket, msg: Extract<ClientMessage, { type: "share" }>): void {
     const state = this.clientState.get(ws);
     if (!state) {
       console.warn("[chat-relay] share message from client not in a room — ignoring");
@@ -250,15 +263,21 @@ export class ChatRelay {
     }
 
     if (typeof msg.target !== "string" || msg.target.length > 256) {
-      ws.send(JSON.stringify({ type: "room_error", error: "Share target too long (max 256 chars)" }));
+      ws.send(
+        JSON.stringify({ type: "room_error", error: "Share target too long (max 256 chars)" }),
+      );
       return;
     }
     if (msg.detail != null && msg.detail.length > 1_024) {
-      ws.send(JSON.stringify({ type: "room_error", error: "Share detail too long (max 1024 chars)" }));
+      ws.send(
+        JSON.stringify({ type: "room_error", error: "Share detail too long (max 1024 chars)" }),
+      );
       return;
     }
     if (msg.diff != null && msg.diff.length > 64_000) {
-      ws.send(JSON.stringify({ type: "room_error", error: "Share diff too long (max 64000 chars)" }));
+      ws.send(
+        JSON.stringify({ type: "room_error", error: "Share diff too long (max 64000 chars)" }),
+      );
       return;
     }
 
@@ -288,10 +307,7 @@ export class ChatRelay {
     const { room, member } = state;
     member.typing = typing;
 
-    room.broadcast(
-      { type: "typing_update", nickname: member.nickname, typing },
-      ws
-    );
+    room.broadcast({ type: "typing_update", nickname: member.nickname, typing }, ws);
   }
 
   private handleHeartbeat(ws: WebSocket): void {

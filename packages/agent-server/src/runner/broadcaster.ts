@@ -1,6 +1,6 @@
 // packages/agent-server/src/runner/broadcaster.ts
-import type WebSocket from 'ws';
-import type { AgentEvent } from '../types.js';
+import type WebSocket from "ws";
+import type { AgentEvent } from "../types.js";
 
 type EventSink = (event: AgentEvent) => void;
 const sinks = new Map<number, Set<EventSink>>();
@@ -17,7 +17,7 @@ export function clearSubscribers(taskId: number) {
 }
 
 export function emit(event: AgentEvent) {
-  sinks.get(event.taskId)?.forEach(s => s(event));
+  sinks.get(event.taskId)?.forEach((s) => s(event));
 }
 
 /** Attach a WebSocket client to receive events for a task */
@@ -27,5 +27,5 @@ export function attachWs(taskId: number, ws: WebSocket) {
       ws.send(JSON.stringify(event));
     }
   });
-  ws.on('close', unsub);
+  ws.on("close", unsub);
 }

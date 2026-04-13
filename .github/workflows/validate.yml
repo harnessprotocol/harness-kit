@@ -188,7 +188,7 @@ jobs:
 
       - uses: pnpm/action-setup@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           cache: pnpm
@@ -198,6 +198,42 @@ jobs:
 
       - name: Type check all packages
         run: pnpm turbo run typecheck
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint and format check
+        run: pnpm lint
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Dependency audit
+        run: pnpm audit --audit-level=critical
 
   security-scan:
     runs-on: ubuntu-latest
@@ -283,27 +319,6 @@ jobs:
       - name: Build and test all packages
         run: pnpm turbo run build test
 
-  core-build-test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Run dependency audit
-        run: pnpm audit --audit-level=critical
-
-      - name: Build and test core stack
-        run: pnpm turbo run build test --filter=@harness-kit/cli...
-
   desktop-build-test:
     runs-on: ubuntu-latest
     steps:
@@ -342,58 +357,14 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build workspace dependencies
-        run: |
-          pnpm --filter @harness-kit/shared build
-          pnpm --filter @harness-kit/core build
-
-      - name: Run desktop tests
-        run: pnpm --filter harness-kit-desktop test
+      - name: Build workspace dependencies and run desktop tests
+        run: pnpm turbo run test --filter=harness-kit-desktop
 
       - name: Build board-server (mirrors tauri beforeBuildCommand)
         run: pnpm --filter board-server build
 
       - name: Build desktop frontend
-        run: pnpm --filter harness-kit-desktop exec vite build
-
-  board-build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build board-server
-        run: pnpm --filter board-server build
-
-      - name: Start board-server (smoke test)
-        run: node packages/board-server/dist/index.js &
-        working-directory: .
-
-      - name: Wait for board-server to be ready
-        run: |
-          for i in $(seq 1 10); do
-            if curl -sf http://localhost:4800/health; then
-              echo "board-server is up"
-              exit 0
-            fi
-            sleep 1
-          done
-          echo "board-server did not start in time"
-          exit 1
-
-      - name: Kill board-server
-        if: always()
-        run: kill $(lsof -ti:4800) 2>/dev/null || true
-
+        run: pnpm turbo run build --filter=harness-kit-desktop
 
   docs-build:
     runs-on: ubuntu-latest

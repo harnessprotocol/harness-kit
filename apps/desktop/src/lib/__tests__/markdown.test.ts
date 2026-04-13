@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { renderMarkdown } from "../markdown";
 
 describe("renderMarkdown", () => {
@@ -95,7 +95,7 @@ describe("renderMarkdown", () => {
     });
 
     it("strips onerror attributes", () => {
-      const result = renderMarkdown('[x](javascript:alert(1))');
+      const result = renderMarkdown("[x](javascript:alert(1))");
       expect(result).not.toContain("javascript:");
     });
 

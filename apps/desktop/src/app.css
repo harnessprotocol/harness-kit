@@ -57,10 +57,10 @@
   --border: var(--border-base);
 
   /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.10), 0 1px 2px rgba(0,0,0,0.06);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.06);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,0.14), 0 4px 8px rgba(0,0,0,0.08);
-  --shadow-popover: 0 8px 24px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.14), 0 4px 8px rgba(0, 0, 0, 0.08);
+  --shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .dark {
@@ -103,10 +103,10 @@
   --active-bg: rgba(255, 248, 230, 0.09);
 
   /* Shadows — stronger in dark mode */
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.30), 0 1px 2px rgba(0,0,0,0.20);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.40), 0 2px 4px rgba(0,0,0,0.20);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,0.50), 0 4px 8px rgba(0,0,0,0.30);
-  --shadow-popover: 0 8px 24px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.35);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5), 0 4px 8px rgba(0, 0, 0, 0.3);
+  --shadow-popover: 0 8px 24px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.35);
 }
 
 /* ── Density: compact ── */
@@ -156,11 +156,15 @@
 }
 
 /* ── Base ── */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   margin: 0;
   padding: 0;
@@ -237,7 +241,9 @@ body {
   font-weight: 400;
   color: var(--fg-muted);
   cursor: pointer;
-  transition: background 0.1s, color 0.1s;
+  transition:
+    background 0.1s,
+    color 0.1s;
   user-select: none;
   -webkit-app-region: no-drag;
 }
@@ -263,7 +269,9 @@ body {
   font-weight: 400;
   color: var(--fg-subtle);
   cursor: pointer;
-  transition: background 0.1s, color 0.1s;
+  transition:
+    background 0.1s,
+    color 0.1s;
   user-select: none;
   -webkit-app-region: no-drag;
 }
@@ -321,8 +329,12 @@ body {
   color: var(--fg-muted);
 }
 
-.markdown-body > *:first-child { margin-top: 0; }
-.markdown-body > *:last-child  { margin-bottom: 0; }
+.markdown-body > *:first-child {
+  margin-top: 0;
+}
+.markdown-body > *:last-child {
+  margin-bottom: 0;
+}
 
 .markdown-body h1 {
   font-size: 15px;
@@ -496,7 +508,10 @@ body {
   border: 1px solid transparent;
   background: transparent;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s,
+    opacity 0.15s;
   white-space: nowrap;
   user-select: none;
 }
@@ -594,7 +609,9 @@ body {
   border: 1.5px solid var(--border-base);
   background: var(--bg-surface);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
   min-width: 0;
 }
 
@@ -617,9 +634,10 @@ body {
 }
 
 .preset-card {
-  transition: transform 0.15s cubic-bezier(0.25, 1, 0.5, 1),
-              border-color 0.15s cubic-bezier(0.25, 1, 0.5, 1),
-              box-shadow 0.15s cubic-bezier(0.25, 1, 0.5, 1);
+  transition:
+    transform 0.15s cubic-bezier(0.25, 1, 0.5, 1),
+    border-color 0.15s cubic-bezier(0.25, 1, 0.5, 1),
+    box-shadow 0.15s cubic-bezier(0.25, 1, 0.5, 1);
 }
 .preset-card:hover {
   transform: translateY(-1px);
@@ -771,7 +789,9 @@ body {
   color: var(--fg-subtle);
   cursor: pointer;
   border-radius: 6px;
-  transition: background 0.1s, color 0.1s;
+  transition:
+    background 0.1s,
+    color 0.1s;
   user-select: none;
 }
 
@@ -825,7 +845,10 @@ body {
   background: var(--bg-base);
   color: var(--fg-muted);
   cursor: pointer;
-  transition: background 0.1s, border-color 0.1s, color 0.1s;
+  transition:
+    background 0.1s,
+    border-color 0.1s,
+    color 0.1s;
   user-select: none;
 }
 
@@ -917,7 +940,9 @@ body {
   background: var(--accent);
   color: #fff;
   cursor: pointer;
-  transition: background 0.15s, transform 0.1s;
+  transition:
+    background 0.15s,
+    transform 0.1s;
 }
 
 .eval-cta:hover {
@@ -969,7 +994,9 @@ body {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Compact density adjustments for score numbers */
@@ -985,13 +1012,17 @@ body {
   font-size: 10px;
 }
 
-
 /* ── AI Chat ── */
 
 /* Streaming cursor blink */
 @keyframes blink-cursor {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
 }
 
 .streaming-cursor {
@@ -1007,12 +1038,18 @@ body {
 
 /* Thinking dots animation */
 @keyframes thinking-dot {
-  0%, 80%, 100% { opacity: 0.2; }
-  40% { opacity: 1; }
+  0%,
+  80%,
+  100% {
+    opacity: 0.2;
+  }
+  40% {
+    opacity: 1;
+  }
 }
 
 .thinking-dots::after {
-  content: '...';
+  content: "...";
   display: inline-block;
   letter-spacing: 2px;
   animation: thinking-dot 1.4s ease-in-out infinite;
@@ -1025,17 +1062,28 @@ body {
 
 /* ── Agent execution animations (ported from docs/plans/agent-ui-mock.html) ── */
 @keyframes agent-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: .5; transform: scale(.8); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.8);
+  }
 }
 
 @keyframes agent-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
   }

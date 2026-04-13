@@ -1,18 +1,22 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import type { LiveDailyActivity, StatsCache } from "@harness-kit/shared";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import type { StatsCache, LiveDailyActivity } from "@harness-kit/shared";
-import DashboardPage from "../DashboardPage";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObservatoryProvider } from "../../../hooks/useObservatoryData";
+import DashboardPage from "../DashboardPage";
 
 // ── Recharts mock ─────────────────────────────────────────────
 // jsdom cannot render SVG/canvas; mock all recharts components as simple divs.
 // The factory must not reference any variables declared outside it (Vitest hoisting).
 
 vi.mock("recharts", () => ({
-  AreaChart: ({ children }: { children: React.ReactNode }) => <div data-testid="area-chart">{children}</div>,
+  AreaChart: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="area-chart">{children}</div>
+  ),
   Area: () => null,
-  BarChart: ({ children }: { children: React.ReactNode }) => <div data-testid="bar-chart">{children}</div>,
+  BarChart: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="bar-chart">{children}</div>
+  ),
   Bar: () => null,
   XAxis: () => null,
   YAxis: () => null,
@@ -29,13 +33,23 @@ vi.mock("recharts", () => ({
 let mockReadStatsCache: () => Promise<unknown>;
 let mockReadLiveActivity: () => Promise<unknown>;
 let mockComputeLiveStats: () => Promise<unknown>;
-const mockDetectClaudeAccount = vi.fn().mockResolvedValue({ logged_in: true, subscription_type: null, auto_mode_available: false });
+const mockDetectClaudeAccount = vi
+  .fn()
+  .mockResolvedValue({ logged_in: true, subscription_type: null, auto_mode_available: false });
 
 vi.mock("../../../lib/tauri", () => ({
-  get readStatsCache() { return mockReadStatsCache; },
-  get readLiveActivity() { return mockReadLiveActivity; },
-  get computeLiveStats() { return mockComputeLiveStats; },
-  get detectClaudeAccount() { return mockDetectClaudeAccount; },
+  get readStatsCache() {
+    return mockReadStatsCache;
+  },
+  get readLiveActivity() {
+    return mockReadLiveActivity;
+  },
+  get computeLiveStats() {
+    return mockComputeLiveStats;
+  },
+  get detectClaudeAccount() {
+    return mockDetectClaudeAccount;
+  },
 }));
 
 // ── Fixtures ──────────────────────────────────────────────────
@@ -49,8 +63,18 @@ const mockStats: StatsCache = {
     { date: "2026-03-15", messageCount: 30, sessionCount: 2, toolCallCount: 80 },
   ],
   modelUsage: {
-    "claude-sonnet-4-6": { inputTokens: 1000, outputTokens: 2000, cacheReadInputTokens: 500, cacheCreationInputTokens: 200 },
-    "claude-opus-4-6": { inputTokens: 500, outputTokens: 1000, cacheReadInputTokens: 200, cacheCreationInputTokens: 100 },
+    "claude-sonnet-4-6": {
+      inputTokens: 1000,
+      outputTokens: 2000,
+      cacheReadInputTokens: 500,
+      cacheCreationInputTokens: 200,
+    },
+    "claude-opus-4-6": {
+      inputTokens: 500,
+      outputTokens: 1000,
+      cacheReadInputTokens: 200,
+      cacheCreationInputTokens: 100,
+    },
   },
   hourCounts: { "9": 50, "10": 80, "14": 60 },
 };
@@ -115,9 +139,7 @@ describe("DashboardPage — loading state", () => {
   it("hides 'Loading…' after data loads", async () => {
     mockReadStatsCache = () => Promise.resolve(mockStats);
     renderDashboard();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
   });
 });
 
@@ -184,18 +206,14 @@ describe("DashboardPage — charts", () => {
 
   it("renders the activity area chart after load", async () => {
     renderDashboard();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
     const areaCharts = screen.getAllByTestId("area-chart");
     expect(areaCharts.length).toBe(3);
   });
 
   it("renders bar charts after load", async () => {
     renderDashboard();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
     const barCharts = screen.getAllByTestId("bar-chart");
     expect(barCharts.length).toBeGreaterThanOrEqual(1);
   });

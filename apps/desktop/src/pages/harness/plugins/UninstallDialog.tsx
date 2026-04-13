@@ -8,7 +8,12 @@ interface UninstallDialogProps {
   onClose: () => void;
 }
 
-export default function UninstallDialog({ open, pluginName, onConfirm, onClose }: UninstallDialogProps) {
+export default function UninstallDialog({
+  open,
+  pluginName,
+  onConfirm,
+  onClose,
+}: UninstallDialogProps) {
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -38,7 +43,8 @@ export default function UninstallDialog({ open, pluginName, onConfirm, onClose }
             transition={{ type: "spring", stiffness: 420, damping: 36 }}
             style={{
               position: "fixed",
-              top: "50%", left: "50%",
+              top: "50%",
+              left: "50%",
               transform: "translate(-50%, -50%)",
               width: 400,
               background: "var(--bg-surface)",
@@ -48,19 +54,41 @@ export default function UninstallDialog({ open, pluginName, onConfirm, onClose }
               zIndex: 310,
             }}
           >
-            <h2 style={{ margin: "0 0 8px", fontSize: "15px", fontWeight: 600, color: "var(--fg-base)" }}>
+            <h2
+              style={{
+                margin: "0 0 8px",
+                fontSize: "15px",
+                fontWeight: 600,
+                color: "var(--fg-base)",
+              }}
+            >
               Uninstall {pluginName}?
             </h2>
-            <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "0 0 20px", lineHeight: 1.5 }}>
-              This will remove the plugin from <code style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>~/.claude/</code>. Cannot be undone.
+            <p
+              style={{
+                fontSize: "12px",
+                color: "var(--fg-muted)",
+                margin: "0 0 20px",
+                lineHeight: 1.5,
+              }}
+            >
+              This will remove the plugin from{" "}
+              <code style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
+                ~/.claude/
+              </code>
+              . Cannot be undone.
             </p>
             <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
               <button
                 onClick={onClose}
                 style={{
-                  padding: "7px 16px", background: "transparent",
-                  border: "1px solid var(--border-base)", borderRadius: "6px",
-                  color: "var(--fg-muted)", fontSize: "13px", cursor: "pointer",
+                  padding: "7px 16px",
+                  background: "transparent",
+                  border: "1px solid var(--border-base)",
+                  borderRadius: "6px",
+                  color: "var(--fg-muted)",
+                  fontSize: "13px",
+                  cursor: "pointer",
                 }}
               >
                 Cancel
@@ -68,9 +96,14 @@ export default function UninstallDialog({ open, pluginName, onConfirm, onClose }
               <button
                 onClick={onConfirm}
                 style={{
-                  padding: "7px 16px", background: "var(--danger)",
-                  border: "none", borderRadius: "6px",
-                  color: "#fff", fontSize: "13px", fontWeight: 500, cursor: "pointer",
+                  padding: "7px 16px",
+                  background: "var(--danger)",
+                  border: "none",
+                  borderRadius: "6px",
+                  color: "#fff",
+                  fontSize: "13px",
+                  fontWeight: 500,
+                  cursor: "pointer",
                 }}
               >
                 Uninstall

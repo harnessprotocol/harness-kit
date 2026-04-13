@@ -6,9 +6,6 @@ export async function POST() {
     await signOut();
     return NextResponse.json({ success: true });
   } catch {
-    return NextResponse.json(
-      { error: "Failed to sign out" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to sign out" }, { status: 500 });
   }
 }

@@ -1,12 +1,17 @@
-import { useState, useCallback, useEffect, useRef } from "react";
-import type { InstalledPlugin, FileTreeNode } from "@harness-kit/shared";
-import {
-  readPluginTree, readPluginFile, writePluginFile,
-  exportPluginAsZip, exportPluginToFolder,
-  readFileHistory, pushFileHistory, type HistoryEntry,
-} from "../lib/tauri";
+import type { FileTreeNode, InstalledPlugin } from "@harness-kit/shared";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { isCriticalFile } from "../lib/criticalFiles";
 import { getConfirmSave } from "../lib/preferences";
+import {
+  exportPluginAsZip,
+  exportPluginToFolder,
+  type HistoryEntry,
+  pushFileHistory,
+  readFileHistory,
+  readPluginFile,
+  readPluginTree,
+  writePluginFile,
+} from "../lib/tauri";
 
 export interface PluginExplorerState {
   tree: FileTreeNode | null;
@@ -33,7 +38,10 @@ export interface PluginExplorerState {
   restoreVersion: (content: string) => void;
 }
 
-export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean): PluginExplorerState {
+export function usePluginExplorer(
+  plugin: InstalledPlugin | null,
+  open: boolean,
+): PluginExplorerState {
   const pluginName = plugin?.name ?? "";
   const [tree, setTree] = useState<FileTreeNode | null>(null);
   const [loading, setLoading] = useState(false);
@@ -55,8 +63,12 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
   const originalContentRef = useRef<string | null>(null);
 
   // Keep refs in sync with state for use in callbacks
-  useEffect(() => { fileContentRef.current = fileContent; }, [fileContent]);
-  useEffect(() => { originalContentRef.current = originalContent; }, [originalContent]);
+  useEffect(() => {
+    fileContentRef.current = fileContent;
+  }, [fileContent]);
+  useEffect(() => {
+    originalContentRef.current = originalContent;
+  }, [originalContent]);
 
   // Load tree when opened
   useEffect(() => {
@@ -93,26 +105,29 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
     }
   }, []);
 
-  const selectFile = useCallback(async (path: string) => {
-    // Auto-save dirty file before switching
-    await saveCurrent();
+  const selectFile = useCallback(
+    async (path: string) => {
+      // Auto-save dirty file before switching
+      await saveCurrent();
 
-    setSelectedPath(path);
-    currentPathRef.current = path;
-    setFileLoading(true);
-    setError(null);
-    try {
-      const content = await readPluginFile(path);
-      setFileContent(content);
-      setOriginalContent(content);
-    } catch (e) {
-      setFileContent(null);
-      setOriginalContent(null);
-      setError(String(e));
-    } finally {
-      setFileLoading(false);
-    }
-  }, [saveCurrent]);
+      setSelectedPath(path);
+      currentPathRef.current = path;
+      setFileLoading(true);
+      setError(null);
+      try {
+        const content = await readPluginFile(path);
+        setFileContent(content);
+        setOriginalContent(content);
+      } catch (e) {
+        setFileContent(null);
+        setOriginalContent(null);
+        setError(String(e));
+      } finally {
+        setFileLoading(false);
+      }
+    },
+    [saveCurrent],
+  );
 
   // Load history when file changes
   useEffect(() => {
@@ -197,7 +212,9 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
         title: "Export plugin as zip",
       });
       if (savePath) await exportPluginAsZip(plugin.source, savePath);
-    } catch { /* cancelled */ }
+    } catch {
+      /* cancelled */
+    }
   }, [plugin?.source, plugin?.name]);
 
   const exportToFolder = useCallback(async () => {
@@ -206,7 +223,9 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
       const { open } = await import("@tauri-apps/plugin-dialog");
       const dest = await open({ directory: true, title: "Export plugin to folder" });
       if (dest) await exportPluginToFolder(plugin.source, dest as string);
-    } catch { /* cancelled */ }
+    } catch {
+      /* cancelled */
+    }
   }, [plugin?.source]);
 
   // Clean up savedRecently timer on unmount
@@ -217,12 +236,27 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
   }, []);
 
   return {
-    tree, loading, error,
-    selectedPath, fileContent, fileLoading,
-    dirty, saving, savedRecently,
-    confirmState, requestSave, confirmSave, cancelSave,
-    historyEntries, historyLoading, restoreVersion,
-    selectFile, updateContent, saveFile, revertFile,
-    exportAsZip, exportToFolder,
+    tree,
+    loading,
+    error,
+    selectedPath,
+    fileContent,
+    fileLoading,
+    dirty,
+    saving,
+    savedRecently,
+    confirmState,
+    requestSave,
+    confirmSave,
+    cancelSave,
+    historyEntries,
+    historyLoading,
+    restoreVersion,
+    selectFile,
+    updateContent,
+    saveFile,
+    revertFile,
+    exportAsZip,
+    exportToFolder,
   };
 }

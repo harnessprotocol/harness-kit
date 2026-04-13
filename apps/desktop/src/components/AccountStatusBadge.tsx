@@ -30,20 +30,24 @@ export default function AccountStatusBadge({ account, monthlyTokens, loading }: 
           fontFamily: fontStack,
         }}
       >
-        <div style={{
-          width: "48px",
-          height: "10px",
-          background: "var(--border-subtle)",
-          borderRadius: "4px",
-          animation: "pulse 1.4s ease-in-out infinite",
-        }} />
-        <div style={{
-          width: "80px",
-          height: "10px",
-          background: "var(--border-subtle)",
-          borderRadius: "4px",
-          animation: "pulse 1.4s ease-in-out infinite",
-        }} />
+        <div
+          style={{
+            width: "48px",
+            height: "10px",
+            background: "var(--border-subtle)",
+            borderRadius: "4px",
+            animation: "pulse 1.4s ease-in-out infinite",
+          }}
+        />
+        <div
+          style={{
+            width: "80px",
+            height: "10px",
+            background: "var(--border-subtle)",
+            borderRadius: "4px",
+            animation: "pulse 1.4s ease-in-out infinite",
+          }}
+        />
       </div>
     );
   }

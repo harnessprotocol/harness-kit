@@ -1,4 +1,6 @@
 import type { FsProvider } from "../fs-provider.js";
+import { parseHarness } from "../parser/parse-harness.js";
+import { validateHarness } from "../schema/validate.js";
 import type {
   CompileOptions,
   CompileResult,
@@ -6,13 +8,11 @@ import type {
   HarnessConfig,
   TargetPlatform,
 } from "../types.js";
-import { parseHarness } from "../parser/parse-harness.js";
-import { validateHarness } from "../schema/validate.js";
 import { compileInstructions } from "./instructions.js";
-import { compileMcpServers } from "./mcp-servers.js";
-import { compileSkills } from "./skills.js";
-import { compilePermissions, buildPermissionsText } from "./permissions.js";
 import { appendMarkerBlock, findMarkerBlock, replaceMarkerBlock } from "./markers.js";
+import { compileMcpServers } from "./mcp-servers.js";
+import { buildPermissionsText, compilePermissions } from "./permissions.js";
+import { compileSkills } from "./skills.js";
 
 export async function compile(
   yamlString: string,
@@ -26,9 +26,7 @@ export async function compile(
   // Validate — fail fast
   const validation = validateHarness(config);
   if (!validation.valid) {
-    const errMsgs = validation.errors
-      .map((e) => `  ${e.path}: ${e.message}`)
-      .join("\n");
+    const errMsgs = validation.errors.map((e) => `  ${e.path}: ${e.message}`).join("\n");
     throw new Error(`harness.yaml validation failed:\n${errMsgs}`);
   }
 
@@ -87,10 +85,7 @@ function appendPermissionsToInstructions(
   const harnessName = config.metadata?.name ?? "default";
 
   for (const file of files) {
-    if (
-      file.slot === "operational" &&
-      file.platform !== "claude-code"
-    ) {
+    if (file.slot === "operational" && file.platform !== "claude-code") {
       // Append permissions text inside the marker block
       const existingBlock = findMarkerBlock(file.content, harnessName, "operational");
       if (existingBlock) {
@@ -103,10 +98,7 @@ function appendPermissionsToInstructions(
   }
 }
 
-async function writeFiles(
-  files: FileAction[],
-  fs: FsProvider,
-): Promise<void> {
+async function writeFiles(files: FileAction[], fs: FsProvider): Promise<void> {
   const cwd = fs.cwd();
 
   for (const file of files) {

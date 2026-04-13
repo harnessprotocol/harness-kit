@@ -1,9 +1,6 @@
 // apps/desktop/src/hooks/useSidebarResize.ts
 import { useCallback, useEffect, useRef } from "react";
-import {
-  setSidebarWidth,
-  SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX,
-} from "../lib/preferences";
+import { SIDEBAR_WIDTH_MAX, SIDEBAR_WIDTH_MIN, setSidebarWidth } from "../lib/preferences";
 
 export function useSidebarResize() {
   const dragging = useRef(false);

@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextResponse } from "next/server";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -35,8 +35,8 @@ vi.mock("@supabase/supabase-js", () => {
 // Helpers
 // ---------------------------------------------------------------------------
 
-import { cookies } from "next/headers";
 import { createClient } from "@supabase/supabase-js";
+import { cookies } from "next/headers";
 
 const mockedCookies = vi.mocked(cookies);
 const mockedCreateClient = vi.mocked(createClient);

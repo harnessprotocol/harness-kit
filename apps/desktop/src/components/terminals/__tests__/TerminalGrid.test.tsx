@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import TerminalGrid from "../TerminalGrid";
 
 describe("TerminalGrid", () => {
@@ -8,7 +8,9 @@ describe("TerminalGrid", () => {
     return render(
       <TerminalGrid count={count}>
         {Array.from({ length: n }, (_, i) => (
-          <div key={i} data-testid={`cell-${i}`}>Cell {i}</div>
+          <div key={i} data-testid={`cell-${i}`}>
+            Cell {i}
+          </div>
         ))}
       </TerminalGrid>,
     );

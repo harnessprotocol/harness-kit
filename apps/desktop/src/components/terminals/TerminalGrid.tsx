@@ -10,9 +10,9 @@ export interface TerminalGridProps {
 function getColumns(count: number): number {
   if (count <= 1) return 1;
   if (count <= 3) return count; // 2 → 2, 3 → 3
-  if (count === 4) return 2;    // 2x2
-  if (count <= 9) return 3;     // 5-9 → 3 columns
-  return 4;                     // 10-12 → 4 columns
+  if (count === 4) return 2; // 2x2
+  if (count <= 9) return 3; // 5-9 → 3 columns
+  return 4; // 10-12 → 4 columns
 }
 
 // ── Component ────────────────────────────────────────────────

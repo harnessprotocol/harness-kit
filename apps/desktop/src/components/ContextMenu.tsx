@@ -64,7 +64,10 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
         ) : (
           <button
             key={i}
-            onClick={() => { item.onClick(); onClose(); }}
+            onClick={() => {
+              item.onClick();
+              onClose();
+            }}
             style={{
               display: "block",
               width: "100%",
@@ -77,12 +80,16 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
               color: item.danger ? "var(--danger)" : "var(--fg-base)",
               cursor: "pointer",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = item.danger ? "rgba(220,38,38,0.08)" : "var(--hover-bg)")}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.background = item.danger
+                ? "rgba(220,38,38,0.08)"
+                : "var(--hover-bg)")
+            }
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           >
             {item.label}
           </button>
-        )
+        ),
       )}
     </div>
   );

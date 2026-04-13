@@ -43,7 +43,9 @@ export async function createServerClient(): Promise<SupabaseClient> {
 export async function getServerSession(): Promise<User | null> {
   try {
     const supabase = await createServerClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     return user;
   } catch {
     return null;
@@ -66,7 +68,9 @@ export async function signInWithGitHub(redirectTo?: string): Promise<string | nu
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "github",
     options: {
-      redirectTo: redirectTo || `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"}/api/auth/callback`,
+      redirectTo:
+        redirectTo ||
+        `${process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3001"}/api/auth/callback`,
     },
   });
 

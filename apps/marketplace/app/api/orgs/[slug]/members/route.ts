@@ -1,16 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServiceSupabase } from "@/lib/supabase";
+import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth";
-import { requireOrgRole, AuthorizationError } from "@/lib/orgs";
+import { AuthorizationError, requireOrgRole } from "@/lib/orgs";
+import { getServiceSupabase } from "@/lib/supabase";
 
 /**
  * GET /api/orgs/[slug]/members
  * List all members of an organization. Requires authentication.
  */
-export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
-) {
+export async function GET(request: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   try {
     const user = await getServerSession();
     const { slug } = await params;
@@ -24,10 +21,7 @@ export async function GET(
       .order("created_at", { ascending: true });
 
     if (membersError) {
-      return NextResponse.json(
-        { error: membersError.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: membersError.message }, { status: 500 });
     }
 
     return NextResponse.json(members);
@@ -35,10 +29,7 @@ export async function GET(
     if (error instanceof AuthorizationError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    return NextResponse.json(
-      { error: "Failed to fetch organization members" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch organization members" }, { status: 500 });
   }
 }
 
@@ -48,7 +39,7 @@ export async function GET(
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ slug: string }> },
 ) {
   try {
     const user = await getServerSession();
@@ -62,14 +53,14 @@ export async function POST(
     if (!user_id || !role) {
       return NextResponse.json(
         { error: "Missing required fields: user_id, role" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (role !== "admin" && role !== "member") {
       return NextResponse.json(
         { error: "Invalid role. Must be 'admin' or 'member'" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -83,7 +74,7 @@ export async function POST(
     if (existingMember) {
       return NextResponse.json(
         { error: "User is already a member of this organization" },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -94,10 +85,7 @@ export async function POST(
       .single();
 
     if (insertError) {
-      return NextResponse.json(
-        { error: insertError.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: insertError.message }, { status: 500 });
     }
 
     return NextResponse.json(newMember, { status: 201 });
@@ -105,10 +93,7 @@ export async function POST(
     if (error instanceof AuthorizationError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    return NextResponse.json(
-      { error: "Failed to add organization member" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to add organization member" }, { status: 500 });
   }
 }
 
@@ -118,7 +103,7 @@ export async function POST(
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ slug: string }> },
 ) {
   try {
     const user = await getServerSession();
@@ -132,22 +117,19 @@ export async function PATCH(
     if (!user_id || !role) {
       return NextResponse.json(
         { error: "Missing required fields: user_id, role" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (role !== "admin" && role !== "member") {
       return NextResponse.json(
         { error: "Invalid role. Must be 'admin' or 'member'" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (user_id === user!.id) {
-      return NextResponse.json(
-        { error: "Cannot change your own role" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Cannot change your own role" }, { status: 400 });
     }
 
     const { data: targetMember } = await supabase
@@ -160,7 +142,7 @@ export async function PATCH(
     if (!targetMember) {
       return NextResponse.json(
         { error: "User is not a member of this organization" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -173,10 +155,7 @@ export async function PATCH(
       .single();
 
     if (updateError) {
-      return NextResponse.json(
-        { error: updateError.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: updateError.message }, { status: 500 });
     }
 
     return NextResponse.json(updatedMember);
@@ -184,10 +163,7 @@ export async function PATCH(
     if (error instanceof AuthorizationError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    return NextResponse.json(
-      { error: "Failed to update member role" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to update member role" }, { status: 500 });
   }
 }
 
@@ -197,7 +173,7 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ slug: string }> }
+  { params }: { params: Promise<{ slug: string }> },
 ) {
   try {
     const user = await getServerSession();
@@ -211,14 +187,14 @@ export async function DELETE(
     if (!user_id) {
       return NextResponse.json(
         { error: "Missing required query parameter: user_id" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     if (user_id === user!.id) {
       return NextResponse.json(
         { error: "Cannot remove yourself from the organization" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -232,7 +208,7 @@ export async function DELETE(
     if (!targetMember) {
       return NextResponse.json(
         { error: "User is not a member of this organization" },
-        { status: 404 }
+        { status: 404 },
       );
     }
 
@@ -243,10 +219,7 @@ export async function DELETE(
       .eq("user_id", user_id);
 
     if (deleteError) {
-      return NextResponse.json(
-        { error: deleteError.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: deleteError.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
@@ -254,9 +227,6 @@ export async function DELETE(
     if (error instanceof AuthorizationError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    return NextResponse.json(
-      { error: "Failed to remove organization member" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to remove organization member" }, { status: 500 });
   }
 }

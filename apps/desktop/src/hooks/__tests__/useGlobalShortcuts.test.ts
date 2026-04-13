@@ -1,9 +1,7 @@
-import { describe, it, expect, vi } from "vitest";
-import { renderHook } from "@testing-library/react";
-import { fireEvent } from "@testing-library/react";
-import { NAV_PATHS } from "../useGlobalShortcuts";
+import { fireEvent, renderHook } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import { NAV_SECTIONS } from "../../layouts/AppLayout";
-import { useGlobalShortcuts } from "../useGlobalShortcuts";
+import { NAV_PATHS, useGlobalShortcuts } from "../useGlobalShortcuts";
 
 // ── Helpers ───────────────────────────────────────────────────
 

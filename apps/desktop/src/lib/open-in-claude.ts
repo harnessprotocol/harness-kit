@@ -1,4 +1,4 @@
-import { Command } from '@tauri-apps/plugin-shell';
+import { Command } from "@tauri-apps/plugin-shell";
 
 interface TaskLike {
   id: number;
@@ -10,9 +10,9 @@ interface TaskLike {
 export async function openInClaudeCode(task: TaskLike) {
   const args: string[] = [];
   if (task.worktree_path) {
-    args.push('--cwd', task.worktree_path);
+    args.push("--cwd", task.worktree_path);
   }
-  args.push('--resume', `Work on board task #${task.id}: ${task.title}`);
-  const cmd = Command.create('claude', args);
+  args.push("--resume", `Work on board task #${task.id}: ${task.title}`);
+  const cmd = Command.create("claude", args);
   await cmd.spawn();
 }

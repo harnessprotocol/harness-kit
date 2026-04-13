@@ -1,13 +1,7 @@
-import {
-  readTextFile,
-  writeTextFile,
-  exists,
-  mkdir,
-  readDir,
-} from "@tauri-apps/plugin-fs";
-import { homeDir } from "@tauri-apps/api/path";
 import type { FsProvider } from "@harness-kit/core";
-import { posixJoin, posixDirname } from "@harness-kit/core";
+import { posixDirname, posixJoin } from "@harness-kit/core";
+import { homeDir } from "@tauri-apps/api/path";
+import { exists, mkdir, readDir, readTextFile, writeTextFile } from "@tauri-apps/plugin-fs";
 
 /**
  * FsProvider implementation for Tauri desktop apps.

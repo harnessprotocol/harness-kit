@@ -54,8 +54,12 @@ export default function FirstRunPermissionModal({ onProceed }: FirstRunPermissio
   return createPortal(
     <div
       style={{
-        position: "fixed", inset: 0, zIndex: 9000,
-        display: "flex", alignItems: "center", justifyContent: "center",
+        position: "fixed",
+        inset: 0,
+        zIndex: 9000,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
         background: "rgba(0,0,0,0.45)",
         backdropFilter: "blur(4px)",
         WebkitBackdropFilter: "blur(4px)",
@@ -78,11 +82,15 @@ export default function FirstRunPermissionModal({ onProceed }: FirstRunPermissio
         <div style={{ padding: "20px 22px 22px" }}>
           {/* Header */}
           <div style={{ marginBottom: "14px" }}>
-            <div style={{
-              fontSize: "14px", fontWeight: 600,
-              color: "var(--fg-base)", letterSpacing: "-0.2px",
-              marginBottom: "4px",
-            }}>
+            <div
+              style={{
+                fontSize: "14px",
+                fontWeight: 600,
+                color: "var(--fg-base)",
+                letterSpacing: "-0.2px",
+                marginBottom: "4px",
+              }}
+            >
               Before your first task runs
             </div>
             <div style={{ fontSize: "12px", color: "var(--fg-muted)", lineHeight: 1.5 }}>
@@ -91,15 +99,24 @@ export default function FirstRunPermissionModal({ onProceed }: FirstRunPermissio
           </div>
 
           {/* Mode card */}
-          <div style={{
-            background: "var(--bg-surface)",
-            border: "1px solid var(--border-base)",
-            borderLeft: "3px solid var(--warning)",
-            borderRadius: "8px",
-            padding: "12px 14px",
-            marginBottom: "14px",
-          }}>
-            <div style={{ fontSize: "12px", fontWeight: 600, color: "var(--fg-base)", marginBottom: "4px" }}>
+          <div
+            style={{
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border-base)",
+              borderLeft: "3px solid var(--warning)",
+              borderRadius: "8px",
+              padding: "12px 14px",
+              marginBottom: "14px",
+            }}
+          >
+            <div
+              style={{
+                fontSize: "12px",
+                fontWeight: 600,
+                color: "var(--fg-base)",
+                marginBottom: "4px",
+              }}
+            >
               {info.name}
             </div>
             <div style={{ fontSize: "11px", color: "var(--fg-muted)", lineHeight: 1.5 }}>
@@ -108,14 +125,26 @@ export default function FirstRunPermissionModal({ onProceed }: FirstRunPermissio
           </div>
 
           {/* Footer note */}
-          <div style={{ fontSize: "11px", color: "var(--fg-subtle)", marginBottom: "18px", lineHeight: 1.5 }}>
+          <div
+            style={{
+              fontSize: "11px",
+              color: "var(--fg-subtle)",
+              marginBottom: "18px",
+              lineHeight: 1.5,
+            }}
+          >
             You can change this at any time in{" "}
             <button
               onClick={handleChange}
               style={{
-                background: "none", border: "none", padding: 0,
-                color: "var(--accent-text)", cursor: "pointer",
-                fontSize: "11px", fontWeight: 500, textDecoration: "underline",
+                background: "none",
+                border: "none",
+                padding: 0,
+                color: "var(--accent-text)",
+                cursor: "pointer",
+                fontSize: "11px",
+                fontWeight: 500,
+                textDecoration: "underline",
                 textUnderlineOffset: "2px",
               }}
             >
@@ -129,9 +158,13 @@ export default function FirstRunPermissionModal({ onProceed }: FirstRunPermissio
             <button
               onClick={handleChange}
               style={{
-                fontSize: "12px", fontWeight: 500, padding: "6px 14px",
-                borderRadius: "6px", border: "1px solid var(--border-base)",
-                background: "transparent", color: "var(--fg-muted)",
+                fontSize: "12px",
+                fontWeight: 500,
+                padding: "6px 14px",
+                borderRadius: "6px",
+                border: "1px solid var(--border-base)",
+                background: "transparent",
+                color: "var(--fg-muted)",
                 cursor: "pointer",
               }}
             >
@@ -140,9 +173,13 @@ export default function FirstRunPermissionModal({ onProceed }: FirstRunPermissio
             <button
               onClick={handleProceed}
               style={{
-                fontSize: "12px", fontWeight: 500, padding: "6px 16px",
-                borderRadius: "6px", border: "none",
-                background: "var(--accent)", color: "#fff",
+                fontSize: "12px",
+                fontWeight: 500,
+                padding: "6px 16px",
+                borderRadius: "6px",
+                border: "none",
+                background: "var(--accent)",
+                color: "#fff",
                 cursor: "pointer",
               }}
             >

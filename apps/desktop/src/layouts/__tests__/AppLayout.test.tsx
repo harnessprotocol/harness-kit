@@ -1,13 +1,18 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import AppLayout, { NAV_SECTIONS } from "../AppLayout";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NAV_PATHS } from "../../hooks/useGlobalShortcuts";
+import AppLayout, { NAV_SECTIONS } from "../AppLayout";
 
 // ── Mocks ─────────────────────────────────────────────────────
 
 vi.mock("../../contexts/ChatContext", () => ({
-  useChat: () => ({ state: { status: "disconnected" }, isOpen: false, setOpen: vi.fn(), unreadCount: 0 }),
+  useChat: () => ({
+    state: { status: "disconnected" },
+    isOpen: false,
+    setOpen: vi.fn(),
+    unreadCount: 0,
+  }),
   ChatProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 

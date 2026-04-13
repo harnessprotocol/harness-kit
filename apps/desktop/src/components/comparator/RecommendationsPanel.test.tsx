@@ -1,19 +1,35 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
-import RecommendationsPanel, { TaskTypeSelector } from "./RecommendationsPanel";
 import type { HarnessRecommendation } from "@harness-kit/shared";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import RecommendationsPanel, { TaskTypeSelector } from "./RecommendationsPanel";
 
 const mockRecs: HarnessRecommendation[] = [
-  { harnessId: "claude",  harnessName: "Claude Code", taskType: "coding", winRate: 0.8,  sessionCount: 10 },
-  { harnessId: "codex",   harnessName: "Codex CLI",   taskType: "coding", winRate: 0.55, sessionCount: 6  },
-  { harnessId: "opencode",harnessName: "OpenCode",    taskType: "coding", winRate: 0.4,  sessionCount: 5  },
+  {
+    harnessId: "claude",
+    harnessName: "Claude Code",
+    taskType: "coding",
+    winRate: 0.8,
+    sessionCount: 10,
+  },
+  {
+    harnessId: "codex",
+    harnessName: "Codex CLI",
+    taskType: "coding",
+    winRate: 0.55,
+    sessionCount: 6,
+  },
+  {
+    harnessId: "opencode",
+    harnessName: "OpenCode",
+    taskType: "coding",
+    winRate: 0.4,
+    sessionCount: 5,
+  },
 ];
 
 describe("RecommendationsPanel", () => {
   it("renders nothing when taskType is null", () => {
-    const { container } = render(
-      <RecommendationsPanel taskType={null} recommendations={[]} />
-    );
+    const { container } = render(<RecommendationsPanel taskType={null} recommendations={[]} />);
     expect(container.firstChild).toBeNull();
   });
 
@@ -37,7 +53,13 @@ describe("RecommendationsPanel", () => {
   it("shows only top 3 even when more recommendations are provided", () => {
     const extended: HarnessRecommendation[] = [
       ...mockRecs,
-      { harnessId: "gemini", harnessName: "Gemini CLI", taskType: "coding", winRate: 0.3, sessionCount: 4 },
+      {
+        harnessId: "gemini",
+        harnessName: "Gemini CLI",
+        taskType: "coding",
+        winRate: 0.3,
+        sessionCount: 4,
+      },
     ];
     render(<RecommendationsPanel taskType="coding" recommendations={extended} />);
     const rows = screen.getAllByTestId("recommendation-row");

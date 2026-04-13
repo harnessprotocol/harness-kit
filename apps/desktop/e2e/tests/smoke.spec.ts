@@ -1,4 +1,4 @@
-import { test, expect } from "../fixtures";
+import { expect, test } from "../fixtures";
 
 test.describe("Navigation smoke tests", () => {
   test("app loads at root and redirects to a valid page", async ({ appPage }) => {
@@ -82,9 +82,7 @@ test.describe("Harness File page — content validation", () => {
     });
     await appPage.goto("/harness/file");
     await appPage.waitForLoadState("networkidle");
-    const fatal = errors.filter(
-      (e) => !e.includes("favicon") && !e.includes("ResizeObserver")
-    );
+    const fatal = errors.filter((e) => !e.includes("favicon") && !e.includes("ResizeObserver"));
     expect(fatal).toHaveLength(0);
   });
 });
@@ -135,9 +133,7 @@ test.describe("Parity dashboard — content validation", () => {
 });
 
 test.describe("Sync page — regression: harness loaded from mock", () => {
-  test("Preview Changes button exists on sync page when harness is loaded", async ({
-    appPage,
-  }) => {
+  test("Preview Changes button exists on sync page when harness is loaded", async ({ appPage }) => {
     // Mock returns found: true with harness content, so the sync form is shown
     // with "Preview Changes" button (not the empty-state "Generate" button)
     await appPage.goto("/harness/sync");

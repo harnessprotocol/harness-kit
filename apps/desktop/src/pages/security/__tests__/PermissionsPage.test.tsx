@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
 import type { PermissionsState, SecurityPreset } from "@harness-kit/shared";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import PermissionsPage from "../PermissionsPage";
 
 // ── Mocks ─────────────────────────────────────────────────────
@@ -16,7 +16,8 @@ vi.mock("../../../lib/tauri", () => ({
   updatePermissions: (...args: unknown[]) => mockUpdatePermissions(...args),
   listSecurityPresets: () => mockListSecurityPresets(),
   applySecurityPreset: (...args: unknown[]) => mockApplySecurityPreset(...args),
-  detectClaudeAccount: () => Promise.resolve({ logged_in: false, subscription_type: null, auto_mode_available: false }),
+  detectClaudeAccount: () =>
+    Promise.resolve({ logged_in: false, subscription_type: null, auto_mode_available: false }),
   getHarnessHealth: () => Promise.resolve([]),
 }));
 
@@ -131,9 +132,7 @@ describe("PermissionsPage — loading state", () => {
 
   it("hides 'Loading…' after data loads", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
   });
 });
 
@@ -179,7 +178,9 @@ describe("PermissionsPage — preset buttons", () => {
       const strictStrong = Array.from(strongs).find((el) => el.textContent === "Strict");
       expect(strictStrong).toBeDefined();
       // The parent paragraph should contain the confirmation text
-      expect(strictStrong?.closest("p")?.textContent).toMatch(/Apply.*preset\? This will overwrite/);
+      expect(strictStrong?.closest("p")?.textContent).toMatch(
+        /Apply.*preset\? This will overwrite/,
+      );
     });
   });
 
@@ -227,9 +228,7 @@ describe("PermissionsPage — preset buttons", () => {
     mockListSecurityPresets.mockResolvedValue([]);
     renderPage();
     // Wait for load to finish
-    await waitFor(() =>
-      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
     expect(screen.queryByText("Quick preset")).not.toBeInTheDocument();
   });
 });
@@ -241,9 +240,7 @@ describe("PermissionsPage — permissions display", () => {
 
   it("renders the page heading", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
     expect(screen.getByText("Permissions")).toBeInTheDocument();
   });
 
@@ -292,9 +289,7 @@ describe("PermissionsPage — Save button state", () => {
     renderPage();
 
     // Wait for the page to finish loading
-    await waitFor(() =>
-      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
 
     // Type in the Allow input and click Add
     const inputs = screen.getAllByPlaceholderText("Add allow rule…");
@@ -309,9 +304,7 @@ describe("PermissionsPage — Save button state", () => {
     mockReadPermissions.mockResolvedValue(EMPTY_PERMISSIONS);
     renderPage();
 
-    await waitFor(() =>
-      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
 
     // Dirty the state by adding a tool
     const inputs = screen.getAllByPlaceholderText("Add allow rule…");
@@ -363,9 +356,7 @@ describe("PermissionsPage — add/remove items", () => {
     mockReadPermissions.mockResolvedValue(EMPTY_PERMISSIONS);
     renderPage();
 
-    await waitFor(() =>
-      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
 
     const hostInput = screen.getByPlaceholderText("Add host…");
     fireEvent.change(hostInput, { target: { value: "example.com" } });
@@ -381,9 +372,7 @@ describe("PermissionsPage — add/remove items", () => {
     mockReadPermissions.mockResolvedValue(EMPTY_PERMISSIONS);
     renderPage();
 
-    await waitFor(() =>
-      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
 
     const hostInput = screen.getByPlaceholderText("Add host…");
     fireEvent.change(hostInput, { target: { value: "example.org" } });
@@ -396,25 +385,19 @@ describe("PermissionsPage — add/remove items", () => {
 describe("PermissionsPage — section labels", () => {
   it("shows Tools section label", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
     expect(screen.getByText("Tools")).toBeInTheDocument();
   });
 
   it("shows Paths section label", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
     expect(screen.getByText("Paths")).toBeInTheDocument();
   });
 
   it("shows Network section label", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
     expect(screen.getByText(/Network/)).toBeInTheDocument();
   });
 });

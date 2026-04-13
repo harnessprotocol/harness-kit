@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import AccountStatusBadge from "./AccountStatusBadge";
 
 describe("AccountStatusBadge", () => {
@@ -10,7 +10,12 @@ describe("AccountStatusBadge", () => {
   });
 
   it("shows 'Not logged in' when account.logged_in is false", () => {
-    render(<AccountStatusBadge account={{ logged_in: false, subscription_type: null, auto_mode_available: false }} monthlyTokens={0} />);
+    render(
+      <AccountStatusBadge
+        account={{ logged_in: false, subscription_type: null, auto_mode_available: false }}
+        monthlyTokens={0}
+      />,
+    );
     expect(screen.getByTestId("account-not-logged-in")).toBeInTheDocument();
     expect(screen.queryByTestId("account-connected-dot")).not.toBeInTheDocument();
   });
@@ -21,29 +26,54 @@ describe("AccountStatusBadge", () => {
   });
 
   it("shows connected state when logged_in is true", () => {
-    render(<AccountStatusBadge account={{ logged_in: true, subscription_type: null, auto_mode_available: false }} monthlyTokens={142_000} />);
+    render(
+      <AccountStatusBadge
+        account={{ logged_in: true, subscription_type: null, auto_mode_available: false }}
+        monthlyTokens={142_000}
+      />,
+    );
     expect(screen.getByTestId("account-connected-dot")).toBeInTheDocument();
     expect(screen.getByTestId("account-connected-label")).toBeInTheDocument();
     expect(screen.queryByTestId("account-not-logged-in")).not.toBeInTheDocument();
   });
 
   it("formats token count in thousands (k)", () => {
-    render(<AccountStatusBadge account={{ logged_in: true, subscription_type: null, auto_mode_available: false }} monthlyTokens={142_000} />);
+    render(
+      <AccountStatusBadge
+        account={{ logged_in: true, subscription_type: null, auto_mode_available: false }}
+        monthlyTokens={142_000}
+      />,
+    );
     expect(screen.getByTestId("account-token-count").textContent).toContain("142k");
   });
 
   it("formats token count in millions (M)", () => {
-    render(<AccountStatusBadge account={{ logged_in: true, subscription_type: null, auto_mode_available: false }} monthlyTokens={1_200_000} />);
+    render(
+      <AccountStatusBadge
+        account={{ logged_in: true, subscription_type: null, auto_mode_available: false }}
+        monthlyTokens={1_200_000}
+      />,
+    );
     expect(screen.getByTestId("account-token-count").textContent).toContain("1.2M");
   });
 
   it("formats small token counts as plain numbers", () => {
-    render(<AccountStatusBadge account={{ logged_in: true, subscription_type: null, auto_mode_available: false }} monthlyTokens={500} />);
+    render(
+      <AccountStatusBadge
+        account={{ logged_in: true, subscription_type: null, auto_mode_available: false }}
+        monthlyTokens={500}
+      />,
+    );
     expect(screen.getByTestId("account-token-count").textContent).toContain("500");
   });
 
   it("shows zero tokens when monthlyTokens is 0 and connected", () => {
-    render(<AccountStatusBadge account={{ logged_in: true, subscription_type: null, auto_mode_available: false }} monthlyTokens={0} />);
+    render(
+      <AccountStatusBadge
+        account={{ logged_in: true, subscription_type: null, auto_mode_available: false }}
+        monthlyTokens={0}
+      />,
+    );
     expect(screen.getByTestId("account-token-count").textContent).toContain("0");
   });
 });

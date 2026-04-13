@@ -1,9 +1,5 @@
 import type { FsProvider } from "../fs-provider.js";
-import type {
-  FileAction,
-  HarnessConfig,
-  TargetPlatform,
-} from "../types.js";
+import type { FileAction, HarnessConfig, TargetPlatform } from "../types.js";
 import {
   appendMarkerBlock,
   buildMarkerBlock,
@@ -66,10 +62,7 @@ const COPILOT_FRONTMATTER = `---
 applyTo: "**"
 ---`;
 
-function buildFrontmatter(
-  platform: TargetPlatform,
-  slot: InstructionSlot,
-): string | null {
+function buildFrontmatter(platform: TargetPlatform, slot: InstructionSlot): string | null {
   if (platform === "cursor" && slot in CURSOR_FRONTMATTER) {
     return CURSOR_FRONTMATTER[slot];
   }
@@ -116,9 +109,7 @@ export async function compileInstructions(
 
       if (importMode === "replace") {
         const markerBlock = buildMarkerBlock(harnessName, mapping.slot, slotContent);
-        const fullContent = frontmatter
-          ? `${frontmatter}\n\n${markerBlock}`
-          : markerBlock;
+        const fullContent = frontmatter ? `${frontmatter}\n\n${markerBlock}` : markerBlock;
 
         files.push({
           path: filePath,
@@ -153,17 +144,10 @@ export async function compileInstructions(
       } else if (existingContent.trim() === "") {
         // New file — include frontmatter if needed
         const markerBlock = buildMarkerBlock(harnessName, mapping.slot, slotContent);
-        newFileContent = frontmatter
-          ? `${frontmatter}\n\n${markerBlock}\n`
-          : `${markerBlock}\n`;
+        newFileContent = frontmatter ? `${frontmatter}\n\n${markerBlock}\n` : `${markerBlock}\n`;
       } else {
         // Append to existing file
-        newFileContent = appendMarkerBlock(
-          existingContent,
-          harnessName,
-          mapping.slot,
-          slotContent,
-        );
+        newFileContent = appendMarkerBlock(existingContent, harnessName, mapping.slot, slotContent);
       }
 
       const linesAdded = slotContent.split("\n").length;

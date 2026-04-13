@@ -1,5 +1,5 @@
-@import 'tailwindcss';
-@import 'fumadocs-ui/style.css';
+@import "tailwindcss";
+@import "fumadocs-ui/style.css";
 
 /* ── Font system ── */
 body {
@@ -62,13 +62,15 @@ body {
   position: relative;
 }
 .gradient-border::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   border-radius: inherit;
   padding: 1px;
-  background: linear-gradient(164deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  background: linear-gradient(164deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
@@ -115,7 +117,9 @@ body {
 }
 
 /* ── Heading typography ── */
-h1, h2, h3 {
+h1,
+h2,
+h3 {
   letter-spacing: -0.03em;
 }
 
@@ -153,7 +157,7 @@ h1, h2, h3 {
   backdrop-filter: blur(16px);
 }
 .dark [data-fumadocs-nav]::after {
-  content: '';
+  content: "";
   position: absolute;
   bottom: 0;
   left: 0;
@@ -164,7 +168,10 @@ h1, h2, h3 {
 
 /* ── Sidebar — smooth hover + animated active bar ── */
 [data-fumadocs-sidebar] a {
-  transition: background-color 0.2s ease, padding-left 0.2s ease, border-color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    padding-left 0.2s ease,
+    border-color 0.2s ease;
   border-left: 2px solid transparent;
 }
 [data-fumadocs-sidebar] a:hover {
@@ -183,7 +190,9 @@ h1, h2, h3 {
 
 /* ── TOC — smooth active indicator ── */
 [data-fumadocs-toc] a {
-  transition: color 0.2s ease, border-color 0.2s ease;
+  transition:
+    color 0.2s ease,
+    border-color 0.2s ease;
   border-left: 2px solid transparent;
   padding-left: 0.5rem;
 }
@@ -212,8 +221,9 @@ pre {
   background: hsl(230, 12%, 6%) !important;
   border: none !important;
   border-radius: 0.75rem;
-  box-shadow: 0 -1px 20px -8px hsla(256, 60%, 50%, 0.15),
-              0 4px 16px -4px hsla(230, 15%, 0%, 0.3);
+  box-shadow:
+    0 -1px 20px -8px hsla(256, 60%, 50%, 0.15),
+    0 4px 16px -4px hsla(230, 15%, 0%, 0.3);
 }
 
 /* Copy button — ghost style, fade on hover */
@@ -234,7 +244,9 @@ pre button:hover {
   text-decoration-style: dotted;
   text-underline-offset: 3px;
   text-decoration-color: hsla(256, 60%, 60%, 0.4);
-  transition: text-decoration-color 0.15s ease, color 0.15s ease;
+  transition:
+    text-decoration-color 0.15s ease,
+    color 0.15s ease;
 }
 [data-fumadocs-body] a:not([data-card]):hover {
   text-decoration-style: solid;
@@ -293,13 +305,17 @@ table th {
 [data-card] {
   border: 1px solid hsla(0, 0%, 50%, 0.1) !important;
   border-radius: 0.75rem;
-  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease,
+    border-color 0.3s ease;
 }
 [data-card]:hover {
   transform: scale(1.02);
   border-color: hsla(256, 70%, 60%, 0.3) !important;
-  box-shadow: 0 8px 24px -8px hsla(256, 60%, 40%, 0.15),
-              0 0 0 1px hsla(256, 70%, 60%, 0.1);
+  box-shadow:
+    0 8px 24px -8px hsla(256, 60%, 40%, 0.15),
+    0 0 0 1px hsla(256, 70%, 60%, 0.1);
 }
 
 /* ── Steps — warm accent badges + styled line ── */
@@ -339,7 +355,7 @@ pre code {
 
 /* H2 section dividers — gradient line above */
 [data-fumadocs-body] h2::before {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   left: 0;
@@ -355,7 +371,7 @@ pre code {
 
 /* Page title area — subtle radial glow */
 [data-fumadocs-body]::before {
-  content: '';
+  content: "";
   position: absolute;
   top: -60px;
   left: 50%;
@@ -445,21 +461,32 @@ pre code {
   font-size: 0.9rem;
   line-height: 1.7;
 }
-.mv-preview h1, .mv-preview h2, .mv-preview h3 {
+.mv-preview h1,
+.mv-preview h2,
+.mv-preview h3 {
   margin-top: 1.5em;
   margin-bottom: 0.5em;
   font-weight: 600;
 }
-.mv-preview h1:first-child, .mv-preview h2:first-child, .mv-preview h3:first-child {
+.mv-preview h1:first-child,
+.mv-preview h2:first-child,
+.mv-preview h3:first-child {
   margin-top: 0;
 }
-.mv-preview h1 { font-size: 1.4rem; }
-.mv-preview h2 { font-size: 1.15rem; }
-.mv-preview h3 { font-size: 1rem; }
+.mv-preview h1 {
+  font-size: 1.4rem;
+}
+.mv-preview h2 {
+  font-size: 1.15rem;
+}
+.mv-preview h3 {
+  font-size: 1rem;
+}
 .mv-preview p {
   margin: 0.75em 0;
 }
-.mv-preview ul, .mv-preview ol {
+.mv-preview ul,
+.mv-preview ol {
   margin: 0.75em 0;
   padding-left: 1.5em;
 }
@@ -472,7 +499,8 @@ pre code {
   margin: 1em 0;
   font-size: 0.85rem;
 }
-.mv-preview th, .mv-preview td {
+.mv-preview th,
+.mv-preview td {
   padding: 0.5rem 0.75rem;
   text-align: left;
   border-bottom: 1px solid hsla(0, 0%, 50%, 0.1);

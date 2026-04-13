@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
-import chalk from "chalk";
 import { detectPlatforms } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
+import chalk from "chalk";
 
 const ALL_PLATFORMS = ["claude-code", "cursor", "copilot"] as const;
 type Platform = (typeof ALL_PLATFORMS)[number];
@@ -33,9 +33,7 @@ export async function detectCommand(): Promise<void> {
     } else {
       confirmedCount++;
       const indicators = entry.indicators.join(", ");
-      console.log(
-        `  ${chalk.green("✓")} ${platform.padEnd(12)}  ${chalk.dim(indicators)}`,
-      );
+      console.log(`  ${chalk.green("✓")} ${platform.padEnd(12)}  ${chalk.dim(indicators)}`);
     }
   }
 

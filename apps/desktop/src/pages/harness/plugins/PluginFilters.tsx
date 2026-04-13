@@ -20,10 +20,14 @@ export default function PluginFilters({
   const showCount = search || category;
 
   return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: "8px",
-      marginBottom: "12px",
-    }}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "8px",
+        marginBottom: "12px",
+      }}
+    >
       <input
         type="text"
         placeholder="Search plugins..."
@@ -56,13 +60,20 @@ export default function PluginFilters({
       >
         <option value="">All categories</option>
         {categories.map((c) => (
-          <option key={c} value={c}>{c}</option>
+          <option key={c} value={c}>
+            {c}
+          </option>
         ))}
       </select>
-      <span style={{
-        fontSize: "11px", color: "var(--fg-subtle)",
-        whiteSpace: "nowrap", minWidth: "70px", textAlign: "right",
-      }}>
+      <span
+        style={{
+          fontSize: "11px",
+          color: "var(--fg-subtle)",
+          whiteSpace: "nowrap",
+          minWidth: "70px",
+          textAlign: "right",
+        }}
+      >
         {showCount ? `${filtered} of ${total}` : `${total}`} plugin{total !== 1 ? "s" : ""}
       </span>
     </div>

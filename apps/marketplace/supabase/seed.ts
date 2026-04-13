@@ -21,7 +21,7 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.error(
-    "Missing required environment variables: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY"
+    "Missing required environment variables: SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY",
   );
   process.exit(1);
 }
@@ -30,10 +30,7 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 // Paths are relative to this file (marketplace/supabase/seed.ts)
 const REPO_ROOT = path.resolve(import.meta.dirname, "../..");
-const MARKETPLACE_JSON_PATH = path.join(
-  REPO_ROOT,
-  ".claude-plugin/marketplace.json"
-);
+const MARKETPLACE_JSON_PATH = path.join(REPO_ROOT, ".claude-plugin/marketplace.json");
 const PLUGINS_DIR = path.join(REPO_ROOT, "plugins");
 
 // ---------------------------------------------------------------------------
@@ -104,9 +101,7 @@ function derivePluginType(pluginName: string): "skill" | "plugin" {
   const hasScripts = fs.existsSync(path.join(pluginDir, "scripts"));
   const hasHooks = fs.existsSync(path.join(pluginDir, "hooks"));
 
-  return skillCount > 1 || hasAgents || hasScripts || hasHooks
-    ? "plugin"
-    : "skill";
+  return skillCount > 1 || hasAgents || hasScripts || hasHooks ? "plugin" : "skill";
 }
 
 /**
@@ -135,7 +130,7 @@ function readReadmeMds(pluginName: string): string | null {
 // ---------------------------------------------------------------------------
 
 async function seedCategories(
-  categories: MarketplaceJson["categories"]
+  categories: MarketplaceJson["categories"],
 ): Promise<Map<string, string>> {
   console.log(`Seeding ${categories.length} categories...`);
 
@@ -187,20 +182,17 @@ async function seedOrganizations(): Promise<void> {
     {
       slug: "acme-corp",
       name: "Acme Corporation",
-      description:
-        "Enterprise software development team building next-gen cloud platforms",
+      description: "Enterprise software development team building next-gen cloud platforms",
     },
     {
       slug: "startup-labs",
       name: "Startup Labs",
-      description:
-        "Early-stage startup building AI-powered developer tools",
+      description: "Early-stage startup building AI-powered developer tools",
     },
     {
       slug: "opensource-collective",
       name: "Open Source Collective",
-      description:
-        "Community organization maintaining popular open source projects",
+      description: "Community organization maintaining popular open source projects",
     },
     {
       slug: "devtools-inc",
@@ -218,13 +210,15 @@ async function seedOrganizations(): Promise<void> {
     throw new Error(`Failed to seed organizations: ${error.message}`);
   }
 
-  console.log(`  Seeded ${organizations.length} organizations: ${organizations.map((o) => o.slug).join(", ")}`);
+  console.log(
+    `  Seeded ${organizations.length} organizations: ${organizations.map((o) => o.slug).join(", ")}`,
+  );
 }
 
 async function seedComponents(
   plugins: MarketplaceJson["plugins"],
   categoryMap: Map<string, string>,
-  tagMap: Map<string, string>
+  tagMap: Map<string, string>,
 ): Promise<void> {
   console.log(`Seeding ${plugins.length} components...`);
 
@@ -280,9 +274,7 @@ async function seedComponents(
       .single();
 
     if (error) {
-      throw new Error(
-        `Failed to upsert component "${plugin.name}": ${error.message}`
-      );
+      throw new Error(`Failed to upsert component "${plugin.name}": ${error.message}`);
     }
 
     const componentId = data!.id;
@@ -295,17 +287,17 @@ async function seedComponents(
         .from("component_categories")
         .upsert(
           { component_id: componentId, category_id: categoryId },
-          { onConflict: "component_id,category_id" }
+          { onConflict: "component_id,category_id" },
         );
 
       if (catErr) {
         console.warn(
-          `  Warning: failed to link category "${plugin.category}" for "${plugin.name}": ${catErr.message}`
+          `  Warning: failed to link category "${plugin.category}" for "${plugin.name}": ${catErr.message}`,
         );
       }
     } else {
       console.warn(
-        `  Warning: category "${plugin.category}" not found for plugin "${plugin.name}"`
+        `  Warning: category "${plugin.category}" not found for plugin "${plugin.name}"`,
       );
     }
 
@@ -313,9 +305,7 @@ async function seedComponents(
     for (const tagSlug of plugin.tags) {
       const tagId = tagMap.get(tagSlug);
       if (!tagId) {
-        console.warn(
-          `  Warning: tag "${tagSlug}" not found for plugin "${plugin.name}"`
-        );
+        console.warn(`  Warning: tag "${tagSlug}" not found for plugin "${plugin.name}"`);
         continue;
       }
 
@@ -323,12 +313,12 @@ async function seedComponents(
         .from("component_tags")
         .upsert(
           { component_id: componentId, tag_id: tagId },
-          { onConflict: "component_id,tag_id" }
+          { onConflict: "component_id,tag_id" },
         );
 
       if (tagErr) {
         console.warn(
-          `  Warning: failed to link tag "${tagSlug}" for "${plugin.name}": ${tagErr.message}`
+          `  Warning: failed to link tag "${tagSlug}" for "${plugin.name}": ${tagErr.message}`,
         );
       }
     }
@@ -347,7 +337,7 @@ async function main(): Promise<void> {
   const raw = fs.readFileSync(MARKETPLACE_JSON_PATH, "utf-8");
   const marketplace: MarketplaceJson = JSON.parse(raw);
   console.log(
-    `  Found ${marketplace.categories.length} categories, ${marketplace.plugins.length} plugins\n`
+    `  Found ${marketplace.categories.length} categories, ${marketplace.plugins.length} plugins\n`,
   );
 
   // 2. Seed categories

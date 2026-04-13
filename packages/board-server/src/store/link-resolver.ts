@@ -1,17 +1,17 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import yaml from 'js-yaml';
-import type { RepoBoardLink } from '../types.js';
+import fs from "node:fs";
+import path from "node:path";
+import yaml from "js-yaml";
+import type { RepoBoardLink } from "../types.js";
 
 /**
  * Read .board.yaml from a repo root and return the board link config.
  * Returns null if no .board.yaml exists.
  */
 export function readBoardLink(repoPath: string): RepoBoardLink | null {
-  const linkFile = path.join(path.resolve(repoPath), '.board.yaml');
+  const linkFile = path.join(path.resolve(repoPath), ".board.yaml");
   if (!fs.existsSync(linkFile)) return null;
   try {
-    const raw = fs.readFileSync(linkFile, 'utf-8');
+    const raw = fs.readFileSync(linkFile, "utf-8");
     return yaml.load(raw) as RepoBoardLink;
   } catch {
     return null;
@@ -22,8 +22,8 @@ export function readBoardLink(repoPath: string): RepoBoardLink | null {
  * Write a .board.yaml link file into a repo.
  */
 export function writeBoardLink(repoPath: string, link: RepoBoardLink): void {
-  const linkFile = path.join(path.resolve(repoPath), '.board.yaml');
-  fs.writeFileSync(linkFile, yaml.dump(link), 'utf-8');
+  const linkFile = path.join(path.resolve(repoPath), ".board.yaml");
+  fs.writeFileSync(linkFile, yaml.dump(link), "utf-8");
 }
 
 /**

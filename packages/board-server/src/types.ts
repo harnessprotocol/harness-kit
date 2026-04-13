@@ -1,11 +1,26 @@
-export type TaskStatus = 'backlog' | 'planning' | 'in-progress' | 'ai-review' | 'human-review' | 'done';
-export type TaskPriority = 'low' | 'medium' | 'high' | 'critical';
-export type EpicStatus = 'active' | 'completed' | 'archived';
-export type CommentAuthor = 'claude' | 'user';
-export type SubtaskStatus = 'pending' | 'in_progress' | 'completed' | 'failed';
-export type TaskCategory = 'feature' | 'bug_fix' | 'refactoring' | 'docs' | 'security' | 'performance' | 'ui_ux' | 'infrastructure' | 'testing';
-export type TaskComplexity = 'trivial' | 'small' | 'medium' | 'large' | 'complex';
-export type ExecutionStatus = 'idle' | 'running' | 'paused' | 'completed' | 'failed' | 'stopped';
+export type TaskStatus =
+  | "backlog"
+  | "planning"
+  | "in-progress"
+  | "ai-review"
+  | "human-review"
+  | "done";
+export type TaskPriority = "low" | "medium" | "high" | "critical";
+export type EpicStatus = "active" | "completed" | "archived";
+export type CommentAuthor = "claude" | "user";
+export type SubtaskStatus = "pending" | "in_progress" | "completed" | "failed";
+export type TaskCategory =
+  | "feature"
+  | "bug_fix"
+  | "refactoring"
+  | "docs"
+  | "security"
+  | "performance"
+  | "ui_ux"
+  | "infrastructure"
+  | "testing";
+export type TaskComplexity = "trivial" | "small" | "medium" | "large" | "complex";
+export type ExecutionStatus = "idle" | "running" | "paused" | "completed" | "failed" | "stopped";
 
 export interface TaskExecution {
   status: ExecutionStatus;

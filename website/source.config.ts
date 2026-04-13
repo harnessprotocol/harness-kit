@@ -1,8 +1,8 @@
-import { defineDocs, defineConfig } from 'fumadocs-mdx/config';
-import { remarkEmbed } from './lib/remark-embed.mjs';
+import { defineConfig, defineDocs } from "fumadocs-mdx/config";
+import { remarkEmbed } from "./lib/remark-embed.mjs";
 
 export const docs = defineDocs({
-  dir: 'content/docs',
+  dir: "content/docs",
 });
 
 export default defineConfig({

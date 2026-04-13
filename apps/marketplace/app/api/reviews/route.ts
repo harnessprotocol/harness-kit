@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 function getServiceSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -21,10 +21,7 @@ export async function POST(request: NextRequest) {
   // Require authentication
   const user = await getServerSession();
   if (!user) {
-    return NextResponse.json(
-      { error: "Authentication required" },
-      { status: 401 },
-    );
+    return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
 
   // Rate limit: 5 reviews per hour per user
@@ -44,10 +41,7 @@ export async function POST(request: NextRequest) {
   try {
     payload = await request.json();
   } catch {
-    return NextResponse.json(
-      { error: "Invalid JSON body" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
   const { component_slug, rating, review_text, title } = payload;
@@ -112,13 +106,15 @@ export async function POST(request: NextRequest) {
   }
 
   // Generate title from review text if not provided (first 60 chars)
-  const reviewTitle = title || review_text.substring(0, 60).trim() + (review_text.length > 60 ? "..." : "");
+  const reviewTitle =
+    title || review_text.substring(0, 60).trim() + (review_text.length > 60 ? "..." : "");
 
   // Get user name from metadata (GitHub username)
-  const userName = user.user_metadata?.user_name ||
-                   user.user_metadata?.name ||
-                   user.email?.split("@")[0] ||
-                   "Anonymous";
+  const userName =
+    user.user_metadata?.user_name ||
+    user.user_metadata?.name ||
+    user.email?.split("@")[0] ||
+    "Anonymous";
 
   // Insert into reviews table
   const { data: review, error: reviewError } = await supabase
@@ -150,13 +146,11 @@ export async function POST(request: NextRequest) {
   }
 
   // Also insert/update in ratings table for aggregate calculations
-  const { error: ratingError } = await supabase
-    .from("ratings")
-    .upsert({
-      component_id: component.id,
-      user_id: user.id,
-      rating: rating,
-    });
+  const { error: ratingError } = await supabase.from("ratings").upsert({
+    component_id: component.id,
+    user_id: user.id,
+    rating: rating,
+  });
 
   if (ratingError) {
     // Log error but don't fail the request since the review was created

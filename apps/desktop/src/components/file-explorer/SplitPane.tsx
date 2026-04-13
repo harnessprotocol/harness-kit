@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  FILE_EXPLORER_WIDTH_MAX,
+  FILE_EXPLORER_WIDTH_MIN,
   getFileExplorerWidth,
   setFileExplorerWidth,
-  FILE_EXPLORER_WIDTH_MIN,
-  FILE_EXPLORER_WIDTH_MAX,
 } from "../../lib/preferences";
 
 interface SplitPaneProps {
@@ -21,12 +21,15 @@ export default function SplitPane({ left, right, collapsed, onToggleCollapsed }:
   const startWidth = useRef(0);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const onMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    dragging.current = true;
-    startX.current = e.clientX;
-    startWidth.current = width;
-  }, [width]);
+  const onMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      dragging.current = true;
+      startX.current = e.clientX;
+      startWidth.current = width;
+    },
+    [width],
+  );
 
   useEffect(() => {
     function onMouseMove(e: MouseEvent) {
@@ -34,7 +37,7 @@ export default function SplitPane({ left, right, collapsed, onToggleCollapsed }:
       const delta = e.clientX - startX.current;
       const next = Math.min(
         FILE_EXPLORER_WIDTH_MAX,
-        Math.max(FILE_EXPLORER_WIDTH_MIN, startWidth.current + delta)
+        Math.max(FILE_EXPLORER_WIDTH_MIN, startWidth.current + delta),
       );
       setWidth(next);
     }
@@ -53,14 +56,13 @@ export default function SplitPane({ left, right, collapsed, onToggleCollapsed }:
 
   // Persist width on unmount
   useEffect(() => {
-    return () => { setFileExplorerWidth(width); };
+    return () => {
+      setFileExplorerWidth(width);
+    };
   }, [width]);
 
   return (
-    <div
-      ref={containerRef}
-      style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}
-    >
+    <div ref={containerRef} style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}>
       {/* Left panel */}
       <AnimatePresence initial={false}>
         {!collapsed && (
@@ -97,13 +99,26 @@ export default function SplitPane({ left, right, collapsed, onToggleCollapsed }:
             transition: "background 0.1s",
             zIndex: 1,
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--accent)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "var(--accent)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "transparent";
+          }}
         />
       )}
 
       {/* Right panel */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, position: "relative" }}>
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          minWidth: 0,
+          minHeight: 0,
+          position: "relative",
+        }}
+      >
         {/* Collapse toggle button */}
         <button
           onClick={onToggleCollapsed}

@@ -1,22 +1,27 @@
-import { useEffect, useState, useMemo } from "react";
-import {
-  AreaChart, Area,
-  BarChart, Bar,
-  XAxis, YAxis,
-  CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer,
-} from "recharts";
-import HKTooltip from "../../components/Tooltip";
-import AccountStatusBadge from "../../components/AccountStatusBadge";
-import { useObservatoryData } from "../../hooks/useObservatoryData";
-import { formatNumber, formatDate, formatHour, shortModelName } from "../../lib/format";
-import { detectClaudeAccount } from "../../lib/tauri";
-import type { ClaudeAccountInfo } from "../../lib/tauri";
 import type { DailyActivity, DailyModelTokens, ModelUsageEntry } from "@harness-kit/shared";
-import { estimateTotalCost, formatCost } from "../../lib/pricing";
-import { getBudgetGuard, type BudgetGuardConfig } from "../../lib/preferences";
-import CostBreakdownSection from "../../components/observatory/CostBreakdownSection";
+import { useEffect, useMemo, useState } from "react";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import AccountStatusBadge from "../../components/AccountStatusBadge";
 import BudgetAlertBanner from "../../components/observatory/BudgetAlertBanner";
+import CostBreakdownSection from "../../components/observatory/CostBreakdownSection";
+import HKTooltip from "../../components/Tooltip";
+import { useObservatoryData } from "../../hooks/useObservatoryData";
+import { formatDate, formatHour, formatNumber, shortModelName } from "../../lib/format";
+import { type BudgetGuardConfig, getBudgetGuard } from "../../lib/preferences";
+import { estimateTotalCost, formatCost } from "../../lib/pricing";
+import type { ClaudeAccountInfo } from "../../lib/tauri";
+import { detectClaudeAccount } from "../../lib/tauri";
 
 const MODEL_COLORS = ["#5b50e8", "#0d9488", "#ea580c", "#16a34a", "#2563eb", "#e11d48"];
 
@@ -125,8 +130,10 @@ function mergeModelUsage(
       result[model] = {
         inputTokens: (existing.inputTokens ?? 0) + (entry.inputTokens ?? 0),
         outputTokens: (existing.outputTokens ?? 0) + (entry.outputTokens ?? 0),
-        cacheReadInputTokens: (existing.cacheReadInputTokens ?? 0) + (entry.cacheReadInputTokens ?? 0),
-        cacheCreationInputTokens: (existing.cacheCreationInputTokens ?? 0) + (entry.cacheCreationInputTokens ?? 0),
+        cacheReadInputTokens:
+          (existing.cacheReadInputTokens ?? 0) + (entry.cacheReadInputTokens ?? 0),
+        cacheCreationInputTokens:
+          (existing.cacheCreationInputTokens ?? 0) + (entry.cacheCreationInputTokens ?? 0),
       };
     } else {
       result[model] = { ...entry };
@@ -152,8 +159,8 @@ function mergeHourCounts(
 // ── Hooks ────────────────────────────────────────────────────
 
 function useReducedMotion() {
-  const [reduced, setReduced] = useState(() =>
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches,
+  const [reduced, setReduced] = useState(
+    () => window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
   useEffect(() => {
     const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -165,43 +172,77 @@ function useReducedMotion() {
 }
 
 function getAccentColor() {
-  return getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#5b50e8";
+  return (
+    getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#5b50e8"
+  );
 }
 
 // ── Stat card ────────────────────────────────────────────────
 
-function StatCard({ label, value, sub, tooltip, accent }: { label: string; value: string; sub?: string; tooltip?: string; accent?: string }) {
+function StatCard({
+  label,
+  value,
+  sub,
+  tooltip,
+  accent,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  tooltip?: string;
+  accent?: string;
+}) {
   const tint = accent ?? "var(--accent)";
   const labelEl = (
-    <span style={{
-      fontSize: "11px", fontWeight: 500, fontVariantCaps: "all-small-caps",
-      letterSpacing: "0.03em", color: "var(--fg-subtle)",
-      ...(tooltip ? { borderBottom: "1px dotted var(--fg-subtle)", cursor: "help" } : {}),
-    }}>
+    <span
+      style={{
+        fontSize: "11px",
+        fontWeight: 500,
+        fontVariantCaps: "all-small-caps",
+        letterSpacing: "0.03em",
+        color: "var(--fg-subtle)",
+        ...(tooltip ? { borderBottom: "1px dotted var(--fg-subtle)", cursor: "help" } : {}),
+      }}
+    >
       {label}
     </span>
   );
 
   return (
-    <div style={{
-      flex: 1,
-      minWidth: 0,
-      background: "var(--bg-surface)",
-      border: "1px solid var(--border-base)",
-      borderRadius: "8px",
-      padding: "12px 16px",
-      borderTop: `2px solid ${tint}`,
-    }}>
-      <div style={{ fontSize: "22px", fontWeight: 700, letterSpacing: "-0.5px", color: "var(--fg-base)", lineHeight: 1.1, fontVariantNumeric: "tabular-nums" }}>
+    <div
+      style={{
+        flex: 1,
+        minWidth: 0,
+        background: "var(--bg-surface)",
+        border: "1px solid var(--border-base)",
+        borderRadius: "8px",
+        padding: "12px 16px",
+        borderTop: `2px solid ${tint}`,
+      }}
+    >
+      <div
+        style={{
+          fontSize: "22px",
+          fontWeight: 700,
+          letterSpacing: "-0.5px",
+          color: "var(--fg-base)",
+          lineHeight: 1.1,
+          fontVariantNumeric: "tabular-nums",
+        }}
+      >
         {value}
       </div>
       <div style={{ marginTop: "5px" }}>
-        {tooltip ? <HKTooltip content={tooltip} position="bottom">{labelEl}</HKTooltip> : labelEl}
+        {tooltip ? (
+          <HKTooltip content={tooltip} position="bottom">
+            {labelEl}
+          </HKTooltip>
+        ) : (
+          labelEl
+        )}
       </div>
       {sub && (
-        <div style={{ fontSize: "10px", color: "var(--fg-subtle)", marginTop: "2px" }}>
-          {sub}
-        </div>
+        <div style={{ fontSize: "10px", color: "var(--fg-subtle)", marginTop: "2px" }}>{sub}</div>
       )}
     </div>
   );
@@ -234,7 +275,11 @@ function Pill({ label, active, onClick }: { label: string; active: boolean; onCl
 // ── Global date control ──────────────────────────────────────
 
 function GlobalDateControl({
-  range, onChange, hasOverrides, onResetOverrides, idPrefix,
+  range,
+  onChange,
+  hasOverrides,
+  onResetOverrides,
+  idPrefix,
 }: {
   range: DateRange;
   onChange: (r: DateRange) => void;
@@ -303,8 +348,18 @@ function GlobalDateControl({
         )}
       </div>
       {(showCustom || range.preset === "custom") && (
-        <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "8px", paddingLeft: "2px" }}>
-          <label htmlFor={startId} style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>From</label>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            marginTop: "8px",
+            paddingLeft: "2px",
+          }}
+        >
+          <label htmlFor={startId} style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>
+            From
+          </label>
           <input
             id={startId}
             type="date"
@@ -319,7 +374,9 @@ function GlobalDateControl({
               color: "var(--fg-base)",
             }}
           />
-          <label htmlFor={endId} style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>to</label>
+          <label htmlFor={endId} style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>
+            to
+          </label>
           <input
             id={endId}
             type="date"
@@ -343,7 +400,14 @@ function GlobalDateControl({
 // ── Chart card wrapper ────────────────────────────────────────
 
 function ChartCard({
-  title, children, chartId, override, onOverride, onClearOverride, globalRange, sourceNote,
+  title,
+  children,
+  chartId,
+  override,
+  onOverride,
+  onClearOverride,
+  globalRange,
+  sourceNote,
 }: {
   title: string;
   children: React.ReactNode;
@@ -357,17 +421,43 @@ function ChartCard({
   const [showPicker, setShowPicker] = useState(false);
 
   return (
-    <div style={{
-      background: "var(--bg-surface)",
-      border: "1px solid var(--border-base)",
-      borderRadius: "8px",
-      padding: "14px 16px",
-    }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
-        <p style={{ fontSize: "12px", fontWeight: 500, fontVariantCaps: "all-small-caps", letterSpacing: "0.03em", color: "var(--fg-muted)", margin: 0 }}>
+    <div
+      style={{
+        background: "var(--bg-surface)",
+        border: "1px solid var(--border-base)",
+        borderRadius: "8px",
+        padding: "14px 16px",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: "10px",
+        }}
+      >
+        <p
+          style={{
+            fontSize: "12px",
+            fontWeight: 500,
+            fontVariantCaps: "all-small-caps",
+            letterSpacing: "0.03em",
+            color: "var(--fg-muted)",
+            margin: 0,
+          }}
+        >
           {title}
           {sourceNote && (
-            <span style={{ fontSize: "9px", fontVariantCaps: "normal", color: "var(--fg-subtle)", marginLeft: "6px", fontWeight: 400 }}>
+            <span
+              style={{
+                fontSize: "9px",
+                fontVariantCaps: "normal",
+                color: "var(--fg-subtle)",
+                marginLeft: "6px",
+                fontWeight: 400,
+              }}
+            >
               {sourceNote}
             </span>
           )}
@@ -375,16 +465,35 @@ function ChartCard({
         {chartId && (
           <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
             {override && (
-              <button onClick={onClearOverride} style={{ fontSize: "9px", color: "var(--accent-text)", border: "none", background: "none", cursor: "pointer", padding: "1px 4px" }}>
+              <button
+                onClick={onClearOverride}
+                style={{
+                  fontSize: "9px",
+                  color: "var(--accent-text)",
+                  border: "none",
+                  background: "none",
+                  cursor: "pointer",
+                  padding: "1px 4px",
+                }}
+              >
                 ×reset
               </button>
             )}
             <HKTooltip content="Override date range for this chart">
               <button
                 onClick={() => setShowPicker((s) => !s)}
-                style={{ fontSize: "9px", color: override ? "var(--accent-text)" : "var(--fg-subtle)", border: "none", background: "none", cursor: "pointer", padding: "1px 4px" }}
+                style={{
+                  fontSize: "9px",
+                  color: override ? "var(--accent-text)" : "var(--fg-subtle)",
+                  border: "none",
+                  background: "none",
+                  cursor: "pointer",
+                  padding: "1px 4px",
+                }}
               >
-                {override ? `${override.preset !== "custom" ? override.preset : `${override.start}–${override.end}`}` : "range"}
+                {override
+                  ? `${override.preset !== "custom" ? override.preset : `${override.start}–${override.end}`}`
+                  : "range"}
               </button>
             </HKTooltip>
           </div>
@@ -394,7 +503,10 @@ function ChartCard({
         <div style={{ marginBottom: "8px" }}>
           <GlobalDateControl
             range={override ?? globalRange}
-            onChange={(r) => { onOverride(r); setShowPicker(false); }}
+            onChange={(r) => {
+              onOverride(r);
+              setShowPicker(false);
+            }}
             hasOverrides={false}
             onResetOverrides={() => {}}
             idPrefix={chartId}
@@ -422,7 +534,8 @@ const axisStyle = { fontSize: 10, fill: "var(--fg-subtle)" };
 // ── Main component ────────────────────────────────────────────
 
 export default function DashboardPage() {
-  const { cache, liveActivity, liveStats, loading, isRefreshing, error, lastRefreshed, refresh } = useObservatoryData();
+  const { cache, liveActivity, liveStats, loading, isRefreshing, error, lastRefreshed, refresh } =
+    useObservatoryData();
   const [globalRange, setGlobalRange] = useState<DateRange>(defaultRange);
   const [chartOverrides, setChartOverrides] = useState<Record<string, DateRange | null>>({});
   const [accentColor, setAccentColor] = useState(getAccentColor);
@@ -455,50 +568,51 @@ export default function DashboardPage() {
   useEffect(() => {
     detectClaudeAccount()
       .then(setAccount)
-      .catch(() => setAccount({ logged_in: false, subscription_type: null, auto_mode_available: false }))
+      .catch(() =>
+        setAccount({ logged_in: false, subscription_type: null, auto_mode_available: false }),
+      )
       .finally(() => setAccountLoading(false));
   }, []);
 
   // Merge cache + live stats data
-  const mergedActivity = useMemo(() =>
-    mergeDailyActivity(
-      cache?.dailyActivity ?? [],
-      liveStats?.dailyActivity ?? [],
-      cutoffDate,
-    ),
+  const mergedActivity = useMemo(
+    () =>
+      mergeDailyActivity(cache?.dailyActivity ?? [], liveStats?.dailyActivity ?? [], cutoffDate),
     [cache, liveStats, cutoffDate],
   );
 
-  const mergedDailyTokens = useMemo(() =>
-    mergeDailyTokens(
-      cache?.dailyModelTokens ?? [],
-      liveStats?.dailyModelTokens ?? [],
-      cutoffDate,
-    ),
+  const mergedDailyTokens = useMemo(
+    () =>
+      mergeDailyTokens(
+        cache?.dailyModelTokens ?? [],
+        liveStats?.dailyModelTokens ?? [],
+        cutoffDate,
+      ),
     [cache, liveStats, cutoffDate],
   );
 
-  const mergedModelUsage = useMemo(() =>
-    mergeModelUsage(cache?.modelUsage, liveStats?.modelUsage),
+  const mergedModelUsage = useMemo(
+    () => mergeModelUsage(cache?.modelUsage, liveStats?.modelUsage),
     [cache, liveStats],
   );
 
-  const mergedHourCounts = useMemo(() =>
-    mergeHourCounts(cache?.hourCounts, liveStats?.hourCounts),
+  const mergedHourCounts = useMemo(
+    () => mergeHourCounts(cache?.hourCounts, liveStats?.hourCounts),
     [cache, liveStats],
   );
 
   // Messages chart uses liveActivity (from history.jsonl) for message/session counts
-  const filteredMessagesActivity = useMemo(() =>
-    filterByRange(liveActivity, rangeForChart("messages")),
+  const filteredMessagesActivity = useMemo(
+    () => filterByRange(liveActivity, rangeForChart("messages")),
     [liveActivity, globalRange, chartOverrides],
   );
 
-  const activityChartData = useMemo(() =>
-    filteredMessagesActivity.map((d) => ({
-      date: formatDate(d.date),
-      messages: d.messageCount,
-    })),
+  const activityChartData = useMemo(
+    () =>
+      filteredMessagesActivity.map((d) => ({
+        date: formatDate(d.date),
+        messages: d.messageCount,
+      })),
     [filteredMessagesActivity],
   );
 
@@ -524,7 +638,10 @@ export default function DashboardPage() {
   }, [mergedActivity]);
 
   const { totalOutputTokens, cacheHitRate } = useMemo(() => {
-    let outTokens = 0, cacheRead = 0, input = 0, cacheCreate = 0;
+    let outTokens = 0,
+      cacheRead = 0,
+      input = 0,
+      cacheCreate = 0;
     for (const m of Object.values(mergedModelUsage)) {
       outTokens += m.outputTokens ?? 0;
       cacheRead += m.cacheReadInputTokens ?? 0;
@@ -538,10 +655,7 @@ export default function DashboardPage() {
     };
   }, [mergedModelUsage]);
 
-  const totalEstimatedCost = useMemo(() =>
-    estimateTotalCost(mergedModelUsage),
-    [mergedModelUsage],
-  );
+  const totalEstimatedCost = useMemo(() => estimateTotalCost(mergedModelUsage), [mergedModelUsage]);
 
   const [budgetGuard, setBudgetGuardLocal] = useState<BudgetGuardConfig>(() => getBudgetGuard());
 
@@ -568,21 +682,23 @@ export default function DashboardPage() {
           Object.entries(todayEntry.tokensByModel).map(([model, tokens]) => [
             model,
             { inputTokens: tokens, outputTokens: 0 },
-          ])
+          ]),
         )
       : {};
   }, [liveStats]);
 
   const costToday = useMemo(() => estimateTotalCost(todayModelUsage), [todayModelUsage]);
-  const tokensToday = useMemo(() =>
-    Object.values(todayModelUsage).reduce((sum, u) => sum + (u.inputTokens ?? 0), 0),
+  const tokensToday = useMemo(
+    () => Object.values(todayModelUsage).reduce((sum, u) => sum + (u.inputTokens ?? 0), 0),
     [todayModelUsage],
   );
 
   const budgetExceeded = useMemo(() => {
     if (!budgetGuard.enabled) return false;
-    const tokenOver = budgetGuard.dailyTokenLimit != null && tokensToday > budgetGuard.dailyTokenLimit;
-    const costOver  = budgetGuard.dailyEstimatedCostUSD != null && costToday > budgetGuard.dailyEstimatedCostUSD;
+    const tokenOver =
+      budgetGuard.dailyTokenLimit != null && tokensToday > budgetGuard.dailyTokenLimit;
+    const costOver =
+      budgetGuard.dailyEstimatedCostUSD != null && costToday > budgetGuard.dailyEstimatedCostUSD;
     return tokenOver || costOver;
   }, [budgetGuard, tokensToday, costToday]);
 
@@ -611,13 +727,15 @@ export default function DashboardPage() {
   }, [mergedDailyTokens, globalRange, chartOverrides]);
 
   const tokenTypeData = useMemo(() => {
-    return Object.entries(mergedModelUsage).map(([model, usage]) => ({
-      name: shortModelName(model),
-      Input: usage.inputTokens ?? 0,
-      Output: usage.outputTokens ?? 0,
-      "Cache Read": usage.cacheReadInputTokens ?? 0,
-      "Cache Create": usage.cacheCreationInputTokens ?? 0,
-    })).sort((a, b) => (b.Output) - (a.Output));
+    return Object.entries(mergedModelUsage)
+      .map(([model, usage]) => ({
+        name: shortModelName(model),
+        Input: usage.inputTokens ?? 0,
+        Output: usage.outputTokens ?? 0,
+        "Cache Read": usage.cacheReadInputTokens ?? 0,
+        "Cache Create": usage.cacheCreationInputTokens ?? 0,
+      }))
+      .sort((a, b) => b.Output - a.Output);
   }, [mergedModelUsage]);
 
   const TOKEN_TYPE_COLORS: Record<string, string> = {
@@ -670,18 +788,28 @@ export default function DashboardPage() {
     return (
       <div style={{ padding: "20px 24px" }}>
         <div style={{ marginBottom: "16px" }}>
-          <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
+          <h1
+            style={{
+              fontSize: "17px",
+              fontWeight: 600,
+              letterSpacing: "-0.3px",
+              color: "var(--fg-base)",
+              margin: 0,
+            }}
+          >
             Observatory
           </h1>
         </div>
-        <div style={{
-          background: "var(--bg-surface)",
-          border: "1px solid var(--border-base)",
-          borderRadius: "8px",
-          padding: "10px 14px",
-          fontSize: "13px",
-          color: "var(--danger)",
-        }}>
+        <div
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-base)",
+            borderRadius: "8px",
+            padding: "10px 14px",
+            fontSize: "13px",
+            color: "var(--danger)",
+          }}
+        >
           {error}
         </div>
       </div>
@@ -692,17 +820,28 @@ export default function DashboardPage() {
     <div style={{ padding: "20px 24px" }}>
       {/* Header */}
       <div style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
-        <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
+        <h1
+          style={{
+            fontSize: "17px",
+            fontWeight: 600,
+            letterSpacing: "-0.3px",
+            color: "var(--fg-base)",
+            margin: 0,
+          }}
+        >
           Observatory
         </h1>
         {effectiveLastUpdated && (
           <span style={{ fontSize: "10px", color: "var(--fg-subtle)", marginTop: "1px" }}>
-            last updated {effectiveLastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            last updated{" "}
+            {effectiveLastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           </span>
         )}
         <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
           {isRefreshing && (
-            <span style={{ fontSize: "10px", color: "var(--accent-text)", fontWeight: 500 }}>Refreshing…</span>
+            <span style={{ fontSize: "10px", color: "var(--accent-text)", fontWeight: 500 }}>
+              Refreshing…
+            </span>
           )}
           <button
             onClick={refresh}
@@ -724,9 +863,26 @@ export default function DashboardPage() {
               transition: "background 0.15s",
             }}
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ color: "currentColor" }}>
-              <path d="M21 12a9 9 0 1 1-2.63-6.36" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              <path d="M21 3v6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              style={{ color: "currentColor" }}
+            >
+              <path
+                d="M21 12a9 9 0 1 1-2.63-6.36"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              />
+              <path
+                d="M21 3v6h-6"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
             </svg>
             Refresh
           </button>
@@ -736,7 +892,10 @@ export default function DashboardPage() {
       {/* Global date range control */}
       <GlobalDateControl
         range={globalRange}
-        onChange={(r) => { setGlobalRange(r); setChartOverrides({}); }}
+        onChange={(r) => {
+          setGlobalRange(r);
+          setChartOverrides({});
+        }}
         hasOverrides={hasOverrides}
         onResetOverrides={() => setChartOverrides({})}
       />
@@ -753,14 +912,34 @@ export default function DashboardPage() {
 
       {/* Stats bar */}
       <div style={{ display: "flex", gap: "10px", marginBottom: "18px", flexWrap: "wrap" }}>
-        <StatCard label="Sessions" value={formatNumber(cache?.totalSessions ?? 0)} tooltip="Unique Claude Code sessions" accent="#5b50e8" />
-        <StatCard label="Messages" value={formatNumber(cache?.totalMessages ?? 0)} tooltip="Total user messages across all sessions" accent="#2563eb" />
-        <StatCard label="Tool Calls" value={formatNumber(totalToolCalls)} tooltip="Total tool invocations (Read, Edit, Bash, etc.)" accent="#0d9488" />
-        <StatCard label="Output Tokens" value={
-          totalOutputTokens >= 1_000_000
-            ? `${(totalOutputTokens / 1_000_000).toFixed(1)}M`
-            : formatNumber(totalOutputTokens)
-        } tooltip="Total tokens generated by Claude across all models" accent="#ea580c" />
+        <StatCard
+          label="Sessions"
+          value={formatNumber(cache?.totalSessions ?? 0)}
+          tooltip="Unique Claude Code sessions"
+          accent="#5b50e8"
+        />
+        <StatCard
+          label="Messages"
+          value={formatNumber(cache?.totalMessages ?? 0)}
+          tooltip="Total user messages across all sessions"
+          accent="#2563eb"
+        />
+        <StatCard
+          label="Tool Calls"
+          value={formatNumber(totalToolCalls)}
+          tooltip="Total tool invocations (Read, Edit, Bash, etc.)"
+          accent="#0d9488"
+        />
+        <StatCard
+          label="Output Tokens"
+          value={
+            totalOutputTokens >= 1_000_000
+              ? `${(totalOutputTokens / 1_000_000).toFixed(1)}M`
+              : formatNumber(totalOutputTokens)
+          }
+          tooltip="Total tokens generated by Claude across all models"
+          accent="#ea580c"
+        />
         <StatCard
           label="Cache Hit"
           value={cacheHitRate !== null ? `${cacheHitRate}%` : "\u2014"}
@@ -779,13 +958,20 @@ export default function DashboardPage() {
 
       {/* Account status */}
       <div style={{ marginBottom: "18px" }}>
-        <AccountStatusBadge account={account} monthlyTokens={monthlyTokens} loading={accountLoading} />
+        <AccountStatusBadge
+          account={account}
+          monthlyTokens={monthlyTokens}
+          loading={accountLoading}
+        />
       </div>
 
       {/* Messages chart — full width, hero chart */}
       <div style={{ marginBottom: "12px" }}>
-        <ChartCard title="Messages per Day" chartId="messages"
-          override={chartOverrides["messages"]} globalRange={globalRange}
+        <ChartCard
+          title="Messages per Day"
+          chartId="messages"
+          override={chartOverrides["messages"]}
+          globalRange={globalRange}
           onOverride={(r) => setChartOverride("messages", r)}
           onClearOverride={() => clearOverride("messages")}
         >
@@ -798,20 +984,43 @@ export default function DashboardPage() {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--separator)" vertical={false} />
-              <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+              <XAxis
+                dataKey="date"
+                tick={axisStyle}
+                tickLine={false}
+                axisLine={false}
+                interval="preserveStartEnd"
+              />
               <YAxis tick={axisStyle} tickLine={false} axisLine={false} />
               <Tooltip contentStyle={tooltipStyle} />
-              <Area type="monotone" dataKey="messages" stroke={accentColor} strokeWidth={1.5}
-                fill="url(#msgGrad)" dot={false} isAnimationActive={!reducedMotion} />
+              <Area
+                type="monotone"
+                dataKey="messages"
+                stroke={accentColor}
+                strokeWidth={1.5}
+                fill="url(#msgGrad)"
+                dot={false}
+                isAnimationActive={!reducedMotion}
+              />
             </AreaChart>
           </ResponsiveContainer>
         </ChartCard>
       </div>
 
       {/* Sessions + Tool Calls — side by side */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "12px" }}>
-        <ChartCard title="Sessions per Day" chartId="sessions"
-          override={chartOverrides["sessions"]} globalRange={globalRange}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "12px",
+          marginBottom: "12px",
+        }}
+      >
+        <ChartCard
+          title="Sessions per Day"
+          chartId="sessions"
+          override={chartOverrides["sessions"]}
+          globalRange={globalRange}
           onOverride={(r) => setChartOverride("sessions", r)}
           onClearOverride={() => clearOverride("sessions")}
         >
@@ -819,39 +1028,71 @@ export default function DashboardPage() {
             <AreaChart data={sessionsChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
               <defs>
                 <linearGradient id="sessGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={accentColor} stopOpacity={0.10} />
+                  <stop offset="5%" stopColor={accentColor} stopOpacity={0.1} />
                   <stop offset="95%" stopColor={accentColor} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--separator)" vertical={false} />
-              <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+              <XAxis
+                dataKey="date"
+                tick={axisStyle}
+                tickLine={false}
+                axisLine={false}
+                interval="preserveStartEnd"
+              />
               <YAxis tick={axisStyle} tickLine={false} axisLine={false} />
               <Tooltip contentStyle={tooltipStyle} />
-              <Area type="monotone" dataKey="sessions" stroke={accentColor} strokeWidth={1.5}
-                fill="url(#sessGrad)" dot={false} isAnimationActive={!reducedMotion} />
+              <Area
+                type="monotone"
+                dataKey="sessions"
+                stroke={accentColor}
+                strokeWidth={1.5}
+                fill="url(#sessGrad)"
+                dot={false}
+                isAnimationActive={!reducedMotion}
+              />
             </AreaChart>
           </ResponsiveContainer>
         </ChartCard>
 
-        <ChartCard title="Tool Calls per Day" chartId="toolCalls"
-          override={chartOverrides["toolCalls"]} globalRange={globalRange}
+        <ChartCard
+          title="Tool Calls per Day"
+          chartId="toolCalls"
+          override={chartOverrides["toolCalls"]}
+          globalRange={globalRange}
           onOverride={(r) => setChartOverride("toolCalls", r)}
           onClearOverride={() => clearOverride("toolCalls")}
         >
           <ResponsiveContainer width="100%" height={120}>
-            <AreaChart data={toolCallsChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+            <AreaChart
+              data={toolCallsChartData}
+              margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
+            >
               <defs>
                 <linearGradient id="tcGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor={accentColor} stopOpacity={0.10} />
+                  <stop offset="5%" stopColor={accentColor} stopOpacity={0.1} />
                   <stop offset="95%" stopColor={accentColor} stopOpacity={0} />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--separator)" vertical={false} />
-              <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+              <XAxis
+                dataKey="date"
+                tick={axisStyle}
+                tickLine={false}
+                axisLine={false}
+                interval="preserveStartEnd"
+              />
               <YAxis tick={axisStyle} tickLine={false} axisLine={false} />
               <Tooltip contentStyle={tooltipStyle} />
-              <Area type="monotone" dataKey="toolCalls" stroke={accentColor} strokeWidth={1.5}
-                fill="url(#tcGrad)" dot={false} isAnimationActive={!reducedMotion} />
+              <Area
+                type="monotone"
+                dataKey="toolCalls"
+                stroke={accentColor}
+                strokeWidth={1.5}
+                fill="url(#tcGrad)"
+                dot={false}
+                isAnimationActive={!reducedMotion}
+              />
             </AreaChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -860,26 +1101,57 @@ export default function DashboardPage() {
       {/* Daily tokens by model — stacked area */}
       {dailyTokensChartData.length > 0 && (
         <div style={{ marginBottom: "12px" }}>
-          <ChartCard title="Daily Tokens by Model" chartId="dailyTokens"
-            override={chartOverrides["dailyTokens"]} globalRange={globalRange}
+          <ChartCard
+            title="Daily Tokens by Model"
+            chartId="dailyTokens"
+            override={chartOverrides["dailyTokens"]}
+            globalRange={globalRange}
             onOverride={(r) => setChartOverride("dailyTokens", r)}
             onClearOverride={() => clearOverride("dailyTokens")}
           >
             <ResponsiveContainer width="100%" height={150}>
-              <AreaChart data={dailyTokensChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+              <AreaChart
+                data={dailyTokensChartData}
+                margin={{ top: 4, right: 4, left: -20, bottom: 0 }}
+              >
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--separator)" vertical={false} />
-                <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} interval="preserveStartEnd" />
-                <YAxis tick={axisStyle} tickLine={false} axisLine={false}
-                  tickFormatter={(v: number) => v >= 1_000_000 ? `${(v/1_000_000).toFixed(1)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)} />
+                <XAxis
+                  dataKey="date"
+                  tick={axisStyle}
+                  tickLine={false}
+                  axisLine={false}
+                  interval="preserveStartEnd"
+                />
+                <YAxis
+                  tick={axisStyle}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v: number) =>
+                    v >= 1_000_000
+                      ? `${(v / 1_000_000).toFixed(1)}M`
+                      : v >= 1000
+                        ? `${(v / 1000).toFixed(0)}k`
+                        : String(v)
+                  }
+                />
                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                <Tooltip contentStyle={tooltipStyle} formatter={((v: number) => formatNumber(v)) as any} />
+                <Tooltip
+                  contentStyle={tooltipStyle}
+                  formatter={((v: number) => formatNumber(v)) as any}
+                />
                 <Legend wrapperStyle={{ fontSize: "10px" }} />
                 {allModelNames.map((name, i) => (
-                  <Area key={name} type="monotone" dataKey={name} stackId="a"
+                  <Area
+                    key={name}
+                    type="monotone"
+                    dataKey={name}
+                    stackId="a"
                     stroke={MODEL_COLORS[i % MODEL_COLORS.length]}
                     fill={MODEL_COLORS[i % MODEL_COLORS.length]}
-                    fillOpacity={0.5} strokeWidth={1}
-                    isAnimationActive={!reducedMotion} />
+                    fillOpacity={0.5}
+                    strokeWidth={1}
+                    isAnimationActive={!reducedMotion}
+                  />
                 ))}
               </AreaChart>
             </ResponsiveContainer>
@@ -892,17 +1164,46 @@ export default function DashboardPage() {
         <div style={{ marginBottom: "12px" }}>
           <ChartCard title="Token Type Breakdown by Model">
             <ResponsiveContainer width="100%" height={Math.max(120, tokenTypeData.length * 36)}>
-              <BarChart data={tokenTypeData} layout="vertical" margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                <XAxis type="number" tick={axisStyle} tickLine={false} axisLine={false}
-                  tickFormatter={(v: number) => v >= 1_000_000 ? `${(v/1_000_000).toFixed(1)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)} />
-                <YAxis type="category" dataKey="name" tick={axisStyle} tickLine={false} axisLine={false} width={80} />
+              <BarChart
+                data={tokenTypeData}
+                layout="vertical"
+                margin={{ top: 4, right: 8, left: 0, bottom: 0 }}
+              >
+                <XAxis
+                  type="number"
+                  tick={axisStyle}
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={(v: number) =>
+                    v >= 1_000_000
+                      ? `${(v / 1_000_000).toFixed(1)}M`
+                      : v >= 1000
+                        ? `${(v / 1000).toFixed(0)}k`
+                        : String(v)
+                  }
+                />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  tick={axisStyle}
+                  tickLine={false}
+                  axisLine={false}
+                  width={80}
+                />
                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                <Tooltip contentStyle={tooltipStyle} formatter={((v: number) => formatNumber(v)) as any} />
+                <Tooltip
+                  contentStyle={tooltipStyle}
+                  formatter={((v: number) => formatNumber(v)) as any}
+                />
                 <Legend wrapperStyle={{ fontSize: "10px" }} />
                 {(["Input", "Output", "Cache Read", "Cache Create"] as const).map((type) => (
-                  <Bar key={type} dataKey={type} stackId="a"
+                  <Bar
+                    key={type}
+                    dataKey={type}
+                    stackId="a"
                     fill={TOKEN_TYPE_COLORS[type]}
-                    isAnimationActive={!reducedMotion} />
+                    isAnimationActive={!reducedMotion}
+                  />
                 ))}
               </BarChart>
             </ResponsiveContainer>
@@ -917,14 +1218,34 @@ export default function DashboardPage() {
             <ResponsiveContainer width="100%" height={160}>
               <BarChart data={hourlyChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--separator)" vertical={false} />
-                <XAxis dataKey="hour" tick={axisStyle} tickLine={false} axisLine={false} interval={3} />
+                <XAxis
+                  dataKey="hour"
+                  tick={axisStyle}
+                  tickLine={false}
+                  axisLine={false}
+                  interval={3}
+                />
                 <YAxis tick={axisStyle} tickLine={false} axisLine={false} />
                 <Tooltip contentStyle={tooltipStyle} />
-                <Bar dataKey="count" fill={accentColor} radius={[2, 2, 0, 0]} isAnimationActive={!reducedMotion} />
+                <Bar
+                  dataKey="count"
+                  fill={accentColor}
+                  radius={[2, 2, 0, 0]}
+                  isAnimationActive={!reducedMotion}
+                />
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <p style={{ fontSize: "12px", color: "var(--fg-subtle)", textAlign: "center", padding: "20px 0" }}>No hourly data.</p>
+            <p
+              style={{
+                fontSize: "12px",
+                color: "var(--fg-subtle)",
+                textAlign: "center",
+                padding: "20px 0",
+              }}
+            >
+              No hourly data.
+            </p>
           )}
         </ChartCard>
       </div>

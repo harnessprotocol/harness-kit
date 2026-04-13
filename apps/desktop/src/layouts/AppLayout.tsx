@@ -1,15 +1,15 @@
-import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { useState, useEffect, useCallback, useRef } from "react";
-import { open } from "@tauri-apps/plugin-shell";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
-import { useArrowNavigation } from "../hooks/useArrowNavigation";
-import { useSidebarResize } from "../hooks/useSidebarResize";
-import { initTheme } from "../lib/theme";
-import { initPreferences, getHiddenSections } from "../lib/preferences";
-import { useChat } from "../contexts/ChatContext";
+import { open } from "@tauri-apps/plugin-shell";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import ChatPanel from "../components/chat/ChatPanel";
+import { useChat } from "../contexts/ChatContext";
+import { useArrowNavigation } from "../hooks/useArrowNavigation";
 import { useClaudeFileList } from "../hooks/useClaudeFileList";
+import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
+import { useSidebarResize } from "../hooks/useSidebarResize";
+import { getHiddenSections, initPreferences } from "../lib/preferences";
+import { initTheme } from "../lib/theme";
 
 type NavSection = {
   id: string;
@@ -35,9 +35,7 @@ export const NAV_SECTIONS: NavSection[] = [
     id: "marketplace",
     label: "Marketplace",
     path: "/marketplace",
-    children: [
-      { label: "Browse", path: "/marketplace" },
-    ],
+    children: [{ label: "Browse", path: "/marketplace" }],
   },
   {
     id: "observatory",
@@ -74,9 +72,7 @@ export const NAV_SECTIONS: NavSection[] = [
     id: "parity",
     label: "Parity",
     path: "/parity",
-    children: [
-      { label: "Dashboard", path: "/parity" },
-    ],
+    children: [{ label: "Dashboard", path: "/parity" }],
   },
   {
     id: "board",
@@ -128,7 +124,12 @@ function HarnessSubnav({ configFiles }: { configFiles: string[] }) {
   const allItems = [
     syncItem,
     ...staticItems,
-    ...(configExpanded ? visibleConfigFiles.map((f) => ({ label: f, path: `/harness/config/${encodeURIComponent(f)}` })) : []),
+    ...(configExpanded
+      ? visibleConfigFiles.map((f) => ({
+          label: f,
+          path: `/harness/config/${encodeURIComponent(f)}`,
+        }))
+      : []),
   ];
   const { focusedIndex, onKeyDown } = useArrowNavigation({
     count: allItems.length,
@@ -142,12 +143,26 @@ function HarnessSubnav({ configFiles }: { configFiles: string[] }) {
         to="/harness/sync"
         className={({ isActive }) => `sidebar-subitem${isActive ? " active" : ""}`}
         style={{
-          display: "flex", alignItems: "center", gap: "5px",
-          ...(focusedIndex === 0 ? { outline: "2px solid var(--accent)", outlineOffset: "-2px", borderRadius: "5px" } : {}),
+          display: "flex",
+          alignItems: "center",
+          gap: "5px",
+          ...(focusedIndex === 0
+            ? { outline: "2px solid var(--accent)", outlineOffset: "-2px", borderRadius: "5px" }
+            : {}),
         }}
       >
-        <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.6, flexShrink: 0 }}>
-          <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+        <svg
+          width="11"
+          height="11"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          style={{ opacity: 0.6, flexShrink: 0 }}
+        >
+          <path
+            fillRule="evenodd"
+            d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z"
+            clipRule="evenodd"
+          />
         </svg>
         Sync
       </NavLink>
@@ -161,7 +176,11 @@ function HarnessSubnav({ configFiles }: { configFiles: string[] }) {
           to={item.path}
           end={item.path === "/harness/plugins" ? false : undefined}
           className={({ isActive }) => `sidebar-subitem${isActive ? " active" : ""}`}
-          style={focusedIndex === idx + 1 ? { outline: "2px solid var(--accent)", outlineOffset: "-2px", borderRadius: "5px" } : undefined}
+          style={
+            focusedIndex === idx + 1
+              ? { outline: "2px solid var(--accent)", outlineOffset: "-2px", borderRadius: "5px" }
+              : undefined
+          }
         >
           {item.label}
         </NavLink>
@@ -193,7 +212,11 @@ function HarnessSubnav({ configFiles }: { configFiles: string[] }) {
             height="10"
             viewBox="0 0 16 16"
             fill="currentColor"
-            style={{ transform: configExpanded ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.15s ease", flexShrink: 0 }}
+            style={{
+              transform: configExpanded ? "rotate(0deg)" : "rotate(-90deg)",
+              transition: "transform 0.15s ease",
+              flexShrink: 0,
+            }}
           >
             <path d="M8 10.5L2.5 5h11L8 10.5z" />
           </svg>
@@ -201,23 +224,30 @@ function HarnessSubnav({ configFiles }: { configFiles: string[] }) {
       )}
 
       {/* Dynamic file items */}
-      {configExpanded && visibleConfigFiles.map((file, idx) => {
-        const path = `/harness/config/${encodeURIComponent(file)}`;
-        const itemIdx = 1 + staticItems.length + idx;
-        return (
-          <NavLink
-            key={file}
-            to={path}
-            className={({ isActive }) => `sidebar-subitem${isActive ? " active" : ""}`}
-            style={{
-              paddingLeft: "20px",
-              ...(focusedIndex === itemIdx ? { outline: "2px solid var(--accent)", outlineOffset: "-2px", borderRadius: "5px" } : {}),
-            }}
-          >
-            {file}
-          </NavLink>
-        );
-      })}
+      {configExpanded &&
+        visibleConfigFiles.map((file, idx) => {
+          const path = `/harness/config/${encodeURIComponent(file)}`;
+          const itemIdx = 1 + staticItems.length + idx;
+          return (
+            <NavLink
+              key={file}
+              to={path}
+              className={({ isActive }) => `sidebar-subitem${isActive ? " active" : ""}`}
+              style={{
+                paddingLeft: "20px",
+                ...(focusedIndex === itemIdx
+                  ? {
+                      outline: "2px solid var(--accent)",
+                      outlineOffset: "-2px",
+                      borderRadius: "5px",
+                    }
+                  : {}),
+              }}
+            >
+              {file}
+            </NavLink>
+          );
+        })}
     </div>
   );
 }
@@ -239,7 +269,11 @@ function SidebarSubnav({ children }: { children: { label: string; path: string }
           className={({ isActive: childActive }) =>
             `sidebar-subitem${childActive ? " active" : ""}`
           }
-          style={focusedIndex === idx ? { outline: "2px solid var(--accent)", outlineOffset: "-2px", borderRadius: "5px" } : undefined}
+          style={
+            focusedIndex === idx
+              ? { outline: "2px solid var(--accent)", outlineOffset: "-2px", borderRadius: "5px" }
+              : undefined
+          }
         >
           {child.label}
         </NavLink>
@@ -254,19 +288,25 @@ export default function AppLayout() {
   const { isOpen: chatOpen, setOpen: setChatOpen, unreadCount } = useChat();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    try { return localStorage.getItem("sidebar-collapsed") === "true"; } catch { return false; }
+    try {
+      return localStorage.getItem("sidebar-collapsed") === "true";
+    } catch {
+      return false;
+    }
   });
 
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed((v) => {
       const next = !v;
-      try { localStorage.setItem("sidebar-collapsed", String(next)); } catch {}
+      try {
+        localStorage.setItem("sidebar-collapsed", String(next));
+      } catch {}
       return next;
     });
   }, []);
 
-  const [harnessExpanded, setHarnessExpanded] = useState(
-    () => location.pathname.startsWith("/harness")
+  const [harnessExpanded, setHarnessExpanded] = useState(() =>
+    location.pathname.startsWith("/harness"),
   );
   // Auto-expand when navigating into harness from another section
   const prevPathRef = useRef(location.pathname);
@@ -319,9 +359,11 @@ export default function AppLayout() {
     // Guard covers all interactive elements — extend if non-button interactives are added to the titlebar
     if ((e.target as HTMLElement).closest("button, a, input, [role='button']")) return;
     e.preventDefault();
-    getCurrentWindow().startDragging().catch((err) => {
-      console.error("[titlebar] startDragging failed:", err);
-    });
+    getCurrentWindow()
+      .startDragging()
+      .catch((err) => {
+        console.error("[titlebar] startDragging failed:", err);
+      });
   }
 
   return (
@@ -354,19 +396,34 @@ export default function AppLayout() {
           }}
         />
         <button className="titlebar-btn" onClick={toggleSidebar} title="Toggle sidebar (⌘\)">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
             <rect x="1" y="1" width="14" height="14" rx="2" />
             <line x1="5" y1="1" x2="5" y2="15" />
           </svg>
         </button>
         <button className="titlebar-btn" onClick={() => navigate(-1)} title="Back (⌘[)">
           <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+            <path
+              fillRule="evenodd"
+              d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z"
+              clipRule="evenodd"
+            />
           </svg>
         </button>
         <button className="titlebar-btn" onClick={() => navigate(1)} title="Forward (⌘])">
           <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+            <path
+              fillRule="evenodd"
+              d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z"
+              clipRule="evenodd"
+            />
           </svg>
         </button>
         <button
@@ -376,15 +433,31 @@ export default function AppLayout() {
           style={{ marginLeft: "auto", position: "relative" }}
         >
           {/* Speech bubble icon — communicates team chat */}
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M14 7C14 10.3137 11.3137 13 8 13C7.0401 13 6.1327 12.773 5.327 12.373L2 13.5L3.1 10.4C2.41 9.49 2 8.29 2 7C2 3.6863 4.6863 1 8 1C11.3137 1 14 3.6863 14 7Z" strokeLinejoin="round" />
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
+            <path
+              d="M14 7C14 10.3137 11.3137 13 8 13C7.0401 13 6.1327 12.773 5.327 12.373L2 13.5L3.1 10.4C2.41 9.49 2 8.29 2 7C2 3.6863 4.6863 1 8 1C11.3137 1 14 3.6863 14 7Z"
+              strokeLinejoin="round"
+            />
           </svg>
           {unreadCount > 0 && (
-            <span style={{
-              position: "absolute", top: "2px", right: "2px",
-              width: "6px", height: "6px",
-              background: "var(--danger)", borderRadius: "50%",
-            }} />
+            <span
+              style={{
+                position: "absolute",
+                top: "2px",
+                right: "2px",
+                width: "6px",
+                height: "6px",
+                background: "var(--danger)",
+                borderRadius: "50%",
+              }}
+            />
           )}
         </button>
       </div>
@@ -418,7 +491,14 @@ export default function AppLayout() {
               className="flex items-center px-4"
               style={{ height: "44px", borderBottom: "1px solid var(--separator)" }}
             >
-              <span style={{ fontSize: "13px", fontWeight: 600, letterSpacing: "-0.1px", color: "var(--fg-base)" }}>
+              <span
+                style={{
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  letterSpacing: "-0.1px",
+                  color: "var(--fg-base)",
+                }}
+              >
                 harness-kit
               </span>
             </div>
@@ -435,7 +515,16 @@ export default function AppLayout() {
                       <button
                         onClick={() => setHarnessExpanded((v) => !v)}
                         className={`sidebar-item${active ? " active" : ""}`}
-                        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", cursor: "pointer", border: "none", background: "transparent", textAlign: "left" }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          width: "100%",
+                          cursor: "pointer",
+                          border: "none",
+                          background: "transparent",
+                          textAlign: "left",
+                        }}
                       >
                         <span style={{ flex: 1 }}>{section.label}</span>
                         <svg
@@ -443,24 +532,33 @@ export default function AppLayout() {
                           height="10"
                           viewBox="0 0 16 16"
                           fill="currentColor"
-                          style={{ transform: harnessExpanded ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.15s ease", flexShrink: 0, opacity: 0.6 }}
+                          style={{
+                            transform: harnessExpanded ? "rotate(0deg)" : "rotate(-90deg)",
+                            transition: "transform 0.15s ease",
+                            flexShrink: 0,
+                            opacity: 0.6,
+                          }}
                         >
                           <path d="M8 10.5L2.5 5h11L8 10.5z" />
                         </svg>
                       </button>
                     ) : (
-                      <NavLink to={section.path} className={`sidebar-item${active ? " active" : ""}`}>
+                      <NavLink
+                        to={section.path}
+                        className={`sidebar-item${active ? " active" : ""}`}
+                      >
                         <span style={{ flex: 1 }}>{section.label}</span>
                         {shortcutNum && !sidebarCollapsed && (
                           <span
                             style={{
                               fontSize: 10,
-                              fontFamily: 'ui-monospace, monospace',
-                              color: 'var(--fg-subtle)',
+                              fontFamily: "ui-monospace, monospace",
+                              color: "var(--fg-subtle)",
                               flexShrink: 0,
                             }}
                           >
-                            {'\u2318'}{shortcutNum}
+                            {"\u2318"}
+                            {shortcutNum}
                           </span>
                         )}
                       </NavLink>
@@ -470,7 +568,7 @@ export default function AppLayout() {
                       <HarnessSubnav configFiles={configFiles} />
                     )}
                     {active && section.children && section.id !== "harness" && (
-                      <SidebarSubnav children={section.children} />
+                      <SidebarSubnav>{section.children}</SidebarSubnav>
                     )}
                   </div>
                 );
@@ -500,7 +598,13 @@ export default function AppLayout() {
                   <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
                 </svg>
                 Docs
-                <svg width="9" height="9" viewBox="0 0 20 20" fill="currentColor" style={{ marginLeft: "auto", opacity: 0.5 }}>
+                <svg
+                  width="9"
+                  height="9"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                  style={{ marginLeft: "auto", opacity: 0.5 }}
+                >
                   <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
                   <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
                 </svg>
@@ -508,10 +612,7 @@ export default function AppLayout() {
             </div>
 
             {/* Bottom bar: gear button */}
-            <div
-              className="px-2 py-2"
-              style={{ borderTop: "1px solid var(--separator)" }}
-            >
+            <div className="px-2 py-2" style={{ borderTop: "1px solid var(--separator)" }}>
               <button
                 onClick={() => navigate("/preferences")}
                 style={{
@@ -530,7 +631,11 @@ export default function AppLayout() {
                 }}
               >
                 <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                  <path
+                    fillRule="evenodd"
+                    d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z"
+                    clipRule="evenodd"
+                  />
                 </svg>
                 Preferences
               </button>
@@ -560,12 +665,14 @@ export default function AppLayout() {
         </main>
 
         {/* Right sidebar: chat panel */}
-        <div style={{
-          width: chatOpen ? "340px" : 0,
-          flexShrink: 0,
-          overflow: "hidden",
-          transition: "width 0.15s ease",
-        }}>
+        <div
+          style={{
+            width: chatOpen ? "340px" : 0,
+            flexShrink: 0,
+            overflow: "hidden",
+            transition: "width 0.15s ease",
+          }}
+        >
           <ChatPanel />
         </div>
       </div>

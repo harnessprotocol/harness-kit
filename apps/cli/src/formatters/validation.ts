@@ -1,10 +1,7 @@
-import chalk from "chalk";
 import type { ValidationResult } from "@harness-kit/core";
+import chalk from "chalk";
 
-export function formatValidationResult(
-  result: ValidationResult,
-  filePath: string,
-): string {
+export function formatValidationResult(result: ValidationResult, filePath: string): string {
   const lines: string[] = [];
 
   if (result.valid) {

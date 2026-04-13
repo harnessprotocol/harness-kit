@@ -6,9 +6,7 @@ interface Props {
 }
 
 export default function SharesTab({ messages }: Props) {
-  const shares = messages
-    .filter((m): m is ShareMessage => m.type === "share")
-    .reverse();
+  const shares = messages.filter((m): m is ShareMessage => m.type === "share").reverse();
 
   if (shares.length === 0) {
     return (
@@ -25,10 +23,16 @@ export default function SharesTab({ messages }: Props) {
         }}
       >
         <span style={{ fontSize: "20px", lineHeight: 1 }}>✦</span>
-        <p style={{ margin: 0, fontSize: "12px", color: "var(--fg-subtle)" }}>
-          No shares yet.
-        </p>
-        <p style={{ margin: 0, fontSize: "11px", color: "var(--fg-subtle)", maxWidth: "180px", lineHeight: "1.5" }}>
+        <p style={{ margin: 0, fontSize: "12px", color: "var(--fg-subtle)" }}>No shares yet.</p>
+        <p
+          style={{
+            margin: 0,
+            fontSize: "11px",
+            color: "var(--fg-subtle)",
+            maxWidth: "180px",
+            lineHeight: "1.5",
+          }}
+        >
           Use "Share to Room" after syncing to share your config with the room.
         </p>
       </div>

@@ -67,12 +67,7 @@ const DEFAULT_DIMENSIONS = [
 const DEFAULT_PROMPT =
   "Evaluate the code quality, correctness, and completeness of each submission. Score each dimension 0-10.";
 
-const JUDGE_MODELS = [
-  "claude-sonnet-4-6",
-  "claude-opus-4-6",
-  "gpt-5",
-  "o4-mini",
-];
+const JUDGE_MODELS = ["claude-sonnet-4-6", "claude-opus-4-6", "gpt-5", "o4-mini"];
 
 // ── Styles ──────────────────────────────────────────────────
 
@@ -481,7 +476,8 @@ function generateMockResults(panels: ComparisonState["panels"], dimensions: stri
       // Deterministic-ish scores seeded from panel + dimension name lengths.
       score: Math.min(10, Math.max(2, ((panel.harnessName.length * 3 + label.length * 7) % 9) + 2)),
     }));
-    const overall = Math.round((dimScores.reduce((sum, d) => sum + d.score, 0) / dimScores.length) * 10) / 10;
+    const overall =
+      Math.round((dimScores.reduce((sum, d) => sum + d.score, 0) / dimScores.length) * 10) / 10;
     return {
       panelId: panel.id,
       harnessName: panel.harnessName,
@@ -524,7 +520,16 @@ function GavelIcon() {
 
 function CheckSmallIcon() {
   return (
-    <svg width="8" height="8" viewBox="0 0 16 16" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="8"
+      height="8"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="#fff"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <polyline points="3 8 7 12 13 4" />
     </svg>
   );
@@ -541,7 +546,10 @@ function ChevronIcon({ open }: { open: boolean }) {
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
-      style={{ transition: "transform 150ms ease-out", transform: open ? "rotate(90deg)" : "rotate(0deg)" }}
+      style={{
+        transition: "transform 150ms ease-out",
+        transform: open ? "rotate(90deg)" : "rotate(0deg)",
+      }}
     >
       <polyline points="6 4 10 8 6 12" />
     </svg>
@@ -592,7 +600,10 @@ export default function JudgePhase({ active }: JudgePhaseProps) {
   const handleRunJudge = useCallback(() => {
     const dims = [
       ...Array.from(enabledDimensions),
-      ...customRubric.split("\n").map((l) => l.trim()).filter(Boolean),
+      ...customRubric
+        .split("\n")
+        .map((l) => l.trim())
+        .filter(Boolean),
     ];
     if (dims.length === 0) return;
     const mockResults = generateMockResults(active.panels, dims);
@@ -648,9 +659,7 @@ export default function JudgePhase({ active }: JudgePhaseProps) {
             {/* Header */}
             <div>
               <h2 style={styles.cardTitle}>Automated Judge</h2>
-              <p style={styles.cardSubtitle}>
-                Use a harness to evaluate each submission
-              </p>
+              <p style={styles.cardSubtitle}>Use a harness to evaluate each submission</p>
             </div>
 
             {/* Judge Harness Selection */}
@@ -737,8 +746,12 @@ export default function JudgePhase({ active }: JudgePhaseProps) {
               <button
                 style={styles.rubricToggle}
                 onClick={() => setShowRubric(!showRubric)}
-                onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.7"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.opacity = "1"; }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = "0.7";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = "1";
+                }}
               >
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
                   <ChevronIcon open={showRubric} />
@@ -826,9 +839,7 @@ export default function JudgePhase({ active }: JudgePhaseProps) {
                   {/* Header */}
                   <div style={styles.verdictHeader}>
                     <span style={styles.verdictName}>{verdict.harnessName}</span>
-                    {verdict.isWinner && (
-                      <span style={styles.winnerBadge}>Winner</span>
-                    )}
+                    {verdict.isWinner && <span style={styles.winnerBadge}>Winner</span>}
                   </div>
 
                   {/* Score bars */}
@@ -862,10 +873,24 @@ export default function JudgePhase({ active }: JudgePhaseProps) {
                       justifyContent: "space-between",
                     }}
                   >
-                    <span style={{ fontSize: 12, fontWeight: 600, color: tokens.fgMuted, fontFamily: fontStack }}>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 600,
+                        color: tokens.fgMuted,
+                        fontFamily: fontStack,
+                      }}
+                    >
                       Overall
                     </span>
-                    <span style={{ fontSize: 18, fontWeight: 700, color: scoreColor(verdict.overallScore), fontFamily: monoStack }}>
+                    <span
+                      style={{
+                        fontSize: 18,
+                        fontWeight: 700,
+                        color: scoreColor(verdict.overallScore),
+                        fontFamily: monoStack,
+                      }}
+                    >
                       {verdict.overallScore}
                     </span>
                   </div>

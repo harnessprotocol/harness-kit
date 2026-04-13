@@ -1,9 +1,9 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import fs from "node:fs";
-import path from "node:path";
 import os from "node:os";
+import path from "node:path";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import * as store from "../src/store/yaml-store.js";
-import type { Project, Epic, Task } from "../src/types.js";
+import type { Epic, Project, Task } from "../src/types.js";
 
 describe("yaml-store", () => {
   let testDir: string;
@@ -118,7 +118,9 @@ describe("yaml-store", () => {
 
       expect(updated.description).toBe("Updated description");
       // Timestamp should be updated (may be same in fast tests, but at least should be >=)
-      expect(new Date(updated.updated_at).getTime()).toBeGreaterThanOrEqual(new Date(project.updated_at).getTime());
+      expect(new Date(updated.updated_at).getTime()).toBeGreaterThanOrEqual(
+        new Date(project.updated_at).getTime(),
+      );
     });
 
     it("updates multiple fields at once", () => {
@@ -174,7 +176,7 @@ describe("yaml-store", () => {
     it("returns empty array when no projects exist", () => {
       const projects = store.listProjects();
       // Filter out any non-test projects that might exist
-      const testProjects = projects.filter(p => p.slug.startsWith("test-"));
+      const testProjects = projects.filter((p) => p.slug.startsWith("test-"));
       expect(testProjects).toEqual([]);
     });
 
@@ -184,12 +186,12 @@ describe("yaml-store", () => {
       store.createProject({ name: "Test List 3" });
 
       const projects = store.listProjects();
-      const testProjects = projects.filter(p => p.slug.startsWith("test-list-"));
+      const testProjects = projects.filter((p) => p.slug.startsWith("test-list-"));
 
       expect(testProjects).toHaveLength(3);
-      expect(testProjects.map(p => p.name)).toContain("Test List 1");
-      expect(testProjects.map(p => p.name)).toContain("Test List 2");
-      expect(testProjects.map(p => p.name)).toContain("Test List 3");
+      expect(testProjects.map((p) => p.name)).toContain("Test List 1");
+      expect(testProjects.map((p) => p.name)).toContain("Test List 2");
+      expect(testProjects.map((p) => p.name)).toContain("Test List 3");
     });
   });
 
@@ -242,7 +244,9 @@ describe("yaml-store", () => {
 
       const loaded = store.readProject(project.slug);
       // Timestamp should be updated (may be same in fast tests, but at least should be >=)
-      expect(new Date(loaded!.updated_at).getTime()).toBeGreaterThanOrEqual(new Date(originalTimestamp).getTime());
+      expect(new Date(loaded!.updated_at).getTime()).toBeGreaterThanOrEqual(
+        new Date(originalTimestamp).getTime(),
+      );
     });
   });
 
@@ -277,7 +281,9 @@ describe("yaml-store", () => {
 
       expect(updated.status).toBe("completed");
       // Timestamp should be updated (may be same in fast tests, but at least should be >=)
-      expect(new Date(updated.updated_at).getTime()).toBeGreaterThanOrEqual(new Date(epic.updated_at).getTime());
+      expect(new Date(updated.updated_at).getTime()).toBeGreaterThanOrEqual(
+        new Date(epic.updated_at).getTime(),
+      );
     });
 
     it("updates epic status to archived", () => {
@@ -367,8 +373,12 @@ describe("yaml-store", () => {
       const loaded = store.readProject(project.slug);
       const loadedEpic = store.findEpic(loaded!, epic.id);
       // Timestamps should be updated (may be same in fast tests, but at least should be >=)
-      expect(new Date(loadedEpic!.updated_at).getTime()).toBeGreaterThanOrEqual(new Date(originalEpicTime).getTime());
-      expect(new Date(loaded!.updated_at).getTime()).toBeGreaterThanOrEqual(new Date(project.updated_at).getTime());
+      expect(new Date(loadedEpic!.updated_at).getTime()).toBeGreaterThanOrEqual(
+        new Date(originalEpicTime).getTime(),
+      );
+      expect(new Date(loaded!.updated_at).getTime()).toBeGreaterThanOrEqual(
+        new Date(project.updated_at).getTime(),
+      );
     });
   });
 
@@ -423,7 +433,9 @@ describe("yaml-store", () => {
 
       expect(updated.title).toBe("Updated Title");
       // Timestamp should be updated (may be same in fast tests, but at least should be >=)
-      expect(new Date(updated.updated_at).getTime()).toBeGreaterThanOrEqual(new Date(task.updated_at).getTime());
+      expect(new Date(updated.updated_at).getTime()).toBeGreaterThanOrEqual(
+        new Date(task.updated_at).getTime(),
+      );
     });
 
     it("updates multiple fields at once", () => {
@@ -564,12 +576,7 @@ describe("yaml-store", () => {
       const epic = store.createEpic(project.slug, "Epic");
       const task = store.createTask(project.slug, epic.id, "Task");
 
-      const updated = store.linkBranch(
-        project.slug,
-        task.id,
-        "feature/test",
-        "/path/to/worktree"
-      );
+      const updated = store.linkBranch(project.slug, task.id, "feature/test", "/path/to/worktree");
 
       expect(updated.branch).toBe("feature/test");
       expect(updated.worktree_path).toBe("/path/to/worktree");
@@ -662,7 +669,7 @@ describe("yaml-store", () => {
       store.createTask(project2.slug, epic2.id, "Task 3");
 
       const tasks = store.listTasks();
-      const testTasks = tasks.filter(t => t.project_slug.startsWith("test-list-tasks"));
+      const testTasks = tasks.filter((t) => t.project_slug.startsWith("test-list-tasks"));
 
       expect(testTasks).toHaveLength(3);
     });

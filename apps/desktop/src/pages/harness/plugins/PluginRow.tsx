@@ -1,7 +1,7 @@
-import { motion } from "framer-motion";
 import type { InstalledPlugin, PluginUpdateInfo } from "@harness-kit/shared";
+import { motion } from "framer-motion";
 import SourceBadge from "../../../components/SourceBadge";
-import { relativeDate, formatComponentCounts } from "../../../lib/plugin-utils";
+import { formatComponentCounts, relativeDate } from "../../../lib/plugin-utils";
 
 interface PluginRowProps {
   plugin: InstalledPlugin;
@@ -12,7 +12,14 @@ interface PluginRowProps {
   onContextMenu: (e: React.MouseEvent) => void;
 }
 
-export default function PluginRow({ plugin, update, index, isLast, onClick, onContextMenu }: PluginRowProps) {
+export default function PluginRow({
+  plugin,
+  update,
+  index,
+  isLast,
+  onClick,
+  onContextMenu,
+}: PluginRowProps) {
   const counts = formatComponentCounts(plugin.component_counts);
 
   return (
@@ -26,7 +33,9 @@ export default function PluginRow({ plugin, update, index, isLast, onClick, onCo
         onContextMenu(e);
       }}
       style={{
-        display: "flex", alignItems: "center", gap: "12px",
+        display: "flex",
+        alignItems: "center",
+        gap: "12px",
         padding: "10px 14px",
         borderBottom: isLast ? "none" : "1px solid var(--border-subtle)",
         cursor: "pointer",
@@ -43,24 +52,44 @@ export default function PluginRow({ plugin, update, index, isLast, onClick, onCo
           <SourceBadge marketplace={plugin.marketplace} />
         </div>
 
-        <p style={{
-          fontSize: "11px", color: "var(--fg-muted)", margin: "1px 0 0",
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        }}>
+        <p
+          style={{
+            fontSize: "11px",
+            color: "var(--fg-muted)",
+            margin: "1px 0 0",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
           {plugin.description || <em style={{ color: "var(--fg-subtle)" }}>No description</em>}
         </p>
 
         {(counts || (plugin.tags && plugin.tags.length > 0)) && (
-          <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "3px", flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              marginTop: "3px",
+              flexWrap: "wrap",
+            }}
+          >
             {counts && (
               <span style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>{counts}</span>
             )}
             {plugin.tags?.map((tag) => (
-              <span key={tag} style={{
-                fontSize: "10px", padding: "0 5px", borderRadius: "3px",
-                border: "1px solid var(--border-subtle)", color: "var(--fg-subtle)",
-                lineHeight: "16px",
-              }}>
+              <span
+                key={tag}
+                style={{
+                  fontSize: "10px",
+                  padding: "0 5px",
+                  borderRadius: "3px",
+                  border: "1px solid var(--border-subtle)",
+                  color: "var(--fg-subtle)",
+                  lineHeight: "16px",
+                }}
+              >
                 {tag}
               </span>
             ))}
@@ -70,10 +99,13 @@ export default function PluginRow({ plugin, update, index, isLast, onClick, onCo
 
       {/* Right zone: version + date */}
       <div style={{ flexShrink: 0, textAlign: "right" }}>
-        <div style={{
-          fontFamily: "ui-monospace, monospace", fontSize: "11px",
-          fontVariantNumeric: "tabular-nums",
-        }}>
+        <div
+          style={{
+            fontFamily: "ui-monospace, monospace",
+            fontSize: "11px",
+            fontVariantNumeric: "tabular-nums",
+          }}
+        >
           {update ? (
             <span>
               <span style={{ color: "var(--fg-subtle)", textDecoration: "line-through" }}>
