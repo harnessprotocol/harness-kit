@@ -18,7 +18,8 @@
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "fetch-schema": "npx tsx scripts/fetch-schema.ts"
+    "fetch-schema": "npx tsx scripts/fetch-schema.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@harness-kit/shared": "workspace:*",

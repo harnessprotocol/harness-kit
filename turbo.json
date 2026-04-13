@@ -11,6 +11,11 @@
       "outputs": [],
       "inputs": ["src/**", "**/__tests__/**", "**/*.test.*", "vitest.config.*"]
     },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "outputs": [],
+      "inputs": ["src/**", "tsconfig.json", "tsconfig.*.json"]
+    },
     "dev": {
       "dependsOn": ["^build"],
       "cache": false,

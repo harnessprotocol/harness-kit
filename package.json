@@ -12,6 +12,7 @@
     "dev:board-server": "pnpm --filter board-server dev",
     "build:board-server": "pnpm --filter board-server build",
     "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
     "lint": "biome ci .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",

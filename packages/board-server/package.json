@@ -15,7 +15,8 @@
     "launchd:uninstall": "bash scripts/launchd-ctl.sh uninstall",
     "launchd:status": "bash scripts/launchd-ctl.sh status",
     "launchd:logs": "bash scripts/launchd-ctl.sh logs",
-    "launchd:restart": "bash scripts/launchd-ctl.sh restart"
+    "launchd:restart": "bash scripts/launchd-ctl.sh restart",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.88.0",
