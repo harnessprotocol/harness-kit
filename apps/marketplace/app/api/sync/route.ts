@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { type NextRequest, NextResponse } from "next/server";
 
 function getServiceSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -13,10 +13,7 @@ const REPO_OWNER = "harnessprotocol";
 const REPO_NAME = "harness-kit";
 
 /** Verify GitHub webhook signature using Web Crypto API. */
-async function verifySignature(
-  payload: string,
-  signature: string,
-): Promise<boolean> {
+async function verifySignature(payload: string, signature: string): Promise<boolean> {
   const encoder = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",
@@ -57,9 +54,7 @@ async function fetchRepoDirEntries(
 }
 
 /** Derive "skill" vs "plugin" by inspecting the plugin directory on GitHub. */
-async function derivePluginType(
-  pluginDir: string,
-): Promise<"skill" | "plugin"> {
+async function derivePluginType(pluginDir: string): Promise<"skill" | "plugin"> {
   const entries = await fetchRepoDirEntries(pluginDir);
   if (!entries) return "skill";
 
@@ -118,10 +113,7 @@ export async function POST(request: NextRequest) {
 
   if (!GITHUB_WEBHOOK_SECRET) {
     console.warn("GITHUB_WEBHOOK_SECRET not set — rejecting webhook request");
-    return NextResponse.json(
-      { error: "Webhook secret not configured" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
   }
 
   const valid = await verifySignature(body, signature);
@@ -139,10 +131,7 @@ export async function POST(request: NextRequest) {
   // Read marketplace.json from the repo
   const manifestRaw = await fetchRepoFile(".claude-plugin/marketplace.json");
   if (!manifestRaw) {
-    return NextResponse.json(
-      { error: "Could not read marketplace.json" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Could not read marketplace.json" }, { status: 500 });
   }
 
   const manifest: MarketplaceManifest = JSON.parse(manifestRaw);
@@ -155,12 +144,8 @@ export async function POST(request: NextRequest) {
     const pluginDir = plugin.source.replace("./", "");
 
     // Try to fetch SKILL.md and README.md
-    const skillMd = await fetchRepoFile(
-      `${pluginDir}/skills/${plugin.name}/SKILL.md`,
-    );
-    const readmeMd = await fetchRepoFile(
-      `${pluginDir}/skills/${plugin.name}/README.md`,
-    );
+    const skillMd = await fetchRepoFile(`${pluginDir}/skills/${plugin.name}/SKILL.md`);
+    const readmeMd = await fetchRepoFile(`${pluginDir}/skills/${plugin.name}/README.md`);
 
     const componentType = await derivePluginType(pluginDir);
 
@@ -169,34 +154,30 @@ export async function POST(request: NextRequest) {
     autoTags.add(componentType);
 
     // Upsert component
-    const { error } = await supabase
-      .from("components")
-      .upsert(
-        {
-          slug: plugin.name,
-          name: plugin.name,
-          type: componentType,
-          description: plugin.description,
-          trust_tier: "official",
-          version: plugin.version,
-          author: plugin.author,
-          license: plugin.license,
-          skill_md: skillMd,
-          readme_md: readmeMd,
-          repo_url: `https://github.com/${REPO_OWNER}/${REPO_NAME}/tree/main/${pluginDir}`,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "slug" },
-      );
+    const { error } = await supabase.from("components").upsert(
+      {
+        slug: plugin.name,
+        name: plugin.name,
+        type: componentType,
+        description: plugin.description,
+        trust_tier: "official",
+        version: plugin.version,
+        author: plugin.author,
+        license: plugin.license,
+        skill_md: skillMd,
+        readme_md: readmeMd,
+        repo_url: `https://github.com/${REPO_OWNER}/${REPO_NAME}/tree/main/${pluginDir}`,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "slug" },
+    );
 
     if (error) {
       results.push({ name: plugin.name, status: `error: ${error.message}` });
     } else {
       // Upsert tags
       for (const tagSlug of autoTags) {
-        await supabase
-          .from("tags")
-          .upsert({ slug: tagSlug }, { onConflict: "slug" });
+        await supabase.from("tags").upsert({ slug: tagSlug }, { onConflict: "slug" });
 
         const { data: tagRow } = await supabase
           .from("tags")

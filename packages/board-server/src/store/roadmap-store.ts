@@ -1,14 +1,14 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import os from 'node:os';
-import yaml from 'js-yaml';
-import type { Roadmap, CompetitorAnalysis } from '../roadmap-types.js';
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import yaml from "js-yaml";
+import type { CompetitorAnalysis, Roadmap } from "../roadmap-types.js";
 
 function getBoardDir(): string {
-  if (process.env.NODE_ENV === 'test' && process.env.BOARD_TEST_DIR) {
+  if (process.env.NODE_ENV === "test" && process.env.BOARD_TEST_DIR) {
     return process.env.BOARD_TEST_DIR;
   }
-  return path.join(os.homedir(), '.harness', 'board', 'projects');
+  return path.join(os.homedir(), ".harness", "board", "projects");
 }
 
 let roadmapDirEnsured = false;
@@ -43,7 +43,7 @@ function competitorsPath(slug: string): string {
 export function readRoadmap(slug: string): Roadmap | null {
   const filePath = roadmapPath(slug);
   if (!fs.existsSync(filePath)) return null;
-  const raw = fs.readFileSync(filePath, 'utf-8');
+  const raw = fs.readFileSync(filePath, "utf-8");
   return yaml.load(raw) as Roadmap;
 }
 
@@ -52,14 +52,14 @@ export function writeRoadmap(slug: string, roadmap: Roadmap): void {
   const filePath = roadmapPath(slug);
   const raw = yaml.dump(roadmap, { lineWidth: 120 });
   const tmpPath = `${filePath}.tmp`;
-  fs.writeFileSync(tmpPath, raw, 'utf-8');
+  fs.writeFileSync(tmpPath, raw, "utf-8");
   fs.renameSync(tmpPath, filePath);
 }
 
 export function readCompetitorAnalysis(slug: string): CompetitorAnalysis | null {
   const filePath = competitorsPath(slug);
   if (!fs.existsSync(filePath)) return null;
-  const raw = fs.readFileSync(filePath, 'utf-8');
+  const raw = fs.readFileSync(filePath, "utf-8");
   return yaml.load(raw) as CompetitorAnalysis;
 }
 
@@ -68,6 +68,6 @@ export function writeCompetitorAnalysis(slug: string, analysis: CompetitorAnalys
   const filePath = competitorsPath(slug);
   const raw = yaml.dump(analysis, { lineWidth: 120 });
   const tmpPath = `${filePath}.tmp`;
-  fs.writeFileSync(tmpPath, raw, 'utf-8');
+  fs.writeFileSync(tmpPath, raw, "utf-8");
   fs.renameSync(tmpPath, filePath);
 }

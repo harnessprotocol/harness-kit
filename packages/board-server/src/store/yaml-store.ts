@@ -1,14 +1,26 @@
-import fs from 'node:fs';
-import path from 'node:path';
-import os from 'node:os';
-import yaml from 'js-yaml';
-import type { Project, Epic, Task, Subtask, Comment, TaskStatus, SubtaskStatus, TaskCategory, TaskComplexity, EpicStatus, TaskExecution } from '../types.js';
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import yaml from "js-yaml";
+import type {
+  Comment,
+  Epic,
+  EpicStatus,
+  Project,
+  Subtask,
+  SubtaskStatus,
+  Task,
+  TaskCategory,
+  TaskComplexity,
+  TaskExecution,
+  TaskStatus,
+} from "../types.js";
 
 function getBoardDir(): string {
-  if (process.env.NODE_ENV === 'test' && process.env.BOARD_TEST_DIR) {
+  if (process.env.NODE_ENV === "test" && process.env.BOARD_TEST_DIR) {
     return process.env.BOARD_TEST_DIR;
   }
-  return path.join(os.homedir(), '.harness', 'board', 'projects');
+  return path.join(os.homedir(), ".harness", "board", "projects");
 }
 
 let boardDirEnsured = false;
@@ -36,8 +48,8 @@ function projectPath(slug: string): string {
 function slugify(name: string): string {
   return name
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '');
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 }
 
 function now(): string {
@@ -61,7 +73,7 @@ function normalizeTask(task: Task): Task {
 export function readProject(slug: string): Project | null {
   const filePath = projectPath(slug);
   if (!fs.existsSync(filePath)) return null;
-  const raw = fs.readFileSync(filePath, 'utf-8');
+  const raw = fs.readFileSync(filePath, "utf-8");
   const project = yaml.load(raw) as Project;
   for (const epic of project.epics) {
     for (const task of epic.tasks) normalizeTask(task);
@@ -75,16 +87,18 @@ export function writeProject(project: Project): void {
   const raw = yaml.dump(project, { lineWidth: 120 });
   // Atomic write: temp file → rename
   const tmpPath = `${filePath}.tmp`;
-  fs.writeFileSync(tmpPath, raw, 'utf-8');
+  fs.writeFileSync(tmpPath, raw, "utf-8");
   fs.renameSync(tmpPath, filePath);
 }
 
 export function listProjects(): Project[] {
   ensureBoardDir();
   const boardDir = getBoardDir();
-  const files = fs.readdirSync(boardDir).filter(f => f.endsWith('.yaml') && !f.includes('.roadmap') && !f.includes('.competitors'));
-  return files.map(f => {
-    const raw = fs.readFileSync(path.join(boardDir, f), 'utf-8');
+  const files = fs
+    .readdirSync(boardDir)
+    .filter((f) => f.endsWith(".yaml") && !f.includes(".roadmap") && !f.includes(".competitors"));
+  return files.map((f) => {
+    const raw = fs.readFileSync(path.join(boardDir, f), "utf-8");
     const project = yaml.load(raw) as Project;
     for (const epic of project.epics) {
       for (const task of epic.tasks) normalizeTask(task);
@@ -100,7 +114,12 @@ export function projectsDir(): string {
 
 // --- Project operations ---
 
-export function createProject(opts: { name: string; description?: string; color?: string; repo_url?: string }): Project {
+export function createProject(opts: {
+  name: string;
+  description?: string;
+  color?: string;
+  repo_url?: string;
+}): Project {
   const { name, description, color, repo_url } = opts;
   const slug = slugify(name);
   const existing = readProject(slug);
@@ -124,12 +143,14 @@ export function createProject(opts: { name: string; description?: string; color?
 
 export function updateProject(
   slug: string,
-  updates: Partial<Pick<Project, 'description' | 'color' | 'repo_url'>>,
+  updates: Partial<Pick<Project, "description" | "color" | "repo_url">>,
 ): Project {
   const project = readProject(slug);
   if (!project) throw new Error(`Project "${slug}" not found`);
   // Strip undefined and empty-string values
-  const cleanUpdates = Object.fromEntries(Object.entries(updates).filter(([, v]) => v !== undefined && v !== ''));
+  const cleanUpdates = Object.fromEntries(
+    Object.entries(updates).filter(([, v]) => v !== undefined && v !== ""),
+  );
   Object.assign(project, cleanUpdates);
   project.updated_at = now();
   writeProject(project);
@@ -146,7 +167,7 @@ export function createEpic(projectSlug: string, name: string, description?: stri
     id: project.next_id++,
     name,
     description,
-    status: 'active',
+    status: "active",
     tasks: [],
     created_at: ts,
     updated_at: ts,
@@ -158,7 +179,7 @@ export function createEpic(projectSlug: string, name: string, description?: stri
 }
 
 export function findEpic(project: Project, epicId: number): Epic | undefined {
-  return project.epics.find(e => e.id === epicId);
+  return project.epics.find((e) => e.id === epicId);
 }
 
 export function updateEpicStatus(projectSlug: string, epicId: number, status: EpicStatus): Epic {
@@ -190,7 +211,7 @@ export function createTask(
     id: project.next_id++,
     title,
     description,
-    status: 'planning',
+    status: "planning",
     linked_commits: [],
     comments: [],
     subtasks: [],
@@ -207,13 +228,17 @@ export function createTask(
 
 export function findTask(project: Project, taskId: number): { epic: Epic; task: Task } | undefined {
   for (const epic of project.epics) {
-    const task = epic.tasks.find(t => t.id === taskId);
+    const task = epic.tasks.find((t) => t.id === taskId);
     if (task) return { epic, task };
   }
   return undefined;
 }
 
-function withTask(projectSlug: string, taskId: number, fn: (task: Task, epic: Epic, project: Project) => void): Task {
+function withTask(
+  projectSlug: string,
+  taskId: number,
+  fn: (task: Task, epic: Epic, project: Project) => void,
+): Task {
   const project = readProject(projectSlug);
   if (!project) throw new Error(`Project "${projectSlug}" not found`);
   const found = findTask(project, taskId);
@@ -230,10 +255,26 @@ function withTask(projectSlug: string, taskId: number, fn: (task: Task, epic: Ep
 export function updateTask(
   projectSlug: string,
   taskId: number,
-  updates: Partial<Pick<Task, 'title' | 'description' | 'status' | 'priority' | 'category' | 'complexity' | 'no_worktree' | 'default_harness' | 'default_model' | 'linkedFeatureId'>>,
+  updates: Partial<
+    Pick<
+      Task,
+      | "title"
+      | "description"
+      | "status"
+      | "priority"
+      | "category"
+      | "complexity"
+      | "no_worktree"
+      | "default_harness"
+      | "default_model"
+      | "linkedFeatureId"
+    >
+  >,
 ): Task {
   // Strip undefined values so we don't wipe existing fields
-  const cleanUpdates = Object.fromEntries(Object.entries(updates).filter(([, v]) => v !== undefined));
+  const cleanUpdates = Object.fromEntries(
+    Object.entries(updates).filter(([, v]) => v !== undefined),
+  );
   return withTask(projectSlug, taskId, (task) => {
     Object.assign(task, cleanUpdates);
   });
@@ -246,7 +287,7 @@ export function moveTask(projectSlug: string, taskId: number, status: TaskStatus
 export function addComment(
   projectSlug: string,
   taskId: number,
-  author: 'claude' | 'user',
+  author: "claude" | "user",
   body: string,
 ): Comment {
   const comment: Comment = { author, timestamp: now(), body };
@@ -256,7 +297,12 @@ export function addComment(
   return comment;
 }
 
-export function linkBranch(projectSlug: string, taskId: number, branch: string, worktreePath?: string): Task {
+export function linkBranch(
+  projectSlug: string,
+  taskId: number,
+  branch: string,
+  worktreePath?: string,
+): Task {
   return withTask(projectSlug, taskId, (task) => {
     task.branch = branch;
     if (worktreePath) task.worktree_path = worktreePath;
@@ -286,22 +332,26 @@ export function unblockTask(projectSlug: string, taskId: number): Task {
 export function updateTaskExecution(
   projectSlug: string,
   taskId: number,
-  updates: Partial<Omit<TaskExecution, 'terminal_id'>>,
+  updates: Partial<Omit<TaskExecution, "terminal_id">>,
 ): Task {
-  const cleanUpdates = Object.fromEntries(Object.entries(updates).filter(([, v]) => v !== undefined));
+  const cleanUpdates = Object.fromEntries(
+    Object.entries(updates).filter(([, v]) => v !== undefined),
+  );
   return withTask(projectSlug, taskId, (task) => {
-    if (!task.execution) task.execution = { status: 'idle', harness_id: 'claude' };
+    if (!task.execution) task.execution = { status: "idle", harness_id: "claude" };
     Object.assign(task.execution, cleanUpdates);
   });
 }
 
 export function updateProjectSettings(
   slug: string,
-  updates: Partial<Pick<Project, 'default_harness' | 'default_model' | 'max_concurrent'>>,
+  updates: Partial<Pick<Project, "default_harness" | "default_model" | "max_concurrent">>,
 ): Project {
   const project = readProject(slug);
   if (!project) throw new Error(`Project "${slug}" not found`);
-  const cleanUpdates = Object.fromEntries(Object.entries(updates).filter(([, v]) => v !== undefined));
+  const cleanUpdates = Object.fromEntries(
+    Object.entries(updates).filter(([, v]) => v !== undefined),
+  );
   Object.assign(project, cleanUpdates);
   project.updated_at = now();
   writeProject(project);
@@ -322,7 +372,7 @@ export function addSubtask(
       id: task.next_subtask_id++,
       title,
       description,
-      status: 'pending',
+      status: "pending",
       files: [],
     };
     task.subtasks.push(subtask);
@@ -334,14 +384,14 @@ export function updateSubtask(
   projectSlug: string,
   taskId: number,
   subtaskId: number,
-  updates: Partial<Pick<Subtask, 'title' | 'description' | 'status'>>,
+  updates: Partial<Pick<Subtask, "title" | "description" | "status">>,
 ): Subtask {
   let subtask!: Subtask;
   const cleanUpdates = Object.fromEntries(
     Object.entries(updates).filter(([, v]) => v !== undefined),
   );
   withTask(projectSlug, taskId, (task) => {
-    const found = task.subtasks.find(s => s.id === subtaskId);
+    const found = task.subtasks.find((s) => s.id === subtaskId);
     if (!found) throw new Error(`Subtask ${subtaskId} not found on task ${taskId}`);
     Object.assign(found, cleanUpdates);
     subtask = found;
@@ -349,13 +399,9 @@ export function updateSubtask(
   return subtask;
 }
 
-export function removeSubtask(
-  projectSlug: string,
-  taskId: number,
-  subtaskId: number,
-): void {
+export function removeSubtask(projectSlug: string, taskId: number, subtaskId: number): void {
   withTask(projectSlug, taskId, (task) => {
-    const idx = task.subtasks.findIndex(s => s.id === subtaskId);
+    const idx = task.subtasks.findIndex((s) => s.id === subtaskId);
     if (idx === -1) throw new Error(`Subtask ${subtaskId} not found on task ${taskId}`);
     task.subtasks.splice(idx, 1);
   });
@@ -369,7 +415,7 @@ export function addSubtaskFile(
 ): Subtask {
   let subtask!: Subtask;
   withTask(projectSlug, taskId, (task) => {
-    const found = task.subtasks.find(s => s.id === subtaskId);
+    const found = task.subtasks.find((s) => s.id === subtaskId);
     if (!found) throw new Error(`Subtask ${subtaskId} not found on task ${taskId}`);
     if (!found.files.includes(filePath)) found.files.push(filePath);
     subtask = found;
@@ -383,15 +429,24 @@ export type TaskFilter = {
   status?: TaskStatus;
 };
 
-export function listTasks(filter: TaskFilter = {}): Array<Task & { project_slug: string; epic_id: number; epic_name: string }> {
-  const projects = filter.project ? [readProject(filter.project)].filter(Boolean) as Project[] : listProjects();
+export function listTasks(
+  filter: TaskFilter = {},
+): Array<Task & { project_slug: string; epic_id: number; epic_name: string }> {
+  const projects = filter.project
+    ? ([readProject(filter.project)].filter(Boolean) as Project[])
+    : listProjects();
   const results: Array<Task & { project_slug: string; epic_id: number; epic_name: string }> = [];
   for (const project of projects) {
     for (const epic of project.epics) {
       if (filter.epicId !== undefined && epic.id !== filter.epicId) continue;
       for (const task of epic.tasks) {
         if (filter.status && task.status !== filter.status) continue;
-        results.push({ ...task, project_slug: project.slug, epic_id: epic.id, epic_name: epic.name });
+        results.push({
+          ...task,
+          project_slug: project.slug,
+          epic_id: epic.id,
+          epic_name: epic.name,
+        });
       }
     }
   }

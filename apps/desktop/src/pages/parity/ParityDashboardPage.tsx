@@ -1,14 +1,14 @@
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import type { ParityDriftItem, ParityFeature, ParitySnapshot } from "../../lib/tauri";
 import {
-  runParityScan,
-  getParitySnapshot,
-  getParityDrift,
   acknowledgeDrift,
-  createConfigFile,
   addToParityBaseline,
+  createConfigFile,
+  getParityDrift,
+  getParitySnapshot,
+  runParityScan,
 } from "../../lib/tauri";
-import type { ParitySnapshot, ParityFeature, ParityDriftItem } from "../../lib/tauri";
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -144,9 +144,12 @@ function getFeatureDescription(category: string, featureName: string): string {
   if (specific) return specific;
   // Fallback by category + name patterns
   if (category === "settings_key") {
-    if (featureName.startsWith("permissions.")) return `Permission setting: controls ${featureName.split(".").slice(1).join(".")} access.`;
-    if (featureName.startsWith("hooks.")) return `Hook config for the ${featureName.split(".").slice(1).join(".")} event.`;
-    if (featureName.startsWith("env.")) return `Environment variable: ${featureName.split(".").slice(1).join(".")}.`;
+    if (featureName.startsWith("permissions."))
+      return `Permission setting: controls ${featureName.split(".").slice(1).join(".")} access.`;
+    if (featureName.startsWith("hooks."))
+      return `Hook config for the ${featureName.split(".").slice(1).join(".")} event.`;
+    if (featureName.startsWith("env."))
+      return `Environment variable: ${featureName.split(".").slice(1).join(".")}.`;
     return "Settings key found in ~/.claude/settings.json.";
   }
   if (category === "cli_flag") return "Command-line flag for the Claude Code CLI.";
@@ -169,10 +172,7 @@ const CONFIG_FILE_TEMPLATES: Record<string, string> = {
   ".claude/settings.json": '{\n  "permissions": {\n    "allow": [],\n    "deny": []\n  }\n}',
 };
 
-const DRIFT_DESCRIPTIONS: Record<
-  string,
-  (item: ParityDriftItem) => string
-> = {
+const DRIFT_DESCRIPTIONS: Record<string, (item: ParityDriftItem) => string> = {
   missing_file: (item) => {
     const cfg = FEATURE_DESCRIPTIONS.config_file[item.featureName];
     return cfg
@@ -348,13 +348,7 @@ function featureStatus(feature: ParityFeature): "ok" | "new" | "not_found" | "in
 
 // ── Feature matrix section ───────────────────────────────────
 
-function FeatureSection({
-  category,
-  features,
-}: {
-  category: string;
-  features: ParityFeature[];
-}) {
+function FeatureSection({ category, features }: { category: string; features: ParityFeature[] }) {
   const [open, setOpen] = useState(true);
   const label = CATEGORY_LABELS[category] ?? category;
   const categoryDesc = CATEGORY_DESCRIPTIONS[category] ?? "";
@@ -491,11 +485,7 @@ function FeatureSection({
                           fontSize: "11px",
                         }}
                       >
-                        {desc ? (
-                          <Tooltip text={desc}>{feature.name}</Tooltip>
-                        ) : (
-                          feature.name
-                        )}
+                        {desc ? <Tooltip text={desc}>{feature.name}</Tooltip> : feature.name}
                       </td>
                       <td style={{ padding: "7px 14px", color: "var(--fg-subtle)" }}>
                         {feature.knownToHarness ? "Tracked" : "—"}
@@ -571,9 +561,8 @@ function DriftRow({
   const driftDescription = descFn ? descFn(item) : (item.details ?? "");
   const featureDescription = getFeatureDescription(item.category, item.featureName);
 
-  const template = item.driftType === "missing_file"
-    ? CONFIG_FILE_TEMPLATES[item.featureName]
-    : null;
+  const template =
+    item.driftType === "missing_file" ? CONFIG_FILE_TEMPLATES[item.featureName] : null;
 
   async function runAction(label: string, fn: () => Promise<void>) {
     setActionLoading(label);
@@ -677,8 +666,18 @@ function DriftRow({
                 border: "1px solid var(--border-base)",
               }}
             >
-              <div style={{ fontSize: "10px", fontWeight: 600, color: "var(--fg-subtle)", marginBottom: "3px", fontVariantCaps: "all-small-caps", letterSpacing: "0.04em" }}>
-                About this {CATEGORY_LABELS[item.category]?.replace(/s$/, "").toLowerCase() ?? "feature"}
+              <div
+                style={{
+                  fontSize: "10px",
+                  fontWeight: 600,
+                  color: "var(--fg-subtle)",
+                  marginBottom: "3px",
+                  fontVariantCaps: "all-small-caps",
+                  letterSpacing: "0.04em",
+                }}
+              >
+                About this{" "}
+                {CATEGORY_LABELS[item.category]?.replace(/s$/, "").toLowerCase() ?? "feature"}
               </div>
               <div style={{ fontSize: "12px", color: "var(--fg-base)", lineHeight: 1.45 }}>
                 {featureDescription}
@@ -687,7 +686,14 @@ function DriftRow({
           )}
 
           {/* Why it's drifting */}
-          <p style={{ margin: "0 0 12px", fontSize: "12px", color: "var(--fg-subtle)", lineHeight: 1.5 }}>
+          <p
+            style={{
+              margin: "0 0 12px",
+              fontSize: "12px",
+              color: "var(--fg-subtle)",
+              lineHeight: 1.5,
+            }}
+          >
             {driftDescription}
           </p>
 
@@ -750,9 +756,7 @@ function DriftRow({
                 primary
                 loading={actionLoading === "baseline"}
                 onClick={() =>
-                  runAction("baseline", () =>
-                    addToParityBaseline(item.category, item.featureName)
-                  )
+                  runAction("baseline", () => addToParityBaseline(item.category, item.featureName))
                 }
               />
             )}
@@ -866,7 +870,10 @@ export default function ParityDashboardPage() {
   const driftBreakdown = driftItems
     .filter((d) => !d.acknowledged)
     .reduce(
-      (acc, d) => { acc[d.category] = (acc[d.category] || 0) + 1; return acc; },
+      (acc, d) => {
+        acc[d.category] = (acc[d.category] || 0) + 1;
+        return acc;
+      },
       {} as Record<string, number>,
     );
   const driftBreakdownStr =
@@ -1002,11 +1009,7 @@ export default function ParityDashboardPage() {
 
         {snapshot &&
           orderedCategories.map((cat) => (
-            <FeatureSection
-              key={cat}
-              category={cat}
-              features={snapshot.categories[cat] ?? []}
-            />
+            <FeatureSection key={cat} category={cat} features={snapshot.categories[cat] ?? []} />
           ))}
       </div>
 

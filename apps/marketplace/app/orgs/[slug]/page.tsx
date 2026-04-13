@@ -18,11 +18,7 @@ interface OrgMemberWithUser {
   };
 }
 
-export default async function OrgDetailPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function OrgDetailPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
 
   let organization: Organization | null = null;
@@ -63,8 +59,10 @@ export default async function OrgDetailPage({
           users: {
             id: (row.users as Record<string, unknown>)?.id as string,
             email: (row.users as Record<string, unknown>)?.email as string,
-            user_metadata: (row.users as Record<string, unknown>)
-              ?.raw_user_meta_data as { name?: string; avatar_url?: string },
+            user_metadata: (row.users as Record<string, unknown>)?.raw_user_meta_data as {
+              name?: string;
+              avatar_url?: string;
+            },
           },
         }));
       }
@@ -117,9 +115,7 @@ export default async function OrgDetailPage({
               </span>
             </div>
             {organization.description && (
-              <p className="mt-3 text-lg text-gray-400">
-                {organization.description}
-              </p>
+              <p className="mt-3 text-lg text-gray-400">{organization.description}</p>
             )}
           </div>
 
@@ -175,9 +171,7 @@ export default async function OrgDetailPage({
                     member.users.email?.split("@")[0] ||
                     "Unknown";
                   const avatarUrl = member.users.user_metadata?.avatar_url;
-                  const joinedDate = new Date(
-                    member.created_at,
-                  ).toLocaleDateString("en-US", {
+                  const joinedDate = new Date(member.created_at).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
                     year: "numeric",
@@ -202,18 +196,14 @@ export default async function OrgDetailPage({
                         )}
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-gray-200">
-                              {displayName}
-                            </span>
+                            <span className="font-medium text-gray-200">{displayName}</span>
                             {member.role === "admin" && (
                               <span className="rounded-full bg-violet-500/20 px-2 py-0.5 text-xs text-violet-400">
                                 Admin
                               </span>
                             )}
                           </div>
-                          <div className="text-sm text-gray-500">
-                            Joined {joinedDate}
-                          </div>
+                          <div className="text-sm text-gray-500">Joined {joinedDate}</div>
                         </div>
                       </div>
                     </div>
@@ -249,9 +239,7 @@ export default async function OrgDetailPage({
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
-                            <h3 className="font-semibold text-gray-100">
-                              {plugin.name}
-                            </h3>
+                            <h3 className="font-semibold text-gray-100">{plugin.name}</h3>
                             <span className="rounded-full border border-[#2a2a2e] px-2 py-0.5 text-xs capitalize text-gray-400">
                               {plugin.type}
                             </span>
@@ -277,9 +265,7 @@ export default async function OrgDetailPage({
                               {plugin.install_count.toLocaleString()}
                             </span>
                             <span>v{plugin.version}</span>
-                            {pluginUpdatedDate && (
-                              <span>Updated {pluginUpdatedDate}</span>
-                            )}
+                            {pluginUpdatedDate && <span>Updated {pluginUpdatedDate}</span>}
                           </div>
                         </div>
                       </div>
@@ -302,26 +288,19 @@ export default async function OrgDetailPage({
               <div className="space-y-2 text-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Members</span>
-                  <span className="font-medium text-gray-200">
-                    {members.length}
-                  </span>
+                  <span className="font-medium text-gray-200">{members.length}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Plugins</span>
-                  <span className="font-medium text-gray-200">
-                    {orgPlugins.length}
-                  </span>
+                  <span className="font-medium text-gray-200">{orgPlugins.length}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-500">Created</span>
                   <span className="font-medium text-gray-200">
-                    {new Date(organization.created_at).toLocaleDateString(
-                      "en-US",
-                      {
-                        month: "short",
-                        year: "numeric",
-                      },
-                    )}
+                    {new Date(organization.created_at).toLocaleDateString("en-US", {
+                      month: "short",
+                      year: "numeric",
+                    })}
                   </span>
                 </div>
               </div>
@@ -347,9 +326,7 @@ export default async function OrgDetailPage({
                           <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#2a2a2e] text-xs font-semibold text-gray-300">
                             {displayName.charAt(0).toUpperCase()}
                           </div>
-                          <span className="text-sm text-gray-200">
-                            {displayName}
-                          </span>
+                          <span className="text-sm text-gray-200">{displayName}</span>
                         </li>
                       );
                     })}

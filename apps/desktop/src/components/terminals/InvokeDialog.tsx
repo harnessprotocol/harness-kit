@@ -1,6 +1,6 @@
+import type { HarnessInfo } from "@harness-kit/shared";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { HarnessInfo } from "@harness-kit/shared";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -205,7 +205,13 @@ export default function InvokeDialog({
 
   return createPortal(
     <div style={styles.backdrop} onPointerDown={onClose}>
-      <div style={styles.card} role="dialog" aria-modal="true" aria-label={`Invoke in ${terminalTitle}`} onPointerDown={(e) => e.stopPropagation()}>
+      <div
+        style={styles.card}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Invoke in ${terminalTitle}`}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div style={styles.header}>
           <span style={styles.title}>Invoke in {terminalTitle}</span>
@@ -221,7 +227,16 @@ export default function InvokeDialog({
               e.currentTarget.style.color = "#a09d98";
             }}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <line x1="18" y1="6" x2="6" y2="18" />
               <line x1="6" y1="6" x2="18" y2="18" />
             </svg>
@@ -232,19 +247,20 @@ export default function InvokeDialog({
         <div style={styles.body}>
           {/* Harness selector */}
           <div>
-            <label htmlFor="invoke-harness" style={styles.fieldLabel}>Harness</label>
+            <label htmlFor="invoke-harness" style={styles.fieldLabel}>
+              Harness
+            </label>
             <select
               id="invoke-harness"
               style={styles.select}
               value={selectedHarness}
               onChange={(e) => setSelectedHarness(e.target.value)}
             >
-              {harnesses.length === 0 && (
-                <option value="">No harnesses detected</option>
-              )}
+              {harnesses.length === 0 && <option value="">No harnesses detected</option>}
               {harnesses.map((h) => (
                 <option key={h.id} value={h.id}>
-                  {h.name}{h.authenticated ? "" : " (not authenticated)"}
+                  {h.name}
+                  {h.authenticated ? "" : " (not authenticated)"}
                 </option>
               ))}
             </select>
@@ -252,7 +268,9 @@ export default function InvokeDialog({
 
           {/* Model selector */}
           <div>
-            <label htmlFor="invoke-model" style={styles.fieldLabel}>Model</label>
+            <label htmlFor="invoke-model" style={styles.fieldLabel}>
+              Model
+            </label>
             <select
               id="invoke-model"
               style={styles.select}
@@ -260,18 +278,20 @@ export default function InvokeDialog({
               onChange={(e) => setSelectedModel(e.target.value)}
               disabled={availableModels.length === 0}
             >
-              {availableModels.length === 0 && (
-                <option value="">No models available</option>
-              )}
+              {availableModels.length === 0 && <option value="">No models available</option>}
               {availableModels.map((m) => (
-                <option key={m} value={m}>{m}</option>
+                <option key={m} value={m}>
+                  {m}
+                </option>
               ))}
             </select>
           </div>
 
           {/* Prompt */}
           <div>
-            <label htmlFor="invoke-prompt" style={styles.fieldLabel}>Prompt</label>
+            <label htmlFor="invoke-prompt" style={styles.fieldLabel}>
+              Prompt
+            </label>
             <textarea
               id="invoke-prompt"
               ref={promptRef}

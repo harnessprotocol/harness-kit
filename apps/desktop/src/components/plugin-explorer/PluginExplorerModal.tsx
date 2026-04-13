@@ -1,10 +1,10 @@
-import { useEffect, useCallback } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import type { InstalledPlugin } from "@harness-kit/shared";
+import { AnimatePresence, motion } from "framer-motion";
+import { useCallback, useEffect } from "react";
 import { usePluginExplorer } from "../../hooks/usePluginExplorer";
-import PluginExplorerHeader from "./PluginExplorerHeader";
 import FileTree from "./FileTree";
 import FileViewer from "./FileViewer";
+import PluginExplorerHeader from "./PluginExplorerHeader";
 
 interface PluginExplorerModalProps {
   plugin: InstalledPlugin | null;
@@ -42,23 +42,24 @@ export default function PluginExplorerModal({ plugin, onClose }: PluginExplorerM
   return (
     <AnimatePresence>
       {open && plugin && (
-          /* Full-overlay container — covers the content area, not the viewport */
-          <motion.div
-            key="explorer-overlay"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            onClick={handleClose}
-            style={{
-              position: "absolute", inset: 0,
-              background: "rgba(0,0,0,0.5)",
-              zIndex: 200,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
+        /* Full-overlay container — covers the content area, not the viewport */
+        <motion.div
+          key="explorer-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+          onClick={handleClose}
+          style={{
+            position: "absolute",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            zIndex: 200,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
           {/* Modal */}
           <motion.div
             key="explorer-modal"
@@ -100,28 +101,44 @@ export default function PluginExplorerModal({ plugin, onClose }: PluginExplorerM
 
             {/* Body */}
             {explorer.loading ? (
-              <div style={{
-                flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-                color: "var(--fg-subtle)", fontSize: "13px",
-              }}>
+              <div
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--fg-subtle)",
+                  fontSize: "13px",
+                }}
+              >
                 Loading plugin files...
               </div>
             ) : explorer.error && !explorer.tree ? (
-              <div style={{
-                flex: 1, display: "flex", alignItems: "center", justifyContent: "center",
-                color: "var(--danger)", fontSize: "13px",
-              }}>
+              <div
+                style={{
+                  flex: 1,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--danger)",
+                  fontSize: "13px",
+                }}
+              >
                 {explorer.error}
               </div>
             ) : (
               <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
                 {/* Left panel: file tree */}
-                <div style={{
-                  width: "250px", flexShrink: 0,
-                  borderRight: "1px solid var(--border-base)",
-                  display: "flex", flexDirection: "column",
-                  overflow: "hidden",
-                }}>
+                <div
+                  style={{
+                    width: "250px",
+                    flexShrink: 0,
+                    borderRight: "1px solid var(--border-base)",
+                    display: "flex",
+                    flexDirection: "column",
+                    overflow: "hidden",
+                  }}
+                >
                   {explorer.tree && (
                     <FileTree
                       tree={explorer.tree}
@@ -132,10 +149,15 @@ export default function PluginExplorerModal({ plugin, onClose }: PluginExplorerM
                 </div>
 
                 {/* Right panel: file viewer */}
-                <div style={{
-                  flex: 1, display: "flex", flexDirection: "column",
-                  minWidth: 0, minHeight: 0,
-                }}>
+                <div
+                  style={{
+                    flex: 1,
+                    display: "flex",
+                    flexDirection: "column",
+                    minWidth: 0,
+                    minHeight: 0,
+                  }}
+                >
                   <FileViewer
                     filePath={explorer.selectedPath}
                     content={explorer.fileContent}
@@ -147,7 +169,7 @@ export default function PluginExplorerModal({ plugin, onClose }: PluginExplorerM
               </div>
             )}
           </motion.div>
-          </motion.div>
+        </motion.div>
       )}
     </AnimatePresence>
   );

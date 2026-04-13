@@ -1,22 +1,22 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import { estimateCost, estimateTotalCost, formatCost, MODEL_PRICING } from "../pricing";
 
 describe("pricing", () => {
   describe("estimateCost", () => {
     it("calculates correct cost for a known model (sonnet: 1M input + 1M output = $18.00)", () => {
       const cost = estimateCost("claude-sonnet-4-6", 1_000_000, 1_000_000);
-      expect(cost).toBeCloseTo(18.00, 5);
+      expect(cost).toBeCloseTo(18.0, 5);
     });
 
     it("calculates correct cost for haiku (1M input + 1M output = $4.80)", () => {
       const cost = estimateCost("claude-haiku-4-5", 1_000_000, 1_000_000);
-      expect(cost).toBeCloseTo(4.80, 5);
+      expect(cost).toBeCloseTo(4.8, 5);
     });
 
     it("falls back to default pricing for an unknown model", () => {
       const cost = estimateCost("unknown-model-xyz", 1_000_000, 1_000_000);
       // Default is sonnet-equivalent: $3 + $15 = $18
-      expect(cost).toBeCloseTo(18.00, 5);
+      expect(cost).toBeCloseTo(18.0, 5);
     });
 
     it("returns $0.00 for zero tokens", () => {
@@ -34,10 +34,10 @@ describe("pricing", () => {
     it("sums costs across multiple models correctly", () => {
       const usage = {
         "claude-sonnet-4-6": { inputTokens: 1_000_000, outputTokens: 0 },
-        "claude-haiku-4-5":  { inputTokens: 0, outputTokens: 1_000_000 },
+        "claude-haiku-4-5": { inputTokens: 0, outputTokens: 1_000_000 },
       };
       // sonnet: $3.00 input, haiku: $4.00 output → $7.00
-      expect(estimateTotalCost(usage)).toBeCloseTo(7.00, 5);
+      expect(estimateTotalCost(usage)).toBeCloseTo(7.0, 5);
     });
 
     it("returns $0.00 for empty usage map", () => {
@@ -48,7 +48,7 @@ describe("pricing", () => {
       const cost = estimateTotalCost({
         "claude-sonnet-4-6": { inputTokens: 1_000_000 }, // no outputTokens
       });
-      expect(cost).toBeCloseTo(3.00, 5);
+      expect(cost).toBeCloseTo(3.0, 5);
     });
   });
 

@@ -1,7 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import chalk from "chalk";
-import { checkbox, confirm } from "@inquirer/prompts";
+import type { OrphanedBlock, TargetPlatform } from "@harness-kit/core";
 import {
   compile,
   detectPlatforms,
@@ -12,7 +11,8 @@ import {
   validateHarness,
 } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
-import type { OrphanedBlock, TargetPlatform } from "@harness-kit/core";
+import { checkbox, confirm } from "@inquirer/prompts";
+import chalk from "chalk";
 import { formatCompileReport, formatDryRunFile } from "../formatters/report.js";
 import { formatValidationResult } from "../formatters/validation.js";
 
@@ -118,15 +118,11 @@ export async function compileCommand(
   }
 }
 
-async function interactiveTargetSelection(
-  fs: NodeFsProvider,
-): Promise<TargetPlatform[]> {
+async function interactiveTargetSelection(fs: NodeFsProvider): Promise<TargetPlatform[]> {
   const detected = await detectPlatforms(fs);
 
   if (detected.length === 0) {
-    console.log(
-      "No AI tool config directories found. Which targets should I compile for?",
-    );
+    console.log("No AI tool config directories found. Which targets should I compile for?");
     const selected = await checkbox<TargetPlatform>({
       message: "Select targets:",
       choices: ALL_TARGETS.map((t) => ({ name: t, value: t })),

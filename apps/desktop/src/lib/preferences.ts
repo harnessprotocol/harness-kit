@@ -254,7 +254,9 @@ export function getHarnessPermissionOverrides(): Record<string, HarnessPermissio
   }
 }
 
-export function setHarnessPermissionOverrides(overrides: Record<string, HarnessPermissionOverride>) {
+export function setHarnessPermissionOverrides(
+  overrides: Record<string, HarnessPermissionOverride>,
+) {
   localStorage.setItem(KEY_HARNESS_PERMISSION_OVERRIDES, JSON.stringify(overrides));
 }
 

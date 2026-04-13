@@ -1,9 +1,4 @@
-const CRITICAL_BASENAMES = new Set([
-  "plugin.json",
-  "CLAUDE.md",
-  "settings.json",
-  "hooks.json",
-]);
+const CRITICAL_BASENAMES = new Set(["plugin.json", "CLAUDE.md", "settings.json", "hooks.json"]);
 
 const CRITICAL_EXTENSIONS = new Set([".yaml", ".yml"]);
 

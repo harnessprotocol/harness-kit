@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { describe, expect, it } from "vitest";
 import { compile } from "../src/compile/compile.js";
 import { MockFsProvider } from "./helpers/mock-fs.js";
 
@@ -33,12 +33,7 @@ describe("compile", () => {
     const fs = new MockFsProvider();
     const yaml = loadFixture("valid-harness.yaml");
 
-    const result = await compile(
-      yaml,
-      ["claude-code", "cursor", "copilot"],
-      fs,
-      { dryRun: true },
-    );
+    const result = await compile(yaml, ["claude-code", "cursor", "copilot"], fs, { dryRun: true });
 
     expect(result.targets).toHaveLength(3);
 
@@ -60,9 +55,7 @@ describe("compile", () => {
     const fs = new MockFsProvider();
     const yaml = loadFixture("invalid-harness.yaml");
 
-    await expect(
-      compile(yaml, ["claude-code"], fs),
-    ).rejects.toThrow("validation failed");
+    await expect(compile(yaml, ["claude-code"], fs)).rejects.toThrow("validation failed");
   });
 
   it("writes files when not dry-run", async () => {
@@ -86,16 +79,10 @@ describe("compile", () => {
     const yaml = loadFixture("valid-harness.yaml");
 
     const result = await compile(yaml, ["claude-code"], fs, { dryRun: true });
-    const ops = result.files.find(
-      (f) => f.slot === "operational" && f.platform === "claude-code",
-    );
+    const ops = result.files.find((f) => f.slot === "operational" && f.platform === "claude-code");
 
-    expect(ops!.content).toMatch(
-      /<!-- BEGIN harness:my-harness:operational -->/,
-    );
-    expect(ops!.content).toMatch(
-      /<!-- END harness:my-harness:operational -->/,
-    );
+    expect(ops!.content).toMatch(/<!-- BEGIN harness:my-harness:operational -->/);
+    expect(ops!.content).toMatch(/<!-- END harness:my-harness:operational -->/);
   });
 
   it("includes Cursor .mdc frontmatter", async () => {
@@ -103,9 +90,7 @@ describe("compile", () => {
     const yaml = loadFixture("valid-harness.yaml");
 
     const result = await compile(yaml, ["cursor"], fs, { dryRun: true });
-    const ops = result.files.find(
-      (f) => f.slot === "operational" && f.platform === "cursor",
-    );
+    const ops = result.files.find((f) => f.slot === "operational" && f.platform === "cursor");
 
     expect(ops!.content).toContain("description: Harness operational instructions");
     expect(ops!.content).toContain("alwaysApply: true");

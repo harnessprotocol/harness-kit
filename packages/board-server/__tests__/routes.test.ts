@@ -1,21 +1,21 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import type { Express } from "express";
 import request from "supertest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createHttpApp } from "../src/http/server.js";
 import * as store from "../src/store/yaml-store.js";
 import { resetBoardDirCache } from "../src/store/yaml-store.js";
-import type { Express } from "express";
-import fs from "node:fs";
-import path from "node:path";
-import os from "node:os";
 
 describe("HTTP Routes", () => {
   let app: Express;
   let tempDir: string;
 
   beforeAll(() => {
-    tempDir = path.join(os.tmpdir(), 'board-test-' + Date.now());
+    tempDir = path.join(os.tmpdir(), "board-test-" + Date.now());
     fs.mkdirSync(tempDir, { recursive: true });
-    process.env.NODE_ENV = 'test';
+    process.env.NODE_ENV = "test";
     process.env.BOARD_TEST_DIR = tempDir;
   });
 
@@ -44,7 +44,7 @@ describe("HTTP Routes", () => {
     it("returns health status", async () => {
       const res = await request(app).get("/health");
       expect(res.status).toBe(200);
-      expect(res.body).toEqual({ ok: true, service: 'harness-board' });
+      expect(res.body).toEqual({ ok: true, service: "harness-board" });
     });
   });
 
@@ -74,9 +74,7 @@ describe("HTTP Routes", () => {
 
   describe("POST /api/v1/projects", () => {
     it("creates a new project with required fields", async () => {
-      const res = await request(app)
-        .post("/api/v1/projects")
-        .send({ name: "New Project" });
+      const res = await request(app).post("/api/v1/projects").send({ name: "New Project" });
 
       expect(res.status).toBe(201);
       expect(res.body.name).toBe("New Project");
@@ -86,14 +84,12 @@ describe("HTTP Routes", () => {
     });
 
     it("creates a project with all optional fields", async () => {
-      const res = await request(app)
-        .post("/api/v1/projects")
-        .send({
-          name: "Full Project",
-          description: "A test project",
-          color: "#FF5733",
-          repo_url: "https://github.com/user/repo",
-        });
+      const res = await request(app).post("/api/v1/projects").send({
+        name: "Full Project",
+        description: "A test project",
+        color: "#FF5733",
+        repo_url: "https://github.com/user/repo",
+      });
 
       expect(res.status).toBe(201);
       expect(res.body.name).toBe("Full Project");
@@ -103,22 +99,16 @@ describe("HTTP Routes", () => {
     });
 
     it("returns 400 when name is missing", async () => {
-      const res = await request(app)
-        .post("/api/v1/projects")
-        .send({});
+      const res = await request(app).post("/api/v1/projects").send({});
 
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("name is required");
     });
 
     it("returns 400 when project already exists", async () => {
-      await request(app)
-        .post("/api/v1/projects")
-        .send({ name: "Duplicate Project" });
+      await request(app).post("/api/v1/projects").send({ name: "Duplicate Project" });
 
-      const res = await request(app)
-        .post("/api/v1/projects")
-        .send({ name: "Duplicate Project" });
+      const res = await request(app).post("/api/v1/projects").send({ name: "Duplicate Project" });
 
       expect(res.status).toBe(400);
       expect(res.body.error).toContain("already exists");
@@ -179,13 +169,11 @@ describe("HTTP Routes", () => {
     it("updates multiple fields at once", async () => {
       store.createProject({ name: "Test Project" });
 
-      const res = await request(app)
-        .patch("/api/v1/projects/test-project")
-        .send({
-          description: "New description",
-          color: "#0000FF",
-          repo_url: "https://github.com/updated/repo",
-        });
+      const res = await request(app).patch("/api/v1/projects/test-project").send({
+        description: "New description",
+        color: "#0000FF",
+        repo_url: "https://github.com/updated/repo",
+      });
 
       expect(res.status).toBe(200);
       expect(res.body.description).toBe("New description");
@@ -233,9 +221,7 @@ describe("HTTP Routes", () => {
     });
 
     it("returns 400 when name is missing", async () => {
-      const res = await request(app)
-        .post("/api/v1/projects/test-project/epics")
-        .send({});
+      const res = await request(app).post("/api/v1/projects/test-project/epics").send({});
 
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("name is required");
@@ -251,9 +237,7 @@ describe("HTTP Routes", () => {
     });
 
     it("increments project next_id for epic", async () => {
-      await request(app)
-        .post("/api/v1/projects/test-project/epics")
-        .send({ name: "Epic 1" });
+      await request(app).post("/api/v1/projects/test-project/epics").send({ name: "Epic 1" });
 
       const res = await request(app)
         .post("/api/v1/projects/test-project/epics")
@@ -339,9 +323,7 @@ describe("HTTP Routes", () => {
     });
 
     it("returns 400 when title is missing", async () => {
-      const res = await request(app)
-        .post("/api/v1/projects/test-project/epics/1/tasks")
-        .send({});
+      const res = await request(app).post("/api/v1/projects/test-project/epics/1/tasks").send({});
 
       expect(res.status).toBe(400);
       expect(res.body.error).toBe("title is required");
@@ -480,13 +462,11 @@ describe("HTTP Routes", () => {
     });
 
     it("updates multiple fields at once", async () => {
-      const res = await request(app)
-        .patch("/api/v1/projects/test-project/tasks/2")
-        .send({
-          title: "Multi Update",
-          description: "Multi description",
-          status: "ai-review",
-        });
+      const res = await request(app).patch("/api/v1/projects/test-project/tasks/2").send({
+        title: "Multi Update",
+        description: "Multi description",
+        status: "ai-review",
+      });
 
       expect(res.status).toBe(200);
       expect(res.body.title).toBe("Multi Update");
@@ -622,9 +602,7 @@ describe("HTTP Routes", () => {
     });
 
     it("handles CORS headers correctly", async () => {
-      const res = await request(app)
-        .get("/api/v1/projects")
-        .set("Origin", "http://localhost:3000");
+      const res = await request(app).get("/api/v1/projects").set("Origin", "http://localhost:3000");
 
       expect(res.headers["access-control-allow-origin"]).toBeTruthy();
       expect(res.headers["access-control-allow-methods"]).toBeDefined();

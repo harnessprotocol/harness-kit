@@ -1,4 +1,4 @@
-import MemoryWebView from './MemoryWebView';
+import MemoryWebView from "./MemoryWebView";
 
 export default function MemoryTracePage() {
   return <MemoryWebView />;

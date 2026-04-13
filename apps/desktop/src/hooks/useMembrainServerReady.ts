@@ -1,10 +1,6 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { MEMBRAIN_API } from '../lib/membrain-api';
-import {
-  membrainCheckInstalled,
-  membrainStart,
-  membrainStop,
-} from '../lib/tauri';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { MEMBRAIN_API } from "../lib/membrain-api";
+import { membrainCheckInstalled, membrainStart, membrainStop } from "../lib/tauri";
 
 const MAX_POLLS = 10;
 
@@ -47,7 +43,7 @@ export function useMembrainServerReady(): MembrainServerReadyState {
     let mounted = true;
     const check = () => {
       fetchWithTimeout(`${MEMBRAIN_API}/graph/stats`, 1500)
-        .then(res => {
+        .then((res) => {
           if (!mounted) return;
           if (res.ok) {
             setReady(true);
@@ -72,7 +68,10 @@ export function useMembrainServerReady(): MembrainServerReadyState {
 
     check();
     const id = setInterval(check, 2000);
-    return () => { mounted = false; clearInterval(id); };
+    return () => {
+      mounted = false;
+      clearInterval(id);
+    };
   }, [ready, timedOut, installed]);
 
   const retry = useCallback(() => {

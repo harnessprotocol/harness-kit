@@ -21,19 +21,21 @@ const PLATFORM_LABELS: Record<TargetPlatform, string> = {
 
 function ActionBadge({ action }: { action: string }) {
   return (
-    <span style={{
-      display: "inline-flex",
-      alignItems: "center",
-      padding: "1px 6px",
-      borderRadius: "4px",
-      fontSize: "10px",
-      fontWeight: 600,
-      textTransform: "uppercase",
-      letterSpacing: "0.3px",
-      background: `${ACTION_COLORS[action] ?? "var(--fg-subtle)"}20`,
-      color: ACTION_COLORS[action] ?? "var(--fg-subtle)",
-      border: `1px solid ${ACTION_COLORS[action] ?? "var(--fg-subtle)"}40`,
-    }}>
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "1px 6px",
+        borderRadius: "4px",
+        fontSize: "10px",
+        fontWeight: 600,
+        textTransform: "uppercase",
+        letterSpacing: "0.3px",
+        background: `${ACTION_COLORS[action] ?? "var(--fg-subtle)"}20`,
+        color: ACTION_COLORS[action] ?? "var(--fg-subtle)",
+        border: `1px solid ${ACTION_COLORS[action] ?? "var(--fg-subtle)"}40`,
+      }}
+    >
       {action}
     </span>
   );
@@ -41,17 +43,19 @@ function ActionBadge({ action }: { action: string }) {
 
 function PlatformBadge({ platform }: { platform: TargetPlatform }) {
   return (
-    <span style={{
-      display: "inline-flex",
-      alignItems: "center",
-      padding: "1px 6px",
-      borderRadius: "4px",
-      fontSize: "10px",
-      fontWeight: 500,
-      background: "var(--bg-elevated)",
-      color: "var(--fg-subtle)",
-      border: "1px solid var(--border-base)",
-    }}>
+    <span
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        padding: "1px 6px",
+        borderRadius: "4px",
+        fontSize: "10px",
+        fontWeight: 500,
+        background: "var(--bg-elevated)",
+        color: "var(--fg-subtle)",
+        border: "1px solid var(--border-base)",
+      }}
+    >
       {PLATFORM_LABELS[platform]}
     </span>
   );
@@ -60,7 +64,14 @@ function PlatformBadge({ platform }: { platform: TargetPlatform }) {
 function FileRow({ file }: { file: FileAction }) {
   return (
     <tr style={{ borderBottom: "1px solid var(--border-base)" }}>
-      <td style={{ padding: "6px 8px", fontFamily: "ui-monospace, monospace", fontSize: "11px", color: "var(--fg-base)" }}>
+      <td
+        style={{
+          padding: "6px 8px",
+          fontFamily: "ui-monospace, monospace",
+          fontSize: "11px",
+          color: "var(--fg-base)",
+        }}
+      >
         {file.path}
       </td>
       <td style={{ padding: "6px 8px", whiteSpace: "nowrap" }}>
@@ -69,7 +80,14 @@ function FileRow({ file }: { file: FileAction }) {
       <td style={{ padding: "6px 8px", whiteSpace: "nowrap" }}>
         <PlatformBadge platform={file.platform} />
       </td>
-      <td style={{ padding: "6px 8px", textAlign: "right", fontSize: "11px", color: "var(--fg-subtle)" }}>
+      <td
+        style={{
+          padding: "6px 8px",
+          textAlign: "right",
+          fontSize: "11px",
+          color: "var(--fg-subtle)",
+        }}
+      >
         {file.linesAdded != null ? `+${file.linesAdded}` : "—"}
       </td>
     </tr>
@@ -78,33 +96,39 @@ function FileRow({ file }: { file: FileAction }) {
 
 export default function SyncPreview({ result, applying, onApply }: SyncPreviewProps) {
   const fileCount = result.files.length;
-  const writeCount = result.files.filter((f) => f.action === "create" || f.action === "update").length;
+  const writeCount = result.files.filter(
+    (f) => f.action === "create" || f.action === "update",
+  ).length;
   const warningCount = result.warnings.length;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
       {/* Summary bar */}
-      <div style={{
-        display: "flex",
-        gap: "16px",
-        padding: "10px 14px",
-        background: "var(--bg-surface)",
-        border: "1px solid var(--border-base)",
-        borderRadius: "8px",
-        fontSize: "12px",
-        color: "var(--fg-muted)",
-        flexWrap: "wrap",
-        alignItems: "center",
-      }}>
+      <div
+        style={{
+          display: "flex",
+          gap: "16px",
+          padding: "10px 14px",
+          background: "var(--bg-surface)",
+          border: "1px solid var(--border-base)",
+          borderRadius: "8px",
+          fontSize: "12px",
+          color: "var(--fg-muted)",
+          flexWrap: "wrap",
+          alignItems: "center",
+        }}
+      >
         <span>
           <strong style={{ color: "var(--fg-base)" }}>{result.harnessName}</strong>
         </span>
         <span>{result.targets.map((t) => PLATFORM_LABELS[t]).join(", ")}</span>
         <span>
-          <strong style={{ color: "var(--fg-base)" }}>{fileCount}</strong> file{fileCount !== 1 ? "s" : ""}
+          <strong style={{ color: "var(--fg-base)" }}>{fileCount}</strong> file
+          {fileCount !== 1 ? "s" : ""}
         </span>
         <span>
-          <strong style={{ color: "var(--fg-base)" }}>{writeCount}</strong> write{writeCount !== 1 ? "s" : ""}
+          <strong style={{ color: "var(--fg-base)" }}>{writeCount}</strong> write
+          {writeCount !== 1 ? "s" : ""}
         </span>
         {warningCount > 0 && (
           <span style={{ color: "var(--warning, #f59e0b)" }}>
@@ -115,19 +139,74 @@ export default function SyncPreview({ result, applying, onApply }: SyncPreviewPr
 
       {/* File table */}
       {fileCount > 0 && (
-        <div style={{
-          background: "var(--bg-surface)",
-          border: "1px solid var(--border-base)",
-          borderRadius: "8px",
-          overflow: "hidden",
-        }}>
+        <div
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-base)",
+            borderRadius: "8px",
+            overflow: "hidden",
+          }}
+        >
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr style={{ borderBottom: "1px solid var(--border-base)", background: "var(--bg-elevated)" }}>
-                <th style={{ padding: "6px 8px", textAlign: "left", fontSize: "10px", fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.3px" }}>Path</th>
-                <th style={{ padding: "6px 8px", textAlign: "left", fontSize: "10px", fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.3px" }}>Action</th>
-                <th style={{ padding: "6px 8px", textAlign: "left", fontSize: "10px", fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.3px" }}>Platform</th>
-                <th style={{ padding: "6px 8px", textAlign: "right", fontSize: "10px", fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.3px" }}>Lines</th>
+              <tr
+                style={{
+                  borderBottom: "1px solid var(--border-base)",
+                  background: "var(--bg-elevated)",
+                }}
+              >
+                <th
+                  style={{
+                    padding: "6px 8px",
+                    textAlign: "left",
+                    fontSize: "10px",
+                    fontWeight: 600,
+                    color: "var(--fg-subtle)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px",
+                  }}
+                >
+                  Path
+                </th>
+                <th
+                  style={{
+                    padding: "6px 8px",
+                    textAlign: "left",
+                    fontSize: "10px",
+                    fontWeight: 600,
+                    color: "var(--fg-subtle)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px",
+                  }}
+                >
+                  Action
+                </th>
+                <th
+                  style={{
+                    padding: "6px 8px",
+                    textAlign: "left",
+                    fontSize: "10px",
+                    fontWeight: 600,
+                    color: "var(--fg-subtle)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px",
+                  }}
+                >
+                  Platform
+                </th>
+                <th
+                  style={{
+                    padding: "6px 8px",
+                    textAlign: "right",
+                    fontSize: "10px",
+                    fontWeight: 600,
+                    color: "var(--fg-subtle)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.3px",
+                  }}
+                >
+                  Lines
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -141,18 +220,34 @@ export default function SyncPreview({ result, applying, onApply }: SyncPreviewPr
 
       {/* Warnings */}
       {result.warnings.length > 0 && (
-        <div style={{
-          background: "var(--bg-surface)",
-          border: "1px solid var(--border-base)",
-          borderRadius: "8px",
-          padding: "10px 14px",
-        }}>
-          <p style={{ fontSize: "11px", fontWeight: 600, color: "var(--warning, #f59e0b)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+        <div
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-base)",
+            borderRadius: "8px",
+            padding: "10px 14px",
+          }}
+        >
+          <p
+            style={{
+              fontSize: "11px",
+              fontWeight: 600,
+              color: "var(--warning, #f59e0b)",
+              margin: "0 0 6px",
+              textTransform: "uppercase",
+              letterSpacing: "0.3px",
+            }}
+          >
             Warnings
           </p>
           <ul style={{ margin: 0, paddingLeft: "16px" }}>
             {result.warnings.map((w, i) => (
-              <li key={i} style={{ fontSize: "12px", color: "var(--fg-muted)", marginBottom: "2px" }}>{w}</li>
+              <li
+                key={i}
+                style={{ fontSize: "12px", color: "var(--fg-muted)", marginBottom: "2px" }}
+              >
+                {w}
+              </li>
             ))}
           </ul>
         </div>

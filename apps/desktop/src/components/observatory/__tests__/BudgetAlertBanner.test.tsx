@@ -1,49 +1,26 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 import BudgetAlertBanner from "../BudgetAlertBanner";
 
 describe("BudgetAlertBanner", () => {
   it("renders when tokens exceed limit", () => {
-    render(
-      <BudgetAlertBanner
-        tokensToday={600_000}
-        tokenLimit={500_000}
-        costToday={0}
-      />
-    );
+    render(<BudgetAlertBanner tokensToday={600_000} tokenLimit={500_000} costToday={0} />);
     expect(screen.getByTestId("budget-alert-banner")).toBeInTheDocument();
     expect(screen.getByText(/Daily budget exceeded/)).toBeInTheDocument();
   });
 
   it("renders when cost exceeds limit", () => {
-    render(
-      <BudgetAlertBanner
-        tokensToday={0}
-        costToday={6.50}
-        costLimit={5.00}
-      />
-    );
+    render(<BudgetAlertBanner tokensToday={0} costToday={6.5} costLimit={5.0} />);
     expect(screen.getByTestId("budget-alert-banner")).toBeInTheDocument();
   });
 
   it("does not render when within token limit", () => {
-    render(
-      <BudgetAlertBanner
-        tokensToday={100_000}
-        tokenLimit={500_000}
-        costToday={0.30}
-      />
-    );
+    render(<BudgetAlertBanner tokensToday={100_000} tokenLimit={500_000} costToday={0.3} />);
     expect(screen.queryByTestId("budget-alert-banner")).not.toBeInTheDocument();
   });
 
   it("does not render when no limits are set", () => {
-    render(
-      <BudgetAlertBanner
-        tokensToday={1_000_000}
-        costToday={18.00}
-      />
-    );
+    render(<BudgetAlertBanner tokensToday={1_000_000} costToday={18.0} />);
     expect(screen.queryByTestId("budget-alert-banner")).not.toBeInTheDocument();
   });
 
@@ -55,7 +32,7 @@ describe("BudgetAlertBanner", () => {
         tokenLimit={500_000}
         costToday={0}
         onDismiss={onDismiss}
-      />
+      />,
     );
 
     expect(screen.getByTestId("budget-alert-banner")).toBeInTheDocument();
@@ -69,9 +46,9 @@ describe("BudgetAlertBanner", () => {
       <BudgetAlertBanner
         tokensToday={600_000}
         tokenLimit={500_000}
-        costToday={6.00}
-        costLimit={5.00}
-      />
+        costToday={6.0}
+        costLimit={5.0}
+      />,
     );
 
     const banner = screen.getByTestId("budget-alert-banner");

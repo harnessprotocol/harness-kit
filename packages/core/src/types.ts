@@ -96,11 +96,7 @@ export interface CompileOptions {
   verbose?: boolean;
 }
 
-export type FileActionType =
-  | "create"
-  | "update"
-  | "skip"
-  | "needs-confirmation";
+export type FileActionType = "create" | "update" | "skip" | "needs-confirmation";
 
 export interface FileAction {
   path: string;

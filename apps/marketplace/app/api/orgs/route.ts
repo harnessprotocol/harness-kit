@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServiceSupabase } from "@/lib/supabase";
+import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth";
+import { getServiceSupabase } from "@/lib/supabase";
 
 /**
  * GET /api/orgs
@@ -16,18 +16,12 @@ export async function GET() {
       .order("created_at", { ascending: false });
 
     if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json(data);
   } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to fetch organizations" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to fetch organizations" }, { status: 500 });
   }
 }
 
@@ -41,10 +35,7 @@ export async function POST(request: NextRequest) {
     // Check authentication
     const user = await getServerSession();
     if (!user) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Authentication required" }, { status: 401 });
     }
 
     const body = await request.json();
@@ -52,17 +43,14 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!slug || !name) {
-      return NextResponse.json(
-        { error: "Missing required fields: slug, name" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Missing required fields: slug, name" }, { status: 400 });
     }
 
     // Validate slug format (alphanumeric and hyphens only)
     if (!/^[a-z0-9-]+$/.test(slug)) {
       return NextResponse.json(
         { error: "Slug must contain only lowercase letters, numbers, and hyphens" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -78,7 +66,7 @@ export async function POST(request: NextRequest) {
     if (existing) {
       return NextResponse.json(
         { error: "Organization with this slug already exists" },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
@@ -94,35 +82,24 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (orgError) {
-      return NextResponse.json(
-        { error: orgError.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: orgError.message }, { status: 500 });
     }
 
     // Add creator as admin
-    const { error: memberError } = await supabase
-      .from("org_members")
-      .insert({
-        org_id: org.id,
-        user_id: user.id,
-        role: "admin",
-      });
+    const { error: memberError } = await supabase.from("org_members").insert({
+      org_id: org.id,
+      user_id: user.id,
+      role: "admin",
+    });
 
     if (memberError) {
       // Rollback: delete the organization if member creation fails
       await supabase.from("organizations").delete().eq("id", org.id);
-      return NextResponse.json(
-        { error: "Failed to add organization admin" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Failed to add organization admin" }, { status: 500 });
     }
 
     return NextResponse.json(org, { status: 201 });
   } catch (error) {
-    return NextResponse.json(
-      { error: "Failed to create organization" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create organization" }, { status: 500 });
   }
 }

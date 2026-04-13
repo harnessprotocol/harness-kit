@@ -1,7 +1,7 @@
 // apps/desktop/src/hooks/useAgentEvents.ts
-import { useState, useEffect } from 'react';
-import { agentApi } from '../lib/agent-api';
-import type { AgentEvent } from '../lib/agent-api';
+import { useEffect, useState } from "react";
+import type { AgentEvent } from "../lib/agent-api";
+import { agentApi } from "../lib/agent-api";
 
 export type { AgentEvent };
 
@@ -22,20 +22,25 @@ export function useAgentEvents(taskId: number | null): AgentEventLog {
     if (!taskId) return;
     let cleanup: (() => void) | null = null;
     let cancelled = false;
-    agentApi.subscribe(taskId, (event) => {
-      setEvents(prev => [...prev, event]);
-      if (event.type === 'agent_phase') {
-        setPhase(event.phase);
-        setProgress(event.progress);
-        setIsRunning(true);
-      }
-      if (event.type === 'agent_done' || event.type === 'agent_error') {
-        setIsRunning(false);
-      }
-    }).then(unsub => {
-      if (cancelled) { unsub(); return; }
-      cleanup = unsub;
-    });
+    agentApi
+      .subscribe(taskId, (event) => {
+        setEvents((prev) => [...prev, event]);
+        if (event.type === "agent_phase") {
+          setPhase(event.phase);
+          setProgress(event.progress);
+          setIsRunning(true);
+        }
+        if (event.type === "agent_done" || event.type === "agent_error") {
+          setIsRunning(false);
+        }
+      })
+      .then((unsub) => {
+        if (cancelled) {
+          unsub();
+          return;
+        }
+        cleanup = unsub;
+      });
     return () => {
       cancelled = true;
       cleanup?.();

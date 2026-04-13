@@ -9,7 +9,10 @@ export interface GenerateSummary {
 }
 
 /** Generate a harness.yaml from existing Claude Code config files. */
-export function generateHarnessYaml(scan: ClaudeConfigScan): { yaml: string; summary: GenerateSummary } {
+export function generateHarnessYaml(scan: ClaudeConfigScan): {
+  yaml: string;
+  summary: GenerateSummary;
+} {
   const lines: string[] = [
     'version: "1"',
     "metadata:",
@@ -26,12 +29,15 @@ export function generateHarnessYaml(scan: ClaudeConfigScan): { yaml: string; sum
   if (scan.mcpServersJson) {
     try {
       const parsed = JSON.parse(scan.mcpServersJson) as {
-        mcpServers?: Record<string, {
-          command?: string;
-          args?: string[];
-          env?: Record<string, string>;
-          url?: string;
-        }>;
+        mcpServers?: Record<
+          string,
+          {
+            command?: string;
+            args?: string[];
+            env?: Record<string, string>;
+            url?: string;
+          }
+        >;
       };
       const servers = parsed.mcpServers ?? {};
       const entries = Object.entries(servers);

@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { buildInvokeCommand, type PermissionConfig } from "../lib/harness-definitions";
 import {
-  getPermissionMode,
   getAllowedTools,
   getHarnessPermissionOverrides,
+  getPermissionMode,
 } from "../lib/preferences";
 
 // ── Types ────────────────────────────────────────────────────
@@ -38,9 +38,12 @@ function resolvePermissionConfig(harnessId: string): PermissionConfig {
   const tools = override?.allowedTools ?? getAllowedTools();
 
   switch (mode) {
-    case "auto":          return { mode: "auto" };
-    case "allowed-tools": return { mode: "allowed-tools", tools };
-    default:              return { mode: "skip" };
+    case "auto":
+      return { mode: "auto" };
+    case "allowed-tools":
+      return { mode: "allowed-tools", tools };
+    default:
+      return { mode: "skip" };
   }
 }
 
@@ -57,7 +60,12 @@ export interface UseTerminalsReturn {
   createTerminal: (projectPath: string) => Promise<string | null>;
   destroyTerminal: (id: string) => void;
   assignHarness: (id: string, harnessId: string, model?: string) => void;
-  invokeInTerminal: (id: string, harnessId: string, prompt: string, model?: string) => Promise<void>;
+  invokeInTerminal: (
+    id: string,
+    harnessId: string,
+    prompt: string,
+    model?: string,
+  ) => Promise<void>;
   invokeAll: (prompt: string) => Promise<void>;
   getRawChunks: (id: string) => string[];
   /** Increments on every terminal output event — subscribe for re-renders. */
@@ -99,11 +107,7 @@ export function useTerminals(): UseTerminalsReturn {
     const unlistenExit = listen<TerminalExitPayload>("terminal://exit", (event) => {
       const { terminalId, exitCode } = event.payload;
       setSessions((prev) =>
-        prev.map((s) =>
-          s.id === terminalId
-            ? { ...s, status: "exited" as const, exitCode }
-            : s,
-        ),
+        prev.map((s) => (s.id === terminalId ? { ...s, status: "exited" as const, exitCode } : s)),
       );
     });
 
@@ -152,11 +156,7 @@ export function useTerminals(): UseTerminalsReturn {
   }, []);
 
   const assignHarness = useCallback((id: string, harnessId: string, model?: string) => {
-    setSessions((prev) =>
-      prev.map((s) =>
-        s.id === id ? { ...s, harnessId, model } : s,
-      ),
-    );
+    setSessions((prev) => prev.map((s) => (s.id === id ? { ...s, harnessId, model } : s)));
   }, []);
 
   const invokeInTerminal = useCallback(
@@ -171,9 +171,7 @@ export function useTerminals(): UseTerminalsReturn {
       }
 
       setSessions((prev) =>
-        prev.map((s) =>
-          s.id === id ? { ...s, status: "running" as const, harnessId, model } : s,
-        ),
+        prev.map((s) => (s.id === id ? { ...s, status: "running" as const, harnessId, model } : s)),
       );
 
       await invoke("write_terminal", {
@@ -188,11 +186,7 @@ export function useTerminals(): UseTerminalsReturn {
     async (prompt: string) => {
       // Use ref for latest sessions to avoid stale closure.
       const eligible = sessionsRef.current.filter((s) => s.harnessId);
-      await Promise.all(
-        eligible.map((s) =>
-          invokeInTerminal(s.id, s.harnessId!, prompt, s.model),
-        ),
-      );
+      await Promise.all(eligible.map((s) => invokeInTerminal(s.id, s.harnessId!, prompt, s.model)));
     },
     [invokeInTerminal],
   );

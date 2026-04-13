@@ -14,9 +14,5 @@ export function TypingIndicator({ typingMembers }: Props) {
     text = `${typingMembers.length} people are typing…`;
   }
 
-  return (
-    <div className="px-3 py-1 text-xs text-muted-foreground italic">
-      {text}
-    </div>
-  );
+  return <div className="px-3 py-1 text-xs text-muted-foreground italic">{text}</div>;
 }

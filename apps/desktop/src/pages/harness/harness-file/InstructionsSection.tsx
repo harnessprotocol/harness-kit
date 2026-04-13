@@ -1,5 +1,5 @@
-import type { CSSProperties } from "react";
 import type { HarnessInstructions } from "@harness-kit/core";
+import type { CSSProperties } from "react";
 import SectionCard from "./SectionCard";
 
 interface InstructionsSectionProps {
@@ -52,9 +52,7 @@ export default function InstructionsSection({ instructions }: InstructionsSectio
       explanation="Text injected into CLAUDE.md, AGENT.md, or equivalent at harness import time."
     >
       {instructions["import-mode"] && (
-        <span style={importModeBadgeStyle}>
-          import-mode: {instructions["import-mode"]}
-        </span>
+        <span style={importModeBadgeStyle}>import-mode: {instructions["import-mode"]}</span>
       )}
 
       {hasContent ? (

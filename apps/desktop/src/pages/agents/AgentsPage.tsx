@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useEffect, useState } from "react";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -38,7 +38,8 @@ const fontStack = '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-ser
 const INSTALL_DOCS: Record<string, string> = {
   claude: "https://docs.anthropic.com/claude-code",
   codex: "https://github.com/openai/codex",
-  copilot: "https://docs.github.com/copilot/using-github-copilot/using-github-copilot-in-the-command-line",
+  copilot:
+    "https://docs.github.com/copilot/using-github-copilot/using-github-copilot-in-the-command-line",
   "cursor-agent": "https://www.cursor.com/downloads",
   opencode: "https://opencode.ai",
   goose: "https://github.com/block/goose",
@@ -56,23 +57,28 @@ const INSTALL_DOCS: Record<string, string> = {
 
 function SkeletonCard() {
   return (
-    <div style={{
-      background: tokens.bgSurface,
-      border: `1px solid ${tokens.borderSubtle}`,
-      borderRadius: "10px",
-      padding: "20px",
-      display: "flex",
-      flexDirection: "column",
-      gap: "10px",
-    }}>
+    <div
+      style={{
+        background: tokens.bgSurface,
+        border: `1px solid ${tokens.borderSubtle}`,
+        borderRadius: "10px",
+        padding: "20px",
+        display: "flex",
+        flexDirection: "column",
+        gap: "10px",
+      }}
+    >
       {[100, 60, 80].map((w, i) => (
-        <div key={i} style={{
-          height: i === 0 ? "16px" : "12px",
-          width: `${w}%`,
-          background: tokens.borderBase,
-          borderRadius: "4px",
-          opacity: 0.5,
-        }} />
+        <div
+          key={i}
+          style={{
+            height: i === 0 ? "16px" : "12px",
+            width: `${w}%`,
+            background: tokens.borderBase,
+            borderRadius: "4px",
+            opacity: 0.5,
+          }}
+        />
       ))}
     </div>
   );
@@ -80,7 +86,10 @@ function SkeletonCard() {
 
 // ── Agent card ───────────────────────────────────────────────
 
-function AgentCard({ agent, onAddToComparator }: {
+function AgentCard({
+  agent,
+  onAddToComparator,
+}: {
   agent: AgentInfo;
   onAddToComparator: (id: string) => void;
 }) {
@@ -104,9 +113,18 @@ function AgentCard({ agent, onAddToComparator }: {
       }}
     >
       {/* Header row */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: "8px" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          gap: "8px",
+        }}
+      >
         <div>
-          <div style={{ fontSize: "14px", fontWeight: 600, color: tokens.fgBase, marginBottom: "3px" }}>
+          <div
+            style={{ fontSize: "14px", fontWeight: 600, color: tokens.fgBase, marginBottom: "3px" }}
+          >
             {agent.name}
           </div>
           <div style={{ fontSize: "12px", color: tokens.fgMuted, fontFamily: "monospace" }}>
@@ -124,9 +142,7 @@ function AgentCard({ agent, onAddToComparator }: {
             textTransform: "uppercase",
             padding: "2px 7px",
             borderRadius: "8px",
-            background: agent.protocol === "http"
-              ? "rgba(37,99,235,0.12)"
-              : "rgba(91,80,232,0.12)",
+            background: agent.protocol === "http" ? "rgba(37,99,235,0.12)" : "rgba(91,80,232,0.12)",
             color: agent.protocol === "http" ? "#2563eb" : tokens.accent,
             border: `1px solid ${agent.protocol === "http" ? "rgba(37,99,235,0.2)" : "rgba(91,80,232,0.2)"}`,
             flexShrink: 0,
@@ -142,7 +158,15 @@ function AgentCard({ agent, onAddToComparator }: {
       </div>
 
       {/* Status + actions */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginTop: "auto" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: "8px",
+          marginTop: "auto",
+        }}
+      >
         {agent.installed ? (
           <span
             data-testid="installed-badge"
@@ -205,9 +229,7 @@ function AgentCard({ agent, onAddToComparator }: {
               padding: "3px 9px",
               borderRadius: "6px",
               border: `1px solid ${agent.addToComparator ? tokens.accent : tokens.borderSubtle}`,
-              background: agent.addToComparator
-                ? "rgba(91,80,232,0.1)"
-                : tokens.bgElevated,
+              background: agent.addToComparator ? "rgba(91,80,232,0.1)" : tokens.bgElevated,
               color: agent.addToComparator ? tokens.accent : tokens.fgSubtle,
               cursor: agent.addToComparator ? "pointer" : "not-allowed",
               opacity: agent.addToComparator ? 1 : 0.5,
@@ -236,30 +258,32 @@ export default function AgentsPage() {
   function handleAddToComparator(id: string) {
     // Mark the agent as no longer addable (prevents double-clicks)
     setAgents((prev) =>
-      prev
-        ? prev.map((a) => (a.id === id ? { ...a, addToComparator: false } : a))
-        : prev
+      prev ? prev.map((a) => (a.id === id ? { ...a, addToComparator: false } : a)) : prev,
     );
   }
 
   const installedCount = agents ? agents.filter((a) => a.installed).length : 0;
 
   return (
-    <div style={{
-      padding: "32px",
-      maxWidth: "1100px",
-      fontFamily: fontStack,
-      color: tokens.fgBase,
-    }}>
+    <div
+      style={{
+        padding: "32px",
+        maxWidth: "1100px",
+        fontFamily: fontStack,
+        color: tokens.fgBase,
+      }}
+    >
       {/* Page header */}
       <div style={{ marginBottom: "28px" }}>
-        <h1 style={{
-          margin: 0,
-          fontSize: "22px",
-          fontWeight: 700,
-          color: tokens.fgBase,
-          letterSpacing: "-0.02em",
-        }}>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: "22px",
+            fontWeight: 700,
+            color: tokens.fgBase,
+            letterSpacing: "-0.02em",
+          }}
+        >
           Agents
         </h1>
         <p style={{ margin: "6px 0 0", fontSize: "14px", color: tokens.fgMuted }}>
@@ -271,33 +295,33 @@ export default function AgentsPage() {
 
       {/* Error state */}
       {error && (
-        <div style={{
-          padding: "12px 16px",
-          borderRadius: "8px",
-          background: "rgba(220,38,38,0.08)",
-          border: "1px solid rgba(220,38,38,0.2)",
-          color: tokens.danger,
-          fontSize: "13px",
-          marginBottom: "24px",
-        }}>
+        <div
+          style={{
+            padding: "12px 16px",
+            borderRadius: "8px",
+            background: "rgba(220,38,38,0.08)",
+            border: "1px solid rgba(220,38,38,0.2)",
+            color: tokens.danger,
+            fontSize: "13px",
+            marginBottom: "24px",
+          }}
+        >
           Failed to detect agents: {error}
         </div>
       )}
 
       {/* Grid — skeleton while loading, cards when ready */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-        gap: "16px",
-      }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+          gap: "16px",
+        }}
+      >
         {agents === null && !error
           ? Array.from({ length: 6 }, (_, i) => <SkeletonCard key={i} />)
           : agents?.map((agent) => (
-              <AgentCard
-                key={agent.id}
-                agent={agent}
-                onAddToComparator={handleAddToComparator}
-              />
+              <AgentCard key={agent.id} agent={agent} onAddToComparator={handleAddToComparator} />
             ))}
       </div>
     </div>

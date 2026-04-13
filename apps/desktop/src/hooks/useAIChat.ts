@@ -1,17 +1,17 @@
-import { useState, useCallback, useRef, useEffect } from "react";
 import { Channel } from "@tauri-apps/api/core";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  type AIChatMessage,
+  type AIMessageRow,
+  type AISessionRow,
+  aiCancelStream,
   aiCreateSession,
-  aiUpdateSessionTitle,
   aiDeleteSession,
   aiListSessions,
   aiLoadSession,
   aiSaveMessage,
   aiStreamChat,
-  aiCancelStream,
-  type AIChatMessage,
-  type AISessionRow,
-  type AIMessageRow,
+  aiUpdateSessionTitle,
   type ChatChunk,
 } from "../lib/tauri";
 
@@ -56,12 +56,18 @@ export function useAIChat(): UseAIChatReturn {
   const mountedRef = useRef(true);
 
   // Keep refs in sync with state
-  useEffect(() => { currentSessionRef.current = currentSession; }, [currentSession]);
-  useEffect(() => { messagesRef.current = messages; }, [messages]);
+  useEffect(() => {
+    currentSessionRef.current = currentSession;
+  }, [currentSession]);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   useEffect(() => {
     mountedRef.current = true;
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   // ── Session management ──────────────────────────────────────────────────
@@ -76,7 +82,9 @@ export function useAIChat(): UseAIChatReturn {
   }, []);
 
   // Load sessions on mount
-  useEffect(() => { refreshSessions(); }, [refreshSessions]);
+  useEffect(() => {
+    refreshSessions();
+  }, [refreshSessions]);
 
   const createSession = useCallback(async (model: string): Promise<string> => {
     const id = crypto.randomUUID();
@@ -132,10 +140,10 @@ export function useAIChat(): UseAIChatReturn {
     await aiUpdateSessionTitle(id, title);
     if (!mountedRef.current) return;
 
-    const update = (s: AISessionRow) => s.id === id ? { ...s, title } : s;
+    const update = (s: AISessionRow) => (s.id === id ? { ...s, title } : s);
     setSessions((prev) => prev.map(update));
     if (currentSessionRef.current?.id === id) {
-      setCurrentSession((prev) => prev ? { ...prev, title } : prev);
+      setCurrentSession((prev) => (prev ? { ...prev, title } : prev));
     }
   }, []);
 
@@ -145,130 +153,132 @@ export function useAIChat(): UseAIChatReturn {
     aiCancelStream().catch(() => {});
   }, []);
 
-  const sendMessage = useCallback(async (content: string, model: string) => {
-    if (isStreaming) return;
+  const sendMessage = useCallback(
+    async (content: string, model: string) => {
+      if (isStreaming) return;
 
-    setError(null);
-    setIsStreaming(true);
-    setStreamingContent("");
+      setError(null);
+      setIsStreaming(true);
+      setStreamingContent("");
 
-    // Ensure we have a session — create one if needed
-    let session = currentSessionRef.current;
-    if (!session) {
-      try {
-        const id = crypto.randomUUID();
-        await aiCreateSession(id, model);
-        session = {
-          id,
-          title: null,
-          model,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        };
-        if (mountedRef.current) {
-          setCurrentSession(session);
-          currentSessionRef.current = session;
-          setSessions((prev) => [session!, ...prev]);
+      // Ensure we have a session — create one if needed
+      let session = currentSessionRef.current;
+      if (!session) {
+        try {
+          const id = crypto.randomUUID();
+          await aiCreateSession(id, model);
+          session = {
+            id,
+            title: null,
+            model,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          };
+          if (mountedRef.current) {
+            setCurrentSession(session);
+            currentSessionRef.current = session;
+            setSessions((prev) => [session!, ...prev]);
+          }
+        } catch (e) {
+          if (mountedRef.current) {
+            setError(String(e));
+            setIsStreaming(false);
+          }
+          return;
         }
-      } catch (e) {
-        if (mountedRef.current) {
-          setError(String(e));
-          setIsStreaming(false);
-        }
-        return;
       }
-    }
 
-    const sessionId = session.id;
+      const sessionId = session.id;
 
-    // Persist user message
-    const userMsgId = crypto.randomUUID();
-    const userTimestamp = new Date().toISOString();
-    const userMsg: AIChatMessageDisplay = {
-      id: userMsgId,
-      role: "user",
-      content,
-      timestamp: userTimestamp,
-    };
+      // Persist user message
+      const userMsgId = crypto.randomUUID();
+      const userTimestamp = new Date().toISOString();
+      const userMsg: AIChatMessageDisplay = {
+        id: userMsgId,
+        role: "user",
+        content,
+        timestamp: userTimestamp,
+      };
 
-    try {
-      await aiSaveMessage(userMsgId, sessionId, "user", content);
-    } catch {
-      // Non-fatal — display message anyway
-    }
+      try {
+        await aiSaveMessage(userMsgId, sessionId, "user", content);
+      } catch {
+        // Non-fatal — display message anyway
+      }
 
-    if (mountedRef.current) {
-      setMessages((prev) => {
-        const next = [...prev, userMsg];
-        messagesRef.current = next;
-        return next;
-      });
-    }
-
-    // Build conversation history for Ollama
-    const conversationMessages: AIChatMessage[] = messagesRef.current.map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
-
-    // Stream the response
-    let fullResponse = "";
-    const channel = new Channel<ChatChunk>();
-
-    channel.onmessage = (chunk: ChatChunk) => {
-      if (!mountedRef.current) return;
-
-      fullResponse += chunk.content;
-      setStreamingContent(fullResponse);
-
-      if (chunk.done) {
-        const assistantMsgId = crypto.randomUUID();
-        const assistantTimestamp = new Date().toISOString();
-        const assistantMsg: AIChatMessageDisplay = {
-          id: assistantMsgId,
-          role: "assistant",
-          content: fullResponse,
-          timestamp: assistantTimestamp,
-        };
-
+      if (mountedRef.current) {
         setMessages((prev) => {
-          const next = [...prev, assistantMsg];
+          const next = [...prev, userMsg];
           messagesRef.current = next;
           return next;
         });
+      }
+
+      // Build conversation history for Ollama
+      const conversationMessages: AIChatMessage[] = messagesRef.current.map((m) => ({
+        role: m.role,
+        content: m.content,
+      }));
+
+      // Stream the response
+      let fullResponse = "";
+      const channel = new Channel<ChatChunk>();
+
+      channel.onmessage = (chunk: ChatChunk) => {
+        if (!mountedRef.current) return;
+
+        fullResponse += chunk.content;
+        setStreamingContent(fullResponse);
+
+        if (chunk.done) {
+          const assistantMsgId = crypto.randomUUID();
+          const assistantTimestamp = new Date().toISOString();
+          const assistantMsg: AIChatMessageDisplay = {
+            id: assistantMsgId,
+            role: "assistant",
+            content: fullResponse,
+            timestamp: assistantTimestamp,
+          };
+
+          setMessages((prev) => {
+            const next = [...prev, assistantMsg];
+            messagesRef.current = next;
+            return next;
+          });
+          setStreamingContent("");
+          setIsStreaming(false);
+
+          // Persist assistant message (fire and forget)
+          aiSaveMessage(assistantMsgId, sessionId, "assistant", fullResponse).catch(() => {});
+
+          // Auto-title the session from the first user message if still untitled
+          const currentSess = currentSessionRef.current;
+          if (currentSess && !currentSess.title) {
+            const title = content.length > 50 ? content.slice(0, 47) + "…" : content;
+            aiUpdateSessionTitle(sessionId, title)
+              .then(() => {
+                if (mountedRef.current) {
+                  const update = (s: AISessionRow) => (s.id === sessionId ? { ...s, title } : s);
+                  setSessions((prev) => prev.map(update));
+                  setCurrentSession((prev) => (prev ? { ...prev, title } : prev));
+                }
+              })
+              .catch(() => {});
+          }
+        }
+      };
+
+      try {
+        await aiStreamChat(model, conversationMessages, channel);
+      } catch (e) {
+        if (!mountedRef.current) return;
+        setError(String(e));
         setStreamingContent("");
         setIsStreaming(false);
-
-        // Persist assistant message (fire and forget)
-        aiSaveMessage(assistantMsgId, sessionId, "assistant", fullResponse).catch(() => {});
-
-        // Auto-title the session from the first user message if still untitled
-        const currentSess = currentSessionRef.current;
-        if (currentSess && !currentSess.title) {
-          const title = content.length > 50 ? content.slice(0, 47) + "…" : content;
-          aiUpdateSessionTitle(sessionId, title)
-            .then(() => {
-              if (mountedRef.current) {
-                const update = (s: AISessionRow) =>
-                  s.id === sessionId ? { ...s, title } : s;
-                setSessions((prev) => prev.map(update));
-                setCurrentSession((prev) => (prev ? { ...prev, title } : prev));
-              }
-            })
-            .catch(() => {});
-        }
       }
-    };
-
-    try {
-      await aiStreamChat(model, conversationMessages, channel);
-    } catch (e) {
-      if (!mountedRef.current) return;
-      setError(String(e));
-      setStreamingContent("");
-      setIsStreaming(false);
-    }
-  }, [isStreaming]);
+    },
+    [isStreaming],
+  );
 
   return {
     sessions,

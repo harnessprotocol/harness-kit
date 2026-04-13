@@ -1,7 +1,7 @@
 import { useState } from "react";
+import EditorPane from "../../components/file-explorer/EditorPane";
 import { useFileEditor } from "../../hooks/useFileEditor";
 import { getAvailableViewModes, getDefaultViewMode } from "../../lib/viewModes";
-import EditorPane from "../../components/file-explorer/EditorPane";
 
 const FILE_PATH = "~/.claude/CLAUDE.md";
 

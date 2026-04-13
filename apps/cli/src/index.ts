@@ -1,14 +1,10 @@
 import { Command } from "commander";
-import { validateCommand } from "./commands/validate.js";
 import { compileCommand } from "./commands/compile.js";
 import { detectCommand } from "./commands/detect.js";
 import { initCommand } from "./commands/init.js";
+import { createOrganization, joinOrganization, listOrganizations } from "./commands/org.js";
 import { scanCommand } from "./commands/scan.js";
-import {
-  listOrganizations,
-  createOrganization,
-  joinOrganization,
-} from "./commands/org.js";
+import { validateCommand } from "./commands/validate.js";
 
 const program = new Command();
 
@@ -87,9 +83,7 @@ Examples:
     await scanCommand(path);
   });
 
-const orgCommand = program
-  .command("org")
-  .description("Manage organizations");
+const orgCommand = program.command("org").description("Manage organizations");
 
 orgCommand
   .command("list")

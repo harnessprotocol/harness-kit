@@ -54,7 +54,14 @@ export type ClientMessage =
   | { type: "join_room"; code: string; nickname: string }
   | { type: "leave_room" }
   | { type: "chat"; body: string }
-  | { type: "share"; action: ShareAction; target: string; detail?: string; diff?: string; pullable?: boolean }
+  | {
+      type: "share";
+      action: ShareAction;
+      target: string;
+      detail?: string;
+      diff?: string;
+      pullable?: boolean;
+    }
   | { type: "typing"; typing: boolean }
   | { type: "heartbeat" };
 

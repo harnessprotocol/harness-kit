@@ -8,8 +8,8 @@ const MAX_SLUG_LEN = 40;
 export function taskBranchName(taskId: number, title: string): string {
   const slug = title
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-|-$/g, '')
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
     .slice(0, MAX_SLUG_LEN);
   return `board/task-${taskId}-${slug}`;
 }

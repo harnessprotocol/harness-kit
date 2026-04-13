@@ -1,5 +1,5 @@
+import type { User } from "@supabase/supabase-js";
 import { getServiceSupabase } from "@/lib/supabase";
-import { type User } from "@supabase/supabase-js";
 
 /**
  * Organization member roles
@@ -55,10 +55,7 @@ export async function getOrgBySlug(slug: string): Promise<Organization | null> {
  * Gets a user's role in an organization.
  * Returns null if the user is not a member.
  */
-export async function getUserOrgRole(
-  orgId: string,
-  userId: string
-): Promise<OrgRole | null> {
+export async function getUserOrgRole(orgId: string, userId: string): Promise<OrgRole | null> {
   const supabase = getServiceSupabase();
 
   const { data, error } = await supabase
@@ -86,7 +83,7 @@ export async function getUserOrgRole(
 export async function checkOrgRole(
   orgId: string,
   userId: string,
-  requiredRole: OrgRole
+  requiredRole: OrgRole,
 ): Promise<boolean> {
   const userRole = await getUserOrgRole(orgId, userId);
 
@@ -110,10 +107,7 @@ export async function checkOrgRole(
 /**
  * Checks if a user is a member of an organization (any role).
  */
-export async function checkOrgMembership(
-  orgId: string,
-  userId: string
-): Promise<boolean> {
+export async function checkOrgMembership(orgId: string, userId: string): Promise<boolean> {
   const role = await getUserOrgRole(orgId, userId);
   return role !== null;
 }
@@ -126,7 +120,7 @@ export async function checkOrgMembership(
 export async function requireOrgRole(
   orgSlug: string,
   user: User | null,
-  requiredRole: OrgRole
+  requiredRole: OrgRole,
 ): Promise<Organization> {
   if (!user) {
     throw new AuthorizationError("Authentication required", 401);
@@ -149,9 +143,7 @@ export async function requireOrgRole(
 /**
  * Gets all organizations a user is a member of.
  */
-export async function getUserOrganizations(
-  userId: string
-): Promise<Organization[]> {
+export async function getUserOrganizations(userId: string): Promise<Organization[]> {
   const supabase = getServiceSupabase();
 
   const { data, error } = await supabase
@@ -164,7 +156,7 @@ export async function getUserOrganizations(
   }
 
   // Supabase infers the joined field as any[] — cast to the known shape
-  return data.map((item) => (item.organizations as unknown) as Organization);
+  return data.map((item) => item.organizations as unknown as Organization);
 }
 
 /**
@@ -193,7 +185,7 @@ export async function getOrgMembers(orgId: string): Promise<OrgMember[]> {
 export class AuthorizationError extends Error {
   constructor(
     message: string,
-    public status: number
+    public status: number,
   ) {
     super(message);
     this.name = "AuthorizationError";

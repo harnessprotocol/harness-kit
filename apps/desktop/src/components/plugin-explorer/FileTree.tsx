@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react";
-import { AnimatePresence, motion } from "framer-motion";
 import type { FileTreeNode } from "@harness-kit/shared";
+import { AnimatePresence, motion } from "framer-motion";
+import { useCallback, useState } from "react";
 import FileTypeIcon from "./FileTypeIcon";
 
 interface FileTreeProps {
@@ -11,7 +11,13 @@ interface FileTreeProps {
   defaultExpanded?: boolean;
 }
 
-function FileTreeItem({ node, selectedPath, onSelectFile, depth = 0, defaultExpanded = false }: FileTreeProps) {
+function FileTreeItem({
+  node,
+  selectedPath,
+  onSelectFile,
+  depth = 0,
+  defaultExpanded = false,
+}: FileTreeProps) {
   const [expanded, setExpanded] = useState(defaultExpanded || depth < 1);
   const isDir = node.kind === "directory";
   const isSelected = node.path === selectedPath;
@@ -24,15 +30,18 @@ function FileTreeItem({ node, selectedPath, onSelectFile, depth = 0, defaultExpa
     }
   }, [isDir, node.path, onSelectFile]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      handleClick();
-    } else if (isDir && e.key === "ArrowRight" && !expanded) {
-      setExpanded(true);
-    } else if (isDir && e.key === "ArrowLeft" && expanded) {
-      setExpanded(false);
-    }
-  }, [handleClick, isDir, expanded]);
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter") {
+        handleClick();
+      } else if (isDir && e.key === "ArrowRight" && !expanded) {
+        setExpanded(true);
+      } else if (isDir && e.key === "ArrowLeft" && expanded) {
+        setExpanded(false);
+      }
+    },
+    [handleClick, isDir, expanded],
+  );
 
   return (
     <div>
@@ -64,39 +73,55 @@ function FileTreeItem({ node, selectedPath, onSelectFile, depth = 0, defaultExpa
         }}
       >
         {/* Vertical guide lines */}
-        {depth > 0 && Array.from({ length: depth }).map((_, i) => (
-          <div
-            key={i}
-            style={{
-              position: "absolute",
-              left: `${14 + i * 16}px`,
-              top: 0,
-              bottom: 0,
-              width: "1px",
-              background: "var(--border-subtle)",
-            }}
-          />
-        ))}
+        {depth > 0 &&
+          Array.from({ length: depth }).map((_, i) => (
+            <div
+              key={i}
+              style={{
+                position: "absolute",
+                left: `${14 + i * 16}px`,
+                top: 0,
+                bottom: 0,
+                width: "1px",
+                background: "var(--border-subtle)",
+              }}
+            />
+          ))}
 
         {/* Expand/collapse chevron for dirs */}
         {isDir ? (
-          <svg width="10" height="10" viewBox="0 0 10 10" style={{
-            flexShrink: 0,
-            transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
-            transition: "transform 0.1s",
-            color: "var(--fg-subtle)",
-          }}>
-            <path d="M3 1.5l4 3.5-4 3.5" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+          <svg
+            width="10"
+            height="10"
+            viewBox="0 0 10 10"
+            style={{
+              flexShrink: 0,
+              transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
+              transition: "transform 0.1s",
+              color: "var(--fg-subtle)",
+            }}
+          >
+            <path
+              d="M3 1.5l4 3.5-4 3.5"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+            />
           </svg>
         ) : (
           <span style={{ width: 10, flexShrink: 0 }} />
         )}
 
         <FileTypeIcon name={node.name} kind={node.kind} expanded={expanded} />
-        <span style={{
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-          fontWeight: isDir ? 500 : 400,
-        }}>
+        <span
+          style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            fontWeight: isDir ? 500 : 400,
+          }}
+        >
           {node.name}
         </span>
       </div>
@@ -136,10 +161,15 @@ interface FileTreeRootProps {
 
 export default function FileTree({ tree, selectedPath, onSelectFile }: FileTreeRootProps) {
   return (
-    <div role="tree" style={{
-      overflowY: "auto", overflowX: "hidden",
-      flex: 1, padding: "4px 0",
-    }}>
+    <div
+      role="tree"
+      style={{
+        overflowY: "auto",
+        overflowX: "hidden",
+        flex: 1,
+        padding: "4px 0",
+      }}
+    >
       <FileTreeItem
         node={tree}
         selectedPath={selectedPath}

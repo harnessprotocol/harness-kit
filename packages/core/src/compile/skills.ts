@@ -1,10 +1,5 @@
 import type { FsProvider } from "../fs-provider.js";
-import type {
-  FileAction,
-  HarnessConfig,
-  HarnessPlugin,
-  TargetPlatform,
-} from "../types.js";
+import type { FileAction, HarnessConfig, HarnessPlugin, TargetPlatform } from "../types.js";
 
 const SKILL_SEARCH_PATHS = [
   "~/.claude/skills/{name}/SKILL.md",
@@ -36,29 +31,20 @@ function adaptFrontmatter(content: string): string {
   const body = fmMatch[2];
 
   // Rename dependencies → compatibility
-  frontmatter = frontmatter.replace(
-    /^dependencies:/m,
-    "compatibility:",
-  );
+  frontmatter = frontmatter.replace(/^dependencies:/m, "compatibility:");
 
   // Enforce name constraints
   const nameMatch = frontmatter.match(/^name:\s*(.+)$/m);
   if (nameMatch) {
     const slugged = slugify(nameMatch[1].trim());
-    frontmatter = frontmatter.replace(
-      /^name:\s*.+$/m,
-      `name: ${slugged}`,
-    );
+    frontmatter = frontmatter.replace(/^name:\s*.+$/m, `name: ${slugged}`);
   }
 
   // Truncate description
   const descMatch = frontmatter.match(/^description:\s*(.+)$/m);
   if (descMatch && descMatch[1].length > 1024) {
     const truncated = descMatch[1].slice(0, 1024).replace(/\s+\S*$/, "") + "…";
-    frontmatter = frontmatter.replace(
-      /^description:\s*.+$/m,
-      `description: ${truncated}`,
-    );
+    frontmatter = frontmatter.replace(/^description:\s*.+$/m, `description: ${truncated}`);
   }
 
   return `---\n${frontmatter}\n---\n${body}`;
@@ -115,13 +101,9 @@ async function findSkillMd(
   home: string,
 ): Promise<string | null> {
   for (const template of SKILL_SEARCH_PATHS) {
-    const relPath = template
-      .replace("{name}", plugin.name)
-      .replace("~", home);
+    const relPath = template.replace("{name}", plugin.name).replace("~", home);
 
-    const fullPath = relPath.startsWith("/")
-      ? relPath
-      : fs.joinPath(cwd, relPath);
+    const fullPath = relPath.startsWith("/") ? relPath : fs.joinPath(cwd, relPath);
 
     if (await fs.exists(fullPath)) {
       return fs.readFile(fullPath);

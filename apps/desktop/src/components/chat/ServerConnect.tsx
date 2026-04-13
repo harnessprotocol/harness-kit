@@ -5,11 +5,19 @@ import { chatStartLocalRelay } from "../../lib/tauri";
 const DEFAULT_URL = "ws://localhost:4801";
 
 function getStoredServer(): string {
-  try { return localStorage.getItem("harness-kit-chat-server") ?? ""; } catch { return ""; }
+  try {
+    return localStorage.getItem("harness-kit-chat-server") ?? "";
+  } catch {
+    return "";
+  }
 }
 
 function getStoredKeepAlive(): number {
-  try { return Number(localStorage.getItem("harness-kit-chat-keep-alive") ?? "5") || 5; } catch { return 5; }
+  try {
+    return Number(localStorage.getItem("harness-kit-chat-keep-alive") ?? "5") || 5;
+  } catch {
+    return 5;
+  }
 }
 
 export default function ServerConnect() {
@@ -53,30 +61,54 @@ export default function ServerConnect() {
   });
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "20px 16px", gap: "16px" }}>
+    <div
+      style={{
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+        padding: "20px 16px",
+        gap: "16px",
+      }}
+    >
       {/* Tab switcher */}
-      <div style={{ display: "flex", gap: "4px", padding: "4px", background: "var(--bg-subtle)", borderRadius: "7px" }}>
-        <button style={tabStyle(tab === "host")} onClick={() => setTab("host")}>Host</button>
-        <button style={tabStyle(tab === "join")} onClick={() => setTab("join")}>Join</button>
+      <div
+        style={{
+          display: "flex",
+          gap: "4px",
+          padding: "4px",
+          background: "var(--bg-subtle)",
+          borderRadius: "7px",
+        }}
+      >
+        <button style={tabStyle(tab === "host")} onClick={() => setTab("host")}>
+          Host
+        </button>
+        <button style={tabStyle(tab === "join")} onClick={() => setTab("join")}>
+          Join
+        </button>
       </div>
 
       {tab === "host" ? (
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
           <div style={{ fontSize: "12px", color: "var(--fg-muted)", lineHeight: 1.5 }}>
-            Start a relay server on this machine. Share the URL and room code with teammates so they can join.
+            Start a relay server on this machine. Share the URL and room code with teammates so they
+            can join.
           </div>
-          <div style={{
-            background: "var(--bg-subtle)",
-            borderRadius: "6px",
-            padding: "10px 12px",
-            fontFamily: "ui-monospace, monospace",
-            fontSize: "11px",
-            color: "var(--fg-subtle)",
-          }}>
+          <div
+            style={{
+              background: "var(--bg-subtle)",
+              borderRadius: "6px",
+              padding: "10px 12px",
+              fontFamily: "ui-monospace, monospace",
+              fontSize: "11px",
+              color: "var(--fg-subtle)",
+            }}
+          >
             ws://YOUR_IP:4801
           </div>
           <div style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>
-            Replace <code>YOUR_IP</code> with your machine's local IP address when sharing with teammates.
+            Replace <code>YOUR_IP</code> with your machine's local IP address when sharing with
+            teammates.
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             <label style={{ fontSize: "11px", color: "var(--fg-subtle)", fontWeight: 500 }}>
@@ -96,16 +128,15 @@ export default function ServerConnect() {
             </select>
           </div>
           {error && <div style={{ fontSize: "11px", color: "var(--red)" }}>{error}</div>}
-          <button
-            className="btn btn-primary btn-sm"
-            onClick={handleHost}
-            disabled={starting}
-          >
+          <button className="btn btn-primary btn-sm" onClick={handleHost} disabled={starting}>
             {starting ? "Starting…" : "Start server & create room"}
           </button>
         </div>
       ) : (
-        <form onSubmit={handleJoin} style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+        <form
+          onSubmit={handleJoin}
+          style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+        >
           <label style={{ fontSize: "11px", color: "var(--fg-subtle)", fontWeight: 500 }}>
             Relay server URL
           </label>

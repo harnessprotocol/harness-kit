@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
-import { compilePermissions, buildPermissionsText } from "../src/compile/permissions.js";
-import { MockFsProvider } from "./helpers/mock-fs.js";
+import { describe, expect, it } from "vitest";
+import { buildPermissionsText, compilePermissions } from "../src/compile/permissions.js";
 import type { HarnessConfig } from "../src/types.js";
+import { MockFsProvider } from "./helpers/mock-fs.js";
 
 function makeConfig(permissions: HarnessConfig["permissions"]): HarnessConfig {
   return {

@@ -1,20 +1,24 @@
+import type { InstalledPlugin, PluginUpdateInfo } from "@harness-kit/shared";
+import { AnimatePresence } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AnimatePresence } from "framer-motion";
-import {
-  listInstalledPlugins, checkPluginUpdates, uninstallPlugin,
-  importPluginFromPath, importPluginFromZip,
-  exportPluginAsZip, exportPluginToFolder,
-} from "../../lib/tauri";
-import type { InstalledPlugin, PluginUpdateInfo } from "@harness-kit/shared";
 import ContextMenu, { type ContextMenuItem } from "../../components/ContextMenu";
-import PluginFilters from "./plugins/PluginFilters";
-import PluginRow from "./plugins/PluginRow";
-import ImportOverlay from "./plugins/ImportOverlay";
-import ImportBanner, { type ImportStatus } from "./plugins/ImportBanner";
-import UninstallDialog from "./plugins/UninstallDialog";
 import { useChat } from "../../contexts/ChatContext";
 import { emitChatShare } from "../../lib/chat-events";
+import {
+  checkPluginUpdates,
+  exportPluginAsZip,
+  exportPluginToFolder,
+  importPluginFromPath,
+  importPluginFromZip,
+  listInstalledPlugins,
+  uninstallPlugin,
+} from "../../lib/tauri";
+import ImportBanner, { type ImportStatus } from "./plugins/ImportBanner";
+import ImportOverlay from "./plugins/ImportOverlay";
+import PluginFilters from "./plugins/PluginFilters";
+import PluginRow from "./plugins/PluginRow";
+import UninstallDialog from "./plugins/UninstallDialog";
 
 export default function PluginsPage() {
   const navigate = useNavigate();
@@ -23,7 +27,11 @@ export default function PluginsPage() {
   const [updates, setUpdates] = useState<Record<string, PluginUpdateInfo>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; plugin: InstalledPlugin } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    plugin: InstalledPlugin;
+  } | null>(null);
 
   // Filters
   const [search, setSearch] = useState("");
@@ -69,8 +77,8 @@ export default function PluginsPage() {
       result = result.filter(
         (p) =>
           p.name.toLowerCase().includes(q) ||
-          (p.description?.toLowerCase().includes(q)) ||
-          (p.category?.toLowerCase().includes(q)) ||
+          p.description?.toLowerCase().includes(q) ||
+          p.category?.toLowerCase().includes(q) ||
           p.tags?.some((t) => t.toLowerCase().includes(q)),
       );
     }
@@ -124,7 +132,13 @@ export default function PluginsPage() {
       setImportStatus({ state: "success", name });
       loadPlugins();
       if (chatState.status === "in_room") {
-        emitChatShare({ action: "plugin_installed", target: name, detail: null, diff: null, pullable: false });
+        emitChatShare({
+          action: "plugin_installed",
+          target: name,
+          detail: null,
+          diff: null,
+          pullable: false,
+        });
       }
     } catch (err) {
       setImportStatus({ state: "error", message: String(err) });
@@ -148,7 +162,13 @@ export default function PluginsPage() {
         setImportStatus({ state: "success", name });
         loadPlugins();
         if (chatState.status === "in_room") {
-          emitChatShare({ action: "plugin_installed", target: name, detail: null, diff: null, pullable: false });
+          emitChatShare({
+            action: "plugin_installed",
+            target: name,
+            detail: null,
+            diff: null,
+            pullable: false,
+          });
         }
       } catch (err) {
         setImportStatus({ state: "error", message: String(err) });
@@ -168,7 +188,13 @@ export default function PluginsPage() {
       setUninstallTarget(null);
       loadPlugins();
       if (chatState.status === "in_room") {
-        emitChatShare({ action: "plugin_uninstalled", target: pluginName, detail: null, diff: null, pullable: false });
+        emitChatShare({
+          action: "plugin_uninstalled",
+          target: pluginName,
+          detail: null,
+          diff: null,
+          pullable: false,
+        });
       }
     } catch (err) {
       setError(String(err));
@@ -202,7 +228,9 @@ export default function PluginsPage() {
               title: "Export plugin as zip",
             });
             if (savePath) await exportPluginAsZip(plugin.source, savePath);
-          } catch { /* cancelled */ }
+          } catch {
+            /* cancelled */
+          }
         },
       },
       {
@@ -213,7 +241,9 @@ export default function PluginsPage() {
             const { open } = await import("@tauri-apps/plugin-dialog");
             const dest = await open({ directory: true, title: "Export plugin to folder" });
             if (dest) await exportPluginToFolder(plugin.source, dest as string);
-          } catch { /* cancelled */ }
+          } catch {
+            /* cancelled */
+          }
         },
       },
       { separator: true },
@@ -232,22 +262,45 @@ export default function PluginsPage() {
       onDrop={handleDrop}
     >
       {/* Page header */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "16px" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "space-between",
+          marginBottom: "16px",
+        }}
+      >
         <div>
-          <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
+          <h1
+            style={{
+              fontSize: "17px",
+              fontWeight: 600,
+              letterSpacing: "-0.3px",
+              color: "var(--fg-base)",
+              margin: 0,
+            }}
+          >
             Installed Plugins
           </h1>
           <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>
-            Plugins in your <code style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>~/.claude/</code> environment.
+            Plugins in your{" "}
+            <code style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
+              ~/.claude/
+            </code>{" "}
+            environment.
           </p>
         </div>
         <div style={{ display: "flex", gap: "8px" }}>
           <button
             onClick={handleImportFolder}
             style={{
-              fontSize: "12px", fontWeight: 500, padding: "5px 12px",
-              borderRadius: "6px", border: "1px solid var(--accent)",
-              background: "rgba(91,80,232,0.08)", color: "var(--accent-text)",
+              fontSize: "12px",
+              fontWeight: 500,
+              padding: "5px 12px",
+              borderRadius: "6px",
+              border: "1px solid var(--accent)",
+              background: "rgba(91,80,232,0.08)",
+              color: "var(--accent-text)",
               cursor: "pointer",
             }}
           >
@@ -258,10 +311,15 @@ export default function PluginsPage() {
               disabled
               title="Run /plugin update in Claude Code to apply updates"
               style={{
-                fontSize: "12px", fontWeight: 500, padding: "5px 12px",
-                borderRadius: "6px", border: "1px solid var(--border-base)",
-                background: "var(--bg-elevated)", color: "var(--fg-muted)",
-                cursor: "not-allowed", opacity: 0.7,
+                fontSize: "12px",
+                fontWeight: 500,
+                padding: "5px 12px",
+                borderRadius: "6px",
+                border: "1px solid var(--border-base)",
+                background: "var(--bg-elevated)",
+                color: "var(--fg-muted)",
+                cursor: "not-allowed",
+                opacity: 0.7,
               }}
             >
               Update All ({Object.keys(updates).length})
@@ -273,40 +331,93 @@ export default function PluginsPage() {
       {/* Import banner */}
       <ImportBanner status={importStatus} onDismiss={() => setImportStatus(null)} />
 
-      {loading && (
-        <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</p>
-      )}
+      {loading && <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</p>}
 
       {error && (
-        <div style={{
-          background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-          borderRadius: "8px", padding: "10px 14px", fontSize: "13px", color: "var(--danger)",
-          marginBottom: "12px",
-        }}>
+        <div
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-base)",
+            borderRadius: "8px",
+            padding: "10px 14px",
+            fontSize: "13px",
+            color: "var(--danger)",
+            marginBottom: "12px",
+          }}
+        >
           {error}
         </div>
       )}
 
       {!loading && !error && plugins.length === 0 && (
-        <div style={{
-          background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-          borderRadius: "8px", padding: "40px 16px", textAlign: "center",
-        }}>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ color: "var(--fg-subtle)", marginBottom: "10px" }}>
-            <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
-            <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
-            <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
-            <path d="M17.5 14v7M14 17.5h7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+        <div
+          style={{
+            background: "var(--bg-surface)",
+            border: "1px solid var(--border-base)",
+            borderRadius: "8px",
+            padding: "40px 16px",
+            textAlign: "center",
+          }}
+        >
+          <svg
+            width="32"
+            height="32"
+            viewBox="0 0 24 24"
+            fill="none"
+            style={{ color: "var(--fg-subtle)", marginBottom: "10px" }}
+          >
+            <rect
+              x="3"
+              y="3"
+              width="7"
+              height="7"
+              rx="1.5"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+            <rect
+              x="14"
+              y="3"
+              width="7"
+              height="7"
+              rx="1.5"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+            <rect
+              x="3"
+              y="14"
+              width="7"
+              height="7"
+              rx="1.5"
+              stroke="currentColor"
+              strokeWidth="1.5"
+            />
+            <path
+              d="M17.5 14v7M14 17.5h7"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+            />
           </svg>
-          <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: "0 0 4px" }}>No plugins installed.</p>
+          <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: "0 0 4px" }}>
+            No plugins installed.
+          </p>
           <p style={{ fontSize: "11px", color: "var(--fg-subtle)", margin: "0 0 12px" }}>
-            Install via <code style={{ fontFamily: "ui-monospace, monospace" }}>/plugin install</code> in Claude Code, or drag a plugin folder here.
+            Install via{" "}
+            <code style={{ fontFamily: "ui-monospace, monospace" }}>/plugin install</code> in Claude
+            Code, or drag a plugin folder here.
           </p>
           <button
             onClick={() => navigate("/marketplace")}
             style={{
-              fontSize: "11px", color: "var(--accent-text)", background: "none",
-              border: "none", cursor: "pointer", fontWeight: 500, padding: 0,
+              fontSize: "11px",
+              color: "var(--accent-text)",
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              fontWeight: 500,
+              padding: 0,
             }}
           >
             Browse Marketplace →
@@ -326,10 +437,15 @@ export default function PluginsPage() {
             filtered={filtered.length}
           />
 
-          <div style={{
-            background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-            borderRadius: "8px", overflow: "hidden", flex: 1,
-          }}>
+          <div
+            style={{
+              background: "var(--bg-surface)",
+              border: "1px solid var(--border-base)",
+              borderRadius: "8px",
+              overflow: "hidden",
+              flex: 1,
+            }}
+          >
             <AnimatePresence mode="popLayout">
               {filtered.map((plugin, i) => (
                 <PluginRow
@@ -347,10 +463,14 @@ export default function PluginsPage() {
             </AnimatePresence>
 
             {filtered.length === 0 && (
-              <div style={{
-                padding: "20px", textAlign: "center",
-                fontSize: "12px", color: "var(--fg-subtle)",
-              }}>
+              <div
+                style={{
+                  padding: "20px",
+                  textAlign: "center",
+                  fontSize: "12px",
+                  color: "var(--fg-subtle)",
+                }}
+              >
                 No plugins match your filter.
               </div>
             )}
@@ -378,7 +498,6 @@ export default function PluginsPage() {
         onConfirm={handleUninstall}
         onClose={() => setUninstallTarget(null)}
       />
-
     </div>
   );
 }

@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
-import { roadmapApi } from '../lib/roadmap-api';
-import type { Roadmap, CompetitorAnalysis } from '../lib/roadmap-types';
-import { useWebSocket } from './useWebSocket';
+import { useCallback, useEffect, useState } from "react";
+import { roadmapApi } from "../lib/roadmap-api";
+import type { CompetitorAnalysis, Roadmap } from "../lib/roadmap-types";
+import { useWebSocket } from "./useWebSocket";
 
 type RoadmapEvent =
-  | { type: 'roadmap_updated'; slug: string }
-  | { type: 'competitors_updated'; slug: string }
-  | { type: 'connected'; message: string };
+  | { type: "roadmap_updated"; slug: string }
+  | { type: "competitors_updated"; slug: string }
+  | { type: "connected"; message: string };
 
 export function useRoadmapData(slug: string, ready = true) {
   const [roadmap, setRoadmap] = useState<Roadmap | null>(null);
@@ -16,17 +16,14 @@ export function useRoadmapData(slug: string, ready = true) {
   const [lastSyncedAt, setLastSyncedAt] = useState<Date | null>(null);
 
   const fetchAll = useCallback(() => {
-    Promise.all([
-      roadmapApi.roadmap.get(slug),
-      roadmapApi.competitors.get(slug),
-    ])
+    Promise.all([roadmapApi.roadmap.get(slug), roadmapApi.competitors.get(slug)])
       .then(([r, c]) => {
         setRoadmap(r);
         setCompetitorAnalysis(c);
         setError(null);
         setLastSyncedAt(new Date());
       })
-      .catch(err => setError(String(err)))
+      .catch((err) => setError(String(err)))
       .finally(() => setLoading(false));
   }, [slug]);
 
@@ -39,10 +36,10 @@ export function useRoadmapData(slug: string, ready = true) {
   useWebSocket((evt) => {
     try {
       const msg = JSON.parse(evt.data as string) as RoadmapEvent;
-      if (msg.type === 'roadmap_updated' && msg.slug === slug) {
+      if (msg.type === "roadmap_updated" && msg.slug === slug) {
         fetchAll();
       }
-      if (msg.type === 'competitors_updated' && msg.slug === slug) {
+      if (msg.type === "competitors_updated" && msg.slug === slug) {
         fetchAll();
       }
     } catch {

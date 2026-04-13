@@ -1,5 +1,5 @@
 import { WebSocket } from "ws";
-import type { Member, ServerMessage, AnyMessage } from "./protocol.js";
+import type { AnyMessage, Member, ServerMessage } from "./protocol.js";
 import { RingBuffer } from "./ring-buffer.js";
 
 const MESSAGE_HISTORY_CAPACITY = 500;

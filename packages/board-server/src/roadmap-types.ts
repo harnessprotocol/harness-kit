@@ -1,7 +1,7 @@
-export type CompetitorSource = 'manual' | 'ai';
-export type CompetitorRelevance = 'high' | 'medium' | 'low';
-export type PainPointSeverity = 'high' | 'medium' | 'low';
-export type OpportunitySize = 'high' | 'medium' | 'low';
+export type CompetitorSource = "manual" | "ai";
+export type CompetitorRelevance = "high" | "medium" | "low";
+export type PainPointSeverity = "high" | "medium" | "low";
+export type OpportunitySize = "high" | "medium" | "low";
 
 export interface CompetitorPainPoint {
   id: string;
@@ -64,10 +64,10 @@ export interface CompetitorAnalysis {
   created_at: string;
 }
 
-export type RoadmapFeaturePriority = 'must' | 'should' | 'could' | 'wont';
-export type RoadmapFeatureStatus = 'backlog' | 'planning' | 'in_progress' | 'done';
-export type RoadmapPhaseStatus = 'planned' | 'in_progress' | 'completed';
-export type RoadmapStatus = 'draft' | 'active' | 'archived';
+export type RoadmapFeaturePriority = "must" | "should" | "could" | "wont";
+export type RoadmapFeatureStatus = "backlog" | "planning" | "in_progress" | "done";
+export type RoadmapPhaseStatus = "planned" | "in_progress" | "completed";
+export type RoadmapStatus = "draft" | "active" | "archived";
 
 export interface TargetAudience {
   primary: string;
@@ -77,7 +77,7 @@ export interface TargetAudience {
   usageContext?: string;
 }
 
-export type RoadmapMilestoneStatus = 'planned' | 'achieved';
+export type RoadmapMilestoneStatus = "planned" | "achieved";
 
 export interface RoadmapMilestone {
   id: string;
@@ -104,8 +104,8 @@ export interface RoadmapFeature {
   description: string;
   rationale: string;
   priority: RoadmapFeaturePriority;
-  complexity: 'low' | 'medium' | 'high';
-  impact: 'low' | 'medium' | 'high';
+  complexity: "low" | "medium" | "high";
+  impact: "low" | "medium" | "high";
   phaseId: string;
   dependencies: string[];
   status: RoadmapFeatureStatus;

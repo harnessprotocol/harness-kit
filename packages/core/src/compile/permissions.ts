@@ -1,10 +1,5 @@
 import type { FsProvider } from "../fs-provider.js";
-import type {
-  FileAction,
-  HarnessConfig,
-  HarnessPermissions,
-  TargetPlatform,
-} from "../types.js";
+import type { FileAction, HarnessConfig, HarnessPermissions, TargetPlatform } from "../types.js";
 import { readJsonOrDefault } from "../utils/read-json.js";
 
 export async function compilePermissions(
@@ -52,7 +47,9 @@ async function compileClaudeCodePermissions(
   const settingsPath = fs.joinPath(cwd, ".claude/settings.json");
 
   const { data: existing, existed } = await readJsonOrDefault<Record<string, unknown>>(
-    fs, settingsPath, {},
+    fs,
+    settingsPath,
+    {},
   );
 
   const permissionsObj: Record<string, unknown> = {};

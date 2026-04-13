@@ -1,14 +1,11 @@
-import { describe, it, expect } from "vitest";
-import { render, screen } from "@testing-library/react";
-import SystemEvent from "../SystemEvent";
 import type { SystemMessage } from "@harness-kit/shared";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import SystemEvent from "../SystemEvent";
 
 // ── Helpers ───────────────────────────────────────────────────
 
-function makeSystemMsg(
-  event: SystemMessage["event"],
-  nickname = "alice",
-): SystemMessage {
+function makeSystemMsg(event: SystemMessage["event"], nickname = "alice"): SystemMessage {
   return {
     id: "sys-1",
     roomCode: "ABCD",

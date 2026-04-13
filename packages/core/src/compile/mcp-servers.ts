@@ -1,10 +1,5 @@
 import type { FsProvider } from "../fs-provider.js";
-import type {
-  FileAction,
-  HarnessConfig,
-  McpServer,
-  TargetPlatform,
-} from "../types.js";
+import type { FileAction, HarnessConfig, McpServer, TargetPlatform } from "../types.js";
 import { readJsonOrDefault } from "../utils/read-json.js";
 
 const MCP_FILE_MAP: Record<TargetPlatform, string> = {
@@ -65,12 +60,11 @@ export async function compileMcpServers(
     const filePath = MCP_FILE_MAP[target];
     const fullPath = fs.joinPath(cwd, filePath);
 
-    const { data: existing, existed } = await readJsonOrDefault<Record<string, Record<string, unknown>>>(
-      fs, fullPath, {},
-    );
+    const { data: existing, existed } = await readJsonOrDefault<
+      Record<string, Record<string, unknown>>
+    >(fs, fullPath, {});
 
-    const existingServers =
-      (existing.mcpServers as Record<string, unknown> | undefined) ?? {};
+    const existingServers = (existing.mcpServers as Record<string, unknown> | undefined) ?? {};
 
     // Merge: add new servers, keep existing ones
     const merged = { ...existingServers };

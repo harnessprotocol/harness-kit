@@ -1,5 +1,5 @@
-import { useState } from "react";
 import type { CSSProperties } from "react";
+import { useState } from "react";
 import type { ClaudeMcpServer } from "../../lib/mcp-types";
 import { inferTransport, isNetworkServer } from "../../lib/mcp-types";
 

@@ -1,6 +1,6 @@
-import { readFile, writeFile, access, mkdir, readdir, lstat } from "node:fs/promises";
-import { join, dirname } from "node:path";
+import { access, lstat, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 import type { FsProvider } from "./fs-provider.js";
 
 export class NodeFsProvider implements FsProvider {

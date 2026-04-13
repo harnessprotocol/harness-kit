@@ -1,24 +1,24 @@
-import './global.css';
-import { RootProvider } from 'fumadocs-ui/provider/next';
-import { Inter, Space_Grotesk } from 'next/font/google';
-import type { ReactNode } from 'react';
+import "./global.css";
+import { RootProvider } from "fumadocs-ui/provider/next";
+import { Inter, Space_Grotesk } from "next/font/google";
+import type { ReactNode } from "react";
 
 const inter = Inter({
-  subsets: ['latin'],
-  variable: '--font-inter',
+  subsets: ["latin"],
+  variable: "--font-inter",
 });
 
 const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  variable: '--font-display',
+  subsets: ["latin"],
+  variable: "--font-display",
 });
 
 export const metadata = {
   title: {
-    template: '%s | Harness Kit',
-    default: 'Harness Kit',
+    template: "%s | Harness Kit",
+    default: "Harness Kit",
   },
-  description: 'A harness-agnostic framework for AI coding tools.',
+  description: "A harness-agnostic framework for AI coding tools.",
 };
 
 export default function Layout({ children }: { children: ReactNode }) {
@@ -31,8 +31,8 @@ export default function Layout({ children }: { children: ReactNode }) {
       <body className="font-sans antialiased">
         <RootProvider
           theme={{
-            defaultTheme: 'dark',
-            attribute: 'class',
+            defaultTheme: "dark",
+            attribute: "class",
           }}
         >
           {children}

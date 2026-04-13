@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import type { SessionFacet, SessionSummary } from "@harness-kit/shared";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import type { SessionSummary, SessionFacet } from "@harness-kit/shared";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import SessionsPage from "../SessionsPage";
 
 // ── Tauri mock ────────────────────────────────────────────────
@@ -13,9 +13,15 @@ let mockReadSessionFacet: (sessionId: string) => Promise<unknown>;
 let mockReadSessionTranscript: (sessionId: string, project: string) => Promise<unknown>;
 
 vi.mock("../../../lib/tauri", () => ({
-  get listSessionsSummary() { return mockListSessionsSummary; },
-  get readSessionFacet() { return mockReadSessionFacet; },
-  get readSessionTranscript() { return mockReadSessionTranscript; },
+  get listSessionsSummary() {
+    return mockListSessionsSummary;
+  },
+  get readSessionFacet() {
+    return mockReadSessionFacet;
+  },
+  get readSessionTranscript() {
+    return mockReadSessionTranscript;
+  },
 }));
 
 // ── Fixtures ──────────────────────────────────────────────────
@@ -25,7 +31,7 @@ const mockSessions: SessionSummary[] = [
     sessionId: "sess-1",
     project: "/Users/john/repos/my-project",
     projectShort: "my-project",
-    firstTimestamp: 1741824600000,  // 2026-03-13 06:50 UTC
+    firstTimestamp: 1741824600000, // 2026-03-13 06:50 UTC
     lastTimestamp: 1741824600000 + 2 * 3_600_000 + 15 * 60_000,
     messageCount: 142,
   },
@@ -64,7 +70,17 @@ function renderSessions() {
 beforeEach(() => {
   // Default: facet and transcript return null unless overridden per test
   mockReadSessionFacet = () => Promise.resolve(null);
-  mockReadSessionTranscript = () => Promise.resolve({ sessionId: "", entries: [], totalInputTokens: 0, totalOutputTokens: 0, totalToolCalls: 0, modelsUsed: [], subagentCount: 0, truncated: false });
+  mockReadSessionTranscript = () =>
+    Promise.resolve({
+      sessionId: "",
+      entries: [],
+      totalInputTokens: 0,
+      totalOutputTokens: 0,
+      totalToolCalls: 0,
+      modelsUsed: [],
+      subagentCount: 0,
+      truncated: false,
+    });
 });
 
 // ── Tests ─────────────────────────────────────────────────────
@@ -79,9 +95,7 @@ describe("SessionsPage — loading state", () => {
   it("hides 'Loading…' after data loads", async () => {
     mockListSessionsSummary = () => Promise.resolve(mockSessions);
     renderSessions();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
   });
 });
 
@@ -119,9 +133,7 @@ describe("SessionsPage — session count header", () => {
   it("shows '2 sessions across 2 projects'", async () => {
     mockListSessionsSummary = () => Promise.resolve(mockSessions);
     renderSessions();
-    expect(
-      await screen.findByText("2 sessions across 2 projects"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("2 sessions across 2 projects")).toBeInTheDocument();
   });
 });
 

@@ -6,17 +6,11 @@ export async function POST() {
     const url = await signInWithGitHub();
 
     if (!url) {
-      return NextResponse.json(
-        { error: "Failed to generate sign-in URL" },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: "Failed to generate sign-in URL" }, { status: 500 });
     }
 
     return NextResponse.json({ url });
   } catch {
-    return NextResponse.json(
-      { error: "Failed to initiate sign-in" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to initiate sign-in" }, { status: 500 });
   }
 }

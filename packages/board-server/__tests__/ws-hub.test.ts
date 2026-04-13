@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import type { Server } from "node:http";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ── Mocks ─────────────────────────────────────────────────────
 
@@ -73,11 +73,11 @@ vi.mock("../src/store/yaml-store.js", () => ({
   readProject: vi.fn(),
 }));
 
-// Import after mocks are set up
-import { WsHub } from "../src/ws/hub.js";
-import type { BoardEvent } from "../src/ws/hub.js";
 import { WebSocket } from "ws";
 import * as store from "../src/store/yaml-store.js";
+import type { BoardEvent } from "../src/ws/hub.js";
+// Import after mocks are set up
+import { WsHub } from "../src/ws/hub.js";
 
 // ── Helpers ───────────────────────────────────────────────────
 
@@ -130,21 +130,21 @@ describe("WsHub constructor", () => {
     const httpServer = makeFakeHttpServer();
     new WsHub(httpServer);
 
-    expect(mockWssInstance.on).toHaveBeenCalledWith('connection', expect.any(Function));
+    expect(mockWssInstance.on).toHaveBeenCalledWith("connection", expect.any(Function));
   });
 
   it("registers file watcher change handler", () => {
     const httpServer = makeFakeHttpServer();
     new WsHub(httpServer);
 
-    expect(mockFileWatcherInstance.on).toHaveBeenCalledWith('change', expect.any(Function));
+    expect(mockFileWatcherInstance.on).toHaveBeenCalledWith("change", expect.any(Function));
   });
 
   it("registers file watcher error handler", () => {
     const httpServer = makeFakeHttpServer();
     new WsHub(httpServer);
 
-    expect(mockFileWatcherInstance.on).toHaveBeenCalledWith('error', expect.any(Function));
+    expect(mockFileWatcherInstance.on).toHaveBeenCalledWith("error", expect.any(Function));
   });
 
   it("starts the file watcher", () => {
@@ -168,14 +168,14 @@ describe("WsHub connection handling", () => {
     const ws = makeFakeWebSocket();
     const req = {} as any;
 
-    const connectionHandler = mockWssOnHandlers.get('connection')!;
+    const connectionHandler = mockWssOnHandlers.get("connection")!;
     connectionHandler(ws, req);
 
     expect(ws.send).toHaveBeenCalledOnce();
     const sentData = JSON.parse(ws.send.mock.calls[0][0]);
     expect(sentData).toEqual({
-      type: 'connected',
-      message: 'Harness Board connected'
+      type: "connected",
+      message: "Harness Board connected",
     });
   });
 
@@ -183,10 +183,10 @@ describe("WsHub connection handling", () => {
     const ws = makeFakeWebSocket();
     const req = {} as any;
 
-    const connectionHandler = mockWssOnHandlers.get('connection')!;
+    const connectionHandler = mockWssOnHandlers.get("connection")!;
     connectionHandler(ws, req);
 
-    expect(ws.on).toHaveBeenCalledWith('error', expect.any(Function));
+    expect(ws.on).toHaveBeenCalledWith("error", expect.any(Function));
   });
 });
 
@@ -209,9 +209,9 @@ describe("WsHub.broadcast", () => {
     mockClients.add(ws3);
 
     const event: BoardEvent = {
-      type: 'project_updated',
-      slug: 'test-project',
-      project: makeMockProject('test-project')
+      type: "project_updated",
+      slug: "test-project",
+      project: makeMockProject("test-project"),
     };
 
     hub.broadcast(event);
@@ -231,8 +231,8 @@ describe("WsHub.broadcast", () => {
     mockClients.add(connectingWs);
 
     const event: BoardEvent = {
-      type: 'connected',
-      message: 'test'
+      type: "connected",
+      message: "test",
     };
 
     hub.broadcast(event);
@@ -247,9 +247,9 @@ describe("WsHub.broadcast", () => {
     mockClients.add(ws);
 
     const event: BoardEvent = {
-      type: 'project_updated',
-      slug: 'my-project',
-      project: makeMockProject('my-project')
+      type: "project_updated",
+      slug: "my-project",
+      project: makeMockProject("my-project"),
     };
 
     hub.broadcast(event);
@@ -259,8 +259,8 @@ describe("WsHub.broadcast", () => {
 
   it("handles empty client set gracefully", () => {
     const event: BoardEvent = {
-      type: 'connected',
-      message: 'test'
+      type: "connected",
+      message: "test",
     };
 
     // Should not throw with no clients
@@ -272,15 +272,15 @@ describe("WsHub.broadcast", () => {
     mockClients.add(ws);
 
     const event: BoardEvent = {
-      type: 'connected',
-      message: 'Hello from server'
+      type: "connected",
+      message: "Hello from server",
     };
 
     hub.broadcast(event);
 
     const sentData = JSON.parse(ws.send.mock.calls[0][0]);
-    expect(sentData.type).toBe('connected');
-    expect(sentData.message).toBe('Hello from server');
+    expect(sentData.type).toBe("connected");
+    expect(sentData.message).toBe("Hello from server");
   });
 });
 
@@ -296,26 +296,26 @@ describe("WsHub.notifyProjectChanged", () => {
   });
 
   it("reads project from store", () => {
-    vi.mocked(store.readProject).mockReturnValue(makeMockProject('test-project'));
+    vi.mocked(store.readProject).mockReturnValue(makeMockProject("test-project"));
 
-    hub.notifyProjectChanged('test-project');
+    hub.notifyProjectChanged("test-project");
 
-    expect(store.readProject).toHaveBeenCalledWith('test-project');
+    expect(store.readProject).toHaveBeenCalledWith("test-project");
   });
 
   it("broadcasts project_updated event when project exists", () => {
     const ws = makeFakeWebSocket(1);
     mockClients.add(ws);
 
-    const project = makeMockProject('test-project');
+    const project = makeMockProject("test-project");
     vi.mocked(store.readProject).mockReturnValue(project);
 
-    hub.notifyProjectChanged('test-project');
+    hub.notifyProjectChanged("test-project");
 
     expect(ws.send).toHaveBeenCalledOnce();
     const sentData = JSON.parse(ws.send.mock.calls[0][0]);
-    expect(sentData.type).toBe('project_updated');
-    expect(sentData.slug).toBe('test-project');
+    expect(sentData.type).toBe("project_updated");
+    expect(sentData.slug).toBe("test-project");
     expect(sentData.project).toEqual(project);
   });
 
@@ -325,7 +325,7 @@ describe("WsHub.notifyProjectChanged", () => {
 
     vi.mocked(store.readProject).mockReturnValue(null);
 
-    hub.notifyProjectChanged('non-existent');
+    hub.notifyProjectChanged("non-existent");
 
     expect(ws.send).not.toHaveBeenCalled();
   });
@@ -336,9 +336,9 @@ describe("WsHub.notifyProjectChanged", () => {
     mockClients.add(ws1);
     mockClients.add(ws2);
 
-    vi.mocked(store.readProject).mockReturnValue(makeMockProject('test-project'));
+    vi.mocked(store.readProject).mockReturnValue(makeMockProject("test-project"));
 
-    hub.notifyProjectChanged('test-project');
+    hub.notifyProjectChanged("test-project");
 
     expect(ws1.send).toHaveBeenCalledOnce();
     expect(ws2.send).toHaveBeenCalledOnce();
@@ -360,28 +360,28 @@ describe("WsHub file watcher integration", () => {
     const ws = makeFakeWebSocket(1);
     mockClients.add(ws);
 
-    const project = makeMockProject('my-project');
+    const project = makeMockProject("my-project");
     vi.mocked(store.readProject).mockReturnValue(project);
 
     // Simulate file change event
-    const changeHandler = mockFileWatcherHandlers.get('change')!;
-    changeHandler({ filename: 'my-project.yaml' });
+    const changeHandler = mockFileWatcherHandlers.get("change")!;
+    changeHandler({ filename: "my-project.yaml" });
 
-    expect(store.readProject).toHaveBeenCalledWith('my-project');
+    expect(store.readProject).toHaveBeenCalledWith("my-project");
     expect(ws.send).toHaveBeenCalledOnce();
 
     const sentData = JSON.parse(ws.send.mock.calls[0][0]);
-    expect(sentData.type).toBe('project_updated');
-    expect(sentData.slug).toBe('my-project');
+    expect(sentData.type).toBe("project_updated");
+    expect(sentData.slug).toBe("my-project");
   });
 
   it("strips .yaml extension from filename", () => {
-    vi.mocked(store.readProject).mockReturnValue(makeMockProject('another-project'));
+    vi.mocked(store.readProject).mockReturnValue(makeMockProject("another-project"));
 
-    const changeHandler = mockFileWatcherHandlers.get('change')!;
-    changeHandler({ filename: 'another-project.yaml' });
+    const changeHandler = mockFileWatcherHandlers.get("change")!;
+    changeHandler({ filename: "another-project.yaml" });
 
-    expect(store.readProject).toHaveBeenCalledWith('another-project');
+    expect(store.readProject).toHaveBeenCalledWith("another-project");
   });
 
   it("does nothing when project file no longer exists", () => {
@@ -390,8 +390,8 @@ describe("WsHub file watcher integration", () => {
 
     vi.mocked(store.readProject).mockReturnValue(null);
 
-    const changeHandler = mockFileWatcherHandlers.get('change')!;
-    changeHandler({ filename: 'deleted-project.yaml' });
+    const changeHandler = mockFileWatcherHandlers.get("change")!;
+    changeHandler({ filename: "deleted-project.yaml" });
 
     expect(ws.send).not.toHaveBeenCalled();
   });
@@ -436,44 +436,36 @@ describe("WsHub error handling", () => {
     vi.clearAllMocks();
 
     // Spy on console.error
-    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     const httpServer = makeFakeHttpServer();
     hub = new WsHub(httpServer);
   });
 
   it("logs file watcher errors", () => {
-    const error = new Error('File system error');
-    const errorHandler = mockFileWatcherHandlers.get('error')!;
+    const error = new Error("File system error");
+    const errorHandler = mockFileWatcherHandlers.get("error")!;
     errorHandler(error);
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      '[WsHub] file watcher error:',
-      error
-    );
+    expect(consoleErrorSpy).toHaveBeenCalledWith("[WsHub] file watcher error:", error);
   });
 
   it("logs client WebSocket errors", () => {
     const ws = makeFakeWebSocket(1);
     const req = {} as any;
 
-    const connectionHandler = mockWssOnHandlers.get('connection')!;
+    const connectionHandler = mockWssOnHandlers.get("connection")!;
     connectionHandler(ws, req);
 
     // Extract the error handler registered on the WebSocket
-    const errorCall = ws.on.mock.calls.find(
-      (call: any[]) => call[0] === 'error'
-    );
+    const errorCall = ws.on.mock.calls.find((call: any[]) => call[0] === "error");
     const clientErrorHandler = errorCall ? errorCall[1] : null;
 
     expect(clientErrorHandler).toBeDefined();
 
-    const error = new Error('Client error');
+    const error = new Error("Client error");
     clientErrorHandler(error);
 
-    expect(consoleErrorSpy).toHaveBeenCalledWith(
-      '[WsHub] client error:',
-      error
-    );
+    expect(consoleErrorSpy).toHaveBeenCalledWith("[WsHub] client error:", error);
   });
 });

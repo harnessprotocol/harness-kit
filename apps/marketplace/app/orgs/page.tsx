@@ -7,11 +7,7 @@ interface SearchParams {
   sort?: string;
 }
 
-export default async function OrgsPage({
-  searchParams,
-}: {
-  searchParams: Promise<SearchParams>;
-}) {
+export default async function OrgsPage({ searchParams }: { searchParams: Promise<SearchParams> }) {
   const params = await searchParams;
   const query = params.q ?? "";
   const sortBy = params.sort ?? "name";
@@ -126,9 +122,7 @@ export default async function OrgsPage({
                         </span>
                       </div>
                       {org.description && (
-                        <p className="mt-1 line-clamp-2 text-sm text-gray-400">
-                          {org.description}
-                        </p>
+                        <p className="mt-1 line-clamp-2 text-sm text-gray-400">{org.description}</p>
                       )}
                     </div>
                     <div className="hidden shrink-0 pt-1 text-right text-xs text-gray-500 sm:block">

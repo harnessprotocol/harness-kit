@@ -1,10 +1,9 @@
 import Link from "next/link";
+import { FilterPanel } from "@/app/components/FilterPanel";
+import { StarRating } from "@/app/components/StarRating";
+import { TrustBadge } from "@/app/components/TrustBadge";
 import { supabase } from "@/lib/supabase";
 import type { Component } from "@/lib/types";
-import { TrustBadge } from "@/app/components/TrustBadge";
-import { StarRating } from "@/app/components/StarRating";
-import { FilterPanel } from "@/app/components/FilterPanel";
-
 
 interface SearchParams {
   q?: string;
@@ -30,9 +29,7 @@ export default async function PluginsPage({
 
   let components: Component[] = [];
   try {
-    let q = supabase
-      .from("components")
-      .select(`
+    let q = supabase.from("components").select(`
         *,
         ratings:ratings(rating)
       `);
@@ -56,9 +53,11 @@ export default async function PluginsPage({
     const { data } = await q;
     let results = (data ?? []).map((item: any) => {
       const ratings = item.ratings || [];
-      const average_rating = ratings.length > 0
-        ? ratings.reduce((sum: number, r: { rating: number }) => sum + r.rating, 0) / ratings.length
-        : 0;
+      const average_rating =
+        ratings.length > 0
+          ? ratings.reduce((sum: number, r: { rating: number }) => sum + r.rating, 0) /
+            ratings.length
+          : 0;
       const review_count = ratings.length;
 
       // Remove the ratings array and add computed fields
@@ -136,18 +135,10 @@ export default async function PluginsPage({
             placeholder="Search plugins..."
             className="flex-1 rounded-lg border border-[#2a2a2e] bg-[#1a1a1e] px-4 py-2.5 text-sm text-gray-100 placeholder-gray-500 outline-none focus:border-violet-500/50"
           />
-          {selectedCategory && (
-            <input type="hidden" name="category" value={selectedCategory} />
-          )}
-          {selectedType && (
-            <input type="hidden" name="type" value={selectedType} />
-          )}
-          {selectedTrust && (
-            <input type="hidden" name="trust" value={selectedTrust} />
-          )}
-          {selectedTag && (
-            <input type="hidden" name="tag" value={selectedTag} />
-          )}
+          {selectedCategory && <input type="hidden" name="category" value={selectedCategory} />}
+          {selectedType && <input type="hidden" name="type" value={selectedType} />}
+          {selectedTrust && <input type="hidden" name="trust" value={selectedTrust} />}
+          {selectedTag && <input type="hidden" name="tag" value={selectedTag} />}
           <button
             type="submit"
             className="rounded-lg bg-violet-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-violet-500"
@@ -195,18 +186,16 @@ export default async function PluginsPage({
 
           {components.length === 0 ? (
             <div className="rounded-xl border border-[#2a2a2e] bg-[#1a1a1e] py-16 text-center">
-              <p className="text-gray-400">
-                No plugins found. Connect Supabase to load data.
-              </p>
+              <p className="text-gray-400">No plugins found. Connect Supabase to load data.</p>
             </div>
           ) : (
             <div className="rounded-xl border border-[#2a2a2e]">
               {components.map((component) => {
                 const updatedDate = component.updated_at
-                  ? new Date(component.updated_at).toLocaleDateString(
-                      "en-US",
-                      { month: "short", day: "numeric" },
-                    )
+                  ? new Date(component.updated_at).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                    })
                   : null;
 
                 return (
@@ -243,9 +232,7 @@ export default async function PluginsPage({
                           {component.install_count.toLocaleString()}
                         </span>
                         {component.author && (
-                          <span className="text-xs text-gray-500">
-                            {component.author.name}
-                          </span>
+                          <span className="text-xs text-gray-500">{component.author.name}</span>
                         )}
                         <TrustBadge tier={component.trust_tier} />
                         <span className="rounded-full border border-[#2a2a2e] px-2 py-0.5 text-xs capitalize text-gray-500">
@@ -258,9 +245,7 @@ export default async function PluginsPage({
                     </div>
                     <div className="hidden shrink-0 pt-1 text-right text-xs text-gray-500 sm:block">
                       <div>v{component.version}</div>
-                      {updatedDate && (
-                        <div className="mt-0.5">{updatedDate}</div>
-                      )}
+                      {updatedDate && <div className="mt-0.5">{updatedDate}</div>}
                     </div>
                   </Link>
                 );

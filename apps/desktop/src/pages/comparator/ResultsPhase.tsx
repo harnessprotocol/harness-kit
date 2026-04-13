@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
 import type { FileDiffRow } from "@harness-kit/shared";
+import { useEffect, useState } from "react";
 import type { ComparisonState } from "../../hooks/useComparator";
-import { getComparisonDiffs, getComparison } from "../../lib/tauri";
+import { getComparison, getComparisonDiffs } from "../../lib/tauri";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -374,7 +374,16 @@ function changeTypeBadge(changeType: string): React.ReactNode {
 
 function ExportIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M14 10v3a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1v-3" />
       <polyline points="8 2 8 10" />
       <polyline points="5 5 8 2 11 5" />
@@ -386,7 +395,16 @@ function ExportIcon() {
 
 function JudgeIcon() {
   return (
-    <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="12"
+      height="12"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <circle cx="8" cy="8" r="6" />
       <polyline points="8 5 8 8 10.5 9.5" />
     </svg>
@@ -457,9 +475,7 @@ export default function ResultsPhase({ active, onStartJudge }: ResultsPhaseProps
     <div style={styles.container}>
       {/* ── Section 1: Header ──────────────────────────────── */}
       <div style={styles.header}>
-        <h2 style={styles.title}>
-          Results{active.title ? ` \u2014 ${active.title}` : ""}
-        </h2>
+        <h2 style={styles.title}>Results{active.title ? ` \u2014 ${active.title}` : ""}</h2>
         <div style={styles.actions}>
           <button
             style={styles.btnBordered}
@@ -506,7 +522,16 @@ export default function ResultsPhase({ active, onStartJudge }: ResultsPhaseProps
                   <th key={p.id} style={styles.th}>
                     {p.harnessName}
                     {p.model ? (
-                      <span style={{ fontWeight: 400, color: tokens.fgPlaceholder, marginLeft: 4, fontSize: 10, textTransform: "none" as const, letterSpacing: 0 }}>
+                      <span
+                        style={{
+                          fontWeight: 400,
+                          color: tokens.fgPlaceholder,
+                          marginLeft: 4,
+                          fontSize: 10,
+                          textTransform: "none" as const,
+                          letterSpacing: 0,
+                        }}
+                      >
                         {p.model}
                       </span>
                     ) : null}
@@ -528,7 +553,9 @@ export default function ResultsPhase({ active, onStartJudge }: ResultsPhaseProps
                     <td key={p.id} style={styles.td}>
                       <span style={{ color: s.color, fontWeight: 500 }}>{s.text}</span>
                       {p.status === "completed" && p.exitCode === 0 && (
-                        <span style={{ marginLeft: 4, color: tokens.success, fontSize: 11 }}>{"\u2713"}</span>
+                        <span style={{ marginLeft: 4, color: tokens.success, fontSize: 11 }}>
+                          {"\u2713"}
+                        </span>
                       )}
                     </td>
                   );
@@ -568,7 +595,12 @@ export default function ResultsPhase({ active, onStartJudge }: ResultsPhaseProps
                     key={p.id}
                     style={{
                       ...styles.tdMono,
-                      color: p.exitCode === 0 ? tokens.success : p.exitCode != null ? tokens.danger : tokens.fgMuted,
+                      color:
+                        p.exitCode === 0
+                          ? tokens.success
+                          : p.exitCode != null
+                            ? tokens.danger
+                            : tokens.fgMuted,
                       fontWeight: 500,
                     }}
                   >
@@ -621,7 +653,9 @@ export default function ResultsPhase({ active, onStartJudge }: ResultsPhaseProps
                     key={row.filePath}
                     onMouseEnter={() => setHoveredRow(`file-${rowIdx}`)}
                     onMouseLeave={() => setHoveredRow(null)}
-                    style={hoveredRow === `file-${rowIdx}` ? { background: tokens.hoverBg } : undefined}
+                    style={
+                      hoveredRow === `file-${rowIdx}` ? { background: tokens.hoverBg } : undefined
+                    }
                   >
                     <td
                       style={{
@@ -631,7 +665,8 @@ export default function ResultsPhase({ active, onStartJudge }: ResultsPhaseProps
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap" as const,
-                        borderBottom: rowIdx === fileMatrix.length - 1 ? "none" : styles.td.borderBottom,
+                        borderBottom:
+                          rowIdx === fileMatrix.length - 1 ? "none" : styles.td.borderBottom,
                       }}
                       title={row.filePath}
                     >
@@ -645,13 +680,16 @@ export default function ResultsPhase({ active, onStartJudge }: ResultsPhaseProps
                           style={{
                             ...styles.td,
                             textAlign: "center" as const,
-                            borderBottom: rowIdx === fileMatrix.length - 1 ? "none" : styles.td.borderBottom,
+                            borderBottom:
+                              rowIdx === fileMatrix.length - 1 ? "none" : styles.td.borderBottom,
                           }}
                         >
                           {ct ? (
                             changeTypeBadge(ct)
                           ) : (
-                            <span style={{ color: tokens.fgPlaceholder, fontSize: 13 }}>{"\u2014"}</span>
+                            <span style={{ color: tokens.fgPlaceholder, fontSize: 13 }}>
+                              {"\u2014"}
+                            </span>
                           )}
                         </td>
                       );
@@ -706,7 +744,7 @@ export default function ResultsPhase({ active, onStartJudge }: ResultsPhaseProps
                           fontFamily: monoStack,
                           color: pct > 20 ? "#ffffff" : barColor,
                           whiteSpace: "nowrap" as const,
-                          position: pct > 20 ? "relative" as const : "absolute" as const,
+                          position: pct > 20 ? ("relative" as const) : ("absolute" as const),
                           left: pct > 20 ? undefined : `calc(${Math.max(pct, 2)}% + 6px)`,
                         }}
                       >

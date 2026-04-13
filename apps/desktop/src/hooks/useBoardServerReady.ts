@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { BOARD_SERVER_BASE } from '../lib/board-api';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { BOARD_SERVER_BASE } from "../lib/board-api";
 import {
   boardServerCheckInstalled,
   boardServerInstall,
-  boardServerStart,
   boardServerRestart,
-} from '../lib/tauri';
+  boardServerStart,
+} from "../lib/tauri";
 
 const MAX_POLLS = 5;
 
@@ -48,7 +48,7 @@ export function useBoardServerReady(): BoardServerReadyState {
     let mounted = true;
     const check = () => {
       fetchWithTimeout(`${BOARD_SERVER_BASE}/health`, 1500)
-        .then(res => {
+        .then((res) => {
           if (!mounted) return;
           if (res.ok) {
             setReady(true);
@@ -68,7 +68,10 @@ export function useBoardServerReady(): BoardServerReadyState {
 
     check();
     const id = setInterval(check, 2000);
-    return () => { mounted = false; clearInterval(id); };
+    return () => {
+      mounted = false;
+      clearInterval(id);
+    };
   }, [ready, timedOut]);
 
   const retry = useCallback(() => {

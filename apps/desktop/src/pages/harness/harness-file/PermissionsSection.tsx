@@ -1,5 +1,5 @@
-import type { CSSProperties } from "react";
 import type { HarnessPermissions } from "@harness-kit/core";
+import type { CSSProperties } from "react";
 import SectionCard from "./SectionCard";
 
 interface PermissionsSectionProps {
@@ -12,7 +12,10 @@ const TOOL_CATEGORIES: Array<{ label: string; pattern: RegExp }> = [
   { label: "File System", pattern: /^(Read|Write|Edit|Glob|Grep|NotebookEdit)$/i },
   { label: "Shell", pattern: /^(Bash|Terminal)$/i },
   { label: "MCP", pattern: /^mcp__/i },
-  { label: "Agent & Tasks", pattern: /^(Agent|Task|TodoRead|TodoWrite|SendMessage|TeamCreate|TeamDelete)$/i },
+  {
+    label: "Agent & Tasks",
+    pattern: /^(Agent|Task|TodoRead|TodoWrite|SendMessage|TeamCreate|TeamDelete)$/i,
+  },
   { label: "Browser & Web", pattern: /^(WebFetch|WebSearch|Browser)$/i },
   { label: "LSP & Dev", pattern: /^(LSP|EnterPlanMode|ExitPlanMode|EnterWorktree|ExitWorktree)$/i },
 ];
@@ -119,7 +122,13 @@ const monoPathStyle: CSSProperties = {
 
 // ── Sub-components ───────────────────────────────────────────
 
-function ToolGroupDisplay({ groups, badgeStyle }: { groups: ToolGroup[]; badgeStyle: CSSProperties }) {
+function ToolGroupDisplay({
+  groups,
+  badgeStyle,
+}: {
+  groups: ToolGroup[];
+  badgeStyle: CSSProperties;
+}) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
       {groups.map((group) => (
@@ -127,7 +136,9 @@ function ToolGroupDisplay({ groups, badgeStyle }: { groups: ToolGroup[]; badgeSt
           <div style={categoryLabelStyle}>{group.label}</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "2px" }}>
             {group.tools.map((t) => (
-              <span key={t} style={badgeStyle}>{t}</span>
+              <span key={t} style={badgeStyle}>
+                {t}
+              </span>
             ))}
           </div>
         </div>
@@ -159,58 +170,85 @@ export default function PermissionsSection({ permissions }: PermissionsSectionPr
 
           {tools?.allow && tools.allow.length > 0 && (
             <div style={{ marginBottom: "10px" }}>
-              <div style={{
-                fontSize: "10px", fontWeight: 600, color: "#28a745",
-                marginBottom: "6px", display: "flex", alignItems: "center", gap: "4px",
-              }}>
-                <span style={{
-                  width: "6px", height: "6px", borderRadius: "50%",
-                  background: "#28a745", display: "inline-block",
-                }} />
+              <div
+                style={{
+                  fontSize: "10px",
+                  fontWeight: 600,
+                  color: "#28a745",
+                  marginBottom: "6px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                <span
+                  style={{
+                    width: "6px",
+                    height: "6px",
+                    borderRadius: "50%",
+                    background: "#28a745",
+                    display: "inline-block",
+                  }}
+                />
                 Allow ({tools.allow.length})
               </div>
-              <ToolGroupDisplay
-                groups={categorizeTools(tools.allow)}
-                badgeStyle={allowToolStyle}
-              />
+              <ToolGroupDisplay groups={categorizeTools(tools.allow)} badgeStyle={allowToolStyle} />
             </div>
           )}
 
           {tools?.deny && tools.deny.length > 0 && (
             <div style={{ marginBottom: "10px" }}>
-              <div style={{
-                fontSize: "10px", fontWeight: 600, color: "var(--danger)",
-                marginBottom: "6px", display: "flex", alignItems: "center", gap: "4px",
-              }}>
-                <span style={{
-                  width: "6px", height: "6px", borderRadius: "50%",
-                  background: "var(--danger)", display: "inline-block",
-                }} />
+              <div
+                style={{
+                  fontSize: "10px",
+                  fontWeight: 600,
+                  color: "var(--danger)",
+                  marginBottom: "6px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                <span
+                  style={{
+                    width: "6px",
+                    height: "6px",
+                    borderRadius: "50%",
+                    background: "var(--danger)",
+                    display: "inline-block",
+                  }}
+                />
                 Deny ({tools.deny.length})
               </div>
-              <ToolGroupDisplay
-                groups={categorizeTools(tools.deny)}
-                badgeStyle={denyToolStyle}
-              />
+              <ToolGroupDisplay groups={categorizeTools(tools.deny)} badgeStyle={denyToolStyle} />
             </div>
           )}
 
           {tools?.ask && tools.ask.length > 0 && (
             <div style={{ marginBottom: "10px" }}>
-              <div style={{
-                fontSize: "10px", fontWeight: 600, color: "#856404",
-                marginBottom: "6px", display: "flex", alignItems: "center", gap: "4px",
-              }}>
-                <span style={{
-                  width: "6px", height: "6px", borderRadius: "50%",
-                  background: "#d4a017", display: "inline-block",
-                }} />
+              <div
+                style={{
+                  fontSize: "10px",
+                  fontWeight: 600,
+                  color: "#856404",
+                  marginBottom: "6px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "4px",
+                }}
+              >
+                <span
+                  style={{
+                    width: "6px",
+                    height: "6px",
+                    borderRadius: "50%",
+                    background: "#d4a017",
+                    display: "inline-block",
+                  }}
+                />
                 Ask ({tools.ask.length})
               </div>
-              <ToolGroupDisplay
-                groups={categorizeTools(tools.ask)}
-                badgeStyle={askToolStyle}
-              />
+              <ToolGroupDisplay groups={categorizeTools(tools.ask)} badgeStyle={askToolStyle} />
             </div>
           )}
         </div>
@@ -223,7 +261,9 @@ export default function PermissionsSection({ permissions }: PermissionsSectionPr
             <div style={{ marginBottom: "6px" }}>
               <div style={{ ...categoryLabelStyle, color: "#28a745" }}>Writable</div>
               {paths.writable.map((p) => (
-                <code key={p} style={{ ...monoPathStyle, color: "#28a745" }}>{p}</code>
+                <code key={p} style={{ ...monoPathStyle, color: "#28a745" }}>
+                  {p}
+                </code>
               ))}
             </div>
           )}
@@ -231,7 +271,9 @@ export default function PermissionsSection({ permissions }: PermissionsSectionPr
             <div style={{ marginBottom: "6px" }}>
               <div style={categoryLabelStyle}>Read-only</div>
               {paths.readonly.map((p) => (
-                <code key={p} style={monoPathStyle}>{p}</code>
+                <code key={p} style={monoPathStyle}>
+                  {p}
+                </code>
               ))}
             </div>
           )}
@@ -243,7 +285,9 @@ export default function PermissionsSection({ permissions }: PermissionsSectionPr
           <div style={labelStyle("network")}>Network</div>
           <div style={categoryLabelStyle}>Allowed Hosts</div>
           {network?.["allowed-hosts"]?.map((host) => (
-            <code key={host} style={monoPathStyle}>{host}</code>
+            <code key={host} style={monoPathStyle}>
+              {host}
+            </code>
           ))}
         </div>
       )}

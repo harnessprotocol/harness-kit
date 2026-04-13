@@ -1,7 +1,7 @@
-import { writeFile, access } from "node:fs/promises";
-import { resolve, basename } from "node:path";
+import { access, writeFile } from "node:fs/promises";
+import { basename, resolve } from "node:path";
+import { checkbox, confirm, input, Separator } from "@inquirer/prompts";
 import chalk from "chalk";
-import { confirm, input, checkbox, Separator } from "@inquirer/prompts";
 
 interface PluginChoice {
   name: string;
@@ -70,8 +70,7 @@ const PLUGIN_GROUPS: { label: string; plugins: PluginChoice[] }[] = [
       },
       {
         name: "membrain",
-        description:
-          "Graph-based agent memory — search, trace, and manage what your agent knows",
+        description: "Graph-based agent memory — search, trace, and manage what your agent knows",
       },
     ],
   },
@@ -123,10 +122,7 @@ const PLUGIN_GROUPS: { label: string; plugins: PluginChoice[] }[] = [
 ];
 
 function buildChoices() {
-  const choices: (
-    | { name: string; value: string; hint?: string }
-    | Separator
-  )[] = [];
+  const choices: ({ name: string; value: string; hint?: string } | Separator)[] = [];
 
   for (const group of PLUGIN_GROUPS) {
     choices.push(new Separator(`── ${group.label} ──`));
@@ -150,14 +146,8 @@ function getPluginDescription(name: string): string {
   return "";
 }
 
-function buildYaml(
-  projectName: string,
-  description: string,
-  plugins: string[],
-): string {
-  const metaDescription = description
-    ? `\n  description: ${description}`
-    : "";
+function buildYaml(projectName: string, description: string, plugins: string[]): string {
+  const metaDescription = description ? `\n  description: ${description}` : "";
 
   const pluginsBlock =
     plugins.length === 0
@@ -167,11 +157,7 @@ function buildYaml(
           ...plugins.map((name) => {
             const desc = getPluginDescription(name);
             const descLine = desc ? `    description: ${desc}` : "";
-            return [
-              `  - name: ${name}`,
-              `    source: harnessprotocol/harness-kit`,
-              descLine,
-            ]
+            return [`  - name: ${name}`, `    source: harnessprotocol/harness-kit`, descLine]
               .filter(Boolean)
               .join("\n");
           }),
@@ -238,8 +224,6 @@ export async function initCommand(outputPath: string): Promise<void> {
   console.log("");
   console.log(chalk.green("Created harness.yaml"));
   console.log(
-    chalk.dim(
-      `Run ${chalk.white("harness-kit compile")} to generate platform config files.`,
-    ),
+    chalk.dim(`Run ${chalk.white("harness-kit compile")} to generate platform config files.`),
   );
 }

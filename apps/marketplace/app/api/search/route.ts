@@ -1,10 +1,16 @@
-import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { type NextRequest, NextResponse } from "next/server";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { supabase } from "@/lib/supabase";
 
 const VALID_SCOPES = new Set(["component", "profile"]);
 const VALID_COMPONENT_TYPES = new Set([
-  "skill", "agent", "hook", "script", "knowledge", "rules", "plugin",
+  "skill",
+  "agent",
+  "hook",
+  "script",
+  "knowledge",
+  "rules",
+  "plugin",
 ]);
 
 export async function GET(request: NextRequest) {
@@ -14,17 +20,11 @@ export async function GET(request: NextRequest) {
   const query = searchParams.get("q") ?? "";
 
   if (!query) {
-    return NextResponse.json(
-      { error: "Missing required query parameter: q" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Missing required query parameter: q" }, { status: 400 });
   }
 
   if (query.length > 200) {
-    return NextResponse.json(
-      { error: "Query too long (max 200 characters)" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Query too long (max 200 characters)" }, { status: 400 });
   }
 
   const scopeParam = searchParams.get("scope") ?? "component";
@@ -41,10 +41,7 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(parseInt(searchParams.get("limit") ?? "20", 10), 100);
 
   if (page < 1) {
-    return NextResponse.json(
-      { error: "Page must be >= 1" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Page must be >= 1" }, { status: 400 });
   }
 
   // Filter parameters — validated before use
@@ -94,10 +91,7 @@ export async function GET(request: NextRequest) {
     .filter(Boolean);
 
   if (sanitizedTokens.length === 0) {
-    return NextResponse.json(
-      { error: "Query contains no searchable terms" },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Query contains no searchable terms" }, { status: 400 });
   }
 
   const tsquery = sanitizedTokens.join(" & ");
@@ -109,16 +103,18 @@ export async function GET(request: NextRequest) {
       .select("*")
       .textSearch("fts", tsquery)
       .order("name", { ascending: true })
-      .range(offset, offset + limit);  // fetch limit+1 to detect hasMore
+      .range(offset, offset + limit); // fetch limit+1 to detect hasMore
 
     if (error) {
       // Fallback to ilike if FTS fails — use parameterized filters
       const { data: fallback, error: fallbackError } = await supabase
         .from("profiles")
         .select("*")
-        .or(`name.ilike.%${query.replace(/[,().%_\\]/g, "")}%,description.ilike.%${query.replace(/[,().%_\\]/g, "")}%`)
+        .or(
+          `name.ilike.%${query.replace(/[,().%_\\]/g, "")}%,description.ilike.%${query.replace(/[,().%_\\]/g, "")}%`,
+        )
         .order("name", { ascending: true })
-        .range(offset, offset + limit);  // fetch limit+1 to detect hasMore
+        .range(offset, offset + limit); // fetch limit+1 to detect hasMore
 
       if (fallbackError) {
         console.error("[search] profile fallback failed", fallbackError);
@@ -143,7 +139,15 @@ export async function GET(request: NextRequest) {
 
   // Default: search components using full-text search with filters
   try {
-    const results = await searchComponents(tsquery, query, componentType, category, minRating, page, limit);
+    const results = await searchComponents(
+      tsquery,
+      query,
+      componentType,
+      category,
+      minRating,
+      page,
+      limit,
+    );
     return jsonResponse(startTime, {
       type: "component",
       results: results.data,
@@ -190,10 +194,7 @@ async function searchComponents(
   }
 
   // Step 2: Build and execute the FTS query
-  let componentQuery = supabase
-    .from("components")
-    .select("*")
-    .textSearch("fts", tsquery);
+  let componentQuery = supabase.from("components").select("*").textSearch("fts", tsquery);
 
   if (componentType) {
     componentQuery = componentQuery.eq("type", componentType);
@@ -215,7 +216,9 @@ async function searchComponents(
     let fallbackQuery = supabase
       .from("components")
       .select("*")
-      .or(`name.ilike.%${rawQuery.replace(/[,().%_\\]/g, "")}%,description.ilike.%${rawQuery.replace(/[,().%_\\]/g, "")}%`);
+      .or(
+        `name.ilike.%${rawQuery.replace(/[,().%_\\]/g, "")}%,description.ilike.%${rawQuery.replace(/[,().%_\\]/g, "")}%`,
+      );
 
     if (componentType) {
       fallbackQuery = fallbackQuery.eq("type", componentType);
@@ -255,7 +258,7 @@ async function applyRatingFilter(
 async function filterByRating(components: any[], minRating: number): Promise<any[]> {
   if (components.length === 0) return [];
 
-  const componentIds = components.map(c => c.id);
+  const componentIds = components.map((c) => c.id);
 
   const { data: ratings } = await supabase
     .from("ratings")
@@ -275,7 +278,7 @@ async function filterByRating(components: any[], minRating: number): Promise<any
     ratingCount.set(r.component_id, (ratingCount.get(r.component_id) ?? 0) + 1);
   }
 
-  return components.filter(component => {
+  return components.filter((component) => {
     const sum = ratingSum.get(component.id);
     const count = ratingCount.get(component.id);
     if (sum === undefined || count === undefined) return false;

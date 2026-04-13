@@ -3,9 +3,7 @@ import type { ReactNode } from "react";
 function Stat({ value, label }: { value: string; label: ReactNode }) {
   return (
     <div className="flex items-baseline gap-1.5 text-sm">
-      <span className="font-display text-base font-semibold text-gray-100">
-        {value}
-      </span>
+      <span className="font-display text-base font-semibold text-gray-100">{value}</span>
       <span className="text-gray-400">{label}</span>
     </div>
   );

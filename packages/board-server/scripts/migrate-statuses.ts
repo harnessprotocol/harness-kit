@@ -9,16 +9,16 @@
  *   npx tsx scripts/migrate-statuses.ts [--dry-run]
  */
 
-import fs from 'node:fs';
-import path from 'node:path';
-import os from 'node:os';
-import yaml from 'js-yaml';
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import yaml from "js-yaml";
 
-const BOARD_DIR = path.join(os.homedir(), '.harness', 'board', 'projects');
+const BOARD_DIR = path.join(os.homedir(), ".harness", "board", "projects");
 
 const STATUS_MAP: Record<string, string> = {
-  backlog: 'planning',
-  review: 'ai-review',
+  backlog: "planning",
+  review: "ai-review",
 };
 
 interface TaskLike {
@@ -40,17 +40,17 @@ interface ProjectLike {
 }
 
 function migrate(): void {
-  const dryRun = process.argv.includes('--dry-run');
+  const dryRun = process.argv.includes("--dry-run");
 
   if (!fs.existsSync(BOARD_DIR)) {
     console.log(`No projects directory found at ${BOARD_DIR}. Nothing to migrate.`);
     return;
   }
 
-  const files = fs.readdirSync(BOARD_DIR).filter(f => f.endsWith('.yaml'));
+  const files = fs.readdirSync(BOARD_DIR).filter((f) => f.endsWith(".yaml"));
 
   if (files.length === 0) {
-    console.log('No project files found. Nothing to migrate.');
+    console.log("No project files found. Nothing to migrate.");
     return;
   }
 
@@ -58,7 +58,7 @@ function migrate(): void {
 
   for (const file of files) {
     const filePath = path.join(BOARD_DIR, file);
-    const raw = fs.readFileSync(filePath, 'utf-8');
+    const raw = fs.readFileSync(filePath, "utf-8");
     const project = yaml.load(raw) as ProjectLike;
 
     if (!project?.epics) continue;
@@ -70,7 +70,9 @@ function migrate(): void {
       for (const task of epic.tasks) {
         const newStatus = STATUS_MAP[task.status];
         if (newStatus) {
-          changes.push(`  Task #${task.id} "${task.title ?? '(untitled)'}": ${task.status} → ${newStatus}`);
+          changes.push(
+            `  Task #${task.id} "${task.title ?? "(untitled)"}": ${task.status} → ${newStatus}`,
+          );
           task.status = newStatus;
         }
       }
@@ -88,7 +90,7 @@ function migrate(): void {
     if (!dryRun) {
       const out = yaml.dump(project, { lineWidth: 120 });
       const tmpPath = `${filePath}.tmp`;
-      fs.writeFileSync(tmpPath, out, 'utf-8');
+      fs.writeFileSync(tmpPath, out, "utf-8");
       fs.renameSync(tmpPath, filePath);
       console.log(`  ✓ written`);
     } else {
@@ -96,7 +98,7 @@ function migrate(): void {
     }
   }
 
-  console.log(`\nTotal: ${totalChanges} status change(s)${dryRun ? ' (dry-run)' : ' applied'}`);
+  console.log(`\nTotal: ${totalChanges} status change(s)${dryRun ? " (dry-run)" : " applied"}`);
 }
 
 migrate();

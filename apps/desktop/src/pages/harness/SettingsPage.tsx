@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
+import ClaudeFileListPanel from "../../components/file-explorer/ClaudeFileListPanel";
+import EditorPane from "../../components/file-explorer/EditorPane";
+import SplitPane from "../../components/file-explorer/SplitPane";
 import { useClaudeFileList } from "../../hooks/useClaudeFileList";
 import { useFileEditor } from "../../hooks/useFileEditor";
 import { getAvailableViewModes, getDefaultViewMode } from "../../lib/viewModes";
-import SplitPane from "../../components/file-explorer/SplitPane";
-import ClaudeFileListPanel from "../../components/file-explorer/ClaudeFileListPanel";
-import EditorPane from "../../components/file-explorer/EditorPane";
 
 export default function SettingsPage() {
   const fileList = useClaudeFileList();

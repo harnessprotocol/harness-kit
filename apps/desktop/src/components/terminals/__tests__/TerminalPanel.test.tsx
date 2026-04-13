@@ -1,5 +1,5 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import { describe, it, expect, vi, beforeAll } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import TerminalPanel, { type TerminalPanelProps } from "../TerminalPanel";
 
 // ── Stub ResizeObserver (not in jsdom) ─────────────────────────

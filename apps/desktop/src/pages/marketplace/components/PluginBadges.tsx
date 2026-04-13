@@ -8,15 +8,17 @@ export function TrustBadge({ tier }: { tier: Component["trust_tier"] }) {
   };
   const c = colors[tier];
   return (
-    <span style={{
-      fontSize: "11px",
-      fontWeight: 500,
-      padding: "2px 8px",
-      borderRadius: "10px",
-      background: c.bg,
-      color: c.color,
-      border: `1px solid ${c.color}30`,
-    }}>
+    <span
+      style={{
+        fontSize: "11px",
+        fontWeight: 500,
+        padding: "2px 8px",
+        borderRadius: "10px",
+        background: c.bg,
+        color: c.color,
+        border: `1px solid ${c.color}30`,
+      }}
+    >
       {tier}
     </span>
   );
@@ -24,15 +26,17 @@ export function TrustBadge({ tier }: { tier: Component["trust_tier"] }) {
 
 export function TypeBadge({ type }: { type: ComponentType }) {
   return (
-    <span style={{
-      fontSize: "11px",
-      fontWeight: 400,
-      padding: "2px 8px",
-      borderRadius: "10px",
-      border: "1px solid var(--border-base)",
-      color: "var(--fg-subtle)",
-      textTransform: "capitalize",
-    }}>
+    <span
+      style={{
+        fontSize: "11px",
+        fontWeight: 400,
+        padding: "2px 8px",
+        borderRadius: "10px",
+        border: "1px solid var(--border-base)",
+        color: "var(--fg-subtle)",
+        textTransform: "capitalize",
+      }}
+    >
       {type}
     </span>
   );

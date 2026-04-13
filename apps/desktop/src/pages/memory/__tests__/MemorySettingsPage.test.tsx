@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import MemorySettingsPage from "../MemorySettingsPage";
 
 // ── Mocks ─────────────────────────────────────────────────────
@@ -9,8 +9,12 @@ let mockGetMembrainEnabled: () => boolean;
 let mockSetMembrainEnabled: (v: boolean) => void;
 
 vi.mock("../../../lib/preferences", () => ({
-  get getMembrainEnabled() { return mockGetMembrainEnabled; },
-  get setMembrainEnabled() { return mockSetMembrainEnabled; },
+  get getMembrainEnabled() {
+    return mockGetMembrainEnabled;
+  },
+  get setMembrainEnabled() {
+    return mockSetMembrainEnabled;
+  },
 }));
 
 let mockServerState: {

@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface TooltipProps {
   content: string;
@@ -7,7 +7,12 @@ interface TooltipProps {
   children: React.ReactNode;
 }
 
-export default function Tooltip({ content, delay = 500, position = "top", children }: TooltipProps) {
+export default function Tooltip({
+  content,
+  delay = 500,
+  position = "top",
+  children,
+}: TooltipProps) {
   const [visible, setVisible] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 

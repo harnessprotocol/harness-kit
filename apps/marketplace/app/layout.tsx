@@ -12,11 +12,7 @@ export const metadata: Metadata = {
     "Skills, agents, and configuration for Claude Code — browse, search, and install plugins.",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`dark ${inter.variable} ${spaceGrotesk.variable}`}>
       <body className="bg-[#0c0c0e] text-gray-100 antialiased">
@@ -41,12 +37,8 @@ export default function RootLayout({
                   hk
                 </text>
               </svg>
-              <span className="font-display font-bold tracking-tight">
-                Harness Kit
-              </span>
-              <span className="text-xs font-medium text-violet-400">
-                Marketplace
-              </span>
+              <span className="font-display font-bold tracking-tight">Harness Kit</span>
+              <span className="text-xs font-medium text-violet-400">Marketplace</span>
             </Link>
             <div className="flex items-center gap-6 text-sm text-gray-400">
               <Link
@@ -98,9 +90,7 @@ export default function RootLayout({
                       hk
                     </text>
                   </svg>
-                  <span className="font-display font-semibold text-gray-100">
-                    Harness Kit
-                  </span>
+                  <span className="font-display font-semibold text-gray-100">Harness Kit</span>
                 </div>
                 <p className="text-sm leading-relaxed text-gray-400">
                   Skills, agents, and configuration for Claude Code.
@@ -109,9 +99,7 @@ export default function RootLayout({
 
               {/* Resources */}
               <div>
-                <h3 className="mb-3 text-sm font-semibold text-gray-100">
-                  Resources
-                </h3>
+                <h3 className="mb-3 text-sm font-semibold text-gray-100">Resources</h3>
                 <ul className="space-y-2 text-sm text-gray-400">
                   <li>
                     <Link
@@ -144,9 +132,7 @@ export default function RootLayout({
 
               {/* Legal */}
               <div>
-                <h3 className="mb-3 text-sm font-semibold text-gray-100">
-                  Legal
-                </h3>
+                <h3 className="mb-3 text-sm font-semibold text-gray-100">Legal</h3>
                 <ul className="space-y-2 text-sm text-gray-400">
                   <li>
                     <a

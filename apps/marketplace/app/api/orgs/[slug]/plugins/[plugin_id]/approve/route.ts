@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getServiceSupabase } from "@/lib/supabase";
+import { type NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth";
-import { requireOrgRole, AuthorizationError } from "@/lib/orgs";
+import { AuthorizationError, requireOrgRole } from "@/lib/orgs";
+import { getServiceSupabase } from "@/lib/supabase";
 
 /**
  * POST /api/orgs/[slug]/plugins/[plugin_id]/approve
@@ -10,7 +10,7 @@ import { requireOrgRole, AuthorizationError } from "@/lib/orgs";
  */
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ slug: string; plugin_id: string }> }
+  { params }: { params: Promise<{ slug: string; plugin_id: string }> },
 ) {
   try {
     const user = await getServerSession();
@@ -27,10 +27,7 @@ export async function POST(
 
     if (pluginError) {
       if (pluginError.code === "PGRST116") {
-        return NextResponse.json(
-          { error: "Plugin not found" },
-          { status: 404 }
-        );
+        return NextResponse.json({ error: "Plugin not found" }, { status: 404 });
       }
       return NextResponse.json({ error: pluginError.message }, { status: 500 });
     }
@@ -41,7 +38,7 @@ export async function POST(
     if (typeof approved !== "boolean") {
       return NextResponse.json(
         { error: "Missing or invalid required field: approved (must be boolean)" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -68,9 +65,6 @@ export async function POST(
     if (error instanceof AuthorizationError) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    return NextResponse.json(
-      { error: "Failed to process plugin approval" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to process plugin approval" }, { status: 500 });
   }
 }

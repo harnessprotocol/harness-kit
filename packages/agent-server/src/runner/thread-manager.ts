@@ -1,12 +1,10 @@
 // packages/agent-server/src/runner/thread-manager.ts
-import type { RunnableConfig } from '@langchain/core/runnables';
+import type { RunnableConfig } from "@langchain/core/runnables";
 
 /** Maps taskId → LangGraph thread config for checkpoint resume */
 const threads = new Map<number, RunnableConfig>();
 
-export function getThreadConfig(
-  projectSlug: string, taskId: number
-): RunnableConfig {
+export function getThreadConfig(projectSlug: string, taskId: number): RunnableConfig {
   const existing = threads.get(taskId);
   if (existing) return existing;
   const config: RunnableConfig = {

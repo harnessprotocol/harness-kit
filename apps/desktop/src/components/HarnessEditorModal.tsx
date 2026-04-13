@@ -1,5 +1,5 @@
-import { Suspense, lazy, useCallback, useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { writeHarnessFile } from "../lib/tauri";
 
 const MonacoEditor = lazy(() => import("./plugin-explorer/MonacoEditor"));
@@ -113,20 +113,28 @@ export default function HarnessEditorModal({
             }}
           >
             {/* Header */}
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "10px 14px",
-              borderBottom: "1px solid var(--border-base)",
-              gap: "12px",
-              flexShrink: 0,
-            }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "10px 14px",
+                borderBottom: "1px solid var(--border-base)",
+                gap: "12px",
+                flexShrink: 0,
+              }}
+            >
               <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
                 <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)" }}>
                   harness.yaml
                 </span>
-                <span style={{ fontSize: "10px", color: "var(--fg-subtle)", fontFamily: "ui-monospace, monospace" }}>
+                <span
+                  style={{
+                    fontSize: "10px",
+                    color: "var(--fg-subtle)",
+                    fontFamily: "ui-monospace, monospace",
+                  }}
+                >
                   {filePath}
                 </span>
               </div>
@@ -136,7 +144,9 @@ export default function HarnessEditorModal({
                   <span style={{ fontSize: "11px", color: "var(--danger)" }}>{saveError}</span>
                 )}
                 {saveable && !saveError && (
-                  <span style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>Unsaved changes</span>
+                  <span style={{ fontSize: "10px", color: "var(--fg-subtle)" }}>
+                    Unsaved changes
+                  </span>
                 )}
                 <button
                   onClick={handleSave}
@@ -177,11 +187,22 @@ export default function HarnessEditorModal({
 
             {/* Editor */}
             <div style={{ flex: 1, overflow: "hidden" }}>
-              <Suspense fallback={
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: "12px", color: "var(--fg-subtle)" }}>
-                  Loading editor…
-                </div>
-              }>
+              <Suspense
+                fallback={
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      height: "100%",
+                      fontSize: "12px",
+                      color: "var(--fg-subtle)",
+                    }}
+                  >
+                    Loading editor…
+                  </div>
+                }
+              >
                 <MonacoEditor
                   filePath="harness.yaml"
                   content={content}

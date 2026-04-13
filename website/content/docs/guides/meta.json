@@ -1,10 +1,4 @@
 {
   "title": "Guides",
-  "pages": [
-    "creating-plugins",
-    "secrets-management",
-    "conventions",
-    "contributing",
-    "resources"
-  ]
+  "pages": ["creating-plugins", "secrets-management", "conventions", "contributing", "resources"]
 }

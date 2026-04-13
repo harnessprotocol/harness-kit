@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
 import type { User } from "@supabase/supabase-js";
+import { useState } from "react";
 
 interface FlagButtonProps {
   reviewId: string;
@@ -81,16 +81,11 @@ export function FlagButton({ reviewId, user, flagged }: FlagButtonProps) {
       {showReasonMenu && (
         <>
           {/* Backdrop to close menu */}
-          <div
-            className="fixed inset-0 z-10"
-            onClick={() => setShowReasonMenu(false)}
-          />
+          <div className="fixed inset-0 z-10" onClick={() => setShowReasonMenu(false)} />
 
           {/* Menu */}
           <div className="absolute bottom-full right-0 z-20 mb-2 w-48 rounded-lg border border-gray-700 bg-[#1a1a1e] py-2 shadow-xl">
-            <div className="px-3 pb-2 text-xs font-semibold text-gray-400">
-              Select a reason
-            </div>
+            <div className="px-3 pb-2 text-xs font-semibold text-gray-400">Select a reason</div>
             {[
               { value: "spam", label: "Spam" },
               { value: "offensive", label: "Offensive" },

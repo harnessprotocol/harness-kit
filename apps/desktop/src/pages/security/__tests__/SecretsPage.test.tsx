@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import type { EnvConfigEntry, KeychainSecretInfo } from "@harness-kit/shared";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import type { KeychainSecretInfo, EnvConfigEntry } from "@harness-kit/shared";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import SecretsPage from "../SecretsPage";
 
 // ── Mocks ─────────────────────────────────────────────────────
@@ -91,42 +91,32 @@ describe("SecretsPage — loading state", () => {
 
   it("hides 'Loading...' after data loads", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading...")).not.toBeInTheDocument());
   });
 });
 
 describe("SecretsPage — basic render", () => {
   it("renders without crashing", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading...")).not.toBeInTheDocument());
     expect(screen.getByText("Secrets")).toBeInTheDocument();
   });
 
   it("shows the page description", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading...")).not.toBeInTheDocument());
     expect(screen.getByText(/Manage API keys and environment configuration/)).toBeInTheDocument();
   });
 
   it("shows Secrets Vault section heading", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading...")).not.toBeInTheDocument());
     expect(screen.getByText("Secrets Vault")).toBeInTheDocument();
   });
 
   it("shows Environment Config section heading", async () => {
     renderPage();
-    await waitFor(() =>
-      expect(screen.queryByText("Loading...")).not.toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.queryByText("Loading...")).not.toBeInTheDocument());
     expect(screen.getByText("Environment Config")).toBeInTheDocument();
   });
 });
@@ -139,16 +129,12 @@ describe("SecretsPage — empty state", () => {
 
   it("shows install hint in secrets empty state", async () => {
     renderPage();
-    expect(
-      await screen.findByText(/Install plugins from the Marketplace/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Install plugins from the Marketplace/)).toBeInTheDocument();
   });
 
   it("shows empty state message for env config when none configured", async () => {
     renderPage();
-    expect(
-      await screen.findByText("No environment variables configured."),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("No environment variables configured.")).toBeInTheDocument();
   });
 });
 

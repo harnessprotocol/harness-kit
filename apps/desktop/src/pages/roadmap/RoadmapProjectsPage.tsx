@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { api } from '../../lib/board-api';
-import type { Project } from '../../lib/board-api';
-import { useBoardServerReady } from '../../hooks/useBoardServerReady';
-import { BoardServerOffline } from '../../components/board/BoardServerOffline';
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { BoardServerOffline } from "../../components/board/BoardServerOffline";
+import { useBoardServerReady } from "../../hooks/useBoardServerReady";
+import type { Project } from "../../lib/board-api";
+import { api } from "../../lib/board-api";
 
 export default function RoadmapProjectsPage() {
   const navigate = useNavigate();
@@ -17,8 +17,9 @@ export default function RoadmapProjectsPage() {
     if (!ready) return;
     setLoading(true);
     setError(null);
-    api.projects.list()
-      .then(list => {
+    api.projects
+      .list()
+      .then((list) => {
         if (list.length === 1) {
           navigate(`/roadmap/${list[0].slug}`, { replace: true });
         } else if (list.length > 1) {
@@ -29,7 +30,7 @@ export default function RoadmapProjectsPage() {
           setLoading(false);
         }
       })
-      .catch(err => {
+      .catch((err) => {
         setError(String(err));
         setLoading(false);
       });
@@ -41,9 +42,11 @@ export default function RoadmapProjectsPage() {
 
   if (!ready || loading) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-        <span style={{ color: 'var(--text-muted)', fontSize: 14 }}>
-          {!ready ? 'Connecting to board server...' : 'Loading projects...'}
+      <div
+        style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%" }}
+      >
+        <span style={{ color: "var(--text-muted)", fontSize: 14 }}>
+          {!ready ? "Connecting to board server..." : "Loading projects..."}
         </span>
       </div>
     );
@@ -51,10 +54,21 @@ export default function RoadmapProjectsPage() {
 
   if (error) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: 12 }}>
-        <span style={{ fontSize: 32 }}>{'!'}</span>
-        <span style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Could not load projects</span>
-        <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>{error}</span>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          height: "100%",
+          flexDirection: "column",
+          gap: 12,
+        }}
+      >
+        <span style={{ fontSize: 32 }}>{"!"}</span>
+        <span style={{ color: "var(--text-secondary)", fontSize: 14 }}>
+          Could not load projects
+        </span>
+        <span style={{ color: "var(--text-muted)", fontSize: 12 }}>{error}</span>
       </div>
     );
   }
@@ -62,46 +76,60 @@ export default function RoadmapProjectsPage() {
   // Multiple projects — show picker
   if (projects.length > 1) {
     return (
-      <div style={{ padding: 32, maxWidth: 600, margin: '0 auto' }}>
-        <h1 style={{ fontSize: 20, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 20 }}>
+      <div style={{ padding: 32, maxWidth: 600, margin: "0 auto" }}>
+        <h1
+          style={{ fontSize: 20, fontWeight: 600, color: "var(--text-primary)", marginBottom: 20 }}
+        >
           Roadmap
         </h1>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {projects.map(p => (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {projects.map((p) => (
             <button
               key={p.slug}
               onClick={() => navigate(`/roadmap/${p.slug}`)}
               style={{
-                display: 'flex',
-                alignItems: 'center',
+                display: "flex",
+                alignItems: "center",
                 gap: 12,
-                padding: '14px 16px',
-                background: 'var(--bg-surface)',
-                border: '1px solid var(--border-subtle)',
+                padding: "14px 16px",
+                background: "var(--bg-surface)",
+                border: "1px solid var(--border-subtle)",
                 borderRadius: 8,
-                cursor: 'pointer',
-                textAlign: 'left',
-                transition: 'border-color 0.1s, background 0.1s',
+                cursor: "pointer",
+                textAlign: "left",
+                transition: "border-color 0.1s, background 0.1s",
               }}
-              onMouseEnter={e => {
-                (e.currentTarget as HTMLElement).style.borderColor = 'var(--accent)';
-                (e.currentTarget as HTMLElement).style.background = 'var(--bg-elevated)';
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.borderColor = "var(--accent)";
+                (e.currentTarget as HTMLElement).style.background = "var(--bg-elevated)";
               }}
-              onMouseLeave={e => {
-                (e.currentTarget as HTMLElement).style.borderColor = 'var(--border-subtle)';
-                (e.currentTarget as HTMLElement).style.background = 'var(--bg-surface)';
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.borderColor = "var(--border-subtle)";
+                (e.currentTarget as HTMLElement).style.background = "var(--bg-surface)";
               }}
             >
               {p.color && (
-                <span style={{ width: 10, height: 10, borderRadius: '50%', background: p.color, flexShrink: 0 }} />
+                <span
+                  style={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: "50%",
+                    background: p.color,
+                    flexShrink: 0,
+                  }}
+                />
               )}
               <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</div>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "var(--text-primary)" }}>
+                  {p.name}
+                </div>
                 {p.description && (
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>{p.description}</div>
+                  <div style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 2 }}>
+                    {p.description}
+                  </div>
                 )}
               </div>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              <span style={{ fontSize: 11, color: "var(--text-muted)" }}>
                 {p.epics.reduce((n, e) => n + e.tasks.length, 0)} tasks
               </span>
             </button>
@@ -113,22 +141,41 @@ export default function RoadmapProjectsPage() {
 
   // No projects
   return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', flexDirection: 'column', gap: 16 }}>
-      <h1 style={{ color: 'var(--text-primary)', fontSize: 20, fontWeight: 600, margin: 0 }}>
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100%",
+        flexDirection: "column",
+        gap: 16,
+      }}
+    >
+      <h1 style={{ color: "var(--text-primary)", fontSize: 20, fontWeight: 600, margin: 0 }}>
         No projects yet
       </h1>
-      <p style={{ color: 'var(--text-muted)', fontSize: 14, margin: 0, textAlign: 'center', maxWidth: 320 }}>
+      <p
+        style={{
+          color: "var(--text-muted)",
+          fontSize: 14,
+          margin: 0,
+          textAlign: "center",
+          maxWidth: 320,
+        }}
+      >
         Create a project with an MCP tool call to get started:
       </p>
-      <code style={{
-        background: 'var(--bg-elevated)',
-        border: '1px solid var(--border)',
-        borderRadius: 6,
-        padding: '8px 16px',
-        fontSize: 13,
-        color: 'var(--text-secondary)',
-        fontFamily: 'monospace',
-      }}>
+      <code
+        style={{
+          background: "var(--bg-elevated)",
+          border: "1px solid var(--border)",
+          borderRadius: 6,
+          padding: "8px 16px",
+          fontSize: 13,
+          color: "var(--text-secondary)",
+          fontFamily: "monospace",
+        }}
+      >
         create_project(name: "My Project")
       </code>
     </div>

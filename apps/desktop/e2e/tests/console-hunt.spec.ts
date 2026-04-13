@@ -1,4 +1,4 @@
-import { test, expect } from "../fixtures";
+import { expect, test } from "../fixtures";
 
 const ALL_ROUTES = [
   "/harness/file",
@@ -23,19 +23,20 @@ const ALL_ROUTES = [
 for (const route of ALL_ROUTES) {
   test(`no console errors on ${route}`, async ({ appPage }) => {
     const errors: string[] = [];
-    appPage.on("console", msg => {
+    appPage.on("console", (msg) => {
       if (msg.type() === "error") errors.push(msg.text());
     });
-    appPage.on("pageerror", err => errors.push("PAGEERROR: " + err.message));
+    appPage.on("pageerror", (err) => errors.push("PAGEERROR: " + err.message));
 
     await appPage.goto(route);
     await appPage.waitForLoadState("networkidle");
 
-    const fatal = errors.filter(e =>
-      !e.includes("favicon") &&
-      !e.includes("ResizeObserver") &&
-      !e.includes("webkit") &&
-      !e.includes("Supabase")  // marketplace has no supabase config in dev
+    const fatal = errors.filter(
+      (e) =>
+        !e.includes("favicon") &&
+        !e.includes("ResizeObserver") &&
+        !e.includes("webkit") &&
+        !e.includes("Supabase"), // marketplace has no supabase config in dev
     );
     expect(fatal, `Console errors on ${route}:\n${fatal.join("\n")}`).toHaveLength(0);
   });

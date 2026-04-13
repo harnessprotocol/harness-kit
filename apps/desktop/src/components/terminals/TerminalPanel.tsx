@@ -1,7 +1,7 @@
-import { useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
+import { Terminal } from "@xterm/xterm";
+import { useEffect, useRef } from "react";
 import "@xterm/xterm/css/xterm.css";
 
 // ── Types ────────────────────────────────────────────────────
@@ -23,7 +23,16 @@ export interface TerminalPanelProps {
 
 function SparklesIcon() {
   return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <path d="M12 3l1.912 5.813a2 2 0 001.275 1.275L21 12l-5.813 1.912a2 2 0 00-1.275 1.275L12 21l-1.912-5.813a2 2 0 00-1.275-1.275L3 12l5.813-1.912a2 2 0 001.275-1.275L12 3z" />
     </svg>
   );
@@ -31,7 +40,16 @@ function SparklesIcon() {
 
 function MaximizeIcon() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <polyline points="15 3 21 3 21 9" />
       <polyline points="9 21 3 21 3 15" />
       <line x1="21" y1="3" x2="14" y2="10" />
@@ -42,7 +60,16 @@ function MaximizeIcon() {
 
 function CloseIcon() {
   return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg
+      width="13"
+      height="13"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
       <line x1="18" y1="6" x2="6" y2="18" />
       <line x1="6" y1="6" x2="18" y2="18" />
     </svg>
@@ -163,7 +190,9 @@ export default function TerminalPanel({
   const writtenRef = useRef(0);
 
   // Inject pulse CSS once.
-  useEffect(() => { injectPulseAnimation(); }, []);
+  useEffect(() => {
+    injectPulseAnimation();
+  }, []);
 
   // ── Mount xterm ──────────────────────────────────────────────
 
@@ -246,9 +275,9 @@ export default function TerminalPanel({
       }
       writtenRef.current = rawChunks.length;
     }
-  // rawChunks is the same array reference (mutated); rawChunks.length changes
-  // on each parent re-render triggered by outputTick.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // rawChunks is the same array reference (mutated); rawChunks.length changes
+    // on each parent re-render triggered by outputTick.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rawChunks.length]);
 
   // ── Status dot ───────────────────────────────────────────────
@@ -259,9 +288,7 @@ export default function TerminalPanel({
     borderRadius: "50%",
     background: STATUS_COLORS[status] ?? STATUS_COLORS.idle,
     flexShrink: 0,
-    ...(status === "idle"
-      ? { animation: "terminal-pulse 2s ease-in-out infinite" }
-      : {}),
+    ...(status === "idle" ? { animation: "terminal-pulse 2s ease-in-out infinite" } : {}),
   };
 
   // ── Render ───────────────────────────────────────────────────
@@ -275,7 +302,8 @@ export default function TerminalPanel({
           <span style={styles.title}>{title}</span>
           {harnessName && (
             <span style={styles.harnessLabel}>
-              {harnessName}{model ? ` · ${model}` : ""}
+              {harnessName}
+              {model ? ` · ${model}` : ""}
             </span>
           )}
         </div>

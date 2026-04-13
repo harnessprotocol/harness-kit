@@ -1,7 +1,7 @@
-import { homeDir } from "@tauri-apps/api/path";
-import { posixJoin, posixDirname } from "@harness-kit/core";
 import type { FsProvider } from "@harness-kit/core";
-import { syncReadFile, syncFileExists, syncReadDir } from "./tauri";
+import { posixDirname, posixJoin } from "@harness-kit/core";
+import { homeDir } from "@tauri-apps/api/path";
+import { syncFileExists, syncReadDir, syncReadFile } from "./tauri";
 
 /**
  * FsProvider implementation that routes all reads through Rust IPC commands,

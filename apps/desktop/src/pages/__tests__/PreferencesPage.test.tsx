@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { describe, it, expect, beforeEach, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // ── Mocks ────────────────────────────────────────────────────
 
@@ -69,7 +69,15 @@ describe("PreferencesPage", () => {
 
   it("renders all 7 section headers", () => {
     renderPage();
-    for (const heading of ["Appearance", "Layout", "Behavior", "Content", "Config File Explorer", "Labs", "About"]) {
+    for (const heading of [
+      "Appearance",
+      "Layout",
+      "Behavior",
+      "Content",
+      "Config File Explorer",
+      "Labs",
+      "About",
+    ]) {
       expect(screen.getByText(heading)).toBeInTheDocument();
     }
   });
@@ -107,7 +115,11 @@ describe("PreferencesPage", () => {
   });
 
   it("renders the Config File Explorer section", () => {
-    render(<MemoryRouter><PreferencesPage /></MemoryRouter>);
+    render(
+      <MemoryRouter>
+        <PreferencesPage />
+      </MemoryRouter>,
+    );
     expect(screen.getByText("Config File Explorer")).toBeInTheDocument();
     expect(screen.getByText("File visibility")).toBeInTheDocument();
   });

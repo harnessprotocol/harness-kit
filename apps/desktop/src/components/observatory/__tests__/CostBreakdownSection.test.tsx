@@ -1,5 +1,5 @@
-import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 import CostBreakdownSection from "../CostBreakdownSection";
 
 describe("CostBreakdownSection", () => {
@@ -8,9 +8,9 @@ describe("CostBreakdownSection", () => {
       <CostBreakdownSection
         modelUsage={{
           "claude-sonnet-4-6": { inputTokens: 100_000, outputTokens: 10_000 },
-          "claude-haiku-4-5":  { inputTokens: 50_000,  outputTokens: 5_000  },
+          "claude-haiku-4-5": { inputTokens: 50_000, outputTokens: 5_000 },
         }}
-      />
+      />,
     );
 
     const rows = screen.getAllByTestId("cost-row");
@@ -21,10 +21,10 @@ describe("CostBreakdownSection", () => {
     render(
       <CostBreakdownSection
         modelUsage={{
-          "claude-haiku-4-5":  { inputTokens: 1_000_000, outputTokens: 1_000_000 },
+          "claude-haiku-4-5": { inputTokens: 1_000_000, outputTokens: 1_000_000 },
           "claude-sonnet-4-6": { inputTokens: 1_000_000, outputTokens: 1_000_000 },
         }}
-      />
+      />,
     );
 
     const rows = screen.getAllByTestId("cost-row");
@@ -43,9 +43,9 @@ describe("CostBreakdownSection", () => {
       <CostBreakdownSection
         modelUsage={{
           "claude-sonnet-4-6": { inputTokens: 0, outputTokens: 0 },
-          "claude-haiku-4-5":  { inputTokens: 100, outputTokens: 0 },
+          "claude-haiku-4-5": { inputTokens: 100, outputTokens: 0 },
         }}
-      />
+      />,
     );
 
     const rows = screen.getAllByTestId("cost-row");
@@ -60,7 +60,7 @@ describe("CostBreakdownSection", () => {
         modelUsage={{
           "claude-sonnet-4-6": { inputTokens: 1_000_000, outputTokens: 0 },
         }}
-      />
+      />,
     );
 
     expect(screen.getByText("$3.00")).toBeInTheDocument();

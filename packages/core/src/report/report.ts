@@ -1,9 +1,4 @@
-import type {
-  CompileReport,
-  CompileReportEntry,
-  CompileResult,
-  TargetPlatform,
-} from "../types.js";
+import type { CompileReport, CompileReportEntry, CompileResult, TargetPlatform } from "../types.js";
 
 const PLATFORM_ORDER: TargetPlatform[] = ["claude-code", "cursor", "copilot"];
 
@@ -21,9 +16,7 @@ export function buildReport(result: CompileResult): CompileReport {
 
   // Sort files by platform order, then slot order
   const sorted = [...result.files].sort((a, b) => {
-    const platDiff =
-      PLATFORM_ORDER.indexOf(a.platform) -
-      PLATFORM_ORDER.indexOf(b.platform);
+    const platDiff = PLATFORM_ORDER.indexOf(a.platform) - PLATFORM_ORDER.indexOf(b.platform);
     if (platDiff !== 0) return platDiff;
     return SLOT_ORDER.indexOf(a.slot) - SLOT_ORDER.indexOf(b.slot);
   });

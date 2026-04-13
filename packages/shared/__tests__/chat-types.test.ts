@@ -1,14 +1,14 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import type {
-  ChatMessageType,
-  ShareAction,
+  AnyMessage,
   ChatMessage,
+  ChatMessageType,
+  ClientMessage,
+  Member,
+  ServerMessage,
+  ShareAction,
   ShareMessage,
   SystemMessage,
-  AnyMessage,
-  Member,
-  ClientMessage,
-  ServerMessage,
 } from "../src/chat-types.js";
 
 describe("Chat message type unions", () => {
