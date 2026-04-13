@@ -12,6 +12,7 @@ export const AgentState = Annotation.Root({
   planSummary:      Annotation<string>({ default: () => '', reducer: (_a: string, b: string) => b }),
   steeringMessage:  Annotation<string | null>({ default: () => null, reducer: (_a: string | null, b: string | null) => b }),
   handoffRequested: Annotation<boolean>({ default: () => false, reducer: (_a: boolean, b: boolean) => b }),
+  qaPassed:         Annotation<boolean>({ default: () => false, reducer: (_a: boolean, b: boolean) => b }),
   qaAttempts:       Annotation<number>({ default: () => 0, reducer: (_a: number, b: number) => b }),
   task:             Annotation<SerializableTask>({ reducer: (_a: SerializableTask, b: SerializableTask) => b } as never),
   projectSlug:      Annotation<string>({ reducer: (_a: string, b: string) => b } as never),

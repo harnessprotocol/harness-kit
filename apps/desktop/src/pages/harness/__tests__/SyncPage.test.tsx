@@ -3,7 +3,7 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import SyncPage from "../SyncPage";
 
-vi.mock("../../../context/ChatContext", () => ({
+vi.mock("../../../contexts/ChatContext", () => ({
   useChat: () => ({ state: { status: "disconnected" } }),
   ChatProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));

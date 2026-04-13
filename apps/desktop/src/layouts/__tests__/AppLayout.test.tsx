@@ -6,7 +6,7 @@ import { NAV_PATHS } from "../../hooks/useGlobalShortcuts";
 
 // ── Mocks ─────────────────────────────────────────────────────
 
-vi.mock("../../context/ChatContext", () => ({
+vi.mock("../../contexts/ChatContext", () => ({
   useChat: () => ({ state: { status: "disconnected" }, isOpen: false, setOpen: vi.fn(), unreadCount: 0 }),
   ChatProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));

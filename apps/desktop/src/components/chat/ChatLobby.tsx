@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useChat } from "../../context/ChatContext";
+import { useChat } from "../../contexts/ChatContext";
 
 function getStoredNick(): string {
   try { return localStorage.getItem("harness-kit-chat-nick") ?? ""; } catch { return ""; }
