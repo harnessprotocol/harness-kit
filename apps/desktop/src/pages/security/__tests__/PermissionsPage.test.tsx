@@ -37,19 +37,6 @@ vi.mock("../../../lib/preferences", () => ({
   setResilienceConfig: vi.fn(),
 }));
 
-vi.mock("../../../lib/preferences", () => ({
-  getPermissionMode: () => "skip",
-  setPermissionMode: vi.fn(),
-  getAllowedTools: () => ["Read", "Grep", "Glob"],
-  setAllowedTools: vi.fn(),
-  getHarnessPermissionOverrides: () => ({}),
-  setHarnessPermissionOverrides: vi.fn(),
-  resetPermissionDefaults: vi.fn(),
-  getAutoModeUnlocked: () => false,
-  setAutoModeUnlocked: vi.fn(),
-  DEFAULT_ALLOWED_TOOLS: ["Read", "Grep", "Glob"],
-}));
-
 // ── Fixtures ──────────────────────────────────────────────────
 
 const EMPTY_PERMISSIONS: PermissionsState = {
