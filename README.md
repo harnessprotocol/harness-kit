@@ -2,7 +2,7 @@
 
 # harness-kit
 
-Portable configuration for AI coding tools.
+Plugins, skills, MCP servers, and hooks for AI coding tools — packaged once, shared anywhere.
 
 [![Release](https://img.shields.io/github/v/release/harnessprotocol/harness-kit?style=flat-square)](https://github.com/harnessprotocol/harness-kit/releases)
 [![Validate](https://img.shields.io/github/actions/workflow/status/harnessprotocol/harness-kit/validate.yml?style=flat-square&label=validate)](https://github.com/harnessprotocol/harness-kit/actions/workflows/validate.yml)
@@ -11,7 +11,7 @@ Portable configuration for AI coding tools.
 [![Plugins](https://img.shields.io/badge/plugins-16-8A2BE2?style=flat-square)](.claude-plugin/marketplace.json)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](CONTRIBUTING.md)
 
-Works with [Claude Code](https://claude.ai/claude-code) · [Cursor](https://cursor.com) · [GitHub Copilot](https://github.com/features/copilot)
+Works with **[Claude Code](https://claude.ai/claude-code)** · **[Cursor](https://cursor.com)** · **[GitHub Copilot](https://github.com/features/copilot)**
 
 </div>
 
@@ -28,7 +28,7 @@ Your AI coding setup — plugins, skills, MCP servers, hooks, conventions — pa
 <details>
 <summary>Fallback: install with script (skills only)</summary>
 
-If your Claude Code build doesn't support the plugin marketplace:
+If you're on an older Claude Code version without plugin marketplace support:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/harnessprotocol/harness-kit/main/install.sh | bash
@@ -48,16 +48,16 @@ Install `explain` — no dependencies, works in any codebase:
 Then try it:
 
 ```
-/explain src/auth/middleware.ts       # explain a specific file
-/explain the payment processing flow  # search the codebase for a concept
-/explain src/services/                # map a directory
+/explain src/               # map the whole codebase
+/explain the auth flow      # search by concept
+/explain README.md          # explain a specific file
 ```
 
 Produces a layered explanation: summary, key components, how it connects, patterns, gotchas, and where to start if you need to change it.
 
 ## 🔌 Plugins
 
-A few highlights to get started:
+A few highlights to get started. The full set spans code quality, data engineering, devops, design, productivity, and research:
 
 | Plugin | What it does | Try it |
 |--------|-------------|--------|
@@ -79,9 +79,11 @@ A few highlights to get started:
 /plugin install superpowers@obra
 ```
 
+> Built a plugin? [Submit a PR](CONTRIBUTING.md) to list it here.
+
 ## 🔄 Share Your Setup
 
-Export your plugin setup to a `harness.yaml`, commit it to your dotfiles, and restore it anywhere.
+Share your exact AI coding setup with teammates or restore it on a new machine — export to `harness.yaml` and commit it to your dotfiles.
 
 | Command | What it does |
 |---------|-------------|
@@ -118,25 +120,16 @@ A Tauri desktop companion that brings the harness concept to a native UI.
 
 - **Sync engine** — compiles `harness.yaml` to platform configs
 - **Plugin explorer** — browse and manage installed plugins
-- **Marketplace** — embedded plugin browser for discovering and installing from the marketplace
+- **Board** — kanban project board with real-time Claude ↔ web sync and per-card agent execution via LangGraph
 - **Observatory** — live session dashboard with stats and transcripts
-- **Comparator** -- structured evaluation workbench: configure harnesses, run side-by-side comparisons, review file diffs, and judge results across a 4-phase workflow
-- **Harness editor** — inline editing with custom profiles
-- **Board** — kanban project board with real-time Claude-to-web sync; per-card agent execution via LangGraph with live phase/progress streaming, subtask tracking, steering, pause/resume, and tool-level permission controls
-- **Roadmap** — AI-driven product roadmap with competitor analysis, generated via Claude
-- **Parity** — cross-platform feature parity tracking across AI coding tools
-- **Security** — permissions editor, secrets management, and audit logging
-- **Memory** — knowledge graph viewer via [membrain](https://github.com/siracusa5/membrain) integration
-- **Team chat** — IRC-style chat backed by a self-hosted WebSocket relay
-- **AI Chat** — streaming conversations with local LLMs via Ollama, with session persistence and inline model downloads
 
-See [`apps/desktop/`](apps/desktop/) for build instructions. The desktop app is a separate product from the plugin marketplace.
+See [`apps/desktop/`](apps/desktop/) for the full feature list and build instructions. The desktop app is a separate product from the plugin marketplace.
 
 ## 🌐 Cross-Platform
 
 - **Claude Code** — native plugin marketplace support
 - **Cursor** — SKILL.md files work as prompt instructions; `/harness-compile` generates native config
-- **GitHub Copilot** — reads `CLAUDE.md` natively via `chat.useClaudeMdFile`
+- **GitHub Copilot** — reads `CLAUDE.md` via `chat.useClaudeMdFile` (requires enabling this setting in VS Code)
 
 See the [Harness Protocol spec](https://harnessprotocol.io) for the full cross-platform target mapping.
 
@@ -145,7 +138,8 @@ See the [Harness Protocol spec](https://harnessprotocol.io) for the full cross-p
 - **[FAQ](docs/FAQ.md)** — What is this, why do I need it, how does it work
 - **[Plugins vs. Skills](docs/plugins-vs-skills.md)** — Why everything ships as a plugin, even when it's just a prompt
 - **[Claude Conventions](docs/claude-md-conventions.md)** — Organizing `CLAUDE.md`, `AGENT.md`, and `SOUL.md` with separation of concerns
-- **[Understanding Agents](https://harnessprotocol.io/docs/concepts/agents)** — AGENT.md, custom subagents, and "AI agent" disambiguation
+- **[Understanding Agents ↗](https://harnessprotocol.io/docs/concepts/agents)** — AGENT.md, custom subagents, and "AI agent" disambiguation
+- **[Changelog](CHANGELOG.md)** — What's changed across releases
 
 ## 🤝 Contributing
 
