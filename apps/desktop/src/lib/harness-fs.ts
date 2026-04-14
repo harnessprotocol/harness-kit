@@ -4,6 +4,8 @@ import {
   exists,
   mkdir,
   readDir,
+  lstat,
+  rename,
 } from "@tauri-apps/plugin-fs";
 import { homeDir } from "@tauri-apps/api/path";
 import type { FsProvider } from "@harness-kit/core";
@@ -39,6 +41,19 @@ export class TauriFsProvider implements FsProvider {
   async readDir(path: string): Promise<string[]> {
     const entries = await readDir(path);
     return entries.map((e) => e.name).filter((n): n is string => n != null);
+  }
+
+  async isDirectory(path: string): Promise<boolean> {
+    try {
+      const info = await lstat(path);
+      return info.isDirectory;
+    } catch {
+      return false;
+    }
+  }
+
+  async renameFile(from: string, to: string): Promise<void> {
+    await rename(from, to);
   }
 
   joinPath(...segments: string[]): string {

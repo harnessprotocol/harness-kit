@@ -17,6 +17,11 @@ const PLATFORM_LABELS: Record<TargetPlatform, string> = {
   "claude-code": "Claude Code",
   cursor: "Cursor",
   copilot: "Copilot",
+  codex: "Codex",
+  opencode: "OpenCode",
+  windsurf: "Windsurf",
+  gemini: "Gemini CLI",
+  junie: "Junie",
 };
 
 function ActionBadge({ action }: { action: string }) {
