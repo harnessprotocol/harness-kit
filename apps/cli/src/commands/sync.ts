@@ -34,7 +34,14 @@ function cachePathForSource(source: string): string {
   const key = source.startsWith("github.com/")
     ? source.slice("github.com/".length)
     : source;
-  return join(cacheRoot(), ...key.split("/"));
+
+  // Reject any path traversal segments to prevent escaping the cache root.
+  const segments = key.split("/");
+  if (segments.some((s) => s === ".." || s === ".")) {
+    throw new Error(`Invalid plugin source: "${source}" — path traversal is not allowed`);
+  }
+
+  return join(cacheRoot(), ...segments);
 }
 
 // ── Git helpers ───────────────────────────────────────────────

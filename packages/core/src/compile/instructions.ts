@@ -207,6 +207,11 @@ export async function compileInstructions(
   return { files, warnings };
 }
 
+/** The slot → platform → file mapping. Used by check.ts to avoid duplication. */
+export function getSlotMappings(): Array<{ slot: string; file: Partial<Record<TargetPlatform, string | null>> }> {
+  return SLOT_MAPPINGS;
+}
+
 /** All instruction file paths across all platforms (for --clean scanning). */
 export function getAllInstructionFilePaths(): string[] {
   const paths: string[] = [];

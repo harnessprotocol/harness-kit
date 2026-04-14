@@ -59,8 +59,10 @@ export const TARGETS: IntegrationTarget[] = [
     skillsDir: ".agents/skills",
     layout: "flat",
     instructionFile: "AGENTS.md",
-    mcpConfigFile: ".codex/config.toml",
-    mcpConfigFormat: "toml",
+    // Codex uses TOML config format which the compiler does not yet support.
+    // Skip project-level MCP write until TOML serialization is implemented.
+    mcpConfigFile: null,
+    mcpConfigFormat: null,
     skillsReadDirect: true,
   },
   {

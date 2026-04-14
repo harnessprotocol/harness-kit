@@ -46,8 +46,9 @@ describe("TARGETS registry", () => {
     expect(getTarget("windsurf").mcpConfigFormat).toBeNull();
   });
 
-  it("codex uses toml mcp format", () => {
-    expect(getTarget("codex").mcpConfigFormat).toBe("toml");
+  it("codex has null mcpConfigFile (TOML not yet supported)", () => {
+    expect(getTarget("codex").mcpConfigFile).toBeNull();
+    expect(getTarget("codex").mcpConfigFormat).toBeNull();
   });
 
   it("getTarget throws for unknown id", () => {

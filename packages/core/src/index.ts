@@ -47,7 +47,7 @@ export { detectPlatforms } from "./detect/detect-platforms.js";
 
 // Compile
 export { compile, computeSourceFingerprint } from "./compile/compile.js";
-export { compileInstructions, getAllInstructionFilePaths } from "./compile/instructions.js";
+export { compileInstructions, getAllInstructionFilePaths, getSlotMappings } from "./compile/instructions.js";
 export { compileMcpServers } from "./compile/mcp-servers.js";
 export { compileSkills } from "./compile/skills.js";
 export { compilePermissions, buildPermissionsText } from "./compile/permissions.js";

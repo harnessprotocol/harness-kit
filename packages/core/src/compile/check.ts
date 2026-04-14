@@ -3,6 +3,7 @@ import type { FsProvider } from "../fs-provider.js";
 import type { HarnessConfig, TargetPlatform } from "../types.js";
 import { findMarkerBlock } from "./markers.js";
 import { compileSkills } from "./skills.js";
+import { getSlotMappings } from "./instructions.js";
 import { TARGETS } from "./targets.js";
 
 // ── Low-level utilities ──────────────────────────────────────
@@ -176,61 +177,33 @@ export async function checkCompiled(
   // ── Instruction checks ───────────────────────────────────
   const instructions = config.instructions;
   if (instructions) {
-    const slots = ["operational", "behavioral", "identity"] as const;
-
-    // Instruction file mapping per target (mirrors instructions.ts SLOT_MAPPINGS)
-    const instructionFiles: Record<
-      string,
-      Partial<Record<TargetPlatform, string>>
-    > = {
-      operational: {
-        "claude-code": "CLAUDE.md",
-        cursor: ".cursor/rules/harness.mdc",
-        copilot: ".github/copilot-instructions.md",
-        codex: "AGENTS.md",
-        opencode: "AGENTS.md",
-        windsurf: "AGENTS.md",
-        gemini: "AGENTS.md",
-        junie: "AGENTS.md",
-      },
-      behavioral: {
-        "claude-code": "AGENT.md",
-        cursor: ".cursor/rules/behavioral.mdc",
-        copilot: ".github/instructions/behavioral.instructions.md",
-      },
-      identity: {
-        "claude-code": "SOUL.md",
-      },
-    };
-
-    for (const slot of slots) {
-      const slotContent = instructions[slot];
+    // Derive file mapping from getSlotMappings() (single source of truth in instructions.ts)
+    // rather than duplicating the slot→file map here.
+    for (const mapping of getSlotMappings()) {
+      const slotContent = instructions[mapping.slot as keyof typeof instructions];
       if (!slotContent) continue;
 
-      const fileMap = instructionFiles[slot];
       const seenPaths = new Set<string>();
 
       for (const target of targets) {
-        const filePath = fileMap[target];
+        const filePath = mapping.file[target];
         if (!filePath) continue;
         if (seenPaths.has(filePath)) continue;
         seenPaths.add(filePath);
 
-        // For AGENTS.md targets, label as the first matching target
-        const labelTarget = target;
         const deployedPath = fs.joinPath(cwd, filePath);
         const status = await instructionDrift(
           slotContent,
           deployedPath,
           harnessName,
-          slot,
+          mapping.slot,
           fs,
         );
 
         entries.push({
           kind: "instruction",
-          name: slot,
-          target: labelTarget,
+          name: mapping.slot,
+          target,
           path: filePath,
           status,
         });
