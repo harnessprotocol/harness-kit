@@ -1,4 +1,4 @@
-import { readFile, writeFile, access, mkdir, readdir, lstat } from "node:fs/promises";
+import { readFile, writeFile, access, mkdir, readdir, lstat, rename } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import type { FsProvider } from "./fs-provider.js";
@@ -36,6 +36,19 @@ export class NodeFsProvider implements FsProvider {
     // via symlinked directories that point outside the plugin tree.
     const entries = await readdir(path, { withFileTypes: true });
     return entries.filter((e) => !e.isSymbolicLink()).map((e) => e.name);
+  }
+
+  async renameFile(from: string, to: string): Promise<void> {
+    await rename(from, to);
+  }
+
+  async isDirectory(path: string): Promise<boolean> {
+    try {
+      const stat = await lstat(path);
+      return stat.isDirectory();
+    } catch {
+      return false;
+    }
   }
 
   async isSymlink(path: string): Promise<boolean> {

@@ -143,4 +143,40 @@ describe("compileInstructions", () => {
     const ops = files.find((f) => f.slot === "operational");
     expect(ops!.content).toContain("<!-- BEGIN harness:default:operational -->");
   });
+
+  it("writes AGENTS.md once even when multiple AGENTS.md targets are requested", async () => {
+    const fs = new MockFsProvider();
+    const config = makeConfig();
+    const { files } = await compileInstructions(
+      config,
+      ["codex", "opencode", "windsurf", "gemini", "junie"],
+      fs,
+    );
+
+    const agentsMdFiles = files.filter((f) => f.path === "AGENTS.md" && f.slot === "operational");
+    expect(agentsMdFiles).toHaveLength(1);
+  });
+
+  it("writes AGENTS.md for operational slot when any AGENTS.md target is included", async () => {
+    const fs = new MockFsProvider();
+    const config = makeConfig();
+    const { files } = await compileInstructions(config, ["codex"], fs);
+
+    const ops = files.find((f) => f.slot === "operational");
+    expect(ops).toBeDefined();
+    expect(ops!.path).toBe("AGENTS.md");
+    expect(ops!.content).toContain("<!-- BEGIN harness:test-harness:operational -->");
+  });
+
+  it("compiles instructions for all 8 targets without error", async () => {
+    const fs = new MockFsProvider();
+    const config = makeConfig();
+    await expect(
+      compileInstructions(
+        config,
+        ["claude-code", "cursor", "copilot", "codex", "opencode", "windsurf", "gemini", "junie"],
+        fs,
+      ),
+    ).resolves.not.toThrow();
+  });
 });

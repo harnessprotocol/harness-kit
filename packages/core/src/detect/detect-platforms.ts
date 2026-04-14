@@ -1,34 +1,22 @@
 import type { FsProvider } from "../fs-provider.js";
 import type { DetectedPlatform, TargetPlatform } from "../types.js";
+import { TARGETS } from "../compile/targets.js";
 
-interface PlatformIndicator {
-  platform: TargetPlatform;
+interface DetectionPaths {
   paths: string[];
-  /** If this is the only indicator found, flag for user confirmation */
-  ambiguousPaths: string[];
+  ambiguous: string[];
 }
 
-const INDICATORS: PlatformIndicator[] = [
-  {
-    platform: "claude-code",
-    paths: ["CLAUDE.md", ".claude", ".mcp.json"],
-    ambiguousPaths: [],
-  },
-  {
-    platform: "cursor",
-    paths: [".cursor", ".cursor/rules", ".cursor/mcp.json", ".cursor/skills"],
-    ambiguousPaths: [],
-  },
-  {
-    platform: "copilot",
-    paths: [
-      ".github/copilot-instructions.md",
-      ".vscode/mcp.json",
-      ".github/skills",
-    ],
-    ambiguousPaths: [".github"],
-  },
-];
+const DETECTION_PATHS: Partial<Record<TargetPlatform, DetectionPaths>> = {
+  "claude-code": { paths: ["CLAUDE.md", ".claude", ".mcp.json"], ambiguous: [] },
+  "cursor":      { paths: [".cursor", ".cursor/rules", ".cursor/mcp.json", ".cursor/skills"], ambiguous: [] },
+  "copilot":     { paths: [".github/copilot-instructions.md", ".vscode/mcp.json", ".github/skills"], ambiguous: [".github"] },
+  "codex":       { paths: [".codex"], ambiguous: [] },
+  "opencode":    { paths: ["opencode.json", ".opencode"], ambiguous: [] },
+  "windsurf":    { paths: [".windsurf"], ambiguous: [] },
+  "gemini":      { paths: [".gemini"], ambiguous: [] },
+  "junie":       { paths: [".junie"], ambiguous: [] },
+};
 
 export async function detectPlatforms(
   fs: FsProvider,
@@ -36,11 +24,13 @@ export async function detectPlatforms(
   const cwd = fs.cwd();
   const results: DetectedPlatform[] = [];
 
-  for (const indicator of INDICATORS) {
-    const allPaths = [...indicator.paths, ...indicator.ambiguousPaths];
-    const ambiguousSet = new Set(indicator.ambiguousPaths);
+  for (const target of TARGETS) {
+    const detection = DETECTION_PATHS[target.id];
+    if (!detection) continue;
 
-    // Check all paths for this platform in parallel
+    const ambiguousSet = new Set(detection.ambiguous);
+    const allPaths = [...detection.paths, ...detection.ambiguous];
+
     const checks = await Promise.all(
       allPaths.map(async (p) => ({
         path: p,
@@ -55,7 +45,7 @@ export async function detectPlatforms(
 
     if (allFound.length > 0) {
       results.push({
-        platform: indicator.platform,
+        platform: target.id,
         indicators: allFound,
         needsConfirmation: foundIndicators.length === 0 && foundAmbiguous.length > 0,
       });

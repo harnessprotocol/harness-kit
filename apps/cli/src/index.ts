@@ -1,9 +1,12 @@
 import { Command } from "commander";
 import { validateCommand } from "./commands/validate.js";
 import { compileCommand } from "./commands/compile.js";
+import { checkCommand } from "./commands/check.js";
 import { detectCommand } from "./commands/detect.js";
-import { initCommand } from "./commands/init.js";
+import { initCommand, initSkillCommand } from "./commands/init.js";
 import { scanCommand } from "./commands/scan.js";
+import { syncCommand } from "./commands/sync.js";
+import { runCommand } from "./commands/run.js";
 import {
   listOrganizations,
   createOrganization,
@@ -43,6 +46,7 @@ program
   .option("--dry-run", "Preview output without writing files")
   .option("--clean", "Remove orphaned marker blocks from previous compilations")
   .option("--verbose", "Show skipped slots and extra detail")
+  .option("--force", "Recompile even if source fingerprint is unchanged")
   .addHelpText(
     "after",
     `
@@ -58,18 +62,100 @@ Examples:
   });
 
 program
+  .command("sync")
+  .description("Fetch plugins into ~/.harness/cache/ and write harness.lock")
+  .argument("[path]", "Path to harness.yaml", "harness.yaml")
+  .option("--frozen", "Verify cached plugins without fetching (for CI)")
+  .option("--locked", "Fail if harness.lock is out of date with harness.yaml, then fetch")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  harness-kit sync               Fetch missing plugins, refresh harness.lock
+  harness-kit sync --frozen      Verify cache is intact (no network, for CI)
+  harness-kit sync --locked      Fail if lock is stale, then fetch
+
+Workflow: harness-kit sync && harness-kit compile`,
+  )
+  .action(async (path: string, flags) => {
+    await syncCommand(path, flags);
+  });
+
+program
+  .command("check")
+  .description("Check compiled output is in sync with harness.yaml (drift detection)")
+  .argument("[path]", "Path to harness.yaml", "harness.yaml")
+  .option(
+    "--target <targets>",
+    "Target platforms to check (comma-separated), or all",
+  )
+  .addHelpText(
+    "after",
+    `
+Examples:
+  harness-kit check                         Check all targets
+  harness-kit check --target cursor,copilot Check specific targets
+
+Exit code 0 if all ok. Exit code 1 if any drift or missing.`,
+  )
+  .action(async (path: string, flags) => {
+    await checkCommand(path, flags);
+  });
+
+program
   .command("detect")
   .description("Show which AI coding platforms are detected in the current directory")
   .action(async () => {
     await detectCommand();
   });
 
-program
+const initCmd = program
   .command("init")
-  .description("Scaffold a new harness.yaml interactively")
+  .description("Scaffold a new harness.yaml or plugin skill")
   .argument("[path]", "Output path for harness.yaml", "harness.yaml")
   .action(async (path: string) => {
     await initCommand(path);
+  });
+
+initCmd
+  .command("skill")
+  .description("Scaffold a new plugin skill")
+  .argument("<name>", "Skill name (lowercase kebab-case)")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  harness-kit init skill my-skill
+  harness-kit init skill code-review
+
+Creates:
+  skills/<name>/SKILL.md   — Skill definition template
+  plugin.json              — Plugin manifest (if not present)`,
+  )
+  .action(async (name: string) => {
+    await initSkillCommand(name);
+  });
+
+program
+  .command("run")
+  .description("Run a skill ephemerally with the active AI tool — nothing persisted")
+  .argument("<plugin>", "Plugin name, optionally with source: name@owner/repo or name@./path")
+  .option("--tool <tool>", "Tool to use (auto-detected if omitted)")
+  .option("--prompt <text>", "Non-interactive: pass a prompt and exit")
+  .option("-i, --interactive", "Interactive mode (default when --prompt is omitted)")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  harness-kit run research                              Auto-detect tool, interactive
+  harness-kit run research@harnessprotocol/harness-kit  Explicit source
+  harness-kit run my-skill@./plugins/my-skill           Local plugin
+  harness-kit run research --tool claude-code --prompt "Analyze this repo"
+
+Nothing is written to harness.yaml, harness.lock, or any persistent skill directory.`,
+  )
+  .action(async (handle: string, flags) => {
+    await runCommand(handle, flags);
   });
 
 program

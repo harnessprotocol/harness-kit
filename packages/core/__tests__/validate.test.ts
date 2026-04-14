@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseHarness } from "../src/parser/parse-harness.js";
-import { validateHarness } from "../src/schema/validate.js";
+import { validateHarness, validateSkillName } from "../src/schema/validate.js";
 
 const FIXTURES = resolve(import.meta.dirname, "fixtures");
 
@@ -59,5 +59,55 @@ describe("validateHarness", () => {
     });
     expect(result.valid).toBe(false);
     expect(result.errors.some((e) => e.fix?.includes("owner/repo"))).toBe(true);
+  });
+
+  it("reports invalid skill name in plugins", () => {
+    const result = validateHarness({
+      version: "1",
+      metadata: { name: "test", description: "test" },
+      plugins: [{ name: "My_BadSkill!", source: "owner/repo" }],
+    });
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.message.includes("Invalid skill name"))).toBe(true);
+  });
+});
+
+// ── validateSkillName ─────────────────────────────────────────
+
+describe("validateSkillName", () => {
+  it("accepts valid kebab-case names", () => {
+    expect(validateSkillName("my-skill")).toBe(true);
+    expect(validateSkillName("research")).toBe(true);
+    expect(validateSkillName("code-review-pro")).toBe(true);
+    expect(validateSkillName("a1b2c3")).toBe(true);
+  });
+
+  it("rejects names with uppercase", () => {
+    expect(validateSkillName("MySkill")).toBe(false);
+    expect(validateSkillName("MY-SKILL")).toBe(false);
+  });
+
+  it("rejects names with underscores", () => {
+    expect(validateSkillName("my_skill")).toBe(false);
+  });
+
+  it("rejects names with special characters", () => {
+    expect(validateSkillName("my skill")).toBe(false);
+    expect(validateSkillName("my.skill")).toBe(false);
+    expect(validateSkillName("my!skill")).toBe(false);
+  });
+
+  it("rejects names with leading or trailing hyphens", () => {
+    expect(validateSkillName("-my-skill")).toBe(false);
+    expect(validateSkillName("my-skill-")).toBe(false);
+  });
+
+  it("rejects empty string", () => {
+    expect(validateSkillName("")).toBe(false);
+  });
+
+  it("rejects names over 64 characters", () => {
+    expect(validateSkillName("a".repeat(65))).toBe(false);
+    expect(validateSkillName("a".repeat(64))).toBe(true);
   });
 });
