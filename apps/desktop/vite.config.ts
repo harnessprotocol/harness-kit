@@ -9,7 +9,8 @@ const externalNodeModules = {
   name: "external-node-builtins",
   enforce: "pre" as const,
   resolveId(id: string) {
-    if (id === "node:crypto") return { id, external: true };
+    // TypeScript may emit "node:crypto" or "crypto" depending on target/module settings.
+    if (id === "node:crypto" || id === "crypto") return { id, external: true };
   },
 };
 
