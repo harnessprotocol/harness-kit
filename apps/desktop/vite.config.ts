@@ -20,6 +20,15 @@ export default defineConfig(async () => ({
     },
   },
 
+  build: {
+    rollupOptions: {
+      // node:crypto is used by @harness-kit/core's compile/check utilities (Node.js-only).
+      // Those functions are never called from the desktop app. Mark as external so
+      // Rollup doesn't attempt to bundle it for the browser.
+      external: ["node:crypto"],
+    },
+  },
+
   test: {
     globals: true,
     environment: "jsdom",
