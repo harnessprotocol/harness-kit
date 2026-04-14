@@ -2,9 +2,20 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
+// node:crypto is used by @harness-kit/core's Node.js-only compile/check utilities.
+// The desktop never calls these functions; externalize so Vite doesn't try to bundle
+// it for the browser and fail with __vite-browser-external.
+const externalNodeModules = {
+  name: "external-node-builtins",
+  enforce: "pre" as const,
+  resolveId(id: string) {
+    if (id === "node:crypto") return { id, external: true };
+  },
+};
+
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
-  plugins: [react(), tailwindcss()],
+  plugins: [externalNodeModules, react(), tailwindcss()],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
@@ -17,15 +28,6 @@ export default defineConfig(async () => ({
     watch: {
       // 3. tell vite to ignore watching `src-tauri` and worktree artifacts
       ignored: ["**/src-tauri/**", "**/.auto-claude/**"],
-    },
-  },
-
-  build: {
-    rollupOptions: {
-      // node:crypto is used by @harness-kit/core's compile/check utilities (Node.js-only).
-      // Those functions are never called from the desktop app. Mark as external so
-      // Rollup doesn't attempt to bundle it for the browser.
-      external: ["node:crypto"],
     },
   },
 
