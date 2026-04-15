@@ -1,19 +1,21 @@
 ---
 title: Introduction
-description: A harness-agnostic framework for AI coding tools.
+description: The configuration console for all your AI coding harnesses.
 ---
 
 import { Cards, Card } from 'fumadocs-ui/components/card';
 
 # Harness Kit
 
-Every AI setup starts from scratch. New machine, new project, new teammate — and you're rebuilding configuration you already built somewhere else.
+Harness Kit is the configuration console for all your AI coding harnesses.
 
-**harness-kit** is a harness-agnostic framework for AI coding tools. Your plugins, skills, MCP servers, hooks, and conventions all live in one portable config. It works with Claude Code today and is designed to travel across tools.
+Every AI coding tool has its own setup folder — Claude Code's `~/.claude`, Cursor's `.cursor`, Copilot's config. Different names, same shape, totally incompatible. **harness-kit** is the layer that turns all of them into one setup you carry with you: plugins, skills, MCP servers, hooks, and conventions, all declared in a single `harness.yaml`.
+
+Configure once. Observe what your AI actually does. Share your setup with a teammate in one file.
 
 ## Quick install
 
-```bash
+```
 /plugin marketplace add harnessprotocol/harness-kit
 /plugin install research@harness-kit
 ```
@@ -23,7 +25,7 @@ Every AI setup starts from scratch. New machine, new project, new teammate — a
 <Cards>
   <Card title="Installation" description="Get up and running in under a minute." href="/docs/getting-started/installation" />
   <Card title="Quick Start" description="Install a plugin and try it immediately." href="/docs/getting-started/quick-start" />
-  <Card title="Browse Plugins" description="16 plugins across 7 categories." href="/docs/plugins/overview" />
+  <Card title="Browse Plugins" description="7 plugins shipping today. Each packages a portable workflow." href="/docs/plugins/overview" />
   <Card title="Architecture" description="How skills, plugins, and the registry fit together." href="/docs/getting-started/architecture" />
   <Card title="Create a Plugin" description="Build your own plugin in minutes." href="/docs/guides/creating-plugins" />
   <Card title="Cross-Harness" description="Use with Copilot, Cursor, Windsurf, and more." href="/docs/cross-harness/setup-guide" />

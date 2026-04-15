@@ -13,9 +13,11 @@ harness-kit is a harness-agnostic framework for AI coding tools. Your plugins, s
 
 Plugins are the entry point: installable slash commands that bundle complete workflows and follow you across every project. Export your full setup as a `harness.yaml`, share it with a teammate, and they're up and running. No rebuilding from scratch.
 
-## What is an "AI harness"?
+## What is a harness?
 
-Your harness is the configuration that tells Claude how to work in a given session — files like `CLAUDE.md` and `AGENT.md`, plus any installed plugins. harness-kit helps you build and share that setup so it's not stuck on one machine.
+Every AI coding tool has its own setup folder — Claude Code's `~/.claude`, Cursor's `.cursor`, Copilot's config, and whatever shows up next month. Different names, same shape, totally incompatible. A **harness** is that setup: the configuration that tells your AI how to work in a given session — files like `CLAUDE.md` and `AGENT.md`, plus installed plugins, MCP servers, hooks, and skills.
+
+Note the plural: each AI coding tool has its own harness. **Harness Kit** is the app that operates all of them, collapsing the per-tool harnesses into one `harness.yaml` you carry with you.
 
 ## Why do I need this? Can't I just write prompts myself?
 

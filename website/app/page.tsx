@@ -1,19 +1,25 @@
 import Link from 'next/link';
+import { SiteNav } from '@/components/site/SiteNav';
+import { SiteFooter } from '@/components/site/SiteFooter';
+import { HeroGlow } from '@/components/site/HeroGlow';
+import { CommandBox } from '@/components/site/CommandBox';
+import { SectionHeader } from '@/components/site/SectionHeader';
+import { FeatureTile } from '@/components/site/FeatureTile';
+import { PluginCard } from '@/components/site/PluginCard';
+import { DesktopMock } from '@/components/site/DesktopMock';
 
-/* ── Lucide SVG icons (inline, no package needed) ── */
-const DownloadIcon = () => (
+/* ── Icons (inline SVG, no icon library) ── */
+const ConfigureIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-    <polyline points="7 10 12 15 17 10" />
-    <line x1="12" y1="15" x2="12" y2="3" />
+    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+    <circle cx="12" cy="12" r="3" />
   </svg>
 );
 
-const WorkflowIcon = () => (
+const ObserveIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <rect x="3" y="3" width="8" height="8" rx="2" />
-    <path d="M7 11v4a2 2 0 0 0 2 2h4" />
-    <rect x="13" y="13" width="8" height="8" rx="2" />
+    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+    <circle cx="12" cy="12" r="3" />
   </svg>
 );
 
@@ -29,383 +35,301 @@ const ShareIcon = () => (
 
 const features = [
   {
-    title: 'Install once, use everywhere',
+    icon: <ConfigureIcon />,
+    title: 'Configure',
     description:
-      'Install by name. Plugins follow you across every project without manual setup.',
-    icon: <DownloadIcon />,
+      'Plugins, skills, MCP servers, hooks — all declared in one harness.yaml. Install by name. No git clone, no path juggling, no "run this script first."',
   },
   {
-    title: 'More than prompts',
+    icon: <ObserveIcon />,
+    title: 'Observe',
     description:
-      'Each plugin encodes a complete workflow — what to gather, how to analyze it, what to produce.',
-    icon: <WorkflowIcon />,
+      'Every session, every tool call, every minute. Observatory and Memory show you what your AI actually did, so you can trust it, tune it, or prove it.',
   },
   {
-    title: 'Share your setup',
-    description:
-      "Export your full setup as a harness.yaml. Share it with a teammate and they're running the same workflows.",
     icon: <ShareIcon />,
+    title: 'Share',
+    description:
+      'Your whole setup fits in one file. Hand it to a teammate and they\'re running exactly what you run — same plugins, same skills, same workflows.',
   },
 ];
 
 const plugins = [
   {
     name: 'research',
-    description:
-      'Process any source into a structured, compounding knowledge base.',
+    description: 'Turn any source into a structured, compounding knowledge base.',
     href: '/docs/plugins/research',
     accent: 'var(--cat-purple)',
   },
   {
     name: 'explain',
-    description:
-      'Layered explanations of files, functions, directories, or concepts.',
+    description: 'Layered explanations — from one-liner to deep dive — for files, functions, or whole directories.',
     href: '/docs/plugins/explain',
     accent: 'var(--cat-blue)',
   },
   {
     name: 'data-lineage',
-    description:
-      'Column-level lineage tracing through SQL, Kafka, Spark, and JDBC.',
+    description: 'Column-level lineage through SQL, Kafka, Spark, and JDBC. Trace every field back to its source.',
     href: '/docs/plugins/data-lineage',
     accent: 'var(--cat-cyan)',
   },
   {
     name: 'orient',
-    description:
-      'Topic-focused session orientation across graph, knowledge, and research.',
+    description: 'Drop into any topic and get the context you need — graph, knowledge, research, all at once.',
     href: '/docs/plugins/orient',
     accent: 'var(--cat-green)',
   },
   {
     name: 'capture-session',
-    description:
-      'Capture session information into a staging file for later reflection.',
+    description: 'Save the state of a session so future-you (or a teammate) can pick up where you left off.',
     href: '/docs/plugins/capture-session',
     accent: 'var(--cat-cyan)',
   },
   {
     name: 'review',
-    description:
-      'Code review for a branch, PR, or path — severity labels and cross-file analysis.',
+    description: 'Code review across a branch, a PR, or a path — severity labels and cross-file analysis included.',
     href: '/docs/plugins/review',
     accent: 'var(--cat-green)',
   },
   {
     name: 'docgen',
-    description:
-      'Generate or update README, API docs, architecture overview, or changelog.',
+    description: 'Generate or update README, API docs, architecture overview, or changelog.',
     href: '/docs/plugins/docgen',
     accent: 'var(--cat-blue)',
   },
 ];
 
-const heroCards = [
+const showcaseCards = [
   {
-    title: 'Getting Started',
-    description: 'Install your first plugin in under a minute.',
-    href: '/docs/getting-started/installation',
+    section: 'observatory' as const,
+    title: 'Observatory · know what your AI actually did',
+    desc: 'Every session, every tool call, every minute. Trends you can point at when someone asks "is this thing working."',
   },
   {
-    title: 'Browse Plugins',
-    description: '7 plugins shipping today. Each packages a proven workflow.',
-    href: '/docs/plugins/overview',
+    section: 'memory' as const,
+    title: 'Memory · the context that outlasts the session',
+    desc: 'A knowledge graph your AI can orient itself in. Teammates, decisions, conventions — persistent across every tool.',
   },
   {
-    title: 'Architecture',
-    description: 'How skills, plugins, and the registry fit together.',
-    href: '/docs/concepts/architecture',
+    section: 'board' as const,
+    title: "Board · your AI's to-do list, not yours",
+    desc: 'Agents pick up cards, draft commits, open PRs. You review. The kanban is built for AI-first teams.',
   },
   {
-    title: 'Cross-Harness',
-    description: 'One config, every tool. Designed for portability across Claude Code, Copilot, Cursor, and more.',
-    href: '/docs/cross-harness/setup-guide',
+    section: 'ai-chat' as const,
+    title: 'AI Chat · the terminal, but nicer',
+    desc: 'A keyboard-first chat window tied to your harness. Pipe files in, stream tool calls, keep every conversation.',
   },
 ];
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen animate-fade-in">
-      {/* Nav */}
-      <nav className="sticky top-0 z-50 border-b border-fd-border/30 bg-fd-background/80 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link href="/" className="flex items-center gap-2.5 font-bold text-fd-foreground no-underline">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 32 32"
-              className="size-7"
-            >
-              <rect width="32" height="32" rx="6" fill="#0d0d12" />
-              <text
-                x="16"
-                y="22"
-                textAnchor="middle"
-                fontFamily="system-ui, sans-serif"
-                fontWeight="700"
-                fontSize="16"
-                fill="#22b1ec"
-              >
-                hk
-              </text>
-            </svg>
-            <span className="font-display">Harness Kit</span>
-          </Link>
-          <div className="flex items-center gap-6 text-sm">
-            <Link
-              href="/docs"
-              className="text-fd-muted-foreground transition-colors hover:text-fd-foreground no-underline"
-            >
-              Docs
-            </Link>
-            <Link
-              href="/explore"
-              className="text-fd-muted-foreground transition-colors hover:text-fd-foreground no-underline"
-            >
-              Explore
-            </Link>
-            <Link
-              href="/docs/plugins/overview"
-              className="text-fd-muted-foreground transition-colors hover:text-fd-foreground no-underline"
-            >
-              Plugins
-            </Link>
-            <a
-              href="https://github.com/harnessprotocol/harness-kit"
-              className="text-fd-muted-foreground transition-colors hover:text-fd-foreground no-underline"
-              target="_blank"
-              rel="noreferrer"
-            >
-              GitHub
-            </a>
-          </div>
-        </div>
-      </nav>
+    <main className="min-h-screen">
+      <SiteNav />
 
-      {/* Hero */}
+      {/* ── Hero ── */}
       <section className="relative overflow-hidden">
-        {/* Ambient glow orb */}
-        <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/4">
-          <div className="h-[500px] w-[700px] rounded-full bg-sky-500/15 blur-[120px]" />
-        </div>
-        <div className="absolute inset-0 bg-gradient-to-b from-sky-500/5 via-transparent to-transparent" />
+        <HeroGlow />
+        <div className="relative mx-auto max-w-6xl px-6 pb-20 pt-24">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            {/* Left: copy */}
+            <div>
+              <div
+                className="mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold"
+                style={{
+                  color: 'var(--accent-fg)',
+                  borderColor: 'var(--accent-glow)',
+                  background: 'var(--accent-light)',
+                }}
+              >
+                <span
+                  className="inline-block size-1.5 rounded-full"
+                  style={{ background: 'var(--accent)' }}
+                />
+                Open source · v0.1
+              </div>
 
-        <div className="relative mx-auto max-w-4xl px-6 pb-16 pt-28 text-center">
-          <h1 className="font-display mb-5 text-5xl font-bold tracking-tight text-fd-foreground sm:text-6xl lg:text-7xl">
-            Your harness,{' '}
-            <span className="bg-gradient-to-r from-sky-400 via-cyan-400 to-blue-500 bg-clip-text text-transparent">
-              everywhere
-            </span>
-          </h1>
-          <p className="mx-auto mb-10 max-w-2xl text-lg leading-relaxed text-fd-muted-foreground">
-            The configuration framework for AI coding tools.
-            Install workflows by name, share your setup across teams and machines,
-            and never rebuild from scratch again.
-          </p>
+              <h1 className="font-display mb-5 text-4xl font-bold tracking-tight text-fd-foreground sm:text-5xl">
+                The configuration console for all your harnesses.
+              </h1>
 
-          {/* Command box with gradient border */}
-          <div className="relative mx-auto mb-8 inline-block">
-            <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-sky-500/30 via-cyan-500/20 to-blue-500/30 blur-[1px]" />
-            <div className="relative rounded-xl border border-white/5 bg-fd-card px-6 py-3.5 font-mono text-sm text-fd-foreground">
-              <span className="text-fd-muted-foreground">$</span>{' '}
-              /plugin marketplace add harnessprotocol/harness-kit
+              <p className="mb-8 text-lg leading-relaxed text-fd-muted-foreground">
+                Configure, observe, and share your harness from one native app, built on an open harness.yaml spec.
+              </p>
+
+              <div className="mb-8">
+                <CommandBox command="/plugin marketplace add harnessprotocol/harness-kit" />
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Link
+                  href="/docs/getting-started/installation"
+                  className="rounded-lg px-5 py-2.5 text-sm font-medium text-white no-underline transition-all"
+                  style={{
+                    background: 'var(--accent)',
+                    boxShadow: '0 4px 14px var(--accent-glow)',
+                  }}
+                >
+                  Get started
+                </Link>
+                <Link
+                  href="/docs/plugins/overview"
+                  className="rounded-lg border px-5 py-2.5 text-sm font-medium text-fd-foreground no-underline transition-all hover:border-fd-primary/40"
+                  style={{
+                    borderColor: 'var(--border-base)',
+                    background: 'var(--bg-elevated)',
+                  }}
+                >
+                  Browse plugins
+                </Link>
+              </div>
+            </div>
+
+            {/* Right: interactive desktop mock */}
+            <div className="hidden lg:block">
+              <DesktopMock interactive defaultSection="observatory" />
             </div>
           </div>
+        </div>
+      </section>
 
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            <Link
-              href="/docs/getting-started/installation"
-              className="rounded-lg bg-sky-500 px-6 py-2.5 text-sm font-medium text-white no-underline shadow-lg shadow-sky-500/20 transition-all hover:bg-sky-600 hover:shadow-sky-500/30"
-            >
-              Get Started
-            </Link>
-            <Link
-              href="/docs/plugins/overview"
-              className="glass rounded-lg border border-white/10 px-6 py-2.5 text-sm font-medium text-fd-foreground no-underline transition-all hover:border-fd-primary/40 hover:bg-fd-accent/50"
-            >
-              Browse Plugins
-            </Link>
+      {/* ── What's a harness? ── */}
+      <section className="border-t border-fd-border/30 py-20">
+        <div className="mx-auto max-w-3xl px-6 text-center">
+          <div
+            className="mb-3 text-xs font-semibold uppercase tracking-[0.1em]"
+            style={{ color: 'var(--accent)' }}
+          >
+            First time here?
           </div>
-        </div>
-      </section>
-
-      {/* Hero Cards */}
-      <section className="mx-auto max-w-5xl px-6 pb-24">
-        <div className="grid gap-4 sm:grid-cols-2">
-          {heroCards.map((card) => (
-            <Link
-              key={card.title}
-              href={card.href}
-              className="group relative overflow-hidden rounded-xl border border-fd-border/50 bg-fd-card/80 p-6 no-underline backdrop-blur-sm transition-all duration-300 hover:border-fd-primary/30 hover:shadow-lg hover:shadow-sky-500/10"
-            >
-              {/* Gradient border overlay */}
-              <div className="pointer-events-none absolute inset-0 rounded-xl opacity-0 transition-opacity duration-300 group-hover:opacity-100" style={{ background: 'linear-gradient(164deg, rgba(34,177,236,0.08), transparent 60%)' }} />
-              <div className="relative">
-                <h3 className="font-display mb-2 text-lg font-semibold text-fd-foreground">
-                  {card.title}
-                </h3>
-                <p className="text-sm leading-relaxed text-fd-muted-foreground">
-                  {card.description}
-                </p>
-              </div>
-              <div className="relative mt-4 text-sm font-medium text-fd-primary opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                Explore →
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* Features */}
-      <section className="relative border-t border-fd-border/30 bg-fd-card/30">
-        {/* Subtle radial gradient background */}
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,hsla(199,82%,55%,0.04),transparent_70%)]" />
-        <div className="relative mx-auto max-w-5xl px-6 py-24">
-          <h2 className="font-display mb-2 text-center text-3xl font-bold text-fd-foreground">
-            How it works
+          <h2 className="font-display mb-6 text-3xl font-bold tracking-tight text-fd-foreground sm:text-4xl">
+            What&apos;s a harness?
           </h2>
-          <p className="mb-14 text-center text-fd-muted-foreground">
-            Install a plugin, invoke a command, get a repeatable workflow.
+          <p className="text-base leading-relaxed text-fd-muted-foreground">
+            Every AI coding tool has its own setup folder — Claude Code&apos;s{' '}
+            <code className="rounded bg-fd-accent px-1.5 py-0.5 font-mono text-sm">~/.claude</code>,
+            {' '}Cursor&apos;s{' '}
+            <code className="rounded bg-fd-accent px-1.5 py-0.5 font-mono text-sm">.cursor</code>,
+            {' '}Copilot&apos;s config, and whatever shows up next month. Different names, same shape,
+            totally incompatible.{' '}
+            <strong className="font-semibold text-fd-foreground">harness-kit</strong>{' '}
+            is the layer that turns all of them into one setup you carry with you.
           </p>
-          <div className="grid gap-6 sm:grid-cols-3">
-            {features.map((f) => (
-              <div
-                key={f.title}
-                className="rounded-xl border border-fd-border/50 bg-fd-background/80 p-6 backdrop-blur-sm transition-all duration-300 hover:border-fd-primary/20 hover:shadow-lg hover:shadow-sky-500/5"
-              >
-                <div className="mb-4 flex size-10 items-center justify-center rounded-lg bg-fd-accent text-fd-primary">
-                  {f.icon}
+        </div>
+      </section>
+
+      {/* ── App showcase strip ── */}
+      <section
+        className="border-t border-fd-border/30 py-24"
+        style={{ background: 'var(--bg-base)' }}
+      >
+        <div className="mx-auto max-w-6xl px-6">
+          <SectionHeader
+            eyebrow="The desktop app"
+            title="Eleven surfaces, one keyboard"
+            subtitle="Observability, memory, a plugin marketplace, a kanban board, AI chat, cross-harness parity — everything your AI coding tool forgot to give you, in one keyboard-first app that travels with your harness."
+          />
+
+          <div className="grid gap-8 sm:grid-cols-2">
+            {showcaseCards.map((card) => (
+              <div key={card.section}>
+                <DesktopMock
+                  interactive={false}
+                  defaultSection={card.section}
+                  compact
+                />
+                <div className="mt-4 px-1">
+                  <p className="mb-1 text-sm font-semibold text-fd-foreground">
+                    {card.title}
+                  </p>
+                  <p className="text-sm leading-relaxed text-fd-muted-foreground">
+                    {card.desc}
+                  </p>
                 </div>
-                <h3 className="font-display mb-2 font-semibold text-fd-foreground">
-                  {f.title}
-                </h3>
-                <p className="text-sm leading-relaxed text-fd-muted-foreground">
-                  {f.description}
-                </p>
               </div>
             ))}
           </div>
-          <p className="mt-12 text-center text-sm text-fd-muted-foreground">
-            harness-kit is the reference implementation of the{' '}
-            <a
-              href="https://harnessprotocol.ai"
-              className="text-fd-primary no-underline hover:underline"
-              target="_blank"
-              rel="noreferrer"
-            >
-              Harness Protocol
-            </a>
-            , an open specification for portable AI tool configuration.
-          </p>
         </div>
       </section>
 
-      {/* Plugin showcase */}
-      <section className="mx-auto max-w-5xl px-6 py-24">
-        <h2 className="font-display mb-2 text-center text-3xl font-bold text-fd-foreground">
-          7 plugins
-        </h2>
-        <p className="mb-14 text-center text-fd-muted-foreground">
-          Each packages a proven workflow as a portable command.
-        </p>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {plugins.map((p) => (
-            <Link
-              key={p.name}
-              href={p.href}
-              className="group rounded-xl border border-fd-border/50 bg-fd-card/80 p-5 no-underline transition-all duration-300 hover:border-fd-primary/30 hover:shadow-lg hover:shadow-sky-500/10"
-              style={{ borderTop: `2px solid ${p.accent}` }}
-            >
-              <h4 className="mb-1.5 font-mono text-sm font-semibold text-fd-primary brightness-110">
-                {p.name}
-              </h4>
-              <p className="text-sm leading-relaxed text-fd-muted-foreground">
-                {p.description}
-              </p>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="relative border-t border-fd-border/30">
-        {/* Top gradient border */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-fd-primary/20 to-transparent" />
-        <div className="mx-auto grid max-w-5xl gap-8 px-6 py-12 text-sm sm:grid-cols-3">
-          {/* Brand */}
-          <div>
-            <div className="mb-3 flex items-center gap-2 font-bold text-fd-foreground">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 32 32"
-                className="size-6"
-              >
-                <rect width="32" height="32" rx="6" fill="#0d0d12" />
-                <text
-                  x="16"
-                  y="22"
-                  textAnchor="middle"
-                  fontFamily="system-ui, sans-serif"
-                  fontWeight="700"
-                  fontSize="16"
-                  fill="#22b1ec"
-                >
-                  hk
-                </text>
-              </svg>
-              <span className="font-display">Harness Kit</span>
+      {/* ── How it works: Configure · Observe · Share ── */}
+      <section className="border-t border-fd-border/30 py-24">
+        <div className="relative mx-auto max-w-5xl px-6">
+          <div
+            className="pointer-events-none absolute inset-0"
+            style={{ background: 'radial-gradient(ellipse at center, var(--accent-glow) 0%, transparent 70%)' }}
+            aria-hidden="true"
+          />
+          <div className="relative">
+            <SectionHeader
+              eyebrow="How it works"
+              title="Configure. Observe. Share."
+              subtitle="That's the whole loop. Your harness travels with you to every machine, every tool, every teammate."
+            />
+            <div className="grid gap-6 sm:grid-cols-3">
+              {features.map((f) => (
+                <FeatureTile key={f.title} icon={f.icon} title={f.title} description={f.description} />
+              ))}
             </div>
-            <p className="text-fd-muted-foreground">
-              A harness-agnostic framework for AI coding tools.
-            </p>
-          </div>
-          {/* Links */}
-          <div>
-            <h5 className="mb-3 font-semibold text-fd-foreground">Resources</h5>
-            <ul className="space-y-2 text-fd-muted-foreground">
-              <li>
-                <Link href="/docs" className="transition-colors hover:text-fd-foreground no-underline">
-                  Documentation
-                </Link>
-              </li>
-              <li>
-                <Link href="/docs/plugins/overview" className="transition-colors hover:text-fd-foreground no-underline">
-                  Plugins
-                </Link>
-              </li>
-              <li>
-                <a
-                  href="https://github.com/harnessprotocol/harness-kit"
-                  className="transition-colors hover:text-fd-foreground no-underline"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  GitHub
-                </a>
-              </li>
-            </ul>
-          </div>
-          {/* Legal */}
-          <div>
-            <h5 className="mb-3 font-semibold text-fd-foreground">Legal</h5>
-            <ul className="space-y-2 text-fd-muted-foreground">
-              <li>Apache-2.0 License</li>
-              <li>
-                <a
-                  href="https://harnessprotocol.ai"
-                  className="transition-colors hover:text-fd-foreground no-underline"
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Harness Protocol
-                </a>
-              </li>
-            </ul>
           </div>
         </div>
-        <div className="border-t border-fd-border/20 px-6 py-4 text-center text-xs text-fd-muted-foreground">
-          © {new Date().getFullYear()} Harness Kit Contributors
+      </section>
+
+      {/* ── Plugin showcase ── */}
+      <section
+        className="border-t border-fd-border/30 py-24"
+        style={{ background: 'var(--bg-base)' }}
+      >
+        <div className="mx-auto max-w-5xl px-6">
+          <SectionHeader
+            eyebrow="Marketplace"
+            title="Seven plugins shipping today"
+            subtitle="Each one is a portable command. Each one travels with your harness.yaml."
+          />
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {plugins.map((p) => (
+              <PluginCard
+                key={p.name}
+                name={p.name}
+                description={p.description}
+                href={p.href}
+                accent={p.accent}
+              />
+            ))}
+          </div>
         </div>
-      </footer>
+      </section>
+
+      {/* ── CTA band ── */}
+      <section className="relative border-t border-fd-border/30 py-24 text-center">
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background: 'linear-gradient(180deg, transparent 0%, var(--accent-light) 50%, transparent 100%)',
+          }}
+          aria-hidden="true"
+        />
+        <div className="relative mx-auto max-w-2xl px-6">
+          <h2 className="font-display mb-4 text-3xl font-bold tracking-tight text-fd-foreground sm:text-4xl">
+            Stop rebuilding your setup.
+          </h2>
+          <p className="mb-8 text-lg text-fd-muted-foreground">
+            One file. Every tool. Every machine. Every teammate.
+          </p>
+          <Link
+            href="/docs/getting-started/installation"
+            className="inline-flex items-center rounded-lg px-6 py-3 text-sm font-semibold text-white no-underline transition-all"
+            style={{
+              background: 'var(--accent)',
+              boxShadow: '0 4px 20px var(--accent-glow)',
+            }}
+          >
+            Get started →
+          </Link>
+        </div>
+      </section>
+
+      <SiteFooter />
     </main>
   );
 }
