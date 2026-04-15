@@ -523,6 +523,34 @@ export default function ComparatorPage() {
     outputTick,
   } = useComparator();
 
+  // ── Resizable rail ───────────────────────────────────────────
+  const [railWidth, setRailWidth] = useState(() => {
+    const raw = localStorage.getItem("harness-kit-comparator-split");
+    const n = Number(raw);
+    return (!isNaN(n) && n >= 160 && n <= 380) ? n : tokens.railWidth;
+  });
+  const railDragging = useRef(false);
+  const railDragStart = useRef({ x: 0, w: 0 });
+  const onRailDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    railDragging.current = true;
+    railDragStart.current = { x: e.clientX, w: railWidth };
+  }, [railWidth]);
+  useEffect(() => {
+    function onMove(e: MouseEvent) {
+      if (!railDragging.current) return;
+      setRailWidth(Math.min(380, Math.max(160, railDragStart.current.w + e.clientX - railDragStart.current.x)));
+    }
+    function onUp() {
+      if (!railDragging.current) return;
+      railDragging.current = false;
+      localStorage.setItem("harness-kit-comparator-split", String(railWidth));
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+  }, [railWidth]);
+
   // ── Account state ────────────────────────────────────────────
 
   const [account, setAccount] = useState<ClaudeAccountInfo | null>(null);
@@ -655,7 +683,7 @@ export default function ComparatorPage() {
   return (
     <div style={styles.page}>
       {/* ── Left rail sidebar ────────────────────────────────── */}
-      <div style={styles.rail}>
+      <div style={{ ...styles.rail, width: railWidth, minWidth: 0 }}>
         {/* New Comparison button */}
         <div style={styles.railTop}>
           <button
@@ -732,6 +760,14 @@ export default function ComparatorPage() {
           )}
         </div>
       </div>
+
+      {/* ── Rail resize handle ───────────────────────────────── */}
+      <div
+        onMouseDown={onRailDown}
+        style={{ width: 4, flexShrink: 0, cursor: "col-resize", background: "transparent", transition: "background 0.12s", zIndex: 1 }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = "var(--accent)"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+      />
 
       {/* ── Content area ─────────────────────────────────────── */}
       <div style={styles.content}>

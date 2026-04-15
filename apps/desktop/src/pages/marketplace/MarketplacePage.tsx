@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "../../lib/supabase";
 import MarkdownPanel from "../../components/MarkdownPanel";
@@ -28,6 +28,34 @@ const COMPONENT_TYPES: ComponentType[] = [
 export default function MarketplacePage() {
   const navigate = useNavigate();
   const { slug: selectedSlug } = useParams<{ slug?: string }>();
+
+  // ── Resizable split ─────────────────────────────────────────
+  const [listWidth, setListWidth] = useState(() => {
+    const raw = localStorage.getItem("harness-kit-marketplace-split");
+    const n = Number(raw);
+    return (!isNaN(n) && n >= 220 && n <= 520) ? n : 300;
+  });
+  const splitDragging = useRef(false);
+  const splitStart = useRef({ x: 0, w: 0 });
+  const onSplitDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    splitDragging.current = true;
+    splitStart.current = { x: e.clientX, w: listWidth };
+  }, [listWidth]);
+  useEffect(() => {
+    function onMove(e: MouseEvent) {
+      if (!splitDragging.current) return;
+      setListWidth(Math.min(520, Math.max(220, splitStart.current.w + e.clientX - splitStart.current.x)));
+    }
+    function onUp() {
+      if (!splitDragging.current) return;
+      splitDragging.current = false;
+      localStorage.setItem("harness-kit-marketplace-split", String(listWidth));
+    }
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+  }, [listWidth]);
 
   // ── Master panel state ──────────────────────────────────────
   const [query, setQuery] = useState("");
@@ -283,8 +311,8 @@ export default function MarketplacePage() {
     <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
       {/* ── Master panel ── */}
       <div style={{
-        width: "40%",
-        minWidth: "260px",
+        width: listWidth,
+        flexShrink: 0,
         display: "flex",
         flexDirection: "column",
         borderRight: "1px solid var(--border-base)",
@@ -491,6 +519,14 @@ export default function MarketplacePage() {
           )}
         </div>
       </div>
+
+      {/* ── Resize handle ── */}
+      <div
+        onMouseDown={onSplitDown}
+        style={{ width: 4, flexShrink: 0, cursor: "col-resize", background: "transparent", transition: "background 0.12s", zIndex: 1 }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = "var(--accent)"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+      />
 
       {/* ── Detail panel ── */}
       <div style={{ flex: 1, overflowY: "auto", minWidth: 0 }}>

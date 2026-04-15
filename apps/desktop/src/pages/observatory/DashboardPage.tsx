@@ -13,7 +13,8 @@ import { formatNumber, formatDate, formatHour, shortModelName } from "../../lib/
 import { detectClaudeAccount } from "../../lib/tauri";
 import type { ClaudeAccountInfo } from "../../lib/tauri";
 import type { DailyActivity, DailyModelTokens, ModelUsageEntry } from "@harness-kit/shared";
-import { estimateTotalCost, formatCost } from "../../lib/pricing";
+import { estimateTotalCost, estimateCost, MODEL_PRICING, formatCost } from "../../lib/pricing";
+import InteractiveLegend from "../../components/InteractiveLegend";
 import { getBudgetGuard, type BudgetGuardConfig } from "../../lib/preferences";
 import CostBreakdownSection from "../../components/observatory/CostBreakdownSection";
 import BudgetAlertBanner from "../../components/observatory/BudgetAlertBanner";
@@ -433,6 +434,16 @@ export default function DashboardPage() {
   const reducedMotion = useReducedMotion();
   const [account, setAccount] = useState<ClaudeAccountInfo | null>(null);
   const [accountLoading, setAccountLoading] = useState(true);
+  const [hiddenTokenModels, setHiddenTokenModels] = useState<Set<string>>(new Set());
+  const [hiddenCostModels, setHiddenCostModels] = useState<Set<string>>(new Set());
+
+  function toggleModel(setFn: React.Dispatch<React.SetStateAction<Set<string>>>, name: string) {
+    setFn((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) next.delete(name); else next.add(name);
+      return next;
+    });
+  }
 
   const cutoffDate = cache?.lastComputedDate;
 
@@ -590,29 +601,65 @@ export default function DashboardPage() {
     return tokenOver || costOver;
   }, [budgetGuard, tokensToday, costToday]);
 
-  const { dailyTokensChartData, allModelNames } = useMemo(() => {
-    if (!mergedDailyTokens.length) return { dailyTokensChartData: [], allModelNames: [] };
+  const { dailyTokensChartData, dailyCostChartData, allModelNames } = useMemo(() => {
+    if (!mergedDailyTokens.length) return { dailyTokensChartData: [], dailyCostChartData: [], allModelNames: [] };
 
     const modelSet = new Set<string>();
     mergedDailyTokens.forEach((d) => {
       Object.keys(d.tokensByModel ?? {}).forEach((m) => modelSet.add(m));
     });
     const models = Array.from(modelSet);
+    const shortNames = models.map(shortModelName);
 
-    const filtered = filterByRange(mergedDailyTokens, rangeForChart("dailyTokens"));
-    const chartData = filtered.map((d) => {
+    // ── Token chart ─────────────────────────────────────────────
+    const filteredTokens = filterByRange(mergedDailyTokens, rangeForChart("dailyTokens"));
+    const tokensData = filteredTokens.map((d) => {
+      const row: Record<string, unknown> = { date: formatDate(d.date) };
+      models.forEach((m) => { row[shortModelName(m)] = d.tokensByModel?.[m] ?? 0; });
+      return row;
+    });
+
+    // ── Cost chart — blended-rate approach ───────────────────────
+    // The daily token data has no input/output split, so naive rate application
+    // wildly over/under counts. Instead, we derive a per-model "cost per token"
+    // by dividing the accurate all-time cost (from mergedModelUsage, which does
+    // have the split) by the all-time aggregate token count (from dailyTokens).
+    // Applying this blended rate to each day distributes cost proportionally —
+    // the daily estimates sum to exactly the all-time cost when not filtered.
+    const allTimeDailyTotals: Record<string, number> = {};
+    for (const d of mergedDailyTokens) {
+      for (const [model, tokens] of Object.entries(d.tokensByModel ?? {})) {
+        allTimeDailyTotals[model] = (allTimeDailyTotals[model] ?? 0) + tokens;
+      }
+    }
+    const costPerToken: Record<string, number> = {};
+    for (const model of models) {
+      const totalDailyTokens = allTimeDailyTotals[model] ?? 0;
+      const usage = mergedModelUsage[model];
+      if (totalDailyTokens > 0 && usage) {
+        const accurateCost = estimateCost(model, usage.inputTokens ?? 0, usage.outputTokens ?? 0);
+        costPerToken[model] = accurateCost / totalDailyTokens;
+      } else {
+        // Fallback for models with no usage history: use input rate
+        costPerToken[model] = (MODEL_PRICING[model]?.inputPer1M ?? 3.00) / 1_000_000;
+      }
+    }
+
+    const filteredCost = filterByRange(mergedDailyTokens, rangeForChart("dailyCostByModel"));
+    const costData = filteredCost.map((d) => {
       const row: Record<string, unknown> = { date: formatDate(d.date) };
       models.forEach((m) => {
-        row[shortModelName(m)] = d.tokensByModel?.[m] ?? 0;
+        row[shortModelName(m)] = (d.tokensByModel?.[m] ?? 0) * (costPerToken[m] ?? 0);
       });
       return row;
     });
 
     return {
-      dailyTokensChartData: chartData,
-      allModelNames: models.map(shortModelName),
+      dailyTokensChartData: tokensData,
+      dailyCostChartData: costData,
+      allModelNames: shortNames,
     };
-  }, [mergedDailyTokens, globalRange, chartOverrides]);
+  }, [mergedDailyTokens, mergedModelUsage, globalRange, chartOverrides]);
 
   const tokenTypeData = useMemo(() => {
     return Object.entries(mergedModelUsage).map(([model, usage]) => ({
@@ -694,6 +741,19 @@ export default function DashboardPage() {
 
   return (
     <div style={{ padding: "20px 24px" }}>
+      {/* Spin keyframe for refresh icon — only motion when not reduced */}
+      {!reducedMotion && (
+        <style>{`@keyframes hk-spin { to { transform: rotate(360deg); } }`}</style>
+      )}
+      {/* Screen-reader live region for refresh completion */}
+      <span
+        aria-live="polite"
+        style={{ position: "absolute", width: 1, height: 1, padding: 0, margin: -1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap", border: 0 }}
+      >
+        {!isRefreshing && effectiveLastUpdated
+          ? `Data refreshed at ${effectiveLastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`
+          : ""}
+      </span>
       {/* Header */}
       <div style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
         <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
@@ -704,14 +764,12 @@ export default function DashboardPage() {
             last updated {effectiveLastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
           </span>
         )}
-        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "8px" }}>
-          {isRefreshing && (
-            <span style={{ fontSize: "10px", color: "var(--accent-text)", fontWeight: 500 }}>Refreshing…</span>
-          )}
+        <div style={{ marginLeft: "auto" }}>
           <button
             onClick={refresh}
             disabled={isRefreshing}
             title={scanNote ? `Last scan: ${scanNote}` : undefined}
+            aria-label={isRefreshing ? "Refreshing data" : "Refresh data"}
             style={{
               fontSize: "11px",
               fontWeight: 500,
@@ -719,20 +777,29 @@ export default function DashboardPage() {
               borderRadius: "6px",
               border: "1px solid var(--border-base)",
               background: "var(--bg-surface)",
-              color: "var(--fg-muted)",
+              color: isRefreshing ? "var(--accent-text)" : "var(--fg-muted)",
               cursor: isRefreshing ? "default" : "pointer",
-              opacity: isRefreshing ? 0.5 : 1,
               display: "flex",
               alignItems: "center",
               gap: "5px",
-              transition: "background 0.15s",
+              transition: "color 0.15s",
             }}
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style={{ color: "currentColor" }}>
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              style={{
+                color: "currentColor",
+                ...(isRefreshing && !reducedMotion ? { animation: "hk-spin 0.8s linear infinite" } : {}),
+                ...(isRefreshing && reducedMotion ? { opacity: 0.6 } : {}),
+              }}
+            >
               <path d="M21 12a9 9 0 1 1-2.63-6.36" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
               <path d="M21 3v6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            Refresh
+            {isRefreshing ? "Refreshing…" : "Refresh"}
           </button>
         </div>
       </div>
@@ -781,10 +848,12 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Account status */}
-      <div style={{ marginBottom: "18px" }}>
-        <AccountStatusBadge account={account} monthlyTokens={monthlyTokens} loading={accountLoading} />
-      </div>
+      {/* Account status — only shown when no data exists (diagnostic aid for first-time setup) */}
+      {(cache?.totalSessions ?? 0) === 0 && liveActivity.length === 0 && (
+        <div style={{ marginBottom: "18px" }}>
+          <AccountStatusBadge account={account} monthlyTokens={monthlyTokens} loading={accountLoading} />
+        </div>
+      )}
 
       {/* Messages chart — full width, hero chart */}
       <div style={{ marginBottom: "12px" }}>
@@ -869,7 +938,7 @@ export default function DashboardPage() {
             onOverride={(r) => setChartOverride("dailyTokens", r)}
             onClearOverride={() => clearOverride("dailyTokens")}
           >
-            <ResponsiveContainer width="100%" height={150}>
+            <ResponsiveContainer width="100%" height={170}>
               <AreaChart data={dailyTokensChartData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--separator)" vertical={false} />
                 <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} interval="preserveStartEnd" />
@@ -877,12 +946,66 @@ export default function DashboardPage() {
                   tickFormatter={(v: number) => v >= 1_000_000 ? `${(v/1_000_000).toFixed(1)}M` : v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)} />
                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                 <Tooltip contentStyle={tooltipStyle} formatter={((v: number) => formatNumber(v)) as any} />
-                <Legend wrapperStyle={{ fontSize: "10px" }} />
+                <Legend
+                  content={(props) => (
+                    <InteractiveLegend
+                      payload={props.payload as Array<{ value: string; color: string }>}
+                      hidden={hiddenTokenModels}
+                      onToggle={(name) => toggleModel(setHiddenTokenModels, name)}
+                    />
+                  )}
+                />
                 {allModelNames.map((name, i) => (
                   <Area key={name} type="monotone" dataKey={name} stackId="a"
                     stroke={MODEL_COLORS[i % MODEL_COLORS.length]}
                     fill={MODEL_COLORS[i % MODEL_COLORS.length]}
                     fillOpacity={0.5} strokeWidth={1}
+                    hide={hiddenTokenModels.has(name)}
+                    isAnimationActive={!reducedMotion} />
+                ))}
+              </AreaChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </div>
+      )}
+
+      {/* Daily cost by model — stacked area (approximated at output rates, see pricing.ts) */}
+      {dailyCostChartData.length > 0 && (
+        <div style={{ marginBottom: "12px" }}>
+          <ChartCard
+            title="Daily Cost by Model"
+            chartId="dailyCostByModel"
+            sourceNote="blended rate · sums to all-time cost"
+            override={chartOverrides["dailyCostByModel"]} globalRange={globalRange}
+            onOverride={(r) => setChartOverride("dailyCostByModel", r)}
+            onClearOverride={() => clearOverride("dailyCostByModel")}
+          >
+            <ResponsiveContainer width="100%" height={170}>
+              <AreaChart data={dailyCostChartData} margin={{ top: 4, right: 4, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--separator)" vertical={false} />
+                <XAxis dataKey="date" tick={axisStyle} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                <YAxis tick={axisStyle} tickLine={false} axisLine={false}
+                  tickFormatter={(v: number) =>
+                    v >= 1000 ? `$${(v/1000).toFixed(1)}k` : v >= 1 ? `$${v.toFixed(0)}` : v > 0 ? `$${v.toFixed(2)}` : "$0"
+                  }
+                />
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                <Tooltip contentStyle={tooltipStyle} formatter={((v: number) => `$${v.toFixed(3)}`) as any} />
+                <Legend
+                  content={(props) => (
+                    <InteractiveLegend
+                      payload={props.payload as Array<{ value: string; color: string }>}
+                      hidden={hiddenCostModels}
+                      onToggle={(name) => toggleModel(setHiddenCostModels, name)}
+                    />
+                  )}
+                />
+                {allModelNames.map((name, i) => (
+                  <Area key={name} type="monotone" dataKey={name} stackId="a"
+                    stroke={MODEL_COLORS[i % MODEL_COLORS.length]}
+                    fill={MODEL_COLORS[i % MODEL_COLORS.length]}
+                    fillOpacity={0.5} strokeWidth={1}
+                    hide={hiddenCostModels.has(name)}
                     isAnimationActive={!reducedMotion} />
                 ))}
               </AreaChart>

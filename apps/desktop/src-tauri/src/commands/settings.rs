@@ -6,28 +6,58 @@ pub struct ClaudeAccountInfo {
     pub auto_mode_available: bool,
 }
 
+/// Common install locations for the `claude` CLI.
+/// macOS GUI apps (Tauri) launch with a minimal PATH that often omits
+/// Homebrew, npm global, and nvm directories — so we probe known paths first.
+fn claude_binary_path() -> Option<std::path::PathBuf> {
+    let home = std::env::var("HOME").unwrap_or_default();
+    let candidates: Vec<String> = vec![
+        "/opt/homebrew/bin/claude".into(),
+        "/usr/local/bin/claude".into(),
+        format!("{home}/.npm-global/bin/claude"),
+        format!("{home}/Library/pnpm/claude"),
+        format!("{home}/.local/bin/claude"),
+        format!("{home}/.nvm/versions/node/$(ls {home}/.nvm/versions/node 2>/dev/null | tail -1)/bin/claude"),
+    ];
+    for c in &candidates {
+        let p = std::path::Path::new(c);
+        if p.exists() {
+            return Some(p.to_path_buf());
+        }
+    }
+    // Last resort: ask the shell (handles nvm, volta, etc.)
+    if let Ok(out) = std::process::Command::new("/bin/sh")
+        .args(["-lc", "which claude 2>/dev/null"])
+        .output()
+    {
+        let s = String::from_utf8_lossy(&out.stdout).trim().to_string();
+        if !s.is_empty() {
+            return Some(std::path::PathBuf::from(s));
+        }
+    }
+    None
+}
+
 /// Run `claude auth status` and parse the result to determine plan eligibility.
 #[tauri::command]
 pub async fn detect_claude_account() -> ClaudeAccountInfo {
-    let output = std::process::Command::new("claude")
+    let Some(claude_bin) = claude_binary_path() else {
+        return ClaudeAccountInfo { logged_in: false, subscription_type: None, auto_mode_available: false };
+    };
+
+    let output = std::process::Command::new(&claude_bin)
         .args(["auth", "status"])
         .output();
 
-    let fallback = ClaudeAccountInfo {
-        logged_in: false,
-        subscription_type: None,
-        auto_mode_available: false,
-    };
-
     let out = match output {
         Ok(o) if o.status.success() => o,
-        _ => return fallback,
+        _ => return ClaudeAccountInfo { logged_in: false, subscription_type: None, auto_mode_available: false },
     };
 
     let json_str = String::from_utf8_lossy(&out.stdout);
     let json: serde_json::Value = match serde_json::from_str(&json_str) {
         Ok(v) => v,
-        Err(_) => return fallback,
+        Err(_) => return ClaudeAccountInfo { logged_in: false, subscription_type: None, auto_mode_available: false },
     };
 
     let logged_in = json.get("loggedIn").and_then(|v| v.as_bool()).unwrap_or(false);
