@@ -186,7 +186,7 @@ function StatCard({ label, value, sub, tooltip, accent }: { label: string; value
     <div style={{
       flex: 1,
       minWidth: 0,
-      background: "rgba(26, 30, 39, 0.7)",
+      background: "var(--card-glass)",
       backdropFilter: "blur(10px)",
       WebkitBackdropFilter: "blur(10px)",
       border: "1px solid var(--border-base)",
@@ -360,7 +360,7 @@ function ChartCard({
 
   return (
     <div style={{
-      background: "rgba(26, 30, 39, 0.7)",
+      background: "var(--card-glass)",
       backdropFilter: "blur(10px)",
       WebkitBackdropFilter: "blur(10px)",
       border: "1px solid var(--border-base)",

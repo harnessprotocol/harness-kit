@@ -62,10 +62,6 @@ body {
 }
 
 /* ── Utility classes ── */
-.glow-purple {
-  box-shadow: 0 0 40px -10px hsla(199, 82%, 53%, 0.3);
-}
-
 .glow-cyan {
   box-shadow: 0 0 40px -10px hsla(199, 82%, 53%, 0.3);
 }
