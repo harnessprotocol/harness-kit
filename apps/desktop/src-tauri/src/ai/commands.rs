@@ -1,5 +1,5 @@
 use crate::ai::client::OllamaState;
-use crate::ai::types::{ChatChunk, ChatMessage, ChatRequest, DownloadProgress, ModelInfo};
+use crate::ai::types::{ChatMessage, ChatRequest, DownloadProgress, ModelInfo, StreamEvent, ToolDef};
 use crate::db::Db;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::Ordering;
@@ -78,27 +78,31 @@ pub async fn pull_model(
 }
 
 #[tauri::command]
-pub async fn stream_chat(
+pub async fn ai_stream_chat(
     model: String,
     messages: Vec<ChatMessage>,
-    channel: Channel<ChatChunk>,
+    tools: Option<Vec<ToolDef>>,
+    options: Option<serde_json::Value>,
+    channel: Channel<StreamEvent>,
     ollama: State<'_, OllamaState>,
 ) -> Result<(), String> {
-    // Reset cancel flag before starting
     ollama.cancel.store(false, Ordering::Relaxed);
 
     let request = ChatRequest {
         model,
         messages,
         stream: Some(true),
+        tools,
+        options,
+        keep_alive: None,
     };
 
     let cancel = ollama.cancel.clone();
     ollama
         .client
-        .stream_chat(request, cancel, |chunk| {
+        .stream_chat(request, cancel, |event| {
             channel
-                .send(chunk)
+                .send(event)
                 .map_err(|e| format!("Channel error: {}", e))
         })
         .await
@@ -261,5 +265,77 @@ pub fn save_ai_message(
     )
     .map_err(|e| e.to_string())?;
 
+    Ok(())
+}
+
+// ─── AI config commands ──────────────────────────────────────────────────────
+
+const DEFAULT_BASE_URL: &str = "http://localhost:11434";
+
+fn ai_config_path() -> std::path::PathBuf {
+    dirs::home_dir()
+        .expect("No home directory")
+        .join(".harness-kit")
+        .join("ai-config.json")
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct AIConfig {
+    pub base_url: String,
+}
+
+impl Default for AIConfig {
+    fn default() -> Self {
+        Self { base_url: DEFAULT_BASE_URL.to_string() }
+    }
+}
+
+pub fn load_ai_config() -> AIConfig {
+    let path = ai_config_path();
+    if let Ok(contents) = std::fs::read_to_string(&path) {
+        serde_json::from_str(&contents).unwrap_or_default()
+    } else {
+        AIConfig::default()
+    }
+}
+
+#[tauri::command]
+pub fn get_ai_config() -> Result<AIConfig, String> {
+    Ok(load_ai_config())
+}
+
+#[tauri::command]
+pub fn set_ai_config(
+    base_url: String,
+    ollama: State<'_, OllamaState>,
+) -> Result<(), String> {
+    // Validate: only http/https to localhost allowed (prevent SSRF)
+    let parsed = url::Url::parse(&base_url).map_err(|_| "Invalid URL".to_string())?;
+    match parsed.scheme() {
+        "http" | "https" => {}
+        s => return Err(format!("Unsupported scheme '{}' — only http/https allowed", s)),
+    }
+    let host = parsed.host_str().ok_or("Missing host in URL")?;
+    if host != "localhost" && host != "127.0.0.1" && host != "::1" {
+        return Err("Only localhost URLs are allowed".to_string());
+    }
+    if base_url.len() > 256 {
+        return Err("base_url too long (max 256 chars)".to_string());
+    }
+
+    let config = AIConfig { base_url: base_url.clone() };
+    let path = ai_config_path();
+
+    // Ensure parent directory exists
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| format!("Failed to create config dir: {}", e))?;
+    }
+
+    let contents = serde_json::to_string_pretty(&config).map_err(|e| e.to_string())?;
+    std::fs::write(&path, contents).map_err(|e| e.to_string())?;
+
+    // Update the live client base URL without restarting Tauri managed state
+    *ollama.client.base_url.lock().map_err(|e| e.to_string())? = base_url;
     Ok(())
 }

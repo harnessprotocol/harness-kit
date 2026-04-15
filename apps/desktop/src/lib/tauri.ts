@@ -609,15 +609,44 @@ export interface AIModelInfo {
   modified_at: string | null;
 }
 
-export interface AIChatMessage {
-  role: "user" | "assistant";
-  content: string;
+// ── Tool-calling schema (mirrors Rust types.rs) ──────────────────────────────
+
+export interface ToolCallFunction {
+  name: string;
+  arguments: Record<string, unknown>;
 }
 
-export interface ChatChunk {
-  content: string;
-  done: boolean;
+export interface ToolCall {
+  id?: string;
+  function: ToolCallFunction;
 }
+
+export interface ToolDefFunction {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+}
+
+export interface ToolDef {
+  type: "function";
+  function: ToolDefFunction;
+}
+
+// ── Chat message / streaming ──────────────────────────────────────────────────
+
+export interface AIChatMessage {
+  role: "system" | "user" | "assistant" | "tool";
+  content: string;
+  name?: string;
+  tool_calls?: ToolCall[];
+}
+
+/** Tagged streaming event — switch on `event.kind`. */
+export type StreamEvent =
+  | { kind: "text"; data: { content: string } }
+  | { kind: "toolCalls"; data: { calls: ToolCall[] } }
+  | { kind: "done"; data: { evalCount?: number; promptEvalCount?: number } }
+  | { kind: "warn"; data: { message: string } };
 
 export interface DownloadProgress {
   model: string;
@@ -666,9 +695,11 @@ export async function aiPullModel(
 export async function aiStreamChat(
   model: string,
   messages: AIChatMessage[],
-  channel: Channel<ChatChunk>,
+  channel: Channel<StreamEvent>,
+  tools?: ToolDef[],
+  options?: Record<string, unknown>,
 ): Promise<void> {
-  return invoke<void>("stream_chat", { model, messages, channel });
+  return invoke<void>("ai_stream_chat", { model, messages, tools, options, channel });
 }
 
 export async function aiCancelStream(): Promise<void> {
@@ -702,6 +733,18 @@ export async function aiSaveMessage(
   content: string,
 ): Promise<void> {
   return invoke<void>("save_ai_message", { id, sessionId, role, content });
+}
+
+export interface AIConfig {
+  baseUrl: string;
+}
+
+export async function aiGetConfig(): Promise<AIConfig> {
+  return invoke<AIConfig>("get_ai_config");
+}
+
+export async function aiSetConfig(baseUrl: string): Promise<void> {
+  return invoke<void>("set_ai_config", { baseUrl });
 }
 
 // ── Harness health ───────────────────────────────────────────

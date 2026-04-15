@@ -194,6 +194,20 @@ pub fn init(data_dir: &Path) -> Result<Db, String> {
         }
     }
 
+    // Migration: extend ai_messages for tool-calling support
+    for (col, ddl) in &[
+        ("metadata_json", "ALTER TABLE ai_messages ADD COLUMN metadata_json TEXT;"),
+        ("tool_name", "ALTER TABLE ai_messages ADD COLUMN tool_name TEXT;"),
+        ("tool_call_id", "ALTER TABLE ai_messages ADD COLUMN tool_call_id TEXT;"),
+    ] {
+        if let Err(e) = conn.execute_batch(ddl) {
+            let msg = e.to_string();
+            if !msg.contains("duplicate column name") {
+                return Err(format!("Migration failed (ai_messages.{}): {}", col, msg));
+            }
+        }
+    }
+
     Ok(Db {
         conn: Mutex::new(conn),
     })

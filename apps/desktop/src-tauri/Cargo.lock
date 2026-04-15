@@ -1579,6 +1579,7 @@ dependencies = [
  "tempfile",
  "tokio",
  "tokio-tungstenite",
+ "url",
  "uuid",
  "walkdir",
  "zip",

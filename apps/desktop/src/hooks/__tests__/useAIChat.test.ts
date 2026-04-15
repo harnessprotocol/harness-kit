@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
-import type { ChatChunk } from "../../lib/tauri";
+import type { StreamEvent } from "../../lib/tauri";
+import type { TranscriptRow } from "../useAIChat";
 
 // ── Mocks ─────────────────────────────────────────────────────
 
@@ -24,11 +25,11 @@ vi.mock("../../lib/tauri", () => ({
   aiCancelStream: mockAiCancelStream,
 }));
 
-// Channel mock — lets tests drive streaming chunks
-let channelOnMessage: ((chunk: ChatChunk) => void) | null = null;
+// Channel mock — lets tests drive streaming events
+let channelOnMessage: ((event: StreamEvent) => void) | null = null;
 vi.mock("@tauri-apps/api/core", () => ({
   Channel: class {
-    set onmessage(fn: (chunk: ChatChunk) => void) {
+    set onmessage(fn: (event: StreamEvent) => void) {
       channelOnMessage = fn;
     }
   },
@@ -70,6 +71,20 @@ function renderChat() {
   return renderHook(() => useAIChat());
 }
 
+/** Extract user/assistant rows from transcript (ignores thinking/system/error) */
+function messages(rows: TranscriptRow[]) {
+  return rows.filter((r): r is Extract<TranscriptRow, { kind: "user" | "assistant" }> =>
+    r.kind === "user" || r.kind === "assistant"
+  );
+}
+
+function sendText(content: string) {
+  channelOnMessage!({ kind: "text", data: { content } });
+}
+function sendDone() {
+  channelOnMessage!({ kind: "done", data: {} });
+}
+
 // ── Tests ─────────────────────────────────────────────────────
 
 describe("initial state", () => {
@@ -77,13 +92,12 @@ describe("initial state", () => {
     const { result } = renderChat();
 
     await waitFor(() => {
-      // refreshSessions resolves with []
       expect(mockAiListSessions).toHaveBeenCalledOnce();
     });
 
     expect(result.current.sessions).toEqual([]);
     expect(result.current.currentSession).toBeNull();
-    expect(result.current.messages).toEqual([]);
+    expect(result.current.transcript).toEqual([]);
     expect(result.current.isStreaming).toBe(false);
     expect(result.current.error).toBeNull();
   });
@@ -116,7 +130,7 @@ describe("createSession()", () => {
     expect(sessionId).toBe(result.current.currentSession?.id);
   });
 
-  it("starts with empty message list", async () => {
+  it("starts with empty transcript", async () => {
     const { result } = renderChat();
     await waitFor(() => expect(mockAiListSessions).toHaveBeenCalled());
 
@@ -124,7 +138,7 @@ describe("createSession()", () => {
       await result.current.createSession("llama3.2:3b");
     });
 
-    expect(result.current.messages).toEqual([]);
+    expect(result.current.transcript).toEqual([]);
   });
 });
 
@@ -146,7 +160,7 @@ describe("deleteSession()", () => {
     expect(mockAiDeleteSession).toHaveBeenCalledWith(deletedId);
     expect(result.current.sessions).toHaveLength(0);
     expect(result.current.currentSession).toBeNull();
-    expect(result.current.messages).toEqual([]);
+    expect(result.current.transcript).toEqual([]);
   });
 });
 
@@ -172,7 +186,7 @@ describe("renameSession()", () => {
 });
 
 describe("loadSession()", () => {
-  it("sets currentSession and messages from loaded data", async () => {
+  it("hydrates transcript from stored messages", async () => {
     const session = { id: "s1", title: "Loaded", model: "llama3.2:3b", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     const msgs = [
       { id: "m1", sessionId: "s1", role: "user", content: "hello", timestamp: new Date().toISOString() },
@@ -188,9 +202,10 @@ describe("loadSession()", () => {
     });
 
     expect(result.current.currentSession).toEqual(session);
-    expect(result.current.messages).toHaveLength(2);
-    expect(result.current.messages[0].role).toBe("user");
-    expect(result.current.messages[1].role).toBe("assistant");
+    const rows = messages(result.current.transcript);
+    expect(rows).toHaveLength(2);
+    expect(rows[0].kind).toBe("user");
+    expect(rows[1].kind).toBe("assistant");
   });
 
   it("sets error if loadSession throws", async () => {
@@ -208,7 +223,7 @@ describe("loadSession()", () => {
 });
 
 describe("sendMessage() — streaming", () => {
-  it("appends user message immediately, then assistant message after stream completes", async () => {
+  it("appends user row, then assistant row after stream completes", async () => {
     const { result } = renderChat();
     await waitFor(() => expect(mockAiListSessions).toHaveBeenCalled());
 
@@ -216,42 +231,35 @@ describe("sendMessage() — streaming", () => {
       await result.current.createSession("llama3.2:3b");
     });
 
-    // sendMessage resolves only after we drive chunks via channelOnMessage
     let streamResolve!: () => void;
     mockAiStreamChat.mockImplementation(() => new Promise<void>(res => { streamResolve = res; }));
 
-    // Start sending (don't await — it won't resolve until stream is driven)
     act(() => {
       void result.current.sendMessage("Hello", "llama3.2:3b");
     });
 
     await waitFor(() => expect(result.current.isStreaming).toBe(true));
 
-    // User message appears
-    await waitFor(() => expect(result.current.messages).toHaveLength(1));
-    expect(result.current.messages[0].role).toBe("user");
-    expect(result.current.messages[0].content).toBe("Hello");
+    // User row appears immediately (+ thinking row)
+    await waitFor(() => messages(result.current.transcript).length >= 1);
+    const userRows = messages(result.current.transcript);
+    expect(userRows[0].kind).toBe("user");
+    expect(userRows[0].content).toBe("Hello");
 
     // Drive streaming chunks
-    await act(async () => {
-      channelOnMessage!({ content: "Hi ", done: false });
-    });
-    expect(result.current.streamingContent).toBe("Hi ");
+    await act(async () => { sendText("Hi "); });
+    await act(async () => { sendText("there!"); sendDone(); });
 
-    await act(async () => {
-      channelOnMessage!({ content: "there!", done: true });
-    });
+    // Resolve stream promise
+    await act(async () => { streamResolve(); });
 
-    // Resolve the stream promise
-    await act(async () => {
-      streamResolve();
-    });
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
 
-    expect(result.current.isStreaming).toBe(false);
-    expect(result.current.streamingContent).toBe("");
-    expect(result.current.messages).toHaveLength(2);
-    expect(result.current.messages[1].role).toBe("assistant");
-    expect(result.current.messages[1].content).toBe("Hi there!");
+    const finalRows = messages(result.current.transcript);
+    expect(finalRows).toHaveLength(2);
+    expect(finalRows[1].kind).toBe("assistant");
+    expect(finalRows[1].content).toBe("Hi there!");
+    expect((finalRows[1] as Extract<TranscriptRow, { kind: "assistant" }>).streaming).toBeFalsy();
   });
 
   it("auto-titles the session from first user message when session is untitled", async () => {
@@ -265,15 +273,11 @@ describe("sendMessage() — streaming", () => {
     let streamResolve!: () => void;
     mockAiStreamChat.mockImplementation(() => new Promise<void>(res => { streamResolve = res; }));
 
-    act(() => {
-      void result.current.sendMessage("Tell me about Rust", "llama3.2:3b");
-    });
-
+    act(() => { void result.current.sendMessage("Tell me about Rust", "llama3.2:3b"); });
     await waitFor(() => expect(result.current.isStreaming).toBe(true));
 
-    await act(async () => { channelOnMessage!({ content: "Rust is...", done: true }); });
+    await act(async () => { sendText("Rust is..."); sendDone(); });
     await act(async () => { streamResolve(); });
-
     await waitFor(() => expect(result.current.isStreaming).toBe(false));
 
     expect(mockAiUpdateSessionTitle).toHaveBeenCalledWith(
@@ -298,6 +302,31 @@ describe("sendMessage() — streaming", () => {
 
     expect(result.current.isStreaming).toBe(false);
     expect(result.current.error).toContain("connection refused");
+    // Error row appears in transcript
+    expect(result.current.transcript.some((r) => r.kind === "error")).toBe(true);
+  });
+
+  it("commits partial response if stream ends without done event", async () => {
+    let streamResolve!: () => void;
+    mockAiStreamChat.mockImplementation(() => new Promise<void>(res => { streamResolve = res; }));
+
+    const { result } = renderChat();
+    await waitFor(() => expect(mockAiListSessions).toHaveBeenCalled());
+
+    await act(async () => { await result.current.createSession("llama3.2:3b"); });
+    act(() => { void result.current.sendMessage("hello", "llama3.2:3b"); });
+    await waitFor(() => expect(result.current.isStreaming).toBe(true));
+
+    // Partial chunk but no done event
+    await act(async () => { sendText("partial..."); });
+    await act(async () => { streamResolve(); }); // stream resolves without done
+
+    await waitFor(() => expect(result.current.isStreaming).toBe(false));
+
+    const assistantRows = messages(result.current.transcript).filter((r) => r.kind === "assistant");
+    expect(assistantRows).toHaveLength(1);
+    expect(assistantRows[0].content).toBe("partial...");
+    expect((assistantRows[0] as Extract<TranscriptRow, { kind: "assistant" }>).incomplete).toBe(true);
   });
 });
 
