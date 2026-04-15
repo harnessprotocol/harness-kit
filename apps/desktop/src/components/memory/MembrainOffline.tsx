@@ -31,27 +31,27 @@ export function MembrainOffline({ serverState }: Props) {
         gap: 12,
       }}
     >
-      <span style={{ color: 'var(--text-secondary)', fontSize: 14, fontWeight: 600 }}>
+      <span style={{ color: 'var(--fg-muted)', fontSize: 14, fontWeight: 600 }}>
         membrain server is not running
       </span>
 
       {installed === false ? (
         <>
-          <span style={{ color: 'var(--text-muted)', fontSize: 13, textAlign: 'center', maxWidth: 380 }}>
+          <span style={{ color: 'var(--fg-subtle)', fontSize: 13, textAlign: 'center', maxWidth: 380 }}>
             Install membrain to get started:
           </span>
           <code style={{
             background: 'var(--bg-elevated)',
-            border: '1px solid var(--border)',
+            border: '1px solid var(--border-base)',
             borderRadius: 6,
             padding: '8px 16px',
             fontSize: 13,
-            color: 'var(--text-secondary)',
+            color: 'var(--fg-muted)',
             fontFamily: 'monospace',
           }}>
             go install github.com/siracusa5/membrain/cmd/mem@latest
           </code>
-          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>
+          <span style={{ color: 'var(--fg-subtle)', fontSize: 12 }}>
             Then click Start below to launch the server.
           </span>
           <button style={buttonStyle} disabled={starting} onClick={start}>
@@ -60,7 +60,7 @@ export function MembrainOffline({ serverState }: Props) {
         </>
       ) : (
         <>
-          <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>
+          <span style={{ color: 'var(--fg-subtle)', fontSize: 13 }}>
             membrain is installed but not responding on port 3131.
           </span>
           <button style={buttonStyle} disabled={starting} onClick={start}>
@@ -74,10 +74,10 @@ export function MembrainOffline({ serverState }: Props) {
           marginTop: 8,
           padding: '8px 14px',
           background: 'var(--bg-elevated)',
-          border: '1px solid var(--border)',
+          border: '1px solid var(--border-base)',
           borderRadius: 6,
           fontSize: 12,
-          color: 'var(--text-secondary)',
+          color: 'var(--fg-muted)',
           maxWidth: 420,
           textAlign: 'center',
           lineHeight: 1.5,

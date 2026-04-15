@@ -54,42 +54,49 @@ const plugins = [
     description:
       'Process any source into a structured, compounding knowledge base.',
     href: '/docs/plugins/research',
+    accent: 'var(--cat-purple)',
   },
   {
     name: 'explain',
     description:
       'Layered explanations of files, functions, directories, or concepts.',
     href: '/docs/plugins/explain',
+    accent: 'var(--cat-blue)',
   },
   {
     name: 'data-lineage',
     description:
       'Column-level lineage tracing through SQL, Kafka, Spark, and JDBC.',
     href: '/docs/plugins/data-lineage',
+    accent: 'var(--cat-cyan)',
   },
   {
     name: 'orient',
     description:
       'Topic-focused session orientation across graph, knowledge, and research.',
     href: '/docs/plugins/orient',
+    accent: 'var(--cat-green)',
   },
   {
     name: 'capture-session',
     description:
       'Capture session information into a staging file for later reflection.',
     href: '/docs/plugins/capture-session',
+    accent: 'var(--cat-cyan)',
   },
   {
     name: 'review',
     description:
       'Code review for a branch, PR, or path — severity labels and cross-file analysis.',
     href: '/docs/plugins/review',
+    accent: 'var(--cat-green)',
   },
   {
     name: 'docgen',
     description:
       'Generate or update README, API docs, architecture overview, or changelog.',
     href: '/docs/plugins/docgen',
+    accent: 'var(--cat-blue)',
   },
 ];
 
@@ -136,7 +143,7 @@ export default function HomePage() {
                 fontFamily="system-ui, sans-serif"
                 fontWeight="700"
                 fontSize="16"
-                fill="#8b7aff"
+                fill="#22b1ec"
               >
                 hk
               </text>
@@ -149,6 +156,12 @@ export default function HomePage() {
               className="text-fd-muted-foreground transition-colors hover:text-fd-foreground no-underline"
             >
               Docs
+            </Link>
+            <Link
+              href="/explore"
+              className="text-fd-muted-foreground transition-colors hover:text-fd-foreground no-underline"
+            >
+              Explore
             </Link>
             <Link
               href="/docs/plugins/overview"
@@ -172,14 +185,14 @@ export default function HomePage() {
       <section className="relative overflow-hidden">
         {/* Ambient glow orb */}
         <div className="pointer-events-none absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/4">
-          <div className="h-[500px] w-[700px] rounded-full bg-purple-500/15 blur-[120px]" />
+          <div className="h-[500px] w-[700px] rounded-full bg-sky-500/15 blur-[120px]" />
         </div>
-        <div className="absolute inset-0 bg-gradient-to-b from-violet-500/5 via-transparent to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-b from-sky-500/5 via-transparent to-transparent" />
 
         <div className="relative mx-auto max-w-4xl px-6 pb-16 pt-28 text-center">
           <h1 className="font-display mb-5 text-5xl font-bold tracking-tight text-fd-foreground sm:text-6xl lg:text-7xl">
             Your harness,{' '}
-            <span className="bg-gradient-to-r from-violet-400 to-purple-500 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-sky-400 via-cyan-400 to-blue-500 bg-clip-text text-transparent">
               everywhere
             </span>
           </h1>
@@ -191,7 +204,7 @@ export default function HomePage() {
 
           {/* Command box with gradient border */}
           <div className="relative mx-auto mb-8 inline-block">
-            <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-violet-500/30 via-purple-500/20 to-indigo-500/30 blur-[1px]" />
+            <div className="absolute -inset-[1px] rounded-xl bg-gradient-to-r from-sky-500/30 via-cyan-500/20 to-blue-500/30 blur-[1px]" />
             <div className="relative rounded-xl border border-white/5 bg-fd-card px-6 py-3.5 font-mono text-sm text-fd-foreground">
               <span className="text-fd-muted-foreground">$</span>{' '}
               /plugin marketplace add harnessprotocol/harness-kit
@@ -201,7 +214,7 @@ export default function HomePage() {
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/docs/getting-started/installation"
-              className="rounded-lg bg-violet-500 px-6 py-2.5 text-sm font-medium text-white no-underline shadow-lg shadow-violet-500/20 transition-all hover:bg-violet-600 hover:shadow-violet-500/30"
+              className="rounded-lg bg-sky-500 px-6 py-2.5 text-sm font-medium text-white no-underline shadow-lg shadow-sky-500/20 transition-all hover:bg-sky-600 hover:shadow-sky-500/30"
             >
               Get Started
             </Link>
@@ -222,10 +235,10 @@ export default function HomePage() {
             <Link
               key={card.title}
               href={card.href}
-              className="group relative overflow-hidden rounded-xl border border-fd-border/50 bg-fd-card/80 p-6 no-underline backdrop-blur-sm transition-all duration-300 hover:border-fd-primary/30 hover:shadow-lg hover:shadow-violet-500/10"
+              className="group relative overflow-hidden rounded-xl border border-fd-border/50 bg-fd-card/80 p-6 no-underline backdrop-blur-sm transition-all duration-300 hover:border-fd-primary/30 hover:shadow-lg hover:shadow-sky-500/10"
             >
               {/* Gradient border overlay */}
-              <div className="pointer-events-none absolute inset-0 rounded-xl opacity-0 transition-opacity duration-300 group-hover:opacity-100" style={{ background: 'linear-gradient(164deg, rgba(139,122,255,0.08), transparent 60%)' }} />
+              <div className="pointer-events-none absolute inset-0 rounded-xl opacity-0 transition-opacity duration-300 group-hover:opacity-100" style={{ background: 'linear-gradient(164deg, rgba(34,177,236,0.08), transparent 60%)' }} />
               <div className="relative">
                 <h3 className="font-display mb-2 text-lg font-semibold text-fd-foreground">
                   {card.title}
@@ -245,7 +258,7 @@ export default function HomePage() {
       {/* Features */}
       <section className="relative border-t border-fd-border/30 bg-fd-card/30">
         {/* Subtle radial gradient background */}
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,hsla(256,80%,60%,0.04),transparent_70%)]" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,hsla(199,82%,55%,0.04),transparent_70%)]" />
         <div className="relative mx-auto max-w-5xl px-6 py-24">
           <h2 className="font-display mb-2 text-center text-3xl font-bold text-fd-foreground">
             How it works
@@ -257,7 +270,7 @@ export default function HomePage() {
             {features.map((f) => (
               <div
                 key={f.title}
-                className="rounded-xl border border-fd-border/50 bg-fd-background/80 p-6 backdrop-blur-sm transition-all duration-300 hover:border-fd-primary/20 hover:shadow-lg hover:shadow-violet-500/5"
+                className="rounded-xl border border-fd-border/50 bg-fd-background/80 p-6 backdrop-blur-sm transition-all duration-300 hover:border-fd-primary/20 hover:shadow-lg hover:shadow-sky-500/5"
               >
                 <div className="mb-4 flex size-10 items-center justify-center rounded-lg bg-fd-accent text-fd-primary">
                   {f.icon}
@@ -299,7 +312,8 @@ export default function HomePage() {
             <Link
               key={p.name}
               href={p.href}
-              className="group rounded-xl border border-fd-border/50 bg-fd-card/80 p-5 no-underline transition-all duration-300 hover:border-fd-primary/30 hover:shadow-lg hover:shadow-violet-500/10"
+              className="group rounded-xl border border-fd-border/50 bg-fd-card/80 p-5 no-underline transition-all duration-300 hover:border-fd-primary/30 hover:shadow-lg hover:shadow-sky-500/10"
+              style={{ borderTop: `2px solid ${p.accent}` }}
             >
               <h4 className="mb-1.5 font-mono text-sm font-semibold text-fd-primary brightness-110">
                 {p.name}
@@ -333,7 +347,7 @@ export default function HomePage() {
                   fontFamily="system-ui, sans-serif"
                   fontWeight="700"
                   fontSize="16"
-                  fill="#8b7aff"
+                  fill="#22b1ec"
                 >
                   hk
                 </text>

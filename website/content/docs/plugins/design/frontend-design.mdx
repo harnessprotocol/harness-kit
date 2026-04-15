@@ -38,17 +38,19 @@ Claude will ask for design context (target audience, use cases, brand tone) if n
 
 ### The AI Slop Test
 
-Before shipping any UI, the skill checks for the fingerprints of generic AI-generated work:
+Before shipping any UI, the skill checks for the fingerprints of generic AI-generated work — patterns that appear when Claude applies defaults rather than making deliberate choices:
 
-- Inter, Roboto, Open Sans, Arial, or system defaults
-- Purple-to-blue gradients; cyan-on-dark; neon accents
+- Inter, Roboto, Open Sans, Arial, or system defaults as the *only* typographic decision
+- Purple-to-blue gradients; cyan-on-dark; neon accents used without a deliberate palette rationale
 - Gray text on colored backgrounds
-- Glassmorphism used decoratively
+- Glassmorphism applied as decoration with no structural purpose
 - Pure black (`#000`) or pure white (`#fff`) anywhere
 - Cards nested inside cards; identical card grids; everything centered
-- Hero metric layout (big number, gradient accent)
-- Dark mode defaulted to as an aesthetic choice
+- Hero metric layout (big number, gradient accent) as the default data presentation
+- Dark mode defaulted to as an aesthetic choice rather than a user preference
 - Bounce / elastic easing; `ease` as the default easing function
+
+The test flags *undifferentiated* defaults — it is not a blanket prohibition. Cyan-on-dark or glassmorphism applied as a considered, consistent product aesthetic is a deliberate choice, not a default. The distinction is intentionality: if the design has a rationale beyond "it looked okay," it passes.
 
 If a design fails the test, Claude revises it.
 
