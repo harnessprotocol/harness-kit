@@ -6,6 +6,11 @@ import type { ToolDef, ToolResult } from '../toolTypes';
 
 const BOARD_BASE = 'http://localhost:4800';
 
+/** Validate that a slug is safe to embed in a URL path segment. */
+function isValidSlug(slug: string): boolean {
+  return /^[a-z0-9][a-z0-9-]*$/.test(slug);
+}
+
 async function boardFetch(path: string, init?: RequestInit): Promise<ToolResult> {
   try {
     const res = await fetch(`${BOARD_BASE}${path}`, init);
@@ -59,11 +64,14 @@ export const boardTools: ToolDef[] = [
         status?: string;
         epic_id?: string;
       };
+      if (!isValidSlug(project_slug)) {
+        return { ok: false, content: { error: `invalid project_slug: "${project_slug}"` } };
+      }
       const params = new URLSearchParams();
       if (status) params.set('status', status);
       if (epic_id) params.set('epicId', epic_id);
       const qs = params.toString() ? `?${params.toString()}` : '';
-      return boardFetch(`/api/projects/${encodeURIComponent(project_slug)}/tasks${qs}`);
+      return boardFetch(`/api/projects/${project_slug}/tasks${qs}`);
     },
     describe: (args) =>
       `List tasks in "${(args as { project_slug?: string })?.project_slug ?? '?'}"`,
@@ -96,7 +104,10 @@ export const boardTools: ToolDef[] = [
         description?: string;
         priority?: string;
       };
-      return boardFetch(`/api/projects/${encodeURIComponent(project_slug)}/tasks`, {
+      if (!isValidSlug(project_slug)) {
+        return { ok: false, content: { error: `invalid project_slug: "${project_slug}"` } };
+      }
+      return boardFetch(`/api/projects/${project_slug}/tasks`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ epic_id, title, description, priority }),

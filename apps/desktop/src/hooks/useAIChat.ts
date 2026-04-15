@@ -395,7 +395,7 @@ export function useAIChat(): UseAIChatReturn {
             model,
             history,
             ollamaTools,
-            hop === 0 ? thinkingId : crypto.randomUUID(), // thinkingId only matters on first hop
+            hop === 0 ? thinkingId : assistantId + "-thinking", // must match the thinking row appended at end of prev hop
             assistantId,
             ""
           );
@@ -412,8 +412,12 @@ export function useAIChat(): UseAIChatReturn {
             break;
           }
 
-          // Process each tool call
-          history.push({ role: "assistant", content: "", tool_calls: toolCalls });
+          // Process each tool call.
+          // Only push the assistant message here if we didn't already push it above
+          // (we push above when assistantText is non-empty, with tool_calls included).
+          if (!assistantText) {
+            history.push({ role: "assistant", content: "", tool_calls: toolCalls });
+          }
 
           for (const call of toolCalls) {
             const callRowId = crypto.randomUUID();

@@ -310,8 +310,28 @@ pub fn set_ai_config(
     base_url: String,
     ollama: State<'_, OllamaState>,
 ) -> Result<(), String> {
+    // Validate: only http/https to localhost allowed (prevent SSRF)
+    let parsed = url::Url::parse(&base_url).map_err(|_| "Invalid URL".to_string())?;
+    match parsed.scheme() {
+        "http" | "https" => {}
+        s => return Err(format!("Unsupported scheme '{}' — only http/https allowed", s)),
+    }
+    let host = parsed.host_str().ok_or("Missing host in URL")?;
+    if host != "localhost" && host != "127.0.0.1" && host != "::1" {
+        return Err("Only localhost URLs are allowed".to_string());
+    }
+    if base_url.len() > 256 {
+        return Err("base_url too long (max 256 chars)".to_string());
+    }
+
     let config = AIConfig { base_url: base_url.clone() };
     let path = ai_config_path();
+
+    // Ensure parent directory exists
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).map_err(|e| format!("Failed to create config dir: {}", e))?;
+    }
+
     let contents = serde_json::to_string_pretty(&config).map_err(|e| e.to_string())?;
     std::fs::write(&path, contents).map_err(|e| e.to_string())?;
 
