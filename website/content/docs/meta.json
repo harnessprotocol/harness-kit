@@ -1,12 +1,12 @@
 {
   "title": "Harness Kit",
   "pages": [
-    "concepts",
-    "getting-started",
-    "plugins",
-    "evals",
-    "guides",
-    "cross-harness",
+    { "type": "folder", "name": "concepts", "icon": "BookOpen" },
+    { "type": "folder", "name": "getting-started", "icon": "Rocket" },
+    { "type": "folder", "name": "plugins", "icon": "LayoutGrid" },
+    { "type": "folder", "name": "evals", "icon": "CheckCircle" },
+    { "type": "folder", "name": "guides", "icon": "Compass" },
+    { "type": "folder", "name": "cross-harness", "icon": "Link" },
     "faq"
   ]
 }

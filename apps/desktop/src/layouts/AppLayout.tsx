@@ -15,6 +15,8 @@ type NavSection = {
   id: string;
   label: string;
   path: string;
+  icon?: React.ReactNode;
+  group?: string;
   children?: { label: string; path: string }[];
 };
 
@@ -22,6 +24,12 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: "harness",
     label: "Harness",
+    group: "CORE",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
+        <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+      </svg>
+    ),
     path: "/harness/file",
     children: [
       { label: "harness.yaml", path: "/harness/file" },
@@ -34,6 +42,11 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: "marketplace",
     label: "Marketplace",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
+        <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
+      </svg>
+    ),
     path: "/marketplace",
     children: [
       { label: "Browse", path: "/marketplace" },
@@ -42,6 +55,12 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: "observatory",
     label: "Observatory",
+    group: "INSIGHTS",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
+        <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+      </svg>
+    ),
     path: "/observatory",
     children: [
       { label: "Dashboard", path: "/observatory" },
@@ -51,18 +70,34 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: "agents",
     label: "Agents",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
+        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+      </svg>
+    ),
     path: "/agents",
     children: [],
   },
   {
     id: "terminals",
     label: "Comparator",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
+        <path d="M3 4a1 1 0 000 2h11.586l-2.293 2.293a1 1 0 001.414 1.414l4-4a1 1 0 000-1.414l-4-4a1 1 0 10-1.414 1.414L14.586 4H3zM17 16a1 1 0 000-2H5.414l2.293-2.293a1 1 0 00-1.414-1.414l-4 4a1 1 0 000 1.414l4 4a1 1 0 001.414-1.414L5.414 16H17z" />
+      </svg>
+    ),
     path: "/terminals",
     children: [],
   },
   {
     id: "security",
     label: "Security",
+    group: "SYSTEM",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
+        <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+      </svg>
+    ),
     path: "/security/permissions",
     children: [
       { label: "Permissions", path: "/security/permissions" },
@@ -73,6 +108,12 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: "parity",
     label: "Parity",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
+        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+        <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+      </svg>
+    ),
     path: "/parity",
     children: [
       { label: "Dashboard", path: "/parity" },
@@ -81,21 +122,43 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: "board",
     label: "Board",
+    group: "WORKFLOWS",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
+        <path d="M2 4a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H3a1 1 0 01-1-1V4zM3 9a1 1 0 000 2h6a1 1 0 000-2H3zM3 14a1 1 0 000 2h6a1 1 0 000-2H3zM14 9a1 1 0 000 2h3a1 1 0 000-2h-3zM14 14a1 1 0 000 2h3a1 1 0 000-2h-3z" />
+      </svg>
+    ),
     path: "/board",
   },
   {
     id: "roadmap",
     label: "Roadmap",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
+        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+      </svg>
+    ),
     path: "/roadmap",
   },
   {
     id: "ai-chat",
     label: "AI Chat",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
+        <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
+        <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z" />
+      </svg>
+    ),
     path: "/ai-chat",
   },
   {
     id: "memory",
     label: "Memory",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
+        <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
+      </svg>
+    ),
     path: "/memory",
     children: [
       { label: "Dashboard", path: "/memory" },
@@ -418,60 +481,97 @@ export default function AppLayout() {
               className="flex items-center px-4"
               style={{ height: "44px", borderBottom: "1px solid var(--separator)" }}
             >
-              <span style={{ fontSize: "13px", fontWeight: 600, letterSpacing: "-0.1px", color: "var(--fg-base)" }}>
-                harness-kit
-              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 28 28"
+                  style={{ width: 22, height: 22, filter: "drop-shadow(0 0 6px rgba(34, 177, 236, 0.5))", flexShrink: 0 }}
+                >
+                  <rect width="28" height="28" rx="6" fill="#0d1016" />
+                  <text
+                    x="14"
+                    y="19"
+                    textAnchor="middle"
+                    fontFamily="system-ui, sans-serif"
+                    fontWeight="700"
+                    fontSize="13"
+                    fill="#4ec7f2"
+                  >
+                    hk
+                  </text>
+                </svg>
+                <span style={{ fontSize: "13px", fontWeight: 600, letterSpacing: "-0.1px", color: "var(--fg-base)" }}>
+                  harness-kit
+                </span>
+              </div>
             </div>
 
             {/* Nav */}
             <nav className="flex-1 py-2 px-2">
-              {visibleSections.map((section) => {
+              {visibleSections.map((section, idx) => {
                 const active = isActive(section);
                 const sectionIndex = NAV_SECTIONS.indexOf(section);
                 const shortcutNum = sectionIndex >= 0 && sectionIndex < 8 ? sectionIndex + 1 : null;
+                // Show group header when group changes
+                const prevSection = idx > 0 ? visibleSections[idx - 1] : null;
+                const showGroupHeader = section.group && section.group !== prevSection?.group;
                 return (
-                  <div key={section.id} className="mb-0.5">
-                    {section.id === "harness" ? (
-                      <button
-                        onClick={() => setHarnessExpanded((v) => !v)}
-                        className={`sidebar-item${active ? " active" : ""}`}
-                        style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", cursor: "pointer", border: "none", background: "transparent", textAlign: "left" }}
-                      >
-                        <span style={{ flex: 1 }}>{section.label}</span>
-                        <svg
-                          width="10"
-                          height="10"
-                          viewBox="0 0 16 16"
-                          fill="currentColor"
-                          style={{ transform: harnessExpanded ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.15s ease", flexShrink: 0, opacity: 0.6 }}
+                  <div key={section.id}>
+                    {showGroupHeader && (
+                      <div className="sidebar-group-header">{section.group}</div>
+                    )}
+                    <div className="mb-0.5">
+                      {section.id === "harness" ? (
+                        <button
+                          onClick={() => {
+                            if (!active) {
+                              navigate(section.path);
+                              setHarnessExpanded(true);
+                            } else {
+                              setHarnessExpanded((v) => !v);
+                            }
+                          }}
+                          className={`sidebar-item${active ? " active" : ""}`}
+                          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", cursor: "pointer", border: "none", background: "transparent", textAlign: "left" }}
                         >
-                          <path d="M8 10.5L2.5 5h11L8 10.5z" />
-                        </svg>
-                      </button>
-                    ) : (
-                      <NavLink to={section.path} className={`sidebar-item${active ? " active" : ""}`}>
-                        <span style={{ flex: 1 }}>{section.label}</span>
-                        {shortcutNum && !sidebarCollapsed && (
-                          <span
-                            style={{
-                              fontSize: 10,
-                              fontFamily: 'ui-monospace, monospace',
-                              color: 'var(--fg-subtle)',
-                              flexShrink: 0,
-                            }}
+                          {section.icon}
+                          <span style={{ flex: 1 }}>{section.label}</span>
+                          <svg
+                            width="10"
+                            height="10"
+                            viewBox="0 0 16 16"
+                            fill="currentColor"
+                            style={{ transform: harnessExpanded ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.15s ease", flexShrink: 0, opacity: 0.6 }}
                           >
-                            {'\u2318'}{shortcutNum}
-                          </span>
-                        )}
-                      </NavLink>
-                    )}
+                            <path d="M8 10.5L2.5 5h11L8 10.5z" />
+                          </svg>
+                        </button>
+                      ) : (
+                        <NavLink to={section.path} className={`sidebar-item${active ? " active" : ""}`}>
+                          {section.icon}
+                          <span style={{ flex: 1 }}>{section.label}</span>
+                          {shortcutNum && !sidebarCollapsed && (
+                            <span
+                              style={{
+                                fontSize: 10,
+                                fontFamily: 'ui-monospace, monospace',
+                                color: 'var(--fg-subtle)',
+                                flexShrink: 0,
+                              }}
+                            >
+                              {'\u2318'}{shortcutNum}
+                            </span>
+                          )}
+                        </NavLink>
+                      )}
 
-                    {active && section.id === "harness" && harnessExpanded && (
-                      <HarnessSubnav configFiles={configFiles} />
-                    )}
-                    {active && section.children && section.id !== "harness" && (
-                      <SidebarSubnav children={section.children} />
-                    )}
+                      {active && section.id === "harness" && harnessExpanded && (
+                        <HarnessSubnav configFiles={configFiles} />
+                      )}
+                      {active && section.children && section.children.length > 0 && section.id !== "harness" && (
+                        <SidebarSubnav children={section.children} />
+                      )}
+                    </div>
                   </div>
                 );
               })}
