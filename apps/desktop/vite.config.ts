@@ -2,9 +2,21 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
+// node:crypto is used by @harness-kit/core's Node.js-only compile/check utilities.
+// The desktop never calls these functions; externalize so Vite doesn't try to bundle
+// it for the browser and fail with __vite-browser-external.
+const externalNodeModules = {
+  name: "external-node-builtins",
+  enforce: "pre" as const,
+  resolveId(id: string) {
+    // TypeScript may emit "node:crypto" or "crypto" depending on target/module settings.
+    if (id === "node:crypto" || id === "crypto") return { id, external: true };
+  },
+};
+
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
-  plugins: [react(), tailwindcss()],
+  plugins: [externalNodeModules, react(), tailwindcss()],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //

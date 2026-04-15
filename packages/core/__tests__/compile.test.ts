@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { compile } from "../src/compile/compile.js";
+import { compile, computeSourceFingerprint } from "../src/compile/compile.js";
 import { MockFsProvider } from "./helpers/mock-fs.js";
 
 const FIXTURES = resolve(import.meta.dirname, "fixtures");
@@ -117,5 +117,74 @@ describe("compile", () => {
 
     const result = await compile(yaml, ["cursor"], fs, { dryRun: true });
     expect(result.warnings.some((w) => w.includes("not machine-enforceable"))).toBe(true);
+  });
+});
+
+// ── Phase 5: fingerprint + cache ─────────────────────────────
+
+describe("computeSourceFingerprint", () => {
+  it("returns a 64-char hex string", () => {
+    const yaml = loadFixture("valid-harness.yaml");
+    const { config } = { config: { version: "1", plugins: [] } };
+    const h = computeSourceFingerprint(yaml, config as never);
+    expect(h).toMatch(/^[0-9a-f]{64}$/);
+  });
+
+  it("is deterministic for the same input", () => {
+    const yaml = loadFixture("valid-harness.yaml");
+    const config = { version: "1" as const, plugins: [] };
+    expect(computeSourceFingerprint(yaml, config)).toBe(
+      computeSourceFingerprint(yaml, config),
+    );
+  });
+
+  it("differs when yaml content changes", () => {
+    const config = { version: "1" as const, plugins: [] };
+    const h1 = computeSourceFingerprint("content-a", config);
+    const h2 = computeSourceFingerprint("content-b", config);
+    expect(h1).not.toBe(h2);
+  });
+});
+
+describe("compile fingerprint cache", () => {
+  it("returns upToDate on second identical compile", async () => {
+    const fs = new MockFsProvider();
+    const yaml = loadFixture("valid-harness.yaml");
+
+    const r1 = await compile(yaml, ["claude-code"], fs);
+    expect(r1.upToDate).toBe(false);
+
+    const r2 = await compile(yaml, ["claude-code"], fs);
+    expect(r2.upToDate).toBe(true);
+    expect(r2.files).toHaveLength(0);
+  });
+
+  it("recompiles when --force is set", async () => {
+    const fs = new MockFsProvider();
+    const yaml = loadFixture("valid-harness.yaml");
+
+    await compile(yaml, ["claude-code"], fs);
+    const r2 = await compile(yaml, ["claude-code"], fs, { force: true });
+    expect(r2.upToDate).toBe(false);
+    expect(r2.files.length).toBeGreaterThan(0);
+  });
+
+  it("recompiles when targets change", async () => {
+    const fs = new MockFsProvider();
+    const yaml = loadFixture("valid-harness.yaml");
+
+    await compile(yaml, ["claude-code"], fs);
+    const r2 = await compile(yaml, ["cursor"], fs);
+    expect(r2.upToDate).toBe(false);
+  });
+
+  it("dry-run never writes cache", async () => {
+    const fs = new MockFsProvider();
+    const yaml = loadFixture("valid-harness.yaml");
+
+    await compile(yaml, ["claude-code"], fs, { dryRun: true });
+    // Second dry-run should NOT return upToDate (cache wasn't written)
+    const r2 = await compile(yaml, ["claude-code"], fs, { dryRun: true });
+    expect(r2.upToDate).toBe(false);
   });
 });

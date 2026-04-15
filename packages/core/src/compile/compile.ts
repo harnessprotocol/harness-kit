@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import type { FsProvider } from "../fs-provider.js";
 import type {
   CompileOptions,
@@ -14,16 +15,76 @@ import { compileSkills } from "./skills.js";
 import { compilePermissions, buildPermissionsText } from "./permissions.js";
 import { appendMarkerBlock, findMarkerBlock, replaceMarkerBlock } from "./markers.js";
 
+// ── Source fingerprint ────────────────────────────────────────
+
+export function computeSourceFingerprint(
+  yamlContent: string,
+  config: HarnessConfig,
+): string {
+  const hash = createHash("sha256");
+  hash.update(yamlContent);
+  for (const plugin of config.plugins ?? []) {
+    hash.update(plugin.name + plugin.source + (plugin.version ?? ""));
+  }
+  return hash.digest("hex");
+}
+
+// ── Fingerprint cache ─────────────────────────────────────────
+
+const CACHE_DIR = ".harness";
+const CACHE_FILE = ".harness/.last-compile";
+
+interface CompileCache {
+  fingerprint: string;
+  timestamp: string;
+  targets: string;
+}
+
+async function readCache(
+  fs: FsProvider,
+  cwd: string,
+): Promise<CompileCache | null> {
+  try {
+    const raw = await fs.readFile(fs.joinPath(cwd, CACHE_FILE));
+    return JSON.parse(raw) as CompileCache;
+  } catch {
+    return null;
+  }
+}
+
+async function writeCache(
+  fs: FsProvider,
+  cwd: string,
+  cache: CompileCache,
+): Promise<void> {
+  const dir = fs.joinPath(cwd, CACHE_DIR);
+  await fs.mkdir(dir, { recursive: true });
+  await fs.writeFile(fs.joinPath(cwd, CACHE_FILE), JSON.stringify(cache, null, 2) + "\n");
+}
+
+// ── Atomic write ──────────────────────────────────────────────
+
+async function writeFileAtomic(
+  fullPath: string,
+  content: string,
+  fs: FsProvider,
+): Promise<void> {
+  const tmpPath = fullPath + ".harness-tmp";
+  await fs.writeFile(tmpPath, content);
+  await fs.renameFile(tmpPath, fullPath);
+}
+
+// ── Main compile function ─────────────────────────────────────
+
 export async function compile(
   yamlString: string,
   targets: TargetPlatform[],
   fs: FsProvider,
   options: CompileOptions = {},
 ): Promise<CompileResult> {
-  // Parse
+  // Stage 2: Parse + validate
   const { config } = parseHarness(yamlString);
 
-  // Validate — fail fast
   const validation = validateHarness(config);
   if (!validation.valid) {
     const errMsgs = validation.errors
@@ -33,16 +94,38 @@ export async function compile(
   }
 
   const harnessName = config.metadata?.name ?? "default";
+  const cwd = fs.cwd();
+
+  // Stage 3: Compute source fingerprint
+  const fingerprint = computeSourceFingerprint(yamlString, config);
+  const targetKey = [...targets].sort().join(",");
+
+  // Stage 4: Skip if unchanged (bypass with --force or dry-run)
+  if (!options.force && !options.dryRun) {
+    const cached = await readCache(fs, cwd);
+    if (cached?.fingerprint === fingerprint && cached?.targets === targetKey) {
+      return {
+        harnessName,
+        targets,
+        files: [],
+        warnings: [],
+        skippedPlugins: [],
+        upToDate: true,
+      };
+    }
+  }
+
   const allFiles: FileAction[] = [];
   const allWarnings: string[] = [];
   const allSkipped: string[] = [];
 
-  // Step 3: Compile instructions
+  // Stage 5: Resolve targets (already passed in — future: filter by detected binaries)
+
+  // Stage 6: Generate instructions
   const instrResult = await compileInstructions(config, targets, fs);
   allFiles.push(...instrResult.files);
   allWarnings.push(...instrResult.warnings);
 
-  // Append permissions text to non-Claude-Code instruction files
   if (config.permissions) {
     const permText = buildPermissionsText(config.permissions);
     if (permText) {
@@ -50,24 +133,30 @@ export async function compile(
     }
   }
 
-  // Step 4: Compile MCP servers
+  // Stage 7: Generate MCP config
   const mcpResult = await compileMcpServers(config, targets, fs);
   allFiles.push(...mcpResult.files);
   allWarnings.push(...mcpResult.warnings);
 
-  // Step 5: Compile skills
+  // Compile skills + permissions
   const skillsResult = await compileSkills(config, targets, fs);
   allFiles.push(...skillsResult.files);
   allSkipped.push(...skillsResult.skippedPlugins);
 
-  // Step 6: Compile permissions (Claude Code settings.json)
   const permsResult = await compilePermissions(config, targets, fs);
   allFiles.push(...permsResult.files);
   allWarnings.push(...permsResult.warnings);
 
-  // Write files (unless dry-run)
+  // Stage 8: Materialize — atomic writes (unless dry-run)
   if (!options.dryRun) {
-    await writeFiles(allFiles, fs);
+    await materializeFiles(allFiles, fs, cwd);
+
+    // Stage 10: Write fingerprint cache
+    await writeCache(fs, cwd, {
+      fingerprint,
+      timestamp: new Date().toISOString(),
+      targets: targetKey,
+    });
   }
 
   return {
@@ -76,7 +165,28 @@ export async function compile(
     files: allFiles,
     warnings: allWarnings,
     skippedPlugins: allSkipped,
+    upToDate: false,
   };
+}
+
+async function materializeFiles(
+  files: FileAction[],
+  fs: FsProvider,
+  cwd: string,
+): Promise<void> {
+  for (const file of files) {
+    if (file.action === "skip" || file.action === "needs-confirmation") {
+      continue;
+    }
+
+    const fullPath = fs.joinPath(cwd, file.path);
+    const dir = fs.dirname(fullPath);
+    if (dir) {
+      await fs.mkdir(dir, { recursive: true });
+    }
+
+    await writeFileAtomic(fullPath, file.content, fs);
+  }
 }
 
 function appendPermissionsToInstructions(
@@ -87,40 +197,24 @@ function appendPermissionsToInstructions(
   const harnessName = config.metadata?.name ?? "default";
 
   for (const file of files) {
-    if (
-      file.slot === "operational" &&
-      file.platform !== "claude-code"
-    ) {
-      // Append permissions text inside the marker block
+    if (file.slot === "operational" && file.platform !== "claude-code") {
       const existingBlock = findMarkerBlock(file.content, harnessName, "operational");
       if (existingBlock) {
         const newContent = existingBlock.content + "\n\n" + permText;
-        file.content = replaceMarkerBlock(file.content, harnessName, "operational", newContent);
+        file.content = replaceMarkerBlock(
+          file.content,
+          harnessName,
+          "operational",
+          newContent,
+        );
       } else {
-        file.content = appendMarkerBlock(file.content, harnessName, "permissions", permText);
+        file.content = appendMarkerBlock(
+          file.content,
+          harnessName,
+          "permissions",
+          permText,
+        );
       }
     }
-  }
-}
-
-async function writeFiles(
-  files: FileAction[],
-  fs: FsProvider,
-): Promise<void> {
-  const cwd = fs.cwd();
-
-  for (const file of files) {
-    if (file.action === "skip" || file.action === "needs-confirmation") {
-      continue;
-    }
-
-    const fullPath = fs.joinPath(cwd, file.path);
-    const dir = fs.dirname(fullPath);
-
-    if (dir) {
-      await fs.mkdir(dir, { recursive: true });
-    }
-
-    await fs.writeFile(fullPath, file.content);
   }
 }

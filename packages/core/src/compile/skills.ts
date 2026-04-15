@@ -5,18 +5,31 @@ import type {
   HarnessPlugin,
   TargetPlatform,
 } from "../types.js";
+import { findSkillFiles, computeSourceDir } from "./discovery.js";
 
-const SKILL_SEARCH_PATHS = [
+// Skills directory per target. null = plugin install system handles deployment (claude-code).
+const SKILL_TARGET_DIR: Record<TargetPlatform, string | null> = {
+  "claude-code": null,
+  cursor: ".cursor/skills",
+  copilot: ".github/skills",
+  codex: ".agents/skills",
+  opencode: ".opencode/skills",
+  windsurf: ".windsurf/skills",
+  gemini: ".gemini/skills",
+  junie: ".junie/skills",
+};
+
+// Legacy deployed-location search paths — kept until harness sync provides a populated cache.
+// Searched last so they don't shadow source-resolved skills.
+const LEGACY_SEARCH_PATHS = [
   "~/.claude/skills/{name}/SKILL.md",
   ".cursor/skills/{name}/SKILL.md",
   ".agents/skills/{name}/SKILL.md",
 ];
 
-const SKILL_TARGET_DIR: Record<TargetPlatform, string | null> = {
-  "claude-code": null, // uses plugin install system
-  cursor: ".cursor/skills",
-  copilot: ".github/skills",
-};
+interface PluginManifest {
+  skills?: Array<{ name: string; path: string }>;
+}
 
 function slugify(name: string): string {
   return name
@@ -28,7 +41,6 @@ function slugify(name: string): string {
 }
 
 function adaptFrontmatter(content: string): string {
-  // Parse frontmatter if present
   const fmMatch = content.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
   if (!fmMatch) return content;
 
@@ -36,19 +48,13 @@ function adaptFrontmatter(content: string): string {
   const body = fmMatch[2];
 
   // Rename dependencies → compatibility
-  frontmatter = frontmatter.replace(
-    /^dependencies:/m,
-    "compatibility:",
-  );
+  frontmatter = frontmatter.replace(/^dependencies:/m, "compatibility:");
 
   // Enforce name constraints
   const nameMatch = frontmatter.match(/^name:\s*(.+)$/m);
   if (nameMatch) {
     const slugged = slugify(nameMatch[1].trim());
-    frontmatter = frontmatter.replace(
-      /^name:\s*.+$/m,
-      `name: ${slugged}`,
-    );
+    frontmatter = frontmatter.replace(/^name:\s*.+$/m, `name: ${slugged}`);
   }
 
   // Truncate description
@@ -80,10 +86,10 @@ export async function compileSkills(
   const skippedPlugins: string[] = [];
 
   for (const plugin of plugins) {
-    const skillContent = await findSkillMd(plugin, fs, cwd, home);
+    const skillContent = await resolveSkillContent(plugin, fs, cwd, home);
     if (!skillContent) {
       skippedPlugins.push(
-        `${plugin.name}: skipped (no SKILL.md found in ~/.claude/skills/, .cursor/skills/, or .agents/skills/)`,
+        `${plugin.name}: skipped (no SKILL.md found — checked inline declaration, source dir, and legacy paths)`,
       );
       continue;
     }
@@ -108,21 +114,82 @@ export async function compileSkills(
   return { files, skippedPlugins };
 }
 
-async function findSkillMd(
+/**
+ * Resolve a plugin's SKILL.md content using manifest-first resolution order:
+ *
+ * 1. Inline `skills` declared in harness.yaml (plugin.skills[].path)
+ * 2. Source dir → plugin.json manifest → declared skill paths
+ * 3. Source dir → recursive walker fallback
+ * 4. Legacy deployed-location fallback (kept until harness sync populates the cache)
+ */
+async function resolveSkillContent(
   plugin: HarnessPlugin,
   fs: FsProvider,
   cwd: string,
   home: string,
 ): Promise<string | null> {
-  for (const template of SKILL_SEARCH_PATHS) {
-    const relPath = template
-      .replace("{name}", plugin.name)
-      .replace("~", home);
+  // 1. Inline skills in harness.yaml
+  if (plugin.skills && plugin.skills.length > 0) {
+    for (const skill of plugin.skills) {
+      const skillPath = skill.path.startsWith("/")
+        ? skill.path
+        : fs.joinPath(cwd, skill.path);
+      if (await fs.exists(skillPath)) {
+        return fs.readFile(skillPath);
+      }
+    }
+  }
 
+  // 2 + 3. Source-based resolution
+  const sourceDir = computeSourceDir(
+    plugin.source,
+    cwd,
+    home,
+    fs.joinPath.bind(fs),
+  );
+
+  if (sourceDir !== null && (await fs.exists(sourceDir))) {
+    // 2. plugin.json manifest
+    const manifestPath = fs.joinPath(sourceDir, "plugin.json");
+    if (await fs.exists(manifestPath)) {
+      try {
+        const raw = await fs.readFile(manifestPath);
+        const manifest: PluginManifest = JSON.parse(raw);
+        if (manifest.skills && manifest.skills.length > 0) {
+          for (const skill of manifest.skills) {
+            const skillPath = fs.joinPath(sourceDir, skill.path);
+            if (await fs.exists(skillPath)) {
+              return fs.readFile(skillPath);
+            }
+          }
+        }
+      } catch {
+        // Malformed plugin.json — fall through to walker
+      }
+    }
+
+    // 3. Walker fallback
+    const found = await findSkillFiles(sourceDir, fs);
+    if (found.length > 0) {
+      return fs.readFile(found[0]);
+    }
+  }
+
+  // 4. Legacy fallback
+  return findSkillMdLegacy(plugin, fs, cwd, home);
+}
+
+async function findSkillMdLegacy(
+  plugin: HarnessPlugin,
+  fs: FsProvider,
+  cwd: string,
+  home: string,
+): Promise<string | null> {
+  for (const template of LEGACY_SEARCH_PATHS) {
+    const relPath = template.replace("{name}", plugin.name).replace("~", home);
     const fullPath = relPath.startsWith("/")
       ? relPath
       : fs.joinPath(cwd, relPath);
-
     if (await fs.exists(fullPath)) {
       return fs.readFile(fullPath);
     }

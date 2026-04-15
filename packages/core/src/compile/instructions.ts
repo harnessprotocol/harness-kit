@@ -20,6 +20,10 @@ interface SlotMapping {
   file: Record<TargetPlatform, string | null>;
 }
 
+// Codex, OpenCode, Windsurf, Gemini, and Junie all share AGENTS.md for operational
+// instructions. The compile loop deduplicates by output path — the last write wins,
+// but all produce identical content so it is safe. A proper group-by-file
+// deduplication pass is handled in compileInstructions().
 const SLOT_MAPPINGS: SlotMapping[] = [
   {
     slot: "operational",
@@ -27,6 +31,11 @@ const SLOT_MAPPINGS: SlotMapping[] = [
       "claude-code": "CLAUDE.md",
       cursor: ".cursor/rules/harness.mdc",
       copilot: ".github/copilot-instructions.md",
+      codex: "AGENTS.md",
+      opencode: "AGENTS.md",
+      windsurf: "AGENTS.md",
+      gemini: "AGENTS.md",
+      junie: "AGENTS.md",
     },
   },
   {
@@ -35,14 +44,24 @@ const SLOT_MAPPINGS: SlotMapping[] = [
       "claude-code": "AGENT.md",
       cursor: ".cursor/rules/behavioral.mdc",
       copilot: ".github/instructions/behavioral.instructions.md",
+      codex: null,
+      opencode: null,
+      windsurf: null,
+      gemini: null,
+      junie: null,
     },
   },
   {
     slot: "identity",
     file: {
       "claude-code": "SOUL.md",
-      cursor: null, // not supported
-      copilot: null, // not supported
+      cursor: null,
+      copilot: null,
+      codex: null,
+      opencode: null,
+      windsurf: null,
+      gemini: null,
+      junie: null,
     },
   },
 ];
@@ -107,9 +126,16 @@ export async function compileInstructions(
       continue;
     }
 
+    // Deduplicate by output path: multiple targets that share a file (e.g. AGENTS.md)
+    // should produce one FileAction, not N identical ones. Track which paths we've
+    // already processed in this slot pass.
+    const seenPaths = new Set<string>();
+
     for (const target of targets) {
       const filePath = mapping.file[target];
       if (!filePath) continue; // slot not supported on this platform
+      if (seenPaths.has(filePath)) continue; // already processed (shared file)
+      seenPaths.add(filePath);
 
       const fullPath = fs.joinPath(cwd, filePath);
       const frontmatter = buildFrontmatter(target, mapping.slot);
@@ -179,6 +205,11 @@ export async function compileInstructions(
   }
 
   return { files, warnings };
+}
+
+/** The slot → platform → file mapping. Used by check.ts to avoid duplication. */
+export function getSlotMappings(): Array<{ slot: string; file: Partial<Record<TargetPlatform, string | null>> }> {
+  return SLOT_MAPPINGS;
 }
 
 /** All instruction file paths across all platforms (for --clean scanning). */

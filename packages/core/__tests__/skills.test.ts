@@ -86,4 +86,83 @@ describe("compileSkills", () => {
     expect(files.map((f) => f.path)).toContain(".cursor/skills/explain/SKILL.md");
     expect(files.map((f) => f.path)).toContain(".github/skills/explain/SKILL.md");
   });
+
+  // ── Phase 3: manifest-first resolution ──────────────────────
+
+  it("uses inline plugin.skills path from harness.yaml", async () => {
+    const fs = new MockFsProvider({
+      "/project/skills/my-skill/SKILL.md": "---\nname: my-skill\n---\n\n# My Skill",
+    });
+
+    const config = makeConfig([
+      {
+        name: "my-skill",
+        source: "owner/repo",
+        skills: [{ name: "my-skill", path: "skills/my-skill/SKILL.md" }],
+      },
+    ]);
+
+    const { files, skippedPlugins } = await compileSkills(config, ["cursor"], fs);
+    expect(skippedPlugins).toHaveLength(0);
+    expect(files[0].content).toContain("# My Skill");
+  });
+
+  it("reads plugin.json manifest from local source directory", async () => {
+    const fs = new MockFsProvider({
+      "/project/plugins/my-plugin/plugin.json": JSON.stringify({
+        skills: [{ name: "my-skill", path: "skills/SKILL.md" }],
+      }),
+      "/project/plugins/my-plugin/skills/SKILL.md": "---\nname: my-skill\n---\n\n# From Manifest",
+    });
+
+    const config = makeConfig([
+      { name: "my-plugin", source: "./plugins/my-plugin" },
+    ]);
+
+    const { files, skippedPlugins } = await compileSkills(config, ["cursor"], fs);
+    expect(skippedPlugins).toHaveLength(0);
+    expect(files[0].content).toContain("# From Manifest");
+  });
+
+  it("falls back to walker when source dir has no plugin.json", async () => {
+    const fs = new MockFsProvider({
+      "/project/plugins/my-plugin/SKILL.md": "---\nname: my-plugin\n---\n\n# Walked",
+    });
+
+    const config = makeConfig([
+      { name: "my-plugin", source: "./plugins/my-plugin" },
+    ]);
+
+    const { files, skippedPlugins } = await compileSkills(config, ["cursor"], fs);
+    expect(skippedPlugins).toHaveLength(0);
+    expect(files[0].content).toContain("# Walked");
+  });
+
+  it("checks harness cache for remote source plugins", async () => {
+    const fs = new MockFsProvider({
+      "/home/user/.harness/cache/owner/repo/SKILL.md": "---\nname: remote\n---\n\n# Cached",
+    });
+
+    const config = makeConfig([
+      { name: "remote", source: "owner/repo" },
+    ]);
+
+    const { files, skippedPlugins } = await compileSkills(config, ["cursor"], fs);
+    expect(skippedPlugins).toHaveLength(0);
+    expect(files[0].content).toContain("# Cached");
+  });
+
+  it("falls back to legacy paths when source dir not found", async () => {
+    const fs = new MockFsProvider({
+      "/home/user/.claude/skills/explain/SKILL.md": "---\nname: explain\n---\n\n# Legacy",
+    });
+
+    const config = makeConfig([
+      { name: "explain", source: "nonexistent/repo" },
+    ]);
+
+    const { files, skippedPlugins } = await compileSkills(config, ["cursor"], fs);
+    expect(skippedPlugins).toHaveLength(0);
+    expect(files[0].content).toContain("# Legacy");
+  });
 });

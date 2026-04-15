@@ -1,6 +1,14 @@
 // ── Target platforms ─────────────────────────────────────────
 
-export type TargetPlatform = "claude-code" | "cursor" | "copilot";
+export type TargetPlatform =
+  | "claude-code"
+  | "cursor"
+  | "copilot"
+  | "codex"
+  | "opencode"
+  | "windsurf"
+  | "gemini"
+  | "junie";
 
 // ── Harness config (parsed harness.yaml) ─────────────────────
 
@@ -26,6 +34,8 @@ export interface HarnessPlugin {
   description?: string;
   config?: Record<string, unknown>;
   integrity?: { sha256: string };
+  /** Manifest-declared skill locations within the plugin source directory. */
+  skills?: Array<{ name: string; path: string }>;
 }
 
 export interface McpServerStdio {
@@ -94,6 +104,7 @@ export interface CompileOptions {
   dryRun?: boolean;
   clean?: boolean;
   verbose?: boolean;
+  force?: boolean;
 }
 
 export type FileActionType =
@@ -117,6 +128,7 @@ export interface CompileResult {
   files: FileAction[];
   warnings: string[];
   skippedPlugins: string[];
+  upToDate?: boolean;
 }
 
 // ── Validation types ─────────────────────────────────────────

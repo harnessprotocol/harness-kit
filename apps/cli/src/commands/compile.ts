@@ -1,5 +1,5 @@
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { readFile, writeFile, unlink, mkdir } from "node:fs/promises";
+import { resolve, dirname, join } from "node:path";
 import chalk from "chalk";
 import { checkbox, confirm } from "@inquirer/prompts";
 import {
@@ -21,9 +21,47 @@ interface CompileFlags {
   dryRun?: boolean;
   clean?: boolean;
   verbose?: boolean;
+  force?: boolean;
 }
 
-const ALL_TARGETS: TargetPlatform[] = ["claude-code", "cursor", "copilot"];
+// ── Compile lock (PID-based) ─────────────────────────────────
+
+async function acquireLock(lockPath: string): Promise<void> {
+  try {
+    const content = await readFile(lockPath, "utf-8");
+    const pid = parseInt(content.trim(), 10);
+    if (!isNaN(pid)) {
+      try {
+        process.kill(pid, 0); // Throws if process doesn't exist
+        console.error(
+          chalk.red("Error:") +
+            ` Another compile is running (PID ${pid}). Wait for it to finish or delete ${lockPath}.`,
+        );
+        process.exit(1);
+      } catch {
+        // ESRCH: process is gone — stale lock, clean up silently
+      }
+    }
+  } catch {
+    // Lock file doesn't exist — that's fine
+  }
+
+  await mkdir(dirname(lockPath), { recursive: true });
+  await writeFile(lockPath, String(process.pid), "utf-8");
+}
+
+async function releaseLock(lockPath: string): Promise<void> {
+  try {
+    await unlink(lockPath);
+  } catch {
+    // Already gone
+  }
+}
+
+const ALL_TARGETS: TargetPlatform[] = [
+  "claude-code", "cursor", "copilot",
+  "codex", "opencode", "windsurf", "gemini", "junie",
+];
 
 function parseTargets(targetStr: string): TargetPlatform[] {
   if (targetStr === "all") return ALL_TARGETS;
@@ -92,12 +130,31 @@ export async function compileCommand(
     return;
   }
 
-  // Compile
-  const result = await compile(yamlString, targets, fs, {
-    dryRun: flags.dryRun,
-    clean: flags.clean,
-    verbose: flags.verbose,
-  });
+  // Stage 1: Acquire compile lock (skip for dry-run)
+  const lockPath = join(process.cwd(), ".harness", ".compile-lock");
+  if (!flags.dryRun) {
+    await acquireLock(lockPath);
+  }
+
+  let result;
+  try {
+    result = await compile(yamlString, targets, fs, {
+      dryRun: flags.dryRun,
+      clean: flags.clean,
+      verbose: flags.verbose,
+      force: flags.force,
+    });
+  } finally {
+    // Stage 11: Release lock
+    if (!flags.dryRun) {
+      await releaseLock(lockPath);
+    }
+  }
+
+  if (result.upToDate) {
+    console.log(chalk.dim("Already up to date."));
+    return;
+  }
 
   // Dry-run: show file previews
   if (flags.dryRun) {

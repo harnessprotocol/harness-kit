@@ -6,12 +6,7 @@ import type {
   TargetPlatform,
 } from "../types.js";
 import { readJsonOrDefault } from "../utils/read-json.js";
-
-const MCP_FILE_MAP: Record<TargetPlatform, string> = {
-  "claude-code": ".mcp.json",
-  cursor: ".cursor/mcp.json",
-  copilot: ".vscode/mcp.json",
-};
+import { getTarget } from "./targets.js";
 
 interface McpJsonEntry {
   type: string;
@@ -62,7 +57,13 @@ export async function compileMcpServers(
   }
 
   for (const target of targets) {
-    const filePath = MCP_FILE_MAP[target];
+    const integration = getTarget(target);
+    const filePath = integration.mcpConfigFile;
+    if (!filePath) {
+      // Tool uses global MCP config (e.g. Windsurf) — skip project-level write
+      warnings.push(`${integration.label}: MCP config is global-only, skipping project-level write`);
+      continue;
+    }
     const fullPath = fs.joinPath(cwd, filePath);
 
     const { data: existing, existed } = await readJsonOrDefault<Record<string, Record<string, unknown>>>(

@@ -28,7 +28,22 @@ export class SyncFsProvider implements FsProvider {
     return syncReadDir(this.projectDir, rel);
   }
 
+  async isDirectory(path: string): Promise<boolean> {
+    // Use readDir — if it resolves, it's a directory; if it throws, it's a file or missing.
+    try {
+      const rel = this.toRelative(path);
+      await syncReadDir(this.projectDir, rel);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
   writeFile(_path: string, _content: string): Promise<void> {
+    return Promise.reject(new Error("SyncFsProvider is read-only"));
+  }
+
+  renameFile(_from: string, _to: string): Promise<void> {
     return Promise.reject(new Error("SyncFsProvider is read-only"));
   }
 

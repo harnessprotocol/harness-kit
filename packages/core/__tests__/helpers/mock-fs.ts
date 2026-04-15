@@ -43,6 +43,21 @@ export class MockFsProvider implements FsProvider {
     // No-op for mock — directories are implicit
   }
 
+  async renameFile(from: string, to: string): Promise<void> {
+    const content = this.files.get(from);
+    if (content === undefined) throw new Error(`ENOENT: no such file: ${from}`);
+    this.files.set(to, content);
+    this.files.delete(from);
+  }
+
+  async isDirectory(path: string): Promise<boolean> {
+    const prefix = path.endsWith("/") ? path : path + "/";
+    for (const key of this.files.keys()) {
+      if (key.startsWith(prefix)) return true;
+    }
+    return false;
+  }
+
   async readDir(path: string): Promise<string[]> {
     const prefix = path.endsWith("/") ? path : path + "/";
     const entries = new Set<string>();

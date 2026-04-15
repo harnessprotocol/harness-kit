@@ -1,7 +1,8 @@
-import { writeFile, access } from "node:fs/promises";
-import { resolve, basename } from "node:path";
+import { writeFile, access, mkdir } from "node:fs/promises";
+import { resolve, basename, join } from "node:path";
 import chalk from "chalk";
 import { confirm, input, checkbox, Separator } from "@inquirer/prompts";
+import { validateSkillName } from "@harness-kit/core";
 
 interface PluginChoice {
   name: string;
@@ -188,6 +189,99 @@ function buildYaml(
     ``,
   ].join("\n");
 }
+
+// ── Skill scaffold ────────────────────────────────────────────
+
+export function scaffoldSkillMd(name: string): string {
+  return [
+    "---",
+    `name: ${name}`,
+    "description: TODO — describe what this skill does and when to use it",
+    "---",
+    "",
+    `# ${name}`,
+    "",
+    "## When to use",
+    "Describe when this skill should be invoked.",
+    "",
+    "## Instructions",
+    "Provide step-by-step instructions here.",
+    "",
+  ].join("\n");
+}
+
+export function scaffoldPluginJson(name: string): string {
+  return JSON.stringify(
+    {
+      name,
+      version: "0.1.0",
+      description: "TODO",
+      skills: [{ name, path: `skills/${name}` }],
+    },
+    null,
+    2,
+  ) + "\n";
+}
+
+export async function initSkillCommand(name: string): Promise<void> {
+  if (!validateSkillName(name)) {
+    console.error(
+      chalk.red("Error:") +
+        ` Invalid skill name "${name}" — must be lowercase kebab-case (a-z, 0-9, hyphens), max 64 chars, no leading/trailing hyphens.`,
+    );
+    process.exit(1);
+  }
+
+  const skillDir = resolve(`skills/${name}`);
+  const skillMdPath = join(skillDir, "SKILL.md");
+  const pluginJsonPath = resolve("plugin.json");
+
+  // Check for conflicts
+  let skillExists = false;
+  try {
+    await access(skillMdPath);
+    skillExists = true;
+  } catch {
+    /* not found */
+  }
+
+  if (skillExists) {
+    const overwrite = await confirm({
+      message: `${skillMdPath} already exists. Overwrite?`,
+      default: false,
+    });
+    if (!overwrite) {
+      console.log(chalk.dim("Aborted."));
+      return;
+    }
+  }
+
+  await mkdir(skillDir, { recursive: true });
+  await writeFile(skillMdPath, scaffoldSkillMd(name), "utf-8");
+
+  // Create or update plugin.json
+  let pluginJsonExists = false;
+  try {
+    await access(pluginJsonPath);
+    pluginJsonExists = true;
+  } catch {
+    /* not found */
+  }
+
+  if (!pluginJsonExists) {
+    await writeFile(pluginJsonPath, scaffoldPluginJson(name), "utf-8");
+    console.log(chalk.green("Created plugin.json"));
+  }
+
+  console.log(chalk.green(`Created skills/${name}/SKILL.md`));
+  console.log(
+    chalk.dim(
+      `Edit ${chalk.white(`skills/${name}/SKILL.md`)} to describe your skill, then add it to harness.yaml.`,
+    ),
+  );
+}
+
+// ── Harness scaffold ──────────────────────────────────────────
 
 export async function initCommand(outputPath: string): Promise<void> {
   const resolved = resolve(outputPath);

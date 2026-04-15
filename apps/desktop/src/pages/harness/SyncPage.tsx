@@ -16,11 +16,18 @@ import { SyncFsProvider } from "../../lib/sync-fs";
 import SyncPreview from "./sync/SyncPreview";
 import BackupHistory from "./sync/BackupHistory";
 
-const ALL_PLATFORMS: TargetPlatform[] = ["claude-code", "cursor", "copilot"];
+const ALL_PLATFORMS: TargetPlatform[] = [
+  "claude-code", "cursor", "copilot", "codex", "opencode", "windsurf", "gemini", "junie",
+];
 const PLATFORM_LABELS: Record<TargetPlatform, string> = {
   "claude-code": "Claude Code",
   cursor: "Cursor",
   copilot: "Copilot",
+  codex: "Codex",
+  opencode: "OpenCode",
+  windsurf: "Windsurf",
+  gemini: "Gemini CLI",
+  junie: "Junie",
 };
 const RECENT_DIRS_KEY = "harness-kit-sync-recent-dirs";
 const MAX_RECENT = 10;

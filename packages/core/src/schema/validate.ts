@@ -52,27 +52,51 @@ function formatPath(instancePath: string): string {
     .replace(/\//g, " → ");
 }
 
+// ── Skill name validation ─────────────────────────────────────
+
+const VALID_SKILL_NAME_RE = /^[a-z0-9]+(-[a-z0-9]+)*$/;
+
+export function validateSkillName(name: string): boolean {
+  if (!name || name.length > 64) return false;
+  return VALID_SKILL_NAME_RE.test(name);
+}
+
 export function validateHarness(config: unknown): ValidationResult {
   const doc = config as Record<string, unknown>;
   const legacy = isLegacyFormat(doc);
 
-  const valid = validate(config);
+  const schemaValid = validate(config);
 
-  if (valid) {
-    return { valid: true, errors: [], isLegacyFormat: legacy };
+  const errors: ValidationError[] = schemaValid
+    ? []
+    : (validate.errors ?? []).map((err) => ({
+        path: formatPath(err.instancePath),
+        message: err.message ?? "Unknown validation error",
+        fix: getFix(
+          err.schemaPath,
+          err.keyword,
+          (err.params as Record<string, unknown>) ?? {},
+        ),
+      }));
+
+  // Validate skill names on plugins (runs even when schema is valid)
+  const plugins = (doc?.plugins ?? []) as Array<Record<string, unknown>>;
+  for (const plugin of plugins) {
+    const name = String(plugin.name ?? "");
+    if (!validateSkillName(name)) {
+      errors.push({
+        path: `plugins → ${name}`,
+        message: `Invalid skill name "${name}" — must be lowercase kebab-case (a-z, 0-9, hyphens), max 64 characters, no leading/trailing hyphens.`,
+        fix: `Rename to a valid slug, e.g. "${name.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "")}"`,
+      });
+    }
   }
 
-  const errors: ValidationError[] = (validate.errors ?? []).map((err) => ({
-    path: formatPath(err.instancePath),
-    message: err.message ?? "Unknown validation error",
-    fix: getFix(
-      err.schemaPath,
-      err.keyword,
-      (err.params as Record<string, unknown>) ?? {},
-    ),
-  }));
-
-  return { valid: false, errors, isLegacyFormat: legacy };
+  return {
+    valid: errors.length === 0,
+    errors,
+    isLegacyFormat: legacy,
+  };
 }
 
 export function validateHarnessYaml(yamlString: string): ValidationResult {

@@ -40,17 +40,41 @@ export type {
 export { parseHarness } from "./parser/parse-harness.js";
 
 // Validation
-export { validateHarness, validateHarnessYaml } from "./schema/validate.js";
+export { validateHarness, validateHarnessYaml, validateSkillName } from "./schema/validate.js";
 
 // Platform detection
 export { detectPlatforms } from "./detect/detect-platforms.js";
 
 // Compile
-export { compile } from "./compile/compile.js";
-export { compileInstructions, getAllInstructionFilePaths } from "./compile/instructions.js";
+export { compile, computeSourceFingerprint } from "./compile/compile.js";
+export { compileInstructions, getAllInstructionFilePaths, getSlotMappings } from "./compile/instructions.js";
 export { compileMcpServers } from "./compile/mcp-servers.js";
 export { compileSkills } from "./compile/skills.js";
 export { compilePermissions, buildPermissionsText } from "./compile/permissions.js";
+
+// Discovery (manifest-first skill resolution utilities)
+export { findSkillFiles, computeSourceDir } from "./compile/discovery.js";
+
+// Lockfile
+export type { LockedPlugin, LockFile } from "./compile/lockfile.js";
+export {
+  readLockFile,
+  writeLockFile,
+  isLockFileFresh,
+  getMissingLockEntries,
+} from "./compile/lockfile.js";
+
+// Check (drift detection)
+export type { CheckEntry, CheckResult } from "./compile/check.js";
+export {
+  computeFileHash,
+  extractMarkerContent,
+  instructionDrift,
+  directorySignature,
+  directoriesEqual,
+  checkCompiled,
+  getCheckableTargets,
+} from "./compile/check.js";
 
 // Markers
 export {

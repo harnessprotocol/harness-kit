@@ -11,7 +11,7 @@ Portable configuration for AI coding tools.
 [![Plugins](https://img.shields.io/badge/plugins-16-8A2BE2?style=flat-square)](.claude-plugin/marketplace.json)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](CONTRIBUTING.md)
 
-Works with [Claude Code](https://claude.ai/claude-code) · [Cursor](https://cursor.com) · [GitHub Copilot](https://github.com/features/copilot)
+Works with [Claude Code](https://claude.ai/claude-code) · [Cursor](https://cursor.com) · [GitHub Copilot](https://github.com/features/copilot) · [Codex](https://openai.com/codex) · [OpenCode](https://opencode.ai) · [Windsurf](https://codeium.com/windsurf) · [Gemini CLI](https://github.com/google-gemini/gemini-cli) · [Junie](https://www.jetbrains.com/junie/)
 
 </div>
 
