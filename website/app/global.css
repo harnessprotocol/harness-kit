@@ -233,7 +233,7 @@ h1, h2, h3 {
 }
 
 /* ── Sidebar — spread out with icons + cyan glow active ── */
-.dark [data-fumadocs-sidebar] {
+[data-fumadocs-sidebar] {
   padding: 1rem 0.5rem;
 }
 
@@ -251,16 +251,24 @@ h1, h2, h3 {
 .dark [data-fumadocs-sidebar] a:hover {
   background: hsla(220, 10%, 50%, 0.1);
 }
+[data-fumadocs-sidebar] [aria-current="page"],
+[data-fumadocs-sidebar] [data-active="true"] {
+  border-left: 2px solid var(--accent);
+  background: linear-gradient(
+    90deg,
+    var(--accent-light) 0%,
+    rgba(14, 165, 233, 0.02) 100%
+  );
+  padding-left: 10px;
+  transition: all 0.2s ease;
+}
 .dark [data-fumadocs-sidebar] [aria-current="page"],
 .dark [data-fumadocs-sidebar] [data-active="true"] {
-  border-left: 2px solid var(--accent);
   background: linear-gradient(
     90deg,
     var(--accent-light) 0%,
     rgba(34, 177, 236, 0.03) 100%
   );
-  padding-left: 10px;
-  transition: all 0.2s ease;
   box-shadow: 0 0 20px -6px var(--accent-glow);
 }
 
@@ -270,7 +278,7 @@ h1, h2, h3 {
   border-left: 2px solid transparent;
   padding-left: 0.5rem;
 }
-.dark [data-fumadocs-toc] [data-active="true"] {
+[data-fumadocs-toc] [data-active="true"] {
   color: var(--accent);
   border-left-color: var(--accent);
 }
@@ -290,11 +298,11 @@ figure:has(pre) {
 pre {
   border: none !important;
   position: relative;
+  border-radius: 0.75rem;
+  background: var(--bg-surface) !important;
+  box-shadow: var(--shadow-sm);
 }
 .dark pre {
-  background: var(--bg-surface) !important;
-  border: none !important;
-  border-radius: 0.75rem;
   box-shadow: 0 -1px 20px -8px hsla(199, 65%, 50%, 0.15),
               0 4px 16px -4px hsla(220, 25%, 0%, 0.3);
 }
@@ -326,7 +334,7 @@ pre button:hover {
 }
 
 /* ── Blockquotes as callouts ── */
-.dark blockquote {
+blockquote {
   border-left: 3px solid var(--accent);
   background: var(--accent-light);
   border-radius: 0 0.5rem 0.5rem 0;
@@ -334,13 +342,20 @@ pre button:hover {
 }
 
 /* ── Callouts — colored left border, no outer border ── */
-.dark [role="alert"],
-.dark [data-callout] {
+[role="alert"],
+[data-callout] {
   border: none !important;
   border-left: 3px solid var(--callout-color, var(--accent)) !important;
   border-radius: 0 0.75rem 0.75rem 0;
-  background: hsla(220, 18%, 8%, 0.5) !important;
   padding: 1rem 1.25rem;
+}
+[role="alert"],
+[data-callout] {
+  background: rgba(0, 0, 0, 0.03) !important;
+}
+.dark [role="alert"],
+.dark [data-callout] {
+  background: hsla(220, 18%, 8%, 0.5) !important;
 }
 
 /* ── Tables — borderless with row tinting ── */

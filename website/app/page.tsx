@@ -1,11 +1,9 @@
 import Link from 'next/link';
 import { SiteNav } from '@/components/site/SiteNav';
 import { SiteFooter } from '@/components/site/SiteFooter';
-import { HeroGlow } from '@/components/site/HeroGlow';
 import { CommandBox } from '@/components/site/CommandBox';
 import { SectionHeader } from '@/components/site/SectionHeader';
 import { FeatureTile } from '@/components/site/FeatureTile';
-import { PluginCard } from '@/components/site/PluginCard';
 import { DesktopMock } from '@/components/site/DesktopMock';
 
 /* ── Icons (inline SVG, no icon library) ── */
@@ -50,52 +48,7 @@ const features = [
     icon: <ShareIcon />,
     title: 'Share',
     description:
-      'Your whole setup fits in one file. Hand it to a teammate and they\'re running exactly what you run — same plugins, same skills, same workflows.',
-  },
-];
-
-const plugins = [
-  {
-    name: 'research',
-    description: 'Turn any source into a structured, compounding knowledge base.',
-    href: '/docs/plugins/research',
-    accent: 'var(--cat-purple)',
-  },
-  {
-    name: 'explain',
-    description: 'Layered explanations — from one-liner to deep dive — for files, functions, or whole directories.',
-    href: '/docs/plugins/explain',
-    accent: 'var(--cat-blue)',
-  },
-  {
-    name: 'data-lineage',
-    description: 'Column-level lineage through SQL, Kafka, Spark, and JDBC. Trace every field back to its source.',
-    href: '/docs/plugins/data-lineage',
-    accent: 'var(--cat-cyan)',
-  },
-  {
-    name: 'orient',
-    description: 'Drop into any topic and get the context you need — graph, knowledge, research, all at once.',
-    href: '/docs/plugins/orient',
-    accent: 'var(--cat-green)',
-  },
-  {
-    name: 'capture-session',
-    description: 'Save the state of a session so future-you (or a teammate) can pick up where you left off.',
-    href: '/docs/plugins/capture-session',
-    accent: 'var(--cat-cyan)',
-  },
-  {
-    name: 'review',
-    description: 'Code review across a branch, a PR, or a path — severity labels and cross-file analysis included.',
-    href: '/docs/plugins/review',
-    accent: 'var(--cat-green)',
-  },
-  {
-    name: 'docgen',
-    description: 'Generate or update README, API docs, architecture overview, or changelog.',
-    href: '/docs/plugins/docgen',
-    accent: 'var(--cat-blue)',
+      "Your whole setup fits in one file. Hand it to a teammate and they're running exactly what you run — same plugins, same skills, same workflows.",
   },
 ];
 
@@ -128,73 +81,45 @@ export default function HomePage() {
       <SiteNav />
 
       {/* ── Hero ── */}
-      <section className="relative overflow-hidden">
-        <HeroGlow />
-        <div className="relative mx-auto max-w-6xl px-6 pb-20 pt-24">
-          <div className="grid items-center gap-12 lg:grid-cols-2">
-            {/* Left: copy */}
-            <div>
-              <div
-                className="mb-4 inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold"
-                style={{
-                  color: 'var(--accent-fg)',
-                  borderColor: 'var(--accent-glow)',
-                  background: 'var(--accent-light)',
-                }}
-              >
-                <span
-                  className="inline-block size-1.5 rounded-full"
-                  style={{ background: 'var(--accent)' }}
-                />
-                Open source · v0.1
-              </div>
-
-              <h1 className="font-display mb-5 text-4xl font-bold tracking-tight text-fd-foreground sm:text-5xl">
-                The configuration console for all your harnesses.
-              </h1>
-
-              <p className="mb-8 text-lg leading-relaxed text-fd-muted-foreground">
-                Configure, observe, and share your harness from one native app, built on an open harness.yaml spec.
-              </p>
-
-              <div className="mb-8">
-                <CommandBox command="/plugin marketplace add harnessprotocol/harness-kit" />
-              </div>
-
-              <div className="flex flex-wrap gap-3">
-                <Link
-                  href="/docs/getting-started/installation"
-                  className="rounded-lg px-5 py-2.5 text-sm font-medium text-white no-underline transition-all"
-                  style={{
-                    background: 'var(--accent)',
-                    boxShadow: '0 4px 14px var(--accent-glow)',
-                  }}
-                >
-                  Get started
-                </Link>
-                <Link
-                  href="/docs/plugins/overview"
-                  className="rounded-lg border px-5 py-2.5 text-sm font-medium text-fd-foreground no-underline transition-all hover:border-fd-primary/40"
-                  style={{
-                    borderColor: 'var(--border-base)',
-                    background: 'var(--bg-elevated)',
-                  }}
-                >
-                  Browse plugins
-                </Link>
-              </div>
-            </div>
-
-            {/* Right: interactive desktop mock */}
-            <div className="hidden lg:block">
-              <DesktopMock interactive defaultSection="observatory" />
-            </div>
+      <section className="relative overflow-hidden border-b border-fd-border/30">
+        {/* Copy block */}
+        <div className="mx-auto max-w-3xl px-6 pb-10 pt-20 text-center">
+          <h1 className="font-display mb-5 text-[2.6rem] font-bold leading-tight tracking-tight text-fd-foreground sm:text-5xl">
+            The configuration console<br className="hidden sm:block" />
+            for all your harnesses.
+          </h1>
+          <p className="mx-auto mb-8 max-w-lg text-lg leading-relaxed text-fd-muted-foreground">
+            Configure, observe, and share your harness from one native app, built on an open harness.yaml spec.
+          </p>
+          <div className="mb-8 flex justify-center">
+            <CommandBox command="/plugin marketplace add harnessprotocol/harness-kit" />
           </div>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/docs/getting-started/installation"
+              className="rounded-lg px-5 py-2.5 text-sm font-semibold text-white no-underline transition-all hover:opacity-90"
+              style={{ background: 'var(--accent)', boxShadow: '0 2px 12px var(--accent-glow)' }}
+            >
+              Get started
+            </Link>
+            <Link
+              href="/explore"
+              className="rounded-lg border px-5 py-2.5 text-sm font-medium text-fd-foreground no-underline transition-all hover:border-fd-primary/40"
+              style={{ borderColor: 'var(--border-strong)', background: 'var(--bg-elevated)' }}
+            >
+              Explore the app →
+            </Link>
+          </div>
+        </div>
+
+        {/* Product hero — the app is the hero */}
+        <div className="mx-auto max-w-5xl px-4 pb-16 sm:px-6">
+          <DesktopMock interactive defaultSection="observatory" />
         </div>
       </section>
 
       {/* ── What's a harness? ── */}
-      <section className="border-t border-fd-border/30 py-20">
+      <section className="border-b border-fd-border/30 py-20">
         <div className="mx-auto max-w-3xl px-6 text-center">
           <div
             className="mb-3 text-xs font-semibold uppercase tracking-[0.1em]"
@@ -220,16 +145,15 @@ export default function HomePage() {
 
       {/* ── App showcase strip ── */}
       <section
-        className="border-t border-fd-border/30 py-24"
+        className="border-b border-fd-border/30 py-24"
         style={{ background: 'var(--bg-base)' }}
       >
         <div className="mx-auto max-w-6xl px-6">
           <SectionHeader
             eyebrow="The desktop app"
             title="Eleven surfaces, one keyboard"
-            subtitle="Observability, memory, a plugin marketplace, a kanban board, AI chat, cross-harness parity — everything your AI coding tool forgot to give you, in one keyboard-first app that travels with your harness."
+            subtitle="Observability, memory, a plugin marketplace, a kanban board, AI chat, cross-harness parity — everything your AI coding tool forgot to give you, in one keyboard-first app."
           />
-
           <div className="grid gap-8 sm:grid-cols-2">
             {showcaseCards.map((card) => (
               <div key={card.section}>
@@ -239,12 +163,8 @@ export default function HomePage() {
                   compact
                 />
                 <div className="mt-4 px-1">
-                  <p className="mb-1 text-sm font-semibold text-fd-foreground">
-                    {card.title}
-                  </p>
-                  <p className="text-sm leading-relaxed text-fd-muted-foreground">
-                    {card.desc}
-                  </p>
+                  <p className="mb-1 text-sm font-semibold text-fd-foreground">{card.title}</p>
+                  <p className="text-sm leading-relaxed text-fd-muted-foreground">{card.desc}</p>
                 </div>
               </div>
             ))}
@@ -253,63 +173,24 @@ export default function HomePage() {
       </section>
 
       {/* ── How it works: Configure · Observe · Share ── */}
-      <section className="border-t border-fd-border/30 py-24">
-        <div className="relative mx-auto max-w-5xl px-6">
-          <div
-            className="pointer-events-none absolute inset-0"
-            style={{ background: 'radial-gradient(ellipse at center, var(--accent-glow) 0%, transparent 70%)' }}
-            aria-hidden="true"
-          />
-          <div className="relative">
-            <SectionHeader
-              eyebrow="How it works"
-              title="Configure. Observe. Share."
-              subtitle="That's the whole loop. Your harness travels with you to every machine, every tool, every teammate."
-            />
-            <div className="grid gap-6 sm:grid-cols-3">
-              {features.map((f) => (
-                <FeatureTile key={f.title} icon={f.icon} title={f.title} description={f.description} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── Plugin showcase ── */}
-      <section
-        className="border-t border-fd-border/30 py-24"
-        style={{ background: 'var(--bg-base)' }}
-      >
+      <section className="border-b border-fd-border/30 py-24">
         <div className="mx-auto max-w-5xl px-6">
           <SectionHeader
-            eyebrow="Marketplace"
-            title="Seven plugins shipping today"
-            subtitle="Each one is a portable command. Each one travels with your harness.yaml."
+            eyebrow="How it works"
+            title="Configure. Observe. Share."
+            subtitle="That's the whole loop. Your harness travels with you to every machine, every tool, every teammate."
           />
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {plugins.map((p) => (
-              <PluginCard
-                key={p.name}
-                name={p.name}
-                description={p.description}
-                href={p.href}
-                accent={p.accent}
-              />
+          <div className="grid gap-6 sm:grid-cols-3">
+            {features.map((f) => (
+              <FeatureTile key={f.title} icon={f.icon} title={f.title} description={f.description} />
             ))}
           </div>
         </div>
       </section>
 
       {/* ── CTA band ── */}
-      <section className="relative border-t border-fd-border/30 py-24 text-center">
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{
-            background: 'linear-gradient(180deg, transparent 0%, var(--accent-light) 50%, transparent 100%)',
-          }}
-          aria-hidden="true"
-        />
-        <div className="relative mx-auto max-w-2xl px-6">
+      <section className="py-24 text-center">
+        <div className="mx-auto max-w-2xl px-6">
           <h2 className="font-display mb-4 text-3xl font-bold tracking-tight text-fd-foreground sm:text-4xl">
             Stop rebuilding your setup.
           </h2>
@@ -318,11 +199,8 @@ export default function HomePage() {
           </p>
           <Link
             href="/docs/getting-started/installation"
-            className="inline-flex items-center rounded-lg px-6 py-3 text-sm font-semibold text-white no-underline transition-all"
-            style={{
-              background: 'var(--accent)',
-              boxShadow: '0 4px 20px var(--accent-glow)',
-            }}
+            className="inline-flex items-center rounded-lg px-6 py-3 text-sm font-semibold text-white no-underline transition-all hover:opacity-90"
+            style={{ background: 'var(--accent)', boxShadow: '0 4px 20px var(--accent-glow)' }}
           >
             Get started →
           </Link>

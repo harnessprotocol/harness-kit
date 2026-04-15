@@ -472,17 +472,30 @@ export function DesktopMock({
           <div className={`${styles.pane} ${activeSection === 'memory' ? styles.paneActive : ''}`} style={{ position: 'relative' }}>
             <div className={styles.memoryGraphBg} />
             <div className={styles.memoryNodes}>
+              {/* SVG edges — rendered before nodes so they appear behind */}
+              <svg
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
+                aria-hidden="true"
+              >
+                {/* harness → plugin */}
+                <line x1="18%" y1="15%" x2="58%" y2="12%" stroke="rgba(148,163,184,0.35)" strokeWidth="1" />
+                {/* harness → skill */}
+                <line x1="18%" y1="15%" x2="36%" y2="42%" stroke="rgba(148,163,184,0.35)" strokeWidth="1" />
+                {/* plugin → skill */}
+                <line x1="58%" y1="12%" x2="36%" y2="42%" stroke="rgba(148,163,184,0.35)" strokeWidth="1" />
+                {/* skill → MCP */}
+                <line x1="36%" y1="42%" x2="72%" y2="48%" stroke="rgba(34,177,236,0.40)" strokeWidth="1" />
+                {/* skill → hook */}
+                <line x1="36%" y1="42%" x2="12%" y2="68%" stroke="rgba(168,85,247,0.35)" strokeWidth="1" />
+                {/* skill → CLAUDE.md */}
+                <line x1="36%" y1="42%" x2="50%" y2="72%" stroke="rgba(16,185,129,0.35)" strokeWidth="1" />
+              </svg>
               <div className={styles.memoryNode} style={{ left: '18%', top: '15%' }}>harness</div>
               <div className={`${styles.memoryNode} ${styles.memoryNodeAltC}`} style={{ left: '58%', top: '12%' }}>plugin</div>
               <div className={styles.memoryNode} style={{ left: '36%', top: '42%' }}>skill</div>
               <div className={`${styles.memoryNode} ${styles.memoryNodeAltA}`} style={{ left: '72%', top: '48%' }}>MCP</div>
               <div className={`${styles.memoryNode} ${styles.memoryNodeAltB}`} style={{ left: '12%', top: '68%' }}>hook</div>
               <div className={`${styles.memoryNode} ${styles.memoryNodeAltC}`} style={{ left: '50%', top: '72%' }}>CLAUDE.md</div>
-              <div className={styles.memoryEdge} style={{ left: '25%', top: '24%', width: 140, transform: 'rotate(22deg)' }} />
-              <div className={styles.memoryEdge} style={{ left: '44%', top: '20%', width: 100, transform: 'rotate(60deg)' }} />
-              <div className={styles.memoryEdge} style={{ left: '43%', top: '50%', width: 160, transform: 'rotate(2deg)' }} />
-              <div className={styles.memoryEdge} style={{ left: '24%', top: '53%', width: 130, transform: 'rotate(35deg)' }} />
-              <div className={styles.memoryEdge} style={{ left: '42%', top: '76%', width: 120, transform: 'rotate(-5deg)' }} />
             </div>
           </div>
         </div>
