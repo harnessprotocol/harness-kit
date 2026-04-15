@@ -39,6 +39,28 @@ export function estimateTotalCost(
   }, 0);
 }
 
+/**
+ * Approximate daily cost per model from raw daily token totals.
+ *
+ * NOTE: DailyModelTokens.tokensByModel stores a single aggregate per model
+ * (input + output + cache combined) — no per-day input/output split is
+ * preserved by the Rust collector. We price the full daily total at the
+ * model's OUTPUT rate (the dominant cost driver at ~5× input rates), which
+ * makes the approximation trend toward the accurate all-time cost figure
+ * rather than dramatically under-counting. Use estimateTotalCost(mergedModelUsage)
+ * for exact all-time figures that do have the split.
+ */
+export function estimateDailyCostByModel(
+  tokensByModel: Record<string, number>,
+): Record<string, number> {
+  return Object.fromEntries(
+    Object.entries(tokensByModel).map(([model, tokens]) => {
+      const pricing = MODEL_PRICING[model] ?? DEFAULT_PRICING;
+      return [model, (tokens / 1_000_000) * pricing.outputPer1M];
+    }),
+  );
+}
+
 /** Format a USD cost value for display (e.g. "$0.84", "$1.20"). */
 export function formatCost(usd: number): string {
   if (usd === 0) return "$0.00";

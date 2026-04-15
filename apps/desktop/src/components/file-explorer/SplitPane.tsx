@@ -59,7 +59,7 @@ export default function SplitPane({ left, right, collapsed, onToggleCollapsed }:
   return (
     <div
       ref={containerRef}
-      style={{ display: "flex", flex: 1, minHeight: 0, overflow: "hidden" }}
+      style={{ display: "flex", height: "100%", minHeight: 0, overflow: "hidden" }}
     >
       {/* Left panel */}
       <AnimatePresence initial={false}>
