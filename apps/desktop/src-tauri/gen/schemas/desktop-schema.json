@@ -1160,10 +1160,22 @@
                         "markdownDescription": "Enables the size command without any pre-configured scope."
                       },
                       {
+                        "description": "Enables the start_accessing_security_scoped_resource command without any pre-configured scope.",
+                        "type": "string",
+                        "const": "fs:allow-start-accessing-security-scoped-resource",
+                        "markdownDescription": "Enables the start_accessing_security_scoped_resource command without any pre-configured scope."
+                      },
+                      {
                         "description": "Enables the stat command without any pre-configured scope.",
                         "type": "string",
                         "const": "fs:allow-stat",
                         "markdownDescription": "Enables the stat command without any pre-configured scope."
+                      },
+                      {
+                        "description": "Enables the stop_accessing_security_scoped_resource command without any pre-configured scope.",
+                        "type": "string",
+                        "const": "fs:allow-stop-accessing-security-scoped-resource",
+                        "markdownDescription": "Enables the stop_accessing_security_scoped_resource command without any pre-configured scope."
                       },
                       {
                         "description": "Enables the truncate command without any pre-configured scope.",
@@ -1316,10 +1328,22 @@
                         "markdownDescription": "Denies the size command without any pre-configured scope."
                       },
                       {
+                        "description": "Denies the start_accessing_security_scoped_resource command without any pre-configured scope.",
+                        "type": "string",
+                        "const": "fs:deny-start-accessing-security-scoped-resource",
+                        "markdownDescription": "Denies the start_accessing_security_scoped_resource command without any pre-configured scope."
+                      },
+                      {
                         "description": "Denies the stat command without any pre-configured scope.",
                         "type": "string",
                         "const": "fs:deny-stat",
                         "markdownDescription": "Denies the stat command without any pre-configured scope."
+                      },
+                      {
+                        "description": "Denies the stop_accessing_security_scoped_resource command without any pre-configured scope.",
+                        "type": "string",
+                        "const": "fs:deny-stop-accessing-security-scoped-resource",
+                        "markdownDescription": "Denies the stop_accessing_security_scoped_resource command without any pre-configured scope."
                       },
                       {
                         "description": "Denies the truncate command without any pre-configured scope.",
@@ -2199,6 +2223,36 @@
           "markdownDescription": "Enables the add_to_parity_baseline command without any pre-configured scope."
         },
         {
+          "description": "Enables the agent_server_check_installed command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-agent-server-check-installed",
+          "markdownDescription": "Enables the agent_server_check_installed command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the agent_server_install command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-agent-server-install",
+          "markdownDescription": "Enables the agent_server_install command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the agent_server_restart command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-agent-server-restart",
+          "markdownDescription": "Enables the agent_server_restart command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the agent_server_start command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-agent-server-start",
+          "markdownDescription": "Enables the agent_server_start command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the ai_stream_chat command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-ai-stream-chat",
+          "markdownDescription": "Enables the ai_stream_chat command without any pre-configured scope."
+        },
+        {
           "description": "Enables the apply_security_preset command without any pre-configured scope.",
           "type": "string",
           "const": "allow-apply-security-preset",
@@ -2407,6 +2461,18 @@
           "type": "string",
           "const": "allow-export-plugin-to-folder",
           "markdownDescription": "Enables the export_plugin_to_folder command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_agent_server_token command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-agent-server-token",
+          "markdownDescription": "Enables the get_agent_server_token command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_ai_config command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-ai-config",
+          "markdownDescription": "Enables the get_ai_config command without any pre-configured scope."
         },
         {
           "description": "Enables the get_comparator_analytics command without any pre-configured scope.",
@@ -2775,6 +2841,12 @@
           "markdownDescription": "Enables the scan_claude_config command without any pre-configured scope."
         },
         {
+          "description": "Enables the set_ai_config command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-ai-config",
+          "markdownDescription": "Enables the set_ai_config command without any pre-configured scope."
+        },
+        {
           "description": "Enables the set_keychain_secret command without any pre-configured scope.",
           "type": "string",
           "const": "allow-set-keychain-secret",
@@ -2917,6 +2989,36 @@
           "type": "string",
           "const": "deny-add-to-parity-baseline",
           "markdownDescription": "Denies the add_to_parity_baseline command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the agent_server_check_installed command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-agent-server-check-installed",
+          "markdownDescription": "Denies the agent_server_check_installed command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the agent_server_install command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-agent-server-install",
+          "markdownDescription": "Denies the agent_server_install command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the agent_server_restart command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-agent-server-restart",
+          "markdownDescription": "Denies the agent_server_restart command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the agent_server_start command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-agent-server-start",
+          "markdownDescription": "Denies the agent_server_start command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the ai_stream_chat command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-ai-stream-chat",
+          "markdownDescription": "Denies the ai_stream_chat command without any pre-configured scope."
         },
         {
           "description": "Denies the apply_security_preset command without any pre-configured scope.",
@@ -3127,6 +3229,18 @@
           "type": "string",
           "const": "deny-export-plugin-to-folder",
           "markdownDescription": "Denies the export_plugin_to_folder command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_agent_server_token command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-agent-server-token",
+          "markdownDescription": "Denies the get_agent_server_token command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_ai_config command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-ai-config",
+          "markdownDescription": "Denies the get_ai_config command without any pre-configured scope."
         },
         {
           "description": "Denies the get_comparator_analytics command without any pre-configured scope.",
@@ -3493,6 +3607,12 @@
           "type": "string",
           "const": "deny-scan-claude-config",
           "markdownDescription": "Denies the scan_claude_config command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_ai_config command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-ai-config",
+          "markdownDescription": "Denies the set_ai_config command without any pre-configured scope."
         },
         {
           "description": "Denies the set_keychain_secret command without any pre-configured scope.",
@@ -5595,22 +5715,22 @@
           "markdownDescription": "Denies the unminimize command without any pre-configured scope."
         },
         {
-          "description": "This permission set configures the types of dialogs\navailable from the dialog plugin.\n\n#### Granted Permissions\n\nAll dialog types are enabled.\n\n\n\n#### This default permission set includes:\n\n- `allow-ask`\n- `allow-confirm`\n- `allow-message`\n- `allow-save`\n- `allow-open`",
+          "description": "This permission set configures the types of dialogs\navailable from the dialog plugin.\n\n#### Granted Permissions\n\nAll dialog types are enabled.\n\n\n\n#### This default permission set includes:\n\n- `allow-message`\n- `allow-save`\n- `allow-open`",
           "type": "string",
           "const": "dialog:default",
-          "markdownDescription": "This permission set configures the types of dialogs\navailable from the dialog plugin.\n\n#### Granted Permissions\n\nAll dialog types are enabled.\n\n\n\n#### This default permission set includes:\n\n- `allow-ask`\n- `allow-confirm`\n- `allow-message`\n- `allow-save`\n- `allow-open`"
+          "markdownDescription": "This permission set configures the types of dialogs\navailable from the dialog plugin.\n\n#### Granted Permissions\n\nAll dialog types are enabled.\n\n\n\n#### This default permission set includes:\n\n- `allow-message`\n- `allow-save`\n- `allow-open`"
         },
         {
-          "description": "Enables the ask command without any pre-configured scope.",
+          "description": "Enables the ask command without any pre-configured scope. (**DEPRECATED**: This is now an alias to `allow-message` and will be removed in v3)",
           "type": "string",
           "const": "dialog:allow-ask",
-          "markdownDescription": "Enables the ask command without any pre-configured scope."
+          "markdownDescription": "Enables the ask command without any pre-configured scope. (**DEPRECATED**: This is now an alias to `allow-message` and will be removed in v3)"
         },
         {
-          "description": "Enables the confirm command without any pre-configured scope.",
+          "description": "Enables the confirm command without any pre-configured scope. (**DEPRECATED**: This is now an alias to `allow-message` and will be removed in v3)",
           "type": "string",
           "const": "dialog:allow-confirm",
-          "markdownDescription": "Enables the confirm command without any pre-configured scope."
+          "markdownDescription": "Enables the confirm command without any pre-configured scope. (**DEPRECATED**: This is now an alias to `allow-message` and will be removed in v3)"
         },
         {
           "description": "Enables the message command without any pre-configured scope.",
@@ -5631,16 +5751,16 @@
           "markdownDescription": "Enables the save command without any pre-configured scope."
         },
         {
-          "description": "Denies the ask command without any pre-configured scope.",
+          "description": "Denies the ask command without any pre-configured scope. (**DEPRECATED**: This is now an alias to `deny-message` and will be removed in v3)",
           "type": "string",
           "const": "dialog:deny-ask",
-          "markdownDescription": "Denies the ask command without any pre-configured scope."
+          "markdownDescription": "Denies the ask command without any pre-configured scope. (**DEPRECATED**: This is now an alias to `deny-message` and will be removed in v3)"
         },
         {
-          "description": "Denies the confirm command without any pre-configured scope.",
+          "description": "Denies the confirm command without any pre-configured scope. (**DEPRECATED**: This is now an alias to `deny-message` and will be removed in v3)",
           "type": "string",
           "const": "dialog:deny-confirm",
-          "markdownDescription": "Denies the confirm command without any pre-configured scope."
+          "markdownDescription": "Denies the confirm command without any pre-configured scope. (**DEPRECATED**: This is now an alias to `deny-message` and will be removed in v3)"
         },
         {
           "description": "Denies the message command without any pre-configured scope.",
@@ -6681,10 +6801,22 @@
           "markdownDescription": "Enables the size command without any pre-configured scope."
         },
         {
+          "description": "Enables the start_accessing_security_scoped_resource command without any pre-configured scope.",
+          "type": "string",
+          "const": "fs:allow-start-accessing-security-scoped-resource",
+          "markdownDescription": "Enables the start_accessing_security_scoped_resource command without any pre-configured scope."
+        },
+        {
           "description": "Enables the stat command without any pre-configured scope.",
           "type": "string",
           "const": "fs:allow-stat",
           "markdownDescription": "Enables the stat command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the stop_accessing_security_scoped_resource command without any pre-configured scope.",
+          "type": "string",
+          "const": "fs:allow-stop-accessing-security-scoped-resource",
+          "markdownDescription": "Enables the stop_accessing_security_scoped_resource command without any pre-configured scope."
         },
         {
           "description": "Enables the truncate command without any pre-configured scope.",
@@ -6837,10 +6969,22 @@
           "markdownDescription": "Denies the size command without any pre-configured scope."
         },
         {
+          "description": "Denies the start_accessing_security_scoped_resource command without any pre-configured scope.",
+          "type": "string",
+          "const": "fs:deny-start-accessing-security-scoped-resource",
+          "markdownDescription": "Denies the start_accessing_security_scoped_resource command without any pre-configured scope."
+        },
+        {
           "description": "Denies the stat command without any pre-configured scope.",
           "type": "string",
           "const": "fs:deny-stat",
           "markdownDescription": "Denies the stat command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the stop_accessing_security_scoped_resource command without any pre-configured scope.",
+          "type": "string",
+          "const": "fs:deny-stop-accessing-security-scoped-resource",
+          "markdownDescription": "Denies the stop_accessing_security_scoped_resource command without any pre-configured scope."
         },
         {
           "description": "Denies the truncate command without any pre-configured scope.",

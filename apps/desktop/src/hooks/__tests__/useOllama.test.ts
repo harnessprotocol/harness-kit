@@ -107,7 +107,7 @@ describe("retry()", () => {
 
     const { result } = renderHook(() => useOllama());
 
-    // Force timeout
+    // Force timeout — 15 failed polls
     for (let i = 0; i < 15; i++) {
       await act(async () => {
         await vi.advanceTimersByTimeAsync(2000);
@@ -116,14 +116,17 @@ describe("retry()", () => {
 
     expect(result.current.timedOut).toBe(true);
 
-    // Now Ollama starts up — switch to real timers so waitFor works
-    vi.useRealTimers();
+    // Ollama comes back up
     mockAiCheckOllama.mockResolvedValue({ running: true });
     mockAiListModels.mockResolvedValue([]);
 
-    act(() => result.current.retry());
+    // retry() resets state; advance the fake clock so the next interval tick fires
+    await act(async () => {
+      result.current.retry();
+      await vi.advanceTimersByTimeAsync(2000);
+    });
 
-    await waitFor(() => expect(result.current.running).toBe(true), { timeout: 5000 });
+    expect(result.current.running).toBe(true);
     expect(result.current.timedOut).toBe(false);
   });
 });

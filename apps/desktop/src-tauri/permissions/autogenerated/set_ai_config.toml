@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-set-ai-config"
+description = "Enables the set_ai_config command without any pre-configured scope."
+commands.allow = ["set_ai_config"]
+
+[[permission]]
+identifier = "deny-set-ai-config"
+description = "Denies the set_ai_config command without any pre-configured scope."
+commands.deny = ["set_ai_config"]

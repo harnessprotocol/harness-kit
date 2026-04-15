@@ -44,7 +44,7 @@ pub fn run() {
         .manage(AgentServerState::new())
         .manage(commands::relay::LocalRelay(tokio::sync::Mutex::new(None)))
         .manage(MembrainServerState::new())
-        .manage(OllamaState::new("http://localhost:11434"))
+        .manage(OllamaState::new(ai::commands::load_ai_config().base_url))
         .invoke_handler(tauri::generate_handler![
             // Plugins
             commands::plugins::list_installed_plugins,
@@ -198,7 +198,7 @@ pub fn run() {
             ai::commands::check_ollama_running,
             ai::commands::list_models,
             ai::commands::pull_model,
-            ai::commands::stream_chat,
+            ai::commands::ai_stream_chat,
             ai::commands::cancel_ai_stream,
             ai::commands::create_ai_session,
             ai::commands::update_ai_session_title,
@@ -206,8 +206,8 @@ pub fn run() {
             ai::commands::list_ai_sessions,
             ai::commands::load_ai_session,
             ai::commands::save_ai_message,
-            // Agents
-            commands::agents::detect_agents,
+            ai::commands::get_ai_config,
+            ai::commands::set_ai_config,
         ])
         .setup(|app| {
             let state = app.state::<BoardServerState>();

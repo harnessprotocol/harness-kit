@@ -157,13 +157,15 @@
     "allow-check-ollama-running",
     "allow-list-models",
     "allow-pull-model",
-    "allow-stream-chat",
+    "allow-ai-stream-chat",
     "allow-cancel-ai-stream",
     "allow-create-ai-session",
     "allow-update-ai-session-title",
     "allow-delete-ai-session",
     "allow-list-ai-sessions",
     "allow-load-ai-session",
-    "allow-save-ai-message"
+    "allow-save-ai-message",
+    "allow-get-ai-config",
+    "allow-set-ai-config"
   ]
 }

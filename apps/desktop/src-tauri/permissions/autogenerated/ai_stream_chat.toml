@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-ai-stream-chat"
+description = "Enables the ai_stream_chat command without any pre-configured scope."
+commands.allow = ["ai_stream_chat"]
+
+[[permission]]
+identifier = "deny-ai-stream-chat"
+description = "Denies the ai_stream_chat command without any pre-configured scope."
+commands.deny = ["ai_stream_chat"]
