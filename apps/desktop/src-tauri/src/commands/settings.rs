@@ -17,7 +17,7 @@ fn claude_binary_path() -> Option<std::path::PathBuf> {
         format!("{home}/.npm-global/bin/claude"),
         format!("{home}/Library/pnpm/claude"),
         format!("{home}/.local/bin/claude"),
-        format!("{home}/.nvm/versions/node/$(ls {home}/.nvm/versions/node 2>/dev/null | tail -1)/bin/claude"),
+        // nvm: the shell fallback below handles dynamic node version discovery
     ];
     for c in &candidates {
         let p = std::path::Path::new(c);
