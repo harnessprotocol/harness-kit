@@ -48,7 +48,7 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          packageManager: pnpm
+          packageManager: npm
           command: pages deploy website/out --project-name=harness-kit-docs --branch=preview
 
       - name: Deploy production
@@ -57,5 +57,5 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          packageManager: pnpm
+          packageManager: npm
           command: pages deploy website/out --project-name=harness-kit-docs --branch=main
