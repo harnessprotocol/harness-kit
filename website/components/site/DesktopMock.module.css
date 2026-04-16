@@ -82,6 +82,12 @@
   display: flex;
   align-items: center;
   gap: 9px;
+  appearance: none;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
   padding: 6px 10px;
   border-radius: 6px;
   font-size: 12px;

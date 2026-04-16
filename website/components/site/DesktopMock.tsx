@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import styles from './DesktopMock.module.css';
 
+type SectionId = 'harness' | 'marketplace' | 'observatory' | 'agents' | 'comparator' | 'security' | 'parity' | 'board' | 'roadmap' | 'ai-chat' | 'memory';
+
 interface DesktopMockProps {
   interactive?: boolean;
-  defaultSection?: string;
+  defaultSection?: SectionId;
   compact?: boolean;
 }
 
@@ -147,7 +149,7 @@ const SECTIONS = [
 // Flatten all items for lookup
 const ALL_ITEMS = SECTIONS.flatMap((g) => g.items);
 
-function getTitleForSection(id: string) {
+function getTitleForSection(id: SectionId) {
   return ALL_ITEMS.find((i) => i.id === id)?.title ?? 'Harness Kit';
 }
 
@@ -160,7 +162,7 @@ export function DesktopMock({
 
   const frameClass = [styles.frame, compact ? styles.compact : ''].filter(Boolean).join(' ');
 
-  const handleItemClick = (id: string) => {
+  const handleItemClick = (id: SectionId) => {
     if (interactive) setActiveSection(id);
   };
 
@@ -187,14 +189,15 @@ export function DesktopMock({
             <div key={group.group}>
               <div className={styles.groupHeader}>{group.group}</div>
               {group.items.map((item) => (
-                <div
+                <button
                   key={item.id}
                   className={`${styles.item} ${activeSection === item.id ? styles.itemActive : ''}`}
-                  onClick={() => handleItemClick(item.id)}
+                  onClick={() => handleItemClick(item.id as SectionId)}
+                  aria-pressed={activeSection === item.id}
                 >
                   {item.icon}
                   {item.label}
-                </div>
+                </button>
               ))}
             </div>
           ))}
