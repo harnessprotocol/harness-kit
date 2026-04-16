@@ -393,7 +393,7 @@ pub fn list_sessions_summary() -> Result<Vec<SessionSummary>, String> {
         })
         .collect();
 
-    result.sort_by(|a, b| b.first_timestamp.cmp(&a.first_timestamp));
+    result.sort_by_key(|b| std::cmp::Reverse(b.first_timestamp));
     Ok(result)
 }
 

@@ -21,12 +21,25 @@ Your AI coding setup — plugins, skills, MCP servers, hooks, conventions — pa
 
 ## 📦 Install
 
+**Skills & Plugins** (Claude Code):
 ```
 /plugin marketplace add harnessprotocol/harness-kit
 ```
 
+**CLI** (`harness-kit validate`, `compile`, `sync`, ...):
+```bash
+brew tap harnessprotocol/tap && brew install harness-kit
+# or: npm install -g @harness-kit/cli  # requires Node.js 22+
+```
+
+**Desktop App**:
+```bash
+brew tap harnessprotocol/tap  # skip if you already ran this above
+brew install --cask harness-kit
+```
+
 <details>
-<summary>Fallback: install with script (skills only)</summary>
+<summary>Fallback: install skills with script (no Node required)</summary>
 
 If your Claude Code build doesn't support the plugin marketplace:
 

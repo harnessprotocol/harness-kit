@@ -13,12 +13,14 @@ import {
   joinOrganization,
 } from "./commands/org.js";
 
+declare const __CLI_VERSION__: string;
+
 const program = new Command();
 
 program
   .name("harness-kit")
   .description("Compile and validate harness.yaml configurations")
-  .version("0.1.0");
+  .version(__CLI_VERSION__);
 
 program
   .command("validate")
