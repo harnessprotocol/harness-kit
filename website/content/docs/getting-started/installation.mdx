@@ -5,6 +5,20 @@ title: Installation
 
 # Installation
 
+harness-kit ships three installable artifacts — choose what you need:
+
+| Artifact | What it does | How to install |
+|----------|-------------|----------------|
+| **Skills & Plugins** | Adds slash commands to Claude Code | Plugin marketplace or install script |
+| **CLI** (`harness-kit`) | Compiles and validates `harness.yaml` from the terminal | Homebrew, npm, or direct download |
+| **Desktop App** | Visual interface for managing your AI tool configurations | Homebrew Cask or DMG |
+
+Most users start with skills. The CLI and desktop app are for teams managing shared `harness.yaml` configs.
+
+---
+
+## Skills & Plugins
+
 The primary distribution channel is [Claude Code](https://claude.ai/claude-code)'s plugin marketplace. For other tools, see [Using with other tools](#using-with-other-tools) below.
 
 <Tabs items={["Plugin Marketplace", "Install Script"]}>
@@ -39,7 +53,7 @@ This downloads skill files to `~/.claude/skills/` over HTTPS. It installs **only
 </Tab>
 </Tabs>
 
-## Verify
+### Verify
 
 After installing, invoke any skill to confirm it loaded:
 
@@ -52,11 +66,95 @@ After installing, invoke any skill to confirm it loaded:
   If the skill responds with its workflow, you're set.
 </Callout>
 
-## Using with other tools
+### Using with other tools
 
 SKILL.md files are plain markdown — copy them into any tool's instruction system. VS Code Copilot reads `CLAUDE.md` natively via the `chat.useClaudeMdFile` setting, so the [conventions guide](/docs/guides/conventions) works without modification.
 
 For per-tool setup instructions (Copilot, Cursor, Windsurf, MCP wiring), see [Using with Other Tools](/docs/cross-harness/setup-guide).
+
+---
+
+## CLI
+
+The `harness-kit` CLI validates and compiles `harness.yaml` into native config files for Claude Code, Cursor, and Copilot. It also handles plugin sync, drift detection, and security scanning.
+
+<Tabs items={["Homebrew", "npm", "Direct download"]}>
+<Tab value="Homebrew">
+```bash
+brew tap harnessprotocol/tap
+brew install harness-kit
+```
+
+Homebrew manages updates automatically — `brew upgrade harness-kit` to update.
+</Tab>
+
+<Tab value="npm">
+```bash
+npm install -g @harness-kit/cli
+```
+
+Requires Node.js 22 or later. The package is published as `@harness-kit/cli` on npm.
+</Tab>
+
+<Tab value="Direct download">
+Download the standalone binary (no Node.js required) from [GitHub Releases](https://github.com/harnessprotocol/harness-kit/releases).
+
+**macOS (Apple Silicon):**
+```bash
+tar -xzf harness-kit-vX.Y.Z-darwin-arm64.tar.gz
+chmod +x harness-kit
+sudo mv harness-kit /usr/local/bin/
+```
+
+Replace `X.Y.Z` with the version you downloaded.
+</Tab>
+</Tabs>
+
+### Verify
+
+```bash
+harness-kit --version
+harness-kit validate        # validates harness.yaml in the current directory
+harness-kit compile --help  # see compile options
+```
+
+---
+
+## Desktop App
+
+The Harness Kit desktop app provides a visual interface for managing configs, running evals, comparing AI tools, and monitoring your setup.
+
+<Tabs items={["Homebrew", "Direct download"]}>
+<Tab value="Homebrew">
+```bash
+brew tap harnessprotocol/tap  # skip if you already ran this for the CLI
+brew install --cask harness-kit
+```
+
+<Callout type="warn" title="Gatekeeper notice">
+  The app is not yet notarized. After installing, open Terminal and run:
+  ```bash
+  xattr -cr "/Applications/Harness Kit.app"
+  ```
+  Or right-click the app in Finder and select **Open**, then confirm.
+</Callout>
+</Tab>
+
+<Tab value="Direct download">
+Download `HarnessKit-vX.Y.Z-darwin-arm64.dmg` from [GitHub Releases](https://github.com/harnessprotocol/harness-kit/releases):
+
+1. Open the `.dmg` and drag **Harness Kit** to your Applications folder.
+2. Remove the quarantine flag before first launch:
+   ```bash
+   xattr -cr "/Applications/Harness Kit.app"
+   ```
+3. Open from Applications or Spotlight.
+
+macOS 14 (Sonoma) or later, Apple Silicon (arm64) required. Intel Mac builds are planned for a future release.
+</Tab>
+</Tabs>
+
+---
 
 ## Requirements per Plugin
 
