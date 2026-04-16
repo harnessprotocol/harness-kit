@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "fumadocs-core": "^16.7.16",
-    "fumadocs-mdx": "^14.2.14",
+    "fumadocs-mdx": "^14.3.0",
     "fumadocs-ui": "^16.7.16",
     "mdast-util-from-markdown": "^2.0.3",
     "next": "^16.2.4",
