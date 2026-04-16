@@ -55,22 +55,22 @@ const features = [
 const showcaseCards = [
   {
     section: 'observatory' as const,
-    title: 'Observatory · know what your AI actually did',
+    title: 'Observatory',
     desc: 'Every session, every tool call, every minute. Trends you can point at when someone asks "is this thing working."',
   },
   {
     section: 'memory' as const,
-    title: 'Memory · the context that outlasts the session',
+    title: 'Memory',
     desc: 'A knowledge graph your AI can orient itself in. Teammates, decisions, conventions — persistent across every tool.',
   },
   {
     section: 'board' as const,
-    title: "Board · your AI's to-do list, not yours",
-    desc: 'Agents pick up cards, draft commits, open PRs. You review. The kanban is built for AI-first teams.',
+    title: 'Board',
+    desc: "Agents pick up cards, draft commits, open PRs. You review. The kanban is built for AI-first teams.",
   },
   {
     section: 'ai-chat' as const,
-    title: 'AI Chat · the terminal, but nicer',
+    title: 'AI Chat',
     desc: 'A keyboard-first chat window tied to your harness. Pipe files in, stream tool calls, keep every conversation.',
   },
 ];
@@ -113,8 +113,27 @@ export default function HomePage() {
         </div>
 
         {/* Product hero — the app is the hero */}
-        <div className="mx-auto max-w-5xl px-4 pb-16 sm:px-6">
+        <div className="mx-auto max-w-5xl px-4 pb-10 sm:px-6">
           <DesktopMock interactive defaultSection="observatory" />
+        </div>
+
+        {/* Surface callouts — what's inside, directly beneath the mock */}
+        <div className="mx-auto max-w-5xl px-4 pb-16 sm:px-6">
+          <div
+            className="grid grid-cols-2 gap-px lg:grid-cols-4"
+            style={{ background: 'var(--fd-border)' }}
+          >
+            {showcaseCards.map((card) => (
+              <div
+                key={card.section}
+                className="px-5 py-5"
+                style={{ background: 'var(--bg-surface)' }}
+              >
+                <p className="mb-1.5 text-sm font-semibold text-fd-foreground">{card.title}</p>
+                <p className="text-xs leading-relaxed text-fd-muted-foreground">{card.desc}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -140,35 +159,6 @@ export default function HomePage() {
             <strong className="font-semibold text-fd-foreground">harness-kit</strong>{' '}
             is the layer that turns all of them into one setup you carry with you.
           </p>
-        </div>
-      </section>
-
-      {/* ── App showcase strip ── */}
-      <section
-        className="border-b border-fd-border/30 py-24"
-        style={{ background: 'var(--bg-base)' }}
-      >
-        <div className="mx-auto max-w-6xl px-6">
-          <SectionHeader
-            eyebrow="The desktop app"
-            title="Eleven surfaces, one keyboard"
-            subtitle="Observability, memory, a plugin marketplace, a kanban board, AI chat, cross-harness parity — everything your AI coding tool forgot to give you, in one keyboard-first app."
-          />
-          <div className="grid gap-8 sm:grid-cols-2">
-            {showcaseCards.map((card) => (
-              <div key={card.section}>
-                <DesktopMock
-                  interactive={false}
-                  defaultSection={card.section}
-                  compact
-                />
-                <div className="mt-4 px-1">
-                  <p className="mb-1 text-sm font-semibold text-fd-foreground">{card.title}</p>
-                  <p className="text-sm leading-relaxed text-fd-muted-foreground">{card.desc}</p>
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
       </section>
 
