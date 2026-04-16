@@ -4,10 +4,11 @@ import { readFileSync } from "fs";
 const pkg = JSON.parse(readFileSync("./package.json", "utf-8"));
 
 export default defineConfig({
-  entry: ["src/index.ts"],
+  entry: { "harness-kit-standalone": "src/index.ts" },
   format: ["esm"],
-  clean: true,
-  sourcemap: true,
+  clean: false,
+  sourcemap: false,
+  noExternal: [/.*/],
   banner: {
     js: "#!/usr/bin/env node",
   },
