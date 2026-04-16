@@ -28,6 +28,7 @@ jobs:
   build-cli-npm:
     needs: prepare
     runs-on: ubuntu-latest
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v6
 
@@ -174,7 +175,7 @@ jobs:
           retention-days: 1
 
   release:
-    needs: [prepare, build-cli-npm, build-cli-standalone, build-desktop]
+    needs: [prepare, build-cli-standalone, build-desktop]
     runs-on: ubuntu-latest
     permissions:
       contents: write
