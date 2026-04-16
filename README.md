@@ -37,6 +37,7 @@ brew tap harnessprotocol/tap && brew install harness-kit
 brew tap harnessprotocol/tap  # skip if you already ran this above
 brew install --cask harness-kit
 ```
+Or download the `.dmg` directly from the [latest release](https://github.com/harnessprotocol/harness-kit/releases/latest) and drag **Harness Kit.app** to `/Applications`. Note: the app is not notarized — right-click and select **Open** on first launch.
 
 <details>
 <summary>Fallback: install skills with script (no Node required)</summary>
