@@ -32,7 +32,8 @@ const pluginParts = [
   { name: 'scripts/',  desc: 'shell automation' },
 ];
 
-const aiTools = ['Claude Code', 'Cursor', 'Copilot', 'Windsurf', 'Zed'];
+// Harnesses sourced from cross-harness/ide-support.md support matrix
+const harnesses = ['Claude Code', 'Copilot', 'Cursor', 'Windsurf', 'Codex'];
 
 // 3 rows × 2 columns; values shortened to fit 286px value column
 const yamlFields = [
@@ -76,7 +77,7 @@ export function ArchitectureDiagram() {
         xmlns="http://www.w3.org/2000/svg"
         viewBox={`0 0 ${W} ${totalH}`}
         style={{ width: '100%', display: 'block' }}
-        aria-label="harness-kit architecture diagram"
+        aria-label="harness-kit architecture: harness.yaml → Desktop App and CLI → Native Configs → Harnesses; Plugin System runs in Harnesses"
       >
         <defs>
           {/* Reusable arrowheads — one per style to avoid duplicate IDs */}
@@ -349,11 +350,11 @@ export function ArchitectureDiagram() {
         <text x={AT.x + AT.w / 2} y={AT.y + 16}
           fontFamily={FONT} fontSize={8} fontWeight={700} letterSpacing="0.1em"
           fill={SUBTLE} textAnchor="middle">
-          AI TOOLS
+          HARNESSES
         </text>
 
         {/* 3+2 grid; chipW=98, gap=8; 3×98+2×8=310 in 340 */}
-        {aiTools.map((tool, i) => {
+        {harnesses.map((tool, i) => {
           const col = i % 3;
           const row = Math.floor(i / 3);
           const tx  = AT.x + 14 + col * 106;
