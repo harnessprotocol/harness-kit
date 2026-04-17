@@ -69,6 +69,25 @@ harness-kit is about what to do with those tools. A `harness.yaml` can declare w
 
 ---
 
+## ACP (Agent Client Protocol)
+
+ACP standardizes the runtime protocol between code editors and AI coding agents — the
+same role LSP plays for language tooling. Where harness-kit handles *configuration*
+(which plugins, skills, and MCP servers an agent loads), ACP handles *runtime protocol*
+(how the editor and agent exchange messages during a session).
+
+| Dimension | harness-kit | ACP |
+|-----------|-------------|-----|
+| Layer | Configuration/startup | Runtime protocol |
+| What it standardizes | harness.yaml format | JSON-RPC message exchange |
+| When it runs | Before/during session setup | During active sessions |
+
+These layers compose: ACP-compatible agents benefit from harness-kit configuration
+the same way any agent does. The comparator uses ACP when running ACP-compatible
+harnesses, providing structured event data instead of raw terminal output.
+
+---
+
 ## devenv
 
 If you've used [devenv](https://devenv.sh), harness-kit will feel familiar.

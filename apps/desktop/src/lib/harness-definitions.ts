@@ -43,6 +43,10 @@ export interface HarnessDefinition {
   name: string;
   /** CLI binary name (used for detection and display, not invocation). */
   command: string;
+  /** Execution protocol (defaults to "cli" if absent). */
+  protocol?: "cli" | "acp";
+  /** ACP spec version supported (e.g., "1"). */
+  acpVersion?: string;
   /** Build the full shell command to invoke this harness with a prompt. */
   buildCommand: (prompt: string, model?: string, config?: PermissionConfig) => string;
 }
@@ -55,6 +59,8 @@ export const BUILTIN_HARNESSES: HarnessDefinition[] = [
     id: "claude",
     name: "Claude Code",
     command: "claude",
+    protocol: "acp" as const,
+    acpVersion: "1",
     buildCommand: (prompt, model, config = DEFAULT_PERMISSION_CONFIG) => {
       const permFlags = buildClaudePermissionFlags(config);
       const parts = ["claude", shellQuote(prompt), ...permFlags];

@@ -5,7 +5,7 @@ import type {
   ComparisonSummary,
   ComparisonPhase,
 } from "@harness-kit/shared";
-import { buildInvokeCommand } from "../lib/harness-definitions";
+import { buildInvokeCommand, getHarness } from "../lib/harness-definitions";
 import { getResilienceConfig } from "../lib/preferences";
 import {
   saveComparison,
@@ -32,6 +32,7 @@ export interface PanelState {
   startedAt: number;
   /** Set when this panel's primary harness failed and a fallback was launched. */
   fallbackReason?: string;
+  acpMode?: boolean;              // True when running with ACP protocol
 }
 
 export interface ComparisonState {
@@ -317,6 +318,7 @@ export function useComparator(): UseComparatorReturn {
           model: harness.model,
           status: "running",
           startedAt: Date.now(),
+          acpMode: getHarness(harness.id)?.protocol === "acp",
         };
         panels.push(panel);
 
