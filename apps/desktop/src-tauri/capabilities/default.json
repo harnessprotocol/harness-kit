@@ -81,6 +81,7 @@
     "allow-create-worktrees",
     "allow-remove-worktrees",
     "allow-get-diff-against-commit",
+    "allow-check-for-updates",
     "allow-save-evaluation",
     "allow-get-evaluations",
     "allow-update-evaluation-score",

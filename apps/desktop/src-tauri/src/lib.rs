@@ -99,6 +99,7 @@ pub fn run() {
             commands::git::create_worktrees,
             commands::git::remove_worktrees,
             commands::git::get_diff_against_commit,
+            commands::git::check_for_updates,
             // Evaluation
             commands::evaluation::save_evaluation,
             commands::evaluation::get_evaluations,
