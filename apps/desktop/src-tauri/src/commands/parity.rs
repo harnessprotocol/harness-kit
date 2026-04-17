@@ -1072,9 +1072,11 @@ pub async fn probe_harness_capabilities(
 ) -> Result<HashMap<String, String>, String> {
     let home = dirs::home_dir().ok_or("Cannot determine home directory")?;
 
+    type CapEntry = (&'static str, &'static str);
+    type TargetEntry = (&'static str, &'static str, &'static [CapEntry]);
     // (target_id, binary_to_check, config_file_paths_by_cap_id)
     // Paths are relative to home dir for global-level checks.
-    let targets: &[(&str, &str, &[(&str, &str)])] = &[
+    let targets: &[TargetEntry] = &[
         (
             "claude-code", "claude",
             &[
