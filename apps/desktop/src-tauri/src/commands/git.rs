@@ -315,3 +315,28 @@ pub async fn check_for_updates(
         error: None,
     }
 }
+
+/// Open a Terminal window and run `pnpm install:desktop` in the source repo.
+/// Returns immediately — build runs in the background terminal.
+#[tauri::command]
+pub async fn trigger_rebuild(repo_path: String) -> Result<(), String> {
+    // Sanitize: reject paths with shell metacharacters
+    if repo_path.contains('"') || repo_path.contains('`') || repo_path.contains('$') {
+        return Err("Invalid repo path".to_string());
+    }
+
+    let script = format!(
+        r#"tell application "Terminal"
+    activate
+    do script "cd '{repo_path}' && pnpm install:desktop && echo '--- Build complete. Relaunch Harness Kit. ---'"
+end tell"#,
+        repo_path = repo_path
+    );
+
+    std::process::Command::new("osascript")
+        .args(["-e", &script])
+        .spawn()
+        .map_err(|e| format!("Failed to open Terminal: {}", e))?;
+
+    Ok(())
+}

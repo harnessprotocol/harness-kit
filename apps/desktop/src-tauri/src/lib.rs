@@ -100,6 +100,7 @@ pub fn run() {
             commands::git::remove_worktrees,
             commands::git::get_diff_against_commit,
             commands::git::check_for_updates,
+            commands::git::trigger_rebuild,
             // Evaluation
             commands::evaluation::save_evaluation,
             commands::evaluation::get_evaluations,
