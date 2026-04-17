@@ -33,6 +33,7 @@ harness-kit/
 │   ├── board-server/             ← WebSocket + HTTP server for the Kanban board and Roadmap/Competitor Analysis features
 │   ├── agent-server/             ← LangGraph execution engine for per-card agent runs (port 4802)
 │   └── chat-relay/               ← self-hosted WebSocket relay for team chat (port 4801)
+├── functions/                    ← Cloudflare Pages Functions (server-side endpoints, e.g. /feedback proxy)
 ├── apps/                         ← end-user applications
 │   ├── desktop/                  ← Tauri desktop app (React + Rust)
 │   ├── cli/                      ← harness CLI

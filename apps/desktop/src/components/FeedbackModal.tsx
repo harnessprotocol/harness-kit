@@ -48,6 +48,7 @@ export default function FeedbackModal({ open: isOpen, onClose }: Props) {
   const canSubmit =
     title.trim().length >= 3 &&
     description.trim().length >= 10 &&
+    sysInfo !== null &&
     !submitting;
 
   async function handleSubmit() {
