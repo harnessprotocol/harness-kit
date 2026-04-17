@@ -195,7 +195,6 @@ pub fn run() {
             commands::relay::chat_stop_local_relay,
             commands::relay::chat_local_relay_running,
             // Feedback
-            commands::feedback::check_gh_auth,
             commands::feedback::get_system_info,
             commands::feedback::submit_feedback,
             // AI Chat

@@ -2,17 +2,17 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { open } from "@tauri-apps/plugin-shell";
 import {
-  checkGhAuth, getSystemInfo, submitFeedback,
-  type GhAuthStatus, type SystemInfo, type FeedbackResult,
+  getSystemInfo, submitFeedback,
+  type SystemInfo, type FeedbackResult,
 } from "../lib/tauri";
 
 // ── Constants ─────────────────────────────────────────────────
 
 const CATEGORIES = [
-  { id: "bug_report",       label: "Bug Report",       template: "bug_report.yml" },
-  { id: "feature_request",  label: "Feature Request",  template: "feature_request.yml" },
-  { id: "general_feedback", label: "General Feedback", template: "general_feedback.yml" },
-  { id: "question",         label: "Question",         template: "question.yml" },
+  { id: "bug_report",       label: "Bug Report" },
+  { id: "feature_request",  label: "Feature Request" },
+  { id: "general_feedback", label: "General Feedback" },
+  { id: "question",         label: "Question" },
 ] as const;
 
 type CategoryId = (typeof CATEGORIES)[number]["id"];
@@ -29,26 +29,18 @@ export default function FeedbackModal({ open: isOpen, onClose }: Props) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [sysInfo, setSysInfo] = useState<SystemInfo | null>(null);
-  const [ghAuth, setGhAuth] = useState<GhAuthStatus | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<FeedbackResult | null>(null);
   const [sysInfoExpanded, setSysInfoExpanded] = useState(false);
 
   useEffect(() => {
     if (!isOpen) return;
-    // Reset form state on each open
     setCategory("bug_report");
     setTitle("");
     setDescription("");
     setResult(null);
     setSysInfoExpanded(false);
-    // Load system info and gh auth status in parallel
-    Promise.all([getSystemInfo(), checkGhAuth()]).then(([info, auth]) => {
-      setSysInfo(info);
-      setGhAuth(auth);
-    }).catch(() => {
-      setGhAuth({ available: false, authenticated: false });
-    });
+    getSystemInfo().then(setSysInfo).catch(() => {});
   }, [isOpen]);
 
   if (!isOpen) return null;
@@ -58,22 +50,10 @@ export default function FeedbackModal({ open: isOpen, onClose }: Props) {
     description.trim().length >= 10 &&
     !submitting;
 
-  const usesBrowser = !ghAuth?.available || !ghAuth?.authenticated;
-
   async function handleSubmit() {
-    if (!canSubmit) return;
+    if (!canSubmit || !sysInfo) return;
     setSubmitting(true);
-
-    if (usesBrowser) {
-      const cat = CATEGORIES.find(c => c.id === category);
-      const params = new URLSearchParams({ template: cat?.template ?? "general_feedback.yml", title: title.trim() });
-      await open(`https://github.com/harnessprotocol/harness-kit-feedback/issues/new?${params}`);
-      setSubmitting(false);
-      onClose();
-      return;
-    }
-
-    const res = await submitFeedback(category, title, description, sysInfo!);
+    const res = await submitFeedback(category, title, description, sysInfo);
     setResult(res);
     setSubmitting(false);
   }
@@ -234,15 +214,6 @@ export default function FeedbackModal({ open: isOpen, onClose }: Props) {
                   )}
                 </div>
               )}
-
-              {/* Browser fallback notice */}
-              {ghAuth && (!ghAuth.available || !ghAuth.authenticated) && (
-                <p style={{ fontSize: "11px", color: "var(--fg-subtle)", margin: 0 }}>
-                  {!ghAuth.available
-                    ? "GitHub CLI not found — submitting will open GitHub in your browser."
-                    : "GitHub CLI is not authenticated — submitting will open GitHub in your browser."}
-                </p>
-              )}
             </>
           )}
         </div>
@@ -270,7 +241,7 @@ export default function FeedbackModal({ open: isOpen, onClose }: Props) {
                 fontWeight: 500,
               }}
             >
-              {submitting ? "Submitting…" : usesBrowser ? "Open in Browser" : "Submit"}
+              {submitting ? "Submitting…" : "Submit"}
             </button>
           </div>
         )}
@@ -312,12 +283,6 @@ function SuccessState({ result, onClose }: { result: FeedbackResult; onClose: ()
       {result.error && (
         <p style={{ fontSize: "11px", color: "var(--fg-muted)", margin: "0 0 12px" }}>{result.error}</p>
       )}
-      <button
-        onClick={() => open("https://github.com/harnessprotocol/harness-kit-feedback/issues/new")}
-        style={{ background: "none", border: "none", cursor: "pointer", color: "var(--accent)", fontSize: "11px", textDecoration: "underline", padding: 0 }}
-      >
-        Open GitHub in browser instead
-      </button>
     </div>
   );
 }

@@ -759,11 +759,6 @@ export async function recordHarnessLaunchResult(harnessId: string, exitCode: num
 
 // ── Feedback commands ─────────────────────────────────────────
 
-export interface GhAuthStatus {
-  available: boolean;
-  authenticated: boolean;
-}
-
 export interface SystemInfo {
   os: string;
   osVersion: string;
@@ -775,10 +770,6 @@ export interface FeedbackResult {
   success: boolean;
   issueUrl: string | null;
   error: string | null;
-}
-
-export async function checkGhAuth(): Promise<GhAuthStatus> {
-  return invoke<GhAuthStatus>("check_gh_auth");
 }
 
 export async function getSystemInfo(): Promise<SystemInfo> {

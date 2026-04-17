@@ -1,17 +1,10 @@
 use serde::Serialize;
 use std::env;
 use std::process::Command as StdCommand;
-use tauri::AppHandle;
-use tauri_plugin_shell::ShellExt;
+
+const FEEDBACK_ENDPOINT: &str = "https://harnesskit.ai/feedback";
 
 // ── Types ────────────────────────────────────────────────────
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct GhAuthStatus {
-    pub available: bool,
-    pub authenticated: bool,
-}
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -31,34 +24,6 @@ pub struct FeedbackResult {
 }
 
 // ── Commands ─────────────────────────────────────────────────
-
-#[tauri::command]
-pub async fn check_gh_auth(app: AppHandle) -> Result<GhAuthStatus, String> {
-    let shell = app.shell();
-
-    // Check if gh is available
-    let version_out = shell.command("gh")
-        .args(["--version"])
-        .output()
-        .await;
-
-    let available = matches!(version_out, Ok(ref o) if o.status.success());
-    if !available {
-        return Ok(GhAuthStatus { available: false, authenticated: false });
-    }
-
-    // Check if authenticated
-    let auth_out = shell.command("gh")
-        .args(["auth", "status"])
-        .output()
-        .await
-        .map_err(|e| e.to_string())?;
-
-    Ok(GhAuthStatus {
-        available: true,
-        authenticated: auth_out.status.success(),
-    })
-}
 
 #[tauri::command]
 pub fn get_system_info() -> Result<SystemInfo, String> {
@@ -95,7 +60,6 @@ fn get_os_version() -> Option<String> {
 
 #[tauri::command]
 pub async fn submit_feedback(
-    app: AppHandle,
     category: String,
     title: String,
     description: String,
@@ -104,51 +68,37 @@ pub async fn submit_feedback(
     arch: String,
     app_version: String,
 ) -> Result<FeedbackResult, String> {
-    let (label, title_prefix) = match category.as_str() {
-        "bug_report"       => ("bug",         "[Bug Report]"),
-        "feature_request"  => ("enhancement", "[Feature Request]"),
-        "general_feedback" => ("feedback",    "[Feedback]"),
-        "question"         => ("question",    "[Question]"),
-        _                  => ("feedback",    "[Feedback]"),
-    };
+    let body = serde_json::json!({
+        "category": category,
+        "title": title,
+        "description": description,
+        "os": os,
+        "osVersion": os_version,
+        "arch": arch,
+        "appVersion": app_version,
+    });
 
-    let full_title = format!("{} {}", title_prefix, title.trim());
-
-    let body = format!(
-        "## Description\n\n{}\n\n## System Info\n\n| Field | Value |\n|-------|-------|\n| OS | {} {} |\n| Architecture | {} |\n| App Version | {} |\n\n---\n*Submitted from Harness Kit desktop app*",
-        description.trim(),
-        os, os_version,
-        arch,
-        app_version,
-    );
-
-    let shell = app.shell();
-    let output = shell.command("gh")
-        .args([
-            "issue", "create",
-            "--repo", "harnessprotocol/harness-kit-feedback",
-            "--title", &full_title,
-            "--body", &body,
-            "--label", label,
-            "--label", "desktop-app",
-        ])
-        .output()
+    let client = reqwest::Client::new();
+    let response = client
+        .post(FEEDBACK_ENDPOINT)
+        .json(&body)
+        .send()
         .await
         .map_err(|e| e.to_string())?;
 
-    if output.status.success() {
-        let issue_url = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if response.status().is_success() {
+        let json: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
         Ok(FeedbackResult {
             success: true,
-            issue_url: Some(issue_url),
+            issue_url: json["issueUrl"].as_str().map(String::from),
             error: None,
         })
     } else {
-        let err = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        let status = response.status().as_u16();
         Ok(FeedbackResult {
             success: false,
             issue_url: None,
-            error: Some(err),
+            error: Some(format!("Server returned HTTP {status}")),
         })
     }
 }

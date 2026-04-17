@@ -2343,12 +2343,6 @@
           "markdownDescription": "Enables the chat_stop_local_relay command without any pre-configured scope."
         },
         {
-          "description": "Enables the check_gh_auth command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-check-gh-auth",
-          "markdownDescription": "Enables the check_gh_auth command without any pre-configured scope."
-        },
-        {
           "description": "Enables the check_git_repo command without any pre-configured scope.",
           "type": "string",
           "const": "allow-check-git-repo",
@@ -3127,12 +3121,6 @@
           "type": "string",
           "const": "deny-chat-stop-local-relay",
           "markdownDescription": "Denies the chat_stop_local_relay command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the check_gh_auth command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-check-gh-auth",
-          "markdownDescription": "Denies the check_gh_auth command without any pre-configured scope."
         },
         {
           "description": "Denies the check_git_repo command without any pre-configured scope.",
