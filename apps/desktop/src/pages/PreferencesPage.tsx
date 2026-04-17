@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-shell";
 import { getVersion } from "@tauri-apps/api/app";
+import { invoke } from "@tauri-apps/api/core";
 import Tooltip from "../components/Tooltip";
 import { NAV_SECTIONS } from "../layouts/AppLayout";
 import {
@@ -23,6 +24,14 @@ import {
   ACCENT_PRESETS,
   type AccentName,
 } from "../lib/theme";
+
+interface UpdateStatus {
+  localSha: string;
+  remoteSha: string;
+  commitsBehind: number;
+  upToDate: boolean;
+  error: string | null;
+}
 
 // ── Local helper components ─────────────────────────────────────
 
@@ -115,9 +124,24 @@ function Segmented<T extends string | number | boolean>({
 
 export default function PreferencesPage() {
   const [appVersion, setAppVersion] = useState("0.0.0");
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null);
+  const [updateChecking, setUpdateChecking] = useState(false);
+  const [rebuilding, setRebuilding] = useState(false);
+  const [buildError, setBuildError] = useState<string | null>(null);
 
   useEffect(() => {
     getVersion().then(setAppVersion).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const repoPath = import.meta.env.VITE_REPO_PATH;
+    const installedSha = import.meta.env.VITE_GIT_SHA;
+    if (!repoPath || !installedSha || installedSha === "unknown") return;
+    setUpdateChecking(true);
+    invoke<UpdateStatus>("check_for_updates", { repoPath, installedSha })
+      .then(setUpdateStatus)
+      .catch(() => {})
+      .finally(() => setUpdateChecking(false));
   }, []);
 
   const [theme, setThemeState] = useState(getTheme);
@@ -201,6 +225,21 @@ export default function PreferencesPage() {
   function handleSetConfigFilesDetail(level: ConfigFilesDetailLevel) {
     setConfigFilesDetailLevel(level);
     setConfigFilesDetailState(level);
+  }
+
+  async function handleRebuild() {
+    const repoPath = import.meta.env.VITE_REPO_PATH;
+    if (!repoPath) return;
+    setRebuilding(true);
+    setBuildError(null);
+    try {
+      await invoke("trigger_rebuild", { repoPath });
+      // On success the app restarts — this line is never reached
+    } catch (err) {
+      setBuildError(typeof err === "string" ? err : "Build failed. Check that pnpm is installed.");
+      setRebuilding(false);
+    }
+    // Don't set rebuilding false on success — the app restarts
   }
 
   // Compute whether each section pill should be disabled (last visible)
@@ -489,6 +528,84 @@ export default function PreferencesPage() {
           </div>
         </SettingRow>
       </div>
+
+      {/* ── Updates ────────────────────────────────────────────────────────────── */}
+      {import.meta.env.VITE_REPO_PATH && (
+        <div style={{ marginBottom: "28px" }}>
+          <SectionHeader>Updates</SectionHeader>
+
+          <div style={{
+            padding: "10px 0",
+            borderBottom: "1px solid var(--separator)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "24px",
+          }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: "13px", fontWeight: 500, color: "var(--fg-base)" }}>
+                {updateChecking
+                  ? "Checking for updates..."
+                  : updateStatus?.error
+                    ? "Update check unavailable"
+                    : updateStatus?.upToDate
+                      ? "Up to date"
+                      : `${updateStatus?.commitsBehind} commit${updateStatus?.commitsBehind === 1 ? "" : "s"} behind main`}
+              </div>
+              {!updateChecking && !updateStatus?.error && import.meta.env.VITE_GIT_SHA && import.meta.env.VITE_GIT_SHA !== "unknown" && (
+                <div style={{ fontSize: "11px", color: "var(--fg-muted)", marginTop: "2px", fontFamily: "monospace" }}>
+                  {import.meta.env.VITE_GIT_SHA.slice(0, 7)}
+                </div>
+              )}
+              {rebuilding && (
+                <div style={{ fontSize: "11px", color: "var(--fg-muted)", marginTop: "4px" }}>
+                  Building... this takes a few minutes. The app will restart when ready.
+                </div>
+              )}
+              {buildError && (
+                <div style={{
+                  fontSize: "11px",
+                  color: "var(--fg-muted)",
+                  marginTop: "4px",
+                  fontFamily: "monospace",
+                  whiteSpace: "pre-wrap",
+                  maxHeight: "80px",
+                  overflow: "auto",
+                }}>
+                  {buildError}
+                </div>
+              )}
+              {updateStatus?.error && (
+                <div style={{ fontSize: "11px", color: "var(--fg-muted)", marginTop: "2px" }}>
+                  {updateStatus.error}
+                </div>
+              )}
+            </div>
+            <div style={{ flexShrink: 0 }}>
+              {(updateStatus !== null && !updateStatus.upToDate || rebuilding || buildError) && !updateStatus?.error && !updateChecking && (
+                <button
+                  onClick={handleRebuild}
+                  disabled={rebuilding}
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    padding: "6px 14px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--accent)",
+                    background: rebuilding ? "var(--bg-elevated)" : "var(--accent-light)",
+                    color: rebuilding ? "var(--fg-muted)" : "var(--accent-text)",
+                    cursor: rebuilding ? "not-allowed" : "pointer",
+                    opacity: rebuilding ? 0.6 : 1,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {rebuilding ? "Building..." : buildError ? "Retry" : "Rebuild & Relaunch"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── About ──────────────────────────────────────────────── */}
       <div>

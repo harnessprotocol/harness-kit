@@ -9,6 +9,7 @@
     "build:marketplace": "pnpm --filter harness-kit-marketplace build",
     "dev:desktop": "pnpm --filter harness-kit-desktop tauri dev",
     "build:desktop": "pnpm --filter harness-kit-desktop tauri build && cp -Rf 'apps/desktop/src-tauri/target/release/bundle/macos/Harness Kit.app' $HOME/Applications/",
+    "install:desktop": "pnpm --filter harness-kit-desktop tauri build --debug && cp -Rf 'apps/desktop/src-tauri/target/debug/bundle/macos/Harness Kit.app' $HOME/Applications/",
     "dev:board-server": "pnpm --filter board-server dev",
     "build:board-server": "pnpm --filter board-server build",
     "build": "turbo run build",
