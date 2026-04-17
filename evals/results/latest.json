@@ -1,0 +1,1316 @@
+{
+  "run_at": "2026-04-17T14:34:21.575052+00:00",
+  "task_results": [
+    {
+      "task": "docgen-changelog",
+      "skill": "docgen",
+      "model": "sonnet",
+      "trials": [
+        {
+          "trial": 1,
+          "output_length": 395,
+          "code_grades": [
+            {
+              "name": "section:Added",
+              "passed": true,
+              "detail": "Section '## Added' found in output"
+            },
+            {
+              "name": "word_count:min",
+              "passed": true,
+              "detail": "Word count 67 \u2265 min 50"
+            },
+            {
+              "name": "word_count:max",
+              "passed": true,
+              "detail": "Word count 67 \u2264 max 1000"
+            },
+            {
+              "name": "not_contains:I don't have access",
+              "passed": true,
+              "detail": "Forbidden phrase 'I don't have access' not found (pass)"
+            },
+            {
+              "name": "not_contains:I cannot",
+              "passed": true,
+              "detail": "Forbidden phrase 'I cannot' not found (pass)"
+            }
+          ],
+          "quality_grades": [],
+          "structure_passed": true,
+          "quality_score": 0.0,
+          "quality_max": 7.0
+        }
+      ],
+      "pass_at_1": 1.0,
+      "pass_at_n": 1.0,
+      "pass_all_n": 1.0,
+      "weighted_score": 0.0
+    },
+    {
+      "task": "docgen-changelog",
+      "skill": "docgen",
+      "model": "haiku",
+      "trials": [
+        {
+          "trial": 1,
+          "output_length": 395,
+          "code_grades": [
+            {
+              "name": "section:Added",
+              "passed": true,
+              "detail": "Section '## Added' found in output"
+            },
+            {
+              "name": "word_count:min",
+              "passed": true,
+              "detail": "Word count 67 \u2265 min 50"
+            },
+            {
+              "name": "word_count:max",
+              "passed": true,
+              "detail": "Word count 67 \u2264 max 1000"
+            },
+            {
+              "name": "not_contains:I don't have access",
+              "passed": true,
+              "detail": "Forbidden phrase 'I don't have access' not found (pass)"
+            },
+            {
+              "name": "not_contains:I cannot",
+              "passed": true,
+              "detail": "Forbidden phrase 'I cannot' not found (pass)"
+            }
+          ],
+          "quality_grades": [],
+          "structure_passed": true,
+          "quality_score": 0.0,
+          "quality_max": 7.0
+        }
+      ],
+      "pass_at_1": 1.0,
+      "pass_at_n": 1.0,
+      "pass_all_n": 1.0,
+      "weighted_score": 0.0
+    },
+    {
+      "task": "docgen-changelog",
+      "skill": "docgen",
+      "model": "opus",
+      "trials": [
+        {
+          "trial": 1,
+          "output_length": 395,
+          "code_grades": [
+            {
+              "name": "section:Added",
+              "passed": true,
+              "detail": "Section '## Added' found in output"
+            },
+            {
+              "name": "word_count:min",
+              "passed": true,
+              "detail": "Word count 67 \u2265 min 50"
+            },
+            {
+              "name": "word_count:max",
+              "passed": true,
+              "detail": "Word count 67 \u2264 max 1000"
+            },
+            {
+              "name": "not_contains:I don't have access",
+              "passed": true,
+              "detail": "Forbidden phrase 'I don't have access' not found (pass)"
+            },
+            {
+              "name": "not_contains:I cannot",
+              "passed": true,
+              "detail": "Forbidden phrase 'I cannot' not found (pass)"
+            }
+          ],
+          "quality_grades": [],
+          "structure_passed": true,
+          "quality_score": 0.0,
+          "quality_max": 7.0
+        }
+      ],
+      "pass_at_1": 1.0,
+      "pass_at_n": 1.0,
+      "pass_all_n": 1.0,
+      "weighted_score": 0.0
+    },
+    {
+      "task": "docgen-readme-go-project",
+      "skill": "docgen",
+      "model": "sonnet",
+      "trials": [
+        {
+          "trial": 1,
+          "output_length": 692,
+          "code_grades": [
+            {
+              "name": "section:Install",
+              "passed": true,
+              "detail": "Section '## Install' found in output"
+            },
+            {
+              "name": "section:Usage",
+              "passed": true,
+              "detail": "Section '## Usage' found in output"
+            },
+            {
+              "name": "word_count:min",
+              "passed": true,
+              "detail": "Word count 103 \u2265 min 100"
+            },
+            {
+              "name": "word_count:max",
+              "passed": true,
+              "detail": "Word count 103 \u2264 max 2000"
+            },
+            {
+              "name": "not_contains:I don't have access",
+              "passed": true,
+              "detail": "Forbidden phrase 'I don't have access' not found (pass)"
+            },
+            {
+              "name": "not_contains:I cannot",
+              "passed": true,
+              "detail": "Forbidden phrase 'I cannot' not found (pass)"
+            }
+          ],
+          "quality_grades": [],
+          "structure_passed": true,
+          "quality_score": 0.0,
+          "quality_max": 8.0
+        }
+      ],
+      "pass_at_1": 1.0,
+      "pass_at_n": 1.0,
+      "pass_all_n": 1.0,
+      "weighted_score": 0.0
+    },
+    {
+      "task": "docgen-readme-go-project",
+      "skill": "docgen",
+      "model": "haiku",
+      "trials": [
+        {
+          "trial": 1,
+          "output_length": 692,
+          "code_grades": [
+            {
+              "name": "section:Install",
+              "passed": true,
+              "detail": "Section '## Install' found in output"
+            },
+            {
+              "name": "section:Usage",
+              "passed": true,
+              "detail": "Section '## Usage' found in output"
+            },
+            {
+              "name": "word_count:min",
+              "passed": true,
+              "detail": "Word count 103 \u2265 min 100"
+            },
+            {
+              "name": "word_count:max",
+              "passed": true,
+              "detail": "Word count 103 \u2264 max 2000"
+            },
+            {
+              "name": "not_contains:I don't have access",
+              "passed": true,
+              "detail": "Forbidden phrase 'I don't have access' not found (pass)"
+            },
+            {
+              "name": "not_contains:I cannot",
+              "passed": true,
+              "detail": "Forbidden phrase 'I cannot' not found (pass)"
+            }
+          ],
+          "quality_grades": [],
+          "structure_passed": true,
+          "quality_score": 0.0,
+          "quality_max": 8.0
+        }
+      ],
+      "pass_at_1": 1.0,
+      "pass_at_n": 1.0,
+      "pass_all_n": 1.0,
+      "weighted_score": 0.0
+    },
+    {
+      "task": "docgen-readme-go-project",
+      "skill": "docgen",
+      "model": "opus",
+      "trials": [
+        {
+          "trial": 1,
+          "output_length": 692,
+          "code_grades": [
+            {
+              "name": "section:Install",
+              "passed": true,
+              "detail": "Section '## Install' found in output"
+            },
+            {
+              "name": "section:Usage",
+              "passed": true,
+              "detail": "Section '## Usage' found in output"
+            },
+            {
+              "name": "word_count:min",
+              "passed": true,
+              "detail": "Word count 103 \u2265 min 100"
+            },
+            {
+              "name": "word_count:max",
+              "passed": true,
+              "detail": "Word count 103 \u2264 max 2000"
+            },
+            {
+              "name": "not_contains:I don't have access",
+              "passed": true,
+              "detail": "Forbidden phrase 'I don't have access' not found (pass)"
+            },
+            {
+              "name": "not_contains:I cannot",
+              "passed": true,
+              "detail": "Forbidden phrase 'I cannot' not found (pass)"
+            }
+          ],
+          "quality_grades": [],
+          "structure_passed": true,
+          "quality_score": 0.0,
+          "quality_max": 8.0
+        }
+      ],
+      "pass_at_1": 1.0,
+      "pass_at_n": 1.0,
+      "pass_all_n": 1.0,
+      "weighted_score": 0.0
+    },
+    {
+      "task": "explain-auth-concept-flow",
+      "skill": "explain",
+      "model": "sonnet",
+      "trials": [
+        {
+          "trial": 1,
+          "output_length": 3081,
+          "code_grades": [
+            {
+              "name": "section:Summary",
+              "passed": true,
+              "detail": "Section '## Summary' found in output"
+            },
+            {
+              "name": "section:Key Components",
+              "passed": true,
+              "detail": "Section '## Key Components' found in output"
+            },
+            {
+              "name": "section:How It Connects",
+              "passed": true,
+              "detail": "Section '## How It Connects' found in output"
+            },
+            {
+              "name": "section:Patterns & Conventions",
+              "passed": true,
+              "detail": "Section '## Patterns & Conventions' found in output"
+            },
+            {
+              "name": "section:Gotchas",
+              "passed": true,
+              "detail": "Section '## Gotchas' found in output"
+            },
+            {
+              "name": "section:Entry Points for Change",
+              "passed": true,
+              "detail": "Section '## Entry Points for Change' found in output"
+            },
+            {
+              "name": "word_count:min",
+              "passed": true,
+              "detail": "Word count 443 \u2265 min 200"
+            },
+            {
+              "name": "word_count:max",
+              "passed": true,
+              "detail": "Word count 443 \u2264 max 4000"
+            },
+            {
+              "name": "contains:jwt",
+              "passed": true,
+              "detail": "Required phrase 'jwt' found"
+            },
+            {
+              "name": "contains:token",
+              "passed": true,
+              "detail": "Required phrase 'token' found"
+            },
+            {
+              "name": "not_contains:I don't have access",
+              "passed": true,
+              "detail": "Forbidden phrase 'I don't have access' not found (pass)"
+            },
+            {
+              "name": "not_contains:I cannot",
+              "passed": true,
+              "detail": "Forbidden phrase 'I cannot' not found (pass)"
+            }
+          ],
+          "quality_grades": [],
+          "structure_passed": true,
+          "quality_score": 0.0,
+          "quality_max": 9.0
+        }
+      ],
+      "pass_at_1": 1.0,
+      "pass_at_n": 1.0,
+      "pass_all_n": 1.0,
+      "weighted_score": 0.0
+    },
+    {
+      "task": "explain-auth-concept-flow",
+      "skill": "explain",
+      "model": "haiku",
+      "trials": [
+        {
+          "trial": 1,
+          "output_length": 3081,
+          "code_grades": [
+            {
+              "name": "section:Summary",
+              "passed": true,
+              "detail": "Section '## Summary' found in output"
+            },
+            {
+              "name": "section:Key Components",
+              "passed": true,
+              "detail": "Section '## Key Components' found in output"
+            },
+            {
+              "name": "section:How It Connects",
+              "passed": true,
+              "detail": "Section '## How It Connects' found in output"
+            },
+            {
+              "name": "section:Patterns & Conventions",
+              "passed": true,
+              "detail": "Section '## Patterns & Conventions' found in output"
+            },
+            {
+              "name": "section:Gotchas",
+              "passed": true,
+              "detail": "Section '## Gotchas' found in output"
+            },
+            {
+              "name": "section:Entry Points for Change",
+              "passed": true,
+              "detail": "Section '## Entry Points for Change' found in output"
+            },
+            {
+              "name": "word_count:min",
+              "passed": true,
+              "detail": "Word count 443 \u2265 min 200"
+            },
+            {
+              "name": "word_count:max",
+              "passed": true,
+              "detail": "Word count 443 \u2264 max 4000"
+            },
+            {
+              "name": "contains:jwt",
+              "passed": true,
+              "detail": "Required phrase 'jwt' found"
+            },
+            {
+              "name": "contains:token",
+              "passed": true,
+              "detail": "Required phrase 'token' found"
+            },
+            {
+              "name": "not_contains:I don't have access",
+              "passed": true,
+              "detail": "Forbidden phrase 'I don't have access' not found (pass)"
+            },
+            {
+              "name": "not_contains:I cannot",
+              "passed": true,
+              "detail": "Forbidden phrase 'I cannot' not found (pass)"
+            }
+          ],
+          "quality_grades": [],
+          "structure_passed": true,
+          "quality_score": 0.0,
+          "quality_max": 9.0
+        }
+      ],
+      "pass_at_1": 1.0,
+      "pass_at_n": 1.0,
+      "pass_all_n": 1.0,
+      "weighted_score": 0.0
+    },
+    {
+      "task": "explain-auth-concept-flow",
+      "skill": "explain",
+      "model": "opus",
+      "trials": [
+        {
+          "trial": 1,
+          "output_length": 3081,
+          "code_grades": [
+            {
+              "name": "section:Summary",
+              "passed": true,
+              "detail": "Section '## Summary' found in output"
+            },
+            {
+              "name": "section:Key Components",
+              "passed": true,
+              "detail": "Section '## Key Components' found in output"
+            },
+            {
+              "name": "section:How It Connects",
+              "passed": true,
+              "detail": "Section '## How It Connects' found in output"
+            },
+            {
+              "name": "section:Patterns & Conventions",
+              "passed": true,
+              "detail": "Section '## Patterns & Conventions' found in output"
+            },
+            {
+              "name": "section:Gotchas",
+              "passed": true,
+              "detail": "Section '## Gotchas' found in output"
+            },
+            {
+              "name": "section:Entry Points for Change",
+              "passed": true,
+              "detail": "Section '## Entry Points for Change' found in output"
+            },
+            {
+              "name": "word_count:min",
+              "passed": true,
+              "detail": "Word count 443 \u2265 min 200"
+            },
+            {
+              "name": "word_count:max",
+              "passed": true,
+              "detail": "Word count 443 \u2264 max 4000"
+            },
+            {
+              "name": "contains:jwt",
+              "passed": true,
+              "detail": "Required phrase 'jwt' found"
+            },
+            {
+              "name": "contains:token",
+              "passed": true,
+              "detail": "Required phrase 'token' found"
+            },
+            {
+              "name": "not_contains:I don't have access",
+              "passed": true,
+              "detail": "Forbidden phrase 'I don't have access' not found (pass)"
+            },
+            {
+              "name": "not_contains:I cannot",
+              "passed": true,
+              "detail": "Forbidden phrase 'I cannot' not found (pass)"
+            }
+          ],
+          "quality_grades": [],
+          "structure_passed": true,
+          "quality_score": 0.0,
+          "quality_max": 9.0
+        }
+      ],
+      "pass_at_1": 1.0,
+      "pass_at_n": 1.0,
+      "pass_all_n": 1.0,
+      "weighted_score": 0.0
+    },
+    {
+      "task": "explain-express-router",
+      "skill": "explain",
+      "model": "sonnet",
+      "trials": [
+        {
+          "trial": 1,
+          "output_length": 2846,
+          "code_grades": [
+            {
+              "name": "section:Summary",
+              "passed": true,
+              "detail": "Section '## Summary' found in output"
+            },
+            {
+              "name": "section:Key Components",
+              "passed": true,
+              "detail": "Section '## Key Components' found in output"
+            },
+            {
+              "name": "section:How It Connects",
+              "passed": true,
+              "detail": "Section '## How It Connects' found in output"
+            },
+            {
+              "name": "section:Patterns & Conventions",
+              "passed": true,
+              "detail": "Section '## Patterns & Conventions' found in output"
+            },
+            {
+              "name": "section:Gotchas",
+              "passed": true,
+              "detail": "Section '## Gotchas' found in output"
+            },
+            {
+              "name": "section:Entry Points for Change",
+              "passed": true,
+              "detail": "Section '## Entry Points for Change' found in output"
+            },
+            {
+              "name": "word_count:min",
+              "passed": true,
+              "detail": "Word count 440 \u2265 min 250"
+            },
+            {
+              "name": "word_count:max",
+              "passed": true,
+              "detail": "Word count 440 \u2264 max 3000"
+            },
+            {
+              "name": "contains:authenticate",
+              "passed": true,
+              "detail": "Required phrase 'authenticate' found"
+            },
+            {
+              "name": "contains:router",
+              "passed": true,
+              "detail": "Required phrase 'router' found"
+            },
+            {
+              "name": "not_contains:I don't have access",
+              "passed": true,
+              "detail": "Forbidden phrase 'I don't have access' not found (pass)"
+            },
+            {
+              "name": "not_contains:I cannot",
+              "passed": true,
+              "detail": "Forbidden phrase 'I cannot' not found (pass)"
+            }
+          ],
+          "quality_grades": [],
+          "structure_passed": true,
+          "quality_score": 0.0,
+          "quality_max": 10.0
+        }
+      ],
+      "pass_at_1": 1.0,
+      "pass_at_n": 1.0,
+      "pass_all_n": 1.0,
+      "weighted_score": 0.0
+    },
+    {
+      "task": "explain-express-router",
+      "skill": "explain",
+      "model": "haiku",
+      "trials": [
+        {
+          "trial": 1,
+          "output_length": 2846,
+          "code_grades": [
+            {
+              "name": "section:Summary",
+              "passed": true,
+              "detail": "Section '## Summary' found in output"
+            },
+            {
+              "name": "section:Key Components",
+              "passed": true,
+              "detail": "Section '## Key Components' found in output"
+            },
+            {
+              "name": "section:How It Connects",
+              "passed": true,
+              "detail": "Section '## How It Connects' found in output"
+            },
+            {
+              "name": "section:Patterns & Conventions",
+              "passed": true,
+              "detail": "Section '## Patterns & Conventions' found in output"
+            },
+            {
+              "name": "section:Gotchas",
+              "passed": true,
+              "detail": "Section '## Gotchas' found in output"
+            },
+            {
+              "name": "section:Entry Points for Change",
+              "passed": true,
+              "detail": "Section '## Entry Points for Change' found in output"
+            },
+            {
+              "name": "word_count:min",
+              "passed": true,
+              "detail": "Word count 440 \u2265 min 250"
+            },
+            {
+              "name": "word_count:max",
+              "passed": true,
+              "detail": "Word count 440 \u2264 max 3000"
+            },
+            {
+              "name": "contains:authenticate",
+              "passed": true,
+              "detail": "Required phrase 'authenticate' found"
+            },
+            {
+              "name": "contains:router",
+              "passed": true,
+              "detail": "Required phrase 'router' found"
+            },
+            {
+              "name": "not_contains:I don't have access",
+              "passed": true,
+              "detail": "Forbidden phrase 'I don't have access' not found (pass)"
+            },
+            {
+              "name": "not_contains:I cannot",
+              "passed": true,
+              "detail": "Forbidden phrase 'I cannot' not found (pass)"
+            }
+          ],
+          "quality_grades": [],
+          "structure_passed": true,
+          "quality_score": 0.0,
+          "quality_max": 10.0
+        }
+      ],
+      "pass_at_1": 1.0,
+      "pass_at_n": 1.0,
+      "pass_all_n": 1.0,
+      "weighted_score": 0.0
+    },
+    {
+      "task": "explain-express-router",
+      "skill": "explain",
+      "model": "opus",
+      "trials": [
+        {
+          "trial": 1,
+          "output_length": 2846,
+          "code_grades": [
+            {
+              "name": "section:Summary",
+              "passed": true,
+              "detail": "Section '## Summary' found in output"
+            },
+            {
+              "name": "section:Key Components",
+              "passed": true,
+              "detail": "Section '## Key Components' found in output"
+            },
+            {
+              "name": "section:How It Connects",
+              "passed": true,
+              "detail": "Section '## How It Connects' found in output"
+            },
+            {
+              "name": "section:Patterns & Conventions",
+              "passed": true,
+              "detail": "Section '## Patterns & Conventions' found in output"
+            },
+            {
+              "name": "section:Gotchas",
+              "passed": true,
+              "detail": "Section '## Gotchas' found in output"
+            },
+            {
+              "name": "section:Entry Points for Change",
+              "passed": true,
+              "detail": "Section '## Entry Points for Change' found in output"
+            },
+            {
+              "name": "word_count:min",
+              "passed": true,
+              "detail": "Word count 440 \u2265 min 250"
+            },
+            {
+              "name": "word_count:max",
+              "passed": true,
+              "detail": "Word count 440 \u2264 max 3000"
+            },
+            {
+              "name": "contains:authenticate",
+              "passed": true,
+              "detail": "Required phrase 'authenticate' found"
+            },
+            {
+              "name": "contains:router",
+              "passed": true,
+              "detail": "Required phrase 'router' found"
+            },
+            {
+              "name": "not_contains:I don't have access",
+              "passed": true,
+              "detail": "Forbidden phrase 'I don't have access' not found (pass)"
+            },
+            {
+              "name": "not_contains:I cannot",
+              "passed": true,
+              "detail": "Forbidden phrase 'I cannot' not found (pass)"
+            }
+          ],
+          "quality_grades": [],
+          "structure_passed": true,
+          "quality_score": 0.0,
+          "quality_max": 10.0
+        }
+      ],
+      "pass_at_1": 1.0,
+      "pass_at_n": 1.0,
+      "pass_all_n": 1.0,
+      "weighted_score": 0.0
+    },
+    {
+      "task": "explain-fibonacci",
+      "skill": "explain",
+      "model": "sonnet",
+      "trials": [
+        {
+          "trial": 1,
+          "output_length": 2090,
+          "code_grades": [
+            {
+              "name": "section:Summary",
+              "passed": true,
+              "detail": "Section '## Summary' found in output"
+            },
+            {
+              "name": "section:Key Components",
+              "passed": true,
+              "detail": "Section '## Key Components' found in output"
+            },
+            {
+              "name": "section:How It Connects",
+              "passed": true,
+              "detail": "Section '## How It Connects' found in output"
+            },
+            {
+              "name": "section:Patterns & Conventions",
+              "passed": true,
+              "detail": "Section '## Patterns & Conventions' found in output"
+            },
+            {
+              "name": "section:Gotchas",
+              "passed": true,
+              "detail": "Section '## Gotchas' found in output"
+            },
+            {
+              "name": "section:Entry Points for Change",
+              "passed": true,
+              "detail": "Section '## Entry Points for Change' found in output"
+            },
+            {
+              "name": "word_count:min",
+              "passed": true,
+              "detail": "Word count 298 \u2265 min 200"
+            },
+            {
+              "name": "word_count:max",
+              "passed": true,
+              "detail": "Word count 298 \u2264 max 3000"
+            },
+            {
+              "name": "contains:fibonacci",
+              "passed": true,
+              "detail": "Required phrase 'fibonacci' found"
+            },
+            {
+              "name": "not_contains:I don't have access",
+              "passed": true,
+              "detail": "Forbidden phrase 'I don't have access' not found (pass)"
+            },
+            {
+              "name": "not_contains:I cannot",
+              "passed": true,
+              "detail": "Forbidden phrase 'I cannot' not found (pass)"
+            }
+          ],
+          "quality_grades": [],
+          "structure_passed": true,
+          "quality_score": 0.0,
+          "quality_max": 8.0
+        }
+      ],
+      "pass_at_1": 1.0,
+      "pass_at_n": 1.0,
+      "pass_all_n": 1.0,
+      "weighted_score": 0.0
+    },
+    {
+      "task": "explain-fibonacci",
+      "skill": "explain",
+      "model": "haiku",
+      "trials": [
+        {
+          "trial": 1,
+          "output_length": 2090,
+          "code_grades": [
+            {
+              "name": "section:Summary",
+              "passed": true,
+              "detail": "Section '## Summary' found in output"
+            },
+            {
+              "name": "section:Key Components",
+              "passed": true,
+              "detail": "Section '## Key Components' found in output"
+            },
+            {
+              "name": "section:How It Connects",
+              "passed": true,
+              "detail": "Section '## How It Connects' found in output"
+            },
+            {
+              "name": "section:Patterns & Conventions",
+              "passed": true,
+              "detail": "Section '## Patterns & Conventions' found in output"
+            },
+            {
+              "name": "section:Gotchas",
+              "passed": true,
+              "detail": "Section '## Gotchas' found in output"
+            },
+            {
+              "name": "section:Entry Points for Change",
+              "passed": true,
+              "detail": "Section '## Entry Points for Change' found in output"
+            },
+            {
+              "name": "word_count:min",
+              "passed": true,
+              "detail": "Word count 298 \u2265 min 200"
+            },
+            {
+              "name": "word_count:max",
+              "passed": true,
+              "detail": "Word count 298 \u2264 max 3000"
+            },
+            {
+              "name": "contains:fibonacci",
+              "passed": true,
+              "detail": "Required phrase 'fibonacci' found"
+            },
+            {
+              "name": "not_contains:I don't have access",
+              "passed": true,
+              "detail": "Forbidden phrase 'I don't have access' not found (pass)"
+            },
+            {
+              "name": "not_contains:I cannot",
+              "passed": true,
+              "detail": "Forbidden phrase 'I cannot' not found (pass)"
+            }
+          ],
+          "quality_grades": [],
+          "structure_passed": true,
+          "quality_score": 0.0,
+          "quality_max": 8.0
+        }
+      ],
+      "pass_at_1": 1.0,
+      "pass_at_n": 1.0,
+      "pass_all_n": 1.0,
+      "weighted_score": 0.0
+    },
+    {
+      "task": "explain-fibonacci",
+      "skill": "explain",
+      "model": "opus",
+      "trials": [
+        {
+          "trial": 1,
+          "output_length": 2090,
+          "code_grades": [
+            {
+              "name": "section:Summary",
+              "passed": true,
+              "detail": "Section '## Summary' found in output"
+            },
+            {
+              "name": "section:Key Components",
+              "passed": true,
+              "detail": "Section '## Key Components' found in output"
+            },
+            {
+              "name": "section:How It Connects",
+              "passed": true,
+              "detail": "Section '## How It Connects' found in output"
+            },
+            {
+              "name": "section:Patterns & Conventions",
+              "passed": true,
+              "detail": "Section '## Patterns & Conventions' found in output"
+            },
+            {
+              "name": "section:Gotchas",
+              "passed": true,
+              "detail": "Section '## Gotchas' found in output"
+            },
+            {
+              "name": "section:Entry Points for Change",
+              "passed": true,
+              "detail": "Section '## Entry Points for Change' found in output"
+            },
+            {
+              "name": "word_count:min",
+              "passed": true,
+              "detail": "Word count 298 \u2265 min 200"
+            },
+            {
+              "name": "word_count:max",
+              "passed": true,
+              "detail": "Word count 298 \u2264 max 3000"
+            },
+            {
+              "name": "contains:fibonacci",
+              "passed": true,
+              "detail": "Required phrase 'fibonacci' found"
+            },
+            {
+              "name": "not_contains:I don't have access",
+              "passed": true,
+              "detail": "Forbidden phrase 'I don't have access' not found (pass)"
+            },
+            {
+              "name": "not_contains:I cannot",
+              "passed": true,
+              "detail": "Forbidden phrase 'I cannot' not found (pass)"
+            }
+          ],
+          "quality_grades": [],
+          "structure_passed": true,
+          "quality_score": 0.0,
+          "quality_max": 8.0
+        }
+      ],
+      "pass_at_1": 1.0,
+      "pass_at_n": 1.0,
+      "pass_all_n": 1.0,
+      "weighted_score": 0.0
+    },
+    {
+      "task": "review-clean-rename",
+      "skill": "review",
+      "model": "sonnet",
+      "trials": [
+        {
+          "trial": 1,
+          "output_length": 650,
+          "code_grades": [
+            {
+              "name": "section:Verdict",
+              "passed": true,
+              "detail": "Section '## Verdict' found in output"
+            },
+            {
+              "name": "word_count:min",
+              "passed": true,
+              "detail": "Word count 105 \u2265 min 50"
+            },
+            {
+              "name": "word_count:max",
+              "passed": true,
+              "detail": "Word count 105 \u2264 max 1000"
+            },
+            {
+              "name": "not_contains:BLOCKER",
+              "passed": true,
+              "detail": "Forbidden phrase 'BLOCKER' not found (pass)"
+            },
+            {
+              "name": "not_contains:I don't have access",
+              "passed": true,
+              "detail": "Forbidden phrase 'I don't have access' not found (pass)"
+            },
+            {
+              "name": "not_contains:I cannot",
+              "passed": true,
+              "detail": "Forbidden phrase 'I cannot' not found (pass)"
+            }
+          ],
+          "quality_grades": [],
+          "structure_passed": true,
+          "quality_score": 0.0,
+          "quality_max": 8.0
+        }
+      ],
+      "pass_at_1": 1.0,
+      "pass_at_n": 1.0,
+      "pass_all_n": 1.0,
+      "weighted_score": 0.0
+    },
+    {
+      "task": "review-clean-rename",
+      "skill": "review",
+      "model": "haiku",
+      "trials": [
+        {
+          "trial": 1,
+          "output_length": 650,
+          "code_grades": [
+            {
+              "name": "section:Verdict",
+              "passed": true,
+              "detail": "Section '## Verdict' found in output"
+            },
+            {
+              "name": "word_count:min",
+              "passed": true,
+              "detail": "Word count 105 \u2265 min 50"
+            },
+            {
+              "name": "word_count:max",
+              "passed": true,
+              "detail": "Word count 105 \u2264 max 1000"
+            },
+            {
+              "name": "not_contains:BLOCKER",
+              "passed": true,
+              "detail": "Forbidden phrase 'BLOCKER' not found (pass)"
+            },
+            {
+              "name": "not_contains:I don't have access",
+              "passed": true,
+              "detail": "Forbidden phrase 'I don't have access' not found (pass)"
+            },
+            {
+              "name": "not_contains:I cannot",
+              "passed": true,
+              "detail": "Forbidden phrase 'I cannot' not found (pass)"
+            }
+          ],
+          "quality_grades": [],
+          "structure_passed": true,
+          "quality_score": 0.0,
+          "quality_max": 8.0
+        }
+      ],
+      "pass_at_1": 1.0,
+      "pass_at_n": 1.0,
+      "pass_all_n": 1.0,
+      "weighted_score": 0.0
+    },
+    {
+      "task": "review-clean-rename",
+      "skill": "review",
+      "model": "opus",
+      "trials": [
+        {
+          "trial": 1,
+          "output_length": 650,
+          "code_grades": [
+            {
+              "name": "section:Verdict",
+              "passed": true,
+              "detail": "Section '## Verdict' found in output"
+            },
+            {
+              "name": "word_count:min",
+              "passed": true,
+              "detail": "Word count 105 \u2265 min 50"
+            },
+            {
+              "name": "word_count:max",
+              "passed": true,
+              "detail": "Word count 105 \u2264 max 1000"
+            },
+            {
+              "name": "not_contains:BLOCKER",
+              "passed": true,
+              "detail": "Forbidden phrase 'BLOCKER' not found (pass)"
+            },
+            {
+              "name": "not_contains:I don't have access",
+              "passed": true,
+              "detail": "Forbidden phrase 'I don't have access' not found (pass)"
+            },
+            {
+              "name": "not_contains:I cannot",
+              "passed": true,
+              "detail": "Forbidden phrase 'I cannot' not found (pass)"
+            }
+          ],
+          "quality_grades": [],
+          "structure_passed": true,
+          "quality_score": 0.0,
+          "quality_max": 8.0
+        }
+      ],
+      "pass_at_1": 1.0,
+      "pass_at_n": 1.0,
+      "pass_all_n": 1.0,
+      "weighted_score": 0.0
+    },
+    {
+      "task": "review-missing-error-handling",
+      "skill": "review",
+      "model": "sonnet",
+      "trials": [
+        {
+          "trial": 1,
+          "output_length": 1249,
+          "code_grades": [
+            {
+              "name": "section:Verdict",
+              "passed": true,
+              "detail": "Section '## Verdict' found in output"
+            },
+            {
+              "name": "word_count:min",
+              "passed": true,
+              "detail": "Word count 187 \u2265 min 100"
+            },
+            {
+              "name": "word_count:max",
+              "passed": true,
+              "detail": "Word count 187 \u2264 max 2000"
+            },
+            {
+              "name": "contains:BLOCKER",
+              "passed": true,
+              "detail": "Required phrase 'BLOCKER' found"
+            },
+            {
+              "name": "not_contains:I don't have access",
+              "passed": true,
+              "detail": "Forbidden phrase 'I don't have access' not found (pass)"
+            },
+            {
+              "name": "not_contains:I cannot",
+              "passed": true,
+              "detail": "Forbidden phrase 'I cannot' not found (pass)"
+            }
+          ],
+          "quality_grades": [],
+          "structure_passed": true,
+          "quality_score": 0.0,
+          "quality_max": 9.0
+        }
+      ],
+      "pass_at_1": 1.0,
+      "pass_at_n": 1.0,
+      "pass_all_n": 1.0,
+      "weighted_score": 0.0
+    },
+    {
+      "task": "review-missing-error-handling",
+      "skill": "review",
+      "model": "haiku",
+      "trials": [
+        {
+          "trial": 1,
+          "output_length": 1249,
+          "code_grades": [
+            {
+              "name": "section:Verdict",
+              "passed": true,
+              "detail": "Section '## Verdict' found in output"
+            },
+            {
+              "name": "word_count:min",
+              "passed": true,
+              "detail": "Word count 187 \u2265 min 100"
+            },
+            {
+              "name": "word_count:max",
+              "passed": true,
+              "detail": "Word count 187 \u2264 max 2000"
+            },
+            {
+              "name": "contains:BLOCKER",
+              "passed": true,
+              "detail": "Required phrase 'BLOCKER' found"
+            },
+            {
+              "name": "not_contains:I don't have access",
+              "passed": true,
+              "detail": "Forbidden phrase 'I don't have access' not found (pass)"
+            },
+            {
+              "name": "not_contains:I cannot",
+              "passed": true,
+              "detail": "Forbidden phrase 'I cannot' not found (pass)"
+            }
+          ],
+          "quality_grades": [],
+          "structure_passed": true,
+          "quality_score": 0.0,
+          "quality_max": 9.0
+        }
+      ],
+      "pass_at_1": 1.0,
+      "pass_at_n": 1.0,
+      "pass_all_n": 1.0,
+      "weighted_score": 0.0
+    },
+    {
+      "task": "review-missing-error-handling",
+      "skill": "review",
+      "model": "opus",
+      "trials": [
+        {
+          "trial": 1,
+          "output_length": 1249,
+          "code_grades": [
+            {
+              "name": "section:Verdict",
+              "passed": true,
+              "detail": "Section '## Verdict' found in output"
+            },
+            {
+              "name": "word_count:min",
+              "passed": true,
+              "detail": "Word count 187 \u2265 min 100"
+            },
+            {
+              "name": "word_count:max",
+              "passed": true,
+              "detail": "Word count 187 \u2264 max 2000"
+            },
+            {
+              "name": "contains:BLOCKER",
+              "passed": true,
+              "detail": "Required phrase 'BLOCKER' found"
+            },
+            {
+              "name": "not_contains:I don't have access",
+              "passed": true,
+              "detail": "Forbidden phrase 'I don't have access' not found (pass)"
+            },
+            {
+              "name": "not_contains:I cannot",
+              "passed": true,
+              "detail": "Forbidden phrase 'I cannot' not found (pass)"
+            }
+          ],
+          "quality_grades": [],
+          "structure_passed": true,
+          "quality_score": 0.0,
+          "quality_max": 9.0
+        }
+      ],
+      "pass_at_1": 1.0,
+      "pass_at_n": 1.0,
+      "pass_all_n": 1.0,
+      "weighted_score": 0.0
+    }
+  ]
+}
