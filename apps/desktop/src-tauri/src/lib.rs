@@ -194,6 +194,9 @@ pub fn run() {
             commands::relay::chat_start_local_relay,
             commands::relay::chat_stop_local_relay,
             commands::relay::chat_local_relay_running,
+            // Feedback
+            commands::feedback::get_system_info,
+            commands::feedback::submit_feedback,
             // AI Chat
             ai::commands::check_ollama_running,
             ai::commands::list_models,

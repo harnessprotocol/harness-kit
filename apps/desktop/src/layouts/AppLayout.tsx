@@ -9,6 +9,7 @@ import { initTheme } from "../lib/theme";
 import { initPreferences, getHiddenSections } from "../lib/preferences";
 import { useChat } from "../contexts/ChatContext";
 import ChatPanel from "../components/chat/ChatPanel";
+import FeedbackModal from "../components/FeedbackModal";
 import { useClaudeFileList } from "../hooks/useClaudeFileList";
 
 type NavSection = {
@@ -373,6 +374,7 @@ export default function AppLayout() {
   const visibleSections = NAV_SECTIONS.filter((s) => !hiddenSections.has(s.id));
 
   const prefsActive = location.pathname === "/preferences";
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   function isActive(section: NavSection) {
     return location.pathname.startsWith(`/${section.id}`);
@@ -605,6 +607,29 @@ export default function AppLayout() {
                   <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
                 </svg>
               </button>
+
+              <button
+                onClick={() => setFeedbackOpen(true)}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  width: "100%",
+                  padding: "6px 8px",
+                  borderRadius: "6px",
+                  border: "none",
+                  background: "transparent",
+                  color: "var(--fg-subtle)",
+                  cursor: "pointer",
+                  fontSize: "11px",
+                  textAlign: "left",
+                }}
+              >
+                <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zm-4 0H9v2h2V9z" clipRule="evenodd" />
+                </svg>
+                Feedback
+              </button>
             </div>
 
             {/* Bottom bar: gear button */}
@@ -669,6 +694,8 @@ export default function AppLayout() {
           <ChatPanel />
         </div>
       </div>
+
+      <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
     </div>
   );
 }

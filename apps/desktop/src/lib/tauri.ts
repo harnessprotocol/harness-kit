@@ -756,3 +756,39 @@ export async function getHarnessHealth(): Promise<HarnessHealthRecord[]> {
 export async function recordHarnessLaunchResult(harnessId: string, exitCode: number): Promise<void> {
   return invoke<void>("record_harness_launch_result", { harnessId, exitCode });
 }
+
+// ── Feedback commands ─────────────────────────────────────────
+
+export interface SystemInfo {
+  os: string;
+  osVersion: string;
+  arch: string;
+  appVersion: string;
+}
+
+export interface FeedbackResult {
+  success: boolean;
+  issueUrl: string | null;
+  error: string | null;
+}
+
+export async function getSystemInfo(): Promise<SystemInfo> {
+  return invoke<SystemInfo>("get_system_info");
+}
+
+export async function submitFeedback(
+  category: string,
+  title: string,
+  description: string,
+  sysInfo: SystemInfo,
+): Promise<FeedbackResult> {
+  return invoke<FeedbackResult>("submit_feedback", {
+    category,
+    title,
+    description,
+    os: sysInfo.os,
+    osVersion: sysInfo.osVersion,
+    arch: sysInfo.arch,
+    appVersion: sysInfo.appVersion,
+  });
+}
