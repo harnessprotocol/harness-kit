@@ -145,6 +145,7 @@
     "allow-get-parity-history",
     "allow-create-config-file",
     "allow-add-to-parity-baseline",
+    "allow-probe-harness-capabilities",
     "allow-chat-save-room",
     "allow-chat-leave-room",
     "allow-chat-list-rooms",

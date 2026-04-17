@@ -183,6 +183,7 @@ pub fn run() {
             commands::parity::get_parity_history,
             commands::parity::create_config_file,
             commands::parity::add_to_parity_baseline,
+            commands::parity::probe_harness_capabilities,
             // Chat
             commands::chat::chat_save_room,
             commands::chat::chat_leave_room,

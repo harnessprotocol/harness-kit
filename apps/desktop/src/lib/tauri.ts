@@ -408,6 +408,15 @@ export async function addToParityBaseline(category: string, featureName: string)
   return invoke<void>("add_to_parity_baseline", { category, featureName });
 }
 
+export type FileProbeState = "detected" | "missing" | "not_applicable";
+
+/** Probe each installed harness + its on-disk capability files.
+ * Returns a flat map of `"targetId::capabilityId"` → file state.
+ * Requires the `probe_harness_capabilities` Rust command. */
+export async function probeHarnessCapabilities(): Promise<Record<string, FileProbeState>> {
+  return invoke<Record<string, FileProbeState>>("probe_harness_capabilities");
+}
+
 // ── Chat commands ────────────────────────────────────────────
 
 export interface ChatRoomRow {
