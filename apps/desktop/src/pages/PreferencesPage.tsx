@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-shell";
 import { getVersion } from "@tauri-apps/api/app";
+import { invoke } from "@tauri-apps/api/core";
 import Tooltip from "../components/Tooltip";
 import { NAV_SECTIONS } from "../layouts/AppLayout";
 import {
@@ -23,6 +24,14 @@ import {
   ACCENT_PRESETS,
   type AccentName,
 } from "../lib/theme";
+
+interface UpdateStatus {
+  localSha: string;
+  remoteSha: string;
+  commitsBehind: number;
+  upToDate: boolean;
+  error: string | null;
+}
 
 // ── Local helper components ─────────────────────────────────────
 
@@ -115,9 +124,23 @@ function Segmented<T extends string | number | boolean>({
 
 export default function PreferencesPage() {
   const [appVersion, setAppVersion] = useState("0.0.0");
+  const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null);
+  const [updateChecking, setUpdateChecking] = useState(false);
+  const [rebuilding, setRebuilding] = useState(false);
 
   useEffect(() => {
     getVersion().then(setAppVersion).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const repoPath = import.meta.env.VITE_REPO_PATH;
+    const installedSha = import.meta.env.VITE_GIT_SHA;
+    if (!repoPath || !installedSha || installedSha === "unknown") return;
+    setUpdateChecking(true);
+    invoke<UpdateStatus>("check_for_updates", { repoPath, installedSha })
+      .then(setUpdateStatus)
+      .catch(() => {})
+      .finally(() => setUpdateChecking(false));
   }, []);
 
   const [theme, setThemeState] = useState(getTheme);
@@ -201,6 +224,19 @@ export default function PreferencesPage() {
   function handleSetConfigFilesDetail(level: ConfigFilesDetailLevel) {
     setConfigFilesDetailLevel(level);
     setConfigFilesDetailState(level);
+  }
+
+  async function handleRebuild() {
+    const repoPath = import.meta.env.VITE_REPO_PATH;
+    if (!repoPath) return;
+    setRebuilding(true);
+    try {
+      await invoke("trigger_rebuild", { repoPath });
+    } catch (err) {
+      console.error("Rebuild failed:", err);
+    } finally {
+      setRebuilding(false);
+    }
   }
 
   // Compute whether each section pill should be disabled (last visible)
@@ -489,6 +525,66 @@ export default function PreferencesPage() {
           </div>
         </SettingRow>
       </div>
+
+      {/* ── Updates ────────────────────────────────────────────────────────────── */}
+      {import.meta.env.VITE_REPO_PATH && (
+        <div style={{ marginBottom: "28px" }}>
+          <SectionHeader>Updates</SectionHeader>
+
+          <div style={{
+            padding: "10px 0",
+            borderBottom: "1px solid var(--separator)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "24px",
+          }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: "13px", fontWeight: 500, color: "var(--fg-base)" }}>
+                {updateChecking
+                  ? "Checking for updates..."
+                  : updateStatus?.error
+                    ? "Update check unavailable"
+                    : updateStatus?.upToDate
+                      ? "Up to date"
+                      : `${updateStatus?.commitsBehind} commit${updateStatus?.commitsBehind === 1 ? "" : "s"} behind main`}
+              </div>
+              {!updateChecking && !updateStatus?.error && import.meta.env.VITE_GIT_SHA && import.meta.env.VITE_GIT_SHA !== "unknown" && (
+                <div style={{ fontSize: "11px", color: "var(--fg-muted)", marginTop: "2px", fontFamily: "monospace" }}>
+                  {import.meta.env.VITE_GIT_SHA.slice(0, 7)}
+                </div>
+              )}
+              {updateStatus?.error && (
+                <div style={{ fontSize: "11px", color: "var(--fg-muted)", marginTop: "2px" }}>
+                  {updateStatus.error}
+                </div>
+              )}
+            </div>
+            <div style={{ flexShrink: 0 }}>
+              {!updateStatus?.upToDate && !updateStatus?.error && !updateChecking && (
+                <button
+                  onClick={handleRebuild}
+                  disabled={rebuilding}
+                  style={{
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    padding: "6px 14px",
+                    borderRadius: "6px",
+                    border: "1px solid var(--accent)",
+                    background: "var(--accent-light)",
+                    color: "var(--accent-text)",
+                    cursor: rebuilding ? "not-allowed" : "pointer",
+                    opacity: rebuilding ? 0.6 : 1,
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {rebuilding ? "Opening Terminal..." : "Rebuild & Relaunch"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── About ──────────────────────────────────────────────── */}
       <div>
