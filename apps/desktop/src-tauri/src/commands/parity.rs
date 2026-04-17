@@ -1053,6 +1053,147 @@ pub fn add_to_parity_baseline(category: String, feature_name: String) -> Result<
     Ok(())
 }
 
+// ── Capability probe ──────────────────────────────────────────
+
+/// Per-harness binary check and capability file probe for the parity grid.
+///
+/// Each target is identified by its `TargetPlatform` id (e.g. `"claude-code"`, `"cursor"`).
+/// Returns a flat map of `"targetId::capabilityId"` → `"detected" | "missing" | "not_applicable"`.
+///
+/// File-based capabilities (`instructions-file`, `mcp-config`, `skills-dir`, `settings-file`)
+/// are probed relative to the user's home directory so the result is meaningful without
+/// requiring a project directory to be set.
+///
+/// Only config capabilities are probed; plugin/runtime/protocol rows are returned as
+/// `"not_applicable"` regardless of install state (they represent features, not files).
+#[tauri::command]
+pub async fn probe_harness_capabilities(
+    app: AppHandle,
+) -> Result<HashMap<String, String>, String> {
+    let home = dirs::home_dir().ok_or("Cannot determine home directory")?;
+
+    type CapEntry = (&'static str, &'static str);
+    type TargetEntry = (&'static str, &'static str, &'static [CapEntry]);
+    // (target_id, binary_to_check, config_file_paths_by_cap_id)
+    // Paths are relative to home dir for global-level checks.
+    let targets: &[TargetEntry] = &[
+        (
+            "claude-code", "claude",
+            &[
+                ("instructions-file", "CLAUDE.md"),
+                ("mcp-config",        ".mcp.json"),
+                ("skills-dir",        ".claude/skills"),
+                ("settings-file",     ".claude/settings.json"),
+            ],
+        ),
+        (
+            "cursor", "cursor-agent",
+            &[
+                ("instructions-file", ".cursor/rules/harness.mdc"),
+                ("mcp-config",        ".cursor/mcp.json"),
+                ("skills-dir",        ".cursor/skills"),
+            ],
+        ),
+        (
+            "copilot", "gh",
+            &[
+                ("instructions-file", ".github/copilot-instructions.md"),
+                ("mcp-config",        ".vscode/mcp.json"),
+                ("skills-dir",        ".github/skills"),
+            ],
+        ),
+        (
+            "codex", "codex",
+            &[
+                ("instructions-file", "AGENTS.md"),
+                ("skills-dir",        ".agents/skills"),
+            ],
+        ),
+        (
+            "opencode", "opencode",
+            &[
+                ("instructions-file", "AGENTS.md"),
+                ("mcp-config",        "opencode.json"),
+                ("skills-dir",        ".opencode/skills"),
+            ],
+        ),
+        (
+            "windsurf", "windsurf",
+            &[
+                ("instructions-file", "AGENTS.md"),
+                ("skills-dir",        ".windsurf/skills"),
+            ],
+        ),
+        (
+            "gemini", "gemini",
+            &[
+                ("instructions-file", "AGENTS.md"),
+                ("mcp-config",        ".gemini/settings.json"),
+                ("skills-dir",        ".gemini/skills"),
+                ("settings-file",     ".gemini/settings.json"),
+            ],
+        ),
+        (
+            "junie", "junie",
+            &[
+                ("instructions-file", "AGENTS.md"),
+                ("mcp-config",        ".junie/mcp/mcp.json"),
+                ("skills-dir",        ".junie/skills"),
+            ],
+        ),
+    ];
+
+    // All capability IDs that are probed as files (config category)
+    let config_cap_ids = &["instructions-file", "mcp-config", "skills-dir", "settings-file"];
+    // Non-file capabilities (plugin/runtime/protocol) — always not_applicable
+    let non_file_cap_ids = &[
+        "slash-commands", "lifecycle-hooks", "subagents",
+        "streaming-json", "parallel-agents",
+        "mcp-stdio", "mcp-http", "mcp-sse",
+    ];
+
+    let shell = app.shell();
+    let mut result: HashMap<String, String> = HashMap::new();
+
+    for (target_id, binary, file_caps) in targets {
+        // Check binary availability (2s timeout)
+        let available = timeout(
+            Duration::from_secs(2),
+            shell.command(binary).args(["--version"]).output(),
+        )
+        .await
+        .map(|r| r.is_ok_and(|o| o.status.success()))
+        .unwrap_or(false);
+
+        // Config capability file probes
+        let probed_cap_ids: Vec<&str> = file_caps.iter().map(|(cap, _)| *cap).collect();
+        for (cap_id, rel_path) in *file_caps {
+            let key = format!("{}::{}", target_id, cap_id);
+            let state = if available {
+                let path = home.join(rel_path);
+                if path.exists() { "detected" } else { "missing" }
+            } else {
+                "not_applicable"
+            };
+            result.insert(key, state.to_string());
+        }
+
+        // Config caps this target doesn't support → not_applicable
+        for cap_id in *config_cap_ids {
+            if !probed_cap_ids.contains(&cap_id) {
+                result.insert(format!("{}::{}", target_id, cap_id), "not_applicable".to_string());
+            }
+        }
+
+        // Non-file caps are always not_applicable (informational only)
+        for cap_id in *non_file_cap_ids {
+            result.insert(format!("{}::{}", target_id, cap_id), "not_applicable".to_string());
+        }
+    }
+
+    Ok(result)
+}
+
 // ── Tests ─────────────────────────────────────────────────────
 
 #[cfg(test)]

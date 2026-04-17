@@ -1,789 +1,186 @@
-import { useEffect, useState, useCallback } from "react";
+import { Fragment, useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import type { HarnessInfo } from "@harness-kit/shared";
+import type { TargetPlatform } from "@harness-kit/core";
 import {
+  detectHarnesses,
   runParityScan,
-  getParitySnapshot,
   getParityDrift,
   acknowledgeDrift,
   createConfigFile,
   addToParityBaseline,
+  probeHarnessCapabilities,
 } from "../../lib/tauri";
-import type { ParitySnapshot, ParityFeature, ParityDriftItem } from "../../lib/tauri";
+import type { ParityDriftItem } from "../../lib/tauri";
+import {
+  CAPABILITIES,
+  CATEGORY_LABELS,
+  CATEGORY_ORDER,
+  isNew,
+  isSelectable,
+} from "./capability-catalog";
+import type { Capability, CapabilityCategory } from "./capability-catalog";
+import { deepLinkForVersion } from "./deep-link";
+import { useParitySelection } from "./useParitySelection";
+import { FeatureDetailDrawer } from "./FeatureDetailDrawer";
+import { BatchActionBar } from "./BatchActionBar";
+import { HarnessColumnMenu } from "./HarnessColumnMenu";
 
-// ── Helpers ──────────────────────────────────────────────────
+const RECENT_DIRS_KEY = "harness-kit-sync-recent-dirs";
+
+function getLastProjectDir(): string {
+  try {
+    const dirs = JSON.parse(localStorage.getItem(RECENT_DIRS_KEY) ?? "[]");
+    return Array.isArray(dirs) && typeof dirs[0] === "string" ? dirs[0] : "";
+  } catch {
+    return "";
+  }
+}
 
 function relativeTime(isoString: string): string {
   const ms = Date.now() - new Date(isoString).getTime();
-  const seconds = Math.floor(ms / 1000);
-  if (seconds < 60) return "just now";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  return `${Math.floor(hours / 24)}d ago`;
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return "just now";
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
 }
 
-function isOlderThan24h(isoString: string): boolean {
-  return Date.now() - new Date(isoString).getTime() > 24 * 60 * 60 * 1000;
+function absoluteTime(isoString: string): string {
+  return new Date(isoString).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  config_file: "Config Files",
-  settings_key: "Settings Keys",
-  cli_flag: "CLI Flags",
-  cli_subcommand: "CLI Subcommands",
-  mcp_transport: "MCP Transports",
-  mcp_server: "MCP Servers",
-  plugin_type: "Plugin Component Types",
-};
+// ── Drift row (for "What's changed" panel) ────────────────────
 
-const CATEGORY_ORDER = [
-  "config_file",
-  "settings_key",
-  "cli_flag",
-  "cli_subcommand",
-  "mcp_transport",
-  "mcp_server",
-  "plugin_type",
-];
-
-const CATEGORY_COLORS: Record<string, string> = {
+const DRIFT_CATEGORY_COLORS: Record<string, string> = {
+  config_file: "#16a34a",
   settings_key: "#0d9488",
   cli_flag: "#2563eb",
-  mcp_transport: "#7c3aed",
-  plugin_type: "#ea580c",
-  config_file: "#16a34a",
-  mcp_server: "#64748b",
   cli_subcommand: "#64748b",
+  mcp_transport: "#7c3aed",
+  mcp_server: "#64748b",
+  plugin_type: "#ea580c",
 };
 
-// ── Descriptions ─────────────────────────────────────────────
-
-const CATEGORY_DESCRIPTIONS: Record<string, string> = {
-  config_file:
-    "Standard configuration files Claude Code reads automatically when present in ~/ or project directories.",
-  settings_key:
-    "Keys found in ~/.claude/settings.json and settings.local.json — controls permissions, tools, and behavior.",
-  cli_flag: "Command-line flags detected from `claude --help` output.",
-  cli_subcommand:
-    "Subcommands available in the Claude Code CLI (informational, not tracked for drift).",
-  mcp_transport: "Transport protocols used by your configured MCP servers.",
-  mcp_server: "MCP servers configured in ~/.claude/mcp.json (informational).",
-  plugin_type: "Plugin component types found across your installed Claude Code plugins.",
+const DRIFT_CATEGORY_LABELS: Record<string, string> = {
+  config_file: "Config",
+  settings_key: "Settings",
+  cli_flag: "CLI Flag",
+  cli_subcommand: "CLI Subcommand",
+  mcp_transport: "MCP Transport",
+  mcp_server: "MCP Server",
+  plugin_type: "Plugin",
 };
 
-const FEATURE_DESCRIPTIONS: Record<string, Record<string, string>> = {
-  config_file: {
-    "CLAUDE.md":
-      "Operational instructions — build commands, architecture notes, and gotchas. Auto-loaded per project up the directory tree.",
-    "AGENT.md":
-      "Behavioral instructions — tone, autonomy level, and workflow conventions. Cascades from global to project.",
-    "SOUL.md":
-      "Identity file — values, relationship context, and memory bootstrap. Global scope only.",
-    ".mcp.json": "Project-level MCP server definitions — tool providers for Claude Code.",
-    ".claude/settings.json":
-      "Claude Code settings — permissions, allowed/denied tools, env vars, and model preferences.",
-    ".claude/settings.local.json":
-      "Local overrides for settings.json — not committed to git, for machine-specific config.",
-    ".claude/hooks/":
-      "Directory for hook scripts — PreToolUse, PostToolUse, Stop, and other lifecycle events.",
-  },
-  settings_key: {
-    permissions: "Root container for all permission settings (allow/deny/ask).",
-    "permissions.allow":
-      "Tool patterns Claude may use without asking. Supports glob syntax, e.g. 'Bash(npm *)'.",
-    "permissions.deny": "Tool patterns Claude is never allowed to use.",
-    "permissions.ask": "Tool patterns that require explicit approval each time.",
-    additionalDirectories:
-      "Directories outside the project root that Claude has read/write access to.",
-    model: "Override the default Claude model for this project.",
-    apiKeyHelper: "Shell command to dynamically fetch the Anthropic API key.",
-    cleanupPeriodDays: "Days to retain conversation history before automatic cleanup.",
-    env: "Environment variables set for all Claude Code sessions in this project.",
-    includeCoAuthoredBy: "Whether to include the Co-Authored-By trailer in git commits.",
-    hooks: "Lifecycle hook configuration — maps events to shell commands.",
-    theme: "UI theme override: 'dark', 'light', or 'auto'.",
-  },
-  cli_flag: {
-    "--version": "Print the current installed version of Claude Code and exit.",
-    "--help": "Show usage information, available flags, and subcommands.",
-    "-p": "Non-interactive print mode — pipe in a prompt, get output without a TTY.",
-    "--print": "Alias for -p — non-interactive print mode.",
-    "--model": "Override the Claude model for this session (e.g. claude-opus-4-6).",
-    "--resume": "Resume a previous conversation by session ID.",
-    "--continue": "Continue the most recent conversation.",
-    "--dangerously-skip-permissions":
-      "Skip all permission checks — for trusted automated environments only.",
-    "--output-format": "Set output format: text, json, or stream-json.",
-    "--max-turns": "Limit agentic turns (tool calls) in a single session.",
-    "--allowedTools": "Comma-separated list of tools to enable for this session.",
-    "--disallowedTools": "Comma-separated list of tools to disable for this session.",
-    "--verbose": "Enable verbose output for debugging.",
-    "--debug": "Enable debug mode with extra logging.",
-    "--no-color": "Disable ANSI color output.",
-    "--add-dir": "Add extra working directories for this session.",
-    "--system-prompt": "Override the system prompt (use with -p).",
-  },
-  mcp_transport: {
-    stdio: "The MCP server runs as a subprocess communicating via stdin/stdout.",
-    http: "The MCP server runs as a web service, queried over HTTP.",
-    sse: "The MCP server streams events over an HTTP connection (Server-Sent Events).",
-    ws: "Bidirectional streaming communication with the MCP server (WebSocket).",
-  },
-  plugin_type: {
-    skills: "Prompt-based SKILL.md files that teach Claude how to perform specific tasks.",
-    agents: "Specialist subagent configurations for delegated autonomous tasks.",
-    hooks: "Lifecycle hook scripts triggered by events (PreToolUse, PostToolUse, etc.).",
-    commands: "Custom slash commands users can invoke in the Claude Code UI.",
-    scripts: "Bundled utility scripts shipped with the plugin.",
-  },
-};
-
-function getFeatureDescription(category: string, featureName: string): string {
-  const specific = FEATURE_DESCRIPTIONS[category]?.[featureName];
-  if (specific) return specific;
-  // Fallback by category + name patterns
-  if (category === "settings_key") {
-    if (featureName.startsWith("permissions.")) return `Permission setting: controls ${featureName.split(".").slice(1).join(".")} access.`;
-    if (featureName.startsWith("hooks.")) return `Hook config for the ${featureName.split(".").slice(1).join(".")} event.`;
-    if (featureName.startsWith("env.")) return `Environment variable: ${featureName.split(".").slice(1).join(".")}.`;
-    return "Settings key found in ~/.claude/settings.json.";
-  }
-  if (category === "cli_flag") return "Command-line flag for the Claude Code CLI.";
-  if (category === "cli_subcommand") return "Claude Code CLI subcommand.";
-  if (category === "mcp_server") return "MCP server configured in ~/.claude/mcp.json.";
-  if (category === "mcp_transport") return "MCP transport protocol used by a configured server.";
-  if (category === "config_file") return "Configuration file read by Claude Code.";
-  if (category === "plugin_type") return "Plugin component type.";
-  return "";
-}
-
-const CONFIG_FILE_TEMPLATES: Record<string, string> = {
-  "CLAUDE.md":
-    "# Global Instructions\n\n## Commands\n\n<!-- build, test, dev commands -->\n\n## Architecture\n\n<!-- entry points, package layout, key files -->\n\n## Gotchas\n\n<!-- non-obvious patterns and common mistakes -->",
-  "AGENT.md":
-    "# Behavioral Configuration\n\n## Tone\n\nDirect and concise. No filler words.\n\n## Autonomy\n\nAsk before destructive or hard-to-reverse operations.\n\n## Workflow\n\nWork in focused sessions. Commit changes incrementally.",
-  "SOUL.md":
-    "# Identity\n\n## Values\n\n<!-- Your collaboration values and preferences -->\n\n## Relationship Context\n\n<!-- How you prefer to work with Claude across sessions -->",
-  ".mcp.json": '{\n  "mcpServers": {}\n}',
-  ".claude/settings.json": '{\n  "permissions": {\n    "allow": [],\n    "deny": []\n  }\n}',
-};
-
-const DRIFT_DESCRIPTIONS: Record<
-  string,
-  (item: ParityDriftItem) => string
-> = {
-  missing_file: (item) => {
-    const cfg = FEATURE_DESCRIPTIONS.config_file[item.featureName];
-    return cfg
-      ? `${item.featureName} is missing from its expected location. ${cfg}`
-      : `${item.featureName} was not found. This file is used by Claude Code.`;
-  },
-  new_feature: (item) => {
-    switch (item.category) {
-      case "settings_key":
-        return `The key "${item.featureName}" is in your ~/.claude/settings.json but isn't tracked in Harness Kit's baseline. If you use this intentionally, mark it as known to stop flagging it.`;
-      case "cli_flag":
-        return `The flag "${item.featureName}" appears in \`claude --help\` but isn't in Harness Kit's baseline. It may be a new Claude Code feature.`;
-      case "mcp_transport":
-        return `The MCP transport "${item.featureName}" is in use but isn't in Harness Kit's baseline.`;
-      case "plugin_type":
-        return `Plugin component type "${item.featureName}" was found but isn't in Harness Kit's baseline.`;
-      default:
-        return item.details ?? "Untracked feature detected.";
-    }
-  },
-};
-
-// ── Tooltip ──────────────────────────────────────────────────
-
-function Tooltip({ text, children }: { text: string; children: React.ReactNode }) {
-  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
-  if (!text) return <>{children}</>;
-  return (
-    <span
-      style={{ position: "relative", display: "inline" }}
-      onMouseEnter={(e) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        setPos({ x: rect.left, y: rect.bottom + 6 });
-      }}
-      onMouseLeave={() => setPos(null)}
-    >
-      <span
-        style={{
-          borderBottom: "1px dotted var(--fg-subtle)",
-          cursor: "help",
-        }}
-      >
-        {children}
-      </span>
-      {pos && (
-        <div
-          style={{
-            position: "fixed",
-            left: pos.x,
-            top: pos.y,
-            zIndex: 9999,
-            background: "var(--bg-base)",
-            border: "1px solid var(--border-base)",
-            borderRadius: "6px",
-            padding: "7px 10px",
-            fontSize: "11px",
-            color: "var(--fg-base)",
-            maxWidth: "280px",
-            lineHeight: 1.45,
-            boxShadow: "0 4px 14px rgba(0,0,0,0.18)",
-            pointerEvents: "none",
-          }}
-        >
-          {text}
-        </div>
-      )}
-    </span>
-  );
-}
-
-// ── Stat card ────────────────────────────────────────────────
-
-function StatCard({
-  label,
-  value,
-  sub,
-  accent,
-}: {
-  label: string;
-  value: string;
-  sub?: string;
-  accent?: boolean;
-}) {
-  return (
-    <div
-      style={{
-        flex: 1,
-        minWidth: 0,
-        background: "var(--bg-surface)",
-        border: `1px solid ${accent ? "var(--accent)" : "var(--border-base)"}`,
-        borderRadius: "8px",
-        padding: "12px 16px",
-      }}
-    >
-      <div
-        style={{
-          fontSize: "20px",
-          fontWeight: 600,
-          letterSpacing: "-0.5px",
-          color: accent ? "var(--accent)" : "var(--fg-base)",
-          lineHeight: 1.1,
-          fontVariantNumeric: "tabular-nums",
-        }}
-      >
-        {value}
-      </div>
-      <div style={{ marginTop: "4px" }}>
-        <span
-          style={{
-            fontSize: "11px",
-            fontWeight: 500,
-            fontVariantCaps: "all-small-caps",
-            letterSpacing: "0.03em",
-            color: "var(--fg-subtle)",
-          }}
-        >
-          {label}
-        </span>
-      </div>
-      {sub && (
-        <div
-          style={{
-            marginTop: "3px",
-            fontSize: "10px",
-            color: "var(--fg-subtle)",
-            opacity: 0.7,
-            lineHeight: 1.35,
-          }}
-        >
-          {sub}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Status badge ─────────────────────────────────────────────
-
-function StatusBadge({ status }: { status: "ok" | "new" | "not_found" | "info" }) {
-  const styles: Record<string, { bg: string; color: string; label: string }> = {
-    ok: { bg: "rgba(22,163,74,0.12)", color: "#16a34a", label: "OK" },
-    new: { bg: "rgba(245,158,11,0.12)", color: "#d97706", label: "New" },
-    not_found: { bg: "rgba(100,116,139,0.10)", color: "var(--fg-subtle)", label: "Not found" },
-    info: { bg: "rgba(100,116,139,0.10)", color: "var(--fg-subtle)", label: "Info" },
-  };
-  const s = styles[status];
-  return (
-    <span
-      style={{
-        display: "inline-block",
-        padding: "1px 7px",
-        borderRadius: "10px",
-        fontSize: "10px",
-        fontWeight: 600,
-        background: s.bg,
-        color: s.color,
-        letterSpacing: "0.02em",
-      }}
-    >
-      {s.label}
-    </span>
-  );
-}
-
-function featureStatus(feature: ParityFeature): "ok" | "new" | "not_found" | "info" {
-  if (feature.category === "config_file") {
-    if (feature.value === "detected") return feature.knownToHarness ? "ok" : "new";
-    return "not_found";
-  }
-  if (feature.category === "mcp_server" || feature.category === "cli_subcommand") return "info";
-  return feature.knownToHarness ? "ok" : "new";
-}
-
-// ── Feature matrix section ───────────────────────────────────
-
-function FeatureSection({
-  category,
-  features,
-}: {
-  category: string;
-  features: ParityFeature[];
-}) {
-  const [open, setOpen] = useState(true);
-  const label = CATEGORY_LABELS[category] ?? category;
-  const categoryDesc = CATEGORY_DESCRIPTIONS[category] ?? "";
-  const newCount = features.filter((f) => featureStatus(f) === "new").length;
-
-  return (
-    <div
-      style={{
-        border: "1px solid var(--border-base)",
-        borderRadius: "8px",
-        overflow: "hidden",
-        marginBottom: "8px",
-      }}
-    >
-      <button
-        onClick={() => setOpen((v) => !v)}
-        style={{
-          width: "100%",
-          display: "flex",
-          alignItems: "center",
-          gap: "8px",
-          padding: "10px 14px",
-          background: "var(--bg-surface)",
-          border: "none",
-          cursor: "pointer",
-          color: "var(--fg-base)",
-          fontSize: "12px",
-          fontWeight: 600,
-          textAlign: "left",
-        }}
-      >
-        <svg
-          width="10"
-          height="10"
-          viewBox="0 0 10 10"
-          fill="currentColor"
-          style={{
-            transform: open ? "rotate(90deg)" : "rotate(0deg)",
-            transition: "transform 0.15s ease",
-            color: "var(--fg-subtle)",
-            flexShrink: 0,
-          }}
-        >
-          <path d="M3 2l4 3-4 3V2z" />
-        </svg>
-        <span style={{ flex: 1 }}>
-          {categoryDesc ? <Tooltip text={categoryDesc}>{label}</Tooltip> : label}
-        </span>
-        <span style={{ color: "var(--fg-subtle)", fontWeight: 400, fontSize: "11px" }}>
-          {features.length} {features.length === 1 ? "item" : "items"}
-        </span>
-        {newCount > 0 && (
-          <span
-            style={{
-              padding: "1px 7px",
-              borderRadius: "10px",
-              fontSize: "10px",
-              fontWeight: 600,
-              background: "rgba(245,158,11,0.12)",
-              color: "#d97706",
-            }}
-          >
-            {newCount} new
-          </span>
-        )}
-      </button>
-
-      {open && (
-        <div style={{ borderTop: "1px solid var(--border-base)" }}>
-          {features.length === 0 ? (
-            <div style={{ padding: "12px 14px", fontSize: "12px", color: "var(--fg-subtle)" }}>
-              No items detected
-            </div>
-          ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "12px" }}>
-              <thead>
-                <tr style={{ background: "var(--bg-base)" }}>
-                  <th
-                    style={{
-                      padding: "6px 14px",
-                      textAlign: "left",
-                      fontWeight: 500,
-                      color: "var(--fg-subtle)",
-                      fontSize: "10px",
-                      fontVariantCaps: "all-small-caps",
-                      letterSpacing: "0.05em",
-                    }}
-                  >
-                    Name
-                  </th>
-                  <th
-                    style={{
-                      padding: "6px 14px",
-                      textAlign: "left",
-                      fontWeight: 500,
-                      color: "var(--fg-subtle)",
-                      fontSize: "10px",
-                      fontVariantCaps: "all-small-caps",
-                      letterSpacing: "0.05em",
-                      width: "120px",
-                    }}
-                  >
-                    Harness Support
-                  </th>
-                  <th
-                    style={{
-                      padding: "6px 14px",
-                      textAlign: "left",
-                      fontWeight: 500,
-                      color: "var(--fg-subtle)",
-                      fontSize: "10px",
-                      fontVariantCaps: "all-small-caps",
-                      letterSpacing: "0.05em",
-                      width: "100px",
-                    }}
-                  >
-                    Status
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {features.map((feature, idx) => {
-                  const desc = getFeatureDescription(feature.category, feature.name);
-                  return (
-                    <tr
-                      key={feature.name}
-                      style={{ borderTop: idx === 0 ? "none" : "1px solid var(--separator)" }}
-                    >
-                      <td
-                        style={{
-                          padding: "7px 14px",
-                          color: "var(--fg-base)",
-                          fontFamily: "monospace",
-                          fontSize: "11px",
-                        }}
-                      >
-                        {desc ? (
-                          <Tooltip text={desc}>{feature.name}</Tooltip>
-                        ) : (
-                          feature.name
-                        )}
-                      </td>
-                      <td style={{ padding: "7px 14px", color: "var(--fg-subtle)" }}>
-                        {feature.knownToHarness ? "Tracked" : "—"}
-                      </td>
-                      <td style={{ padding: "7px 14px" }}>
-                        <StatusBadge status={featureStatus(feature)} />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Action button ─────────────────────────────────────────────
-
-function ActionButton({
-  label,
-  primary,
-  onClick,
-  loading,
-}: {
-  label: string;
-  primary?: boolean;
-  onClick: () => void;
-  loading?: boolean;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={loading}
-      style={{
-        padding: "5px 12px",
-        borderRadius: "5px",
-        border: primary ? "none" : "1px solid var(--border-base)",
-        background: primary ? "var(--accent)" : "transparent",
-        color: primary ? "white" : "var(--fg-base)",
-        fontSize: "11px",
-        fontWeight: primary ? 500 : 400,
-        cursor: loading ? "not-allowed" : "pointer",
-        opacity: loading ? 0.6 : 1,
-      }}
-    >
-      {loading ? "…" : label}
-    </button>
-  );
-}
-
-// ── Drift alert row ───────────────────────────────────────────
-
-function DriftRow({
-  item,
-  onAcknowledge,
-  onRescan,
-}: {
+interface DriftRowProps {
   item: ParityDriftItem;
   onAcknowledge: (id: number) => void;
-  onRescan: () => void;
-}) {
+  onRescan: () => Promise<void>;
+  navigate: ReturnType<typeof useNavigate>;
+}
+
+function DriftRow({ item, onAcknowledge, onRescan, navigate }: DriftRowProps) {
   const [expanded, setExpanded] = useState(false);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
-  const navigate = useNavigate();
+  const [acting, setActing] = useState(false);
+  const [actError, setActError] = useState<string | null>(null);
 
-  const color = CATEGORY_COLORS[item.category] ?? "#64748b";
+  const color = DRIFT_CATEGORY_COLORS[item.category] ?? "#64748b";
+  const categoryLabel = DRIFT_CATEGORY_LABELS[item.category] ?? item.category;
 
-  const descFn = DRIFT_DESCRIPTIONS[item.driftType];
-  const driftDescription = descFn ? descFn(item) : (item.details ?? "");
-  const featureDescription = getFeatureDescription(item.category, item.featureName);
-
-  const template = item.driftType === "missing_file"
-    ? CONFIG_FILE_TEMPLATES[item.featureName]
-    : null;
-
-  async function runAction(label: string, fn: () => Promise<void>) {
-    setActionLoading(label);
-    setActionError(null);
+  async function runAction(fn: () => Promise<unknown>) {
+    setActing(true);
+    setActError(null);
     try {
       await fn();
-      onRescan();
-    } catch (err) {
-      setActionError(String(err));
+      await onRescan();
+    } catch (e) {
+      setActError(String(e));
     } finally {
-      setActionLoading(null);
+      setActing(false);
     }
   }
 
   return (
-    <div
-      style={{
-        borderBottom: "1px solid var(--separator)",
-        opacity: item.acknowledged ? 0.45 : 1,
-      }}
-    >
-      {/* Summary row */}
+    <div style={{ borderBottom: "1px solid var(--separator)" }}>
       <div
-        onClick={() => setExpanded((v) => !v)}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-          padding: "10px 14px",
-          cursor: "pointer",
-          userSelect: "none",
-        }}
+        onClick={() => setExpanded(v => !v)}
+        style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", cursor: "pointer" }}
       >
         <svg
-          width="8"
-          height="8"
-          viewBox="0 0 8 8"
-          fill="currentColor"
-          style={{
-            transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
-            transition: "transform 0.12s ease",
-            color: "var(--fg-subtle)",
-            flexShrink: 0,
-          }}
+          width="7" height="7" viewBox="0 0 8 8" fill="currentColor"
+          style={{ transform: expanded ? "rotate(90deg)" : "none", transition: "transform 0.12s", color: "var(--fg-subtle)", flexShrink: 0 }}
         >
           <path d="M2 1l4 3-4 3V1z" />
         </svg>
-
-        <span
-          style={{
-            display: "inline-block",
-            padding: "2px 8px",
-            borderRadius: "10px",
-            fontSize: "10px",
-            fontWeight: 600,
-            background: `${color}18`,
-            color,
-            flexShrink: 0,
-          }}
-        >
-          {CATEGORY_LABELS[item.category] ?? item.category}
+        <span style={{
+          padding: "2px 7px", borderRadius: 10, fontSize: 10, fontWeight: 600,
+          background: `${color}18`, color, flexShrink: 0,
+        }}>
+          {categoryLabel}
         </span>
-
-        <span
-          style={{
-            flex: 1,
-            fontSize: "12px",
-            fontWeight: 600,
-            color: "var(--fg-base)",
-            fontFamily: "monospace",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
-          }}
-        >
+        <span style={{
+          flex: 1, fontSize: 12, fontWeight: 600, color: "var(--fg-base)",
+          fontFamily: "ui-monospace, monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+        }}>
           {item.featureName}
         </span>
-
-        <span style={{ fontSize: "11px", color: "var(--fg-subtle)", flexShrink: 0 }}>
-          {relativeTime(item.detectedAt)}
+        <span style={{ fontSize: 11, color: "var(--fg-subtle)", flexShrink: 0, whiteSpace: "nowrap" }}>
+          {absoluteTime(item.detectedAt)} · {relativeTime(item.detectedAt)}
         </span>
       </div>
 
-      {/* Expanded panel */}
       {expanded && (
-        <div
-          style={{
-            margin: "0 14px 14px 30px",
-            borderLeft: `2px solid ${color}30`,
-            paddingLeft: "14px",
-          }}
-        >
-          {/* What is this feature */}
-          {featureDescription && (
-            <div
-              style={{
-                marginBottom: "10px",
-                padding: "8px 10px",
-                background: "var(--bg-base)",
-                borderRadius: "5px",
-                border: "1px solid var(--border-base)",
-              }}
-            >
-              <div style={{ fontSize: "10px", fontWeight: 600, color: "var(--fg-subtle)", marginBottom: "3px", fontVariantCaps: "all-small-caps", letterSpacing: "0.04em" }}>
-                About this {CATEGORY_LABELS[item.category]?.replace(/s$/, "").toLowerCase() ?? "feature"}
-              </div>
-              <div style={{ fontSize: "12px", color: "var(--fg-base)", lineHeight: 1.45 }}>
-                {featureDescription}
-              </div>
+        <div style={{ margin: "0 14px 12px 31px", borderLeft: `2px solid ${color}30`, paddingLeft: 14 }}>
+          {item.details && (
+            <p style={{ margin: "0 0 10px", fontSize: 12, color: "var(--fg-subtle)", lineHeight: 1.5 }}>
+              {item.details}
+            </p>
+          )}
+          {actError && (
+            <div style={{ padding: "5px 9px", marginBottom: 10, borderRadius: 5, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#dc2626", fontSize: 11 }}>
+              {actError}
             </div>
           )}
-
-          {/* Why it's drifting */}
-          <p style={{ margin: "0 0 12px", fontSize: "12px", color: "var(--fg-subtle)", lineHeight: 1.5 }}>
-            {driftDescription}
-          </p>
-
-          {/* Template preview for missing files */}
-          {template && (
-            <pre
-              style={{
-                margin: "0 0 12px",
-                padding: "10px 12px",
-                background: "var(--bg-base)",
-                border: "1px solid var(--border-base)",
-                borderRadius: "6px",
-                fontSize: "10px",
-                color: "var(--fg-subtle)",
-                lineHeight: 1.5,
-                overflow: "auto",
-                maxHeight: "100px",
-                whiteSpace: "pre-wrap",
-              }}
-            >
-              {template}
-            </pre>
-          )}
-
-          {/* Action error */}
-          {actionError && (
-            <div
-              style={{
-                padding: "6px 10px",
-                marginBottom: "10px",
-                borderRadius: "5px",
-                background: "rgba(239,68,68,0.08)",
-                border: "1px solid rgba(239,68,68,0.2)",
-                color: "#dc2626",
-                fontSize: "11px",
-              }}
-            >
-              {actionError}
-            </div>
-          )}
-
-          {/* Actions */}
-          <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
-            {/* missing_file → Create File */}
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
             {item.driftType === "missing_file" && (
-              <ActionButton
-                label={`Create ${item.featureName}`}
-                primary
-                loading={actionLoading === "create"}
-                onClick={() =>
-                  runAction("create", () => createConfigFile(item.featureName).then(() => {}))
-                }
-              />
-            )}
-
-            {/* new_feature → Mark as Known */}
-            {item.driftType === "new_feature" && (
-              <ActionButton
-                label="Mark as Known"
-                primary
-                loading={actionLoading === "baseline"}
-                onClick={() =>
-                  runAction("baseline", () =>
-                    addToParityBaseline(item.category, item.featureName)
-                  )
-                }
-              />
-            )}
-
-            {/* settings_key → navigate to Security page for editing */}
-            {item.driftType === "new_feature" && item.category === "settings_key" && (
-              <ActionButton
-                label="Edit in Security →"
-                onClick={() => navigate("/security/permissions")}
-              />
-            )}
-
-            {/* Acknowledge */}
-            {!item.acknowledged && (
               <button
-                onClick={() => onAcknowledge(item.id)}
-                title="Mark as acknowledged — will be pre-acknowledged on future scans unless the item changes."
-                style={{
-                  marginLeft: "auto",
-                  padding: "4px 10px",
-                  borderRadius: "5px",
-                  border: "1px solid var(--border-base)",
-                  background: "transparent",
-                  color: "var(--fg-subtle)",
-                  fontSize: "11px",
-                  cursor: "pointer",
-                }}
+                disabled={acting}
+                onClick={() => runAction(() => createConfigFile(item.featureName).then(() => {}))}
+                style={{ padding: "5px 11px", borderRadius: 5, border: "1px solid var(--accent)", background: "var(--accent)", color: "white", fontSize: 11, fontWeight: 500, cursor: acting ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: acting ? 0.7 : 1 }}
               >
-                Acknowledge
+                Create {item.featureName}
               </button>
             )}
+            {item.driftType === "new_feature" && (
+              <button
+                disabled={acting}
+                onClick={() => runAction(() => addToParityBaseline(item.category, item.featureName))}
+                style={{ padding: "5px 11px", borderRadius: 5, border: "1px solid var(--accent)", background: "var(--accent)", color: "white", fontSize: 11, fontWeight: 500, cursor: acting ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: acting ? 0.7 : 1 }}
+              >
+                Mark as Known
+              </button>
+            )}
+            {item.driftType === "new_feature" && item.category === "settings_key" && (
+              <button
+                onClick={() => navigate("/security/permissions")}
+                style={{ padding: "5px 11px", borderRadius: 5, border: "1px solid var(--border-base)", background: "transparent", color: "var(--fg-muted)", fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
+              >
+                Edit in Security →
+              </button>
+            )}
+            <button
+              onClick={() => onAcknowledge(item.id)}
+              style={{ marginLeft: "auto", padding: "4px 10px", borderRadius: 5, border: "1px solid var(--border-base)", background: "transparent", color: "var(--fg-subtle)", fontSize: 11, cursor: "pointer", fontFamily: "inherit" }}
+            >
+              Acknowledge
+            </button>
           </div>
         </div>
       )}
@@ -794,23 +191,51 @@ function DriftRow({
 // ── Main page ─────────────────────────────────────────────────
 
 export default function ParityDashboardPage() {
-  const [snapshot, setSnapshot] = useState<ParitySnapshot | null>(null);
-  const [driftItems, setDriftItems] = useState<ParityDriftItem[]>([]);
-  const [showAcknowledged, setShowAcknowledged] = useState(false);
-  const [scanning, setScanning] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
-  // Load snapshot and drift separately so the UI can render cached data immediately
-  // while a background scan runs if needed. Both queries are fast (SQLite reads).
-  const loadData = useCallback(async () => {
+  const [harnesses, setHarnesses] = useState<HarnessInfo[]>([]);
+  const [probedFiles, setProbedFiles] = useState<Record<string, "detected" | "missing" | "not_applicable">>({});
+  const [probing, setProbing] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanAge, setScanAge] = useState<string | null>(null);
+  const [filterInstalled, setFilterInstalled] = useState(true);
+  const [filterCategory, setFilterCategory] = useState<CapabilityCategory | "all">("all");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [hiddenTargets, setHiddenTargets] = useState<Set<string>>(new Set());
+  const [drawerCap, setDrawerCap] = useState<Capability | null>(null);
+  const [columnMenu, setColumnMenu] = useState<{ harness: HarnessInfo; x: number; y: number } | null>(null);
+  const [projectDir] = useState(getLastProjectDir);
+  const [driftItems, setDriftItems] = useState<ParityDriftItem[]>([]);
+  const [driftExpanded, setDriftExpanded] = useState(false);
+  const [showAcknowledged, setShowAcknowledged] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hoveredCell, setHoveredCell] = useState<string | null>(null);
+
+  const selection = useParitySelection();
+  const lastClickRef = useRef<{ capId: string; targetId: string } | null>(null);
+
+  const loadCapabilities = useCallback(async () => {
+    setProbing(true);
     try {
-      const [snap, drift] = await Promise.all([getParitySnapshot(), getParityDrift(false)]);
-      setSnapshot(snap);
-      setDriftItems(drift);
-      return snap;
+      const [harnessData, probed] = await Promise.all([
+        detectHarnesses(),
+        probeHarnessCapabilities().catch(() => ({} as Record<string, "detected" | "missing" | "not_applicable">)),
+      ]);
+      setHarnesses(harnessData);
+      setProbedFiles(probed);
     } catch (err) {
       setError(String(err));
-      return null;
+    } finally {
+      setProbing(false);
+    }
+  }, []);
+
+  const loadDrift = useCallback(async (includeAck = false) => {
+    try {
+      const drift = await getParityDrift(includeAck);
+      setDriftItems(drift);
+    } catch {
+      // drift panel is secondary — fail silently
     }
   }, []);
 
@@ -819,265 +244,501 @@ export default function ParityDashboardPage() {
     setError(null);
     try {
       await runParityScan();
-      await loadData();
+      setScanAge(new Date().toISOString());
+      await Promise.all([loadCapabilities(), loadDrift(showAcknowledged)]);
     } catch (err) {
       setError(String(err));
     } finally {
       setScanning(false);
     }
-  }, [loadData]);
+  }, [loadCapabilities, loadDrift, showAcknowledged]);
 
-  // Auto-scan on mount if: no snapshot exists, or last scan is >24 h old.
-  // The 24 h threshold balances freshness against the ~2 s probe latency.
   useEffect(() => {
-    loadData().then((snap) => {
-      if (!snap || isOlderThan24h(snap.timestamp)) triggerScan();
-    });
-  }, [loadData, triggerScan]);
+    loadCapabilities();
+    loadDrift();
+  }, [loadCapabilities, loadDrift]);
 
-  const handleAcknowledge = useCallback(async (driftId: number) => {
+  useEffect(() => {
+    if (driftExpanded) loadDrift(showAcknowledged);
+  }, [driftExpanded, showAcknowledged, loadDrift]);
+
+  const handleAcknowledge = useCallback(async (id: number) => {
     try {
-      await acknowledgeDrift(driftId);
-      setDriftItems((prev) => prev.filter((d) => d.id !== driftId));
+      await acknowledgeDrift(id);
+      setDriftItems(prev => prev.filter(d => d.id !== id));
     } catch (err) {
       setError(String(err));
     }
   }, []);
 
-  const handleShowAcknowledged = useCallback(async () => {
-    const next = !showAcknowledged;
-    setShowAcknowledged(next);
-    try {
-      const drift = await getParityDrift(next);
-      setDriftItems(drift);
-    } catch (err) {
-      setError(String(err));
-    }
-  }, [showAcknowledged]);
+  // ── Derived view state ─────────────────────────────────────
 
-  const ccVersion = snapshot?.ccVersion ?? null;
-  const ccInstalled = snapshot?.ccInstalled ?? false;
-  const lastScan = snapshot?.timestamp ?? null;
-  const totalFeatures = snapshot
-    ? Object.values(snapshot.categories).reduce((sum, arr) => sum + arr.length, 0)
-    : 0;
-  const activeDrift = driftItems.filter((d) => !d.acknowledged).length;
+  const visibleHarnesses = harnesses
+    .filter(h => !hiddenTargets.has(h.id))
+    .filter(h => !filterInstalled || h.available);
 
-  const driftBreakdown = driftItems
-    .filter((d) => !d.acknowledged)
-    .reduce(
-      (acc, d) => { acc[d.category] = (acc[d.category] || 0) + 1; return acc; },
-      {} as Record<string, number>,
-    );
-  const driftBreakdownStr =
-    activeDrift > 0
-      ? Object.entries(driftBreakdown)
-          .map(([cat, n]) => `${n} ${CATEGORY_LABELS[cat] ?? cat}`)
-          .join(" · ")
-      : undefined;
+  const filteredCaps = CAPABILITIES.filter(cap => {
+    if (filterCategory !== "all" && cap.category !== filterCategory) return false;
+    if (searchQuery && !cap.label.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    return true;
+  });
 
-  const orderedCategories = CATEGORY_ORDER.filter(
-    (cat) => snapshot?.categories[cat] && snapshot.categories[cat].length > 0,
+  const capsByCategory = CATEGORY_ORDER.reduce<{ cat: CapabilityCategory; caps: Capability[] }[]>(
+    (acc, cat) => {
+      const caps = filteredCaps.filter(c => c.category === cat);
+      if (caps.length > 0) acc.push({ cat, caps });
+      return acc;
+    },
+    [],
   );
 
+  const flatCaps = capsByCategory.flatMap(g => g.caps);
+
+  // ── Cell helpers ──────────────────────────────────────────
+
+  function cellGlyph(cap: Capability, targetId: TargetPlatform): "dot" | "ring" | "dash" {
+    const sup = cap.support[targetId];
+    if (!sup?.supported) return "dash";
+    const state = probedFiles[`${targetId}::${cap.id}`];
+    if (state === "detected") return "dot";
+    if (state === "not_applicable") return "dash";
+    return "ring";
+  }
+
+  function handleCellClick(
+    e: React.MouseEvent,
+    cap: Capability,
+    targetId: TargetPlatform,
+  ) {
+    if (!isSelectable(cap)) return;
+    const sup = cap.support[targetId];
+    if (!sup?.supported) return;
+
+    if (e.shiftKey && lastClickRef.current) {
+      const lastCapIdx = flatCaps.findIndex(c => c.id === lastClickRef.current!.capId);
+      const thisCapIdx = flatCaps.findIndex(c => c.id === cap.id);
+      const start = Math.min(lastCapIdx, thisCapIdx);
+      const end = Math.max(lastCapIdx, thisCapIdx);
+      for (let i = start; i <= end; i++) {
+        const c = flatCaps[i];
+        if (c && isSelectable(c) && c.support[targetId]?.supported) {
+          selection.toggle(targetId, c.id);
+        }
+      }
+    } else {
+      selection.toggle(targetId, cap.id);
+    }
+    lastClickRef.current = { capId: cap.id, targetId };
+  }
+
+  function handleHeaderContextMenu(e: React.MouseEvent, harness: HarnessInfo) {
+    e.preventDefault();
+    setColumnMenu({ harness, x: e.clientX, y: e.clientY });
+  }
+
+  const colCount = visibleHarnesses.length;
+  const gridCols = `260px repeat(${Math.max(colCount, 1)}, minmax(140px, 1fr))`;
+  const activeDrift = driftItems.filter(d => !d.acknowledged).length;
+
+  // ── Render ────────────────────────────────────────────────
+
   return (
-    <div style={{ padding: "24px", maxWidth: "900px" }}>
-      {/* Header */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: "20px",
-        }}
-      >
-        <div>
-          <h1 style={{ fontSize: "16px", fontWeight: 700, margin: 0, color: "var(--fg-base)" }}>
-            Parity
-          </h1>
-          <p style={{ margin: "4px 0 0", fontSize: "12px", color: "var(--fg-subtle)" }}>
-            Track Claude Code feature parity with Harness Kit
-          </p>
-        </div>
-        <button
-          onClick={triggerScan}
-          disabled={scanning}
-          style={{
-            padding: "7px 14px",
-            borderRadius: "6px",
-            border: "1px solid var(--border-base)",
-            background: scanning ? "var(--bg-surface)" : "var(--accent)",
-            color: scanning ? "var(--fg-subtle)" : "white",
-            fontSize: "12px",
-            fontWeight: 500,
-            cursor: scanning ? "not-allowed" : "pointer",
-            opacity: scanning ? 0.7 : 1,
-          }}
-        >
-          {scanning ? "Scanning…" : "Scan Now"}
-        </button>
-      </div>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
 
-      {error && (
-        <div
-          style={{
-            padding: "10px 14px",
-            borderRadius: "6px",
-            background: "rgba(239,68,68,0.08)",
-            border: "1px solid rgba(239,68,68,0.2)",
-            color: "#dc2626",
-            fontSize: "12px",
-            marginBottom: "16px",
-          }}
-        >
-          {error}
-        </div>
-      )}
-
-      {/* Stat cards */}
-      <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "24px" }}>
-        <StatCard
-          label="Claude Code"
-          value={ccInstalled ? (ccVersion ?? "Installed") : "Not installed"}
-          sub={ccInstalled ? "installed" : undefined}
-        />
-        <StatCard
-          label="Last Scan"
-          value={lastScan ? relativeTime(lastScan) : "Never"}
-          sub={lastScan ? new Date(lastScan).toLocaleDateString() : undefined}
-        />
-        <StatCard label="Features Detected" value={scanning ? "…" : String(totalFeatures)} />
-        <StatCard
-          label="Drift Items"
-          value={scanning ? "…" : String(activeDrift)}
-          sub={driftBreakdownStr}
-          accent={activeDrift > 0}
-        />
-      </div>
-
-      {/* Feature matrix */}
-      <div style={{ marginBottom: "24px" }}>
-        <h2
-          style={{
-            fontSize: "12px",
-            fontWeight: 600,
-            color: "var(--fg-subtle)",
-            margin: "0 0 10px",
-            fontVariantCaps: "all-small-caps",
-            letterSpacing: "0.05em",
-          }}
-        >
-          Feature Matrix
-        </h2>
-
-        {!snapshot && !scanning && (
-          <div
-            style={{
-              padding: "24px",
-              textAlign: "center",
-              color: "var(--fg-subtle)",
-              fontSize: "12px",
-              border: "1px solid var(--border-base)",
-              borderRadius: "8px",
-            }}
-          >
-            No scan data yet. Click "Scan Now" to detect Claude Code features.
+      {/* Page header */}
+      <div style={{ padding: "20px 24px 10px", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+          <div>
+            <h1 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--fg-base)" }}>
+              Parity
+            </h1>
+            <p style={{ margin: "3px 0 0", fontSize: 12, color: "var(--fg-subtle)" }}>
+              Compare feature parity across your AI coding harnesses.
+            </p>
           </div>
-        )}
-
-        {scanning && !snapshot && (
-          <div
-            style={{
-              padding: "24px",
-              textAlign: "center",
-              color: "var(--fg-subtle)",
-              fontSize: "12px",
-              border: "1px solid var(--border-base)",
-              borderRadius: "8px",
-            }}
-          >
-            Scanning…
-          </div>
-        )}
-
-        {snapshot &&
-          orderedCategories.map((cat) => (
-            <FeatureSection
-              key={cat}
-              category={cat}
-              features={snapshot.categories[cat] ?? []}
-            />
-          ))}
-      </div>
-
-      {/* Drift alerts */}
-      <div>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: "10px",
-          }}
-        >
-          <h2
-            style={{
-              fontSize: "12px",
-              fontWeight: 600,
-              color: "var(--fg-subtle)",
-              margin: 0,
-              fontVariantCaps: "all-small-caps",
-              letterSpacing: "0.05em",
-            }}
-          >
-            Drift Alerts
-          </h2>
-          <button
-            onClick={handleShowAcknowledged}
-            style={{
-              background: "transparent",
-              border: "none",
-              fontSize: "11px",
-              color: "var(--fg-subtle)",
-              cursor: "pointer",
-              padding: "2px 4px",
-            }}
-          >
-            {showAcknowledged ? "Hide acknowledged" : "Show acknowledged"}
-          </button>
-        </div>
-
-        <div
-          style={{
-            border: "1px solid var(--border-base)",
-            borderRadius: "8px",
-            overflow: "hidden",
-            background: "var(--bg-surface)",
-          }}
-        >
-          {driftItems.length === 0 ? (
-            <div
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+            {scanAge && (
+              <span style={{ fontSize: 11, color: "var(--fg-subtle)" }}>
+                Scanned {relativeTime(scanAge)}
+              </span>
+            )}
+            <button
+              onClick={triggerScan}
+              disabled={scanning}
               style={{
-                padding: "20px 14px",
-                textAlign: "center",
-                color: "var(--fg-subtle)",
-                fontSize: "12px",
+                padding: "6px 14px", borderRadius: 6,
+                border: "1px solid var(--border-base)", background: "transparent",
+                color: scanning ? "var(--fg-subtle)" : "var(--fg-base)",
+                fontSize: 12, fontWeight: 500,
+                cursor: scanning ? "not-allowed" : "pointer",
+                fontFamily: "inherit", opacity: scanning ? 0.7 : 1,
               }}
             >
-              {scanning ? "Scanning for drift…" : "No drift items."}
-            </div>
-          ) : (
-            driftItems.map((item) => (
-              <DriftRow
-                key={item.id}
-                item={item}
-                onAcknowledge={handleAcknowledge}
-                onRescan={triggerScan}
-              />
-            ))
-          )}
+              {scanning ? "Scanning…" : "Scan now"}
+            </button>
+          </div>
+        </div>
+        {error && (
+          <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 6, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#dc2626", fontSize: 11 }}>
+            {error}
+          </div>
+        )}
+      </div>
+
+      {/* Filter bar */}
+      <div style={{ padding: "0 24px 10px", flexShrink: 0, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+        {/* Installed / All toggle */}
+        <div style={{ display: "flex", border: "1px solid var(--border-base)", borderRadius: 6, overflow: "hidden" }}>
+          {([true, false] as const).map(installed => (
+            <button
+              key={String(installed)}
+              onClick={() => setFilterInstalled(installed)}
+              style={{
+                padding: "5px 11px", fontSize: 11, fontWeight: 500,
+                background: filterInstalled === installed ? "var(--accent)" : "transparent",
+                color: filterInstalled === installed ? "white" : "var(--fg-muted)",
+                border: 0, cursor: "pointer", fontFamily: "inherit",
+              }}
+            >
+              {installed ? "Installed only" : "All harnesses"}
+            </button>
+          ))}
+        </div>
+
+        {/* Category chips */}
+        {(["all", ...CATEGORY_ORDER] as const).map(cat => (
+          <button
+            key={cat}
+            onClick={() => setFilterCategory(cat)}
+            style={{
+              padding: "4px 10px", fontSize: 11, fontWeight: 500,
+              borderRadius: 12, border: "1px solid var(--border-base)",
+              background: filterCategory === cat ? "var(--accent)" : "transparent",
+              color: filterCategory === cat ? "white" : "var(--fg-muted)",
+              cursor: "pointer", fontFamily: "inherit",
+            }}
+          >
+            {cat === "all" ? "All" : CATEGORY_LABELS[cat]}
+          </button>
+        ))}
+
+        {/* Search */}
+        <input
+          type="search"
+          placeholder="Filter features…"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+          style={{
+            padding: "5px 10px", borderRadius: 6, border: "1px solid var(--border-base)",
+            background: "var(--bg-surface)", color: "var(--fg-base)",
+            fontSize: 11, fontFamily: "inherit", outline: "none", width: 150,
+          }}
+        />
+
+        {/* Hidden columns chip */}
+        {hiddenTargets.size > 0 && (
+          <button
+            onClick={() => setHiddenTargets(new Set())}
+            style={{
+              padding: "4px 10px", fontSize: 11, fontWeight: 500,
+              borderRadius: 12, border: "1px dashed var(--border-base)",
+              background: "transparent", color: "var(--fg-muted)",
+              cursor: "pointer", fontFamily: "inherit",
+            }}
+          >
+            {hiddenTargets.size} hidden · show all
+          </button>
+        )}
+
+        <div style={{ flex: 1 }} />
+
+        {/* Legend */}
+        <div style={{ display: "flex", alignItems: "center", gap: 12, fontSize: 10.5, color: "var(--fg-subtle)", userSelect: "none" }}>
+          <span><span style={{ color: "var(--fg-muted)" }}>●</span> supported</span>
+          <span><span style={{ color: "var(--warning)" }}>○</span> missing</span>
+          <span>— not supported</span>
         </div>
       </div>
+
+      {/* Capability grid */}
+      <div style={{ flex: 1, overflow: "auto", padding: "0 24px" }}>
+        {probing && harnesses.length === 0 ? (
+          <div style={{ padding: "40px 0", textAlign: "center", color: "var(--fg-subtle)", fontSize: 12 }}>
+            Loading harnesses…
+          </div>
+        ) : (
+          <div
+            data-testid="capability-grid"
+            style={{
+              display: "grid",
+              gridTemplateColumns: gridCols,
+              minWidth: `${260 + colCount * 140}px`,
+              borderLeft: "1px solid var(--border-base)",
+              borderTop: "1px solid var(--border-base)",
+            }}
+          >
+            {/* ── Header row ── */}
+            {/* Top-left corner */}
+            <div style={{
+              position: "sticky", top: 0, left: 0, zIndex: 4,
+              background: "var(--bg-base)",
+              borderRight: "1px solid var(--border-base)",
+              borderBottom: "1px solid var(--border-base)",
+              padding: "10px 12px",
+            }} />
+
+            {/* Harness header cells */}
+            {visibleHarnesses.map(h => (
+              <div
+                key={h.id}
+                data-testid={`harness-header-${h.id}`}
+                onContextMenu={e => handleHeaderContextMenu(e, h)}
+                style={{
+                  position: "sticky", top: 0, zIndex: 3,
+                  background: "var(--bg-base)",
+                  borderRight: "1px solid var(--border-base)",
+                  borderBottom: "1px solid var(--border-base)",
+                  padding: "10px 12px",
+                  display: "flex", flexDirection: "column", gap: 4,
+                  cursor: "context-menu",
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{
+                    width: 7, height: 7, borderRadius: "50%", flexShrink: 0, display: "inline-block",
+                    background: h.available ? "var(--success)" : "transparent",
+                    border: h.available ? "none" : "1.5px solid var(--fg-subtle)",
+                  }} />
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--fg-base)" }}>
+                    {h.name}
+                  </span>
+                </div>
+                {h.available && h.version && (
+                  <a
+                    href={deepLinkForVersion(h.id as TargetPlatform, h.version)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    data-testid={`version-link-${h.id}`}
+                    onClick={e => e.stopPropagation()}
+                    style={{ fontSize: 10.5, color: "var(--fg-subtle)", textDecoration: "none", borderBottom: "1px dotted var(--fg-subtle)", alignSelf: "flex-start" }}
+                    onMouseEnter={e => (e.currentTarget.style.color = "var(--accent)")}
+                    onMouseLeave={e => (e.currentTarget.style.color = "var(--fg-subtle)")}
+                  >
+                    v{h.version}
+                  </a>
+                )}
+              </div>
+            ))}
+
+            {/* ── Category sections ── */}
+            {capsByCategory.map(({ cat, caps }) => (
+              <Fragment key={cat}>
+                {/* Section header — spans all columns */}
+                <div
+                  style={{
+                    gridColumn: "1 / -1",
+                    padding: "12px 12px 6px",
+                    fontSize: 10.5, fontWeight: 600,
+                    color: "var(--fg-subtle)",
+                    textTransform: "uppercase", letterSpacing: "0.05em",
+                    background: "var(--bg-surface)",
+                    borderBottom: "1px solid var(--separator)",
+                    borderRight: "1px solid var(--border-base)",
+                  }}
+                >
+                  {CATEGORY_LABELS[cat]}
+                </div>
+
+                {/* Feature rows */}
+                {caps.map(cap => (
+                  <Fragment key={cap.id}>
+                    {/* Feature label cell */}
+                    <div
+                      data-testid={`feature-label-${cap.id}`}
+                      onClick={() => setDrawerCap(cap)}
+                      style={{
+                        position: "sticky", left: 0, zIndex: 2,
+                        background: "var(--bg-base)",
+                        borderRight: "1px solid var(--border-base)",
+                        borderBottom: "1px solid var(--separator)",
+                        padding: "10px 12px",
+                        display: "flex", alignItems: "center", gap: 8,
+                        cursor: "pointer",
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.background = "var(--hover-bg)")}
+                      onMouseLeave={e => (e.currentTarget.style.background = "var(--bg-base)")}
+                    >
+                      {isNew(cap) && (
+                        <span style={{
+                          fontSize: 9, fontWeight: 700, color: "var(--warning)",
+                          border: "1px solid var(--warning)", borderRadius: 3,
+                          padding: "1px 4px", flexShrink: 0, letterSpacing: "0.04em",
+                        }}>
+                          NEW
+                        </span>
+                      )}
+                      <span style={{ fontSize: 12, color: "var(--fg-base)", borderBottom: "1px dotted var(--border-base)" }}>
+                        {cap.label}
+                      </span>
+                    </div>
+
+                    {/* Harness cells */}
+                    {visibleHarnesses.map(h => {
+                      const targetId = h.id as TargetPlatform;
+                      const cellKey = `${cap.id}::${targetId}`;
+                      const glyph = cellGlyph(cap, targetId);
+                      const sup = cap.support[targetId];
+                      const path = sup?.path;
+                      const interactive = sup?.supported && isSelectable(cap);
+                      const selected = selection.selected.has(`${targetId}::${cap.id}` as `${TargetPlatform}::${string}`);
+                      const hovered = hoveredCell === cellKey;
+
+                      return (
+                        <div
+                          key={cellKey}
+                          data-testid={`cell-${cap.id}-${targetId}`}
+                          onClick={interactive ? e => handleCellClick(e, cap, targetId) : undefined}
+                          onMouseEnter={() => setHoveredCell(cellKey)}
+                          onMouseLeave={() => setHoveredCell(null)}
+                          style={{
+                            borderRight: "1px solid var(--border-base)",
+                            borderBottom: "1px solid var(--separator)",
+                            borderTop: selected ? "1px solid var(--accent)" : undefined,
+                            borderLeft: selected ? "1px solid var(--accent)" : undefined,
+                            padding: "10px 12px",
+                            display: "flex", flexDirection: "column",
+                            alignItems: "center", justifyContent: "center",
+                            position: "relative",
+                            background: selected ? "rgba(99, 102, 241, 0.08)" : "transparent",
+                            cursor: interactive ? "pointer" : "default",
+                            userSelect: "none",
+                            opacity: !h.available && filterInstalled === false ? 0.35 : 1,
+                            minHeight: 42,
+                          }}
+                        >
+                          <span
+                            data-testid={`glyph-${cap.id}-${targetId}`}
+                            style={{
+                              fontSize: 14, lineHeight: 1,
+                              color: glyph === "dot"
+                                ? "var(--fg-muted)"
+                                : glyph === "ring"
+                                  ? "var(--warning)"
+                                  : "var(--fg-subtle)",
+                            }}
+                          >
+                            {glyph === "dot" ? "●" : glyph === "ring" ? "○" : "—"}
+                          </span>
+
+                          {/* Path micro-label on hover */}
+                          {path && hovered && (
+                            <span style={{
+                              position: "absolute", bottom: 2, left: 0, right: 0,
+                              textAlign: "center",
+                              fontSize: 9, fontFamily: "ui-monospace, monospace",
+                              color: "var(--fg-subtle)",
+                              overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                              padding: "0 4px", pointerEvents: "none",
+                            }}>
+                              {path}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </Fragment>
+                ))}
+              </Fragment>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ── "What's changed" collapsible panel ── */}
+      <div style={{ flexShrink: 0, borderTop: "1px solid var(--border-base)", background: "var(--bg-surface)" }}>
+        <div
+          onClick={() => setDriftExpanded(v => !v)}
+          style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 24px", cursor: "pointer", userSelect: "none" }}
+        >
+          <svg
+            width="7" height="7" viewBox="0 0 8 8" fill="currentColor"
+            style={{ transform: driftExpanded ? "rotate(90deg)" : "none", transition: "transform 0.12s", color: "var(--fg-subtle)", flexShrink: 0 }}
+          >
+            <path d="M2 1l4 3-4 3V1z" />
+          </svg>
+          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--fg-base)" }}>
+            What's changed
+          </span>
+          {activeDrift > 0 && (
+            <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 7px", borderRadius: 10, background: "var(--warning)", color: "white" }}>
+              {activeDrift}
+            </span>
+          )}
+          <span style={{ fontSize: 11, color: "var(--fg-subtle)" }}>last 30 days</span>
+          {driftExpanded && (
+            <button
+              onClick={e => {
+                e.stopPropagation();
+                const next = !showAcknowledged;
+                setShowAcknowledged(next);
+                loadDrift(next);
+              }}
+              style={{ marginLeft: "auto", background: "transparent", border: "none", fontSize: 11, color: "var(--fg-subtle)", cursor: "pointer", fontFamily: "inherit" }}
+            >
+              {showAcknowledged ? "Hide acknowledged" : "Show acknowledged"}
+            </button>
+          )}
+        </div>
+
+        {driftExpanded && (
+          <div style={{ maxHeight: 320, overflow: "auto", borderTop: "1px solid var(--separator)" }}>
+            {driftItems.length === 0 ? (
+              <div style={{ padding: "20px 24px", textAlign: "center", fontSize: 12, color: "var(--fg-subtle)" }}>
+                No drift items.
+              </div>
+            ) : (
+              driftItems.map(item => (
+                <DriftRow
+                  key={item.id}
+                  item={item}
+                  onAcknowledge={handleAcknowledge}
+                  onRescan={triggerScan}
+                  navigate={navigate}
+                />
+              ))
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Overlays ── */}
+      <FeatureDetailDrawer
+        cap={drawerCap}
+        harnesses={harnesses}
+        probedFiles={probedFiles}
+        onClose={() => setDrawerCap(null)}
+        onAddToSelection={(cap, targets) => {
+          selection.addMissingForCap(cap, targets, probedFiles);
+        }}
+      />
+
+      <BatchActionBar
+        selected={selection.selected}
+        harnesses={harnesses}
+        projectDir={projectDir}
+        onClear={selection.clear}
+        onCompileSuccess={loadCapabilities}
+      />
+
+      <HarnessColumnMenu
+        harness={columnMenu?.harness ?? null}
+        x={columnMenu?.x ?? 0}
+        y={columnMenu?.y ?? 0}
+        hiddenCount={hiddenTargets.size}
+        onHide={id => setHiddenTargets(prev => new Set([...prev, id]))}
+        onShowAll={() => setHiddenTargets(new Set())}
+        onClose={() => setColumnMenu(null)}
+      />
     </div>
   );
 }

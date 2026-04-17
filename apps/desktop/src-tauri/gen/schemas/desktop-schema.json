@@ -2685,6 +2685,12 @@
           "markdownDescription": "Enables the membrain_stop command without any pre-configured scope."
         },
         {
+          "description": "Enables the probe_harness_capabilities command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-probe-harness-capabilities",
+          "markdownDescription": "Enables the probe_harness_capabilities command without any pre-configured scope."
+        },
+        {
           "description": "Enables the pull_model command without any pre-configured scope.",
           "type": "string",
           "const": "allow-pull-model",
@@ -3463,6 +3469,12 @@
           "type": "string",
           "const": "deny-membrain-stop",
           "markdownDescription": "Denies the membrain_stop command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the probe_harness_capabilities command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-probe-harness-capabilities",
+          "markdownDescription": "Denies the probe_harness_capabilities command without any pre-configured scope."
         },
         {
           "description": "Denies the pull_model command without any pre-configured scope.",
