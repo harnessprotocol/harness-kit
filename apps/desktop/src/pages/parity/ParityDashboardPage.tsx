@@ -82,7 +82,7 @@ const DRIFT_CATEGORY_LABELS: Record<string, string> = {
 interface DriftRowProps {
   item: ParityDriftItem;
   onAcknowledge: (id: number) => void;
-  onRescan: () => void;
+  onRescan: () => Promise<void>;
   navigate: ReturnType<typeof useNavigate>;
 }
 
@@ -725,7 +725,6 @@ export default function ParityDashboardPage() {
       <BatchActionBar
         selected={selection.selected}
         harnesses={harnesses}
-        probedFiles={probedFiles}
         projectDir={projectDir}
         onClear={selection.clear}
         onCompileSuccess={loadCapabilities}

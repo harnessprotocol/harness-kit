@@ -9,7 +9,6 @@ import { syncWriteFiles } from "../../lib/tauri";
 interface Props {
   selected: ReadonlySet<SelectionKey>;
   harnesses: HarnessInfo[];
-  probedFiles: Record<string, "detected" | "missing" | "not_applicable">;
   projectDir: string;
   onClear: () => void;
   onCompileSuccess: () => void;

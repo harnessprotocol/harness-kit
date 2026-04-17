@@ -20,10 +20,10 @@ export interface Capability {
   support: Record<TargetPlatform, SupportEntry>;
 }
 
-// Only config-category capabilities are selectable for batch compile.
-// Runtime and protocol rows are informational only.
+// Only file-based config capabilities are selectable for batch compile.
+// Directory-type capabilities (skills-dir) and non-config rows are informational only.
 export function isSelectable(cap: Capability): boolean {
-  return cap.category === "config";
+  return cap.category === "config" && cap.id !== "skills-dir";
 }
 
 export const CAPABILITIES: Capability[] = [
