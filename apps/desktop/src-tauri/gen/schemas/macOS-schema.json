@@ -2343,6 +2343,12 @@
           "markdownDescription": "Enables the chat_stop_local_relay command without any pre-configured scope."
         },
         {
+          "description": "Enables the check_for_updates command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-check-for-updates",
+          "markdownDescription": "Enables the check_for_updates command without any pre-configured scope."
+        },
+        {
           "description": "Enables the check_git_repo command without any pre-configured scope.",
           "type": "string",
           "const": "allow-check-git-repo",
@@ -2919,6 +2925,12 @@
           "markdownDescription": "Enables the sync_write_files command without any pre-configured scope."
         },
         {
+          "description": "Enables the trigger_rebuild command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-trigger-rebuild",
+          "markdownDescription": "Enables the trigger_rebuild command without any pre-configured scope."
+        },
+        {
           "description": "Enables the uninstall_plugin command without any pre-configured scope.",
           "type": "string",
           "const": "allow-uninstall-plugin",
@@ -3127,6 +3139,12 @@
           "type": "string",
           "const": "deny-chat-stop-local-relay",
           "markdownDescription": "Denies the chat_stop_local_relay command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the check_for_updates command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-check-for-updates",
+          "markdownDescription": "Denies the check_for_updates command without any pre-configured scope."
         },
         {
           "description": "Denies the check_git_repo command without any pre-configured scope.",
@@ -3703,6 +3721,12 @@
           "type": "string",
           "const": "deny-sync-write-files",
           "markdownDescription": "Denies the sync_write_files command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the trigger_rebuild command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-trigger-rebuild",
+          "markdownDescription": "Denies the trigger_rebuild command without any pre-configured scope."
         },
         {
           "description": "Denies the uninstall_plugin command without any pre-configured scope.",
