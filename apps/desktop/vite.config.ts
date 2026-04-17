@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
+import { execSync } from "node:child_process";
 
 // node:crypto is used by @harness-kit/core's Node.js-only compile/check utilities.
 // The desktop never calls these functions; externalize so Vite doesn't try to bundle
@@ -14,9 +15,23 @@ const externalNodeModules = {
   },
 };
 
+const BUILD_GIT_SHA = (() => {
+  try { return execSync("git rev-parse HEAD").toString().trim(); }
+  catch { return "unknown"; }
+})();
+
+const BUILD_REPO_PATH = (() => {
+  try { return execSync("git rev-parse --show-toplevel").toString().trim(); }
+  catch { return ""; }
+})();
+
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
   plugins: [externalNodeModules, react(), tailwindcss()],
+  define: {
+    "import.meta.env.VITE_GIT_SHA": JSON.stringify(BUILD_GIT_SHA),
+    "import.meta.env.VITE_REPO_PATH": JSON.stringify(BUILD_REPO_PATH),
+  },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
