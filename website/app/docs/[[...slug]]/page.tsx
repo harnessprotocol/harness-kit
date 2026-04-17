@@ -14,6 +14,7 @@ import { Accordion, Accordions } from 'fumadocs-ui/components/accordion';
 import { MarkdownViewer } from '@/components/markdown-viewer';
 import { AgentSkillBanner } from '@/components/agent-skill-banner';
 import { InstallMethodCards } from '@/components/install-method-cards';
+import { ArchitectureDiagram } from '@/components/architecture-diagram';
 
 const mdxComponents = {
   ...defaultMdxComponents,
@@ -26,6 +27,7 @@ const mdxComponents = {
   Accordions,
   MarkdownViewer,
   InstallMethodCards,
+  ArchitectureDiagram,
 };
 
 export default async function Page(props: {
