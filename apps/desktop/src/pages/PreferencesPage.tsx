@@ -127,6 +127,7 @@ export default function PreferencesPage() {
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null);
   const [updateChecking, setUpdateChecking] = useState(false);
   const [rebuilding, setRebuilding] = useState(false);
+  const [buildError, setBuildError] = useState<string | null>(null);
 
   useEffect(() => {
     getVersion().then(setAppVersion).catch(() => {});
@@ -230,13 +231,15 @@ export default function PreferencesPage() {
     const repoPath = import.meta.env.VITE_REPO_PATH;
     if (!repoPath) return;
     setRebuilding(true);
+    setBuildError(null);
     try {
       await invoke("trigger_rebuild", { repoPath });
+      // On success the app restarts — this line is never reached
     } catch (err) {
-      console.error("Rebuild failed:", err);
-    } finally {
+      setBuildError(typeof err === "string" ? err : "Build failed. Check that pnpm is installed.");
       setRebuilding(false);
     }
+    // Don't set rebuilding false on success — the app restarts
   }
 
   // Compute whether each section pill should be disabled (last visible)
@@ -554,6 +557,24 @@ export default function PreferencesPage() {
                   {import.meta.env.VITE_GIT_SHA.slice(0, 7)}
                 </div>
               )}
+              {rebuilding && (
+                <div style={{ fontSize: "11px", color: "var(--fg-muted)", marginTop: "4px" }}>
+                  Building... this takes a few minutes. The app will restart when ready.
+                </div>
+              )}
+              {buildError && (
+                <div style={{
+                  fontSize: "11px",
+                  color: "var(--fg-muted)",
+                  marginTop: "4px",
+                  fontFamily: "monospace",
+                  whiteSpace: "pre-wrap",
+                  maxHeight: "80px",
+                  overflow: "auto",
+                }}>
+                  {buildError}
+                </div>
+              )}
               {updateStatus?.error && (
                 <div style={{ fontSize: "11px", color: "var(--fg-muted)", marginTop: "2px" }}>
                   {updateStatus.error}
@@ -561,7 +582,7 @@ export default function PreferencesPage() {
               )}
             </div>
             <div style={{ flexShrink: 0 }}>
-              {!updateStatus?.upToDate && !updateStatus?.error && !updateChecking && (
+              {(!updateStatus?.upToDate || rebuilding || buildError) && !updateStatus?.error && !updateChecking && (
                 <button
                   onClick={handleRebuild}
                   disabled={rebuilding}
@@ -571,14 +592,14 @@ export default function PreferencesPage() {
                     padding: "6px 14px",
                     borderRadius: "6px",
                     border: "1px solid var(--accent)",
-                    background: "var(--accent-light)",
-                    color: "var(--accent-text)",
+                    background: rebuilding ? "var(--bg-elevated)" : "var(--accent-light)",
+                    color: rebuilding ? "var(--fg-muted)" : "var(--accent-text)",
                     cursor: rebuilding ? "not-allowed" : "pointer",
                     opacity: rebuilding ? 0.6 : 1,
                     whiteSpace: "nowrap",
                   }}
                 >
-                  {rebuilding ? "Opening Terminal..." : "Rebuild & Relaunch"}
+                  {rebuilding ? "Building..." : buildError ? "Retry" : "Rebuild & Relaunch"}
                 </button>
               )}
             </div>
