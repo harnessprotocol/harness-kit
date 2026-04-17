@@ -316,27 +316,40 @@ pub async fn check_for_updates(
     }
 }
 
-/// Open a Terminal window and run `pnpm install:desktop` in the source repo.
-/// Returns immediately — build runs in the background terminal.
+/// Run `pnpm install:desktop` in the background and restart the app when done.
+/// No Terminal window — build runs silently, app relaunches automatically on success.
 #[tauri::command]
-pub async fn trigger_rebuild(repo_path: String) -> Result<(), String> {
+pub async fn trigger_rebuild(app: AppHandle, repo_path: String) -> Result<(), String> {
     // Sanitize: reject paths with shell metacharacters
     if repo_path.contains('"') || repo_path.contains('`') || repo_path.contains('$') {
         return Err("Invalid repo path".to_string());
     }
 
-    let script = format!(
-        r#"tell application "Terminal"
-    activate
-    do script "cd '{repo_path}' && pnpm install:desktop && echo '--- Build complete. Relaunch Harness Kit. ---'"
-end tell"#,
-        repo_path = repo_path
-    );
+    // macOS GUI apps launch with a minimal PATH that omits Homebrew, nvm, pnpm, etc.
+    // Use a login shell so the user's full shell environment (including pnpm) is available.
+    let output = tokio::process::Command::new("/bin/sh")
+        .args(["-lc", &format!("cd '{}' && pnpm install:desktop", repo_path)])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to start build: {}", e))?;
 
-    std::process::Command::new("osascript")
-        .args(["-e", &script])
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+        let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+        return Err(format!("Build failed:\n{}{}", stdout, stderr));
+    }
+
+    // New binary is in place — restart the app.
+    // Spawn a fresh instance from the same exe path (now pointing at the new binary),
+    // then exit this process.
+    let exe = std::env::current_exe()
+        .map_err(|e| format!("Could not locate app binary: {}", e))?;
+
+    std::process::Command::new(&exe)
         .spawn()
-        .map_err(|e| format!("Failed to open Terminal: {}", e))?;
+        .map_err(|e| format!("Failed to relaunch: {}", e))?;
 
-    Ok(())
+    app.exit(0);
+
+    Ok(()) // unreachable but satisfies the return type
 }
