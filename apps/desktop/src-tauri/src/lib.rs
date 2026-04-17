@@ -19,6 +19,23 @@ use board_server::BoardServerState;
 use agent_server::AgentServerState;
 use membrain_commands::MembrainServerState;
 
+/// Detect the current git branch by running `git branch --show-current`
+/// from the process working directory. Returns `None` when not in a git
+/// repo or when in detached-HEAD state (e.g. a packaged app launched from
+/// Finder where CWD is not inside a repo).
+fn detect_git_branch() -> Option<String> {
+    let output = std::process::Command::new("git")
+        .args(["branch", "--show-current"])
+        .output()
+        .ok()?;
+    if output.status.success() {
+        let branch = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if branch.is_empty() { None } else { Some(branch) }
+    } else {
+        None
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let data_dir = dirs::home_dir()
@@ -241,6 +258,11 @@ pub fn run() {
                     let h = phys.height as f64 / scale * 0.75;
                     let _ = window.set_size(LogicalSize::new(w, h));
                     let _ = window.center();
+                }
+                // When running from a worktree, show the branch in the title bar
+                // so multiple app instances are easy to tell apart.
+                if let Some(branch) = detect_git_branch() {
+                    let _ = window.set_title(&format!("Harness Kit \u{2014} {}", branch));
                 }
             }
 
