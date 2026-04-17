@@ -1,53 +1,100 @@
 ---
 title: How It Works
-description: The full harness-kit stack — desktop app, harness.yaml, plugin system, and CLI.
+description: harness-kit is three things — a config format, a desktop management console, and a CLI — plus a plugin system that delivers skills and agents to your AI coding tools.
 ---
 
-harness-kit is four layers that work together: a desktop app for observation and management, a `harness.yaml` config file at the center, a plugin system that delivers skills and agents to your AI tools, and a CLI that compiles and validates it all.
+harness-kit has three main components and a plugin system. `harness.yaml` is the config format at the center of everything. The desktop app is a multi-section management console for it. The `harness-kit` CLI is a standalone terminal tool that compiles it. Plugins — SKILL.md files, agents, hooks, scripts — run inside your AI tools.
 
 <ArchitectureDiagram />
 
 ---
 
-## harness.yaml — The Config Core
+## harness.yaml
 
-Everything in harness-kit flows through `harness.yaml`. It is the portable declaration of your entire AI coding setup: which plugins are installed, which MCP servers are running, what sources they come from, and which versions you're pinned to.
+`harness.yaml` is the single declaration of your entire AI coding setup. It follows the [Harness Protocol](https://harnessprotocol.io) — an open, vendor-neutral specification.
 
 ```yaml
-sources:
-  - harnessprotocol/harness-kit
-
 plugins:
   - research@0.2.0
-  - explain@0.2.0
   - board@0.1.0
-  - review@0.2.0
+  - explain@0.2.0
 
 mcp-servers:
-  - memory
-  - filesystem
+  - name: memory
+  - name: filesystem
+
+instructions:
+  operational: "Always create a feature branch. Never commit to main."
+  behavioral: "Direct, concise. Lead with the answer."
+
+permissions:
+  tools:
+    allow: ["Bash", "Edit", "Read"]
+    deny: ["WebFetch"]
+  network:
+    allow: ["api.anthropic.com"]
 
 env:
   ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+
+extends:
+  - profiles/backend-engineer.yaml
 ```
 
-`harness.yaml` follows the [Harness Protocol](https://harnessprotocol.io) — an open, vendor-neutral specification. Any tool that validates against the schema can consume it. harness-kit is the reference implementation.
+The full schema supports `version`, `kind`, `metadata`, `plugins`, `mcp-servers`, `instructions`, `permissions`, `env`, and `extends`. [Harness Protocol spec →](https://harnessprotocol.io)
 
 ---
 
 ## Desktop App
 
-The desktop app is the visual management layer. It reads your harness configuration, shows you what your AI tools are doing, and gives you direct control over the pieces that are hard to manage from a terminal.
+The desktop app is a management console organized into named sections. It reads your harness configuration, provides observability into what your AI tools are doing, and gives you direct control over the pieces that are hard to manage from a terminal.
 
-Four surfaces ship with the app:
+**CORE**
 
-**Observatory** — Session telemetry in detail: every session, every tool call, token usage, and trends over time. When someone asks "is this thing working?", Observatory is the answer.
+- **Harness** — view and edit your harness.yaml, CLAUDE.md, plugins, MCP servers, and hooks in a structured UI
+- **Marketplace** — browse and install plugins from the registry
 
-**Memory** — A knowledge graph that persists across every tool and every session. Add teammates, decisions, and conventions once; every agent can orient itself using them. Backed by the [membrain MCP server](/docs/plugins/research-knowledge/membrain).
+**INSIGHTS**
 
-**Board** — An AI-native Kanban board with real-time two-way sync. Agents pick up cards, draft commits, flag for review. You approve. See [board plugin docs](/docs/plugins/productivity/board) for the full MCP tool surface.
+- **Observatory** — session telemetry: every session, every tool call, token usage, timeline, trends
 
-**AI Chat** — A keyboard-first chat window tied to your harness. Terminal UX, Ollama support, and 12 built-in tools including file piping, web search, and memory queries. Every conversation is stored.
+**SYSTEM**
+
+- **Security** — permissions, secrets management, audit log
+
+**WORKFLOWS**
+
+- **Board** — AI-native Kanban board with real-time two-way sync; agents pick up cards, flag for review
+- **Roadmap** — AI-generated quarterly roadmaps and competitor analysis tied to your board
+
+**Standalone sections**
+
+- **Agents** — monitor and manage specialist subagents running across your harness
+- **Comparator** — run the same prompt across Claude Code, Cursor, and Copilot side by side
+- **Parity** — track which plugins, MCP servers, and skills are loaded in each connected AI tool
+- **AI Chat** — keyboard-first chat window with Ollama support and integrated tools
+- **Memory** — browse, search, and manage the knowledge graph your agents orient themselves in
+
+---
+
+## CLI
+
+The `harness-kit` CLI is a standalone terminal tool. You run it from your shell; it is not a plugin and does not run inside an AI tool's session.
+
+```bash
+harness-kit validate          # check harness.yaml against the schema
+harness-kit compile           # compile harness.yaml into native per-tool configs
+harness-kit sync              # fetch plugins into local cache, write harness.lock
+harness-kit check             # detect drift between compiled output and harness.yaml
+harness-kit detect            # show which AI platforms are present in the working directory
+harness-kit scan              # security audit of installed plugin skill files
+```
+
+**`compile` output** — `harness-kit compile` writes native configuration files for each detected AI tool: `.claude/settings.json` for Claude Code, `.cursor/rules` for Cursor, and so on. Each AI tool then loads those files at session start. This is how harness.yaml becomes active in your AI tools — it is compiled, not interpreted at runtime.
+
+<Callout type="info" title="Installation">
+  See [Installation](/docs/getting-started/installation) for Homebrew, npm, and binary options.
+</Callout>
 
 ---
 
@@ -57,108 +104,71 @@ Four surfaces ship with the app:
 
 <Steps>
 <Step>
-**Source** — You register harness-kit as a plugin source in your AI tool. This points to the collection, not individual plugins.
+**Source** — you register harness-kit as a plugin source in your AI tool. This points to the collection, not individual plugins.
 </Step>
 <Step>
-**Install** — You install a plugin by name. Your harness downloads the plugin directory locally.
+**Install** — you install a plugin by name. The plugin directory is downloaded locally.
 
 ```
 /plugin install research@harness-kit
 ```
 </Step>
 <Step>
-**Discovery** — At session start, your harness scans installed plugins and registers all skills it finds.
+**Discovery** — at session start, your AI tool scans installed plugins and registers any skills it finds.
 </Step>
 <Step>
-**Invocation** — You invoke a slash command. The matching `SKILL.md` is loaded into context as the workflow definition.
+**Invocation** — you run a slash command. The matching `SKILL.md` is loaded into context as the workflow definition.
 
 ```
-/research
+/research https://github.com/anthropics/claude-code
 ```
 </Step>
 <Step>
-**Execution** — The AI follows the steps in `SKILL.md`, using available tools: file I/O, web fetch, shell commands, MCP servers.
+**Execution** — the AI follows the steps in `SKILL.md`, using available tools: file I/O, web fetch, shell commands, MCP servers.
 </Step>
 </Steps>
 
 ### Plugin Anatomy
 
-Every plugin follows the same directory layout:
-
 ```
 plugins/<name>/
 ├── .claude-plugin/
-│   └── plugin.json         # name, version, description
+│   └── plugin.json       # name, version, description
 ├── skills/
 │   └── <name>/
-│       ├── SKILL.md        # the workflow (what Claude reads)
-│       └── README.md       # human docs
-├── scripts/                # optional: bundled automation
-├── hooks/                  # optional: lifecycle event handlers
-└── agents/                 # optional: specialist subagents
+│       ├── SKILL.md      # the workflow (what the AI reads at invocation)
+│       └── README.md     # human docs
+├── scripts/              # optional: shell automation
+├── hooks/                # optional: Stop, PreTool, PostTool handlers
+└── agents/               # optional: isolated specialist subagents
 ```
 
 | Component | Role | When it runs |
 |-----------|------|-------------|
 | `plugin.json` | Metadata — name, version, description | At install and update |
-| `SKILL.md` | Workflow definition — steps Claude follows at invocation | At slash command invocation |
-| `README.md` | Human-facing docs | Never (reference only) |
+| `SKILL.md` | Workflow definition | At slash command invocation |
 | `scripts/` | Shell scripts called by skills or hooks | On demand |
-| `hooks/` | Stop, PreTool, PostTool event handlers | On harness lifecycle events |
-| `agents/` | Isolated specialist workers with scoped tools and permissions | When a skill delegates to a named agent |
+| `hooks/` | Lifecycle event handlers | On harness lifecycle events |
+| `agents/` | Isolated workers with scoped tools and a fresh context window | When a skill delegates to a named agent |
 
-### What Makes a SKILL.md Different from a Prompt
+### SKILL.md vs. a prompt
 
 A `SKILL.md` is a **complete workflow specification**, not a prompt template:
 
 - **Mandatory step ordering** — steps execute in sequence, no skipping
 - **Input parsing rules** — how to interpret arguments and flags
-- **Tool usage patterns** — which tools to call when, and how
+- **Tool usage patterns** — which tools to call, when, and how
 - **Output structure** — exact format for results
 - **Error handling** — explicit recovery steps when things fail
 - **Common mistakes table** — known failure modes and fixes
 
-This structure makes skills repeatable across sessions and transferable across users. The same `/research` invocation produces the same workflow regardless of who runs it or when.
-
----
-
-## CLI
-
-The `harness-kit` CLI operates on `harness.yaml` from the terminal. It's useful for CI pipelines, pre-commit hooks, and machines where the desktop app isn't running.
-
-<Tabs items={["Homebrew", "npm", "Binary"]}>
-<Tab value="Homebrew">
-```bash
-brew tap harnessprotocol/tap
-brew install harness-kit
-```
-</Tab>
-<Tab value="npm">
-```bash
-npm install -g @harness-kit/cli
-```
-</Tab>
-<Tab value="Binary">
-Download from [GitHub Releases](https://github.com/harnessprotocol/harness-kit/releases).
-</Tab>
-</Tabs>
-
-**Core commands:**
-
-```bash
-harness-kit validate          # check harness.yaml against the schema
-harness-kit compile           # emit native configs for Claude Code, Cursor, Copilot
-harness-kit sync              # pull latest plugin changes from the registry
-harness-kit scan              # audit installed skills for unsafe directives
-```
+This structure makes skills repeatable across sessions and transferable across users. The same `/research` invocation produces the same workflow regardless of who runs it.
 
 ---
 
 ## Portability
 
-### New Machine
-
-Your harness is fully reproducible. Config files live in version control; plugins reinstall from the registry with the same commands you used the first time.
+Your harness is fully reproducible. Config files live in version control; plugins reinstall from the registry with the same commands.
 
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 210" style={{width: '100%', maxWidth: '560px', display: 'block', margin: '2rem auto'}}>
   <defs>
@@ -210,18 +220,12 @@ Your harness is fully reproducible. Config files live in version control; plugin
   <text x="504" y="185" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fill="#888">review ...</text>
 </svg>
 
-### Sharing with Teammates
-
-Your entire harness serializes into a single `harness.yaml`. Export it, commit it, share it — your teammate runs one command to selectively import what they want.
+Your harness.yaml serializes your whole setup. Share it, import it, or use it to bootstrap the same configuration on any machine.
 
 ```bash
-/harness-export          # captures plugins, versions, and sources
-/harness-import harness.yaml  # interactive picker: they choose what to install
+/harness-export                       # capture plugins, versions, sources → harness.yaml
+/harness-import harness.yaml          # interactive picker: teammate chooses what to install
 ```
-
-<Callout type="info" title="A manifest, not a clone">
-  harness.yaml records <em>what</em> you have and <em>where it came from</em>. The import side fetches the same versions from the same sources. Your setup becomes a shareable artifact, not tribal knowledge.
-</Callout>
 
 ---
 
@@ -231,4 +235,4 @@ harness-kit is a framework without a runtime. No SDK, no build step, no executio
 
 The `SKILL.md` is the portable unit. Plugins add distribution, versioning, and automation on top — but the workflow itself is plain text that any AI tool can read. Uninstall a plugin and nothing breaks, because nothing was ever coupled to it.
 
-> Skills are plain markdown, readable and editable by anyone. The spec is [open](https://harnessprotocol.io). The format travels.
+The spec is [open](https://harnessprotocol.io). The format travels.
