@@ -45,9 +45,19 @@ globs: "src/**/*.ts"
 [SKILL.md content here]
 ```
 
-## Windsurf
+## Codex
 
-Copy the `SKILL.md` content into `.windsurfrules`, or paste it through Windsurf's project rules UI. No frontmatter needed — Windsurf applies rules project-wide.
+Copy a plugin's `SKILL.md` into your `AGENTS.md` file at the repo root. Codex reads `AGENTS.md` as its persistent instruction context — the same role `CLAUDE.md` plays for Claude Code.
+
+```bash
+cat plugins/research/skills/research/SKILL.md >> AGENTS.md
+```
+
+**MCP servers:** Codex supports MCP via the `--mcp` flag:
+
+```bash
+codex --mcp .mcp.json
+```
 
 ## MCP Servers
 
@@ -63,13 +73,13 @@ Plugins that depend on MCP (like `orient` and `capture`) work in any of these to
 
 ## Feature Comparison
 
-| Feature | Claude Code | Copilot | Cursor | Windsurf |
-|---------|-------------|---------|--------|----------|
+| Feature | Claude Code | Copilot | Cursor | Codex |
+|---------|-------------|---------|--------|-------|
 | Marketplace install/update | One command | Copilot CLI | Manual | Manual |
 | Hooks | Auto-triggered | Not supported | Not supported | Not supported |
 | Auto-execution scripts | Bundled | Manual | Manual | Manual |
 | SKILL.md workflows | Full support | Full support | Full support | Full support |
-| MCP server support | Full support | Full support | Full support | Varies |
+| MCP server support | Full support | Full support | Full support | Full support |
 
 ## Configuration Primitives Across Tools
 

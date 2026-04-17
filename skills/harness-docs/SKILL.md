@@ -1,6 +1,6 @@
 ---
 name: harness-docs
-description: Harness Kit documentation — installation, plugin catalog, creating plugins, cross-harness setup, architecture, and FAQ. Use when working with or configuring harness-kit plugins, understanding the plugin/skill system, installing slash commands, setting up AI coding tool configuration, answering questions about the plugin marketplace, writing SKILL.md files, using harness.yaml, or integrating with Copilot, Cursor, or Windsurf. Do NOT use for general Claude Code questions unrelated to harness-kit.
+description: Harness Kit documentation — installation, plugin catalog, creating plugins, cross-harness setup, architecture, and FAQ. Use when working with or configuring harness-kit plugins, understanding the plugin/skill system, installing slash commands, setting up AI coding tool configuration, answering questions about the plugin marketplace, writing SKILL.md files, using harness.yaml, or integrating with Copilot, Cursor, or Codex. Do NOT use for general Claude Code questions unrelated to harness-kit.
 user-invocable: false
 ---
 
@@ -20,7 +20,7 @@ This is a background knowledge skill. When the user asks about harness-kit, load
 | Installation, architecture, quick start | `getting-started.md` |
 | Plugin list, what each plugin does | `plugin-catalog.md` |
 | Creating plugins, writing SKILL.md, frontmatter | `creating-plugins.md` |
-| Using with Copilot, Cursor, Windsurf | `cross-harness.md` |
+| Using with Copilot, Cursor, Codex | `cross-harness.md` |
 | Core concepts, FAQ, harness.yaml, comparison with MCP/A2A | `concepts-and-faq.md` |
 
 Load with: `Read ${CLAUDE_SKILL_DIR}/references/<filename>.md`
