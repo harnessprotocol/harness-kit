@@ -12,6 +12,9 @@ import { Callout } from 'fumadocs-ui/components/callout';
 import { Step, Steps } from 'fumadocs-ui/components/steps';
 import { Accordion, Accordions } from 'fumadocs-ui/components/accordion';
 import { MarkdownViewer } from '@/components/markdown-viewer';
+import { AgentSkillBanner } from '@/components/agent-skill-banner';
+import { InstallMethodCards } from '@/components/install-method-cards';
+import { ArchitectureDiagram } from '@/components/architecture-diagram';
 
 const mdxComponents = {
   ...defaultMdxComponents,
@@ -23,6 +26,8 @@ const mdxComponents = {
   Accordion,
   Accordions,
   MarkdownViewer,
+  InstallMethodCards,
+  ArchitectureDiagram,
 };
 
 export default async function Page(props: {
@@ -39,6 +44,7 @@ export default async function Page(props: {
       <DocsTitle>{page.data.title}</DocsTitle>
       <DocsDescription>{page.data.description}</DocsDescription>
       <DocsBody>
+        <AgentSkillBanner />
         <MDX components={mdxComponents} />
       </DocsBody>
     </DocsPage>

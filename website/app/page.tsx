@@ -5,6 +5,7 @@ import { CommandBox } from '@/components/site/CommandBox';
 import { SectionHeader } from '@/components/site/SectionHeader';
 import { FeatureTile } from '@/components/site/FeatureTile';
 import { DesktopMock } from '@/components/site/DesktopMock';
+import { AgentSkillBanner } from '@/components/agent-skill-banner';
 
 /* ── Icons (inline SVG, no icon library) ── */
 const ConfigureIcon = () => (
@@ -109,6 +110,9 @@ export default function HomePage() {
             >
               Explore the app →
             </Link>
+          </div>
+          <div className="mt-6 text-left">
+            <AgentSkillBanner />
           </div>
         </div>
 

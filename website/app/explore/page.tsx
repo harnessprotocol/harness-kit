@@ -55,7 +55,7 @@ const NAV_GROUPS: Group[] = [
         id: 'observatory',
         title: 'Observatory',
         description: 'Every session, every tool call, every minute. See what your AI actually did.',
-        href: '/docs/evals',
+        href: '/docs/getting-started/architecture',
         accent: 'var(--cat-blue)',
         icon: (
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -67,7 +67,7 @@ const NAV_GROUPS: Group[] = [
         id: 'agents',
         title: 'Agents',
         description: 'Monitor and control specialist subagents running across your harness — live status, output, and history.',
-        href: '/docs/concepts/architecture',
+        href: '/docs/concepts/agents',
         accent: 'var(--cat-purple)',
         icon: (
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -126,7 +126,7 @@ const NAV_GROUPS: Group[] = [
         id: 'board',
         title: 'Board',
         description: 'Agents pick up cards, draft commits, open PRs. You review. Kanban built for AI-first teams.',
-        href: '/docs/plugins/productivity',
+        href: '/docs/plugins/productivity/board',
         accent: 'var(--cat-purple)',
         icon: (
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -138,7 +138,7 @@ const NAV_GROUPS: Group[] = [
         id: 'roadmap',
         title: 'Roadmap',
         description: 'AI-generated quarterly roadmaps and competitor analysis, tied to your board and harness.',
-        href: '/docs/plugins/productivity',
+        href: '/docs/plugins/productivity/board',
         accent: 'var(--cat-purple)',
         icon: (
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -163,7 +163,7 @@ const NAV_GROUPS: Group[] = [
         id: 'memory',
         title: 'Memory',
         description: 'A knowledge graph your AI can orient itself in. Teammates, decisions, conventions — persistent across every tool.',
-        href: '/docs/plugins/research-knowledge',
+        href: '/docs/plugins/research-knowledge/membrain',
         accent: 'var(--cat-cyan)',
         icon: (
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

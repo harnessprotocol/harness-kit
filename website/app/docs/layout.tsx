@@ -11,18 +11,19 @@ export default function Layout({ children }: { children: ReactNode }) {
           <span className="flex items-center gap-2 font-bold">
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 32 32"
+              viewBox="0 0 28 28"
               className="size-6"
+              style={{ filter: 'drop-shadow(0 0 5px rgba(34,177,236,0.4))' }}
             >
-              <rect width="32" height="32" rx="6" fill="#0d0d12" />
+              <rect width="28" height="28" rx="6" fill="#0d1016" />
               <text
-                x="16"
-                y="22"
+                x="14"
+                y="19"
                 textAnchor="middle"
                 fontFamily="system-ui, sans-serif"
                 fontWeight="700"
-                fontSize="16"
-                fill="#8b7aff"
+                fontSize="12"
+                fill="#4ec7f2"
               >
                 hk
               </text>

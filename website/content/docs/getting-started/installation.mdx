@@ -1,91 +1,137 @@
 ---
 sidebar_position: 1
 title: Installation
+description: Three ways to install harness-kit — pick what fits your workflow.
 ---
 
-# Installation
+<InstallMethodCards />
 
-Two commands. The first adds the Harness Kit marketplace to Claude Code. The second installs your first plugin by name. That's the whole install.
+## Desktop App
 
-harness-kit ships three installable artifacts — choose what you need:
+The full harness-kit experience. Observatory, Memory, Board, and AI Chat — all in one native app with a visual interface for managing your AI tool configurations.
 
-| Artifact | What it does | How to install |
-|----------|-------------|----------------|
-| **Skills & Plugins** | Adds slash commands to Claude Code | Plugin marketplace or install script |
-| **CLI** (`harness-kit`) | Compiles and validates `harness.yaml` from the terminal | Homebrew, npm, or direct download |
-| **Desktop App** | Visual interface for managing your AI tool configurations | Homebrew Cask or DMG |
+<Tabs items={["Homebrew", "DMG"]}>
+<Tab value="Homebrew">
+<Steps>
+<Step>
+**Tap the Harness Kit Homebrew cask**
 
-Most users start with skills. The CLI and desktop app are for teams managing shared `harness.yaml` configs.
+```bash
+brew tap harnessprotocol/tap
+brew install --cask harness-kit
+```
+</Step>
+<Step>
+**Clear the quarantine flag**
+
+The app is not yet notarized. Run this before first launch:
+
+```bash
+xattr -cr "/Applications/Harness Kit.app"
+```
+
+Or right-click the app in Finder → **Open** → confirm.
+</Step>
+<Step>
+**Launch from Applications or Spotlight**
+
+Search `Harness Kit` or open from `/Applications/Harness Kit.app`.
+</Step>
+</Steps>
+</Tab>
+
+<Tab value="DMG">
+<Steps>
+<Step>
+**Download the DMG**
+
+Get `HarnessKit-vX.Y.Z-darwin-arm64.dmg` from [GitHub Releases](https://github.com/harnessprotocol/harness-kit/releases).
+</Step>
+<Step>
+**Drag to Applications**
+
+Open the `.dmg` and drag **Harness Kit** to your Applications folder.
+</Step>
+<Step>
+**Clear the quarantine flag**
+
+```bash
+xattr -cr "/Applications/Harness Kit.app"
+```
+</Step>
+<Step>
+**Launch from Applications or Spotlight**
+</Step>
+</Steps>
+</Tab>
+</Tabs>
+
+<Callout type="info" title="System requirements">
+  macOS 14 (Sonoma) or later, Apple Silicon (arm64). Intel builds are planned.
+</Callout>
 
 ---
 
 ## Skills & Plugins
 
+Slash commands for Claude Code. Add the marketplace once, install any plugin by name.
+
 <Tabs items={["Plugin Marketplace", "Install Script"]}>
 <Tab value="Plugin Marketplace">
-Add the marketplace once, then install any plugin by name:
+<Steps>
+<Step>
+**Add the marketplace**
 
 ```
 /plugin marketplace add harnessprotocol/harness-kit
+```
+</Step>
+<Step>
+**Install plugins by name**
+
+```
 /plugin install research@harness-kit
-```
-
-Repeat for any plugin you want:
-
-```
 /plugin install explain@harness-kit
-/plugin install lineage@harness-kit
 /plugin install orient@harness-kit
-/plugin install capture@harness-kit
-/plugin install review@harness-kit
-/plugin install docgen@harness-kit
 ```
+</Step>
+</Steps>
 </Tab>
 
 <Tab value="Install Script">
-If your Claude Code build doesn't support the plugin marketplace yet:
+No plugin marketplace access? Use the install script:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/harnessprotocol/harness-kit/main/install.sh | bash
 ```
 
-This downloads skill files to `~/.claude/skills/` over HTTPS. It installs **only the skill files** — bundled scripts (like the research index rebuilder) require the full marketplace install.
+This copies skill files to `~/.claude/skills/` over HTTPS. Bundled scripts (like the research index rebuilder) require the full marketplace install.
 </Tab>
 </Tabs>
 
-### Verify
-
-After installing, invoke any skill to confirm it loaded:
+**Verify:** invoke any skill after installing:
 
 ```
 /research
 /explain src/main.ts
 ```
 
-<Callout type="success" title="Ready to go">
-  If the skill responds with its workflow, you're set.
+<Callout type="info" title="Using with other tools">
+  SKILL.md files are plain markdown — copy them into any tool's instruction system. See [Using with Other Tools](/docs/cross-harness/setup-guide) for Copilot, Cursor, and Windsurf setup.
 </Callout>
-
-### Using with other tools
-
-SKILL.md files are plain markdown — copy them into any tool's instruction system. VS Code Copilot reads `CLAUDE.md` natively via the `chat.useClaudeMdFile` setting, so the [conventions guide](/docs/guides/conventions) works without modification.
-
-For per-tool setup instructions (Copilot, Cursor, Windsurf, MCP wiring), see [Using with Other Tools](/docs/cross-harness/setup-guide).
 
 ---
 
 ## CLI
 
-The `harness-kit` CLI validates and compiles `harness.yaml` into native config files for Claude Code, Cursor, and Copilot. It also handles plugin sync, drift detection, and security scanning.
+Compile `harness.yaml`, sync plugins, detect drift — from the terminal.
 
-<Tabs items={["Homebrew", "npm", "Direct download"]}>
+<Tabs items={["Homebrew", "npm", "Binary"]}>
 <Tab value="Homebrew">
 ```bash
 brew tap harnessprotocol/tap
 brew install harness-kit
 ```
-
-Homebrew manages updates automatically — `brew upgrade harness-kit` to update.
 </Tab>
 
 <Tab value="npm">
@@ -93,34 +139,30 @@ Homebrew manages updates automatically — `brew upgrade harness-kit` to update.
 npm install -g @harness-kit/cli
 ```
 
-Requires Node.js 22 or later. The package is published as `@harness-kit/cli` on npm.
+Requires Node.js 22 or later.
 </Tab>
 
-<Tab value="Direct download">
-Download the standalone binary (no Node.js required) from [GitHub Releases](https://github.com/harnessprotocol/harness-kit/releases).
+<Tab value="Binary">
+Download the standalone binary (no Node.js required) from [GitHub Releases](https://github.com/harnessprotocol/harness-kit/releases):
 
-**macOS (Apple Silicon):**
 ```bash
 tar -xzf harness-kit-vX.Y.Z-darwin-arm64.tar.gz
 chmod +x harness-kit
 sudo mv harness-kit /usr/local/bin/
 ```
-
-Replace `X.Y.Z` with the version you downloaded.
 </Tab>
 </Tabs>
 
-### Verify
+**Verify:**
 
 ```bash
 harness-kit --version
-harness-kit validate        # validates harness.yaml in the current directory
-harness-kit compile --help  # see compile options
+harness-kit validate
 ```
 
 ---
 
-## Desktop App
+## Plugin Requirements
 
 The Harness Kit desktop app provides a visual interface for managing configs, running evals, comparing AI tools, and monitoring your setup.
 
@@ -156,14 +198,17 @@ macOS 14 (Sonoma) or later, Apple Silicon (arm64) required. Intel Mac builds are
 
 ---
 
-## Requirements per Plugin
+## Plugin Requirements
+
+<Accordions>
+<Accordion title="View requirements by plugin">
 
 | Plugin | Requirements |
 |--------|-------------|
-| research | `gh` CLI (GitHub sources only), Python 3.10+ (index rebuild) |
+| research | `gh` CLI (GitHub sources), Python 3.10+ (index rebuild) |
 | explain | None |
 | lineage | None |
-| orient | None (optional: [MCP Memory Server](https://github.com/anthropics/claude-code-memory)) |
+| orient | None (optional: MCP Memory Server) |
 | capture | None |
 | review | `gh` CLI (PR review only) |
 | docgen | None |
@@ -177,6 +222,9 @@ macOS 14 (Sonoma) or later, Apple Silicon (arm64) required. Intel Mac builds are
 | membrain | Go 1.25+, membrain MCP server |
 | frontend-design | None |
 
+</Accordion>
+</Accordions>
+
 <Callout type="warn" title="Environment variables">
-  Some plugins require environment variables for optional features. See the [Secrets Management guide](/docs/guides/secrets-management) for how to configure them.
+  Some plugins use optional env vars. See [Secrets Management](/docs/guides/secrets-management) for how to configure them.
 </Callout>
