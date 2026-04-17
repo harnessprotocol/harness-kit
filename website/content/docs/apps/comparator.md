@@ -1,3 +1,7 @@
+---
+title: Comparator
+---
+
 # Comparator
 
 The Comparator is a four-phase evaluation workbench for comparing AI harnesses

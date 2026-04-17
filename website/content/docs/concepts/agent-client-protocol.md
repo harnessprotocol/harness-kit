@@ -1,3 +1,7 @@
+---
+title: Agent Client Protocol (ACP)
+---
+
 # Agent Client Protocol (ACP)
 
 ACP is an open protocol that standardizes communication between code editors and AI
