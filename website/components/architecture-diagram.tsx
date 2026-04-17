@@ -33,7 +33,7 @@ const pluginParts = [
 ];
 
 // Harnesses sourced from cross-harness/ide-support.md support matrix
-const harnesses = ['Claude Code', 'Copilot', 'Cursor', 'Windsurf', 'Codex'];
+const harnesses = ['Claude Code', 'Copilot', 'Cursor', 'Codex'];
 
 // 3 rows × 2 columns; values shortened to fit 286px value column
 const yamlFields = [
@@ -353,17 +353,17 @@ export function ArchitectureDiagram() {
           HARNESSES
         </text>
 
-        {/* 3+2 grid; chipW=98, gap=8; 3×98+2×8=310 in 340 */}
+        {/* 2×2 grid; chipW=155, gap=8; 2×155+8=318 in 340 */}
         {harnesses.map((tool, i) => {
-          const col = i % 3;
-          const row = Math.floor(i / 3);
-          const tx  = AT.x + 14 + col * 106;
+          const col = i % 2;
+          const row = Math.floor(i / 2);
+          const tx  = AT.x + 14 + col * 163;
           const ty  = AT.y + 26 + row * 30;
           return (
             <g key={tool}>
-              <rect x={tx} y={ty} width={98} height={20} rx={4}
+              <rect x={tx} y={ty} width={155} height={20} rx={4}
                 fill={SURFACE} stroke={BORDER_MID} />
-              <text x={tx + 49} y={ty + 13.5}
+              <text x={tx + 77.5} y={ty + 13.5}
                 fontFamily={FONT} fontSize={9} fill={MUTED} textAnchor="middle">
                 {tool}
               </text>
