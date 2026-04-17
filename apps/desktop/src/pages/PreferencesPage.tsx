@@ -582,7 +582,7 @@ export default function PreferencesPage() {
               )}
             </div>
             <div style={{ flexShrink: 0 }}>
-              {(!updateStatus?.upToDate || rebuilding || buildError) && !updateStatus?.error && !updateChecking && (
+              {(updateStatus !== null && !updateStatus.upToDate || rebuilding || buildError) && !updateStatus?.error && !updateChecking && (
                 <button
                   onClick={handleRebuild}
                   disabled={rebuilding}

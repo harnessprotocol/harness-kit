@@ -253,6 +253,18 @@ pub async fn check_for_updates(
         };
     }
 
+    // Validate installed_sha to prevent git flag injection — same pattern as get_diff_against_commit.
+    // A valid SHA is exactly 40 hex characters.
+    if installed_sha.len() != 40 || !installed_sha.chars().all(|c| c.is_ascii_hexdigit()) {
+        return UpdateStatus {
+            local_sha: installed_sha,
+            remote_sha: String::new(),
+            commits_behind: 0,
+            up_to_date: true,
+            error: Some("Invalid SHA format".to_string()),
+        };
+    }
+
     // Fetch origin/main (silent, best-effort)
     let _ = shell.command("git")
         .args(["fetch", "origin", "main", "--quiet"])
@@ -320,15 +332,13 @@ pub async fn check_for_updates(
 /// No Terminal window — build runs silently, app relaunches automatically on success.
 #[tauri::command]
 pub async fn trigger_rebuild(app: AppHandle, repo_path: String) -> Result<(), String> {
-    // Sanitize: reject paths with shell metacharacters
-    if repo_path.contains('"') || repo_path.contains('`') || repo_path.contains('$') {
-        return Err("Invalid repo path".to_string());
-    }
-
     // macOS GUI apps launch with a minimal PATH that omits Homebrew, nvm, pnpm, etc.
     // Use a login shell so the user's full shell environment (including pnpm) is available.
+    // Use .current_dir() instead of interpolating the path into the shell string — this
+    // eliminates any shell injection surface from the repo path entirely.
     let output = tokio::process::Command::new("/bin/sh")
-        .args(["-lc", &format!("cd '{}' && pnpm install:desktop", repo_path)])
+        .args(["-lc", "pnpm install:desktop"])
+        .current_dir(&repo_path)
         .output()
         .await
         .map_err(|e| format!("Failed to start build: {}", e))?;
