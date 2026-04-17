@@ -2343,6 +2343,12 @@
           "markdownDescription": "Enables the chat_stop_local_relay command without any pre-configured scope."
         },
         {
+          "description": "Enables the check_gh_auth command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-check-gh-auth",
+          "markdownDescription": "Enables the check_gh_auth command without any pre-configured scope."
+        },
+        {
           "description": "Enables the check_git_repo command without any pre-configured scope.",
           "type": "string",
           "const": "allow-check-git-repo",
@@ -2563,6 +2569,12 @@
           "type": "string",
           "const": "allow-get-parity-snapshot",
           "markdownDescription": "Enables the get_parity_snapshot command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_system_info command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-system-info",
+          "markdownDescription": "Enables the get_system_info command without any pre-configured scope."
         },
         {
           "description": "Enables the import_plugin_from_path command without any pre-configured scope.",
@@ -2859,6 +2871,12 @@
           "markdownDescription": "Enables the stream_chat command without any pre-configured scope."
         },
         {
+          "description": "Enables the submit_feedback command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-submit-feedback",
+          "markdownDescription": "Enables the submit_feedback command without any pre-configured scope."
+        },
+        {
           "description": "Enables the sync_create_backup command without any pre-configured scope.",
           "type": "string",
           "const": "allow-sync-create-backup",
@@ -3111,6 +3129,12 @@
           "markdownDescription": "Denies the chat_stop_local_relay command without any pre-configured scope."
         },
         {
+          "description": "Denies the check_gh_auth command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-check-gh-auth",
+          "markdownDescription": "Denies the check_gh_auth command without any pre-configured scope."
+        },
+        {
           "description": "Denies the check_git_repo command without any pre-configured scope.",
           "type": "string",
           "const": "deny-check-git-repo",
@@ -3331,6 +3355,12 @@
           "type": "string",
           "const": "deny-get-parity-snapshot",
           "markdownDescription": "Denies the get_parity_snapshot command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_system_info command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-system-info",
+          "markdownDescription": "Denies the get_system_info command without any pre-configured scope."
         },
         {
           "description": "Denies the import_plugin_from_path command without any pre-configured scope.",
@@ -3625,6 +3655,12 @@
           "type": "string",
           "const": "deny-stream-chat",
           "markdownDescription": "Denies the stream_chat command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the submit_feedback command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-submit-feedback",
+          "markdownDescription": "Denies the submit_feedback command without any pre-configured scope."
         },
         {
           "description": "Denies the sync_create_backup command without any pre-configured scope.",

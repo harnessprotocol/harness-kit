@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-submit-feedback"
+description = "Enables the submit_feedback command without any pre-configured scope."
+commands.allow = ["submit_feedback"]
+
+[[permission]]
+identifier = "deny-submit-feedback"
+description = "Denies the submit_feedback command without any pre-configured scope."
+commands.deny = ["submit_feedback"]
