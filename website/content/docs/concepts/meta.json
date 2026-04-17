@@ -6,6 +6,7 @@
     "secrets-management",
     "cross-harness-portability",
     "comparison",
+    "agent-client-protocol",
     "harness-protocol"
   ]
 }

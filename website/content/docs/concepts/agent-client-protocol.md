@@ -28,9 +28,9 @@ through prompt turns:
 ## ACP in the harness-kit Comparator
 
 ACP-compatible harnesses (like Claude Code) are marked with an **ACP** badge in the
-comparator's Setup phase. When ACP is supported, the execution layer can exchange
-structured JSON-RPC events rather than parsing raw terminal output — producing richer
-activity data for comparison.
+comparator's Setup and Results phases. Once full ACP transport is implemented, the
+execution layer will exchange structured JSON-RPC events instead of parsing raw terminal
+output — producing richer, typed activity data for comparison.
 
 ## Relationship to MCP
 

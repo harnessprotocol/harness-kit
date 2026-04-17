@@ -15,15 +15,15 @@ outputs, and outcomes.
 ### 1. Setup
 
 Configure which harnesses to compare and define the evaluation task. Available harnesses
-are auto-detected on your system. Harnesses marked **ACP** are ACP-compatible agents —
-they use structured JSON-RPC event exchange during execution rather than raw terminal
-output.
+are auto-detected on your system. Harnesses marked **ACP** are ACP-compatible agents.
+Once full ACP transport is enabled, they exchange structured JSON-RPC events during
+execution rather than raw terminal output.
 
 ### 2. Execution
 
 Each harness runs in parallel in an isolated terminal session. The activity stream
 shows real-time updates: plans, thinking blocks, tool calls, file edits, and terminal
-output. ACP-compatible harnesses emit typed events directly.
+output. ACP-compatible harnesses will emit typed events directly once full transport is enabled.
 
 ### 3. Results
 
@@ -51,7 +51,7 @@ Harnesses marked **ACP** implement the [Agent Client Protocol](./agent-client-pr
 which standardizes the editor↔agent communication layer. ACP-compatible harnesses:
 
 - Are discoverable through the [ACP registry](https://agentclientprotocol.com/overview/agents)
-- Emit structured session events (plans, tool calls, message chunks, stop reasons)
 - Support capability negotiation at session start
+- Will emit structured session events (plans, tool calls, message chunks, stop reasons) once full ACP transport is enabled
 
 Claude Code is ACP-compatible.

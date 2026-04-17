@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { HarnessInfo } from "@harness-kit/shared";
+import { getHarness } from "../../lib/harness-definitions";
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -662,7 +663,7 @@ function HarnessCard({
       <div style={styles.harnessCardHeader}>
         <div style={{ ...styles.harnessStatusDot, background: dotColor }} />
         <span style={styles.harnessName}>{harness.name}</span>
-        {harness.protocol === "acp" && (
+        {getHarness(harness.id)?.protocol === "acp" && (
           <span
             style={{
               fontSize: "9px",

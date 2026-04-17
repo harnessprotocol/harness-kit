@@ -76,15 +76,15 @@ same role LSP plays for language tooling. Where harness-kit handles *configurati
 (which plugins, skills, and MCP servers an agent loads), ACP handles *runtime protocol*
 (how the editor and agent exchange messages during a session).
 
-| Dimension | harness-kit | ACP |
-|-----------|-------------|-----|
-| Layer | Configuration/startup | Runtime protocol |
-| What it standardizes | harness.yaml format | JSON-RPC message exchange |
-| When it runs | Before/during session setup | During active sessions |
+| | ACP | harness-kit |
+|---|---|---|
+| **Layer** | Runtime protocol | Configuration/startup |
+| **What it standardizes** | JSON-RPC message exchange | harness.yaml format |
+| **When it runs** | During active sessions | Before/during session setup |
 
 These layers compose: ACP-compatible agents benefit from harness-kit configuration
-the same way any agent does. The comparator uses ACP when running ACP-compatible
-harnesses, providing structured event data instead of raw terminal output.
+the same way any agent does. The comparator identifies ACP-compatible harnesses — full
+structured event exchange is in development.
 
 ---
 
@@ -116,6 +116,7 @@ They operate at different layers and compose naturally.
 Yes. A typical setup might look like:
 
 - **harness-kit** configures your Claude Code environment (plugins, MCP servers, instructions)
+- **ACP** standardizes how your editor communicates with the agent during a session
 - **MCP** connects your agent to databases, file systems, and APIs
 - **Claude SDK** powers the agent under the hood
 - **A2A** lets your agent coordinate with other agents at runtime
