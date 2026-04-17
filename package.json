@@ -34,9 +34,10 @@
       "dompurify": ">=3.3.2",
       "vite": ">=6.4.2",
       "esbuild": ">=0.25.0",
-      "hono": ">=4.12.12",
+      "hono": ">=4.12.14",
       "@hono/node-server": ">=1.19.13",
-      "langsmith": ">=0.5.18"
+      "langsmith": ">=0.5.18",
+      "express>path-to-regexp": "0.1.13"
     }
   }
 }
