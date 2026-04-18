@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import styles from './DesktopMock.module.css';
 
 type SectionId = 'harness' | 'marketplace' | 'observatory' | 'agents' | 'comparator' | 'security' | 'parity' | 'board' | 'roadmap' | 'ai-chat' | 'memory';
@@ -159,15 +159,70 @@ export function DesktopMock({
   compact = false,
 }: DesktopMockProps) {
   const [activeSection, setActiveSection] = useState(defaultSection);
+  const [hasInteracted, setHasInteracted] = useState(false);
+  const tourRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const frameClass = [styles.frame, compact ? styles.compact : ''].filter(Boolean).join(' ');
 
-  const handleItemClick = (id: SectionId) => {
-    if (interactive) setActiveSection(id);
+  const advance = () => {
+    setActiveSection((cur) => {
+      const idx = ALL_ITEMS.findIndex((i) => i.id === cur);
+      return ALL_ITEMS[(idx + 1) % ALL_ITEMS.length].id as SectionId;
+    });
   };
 
+  const stopTour = () => {
+    if (tourRef.current) { clearInterval(tourRef.current); tourRef.current = null; }
+  };
+
+  const handleItemClick = (id: SectionId) => {
+    if (!interactive) return;
+    stopTour();
+    setHasInteracted(true);
+    setActiveSection(id);
+  };
+
+  const handleHintClick = () => { stopTour(); advance(); };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (!interactive) return;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      stopTour(); setHasInteracted(true); advance();
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      stopTour(); setHasInteracted(true);
+      setActiveSection((cur) => {
+        const idx = ALL_ITEMS.findIndex((i) => i.id === cur);
+        return ALL_ITEMS[(idx - 1 + ALL_ITEMS.length) % ALL_ITEMS.length].id as SectionId;
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!interactive) return;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reducedMotion) return;
+    const delay = setTimeout(() => {
+      if (hasInteracted) return;
+      tourRef.current = setInterval(() => {
+        setHasInteracted((interacted) => {
+          if (interacted) { stopTour(); return interacted; }
+          advance();
+          return false;
+        });
+      }, 4000);
+    }, 2500);
+    return () => { clearTimeout(delay); stopTour(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [interactive]);
+
   return (
-    <div className={frameClass} role="presentation" aria-hidden="true">
+    <div
+      className={frameClass}
+      role="presentation"
+      aria-hidden="true"
+      tabIndex={interactive ? 0 : -1}
+      onKeyDown={handleKeyDown}
+    >
       {/* Title bar */}
       <div className={styles.titlebar}>
         <span className={`${styles.tl} ${styles.tlRed}`} />
@@ -176,8 +231,10 @@ export function DesktopMock({
         <span className={styles.titleText}>
           Harness Kit — {getTitleForSection(activeSection)}
         </span>
-        {interactive && (
-          <span className={styles.hintText}>click the sidebar →</span>
+        {interactive && !hasInteracted && (
+          <button className={styles.hintBtn} onClick={handleHintClick}>
+            next surface →
+          </button>
         )}
       </div>
 
