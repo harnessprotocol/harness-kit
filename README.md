@@ -140,7 +140,7 @@ A Tauri desktop companion that brings the harness concept to a native UI.
 - **Roadmap** — AI-driven product roadmap with competitor analysis, generated via Claude
 - **Parity** — cross-platform feature parity tracking across AI coding tools
 - **Security** — permissions editor, secrets management, and audit logging
-- **Memory** — knowledge graph viewer via [membrain](https://github.com/siracusa5/membrain) integration
+- **Memory** — [membrain](https://github.com/siracusa5/membrain) MCP server: graph-based agent memory with 11 graph tools, semantic dedup, and token-savings telemetry
 - **Team chat** — IRC-style chat backed by a self-hosted WebSocket relay
 - **AI Chat** — streaming conversations with local LLMs via Ollama, with session persistence and inline model downloads
 

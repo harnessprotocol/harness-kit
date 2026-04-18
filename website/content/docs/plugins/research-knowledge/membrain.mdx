@@ -1,13 +1,17 @@
 ---
 title: membrain
-description: Graph-based agent memory — search, trace, and manage a persistent knowledge graph from Claude Code via MCP.
+description: Graph-based agent memory — persistent knowledge graph via MCP, with token-savings telemetry, semantic dedup, and a typed ontology.
 ---
 
 > **[View in Marketplace →](https://marketplace.harnessprotocol.io/plugins/membrain)** for install tracking, related plugins, and profiles.
 
 # membrain
 
-Search, trace, and manage your [membrain](https://github.com/siracusa5/membrain) knowledge graph from Claude Code. membrain is a graph-based memory system that persists entities, relations, and timestamped episodes across sessions. This plugin connects Claude to it via MCP.
+[membrain](https://github.com/siracusa5/membrain) is a graph-based memory system that runs as an MCP server. It gives Claude Code persistent read/write access to a knowledge graph across every session — entities, typed relations, timestamped episodes, and semantic search — without flooding your context window.
+
+This plugin adds the `/memory` skill, which is a thin command interface over the MCP surface. The real power is in the 11 graph tools and 2 semantic tools membrain registers directly as MCP tools.
+
+See the [Memory concept page](/docs/concepts/memory) for the full picture of how graph-based memory works in harness-kit.
 
 ## Requirements
 
@@ -26,22 +30,114 @@ go install github.com/siracusa5/membrain/cmd/mem@latest
 
 ## Setup
 
-After install, add the membrain MCP server to your Claude Code settings:
+Initialize a graph directory and add the MCP server to Claude Code:
+
+```bash
+mem init ~/my-agent-memory
+```
+
+Add to `~/.claude/settings.json`:
 
 ```json
 {
   "mcpServers": {
     "membrain": {
       "command": "mem",
-      "args": ["mcp"]
+      "args": ["mcp"],
+      "env": {
+        "MEMBRAIN_CONFIG": "/absolute/path/to/membrain.yaml"
+      }
     }
   }
 }
 ```
 
-Restart Claude Code. The `/memory` skill activates automatically once the MCP tools are connected.
+Use an absolute path for `MEMBRAIN_CONFIG` — relative paths break when Claude Code spawns the subprocess from a different working directory.
 
-## Usage
+Restart Claude Code. The `/memory` skill activates automatically once the MCP tools are connected. Run `/mcp` to confirm `membrain` is listed.
+
+## MCP tools reference
+
+Once connected, Claude Code has direct access to these tools — no skill invocation needed.
+
+**Graph tools (always on):**
+
+| Tool | What it does |
+|------|-------------|
+| `create_entities` | Add new entities to the graph |
+| `create_relations` | Add typed relations between entities |
+| `add_observations` | Append observations to an existing entity |
+| `add_episode` | Create a timestamped episode; auto-links to mentioned entities |
+| `open_nodes` | Fetch specific entities by exact name |
+| `search_nodes` | Substring search across names, types, and observations; supports `date_from`/`date_to` filtering |
+| `read_graph` | Return the full graph in JSON or compact SGN format |
+| `suggest_entities` | Heuristic entity extraction from raw text — suggests but does not create |
+| `delete_entities` | Remove entities and cascade-delete their relations |
+| `delete_observations` | Remove specific observations from an entity |
+| `delete_relations` | Remove specific relations |
+
+**Semantic tools (require [vector config](#optional-semantic-search)):**
+
+| Tool | What it does |
+|------|-------------|
+| `search_research` | Semantic search over indexed knowledge files using embeddings |
+| `suggest_merges` | Find near-duplicate entities by name similarity (default threshold: 0.85) |
+
+**Resources (always on):**
+
+| Resource | What it provides |
+|----------|----------------|
+| `membrain://profile` | Mission, directives, disposition, and context profile names from `membrain.yaml` |
+| `membrain://recent` | The 10 most recently modified entities |
+
+## What makes it different
+
+**Token-savings telemetry.** Every `search_nodes` and `open_nodes` response includes a `_membrain` stats block showing retrieved tokens vs. full-graph baseline and the percentage saved. On a mature graph this typically saves 80–95% of context overhead per query.
+
+```json
+"_membrain": {
+  "retrieved_entities": 4,
+  "total_entities": 312,
+  "retrieved_tokens": 180,
+  "baseline_tokens": 14200,
+  "savings_pct": 98.7
+}
+```
+
+**Compact SGN output.** Call `read_graph` with `format: sgn` to get Symbolic Graph Notation — a token-efficient text format instead of JSON. Useful when you need the full graph but want to minimize context cost.
+
+**Episode auto-linking.** `add_episode` creates a timestamped Episode entity and automatically creates `mentions` relations to any entities you name in `mentioned_entities`. Sessions become first-class graph nodes.
+
+**Semantic dedup.** `suggest_merges` computes embedding similarity across all entity names and returns candidate duplicate pairs — before they accumulate into a polluted graph.
+
+**Typed ontology.** membrain supports a typed entity system (Identity, Goal, Desire, Tension, Evidence, Reflection, Episode) with `contradicts` as a first-class relation type. You define your schema in `membrain.yaml`.
+
+**Federated store.** membrain merges NDJSON and Markdown files with priority-based conflict resolution. Your knowledge can live in both structured graph data and human-readable markdown, unified in one store.
+
+## Optional: semantic search
+
+Add a `vector:` section to `membrain.yaml` to unlock `search_research` and `suggest_merges`:
+
+```yaml
+vector:
+  enabled: true
+  provider: ollama        # or: openai
+  model: nomic-embed-text # or: text-embedding-3-small
+  db_path: memory/vector.db
+```
+
+For local (free) embeddings with Ollama:
+
+```bash
+ollama pull nomic-embed-text
+mem index run
+```
+
+For OpenAI, set `OPENAI_API_KEY` and use `provider: openai`. Re-run `mem index run` whenever your graph changes significantly.
+
+## `/memory` skill
+
+The plugin also adds a `/memory` skill — a command interface for common graph operations:
 
 ```
 /memory search <topic>       search entities in the knowledge graph
@@ -51,30 +147,18 @@ Restart Claude Code. The `/memory` skill activates automatically once the MCP to
 /memory status               graph health: entity/relation counts, server status
 ```
 
-## Examples
-
-```
-/memory search authentication
-/memory trace "Claude Code"
-/memory add "auth-service" "now uses PKCE for all OAuth flows"
-/memory episode "Completed membrain MCP integration — 11 graph tools now connected"
-/memory status
-```
-
-## How It Works
-
 | Subcommand | Requires |
 |-----------|---------|
-| `search`, `add`, `episode` | membrain MCP server (`mem mcp`) only — works without HTTP server |
+| `search`, `add`, `episode` | membrain MCP server only |
 | `trace`, `status` | membrain HTTP server (`mem serve` at `localhost:3131`) for richer output |
-
-## Graceful Degradation
-
-If the membrain MCP tools are not connected, the skill prints install and configuration instructions. The HTTP-dependent subcommands (`trace`, `status`) fall back gracefully when the server is not running.
 
 ## Desktop UI
 
-When the HTTP server is running (`mem serve`), the full membrain graph UI is available at `http://localhost:3131`. In the harness-kit desktop app, it appears as the **Memory** section with full sub-page navigation.
+When the HTTP server is running (`mem serve`), the full membrain graph explorer is available at `http://localhost:3131`. In the harness-kit desktop app, it appears as the **Memory** section.
+
+## Graceful Degradation
+
+If membrain MCP tools are not connected, the `/memory` skill prints install and setup instructions. HTTP-dependent subcommands (`trace`, `status`) fall back gracefully when the HTTP server is not running.
 
 ## Source Files
 

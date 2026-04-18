@@ -3,6 +3,7 @@
   "pages": [
     "plugins-vs-skills",
     "agents",
+    "memory",
     "secrets-management",
     "cross-harness-portability",
     "comparison",
