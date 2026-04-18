@@ -86,7 +86,8 @@ export default function HomePage() {
         {/* Copy block */}
         <div className="mx-auto max-w-3xl px-6 pb-10 pt-20 text-center">
           <h1 className="font-display mb-5 text-[2.6rem] font-bold leading-tight tracking-tight text-fd-foreground sm:text-5xl">
-            The configuration console<br className="hidden sm:block" />
+            The configuration console{' '}
+            <br className="hidden sm:block" />
             for all your harnesses.
           </h1>
           <p className="mx-auto mb-8 max-w-lg text-lg leading-relaxed text-fd-muted-foreground">

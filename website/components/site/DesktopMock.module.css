@@ -39,13 +39,33 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.hintText {
+.hintBtn {
   margin-left: auto;
+  appearance: none;
+  background: none;
+  border: none;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
   font-size: 10px;
   color: var(--accent-fg);
   font-weight: 500;
   opacity: 0.75;
   white-space: nowrap;
+  transition: opacity 0.15s ease, background 0.15s ease;
+  animation: hintPulse 2.5s ease-in-out infinite;
+}
+.hintBtn:hover {
+  opacity: 1;
+  background: rgba(34,177,236,0.1);
+  animation: none;
+}
+@keyframes hintPulse {
+  0%, 100% { opacity: 0.75; }
+  50%       { opacity: 0.45; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hintBtn { animation: none; }
 }
 
 /* ── Desktop body layout ── */
@@ -141,6 +161,8 @@
   gap: 14px;
   overflow: hidden;
   height: 100%;
+  opacity: 0;
+  transition: opacity 0.15s ease;
 }
 .compact .pane {
   padding: 14px 16px;
@@ -148,6 +170,10 @@
 }
 .paneActive {
   display: flex;
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .pane { transition: none; }
 }
 
 /* ── Observatory: metrics ── */
