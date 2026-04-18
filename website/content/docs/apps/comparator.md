@@ -51,7 +51,7 @@ on historical performance for each task type.
 
 ## ACP Compatibility
 
-Harnesses marked **ACP** implement the [Agent Client Protocol](./agent-client-protocol.md),
+Harnesses marked **ACP** implement the [Agent Client Protocol](/docs/concepts/agent-client-protocol),
 which standardizes the editor↔agent communication layer. ACP-compatible harnesses:
 
 - Are discoverable through the [ACP registry](https://agentclientprotocol.com/overview/agents)
