@@ -6,7 +6,7 @@ Thank you for your interest in contributing to harness-kit! This guide covers ev
 
 Before you begin, ensure you have the following installed:
 
-- **Node.js** v24+ ([download](https://nodejs.org/))
+- **Node.js** v22+ ([download](https://nodejs.org/))
 - **pnpm** 10.29.1+ (install via `corepack enable` or `npm install -g pnpm`)
 - **Rust** 1.77.2+ ([install via rustup](https://rustup.rs/)) — required for desktop app
 - **Python** 3.11+ — required for evals
@@ -15,7 +15,7 @@ Before you begin, ensure you have the following installed:
 Verify your installations:
 
 ```bash
-node --version   # should show v24+
+node --version   # should show v22+
 pnpm --version   # should show 10.29.1+
 rustc --version  # should show 1.77.2+
 python3 --version # should show 3.11+
@@ -281,7 +281,7 @@ chore/<name>                # maintenance, version bumps
 
 ### PR description
 
-Use this structure (reference PR #1 and #3 for examples):
+Use this structure (see recent merged PRs in the GitHub repo for examples):
 
 ```markdown
 ## Summary

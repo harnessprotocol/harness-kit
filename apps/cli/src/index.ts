@@ -1,4 +1,5 @@
 import { Command } from "commander";
+import chalk from "chalk";
 import { validateCommand } from "./commands/validate.js";
 import { compileCommand } from "./commands/compile.js";
 import { checkCommand } from "./commands/check.js";
@@ -15,12 +16,23 @@ import {
 
 declare const __CLI_VERSION__: string;
 
+// NO_COLOR / dumb terminal support (https://no-color.org)
+if (process.env.NO_COLOR !== undefined || process.env.TERM === "dumb") {
+  chalk.level = 0;
+}
+
 const program = new Command();
 
 program
-  .name("harness-kit")
+  .name("harness")
   .description("Compile and validate harness.yaml configurations")
-  .version(__CLI_VERSION__);
+  .version(__CLI_VERSION__)
+  .option("--no-color", "Disable colored output")
+  .hook("preAction", (thisCommand) => {
+    if (thisCommand.opts().color === false) {
+      chalk.level = 0;
+    }
+  });
 
 program
   .command("validate")
@@ -200,5 +212,7 @@ orgCommand
   .action(async (slug: string) => {
     await joinOrganization(slug);
   });
+
+program.addHelpText('after', '\nDocs: https://harnesskit.ai/docs\n');
 
 program.parse();

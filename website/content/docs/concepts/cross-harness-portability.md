@@ -54,7 +54,7 @@ This isn't built yet. The current priority is getting the plugin workflows right
 
 Prompts are portable. Infrastructure is next.
 
-If you're using a non-Claude Code tool today, you can still use harness-kit's workflows. See [Installation — Using with other tools](/docs/getting-started/installation#using-with-other-tools) for specifics.
+If you're using a non-Claude Code tool today, you can still use harness-kit's workflows. See [Installation — Using with other tools](/docs/getting-started/installation) for specifics.
 
 ## See Also
 

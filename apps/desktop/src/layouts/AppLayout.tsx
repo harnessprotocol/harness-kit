@@ -49,9 +49,6 @@ export const NAV_SECTIONS: NavSection[] = [
       </svg>
     ),
     path: "/marketplace",
-    children: [
-      { label: "Browse", path: "/marketplace" },
-    ],
   },
   {
     id: "observatory",
@@ -77,7 +74,6 @@ export const NAV_SECTIONS: NavSection[] = [
       </svg>
     ),
     path: "/agents",
-    children: [],
   },
   {
     id: "terminals",
@@ -418,18 +414,18 @@ export default function AppLayout() {
             pointerEvents: "none",
           }}
         />
-        <button className="titlebar-btn" onClick={toggleSidebar} title="Toggle sidebar (⌘\)">
+        <button className="titlebar-btn" onClick={toggleSidebar} title="Toggle sidebar (⌘\)" aria-label="Toggle sidebar (⌘\)">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
             <rect x="1" y="1" width="14" height="14" rx="2" />
             <line x1="5" y1="1" x2="5" y2="15" />
           </svg>
         </button>
-        <button className="titlebar-btn" onClick={() => navigate(-1)} title="Back (⌘[)">
+        <button className="titlebar-btn" onClick={() => navigate(-1)} title="Back (⌘[)" aria-label="Back (⌘[)">
           <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
           </svg>
         </button>
-        <button className="titlebar-btn" onClick={() => navigate(1)} title="Forward (⌘])">
+        <button className="titlebar-btn" onClick={() => navigate(1)} title="Forward (⌘])" aria-label="Forward (⌘])">
           <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
           </svg>
@@ -438,6 +434,7 @@ export default function AppLayout() {
           className="titlebar-btn"
           onClick={() => setChatOpen(!chatOpen)}
           title="Team Chat (⌘⇧\)"
+          aria-label="Team Chat (⌘⇧\)"
           style={{ marginLeft: "auto", position: "relative" }}
         >
           {/* Speech bubble icon — communicates team chat */}
@@ -487,9 +484,9 @@ export default function AppLayout() {
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 28 28"
-                  style={{ width: 22, height: 22, filter: "drop-shadow(0 0 6px rgba(34, 177, 236, 0.5))", flexShrink: 0 }}
+                  style={{ width: 22, height: 22, filter: "drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 50%, transparent))", flexShrink: 0 }}
                 >
-                  <rect width="28" height="28" rx="6" fill="#0d1016" />
+                  <rect width="28" height="28" rx="6" fill="var(--bg-sidebar-solid)" />
                   <text
                     x="14"
                     y="19"
@@ -497,7 +494,7 @@ export default function AppLayout() {
                     fontFamily="system-ui, sans-serif"
                     fontWeight="700"
                     fontSize="13"
-                    fill="#4ec7f2"
+                    fill="var(--accent-fg)"
                   >
                     hk
                   </text>

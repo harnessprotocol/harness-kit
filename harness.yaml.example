@@ -1,6 +1,6 @@
 # harness.yaml — your personal harness configuration
 #
-# This file follows the Harness Protocol v1 format (harnessprotocol.ai).
+# This file follows the Harness Protocol v1 format (harnessprotocol.io).
 # Commit it to your dotfiles and restore it on any new machine.
 #
 # Restore with Claude Code:
@@ -15,7 +15,7 @@
 # harness-import handles both. New exports use protocol v1 format.
 # ───────────────────────────────────────────────────────────────────────────────
 
-$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
+$schema: https://harnessprotocol.io/schema/v1/harness.schema.json
 version: "1"
 
 # Profile identity (optional — helps teammates understand what this harness is for)

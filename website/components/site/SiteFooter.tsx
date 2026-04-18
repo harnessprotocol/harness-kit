@@ -1,11 +1,5 @@
 import Link from 'next/link';
-
-const HKLogo = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 28" className="size-6" aria-hidden="true">
-    <rect width="28" height="28" rx="6" fill="#0d1016" />
-    <text x="14" y="19" textAnchor="middle" fontFamily="system-ui, sans-serif" fontWeight="700" fontSize="12" fill="#4ec7f2">hk</text>
-  </svg>
-);
+import { HarnessKitLogo } from '@/components/site/HarnessKitLogo';
 
 export function SiteFooter() {
   return (
@@ -15,7 +9,7 @@ export function SiteFooter() {
         {/* Brand */}
         <div className="sm:col-span-2">
           <div className="mb-3 flex items-center gap-2 font-bold text-fd-foreground">
-            <HKLogo />
+            <HarnessKitLogo />
             <span className="font-display">Harness Kit</span>
           </div>
           <p className="text-fd-muted-foreground leading-relaxed max-w-xs">

@@ -218,8 +218,8 @@ export function DesktopMock({
   return (
     <div
       className={frameClass}
-      role="presentation"
-      aria-hidden="true"
+      role="region"
+      aria-label="Harness Kit desktop application preview"
       tabIndex={interactive ? 0 : -1}
       onKeyDown={handleKeyDown}
     >

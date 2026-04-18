@@ -20,6 +20,7 @@ import { OverviewTab } from '../agent/OverviewTab';
 import { FilesTab } from '../agent/FilesTab';
 import { DiffTab } from '../agent/DiffTab';
 import type { HarnessInfo } from '@harness-kit/shared';
+import ConfirmDialog from '../ConfirmDialog';
 
 // Lazy-load xterm (heavy) — only mounted when Logs tab is shown
 const TerminalView = lazy(() => import('../comparator/TerminalView'));
@@ -97,6 +98,9 @@ export function TaskDetailDialog({ task, project, onClose, onTaskUpdated, repoUr
   // Files tab
   const [fileDiffs, setFileDiffs] = useState<FileDiffEntry[]>([]);
   const [expandedFile, setExpandedFile] = useState<string | null>(null);
+
+  // Delete confirmation
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const isRunning = task ? execution.isRunning(task.id) : false;
   const execData = task ? execution.getExecution(task.id) : undefined;
@@ -794,7 +798,7 @@ export function TaskDetailDialog({ task, project, onClose, onTaskUpdated, repoUr
             }}>
               {/* Left: Delete Task */}
               <button
-                onClick={() => { /* TODO: delete confirmation */ }}
+                onClick={() => setDeleteConfirmOpen(true)}
                 disabled={isRunning}
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -880,6 +884,15 @@ export function TaskDetailDialog({ task, project, onClose, onTaskUpdated, repoUr
           </motion.div>
         </div>
       )}
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        title="Delete Task"
+        message="Are you sure you want to delete this task? This action cannot be undone."
+        confirmLabel="Delete"
+        confirmVariant="danger"
+        onConfirm={() => { setDeleteConfirmOpen(false); onClose(); onTaskUpdated(); }}
+        onCancel={() => setDeleteConfirmOpen(false)}
+      />
     </AnimatePresence>,
     document.body,
   );

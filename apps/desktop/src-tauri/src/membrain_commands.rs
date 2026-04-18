@@ -66,7 +66,7 @@ pub fn membrain_start(
     }
 
     let mem = find_mem()?;
-    eprintln!("[membrain] using binary: {mem}");
+    if cfg!(debug_assertions) { eprintln!("[membrain] using binary: {mem}"); }
 
     let child = Command::new(&mem)
         .args(["serve", "--no-open", "--port", &port.to_string()])

@@ -1,3 +1,8 @@
+---
+name: board
+description: Use when the user invokes /board or wants to view, create, move, or manage tasks on the Harness Board.
+---
+
 # Harness Board
 
 Use this skill when the user invokes `/board` or asks to manage tasks, create epics, move tasks, or check project status on the Harness Board.

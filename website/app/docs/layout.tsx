@@ -1,6 +1,7 @@
 import { DocsLayout } from 'fumadocs-ui/layouts/docs';
 import type { ReactNode } from 'react';
 import { source } from '@/lib/source';
+import { HarnessKitLogo } from '@/components/site/HarnessKitLogo';
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
@@ -9,25 +10,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       nav={{
         title: (
           <span className="flex items-center gap-2 font-bold">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 28 28"
-              className="size-6"
-              style={{ filter: 'drop-shadow(0 0 5px rgba(34,177,236,0.4))' }}
-            >
-              <rect width="28" height="28" rx="6" fill="#0d1016" />
-              <text
-                x="14"
-                y="19"
-                textAnchor="middle"
-                fontFamily="system-ui, sans-serif"
-                fontWeight="700"
-                fontSize="12"
-                fill="#4ec7f2"
-              >
-                hk
-              </text>
-            </svg>
+            <HarnessKitLogo glow />
             <span className="font-display">Harness Kit</span>
           </span>
         ),

@@ -170,62 +170,14 @@ This structure makes skills repeatable across sessions and transferable across u
 
 Your harness is fully reproducible. Config files live in version control; plugins reinstall from the registry with the same commands.
 
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 210" style={{width: '100%', maxWidth: '560px', display: 'block', margin: '2rem auto'}}>
-  <defs>
-    <marker id="arr" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto" markerUnits="userSpaceOnUse">
-      <polygon points="0 0, 10 3.5, 0 7" fill="#22b1ec" />
-    </marker>
-  </defs>
-  <text x="103" y="24" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600" fill="#e0e0e0">Your Machine</text>
-  <rect x="8" y="30" width="190" height="172" rx="8" fill="#1a1a24" stroke="#555" strokeWidth="1.5" />
-  <text x="103" y="48" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="9" fill="#666" letterSpacing="0.06em">IN YOUR REPO</text>
-  <rect x="18" y="54" width="84" height="24" rx="5" fill="#12121a" stroke="#22b1ec" strokeWidth="1.5" />
-  <text x="60" y="70" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600" fill="#e0e0e0">CLAUDE.md</text>
-  <rect x="112" y="54" width="78" height="24" rx="5" fill="#12121a" stroke="#22b1ec" strokeWidth="1.5" />
-  <text x="151" y="70" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600" fill="#e0e0e0">AGENT.md</text>
-  <rect x="18" y="86" width="80" height="24" rx="5" fill="#12121a" stroke="#22b1ec" strokeWidth="1.5" />
-  <text x="58" y="102" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600" fill="#e0e0e0">.mcp.json</text>
-  <line x1="18" y1="122" x2="188" y2="122" stroke="#444" strokeWidth="1" />
-  <text x="103" y="136" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="9" fill="#666" letterSpacing="0.06em">PLUGINS</text>
-  <rect x="18" y="142" width="60" height="22" rx="5" fill="#12121a" stroke="#555" strokeWidth="1.5" />
-  <text x="48" y="157" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fill="#888">explain</text>
-  <rect x="86" y="142" width="74" height="22" rx="5" fill="#12121a" stroke="#555" strokeWidth="1.5" />
-  <text x="123" y="157" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fill="#888">research</text>
-  <rect x="18" y="170" width="94" height="22" rx="5" fill="#12121a" stroke="#555" strokeWidth="1.5" />
-  <text x="65" y="185" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fill="#888">lineage</text>
-  <rect x="120" y="170" width="60" height="22" rx="5" fill="#12121a" stroke="#555" strokeWidth="1.5" />
-  <text x="150" y="185" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fill="#888">review ...</text>
-  <line x1="202" y1="78" x2="354" y2="78" markerEnd="url(#arr)" stroke="#22b1ec" strokeWidth="1.5" />
-  <text x="278" y="70" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600" fill="#22b1ec">git clone</text>
-  <line x1="202" y1="158" x2="354" y2="158" markerEnd="url(#arr)" stroke="#22b1ec" strokeWidth="1.5" />
-  <text x="278" y="150" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600" fill="#22b1ec">/plugin install</text>
-  <text x="457" y="24" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600" fill="#e0e0e0">New Machine</text>
-  <rect x="362" y="30" width="190" height="172" rx="8" fill="#1a1a24" stroke="#555" strokeWidth="1.5" />
-  <text x="457" y="48" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="9" fill="#666" letterSpacing="0.06em">IN YOUR REPO</text>
-  <rect x="372" y="54" width="84" height="24" rx="5" fill="#12121a" stroke="#22b1ec" strokeWidth="1.5" />
-  <text x="414" y="70" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600" fill="#e0e0e0">CLAUDE.md</text>
-  <rect x="466" y="54" width="78" height="24" rx="5" fill="#12121a" stroke="#22b1ec" strokeWidth="1.5" />
-  <text x="505" y="70" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600" fill="#e0e0e0">AGENT.md</text>
-  <rect x="372" y="86" width="80" height="24" rx="5" fill="#12121a" stroke="#22b1ec" strokeWidth="1.5" />
-  <text x="412" y="102" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fontWeight="600" fill="#e0e0e0">.mcp.json</text>
-  <line x1="372" y1="122" x2="542" y2="122" stroke="#444" strokeWidth="1" />
-  <text x="457" y="136" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="9" fill="#666" letterSpacing="0.06em">PLUGINS</text>
-  <rect x="372" y="142" width="60" height="22" rx="5" fill="#12121a" stroke="#555" strokeWidth="1.5" />
-  <text x="402" y="157" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fill="#888">explain</text>
-  <rect x="440" y="142" width="74" height="22" rx="5" fill="#12121a" stroke="#555" strokeWidth="1.5" />
-  <text x="477" y="157" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fill="#888">research</text>
-  <rect x="372" y="170" width="94" height="22" rx="5" fill="#12121a" stroke="#555" strokeWidth="1.5" />
-  <text x="419" y="185" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fill="#888">lineage</text>
-  <rect x="474" y="170" width="60" height="22" rx="5" fill="#12121a" stroke="#555" strokeWidth="1.5" />
-  <text x="504" y="185" textAnchor="middle" fontFamily="system-ui, sans-serif" fontSize="11" fill="#888">review ...</text>
-</svg>
-
 Your harness.yaml serializes your whole setup. Share it, import it, or use it to bootstrap the same configuration on any machine.
 
 ```bash
 /harness-export                       # capture plugins, versions, sources → harness.yaml
 /harness-import harness.yaml          # interactive picker: teammate chooses what to install
 ```
+
+(Available via the [harness-share](/docs/plugins/productivity/harness-share) plugin.)
 
 ---
 
