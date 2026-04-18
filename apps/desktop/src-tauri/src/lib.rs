@@ -225,12 +225,16 @@ pub fn run() {
             ai::commands::cancel_ai_stream,
             ai::commands::create_ai_session,
             ai::commands::update_ai_session_title,
+            ai::commands::update_ai_session_prompt,
             ai::commands::delete_ai_session,
             ai::commands::list_ai_sessions,
             ai::commands::load_ai_session,
             ai::commands::save_ai_message,
             ai::commands::get_ai_config,
             ai::commands::set_ai_config,
+            ai::commands::list_running_models,
+            ai::commands::show_model,
+            ai::commands::get_ollama_version,
         ])
         .setup(|app| {
             let state = app.state::<BoardServerState>();

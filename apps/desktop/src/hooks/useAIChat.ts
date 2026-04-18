@@ -19,9 +19,20 @@ import { logAIError } from "./ai/logging";
 import { dispatchToolCall } from "./ai/dispatch";
 import { TOOLS, SYSTEM_PROMPT, modelSupportsTools } from "./ai/toolRegistry";
 import { toolsForOllama, type ToolDef } from "./ai/toolTypes";
+import type { ModelDetails } from "../lib/tauri";
 import { useApprovalState } from "./ai/approvalState";
 
 // ─── Transcript types ────────────────────────────────────────────────────────
+
+export interface TurnStats {
+  evalCount?: number;
+  promptEvalCount?: number;
+  totalDurationNs?: number;
+  loadDurationNs?: number;
+  promptEvalDurationNs?: number;
+  evalDurationNs?: number;
+  tokensPerSec?: number;
+}
 
 export type TranscriptRow =
   | { kind: "user"; id: string; content: string; ts: string }
@@ -32,6 +43,7 @@ export type TranscriptRow =
       ts: string;
       streaming?: boolean;
       incomplete?: boolean;
+      stats?: TurnStats;
     }
   | { kind: "thinking"; id: string }
   | { kind: "system"; id: string; content: string }
@@ -60,8 +72,12 @@ export interface UseAIChatReturn {
   /** Ordered list of rows to render in the transcript */
   transcript: TranscriptRow[];
   isStreaming: boolean;
+  /** Stats from the most recent completed turn */
+  lastTurnStats: TurnStats | null;
+  /** Current tool-hop index during an active multi-turn loop (0 when not in a loop) */
+  currentToolHop: number;
   error: string | null;
-  sendMessage: (content: string, model: string) => Promise<void>;
+  sendMessage: (content: string, model: string, systemPrompt?: string, modelDetails?: ModelDetails | null) => Promise<void>;
   cancelStream: () => void;
   createSession: (model: string) => Promise<string>;
   loadSession: (id: string) => Promise<void>;
@@ -98,6 +114,8 @@ export function useAIChat(): UseAIChatReturn {
   const [currentSession, setCurrentSession] = useState<AISessionRow | null>(null);
   const [transcript, setTranscript] = useState<TranscriptRow[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [lastTurnStats, setLastTurnStats] = useState<TurnStats | null>(null);
+  const [currentToolHop, setCurrentToolHop] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   // Refs for use inside async callbacks / Channel.onmessage
@@ -166,6 +184,8 @@ export function useAIChat(): UseAIChatReturn {
       model,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      systemPrompt: null,
+      contextSourcesJson: null,
     };
     if (mountedRef.current) {
       setCurrentSession(newSession);
@@ -240,7 +260,7 @@ export function useAIChat(): UseAIChatReturn {
       assistantId: string,
       existingContent: string
     ) =>
-      new Promise<{ assistantText: string; toolCalls: ToolCall[]; done: boolean }>(
+      new Promise<{ assistantText: string; toolCalls: ToolCall[]; done: boolean; stats: TurnStats }>(
         (resolve, reject) => {
           let fullText = existingContent;
           let pendingToolCalls: ToolCall[] = [];
@@ -271,12 +291,26 @@ export function useAIChat(): UseAIChatReturn {
             } else if (event.kind === "done") {
               if (!finished) {
                 finished = true;
-                // Finalize assistant row
+                const d = event.data;
+                const tokensPerSec =
+                  d.evalCount && d.evalDuration && d.evalDuration > 0
+                    ? d.evalCount / (d.evalDuration / 1e9)
+                    : undefined;
+                const stats: TurnStats = {
+                  evalCount: d.evalCount,
+                  promptEvalCount: d.promptEvalCount,
+                  totalDurationNs: d.totalDuration,
+                  loadDurationNs: d.loadDuration,
+                  promptEvalDurationNs: d.promptEvalDuration,
+                  evalDurationNs: d.evalDuration,
+                  tokensPerSec,
+                };
+                // Finalize assistant row (with stats attached)
                 if (started) {
                   setTranscript((prev) => {
                     const next = prev.map((r) =>
                       r.id === assistantId && r.kind === "assistant"
-                        ? { ...r, content: fullText, streaming: false }
+                        ? { ...r, content: fullText, streaming: false, stats }
                         : r
                     );
                     transcriptRef.current = next;
@@ -290,7 +324,7 @@ export function useAIChat(): UseAIChatReturn {
                     return next;
                   });
                 }
-                resolve({ assistantText: fullText, toolCalls: pendingToolCalls, done: true });
+                resolve({ assistantText: fullText, toolCalls: pendingToolCalls, done: true, stats });
               }
             } else if (event.kind === "warn") {
               appendRow({ kind: "system", id: crypto.randomUUID(), content: `⚠ ${event.data.message}` });
@@ -324,7 +358,7 @@ export function useAIChat(): UseAIChatReturn {
                     return next;
                   });
                 }
-                resolve({ assistantText: fullText, toolCalls: [], done: false });
+                resolve({ assistantText: fullText, toolCalls: [], done: false, stats: {} });
               }
             })
             .catch(reject);
@@ -334,7 +368,7 @@ export function useAIChat(): UseAIChatReturn {
   );
 
   const sendMessage = useCallback(
-    async (content: string, model: string) => {
+    async (content: string, model: string, systemPrompt?: string, modelDetails?: ModelDetails | null) => {
       if (isStreaming) return;
 
       setError(null);
@@ -354,6 +388,8 @@ export function useAIChat(): UseAIChatReturn {
             model,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
+            systemPrompt: null,
+            contextSourcesJson: null,
           };
           if (mountedRef.current) {
             setCurrentSession(session);
@@ -375,8 +411,9 @@ export function useAIChat(): UseAIChatReturn {
         appendRow({ kind: "thinking", id: thinkingId });
 
         // Build conversation history with system prompt
-        const useTools = modelSupportsTools(model);
-        const systemMsg: AIChatMessage = { role: "system", content: SYSTEM_PROMPT };
+        const useTools = modelSupportsTools(modelDetails);
+        const activeSystemPrompt = systemPrompt ?? SYSTEM_PROMPT;
+        const systemMsg: AIChatMessage = { role: "system", content: activeSystemPrompt };
         const history: AIChatMessage[] = [
           systemMsg,
           ...transcriptRef.current
@@ -390,8 +427,10 @@ export function useAIChat(): UseAIChatReturn {
         let assistantId = crypto.randomUUID();
 
         // ── Multi-turn tool loop ───────────────────────────────────────────
+        setCurrentToolHop(0);
         for (let hop = 0; hop < MAX_TOOL_HOPS; hop++) {
-          const { assistantText, toolCalls, done } = await streamOnce(
+          if (hop > 0 && mountedRef.current) setCurrentToolHop(hop);
+          const { assistantText, toolCalls, done, stats } = await streamOnce(
             model,
             history,
             ollamaTools,
@@ -400,9 +439,14 @@ export function useAIChat(): UseAIChatReturn {
             ""
           );
 
+          if (mountedRef.current) setLastTurnStats(stats);
+
           if (assistantText) {
             history.push({ role: "assistant", content: assistantText, tool_calls: toolCalls.length ? toolCalls : undefined });
-            aiSaveMessage(assistantId, sessionId, "assistant", assistantText).catch((e) =>
+            const metadataJson = Object.keys(stats).length
+              ? JSON.stringify({ model, ...stats })
+              : undefined;
+            aiSaveMessage(assistantId, sessionId, "assistant", assistantText, metadataJson).catch((e) =>
               logAIError("persist assistant message", e)
             );
           }
@@ -521,7 +565,10 @@ export function useAIChat(): UseAIChatReturn {
           approval.resolveAll(false);
         }
       } finally {
-        if (mountedRef.current) setIsStreaming(false);
+        if (mountedRef.current) {
+          setIsStreaming(false);
+          setCurrentToolHop(0);
+        }
       }
     },
     [isStreaming, appendRow, approval, streamOnce]
@@ -532,6 +579,8 @@ export function useAIChat(): UseAIChatReturn {
     currentSession,
     transcript,
     isStreaming,
+    lastTurnStats,
+    currentToolHop,
     error,
     sendMessage,
     cancelStream,

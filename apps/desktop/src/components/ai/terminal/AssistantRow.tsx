@@ -1,13 +1,17 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import type { TurnStats } from '../../../hooks/useAIChat';
 
 interface Props {
   content: string;
   streaming?: boolean;
   incomplete?: boolean;
+  stats?: TurnStats;
 }
 
-export function AssistantRow({ content, streaming, incomplete }: Props) {
+export function AssistantRow({ content, streaming, incomplete, stats }: Props) {
+  const showStats = !streaming && stats && (stats.evalCount != null || stats.tokensPerSec != null);
+
   return (
     <div
       style={{
@@ -29,6 +33,28 @@ export function AssistantRow({ content, streaming, incomplete }: Props) {
           </span>
         )}
       </div>
+      {showStats && (
+        <div
+          style={{
+            marginTop: 4,
+            fontSize: 10,
+            color: 'var(--fg-subtle)',
+            fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace',
+            display: 'flex',
+            gap: 6,
+          }}
+        >
+          {stats!.evalCount != null && (
+            <span>{stats!.evalCount.toLocaleString()} tok</span>
+          )}
+          {stats!.totalDurationNs != null && (
+            <span>{(stats!.totalDurationNs / 1_000_000_000).toFixed(2)}s</span>
+          )}
+          {stats!.tokensPerSec != null && (
+            <span>{stats!.tokensPerSec.toFixed(0)} tok/s</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }

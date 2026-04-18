@@ -1,5 +1,8 @@
 use crate::ai::client::OllamaState;
-use crate::ai::types::{ChatMessage, ChatRequest, DownloadProgress, ModelInfo, StreamEvent, ToolDef};
+use crate::ai::types::{
+    ChatMessage, ChatRequest, DownloadProgress, ModelDetails, ModelInfo, RunningModel, StreamEvent,
+    ToolDef,
+};
 use crate::db::Db;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::Ordering;
@@ -23,6 +26,8 @@ pub struct AISessionRow {
     pub model: Option<String>,
     pub created_at: String,
     pub updated_at: String,
+    pub system_prompt: Option<String>,
+    pub context_sources_json: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -33,6 +38,7 @@ pub struct AIMessageRow {
     pub role: String,
     pub content: String,
     pub timestamp: String,
+    pub metadata_json: Option<String>,
 }
 
 // ─── Ollama service commands ─────────────────────────────────────────────────
@@ -153,6 +159,25 @@ pub fn update_ai_session_title(
 }
 
 #[tauri::command]
+pub fn update_ai_session_prompt(
+    db: State<'_, Db>,
+    id: String,
+    system_prompt: Option<String>,
+    context_sources_json: Option<String>,
+) -> Result<(), String> {
+    let conn = db.conn.lock().map_err(|e| e.to_string())?;
+    let now = chrono::Utc::now().to_rfc3339();
+
+    conn.execute(
+        "UPDATE ai_sessions SET system_prompt = ?1, context_sources_json = ?2, updated_at = ?3 WHERE id = ?4",
+        rusqlite::params![system_prompt, context_sources_json, now, id],
+    )
+    .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+#[tauri::command]
 pub fn delete_ai_session(
     db: State<'_, Db>,
     id: String,
@@ -174,7 +199,7 @@ pub fn list_ai_sessions(db: State<'_, Db>) -> Result<Vec<AISessionRow>, String> 
 
     let mut stmt = conn
         .prepare(
-            "SELECT id, title, model, created_at, updated_at FROM ai_sessions ORDER BY updated_at DESC",
+            "SELECT id, title, model, created_at, updated_at, system_prompt, context_sources_json FROM ai_sessions ORDER BY updated_at DESC",
         )
         .map_err(|e| e.to_string())?;
 
@@ -186,6 +211,8 @@ pub fn list_ai_sessions(db: State<'_, Db>) -> Result<Vec<AISessionRow>, String> 
                 model: row.get(2)?,
                 created_at: row.get(3)?,
                 updated_at: row.get(4)?,
+                system_prompt: row.get(5)?,
+                context_sources_json: row.get(6)?,
             })
         })
         .map_err(|e| e.to_string())?
@@ -204,7 +231,7 @@ pub fn load_ai_session(
 
     let session = conn
         .query_row(
-            "SELECT id, title, model, created_at, updated_at FROM ai_sessions WHERE id = ?1",
+            "SELECT id, title, model, created_at, updated_at, system_prompt, context_sources_json FROM ai_sessions WHERE id = ?1",
             rusqlite::params![session_id],
             |row| {
                 Ok(AISessionRow {
@@ -213,6 +240,8 @@ pub fn load_ai_session(
                     model: row.get(2)?,
                     created_at: row.get(3)?,
                     updated_at: row.get(4)?,
+                    system_prompt: row.get(5)?,
+                    context_sources_json: row.get(6)?,
                 })
             },
         )
@@ -220,7 +249,7 @@ pub fn load_ai_session(
 
     let mut stmt = conn
         .prepare(
-            "SELECT id, session_id, role, content, timestamp FROM ai_messages WHERE session_id = ?1 ORDER BY timestamp ASC",
+            "SELECT id, session_id, role, content, timestamp, metadata_json FROM ai_messages WHERE session_id = ?1 ORDER BY timestamp ASC",
         )
         .map_err(|e| e.to_string())?;
 
@@ -232,6 +261,7 @@ pub fn load_ai_session(
                 role: row.get(2)?,
                 content: row.get(3)?,
                 timestamp: row.get(4)?,
+                metadata_json: row.get(5)?,
             })
         })
         .map_err(|e| e.to_string())?
@@ -248,13 +278,14 @@ pub fn save_ai_message(
     session_id: String,
     role: String,
     content: String,
+    metadata_json: Option<String>,
 ) -> Result<(), String> {
     let conn = db.conn.lock().map_err(|e| e.to_string())?;
     let timestamp = chrono::Utc::now().to_rfc3339();
 
     conn.execute(
-        "INSERT INTO ai_messages (id, session_id, role, content, timestamp) VALUES (?1, ?2, ?3, ?4, ?5)",
-        rusqlite::params![id, session_id, role, content, timestamp],
+        "INSERT INTO ai_messages (id, session_id, role, content, timestamp, metadata_json) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+        rusqlite::params![id, session_id, role, content, timestamp, metadata_json],
     )
     .map_err(|e| e.to_string())?;
 
@@ -266,6 +297,30 @@ pub fn save_ai_message(
     .map_err(|e| e.to_string())?;
 
     Ok(())
+}
+
+// ─── Model introspection commands ───────────────────────────────────────────
+
+#[tauri::command]
+pub async fn list_running_models(
+    ollama: State<'_, OllamaState>,
+) -> Result<Vec<RunningModel>, String> {
+    ollama.client.get_running_models().await
+}
+
+#[tauri::command]
+pub async fn show_model(
+    name: String,
+    ollama: State<'_, OllamaState>,
+) -> Result<ModelDetails, String> {
+    ollama.client.show_model(&name).await
+}
+
+#[tauri::command]
+pub async fn get_ollama_version(
+    ollama: State<'_, OllamaState>,
+) -> Result<String, String> {
+    ollama.client.get_version().await
 }
 
 // ─── AI config commands ──────────────────────────────────────────────────────

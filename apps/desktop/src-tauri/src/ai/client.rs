@@ -7,8 +7,8 @@ use std::time::Duration;
 use tokio::time::timeout;
 
 use crate::ai::types::{
-    ChatRequest, DownloadProgress, ModelInfo, ModelsResponse, PullProgressRaw, StreamEvent,
-    ToolCall,
+    ChatRequest, DownloadProgress, ModelDetails, ModelInfo, ModelShowResponse, ModelsResponse,
+    PullProgressRaw, RunningModel, RunningModelsResponse, StreamEvent, ToolCall,
 };
 
 // ─── UTF-8-safe stream buffer ────────────────────────────────────────────────
@@ -100,11 +100,13 @@ pub fn parse_line(line: &str) -> Vec<StreamEvent> {
     // Done flag (may accompany the last content chunk, though Ollama usually sends
     // an empty-content done line after all content chunks)
     if json["done"].as_bool().unwrap_or(false) {
-        let eval_count = json["eval_count"].as_u64();
-        let prompt_eval_count = json["prompt_eval_count"].as_u64();
         events.push(StreamEvent::Done {
-            eval_count,
-            prompt_eval_count,
+            eval_count: json["eval_count"].as_u64(),
+            prompt_eval_count: json["prompt_eval_count"].as_u64(),
+            total_duration: json["total_duration"].as_u64(),
+            load_duration: json["load_duration"].as_u64(),
+            prompt_eval_duration: json["prompt_eval_duration"].as_u64(),
+            eval_duration: json["eval_duration"].as_u64(),
         });
     }
 
@@ -234,6 +236,10 @@ impl OllamaClient {
                 let _ = on_event(StreamEvent::Done {
                     eval_count: None,
                     prompt_eval_count: None,
+                    total_duration: None,
+                    load_duration: None,
+                    prompt_eval_duration: None,
+                    eval_duration: None,
                 });
                 return Ok(());
             }
@@ -267,6 +273,112 @@ impl OllamaClient {
         }
 
         Ok(())
+    }
+
+    /// Returns all models currently loaded in Ollama's memory (/api/ps).
+    pub async fn get_running_models(&self) -> Result<Vec<RunningModel>, String> {
+        let url = format!("{}/api/ps", self.base_url());
+        let response = self
+            .client
+            .get(&url)
+            .timeout(Duration::from_secs(5))
+            .send()
+            .await
+            .map_err(|e| format!("Failed to reach Ollama /api/ps: {}", e))?;
+
+        if !response.status().is_success() {
+            return Err(format!("Ollama /api/ps returned {}", response.status()));
+        }
+
+        let body: RunningModelsResponse = response
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse /api/ps response: {}", e))?;
+
+        Ok(body
+            .models
+            .into_iter()
+            .map(|m| RunningModel {
+                name: m.name,
+                size_vram: m.size_vram,
+                expires_at: m.expires_at,
+            })
+            .collect())
+    }
+
+    /// Returns metadata for a specific model (/api/show).
+    pub async fn show_model(&self, name: &str) -> Result<ModelDetails, String> {
+        let url = format!("{}/api/show", self.base_url());
+        let payload = serde_json::json!({ "name": name });
+        let response = self
+            .client
+            .post(&url)
+            .json(&payload)
+            .timeout(Duration::from_secs(10))
+            .send()
+            .await
+            .map_err(|e| format!("Failed to reach Ollama /api/show: {}", e))?;
+
+        if !response.status().is_success() {
+            return Err(format!("Ollama /api/show returned {}", response.status()));
+        }
+
+        let body: ModelShowResponse = response
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse /api/show response: {}", e))?;
+
+        // Extract context_length from the architecture-specific model_info map.
+        // Ollama stores it as "<arch>.context_length" (e.g. "llama.context_length").
+        let context_length = body.model_info.as_ref().and_then(|info| {
+            info.as_object()?.iter().find_map(|(k, v)| {
+                if k.ends_with(".context_length") {
+                    v.as_i64()
+                } else {
+                    None
+                }
+            })
+        });
+
+        let (family, parameter_size, quantization_level) = body
+            .details
+            .map(|d| (d.family, d.parameter_size, d.quantization_level))
+            .unwrap_or((None, None, None));
+
+        Ok(ModelDetails {
+            name: name.to_string(),
+            family,
+            parameter_size,
+            quantization_level,
+            capabilities: body.capabilities.unwrap_or_default(),
+            context_length,
+        })
+    }
+
+    /// Returns the Ollama server version string.
+    pub async fn get_version(&self) -> Result<String, String> {
+        let url = format!("{}/api/version", self.base_url());
+        let response = self
+            .client
+            .get(&url)
+            .timeout(Duration::from_secs(5))
+            .send()
+            .await
+            .map_err(|e| format!("Failed to reach Ollama /api/version: {}", e))?;
+
+        if !response.status().is_success() {
+            return Err(format!("Ollama /api/version returned {}", response.status()));
+        }
+
+        let body: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse /api/version response: {}", e))?;
+
+        body["version"]
+            .as_str()
+            .map(|s| s.to_string())
+            .ok_or_else(|| "Missing 'version' field in /api/version response".to_string())
     }
 
     /// Downloads a model, calling `on_progress` with each progress update.
@@ -349,7 +461,7 @@ mod tests {
         assert_eq!(events.len(), 1);
         assert!(matches!(
             &events[0],
-            StreamEvent::Done { eval_count: Some(42), prompt_eval_count: Some(7) }
+            StreamEvent::Done { eval_count: Some(42), prompt_eval_count: Some(7), .. }
         ));
     }
 
