@@ -20,7 +20,6 @@ import { OverviewTab } from '../agent/OverviewTab';
 import { FilesTab } from '../agent/FilesTab';
 import { DiffTab } from '../agent/DiffTab';
 import type { HarnessInfo } from '@harness-kit/shared';
-import ConfirmDialog from '../ConfirmDialog';
 
 // Lazy-load xterm (heavy) — only mounted when Logs tab is shown
 const TerminalView = lazy(() => import('../comparator/TerminalView'));
@@ -100,7 +99,6 @@ export function TaskDetailDialog({ task, project, onClose, onTaskUpdated, repoUr
   const [expandedFile, setExpandedFile] = useState<string | null>(null);
 
   // Delete confirmation
-  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   const isRunning = task ? execution.isRunning(task.id) : false;
   const execData = task ? execution.getExecution(task.id) : undefined;
@@ -796,23 +794,8 @@ export function TaskDetailDialog({ task, project, onClose, onTaskUpdated, repoUr
               padding: '12px 20px', borderTop: '1px solid var(--border-subtle)',
               display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
             }}>
-              {/* Left: Delete Task */}
-              <button
-                onClick={() => setDeleteConfirmOpen(true)}
-                disabled={isRunning}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                  padding: '6px 10px', borderRadius: 6, fontSize: 12,
-                  border: 'none', background: 'transparent',
-                  color: 'var(--text-muted)', cursor: isRunning ? 'not-allowed' : 'pointer',
-                  opacity: isRunning ? 0.4 : 1, transition: 'color 0.15s',
-                }}
-                onMouseEnter={e => { if (!isRunning) (e.currentTarget as HTMLElement).style.color = '#ef4444'; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text-muted)'; }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
-                Delete Task
-              </button>
+              {/* Delete Task — requires backend DELETE /tasks/:id (Phase 4) */}
+              <div style={{ flex: 0 }} />
 
               {/* Center: Harness + Model selectors */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1 }}>
@@ -884,15 +867,6 @@ export function TaskDetailDialog({ task, project, onClose, onTaskUpdated, repoUr
           </motion.div>
         </div>
       )}
-      <ConfirmDialog
-        open={deleteConfirmOpen}
-        title="Delete Task"
-        message="Are you sure you want to delete this task? This action cannot be undone."
-        confirmLabel="Delete"
-        confirmVariant="danger"
-        onConfirm={() => { setDeleteConfirmOpen(false); onClose(); onTaskUpdated(); }}
-        onCancel={() => setDeleteConfirmOpen(false)}
-      />
     </AnimatePresence>,
     document.body,
   );

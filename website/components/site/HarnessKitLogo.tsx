@@ -9,7 +9,7 @@ export function HarnessKitLogo({ glow = false, className = 'size-6' }: HarnessKi
       xmlns="http://www.w3.org/2000/svg"
       viewBox="0 0 28 28"
       className={className}
-      style={glow ? { filter: 'drop-shadow(0 0 5px rgba(34,177,236,0.4))' } : undefined}
+      style={glow ? { filter: 'drop-shadow(0 0 5px var(--accent-glow))' } : undefined}
       aria-hidden="true"
     >
       <rect width="28" height="28" rx="6" fill="#0d1016" />
