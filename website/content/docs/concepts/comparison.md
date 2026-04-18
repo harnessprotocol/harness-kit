@@ -69,6 +69,25 @@ harness-kit is about what to do with those tools. A `harness.yaml` can declare w
 
 ---
 
+## ACP (Agent Client Protocol)
+
+ACP standardizes the runtime protocol between code editors and AI coding agents — the
+same role LSP plays for language tooling. Where harness-kit handles *configuration*
+(which plugins, skills, and MCP servers an agent loads), ACP handles *runtime protocol*
+(how the editor and agent exchange messages during a session).
+
+| | ACP | harness-kit |
+|---|---|---|
+| **Layer** | Runtime protocol | Configuration/startup |
+| **What it standardizes** | JSON-RPC message exchange | harness.yaml format |
+| **When it runs** | During active sessions | Before/during session setup |
+
+These layers compose: ACP-compatible agents benefit from harness-kit configuration
+the same way any agent does. The comparator identifies ACP-compatible harnesses — full
+structured event exchange is in development.
+
+---
+
 ## devenv
 
 If you've used [devenv](https://devenv.sh), harness-kit will feel familiar.
@@ -97,6 +116,7 @@ They operate at different layers and compose naturally.
 Yes. A typical setup might look like:
 
 - **harness-kit** configures your Claude Code environment (plugins, MCP servers, instructions)
+- **ACP** standardizes how your editor communicates with the agent during a session
 - **MCP** connects your agent to databases, file systems, and APIs
 - **Claude SDK** powers the agent under the hood
 - **A2A** lets your agent coordinate with other agents at runtime

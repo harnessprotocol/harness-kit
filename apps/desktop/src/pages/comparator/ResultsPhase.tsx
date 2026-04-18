@@ -510,6 +510,25 @@ export default function ResultsPhase({ active, onStartJudge }: ResultsPhaseProps
                         {p.model}
                       </span>
                     ) : null}
+                    {p.acpMode && (
+                      <span
+                        style={{
+                          fontSize: "9px",
+                          fontWeight: 600,
+                          padding: "1px 5px",
+                          borderRadius: "3px",
+                          background: "rgba(99, 102, 241, 0.12)",
+                          color: "rgb(129, 140, 248)",
+                          border: "1px solid rgba(99, 102, 241, 0.25)",
+                          marginLeft: 5,
+                          textTransform: "none" as const,
+                          letterSpacing: 0,
+                        }}
+                        title="Ran with ACP protocol"
+                      >
+                        ACP
+                      </span>
+                    )}
                   </th>
                 ))}
               </tr>

@@ -55,10 +55,10 @@ plugins:
   #   source: harnessprotocol/harness-kit
   #   description: Capture session information into a staging file for later reflection
 
-  # - name: membrain
-  #   source: harnessprotocol/harness-kit
-  #   description: Graph-based agent memory — search, trace, and manage what your agent knows
-  #   # Requires: go install github.com/siracusa5/membrain/cmd/mem@latest
+  - name: membrain
+    source: harnessprotocol/harness-kit
+    description: Graph-based agent memory — search, trace, and manage what your agent knows
+    # Requires: go install github.com/siracusa5/membrain/cmd/mem@latest
 
   # Example third-party plugin:
   # - name: superpowers
@@ -68,6 +68,14 @@ plugins:
 # MCP servers (optional) — local or remote tool servers.
 # Uncomment and fill in if you want to bundle MCP server config with your harness.
 # mcp-servers:
+#   membrain:
+#     transport: stdio
+#     command: mem
+#     args:
+#       - mcp
+#     env:
+#       MEMBRAIN_CONFIG: /absolute/path/to/membrain.yaml
+#
 #   postgres:
 #     transport: stdio
 #     command: uvx

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import type { HarnessInfo } from "@harness-kit/shared";
+import { getHarness } from "../../lib/harness-definitions";
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -662,6 +663,24 @@ function HarnessCard({
       <div style={styles.harnessCardHeader}>
         <div style={{ ...styles.harnessStatusDot, background: dotColor }} />
         <span style={styles.harnessName}>{harness.name}</span>
+        {getHarness(harness.id)?.protocol === "acp" && (
+          <span
+            style={{
+              fontSize: "9px",
+              fontWeight: 600,
+              letterSpacing: "0.05em",
+              padding: "1px 5px",
+              borderRadius: "3px",
+              background: "rgba(99, 102, 241, 0.15)",
+              color: "rgb(129, 140, 248)",
+              border: "1px solid rgba(99, 102, 241, 0.3)",
+              textTransform: "uppercase" as const,
+            }}
+            title="ACP compatible — uses structured JSON-RPC events"
+          >
+            ACP
+          </span>
+        )}
       </div>
       <span style={styles.harnessVersion}>{statusText}</span>
 

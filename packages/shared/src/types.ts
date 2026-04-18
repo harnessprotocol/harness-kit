@@ -425,6 +425,8 @@ export interface HarnessInfo {
   authenticated: boolean;
   models: string[];
   defaultModel?: string;
+  protocol?: "cli" | "acp";       // Execution protocol (defaults to "cli" if absent)
+  acpVersion?: string;            // ACP spec version supported (e.g., "1")
 }
 
 // ── Security types ──────────────────────────────────────────
