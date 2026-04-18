@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import type { Roadmap, CompetitorAnalysis } from '../../lib/roadmap-types';
 import { ROADMAP_PRIORITY_CONFIG } from '../../lib/roadmap-constants';
 
@@ -16,6 +17,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
 };
 
 export function RoadmapHeader({ roadmap, competitorAnalysis, onAddFeature, onRefresh, onViewCompetitors }: Props) {
+  const navigate = useNavigate();
   const statusCfg = STATUS_CONFIG[roadmap.status] ?? STATUS_CONFIG['draft'];
 
   const totalFeatures = roadmap.features.length;
@@ -37,6 +39,18 @@ export function RoadmapHeader({ roadmap, competitorAnalysis, onAddFeature, onRef
         background: 'var(--bg-surface)',
       }}
     >
+      {/* Breadcrumb */}
+      <button
+        onClick={() => navigate('/roadmap')}
+        style={{
+          background: 'none', border: 'none', padding: '0 0 8px',
+          fontSize: 11, color: 'var(--text-muted)', cursor: 'pointer',
+          display: 'flex', alignItems: 'center', gap: 4,
+        }}
+      >
+        ← All projects
+      </button>
+
       {/* Top row: title + status + actions */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
