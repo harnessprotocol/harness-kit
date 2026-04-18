@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { source } from '@/lib/source';
 
+export const dynamic = 'force-static';
 export const baseUrl = 'https://harnesskit.ai';
 
 export default function sitemap(): MetadataRoute.Sitemap {
