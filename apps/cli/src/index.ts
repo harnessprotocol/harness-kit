@@ -38,6 +38,7 @@ program
   .command("validate")
   .description("Validate a harness.yaml against the Harness Protocol v1 schema")
   .argument("[path]", "Path to harness.yaml", "harness.yaml")
+  .option("--json", "Output results as JSON")
   .addHelpText(
     "after",
     `
@@ -45,8 +46,8 @@ Examples:
   harness-kit validate                    Validate ./harness.yaml
   harness-kit validate ~/dotfiles/harness.yaml   Validate a specific file`,
   )
-  .action(async (path: string) => {
-    await validateCommand(path);
+  .action(async (path: string, flags) => {
+    await validateCommand(path, flags);
   });
 
 program
@@ -103,6 +104,7 @@ program
     "--target <targets>",
     "Target platforms to check (comma-separated), or all",
   )
+  .option("--json", "Output results as JSON")
   .addHelpText(
     "after",
     `
@@ -119,8 +121,9 @@ Exit code 0 if all ok. Exit code 1 if any drift or missing.`,
 program
   .command("detect")
   .description("Show which AI coding platforms are detected in the current directory")
-  .action(async () => {
-    await detectCommand();
+  .option("--json", "Output results as JSON")
+  .action(async (flags) => {
+    await detectCommand(flags);
   });
 
 const initCmd = program
@@ -176,6 +179,7 @@ program
   .command("scan")
   .description("Run security scan on a plugin directory")
   .argument("[path]", "Path to plugin directory", ".")
+  .option("--json", "Output results as JSON")
   .addHelpText(
     "after",
     `
@@ -183,8 +187,8 @@ Examples:
   harness-kit scan                        Scan current directory
   harness-kit scan ./plugins/research     Scan a specific plugin`,
   )
-  .action(async (path: string) => {
-    await scanCommand(path);
+  .action(async (path: string, flags) => {
+    await scanCommand(path, flags);
   });
 
 const orgCommand = program

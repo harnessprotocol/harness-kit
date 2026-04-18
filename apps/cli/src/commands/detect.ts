@@ -6,11 +6,25 @@ import { NodeFsProvider } from "@harness-kit/core/node";
 const ALL_PLATFORMS = ["claude-code", "cursor", "copilot"] as const;
 type Platform = (typeof ALL_PLATFORMS)[number];
 
-export async function detectCommand(): Promise<void> {
+interface DetectFlags {
+  json?: boolean;
+}
+
+export async function detectCommand(flags: DetectFlags = {}): Promise<void> {
   const fs = new NodeFsProvider();
   const cwd = resolve(".");
 
   const detected = await detectPlatforms(fs);
+
+  if (flags.json) {
+    const tools = detected.map((entry) => ({
+      platform: entry.platform,
+      indicators: entry.indicators,
+      needsConfirmation: entry.needsConfirmation ?? false,
+    }));
+    console.log(JSON.stringify({ tools }));
+    return;
+  }
 
   console.log(chalk.bold(`Detected platforms in ${cwd}`));
   console.log("");

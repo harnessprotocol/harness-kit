@@ -485,19 +485,29 @@ function SessionCard({
 // ── Placeholder phases ──────────────────────────────────────
 
 function PhasePlaceholder({ phase }: { phase: ComparisonPhase }) {
+  const labels: Record<string, string> = {
+    execution: "Run a comparison from Setup to see live execution output here.",
+    results: "Complete an execution to review file diffs and output side-by-side.",
+    judge: "Complete an execution to score harnesses across evaluation dimensions.",
+  };
   return (
     <div
       style={{
         display: "flex",
+        flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
+        gap: 8,
         height: "100%",
         color: tokens.fgSubtle,
         fontSize: 14,
         fontFamily: fontStack,
+        textAlign: "center",
+        padding: "0 40px",
       }}
     >
-      {phase.charAt(0).toUpperCase() + phase.slice(1)} phase coming soon...
+      <span style={{ fontSize: 32, opacity: 0.4 }}>◎</span>
+      <span>{labels[phase] ?? "Select or start a comparison to continue."}</span>
     </div>
   );
 }
