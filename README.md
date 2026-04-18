@@ -165,6 +165,11 @@ See the [Harness Protocol spec](https://harnessprotocol.io) for the full cross-p
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for plugin guidelines, skill conventions, and PR process.
 
+## 📬 Contact
+
+- **General** — [contact@harnesskit.ai](mailto:contact@harnesskit.ai)
+- **Security** — [security@harnesskit.ai](mailto:security@harnesskit.ai) (see [SECURITY.md](SECURITY.md))
+
 ## 📄 License
 
 [Apache 2.0](LICENSE)

@@ -39,12 +39,19 @@ export function SiteFooter() {
               <a href="https://github.com/harnessprotocol/harness-kit" className="transition-colors hover:text-fd-foreground no-underline" target="_blank" rel="noreferrer">GitHub</a>
             </li>
             <li><Link href="/docs" className="transition-colors hover:text-fd-foreground no-underline">Documentation</Link></li>
-            <li><span>Apache-2.0 License</span></li>
+          </ul>
+        </div>
+        {/* Contact */}
+        <div>
+          <h5 className="mb-3 font-semibold text-fd-foreground text-xs uppercase tracking-widest">Contact</h5>
+          <ul className="space-y-2 text-fd-muted-foreground">
+            <li><a href="mailto:contact@harnesskit.ai" className="transition-colors hover:text-fd-foreground no-underline">contact@harnesskit.ai</a></li>
+            <li><a href="https://github.com/harnessprotocol/harness-kit/security/policy" className="transition-colors hover:text-fd-foreground no-underline" target="_blank" rel="noreferrer">Security Policy</a></li>
           </ul>
         </div>
       </div>
       <div className="border-t border-fd-border/20 px-6 py-4 text-center text-xs text-fd-muted-foreground">
-        © {new Date().getFullYear()} Harness Kit Contributors
+        © {new Date().getFullYear()} Harness Kit Contributors · Apache-2.0 License
       </div>
     </footer>
   );

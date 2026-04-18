@@ -4,7 +4,7 @@
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
-If you discover a security vulnerability in harness-kit, please report it through [GitHub Security Advisories](https://github.com/harnessprotocol/harness-kit/security/advisories/new). Include the following information:
+If you discover a security vulnerability in harness-kit, please report it through [GitHub Security Advisories](https://github.com/harnessprotocol/harness-kit/security/advisories/new) or email [security@harnesskit.ai](mailto:security@harnesskit.ai). Include the following information:
 
 - Description of the vulnerability
 - Steps to reproduce the issue
