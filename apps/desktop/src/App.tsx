@@ -17,6 +17,7 @@ import MarketplacePage from "./pages/marketplace/MarketplacePage";
 import DashboardPage from "./pages/observatory/DashboardPage";
 import SessionsPage from "./pages/observatory/SessionsPage";
 import ComparatorPage from "./pages/comparator/ComparatorPage";
+import TerminalsPage from "./pages/terminals/TerminalsPage";
 import PermissionsPage from "./pages/security/PermissionsPage";
 import SecretsPage from "./pages/security/SecretsPage";
 import AuditLogPage from "./pages/security/AuditLogPage";
@@ -86,8 +87,11 @@ export default function App() {
           {/* Agents */}
           <Route path="agents" element={<AgentsPage />} />
 
+          {/* Comparator */}
+          <Route path="comparator" element={<ComparatorPage />} />
+
           {/* Terminals */}
-          <Route path="terminals" element={<ComparatorPage />} />
+          <Route path="terminals" element={<TerminalsPage />} />
 
           {/* Security */}
           <Route path="security/permissions" element={<PermissionsPage />} />

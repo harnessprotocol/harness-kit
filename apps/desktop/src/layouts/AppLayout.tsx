@@ -6,7 +6,7 @@ import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
 import { useArrowNavigation } from "../hooks/useArrowNavigation";
 import { useSidebarResize } from "../hooks/useSidebarResize";
 import { initTheme } from "../lib/theme";
-import { initPreferences, getHiddenSections } from "../lib/preferences";
+import { initPreferences, getHiddenSections, getMembrainEnabled } from "../lib/preferences";
 import { useChat } from "../contexts/ChatContext";
 import ChatPanel from "../components/chat/ChatPanel";
 import FeedbackModal from "../components/FeedbackModal";
@@ -83,7 +83,7 @@ export const NAV_SECTIONS: NavSection[] = [
         <path d="M3 4a1 1 0 000 2h11.586l-2.293 2.293a1 1 0 001.414 1.414l4-4a1 1 0 000-1.414l-4-4a1 1 0 10-1.414 1.414L14.586 4H3zM17 16a1 1 0 000-2H5.414l2.293-2.293a1 1 0 00-1.414-1.414l-4 4a1 1 0 000 1.414l4 4a1 1 0 001.414-1.414L5.414 16H17z" />
       </svg>
     ),
-    path: "/terminals",
+    path: "/comparator",
     children: [],
   },
   {
@@ -342,6 +342,7 @@ export default function AppLayout() {
   const { files: configFiles } = useClaudeFileList();
 
   const [hiddenSections, setHiddenSectionsState] = useState(getHiddenSections);
+  const [membrainEnabled, setMembrainEnabledState] = useState(getMembrainEnabled);
 
   useEffect(() => {
     initTheme();
@@ -351,6 +352,7 @@ export default function AppLayout() {
   useEffect(() => {
     function onPrefsChanged() {
       setHiddenSectionsState(getHiddenSections());
+      setMembrainEnabledState(getMembrainEnabled());
     }
     window.addEventListener("harness-kit-prefs-changed", onPrefsChanged);
     return () => window.removeEventListener("harness-kit-prefs-changed", onPrefsChanged);
@@ -367,7 +369,10 @@ export default function AppLayout() {
     return () => window.removeEventListener("keydown", handler);
   }, [setChatOpen, chatOpen]);
 
-  const visibleSections = NAV_SECTIONS.filter((s) => !hiddenSections.has(s.id));
+  // Memory section is a Labs feature — only show it when the user has opted in via Preferences
+  const visibleSections = NAV_SECTIONS.filter(
+    (s) => !hiddenSections.has(s.id) && (s.id !== "memory" || membrainEnabled)
+  );
 
   const prefsActive = location.pathname === "/preferences";
   const [feedbackOpen, setFeedbackOpen] = useState(false);
