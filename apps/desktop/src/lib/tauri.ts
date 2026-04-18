@@ -654,7 +654,17 @@ export interface AIChatMessage {
 export type StreamEvent =
   | { kind: "text"; data: { content: string } }
   | { kind: "toolCalls"; data: { calls: ToolCall[] } }
-  | { kind: "done"; data: { evalCount?: number; promptEvalCount?: number } }
+  | {
+      kind: "done";
+      data: {
+        evalCount?: number;
+        promptEvalCount?: number;
+        totalDuration?: number;
+        loadDuration?: number;
+        promptEvalDuration?: number;
+        evalDuration?: number;
+      };
+    }
   | { kind: "warn"; data: { message: string } };
 
 export interface DownloadProgress {
@@ -671,6 +681,8 @@ export interface AISessionRow {
   model: string | null;
   createdAt: string;
   updatedAt: string;
+  systemPrompt: string | null;
+  contextSourcesJson: string | null;
 }
 
 export interface AIMessageRow {
@@ -679,6 +691,22 @@ export interface AIMessageRow {
   role: string;
   content: string;
   timestamp: string;
+  metadataJson: string | null;
+}
+
+export interface RunningModel {
+  name: string;
+  sizeVram: number | null;
+  expiresAt: string | null;
+}
+
+export interface ModelDetails {
+  name: string;
+  family: string | null;
+  parameterSize: string | null;
+  quantizationLevel: string | null;
+  capabilities: string[];
+  contextLength: number | null;
 }
 
 export interface AISessionDetail {
@@ -740,8 +768,29 @@ export async function aiSaveMessage(
   sessionId: string,
   role: string,
   content: string,
+  metadataJson?: string,
 ): Promise<void> {
-  return invoke<void>("save_ai_message", { id, sessionId, role, content });
+  return invoke<void>("save_ai_message", { id, sessionId, role, content, metadataJson });
+}
+
+export async function aiUpdateSessionPrompt(
+  id: string,
+  systemPrompt: string | null,
+  contextSourcesJson: string | null,
+): Promise<void> {
+  return invoke<void>("update_ai_session_prompt", { id, systemPrompt, contextSourcesJson });
+}
+
+export async function aiListRunningModels(): Promise<RunningModel[]> {
+  return invoke<RunningModel[]>("list_running_models");
+}
+
+export async function aiShowModel(name: string): Promise<ModelDetails> {
+  return invoke<ModelDetails>("show_model", { name });
+}
+
+export async function aiGetOllamaVersion(): Promise<string> {
+  return invoke<string>("get_ollama_version");
 }
 
 export interface AIConfig {

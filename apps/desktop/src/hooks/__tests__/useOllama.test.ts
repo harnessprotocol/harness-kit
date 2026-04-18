@@ -7,11 +7,17 @@ import type { DownloadProgress } from "../../lib/tauri";
 const mockAiCheckOllama = vi.fn();
 const mockAiListModels = vi.fn();
 const mockAiPullModel = vi.fn();
+const mockAiListRunningModels = vi.fn();
+const mockAiShowModel = vi.fn();
+const mockAiGetOllamaVersion = vi.fn();
 
 vi.mock("../../lib/tauri", () => ({
   aiCheckOllama: mockAiCheckOllama,
   aiListModels: mockAiListModels,
   aiPullModel: mockAiPullModel,
+  aiListRunningModels: mockAiListRunningModels,
+  aiShowModel: mockAiShowModel,
+  aiGetOllamaVersion: mockAiGetOllamaVersion,
 }));
 
 // Channel mock — exposes onmessage so tests can push progress events
@@ -30,11 +36,16 @@ beforeEach(() => {
   mockAiCheckOllama.mockReset();
   mockAiListModels.mockReset();
   mockAiPullModel.mockReset();
+  mockAiListRunningModels.mockReset();
+  mockAiShowModel.mockReset();
+  mockAiGetOllamaVersion.mockReset();
   mockChannelInstance.onmessage = null;
 
   // Default: Ollama not running
   mockAiCheckOllama.mockResolvedValue({ running: false });
   mockAiListModels.mockResolvedValue([]);
+  mockAiListRunningModels.mockResolvedValue([]);
+  mockAiGetOllamaVersion.mockResolvedValue("0.6.0");
 });
 
 afterEach(() => {

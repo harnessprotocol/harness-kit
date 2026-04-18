@@ -75,10 +75,14 @@ pub enum StreamEvent {
     Text { content: String },
     /// Model requested one or more tool calls
     ToolCalls { calls: Vec<ToolCall> },
-    /// Stream finished (carries Ollama eval metrics)
+    /// Stream finished (carries Ollama eval metrics and timing in nanoseconds)
     Done {
         eval_count: Option<u64>,
         prompt_eval_count: Option<u64>,
+        total_duration: Option<u64>,
+        load_duration: Option<u64>,
+        prompt_eval_duration: Option<u64>,
+        eval_duration: Option<u64>,
     },
     /// Non-fatal warning (e.g. non-UTF-8 bytes, malformed JSON line)
     Warn { message: String },
@@ -100,6 +104,61 @@ pub struct ModelInfo {
 #[derive(Debug, Clone, Deserialize)]
 pub struct ModelsResponse {
     pub models: Vec<ModelInfo>,
+}
+
+// ─── Running models (/api/ps) ─────────────────────────────────────────────────
+
+/// Raw running-model entry from Ollama /api/ps (snake_case — matches wire format)
+#[derive(Debug, Clone, Deserialize)]
+pub struct RunningModelRaw {
+    pub name: String,
+    pub size_vram: Option<i64>,
+    pub expires_at: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct RunningModelsResponse {
+    pub models: Vec<RunningModelRaw>,
+}
+
+/// Frontend-facing running model info (camelCase)
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RunningModel {
+    pub name: String,
+    pub size_vram: Option<i64>,
+    pub expires_at: Option<String>,
+}
+
+// ─── Model details (/api/show) ────────────────────────────────────────────────
+
+/// The "details" sub-object in /api/show response
+#[derive(Debug, Clone, Deserialize)]
+pub struct ModelDetailsInfo {
+    pub family: Option<String>,
+    pub parameter_size: Option<String>,
+    pub quantization_level: Option<String>,
+}
+
+/// Subset of /api/show response we use (snake_case — matches wire format)
+#[derive(Debug, Clone, Deserialize)]
+pub struct ModelShowResponse {
+    pub details: Option<ModelDetailsInfo>,
+    pub capabilities: Option<Vec<String>>,
+    /// Free-form map of architecture-specific metadata (e.g. "llama.context_length")
+    pub model_info: Option<serde_json::Value>,
+}
+
+/// Frontend-facing model details (camelCase)
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelDetails {
+    pub name: String,
+    pub family: Option<String>,
+    pub parameter_size: Option<String>,
+    pub quantization_level: Option<String>,
+    pub capabilities: Vec<String>,
+    pub context_length: Option<i64>,
 }
 
 // ─── Pull progress ───────────────────────────────────────────────────────────

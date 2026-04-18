@@ -5,6 +5,11 @@ import { TranscriptToolbar } from '../../components/ai/terminal/TranscriptToolba
 import { TerminalTranscript } from '../../components/ai/terminal/TerminalTranscript';
 import { TranscriptInput } from '../../components/ai/terminal/TranscriptInput';
 import { SessionList } from '../../components/ai/SessionList';
+import { StatsStrip } from '../../components/ai/StatsStrip';
+import { InspectorPanel } from '../../components/ai/InspectorPanel';
+import { SystemPromptPanel } from '../../components/ai/SystemPromptPanel';
+import { aiGetConfig } from '../../lib/tauri';
+import type { TurnStats } from '../../hooks/useAIChat';
 
 export default function AIChatPage() {
   const ollama = useOllama();
@@ -12,6 +17,14 @@ export default function AIChatPage() {
   const [selectedModel, setSelectedModel] = useState('');
   const [mode, setMode] = useState<'styled' | 'raw'>('styled');
   const [sessionPickerOpen, setSessionPickerOpen] = useState(false);
+  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [baseUrl, setBaseUrl] = useState('http://localhost:11434');
+  const [systemPrompt, setSystemPrompt] = useState<string | undefined>(undefined);
+
+  // Load runtime base URL once
+  useEffect(() => {
+    aiGetConfig().then((cfg) => setBaseUrl(cfg.baseUrl)).catch(() => {});
+  }, []);
 
   // Seed the model selector once models load
   useEffect(() => {
@@ -23,6 +36,13 @@ export default function AIChatPage() {
       );
     }
   }, [ollama.models, selectedModel]);
+
+  // Fetch model details when selection changes
+  useEffect(() => {
+    if (selectedModel && ollama.running) {
+      ollama.fetchModelDetails(selectedModel).catch(() => {});
+    }
+  }, [selectedModel, ollama.running]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Persist selected model
   const handleModelSelect = useCallback((model: string) => {
@@ -40,11 +60,15 @@ export default function AIChatPage() {
     await chat.createSession(model);
   }, [chat, getModel, ollama.running]);
 
+  const modelDetails = ollama.modelDetails[selectedModel] ?? null;
+
+  const handlePromptChange = useCallback((p: string) => setSystemPrompt(p || undefined), []);
+
   const handleSend = useCallback(async (content: string) => {
     const model = getModel();
     if (!model) return;
-    await chat.sendMessage(content, model);
-  }, [chat, getModel]);
+    await chat.sendMessage(content, model, systemPrompt, modelDetails);
+  }, [chat, getModel, systemPrompt, modelDetails]);
 
   const handleSelectSession = useCallback(async (id: string) => {
     await chat.loadSession(id);
@@ -97,6 +121,16 @@ export default function AIChatPage() {
     prevTranscriptLenRef.current = current.length;
   }, [chat.transcript]);
 
+  // Derive per-message stats list for InspectorPanel
+  const messageStats: { id: string; stats: TurnStats }[] = chat.transcript
+    .filter((r) => r.kind === 'assistant' && r.stats != null)
+    .map((r) => ({ id: r.id, stats: (r as Extract<typeof r, { kind: 'assistant' }>).stats! }));
+
+  // Cumulative conversation token count for StatsStrip
+  const conversationTokens = messageStats.reduce((s, m) => s + (m.stats.evalCount ?? 0), 0);
+
+  const modelInfo = ollama.models.find((m) => m.name === selectedModel) ?? null;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', position: 'relative' }}>
       {/* Toolbar */}
@@ -105,10 +139,17 @@ export default function AIChatPage() {
         selectedModel={selectedModel}
         onModelSelect={handleModelSelect}
         onNew={handleNewChat}
+        baseUrl={baseUrl}
+        version={ollama.version}
+        runningCount={ollama.runningModels.length}
         isStreaming={chat.isStreaming}
         onCancelStream={chat.cancelStream}
         mode={mode}
         onToggleMode={() => setMode((m) => m === 'styled' ? 'raw' : 'styled')}
+        modelDetails={modelDetails}
+        currentToolHop={chat.currentToolHop}
+        inspectorOpen={inspectorOpen}
+        onToggleInspector={() => setInspectorOpen((o) => !o)}
       />
 
       {/* Ollama not running notice */}
@@ -118,25 +159,56 @@ export default function AIChatPage() {
         </div>
       )}
 
-      {/* Transcript area */}
-      {mode === 'styled' ? (
-        <TerminalTranscript
-          transcript={chat.transcript}
-          isStreaming={chat.isStreaming}
-          onApprove={(rowId) => chat.resolveApproval(rowId, true)}
-          onDeny={(rowId) => chat.resolveApproval(rowId, false)}
-        />
-      ) : (
-        <RawView chunks={rawChunksRef.current} outputTick={rawTick} />
-      )}
+      {/* Main content row: transcript + optional inspector */}
+      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        {/* Transcript area */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {/* System prompt panel — above transcript */}
+          <SystemPromptPanel
+            sessionId={chat.currentSession?.id ?? null}
+            onPromptChange={handlePromptChange}
+          />
 
-      {/* Input */}
-      <TranscriptInput
-        onSend={handleSend}
-        isStreaming={chat.isStreaming}
-        onCancel={chat.cancelStream}
-        disabled={!ollama.running || !selectedModel}
-      />
+          {mode === 'styled' ? (
+            <TerminalTranscript
+              transcript={chat.transcript}
+              isStreaming={chat.isStreaming}
+              onApprove={(rowId) => chat.resolveApproval(rowId, true)}
+              onDeny={(rowId) => chat.resolveApproval(rowId, false)}
+            />
+          ) : (
+            <RawView chunks={rawChunksRef.current} outputTick={rawTick} />
+          )}
+
+          {/* Stats strip */}
+          <StatsStrip
+            model={selectedModel}
+            modelInfo={modelInfo}
+            modelDetails={modelDetails}
+            runningModels={ollama.runningModels}
+            lastTurnStats={chat.lastTurnStats}
+            conversationTokens={conversationTokens}
+          />
+
+          {/* Input */}
+          <TranscriptInput
+            onSend={handleSend}
+            isStreaming={chat.isStreaming}
+            onCancel={chat.cancelStream}
+            disabled={!ollama.running || !selectedModel}
+          />
+        </div>
+
+        {/* Inspector panel */}
+        {inspectorOpen && (
+          <InspectorPanel
+            model={selectedModel}
+            modelDetails={modelDetails}
+            runningModels={ollama.runningModels}
+            messageStats={messageStats}
+          />
+        )}
+      </div>
 
       {/* Session picker overlay (Cmd+K) */}
       {sessionPickerOpen && (

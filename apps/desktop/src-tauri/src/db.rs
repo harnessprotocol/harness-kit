@@ -208,6 +208,19 @@ pub fn init(data_dir: &Path) -> Result<Db, String> {
         }
     }
 
+    // Migration: extend ai_sessions with visible system prompt and context source config
+    for (col, ddl) in &[
+        ("system_prompt", "ALTER TABLE ai_sessions ADD COLUMN system_prompt TEXT;"),
+        ("context_sources_json", "ALTER TABLE ai_sessions ADD COLUMN context_sources_json TEXT;"),
+    ] {
+        if let Err(e) = conn.execute_batch(ddl) {
+            let msg = e.to_string();
+            if !msg.contains("duplicate column name") {
+                return Err(format!("Migration failed (ai_sessions.{}): {}", col, msg));
+            }
+        }
+    }
+
     Ok(Db {
         conn: Mutex::new(conn),
     })

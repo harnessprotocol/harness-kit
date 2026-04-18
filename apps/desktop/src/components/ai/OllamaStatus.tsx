@@ -4,6 +4,8 @@ import type { OllamaState } from '../../hooks/useOllama';
 interface Props {
   ollama: Pick<OllamaState, 'running' | 'checking' | 'timedOut' | 'retry' | 'models'>;
   baseUrl?: string;
+  version?: string | null;
+  runningCount?: number;
   isStreaming?: boolean;
   onCancelStream?: () => void;
 }
@@ -31,6 +33,8 @@ function Popover({
   checking,
   models,
   baseUrl,
+  version,
+  runningCount,
   isStreaming,
   onRetry,
   onCancelStream,
@@ -40,6 +44,8 @@ function Popover({
   checking: boolean;
   models: OllamaState['models'];
   baseUrl: string;
+  version?: string | null;
+  runningCount?: number;
   isStreaming?: boolean;
   onRetry: () => void;
   onCancelStream?: () => void;
@@ -105,10 +111,24 @@ function Popover({
         {baseUrl}
       </div>
 
-      {/* Model count */}
+      {/* Model count + in-memory count */}
       <div style={{ fontSize: 11, color: 'var(--fg-subtle)' }}>
-        {running ? `${models.length} model${models.length !== 1 ? 's' : ''} loaded` : '—'}
+        {running
+          ? `${models.length} model${models.length !== 1 ? 's' : ''} available`
+          : '—'}
+        {running && runningCount != null && runningCount > 0 && (
+          <span style={{ color: 'var(--accent)', marginLeft: 6 }}>
+            {runningCount} in memory
+          </span>
+        )}
       </div>
+
+      {/* Version */}
+      {version && (
+        <div style={{ fontSize: 10, color: 'var(--fg-subtle)', fontFamily: 'monospace' }}>
+          v{version}
+        </div>
+      )}
 
       <div style={{ height: 1, background: 'var(--border)', margin: '2px 0' }} />
 
@@ -134,7 +154,7 @@ function Popover({
   );
 }
 
-export function OllamaStatus({ ollama, baseUrl = 'http://localhost:11434', isStreaming, onCancelStream }: Props) {
+export function OllamaStatus({ ollama, baseUrl = 'http://localhost:11434', version, runningCount, isStreaming, onCancelStream }: Props) {
   const { running, checking, timedOut, retry, models } = ollama;
   const [open, setOpen] = useState(false);
 
@@ -185,6 +205,8 @@ export function OllamaStatus({ ollama, baseUrl = 'http://localhost:11434', isStr
           checking={checking}
           models={models}
           baseUrl={baseUrl}
+          version={version}
+          runningCount={runningCount}
           isStreaming={isStreaming}
           onRetry={retry}
           onCancelStream={onCancelStream}

@@ -82,6 +82,7 @@ export function TerminalTranscript({ transcript, isStreaming, onApprove, onDeny 
                   content={row.content}
                   streaming={row.streaming}
                   incomplete={row.incomplete}
+                  stats={row.stats}
                 />
               );
             case 'thinking':
