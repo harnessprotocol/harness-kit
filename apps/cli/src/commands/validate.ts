@@ -15,10 +15,10 @@ export async function validateCommand(filePath?: string, flags: ValidateFlags = 
     yamlString = await readFile(resolved, "utf-8");
   } catch {
     if (flags.json) {
-      console.log(JSON.stringify({ valid: false, errors: [`No harness.yaml found at ${resolved}. Specify a path: harness-kit validate <path>`] }));
+      console.log(JSON.stringify({ valid: false, errors: [`No harness.yaml found at ${resolved}. Specify a path: harness validate <path>`] }));
     } else {
       console.error(
-        `No harness.yaml found at ${resolved}. Specify a path: harness-kit validate <path>`,
+        `No harness.yaml found at ${resolved}. Specify a path: harness validate <path>`,
       );
     }
     process.exit(1);

@@ -201,7 +201,7 @@ export async function syncCommand(
 
   const validation = validateHarness(config);
   if (!validation.valid) {
-    console.error("harness.yaml is invalid — run harness-kit validate for details.");
+    console.error("harness.yaml is invalid — run harness validate for details.");
     process.exit(1);
   }
 

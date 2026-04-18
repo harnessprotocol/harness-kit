@@ -106,7 +106,7 @@ export async function checkCommand(
 
   const validation = validateHarness(config);
   if (!validation.valid) {
-    const msg = `harness.yaml is invalid — run harness-kit validate for details.`;
+    const msg = `harness.yaml is invalid — run harness validate for details.`;
     if (flags.json) {
       console.log(JSON.stringify({ drifted: false, changes: [], error: msg }));
     } else {

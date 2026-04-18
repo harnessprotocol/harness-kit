@@ -13,7 +13,7 @@ export async function scanCommand(pluginPath?: string, flags: ScanFlags = {}): P
   // Check if the path exists
   const exists = await fs.exists(resolved);
   if (!exists) {
-    const msg = `Plugin directory not found: ${resolved}. Specify a valid path: harness-kit scan <path>`;
+    const msg = `Plugin directory not found: ${resolved}. Specify a valid path: harness scan <path>`;
     if (flags.json) {
       console.log(JSON.stringify({ issues: [], count: 0, error: msg }));
     } else {

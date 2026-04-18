@@ -339,7 +339,7 @@ export async function initCommand(outputPath: string): Promise<void> {
   console.log(chalk.green("Created harness.yaml"));
   console.log(
     chalk.dim(
-      `Run ${chalk.white("harness-kit compile")} to generate platform config files.`,
+      `Run ${chalk.white("harness compile")} to generate platform config files.`,
     ),
   );
 }
