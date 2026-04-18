@@ -60,9 +60,9 @@ function absoluteTime(isoString: string): string {
 // ── Drift row (for "What's changed" panel) ────────────────────
 
 const DRIFT_CATEGORY_COLORS: Record<string, string> = {
-  config_file: "#16a34a",
+  config_file: "var(--success)",
   settings_key: "#0d9488",
-  cli_flag: "#2563eb",
+  cli_flag: "var(--status-in-progress)",
   cli_subcommand: "#64748b",
   mcp_transport: "#7c3aed",
   mcp_server: "#64748b",
@@ -144,7 +144,7 @@ function DriftRow({ item, onAcknowledge, onRescan, navigate }: DriftRowProps) {
             </p>
           )}
           {actError && (
-            <div style={{ padding: "5px 9px", marginBottom: 10, borderRadius: 5, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#dc2626", fontSize: 11 }}>
+            <div style={{ padding: "5px 9px", marginBottom: 10, borderRadius: 5, background: "var(--danger-light)", border: "1px solid rgba(220,38,38,0.2)", color: "var(--danger)", fontSize: 11 }}>
               {actError}
             </div>
           )}
@@ -379,7 +379,7 @@ export default function ParityDashboardPage() {
           </div>
         </div>
         {error && (
-          <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 6, background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.2)", color: "#dc2626", fontSize: 11 }}>
+          <div style={{ marginTop: 8, padding: "8px 12px", borderRadius: 6, background: "var(--danger-light)", border: "1px solid rgba(220,38,38,0.2)", color: "var(--danger)", fontSize: 11 }}>
             {error}
           </div>
         )}

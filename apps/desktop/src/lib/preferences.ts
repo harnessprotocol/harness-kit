@@ -266,6 +266,18 @@ export function resetPermissionDefaults() {
   localStorage.removeItem(KEY_HARNESS_PERMISSION_OVERRIDES);
 }
 
+// ── Welcome Screen ───────────────────────────────────────────
+
+const KEY_WELCOME_SEEN = "hk-welcome-seen";
+
+export function getWelcomeSeen(): boolean {
+  return localStorage.getItem(KEY_WELCOME_SEEN) === "true";
+}
+
+export function setWelcomeSeen(): void {
+  localStorage.setItem(KEY_WELCOME_SEEN, "true");
+}
+
 /** Whether the user has confirmed they have a qualifying plan for Auto mode. */
 export function getAutoModeUnlocked(): boolean {
   return localStorage.getItem(KEY_AUTO_MODE_UNLOCKED) === "true";

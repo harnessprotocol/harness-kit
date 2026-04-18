@@ -168,6 +168,16 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "Settings", path: "/memory/settings" },
     ],
   },
+  {
+    id: "services",
+    label: "Services",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
+        <path fillRule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm14 1a1 1 0 11-2 0 1 1 0 012 0zM2 13a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2zm14 1a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" />
+      </svg>
+    ),
+    path: "/services",
+  },
 ];
 
 // Files with dedicated nav items — excluded from the Config Files tree

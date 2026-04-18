@@ -1,7 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useState } from "react";
 import AppLayout from "./layouts/AppLayout";
 import PreferencesPage from "./pages/PreferencesPage";
-import { getDefaultSection } from "./lib/preferences";
+import WelcomeScreen from "./components/WelcomeScreen";
+import { getDefaultSection, getWelcomeSeen, setWelcomeSeen } from "./lib/preferences";
 import { ChatProvider } from "./contexts/ChatContext";
 import { ObservatoryProvider } from "./hooks/useObservatoryData";
 import HarnessFilePage from "./pages/harness/HarnessFilePage";
@@ -36,6 +38,7 @@ import MemoryContextPage from "./pages/memory/MemoryContextPage";
 import MemoryTracePage from "./pages/memory/MemoryTracePage";
 import MemorySettingsPage from "./pages/memory/MemorySettingsPage";
 import AgentsPage from "./pages/agents/AgentsPage";
+import ServicesPage from "./pages/services/ServicesPage";
 
 function DefaultRedirect() {
   const defaultSection = getDefaultSection();
@@ -61,9 +64,19 @@ if (import.meta.env.DEV) {
 }
 
 export default function App() {
+  const [showWelcome, setShowWelcome] = useState(() => !getWelcomeSeen());
+
   return (
     <ChatProvider>
       <ObservatoryProvider>
+      {showWelcome && (
+        <WelcomeScreen
+          onDismiss={() => {
+            setWelcomeSeen();
+            setShowWelcome(false);
+          }}
+        />
+      )}
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<AppLayout />}>
@@ -124,6 +137,9 @@ export default function App() {
           <Route path="memory/context" element={<MemoryContextPage />} />
           <Route path="memory/trace" element={<MemoryTracePage />} />
           <Route path="memory/settings" element={<MemorySettingsPage />} />
+
+          {/* Services */}
+          <Route path="services" element={<ServicesPage />} />
 
           {/* Preferences */}
           <Route path="preferences" element={<PreferencesPage />} />

@@ -8,10 +8,10 @@ import ContextMenu from "../../components/ContextMenu";
 // ── Outcome badge ──────────────────────────────────────────────
 
 const OUTCOME_COLORS: Record<string, { bg: string; color: string }> = {
-  fully_achieved:    { bg: "rgba(22,163,74,0.12)",  color: "#16a34a" },
+  fully_achieved:    { bg: "var(--success-light)",  color: "var(--success)" },
   mostly_achieved:   { bg: "rgba(13,148,136,0.12)", color: "#0f766e" },
-  partially_achieved: { bg: "rgba(217,119,6,0.12)",  color: "#d97706" },
-  not_achieved:      { bg: "rgba(220,38,38,0.12)",  color: "#dc2626" },
+  partially_achieved: { bg: "var(--warning-light)",  color: "var(--warning)" },
+  not_achieved:      { bg: "var(--danger-light)",   color: "var(--danger)" },
 };
 
 function OutcomeBadge({ outcome }: { outcome: string }) {
@@ -77,7 +77,7 @@ function ProjectPill({ name }: { name: string }) {
 // ── Role colors ────────────────────────────────────────────────
 
 const ROLE_COLORS: Record<string, string> = {
-  user: "#2563eb",
+  user: "var(--status-in-progress)",
   assistant: "#5b50e8",
   system: "#636366",
   result: "#0d9488",
