@@ -26,7 +26,7 @@ Your AI coding setup — plugins, skills, MCP servers, hooks, conventions — pa
 /plugin marketplace add harnessprotocol/harness-kit
 ```
 
-**CLI** (`harness-kit validate`, `compile`, `sync`, ...):
+**CLI** (`harness validate`, `compile`, `sync`, ...):
 ```bash
 brew tap harnessprotocol/tap && brew install harness-kit
 # or: npm install -g @harness-kit/cli  # requires Node.js 22+

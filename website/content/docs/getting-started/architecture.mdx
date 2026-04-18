@@ -79,18 +79,18 @@ The desktop app is a management console organized into named sections. It reads 
 
 ## CLI
 
-The `harness-kit` CLI is a standalone terminal tool. You run it from your shell; it is not a plugin and does not run inside an AI tool's session.
+The `harness` CLI is a standalone terminal tool. You run it from your shell; it is not a plugin and does not run inside an AI tool's session.
 
 ```bash
-harness-kit validate          # check harness.yaml against the schema
-harness-kit compile           # compile harness.yaml into native per-tool configs
-harness-kit sync              # fetch plugins into local cache, write harness.lock
-harness-kit check             # detect drift between compiled output and harness.yaml
-harness-kit detect            # show which AI platforms are present in the working directory
-harness-kit scan              # security audit of installed plugin skill files
+harness validate          # check harness.yaml against the schema
+harness compile           # compile harness.yaml into native per-tool configs
+harness sync              # fetch plugins into local cache, write harness.lock
+harness check             # detect drift between compiled output and harness.yaml
+harness detect            # show which AI platforms are present in the working directory
+harness scan              # security audit of installed plugin skill files
 ```
 
-**`compile` output** — `harness-kit compile` writes native configuration files for each detected AI tool: `.claude/settings.json` for Claude Code, `.cursor/rules` for Cursor, and so on. Each AI tool then loads those files at session start. This is how harness.yaml becomes active in your AI tools — it is compiled, not interpreted at runtime.
+**`compile` output** — `harness compile` writes native configuration files for each detected AI tool: `.claude/settings.json` for Claude Code, `.cursor/rules` for Cursor, and so on. Each AI tool then loads those files at session start. This is how harness.yaml becomes active in your AI tools — it is compiled, not interpreted at runtime.
 
 <Callout type="info" title="Installation">
   See [Installation](/docs/getting-started/installation) for Homebrew, npm, and binary options.
