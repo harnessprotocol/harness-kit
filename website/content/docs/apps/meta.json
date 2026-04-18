@@ -1,6 +1,4 @@
 {
   "title": "Desktop App",
-  "pages": [
-    "comparator"
-  ]
+  "pages": ["board", "roadmap", "comparator", "observatory", "ai-chat", "memory", "parity", "agents", "terminals"]
 }
