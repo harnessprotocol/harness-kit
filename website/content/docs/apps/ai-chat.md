@@ -4,7 +4,7 @@ title: AI Chat
 
 # AI Chat
 
-AI Chat is a local chat interface powered by [Ollama](https://ollama.ai). All
+AI Chat is a local chat interface powered by [Ollama](https://ollama.com). All
 conversations stay on your machine — no API keys, no cloud routing.
 
 ## Requirements

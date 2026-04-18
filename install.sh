@@ -52,17 +52,19 @@ print('\n'.join(p['name'] for p in data['plugins']))
   for plugin in "${PLUGINS[@]}"; do
     plugin_json_url="${RAW_BASE}/plugins/${plugin}/.claude-plugin/plugin.json"
     plugin_json=$(curl -fsSL "$plugin_json_url" 2>/dev/null || echo "{}")
-    skill_names=$(python3 -c "
-import json, sys
+    skill_names=$(PLUGIN_NAME="$plugin" python3 -c "
+import json, sys, os
 data = json.loads(sys.stdin.read())
 skills = data.get('skills', [])
-if skills:
-    print('\n'.join(s['name'] for s in skills))
-else:
-    print('$plugin')
+print('\n'.join(s['name'] for s in skills) if skills else os.environ['PLUGIN_NAME'])
 " <<< "$plugin_json")
 
     while IFS= read -r skill; do
+      # Reject names that could traverse the filesystem
+      if ! [[ "$skill" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+        echo "  [warn] Skipping invalid skill name: ${skill}" >&2
+        continue
+      fi
       dest="${SKILLS_DEST}/${skill}"
       mkdir -p "$dest"
       skill_url="${RAW_BASE}/plugins/${plugin}/skills/${skill}/SKILL.md"

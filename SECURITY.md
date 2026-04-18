@@ -121,7 +121,7 @@ Before deploying harness-kit services to production:
 
 - Code-sign the application for distribution
 - Keep Tauri and dependencies up to date
-- Follow Tauri security best practices: https://tauri.app/v1/guides/security/
+- Follow Tauri security best practices: https://v2.tauri.app/security/
 - Validate all IPC commands from the frontend
 - Limit filesystem access to necessary directories
 
@@ -220,7 +220,7 @@ In addition to dependency scanning, we recommend:
 ## Additional Resources
 
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)
-- [Tauri Security Guide](https://tauri.app/v1/guides/security/)
+- [Tauri Security Guide](https://v2.tauri.app/security/)
 - [Next.js Security Headers](https://nextjs.org/docs/advanced-features/security-headers)
 - [Supabase Security](https://supabase.com/docs/guides/auth/security)
 - [npm Security Best Practices](https://docs.npmjs.com/security-best-practices)
