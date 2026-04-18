@@ -50,7 +50,13 @@ export const mcpTools: ToolDef[] = [
         return { ok: false, content: { error: String(e) } };
       }
     },
-    describe: (args) => `Add MCP server "${(args as { name?: string })?.name ?? '?'}"`,
+    describe: (args) => {
+      const { name, config } = (args as { name?: string; config?: unknown }) ?? {};
+      const configPreview = config !== undefined
+        ? `\n${JSON.stringify(config, null, 2)}`
+        : '';
+      return `Add MCP server "${name ?? '?'}"${configPreview}`;
+    },
   },
 
   {

@@ -62,6 +62,8 @@ export default function AIChatPage() {
 
   const modelDetails = ollama.modelDetails[selectedModel] ?? null;
 
+  const handlePromptChange = useCallback((p: string) => setSystemPrompt(p || undefined), []);
+
   const handleSend = useCallback(async (content: string) => {
     const model = getModel();
     if (!model) return;
@@ -164,7 +166,7 @@ export default function AIChatPage() {
           {/* System prompt panel — above transcript */}
           <SystemPromptPanel
             sessionId={chat.currentSession?.id ?? null}
-            onPromptChange={(p) => setSystemPrompt(p || undefined)}
+            onPromptChange={handlePromptChange}
           />
 
           {mode === 'styled' ? (

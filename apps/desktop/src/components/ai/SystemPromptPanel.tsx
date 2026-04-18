@@ -91,11 +91,9 @@ export function SystemPromptPanel({ sessionId, onPromptChange }: Props) {
   };
 
   const handleLock = () => {
-    setLocked((l) => {
-      const next = !l;
-      if (!next) regenerate(enabled, SYSTEM_PROMPT);
-      return next;
-    });
+    const next = !locked;
+    setLocked(next);
+    if (!next) regenerate(enabled, SYSTEM_PROMPT);
   };
 
   const handleReset = () => {
