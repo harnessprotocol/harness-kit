@@ -181,6 +181,53 @@ jobs:
               print('All plugin.json files valid against Protocol schema.')
           "
 
+      - name: Check version alignment (jq)
+        run: |
+          ERRORS=0
+          for plugin_json in plugins/*/.claude-plugin/plugin.json; do
+            name=$(jq -r '.name' "$plugin_json")
+            plugin_version=$(jq -r '.version' "$plugin_json")
+            mp_version=$(jq -r --arg name "$name" '.plugins[] | select(.name == $name) | .version' .claude-plugin/marketplace.json)
+            if [ -z "$mp_version" ]; then
+              echo "::error::$name: not found in marketplace.json"
+              ERRORS=$((ERRORS + 1))
+            elif [ "$plugin_version" != "$mp_version" ]; then
+              echo "::error::$name: plugin.json=$plugin_version marketplace.json=$mp_version"
+              ERRORS=$((ERRORS + 1))
+            else
+              echo "$name: v$plugin_version OK"
+            fi
+          done
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "Version alignment check failed ($ERRORS mismatch(es))"
+            exit 1
+          fi
+
+      - name: Check SKILL.md frontmatter
+        run: |
+          MISSING=0
+          for skill_md in plugins/*/skills/*/SKILL.md; do
+            if [ "$(head -1 "$skill_md")" != "---" ]; then
+              echo "::error file=$skill_md::Missing YAML frontmatter (first line must be ---)"
+              MISSING=$((MISSING + 1))
+            fi
+          done
+          if [ "$MISSING" -gt 0 ]; then
+            echo "SKILL.md frontmatter check failed ($MISSING file(s) missing frontmatter)"
+            exit 1
+          fi
+          echo "All SKILL.md files have YAML frontmatter."
+
+      - name: Check README plugin badge count
+        run: |
+          mp_count=$(jq '.plugins | length' .claude-plugin/marketplace.json)
+          badge_count=$(grep -oP 'Browse all \K[0-9]+(?= plugins)' README.md)
+          if [ "$badge_count" != "$mp_count" ]; then
+            echo "::error::README badge says $badge_count plugins but marketplace.json has $mp_count"
+            exit 1
+          fi
+          echo "README badge count matches marketplace.json ($mp_count plugins)."
+
   security-scan:
     runs-on: ubuntu-latest
     steps:

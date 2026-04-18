@@ -6,7 +6,7 @@ import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
 import { useArrowNavigation } from "../hooks/useArrowNavigation";
 import { useSidebarResize } from "../hooks/useSidebarResize";
 import { initTheme } from "../lib/theme";
-import { initPreferences, getHiddenSections } from "../lib/preferences";
+import { initPreferences, getHiddenSections, getMembrainEnabled } from "../lib/preferences";
 import { useChat } from "../contexts/ChatContext";
 import ChatPanel from "../components/chat/ChatPanel";
 import FeedbackModal from "../components/FeedbackModal";
@@ -49,9 +49,6 @@ export const NAV_SECTIONS: NavSection[] = [
       </svg>
     ),
     path: "/marketplace",
-    children: [
-      { label: "Browse", path: "/marketplace" },
-    ],
   },
   {
     id: "observatory",
@@ -77,7 +74,6 @@ export const NAV_SECTIONS: NavSection[] = [
       </svg>
     ),
     path: "/agents",
-    children: [],
   },
   {
     id: "terminals",
@@ -87,7 +83,7 @@ export const NAV_SECTIONS: NavSection[] = [
         <path d="M3 4a1 1 0 000 2h11.586l-2.293 2.293a1 1 0 001.414 1.414l4-4a1 1 0 000-1.414l-4-4a1 1 0 10-1.414 1.414L14.586 4H3zM17 16a1 1 0 000-2H5.414l2.293-2.293a1 1 0 00-1.414-1.414l-4 4a1 1 0 000 1.414l4 4a1 1 0 001.414-1.414L5.414 16H17z" />
       </svg>
     ),
-    path: "/terminals",
+    path: "/comparator",
     children: [],
   },
   {
@@ -171,6 +167,16 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "Trace", path: "/memory/trace" },
       { label: "Settings", path: "/memory/settings" },
     ],
+  },
+  {
+    id: "services",
+    label: "Services",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
+        <path fillRule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm14 1a1 1 0 11-2 0 1 1 0 012 0zM2 13a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2zm14 1a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" />
+      </svg>
+    ),
+    path: "/services",
   },
 ];
 
@@ -346,6 +352,7 @@ export default function AppLayout() {
   const { files: configFiles } = useClaudeFileList();
 
   const [hiddenSections, setHiddenSectionsState] = useState(getHiddenSections);
+  const [membrainEnabled, setMembrainEnabledState] = useState(getMembrainEnabled);
 
   useEffect(() => {
     initTheme();
@@ -355,6 +362,7 @@ export default function AppLayout() {
   useEffect(() => {
     function onPrefsChanged() {
       setHiddenSectionsState(getHiddenSections());
+      setMembrainEnabledState(getMembrainEnabled());
     }
     window.addEventListener("harness-kit-prefs-changed", onPrefsChanged);
     return () => window.removeEventListener("harness-kit-prefs-changed", onPrefsChanged);
@@ -371,7 +379,10 @@ export default function AppLayout() {
     return () => window.removeEventListener("keydown", handler);
   }, [setChatOpen, chatOpen]);
 
-  const visibleSections = NAV_SECTIONS.filter((s) => !hiddenSections.has(s.id));
+  // Memory section is a Labs feature — only show it when the user has opted in via Preferences
+  const visibleSections = NAV_SECTIONS.filter(
+    (s) => !hiddenSections.has(s.id) && (s.id !== "memory" || membrainEnabled)
+  );
 
   const prefsActive = location.pathname === "/preferences";
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -418,18 +429,18 @@ export default function AppLayout() {
             pointerEvents: "none",
           }}
         />
-        <button className="titlebar-btn" onClick={toggleSidebar} title="Toggle sidebar (⌘\)">
+        <button className="titlebar-btn" onClick={toggleSidebar} title="Toggle sidebar (⌘\)" aria-label="Toggle sidebar (⌘\)">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
             <rect x="1" y="1" width="14" height="14" rx="2" />
             <line x1="5" y1="1" x2="5" y2="15" />
           </svg>
         </button>
-        <button className="titlebar-btn" onClick={() => navigate(-1)} title="Back (⌘[)">
+        <button className="titlebar-btn" onClick={() => navigate(-1)} title="Back (⌘[)" aria-label="Back (⌘[)">
           <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
           </svg>
         </button>
-        <button className="titlebar-btn" onClick={() => navigate(1)} title="Forward (⌘])">
+        <button className="titlebar-btn" onClick={() => navigate(1)} title="Forward (⌘])" aria-label="Forward (⌘])">
           <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
           </svg>
@@ -438,6 +449,7 @@ export default function AppLayout() {
           className="titlebar-btn"
           onClick={() => setChatOpen(!chatOpen)}
           title="Team Chat (⌘⇧\)"
+          aria-label="Team Chat (⌘⇧\)"
           style={{ marginLeft: "auto", position: "relative" }}
         >
           {/* Speech bubble icon — communicates team chat */}
@@ -487,9 +499,9 @@ export default function AppLayout() {
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 28 28"
-                  style={{ width: 22, height: 22, filter: "drop-shadow(0 0 6px rgba(34, 177, 236, 0.5))", flexShrink: 0 }}
+                  style={{ width: 22, height: 22, filter: "drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 50%, transparent))", flexShrink: 0 }}
                 >
-                  <rect width="28" height="28" rx="6" fill="#0d1016" />
+                  <rect width="28" height="28" rx="6" fill="var(--bg-sidebar-solid)" />
                   <text
                     x="14"
                     y="19"
@@ -497,7 +509,7 @@ export default function AppLayout() {
                     fontFamily="system-ui, sans-serif"
                     fontWeight="700"
                     fontSize="13"
-                    fill="#4ec7f2"
+                    fill="var(--accent-fg)"
                   >
                     hk
                   </text>

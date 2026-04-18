@@ -129,6 +129,10 @@ body {
 }
 
 /* ── Utility classes ── */
+.btn-primary {
+  background: var(--accent);
+}
+
 .glow-cyan {
   box-shadow: 0 0 40px -10px var(--accent-glow);
 }
@@ -293,6 +297,12 @@ h1, h2, h3 {
   border-left-color: var(--accent);
 }
 
+/* ── Global focus-visible ── */
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
 /* ── Search — focus glow ── */
 [data-fumadocs-nav] button:focus-visible,
 [data-fumadocs-nav] input:focus-visible {
@@ -339,7 +349,7 @@ pre button:hover {
   text-decoration: underline;
   text-decoration-style: dotted;
   text-underline-offset: 3px;
-  text-decoration-color: rgba(34, 177, 236, 0.4);
+  text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent);
   transition: text-decoration-color 0.15s ease, color 0.15s ease;
 }
 [data-fumadocs-body] a:not([data-card]):hover {
@@ -440,7 +450,7 @@ h5 > a[data-card], h6 > a[data-card] {
   border-color: hsla(199, 65%, 48%, 0.2) !important;
 }
 .dark .fd-step::before {
-  background: hsl(199, 82%, 48%) !important;
+  background: var(--accent) !important;
   color: white !important;
   font-weight: 600;
   box-shadow: 0 0 12px -2px hsla(199, 82%, 53%, 0.4);

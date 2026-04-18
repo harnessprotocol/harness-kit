@@ -62,3 +62,17 @@ packages/agent-server/dist/
 .claude_settings.json
 .security-key
 logs/security/
+
+# Auto-claude worktree symlinks (created by .auto-claude tooling, not committed)
+packages/core/core
+packages/shared/shared
+
+# Claude settings (local overrides stay local)
+.claude/settings.local.json
+.claude/worktrees/
+
+# Wrangler (Cloudflare dev state)
+.wrangler/
+
+# pnpm store (if local)
+.pnpm-store/

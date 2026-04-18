@@ -149,20 +149,6 @@ async function launchWithSkill(
       if (prompt) launchArgs.push("--print", prompt);
       break;
     }
-    case "cursor": {
-      // TODO: verify Cursor's per-invocation rule injection mechanism.
-      // Placeholder: write to .cursor/rules/ephemeral.mdc in temp dir.
-      const rulesDir = join(tmpDir, ".cursor", "rules");
-      await writeFile(join(tmpDir, "AGENTS.md"), skillContent, "utf-8");
-      launchCmd = "cursor";
-      launchArgs = [tmpDir];
-      console.log(
-        chalk.yellow("warn") +
-          " Cursor ephemeral launch is a best-effort stub — verify .cursor/rules injection mechanism.",
-      );
-      void rulesDir; // suppress unused warning
-      break;
-    }
     case "codex": {
       // Codex reads AGENTS.md. Write skill there.
       await writeFile(join(tmpDir, "AGENTS.md"), skillContent, "utf-8");

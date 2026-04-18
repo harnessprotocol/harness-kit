@@ -26,7 +26,7 @@ Your AI coding setup — plugins, skills, MCP servers, hooks, conventions — pa
 /plugin marketplace add harnessprotocol/harness-kit
 ```
 
-**CLI** (`harness-kit validate`, `compile`, `sync`, ...):
+**CLI** (`harness validate`, `compile`, `sync`, ...):
 ```bash
 brew tap harnessprotocol/tap && brew install harness-kit
 # or: npm install -g @harness-kit/cli  # requires Node.js 22+
@@ -134,7 +134,7 @@ A Tauri desktop companion that brings the harness concept to a native UI.
 - **Plugin explorer** — browse and manage installed plugins
 - **Marketplace** — embedded plugin browser for discovering and installing from the marketplace
 - **Observatory** — live session dashboard with stats and transcripts
-- **Comparator** -- structured evaluation workbench: configure harnesses, run side-by-side comparisons, review file diffs, and judge results across a 4-phase workflow
+- **Comparator** — structured evaluation workbench: configure harnesses, run side-by-side comparisons, review file diffs, and judge results across a 4-phase workflow
 - **Harness editor** — inline editing with custom profiles
 - **Board** — kanban project board with real-time Claude-to-web sync; per-card agent execution via LangGraph with live phase/progress streaming, subtask tracking, steering, pause/resume, and tool-level permission controls
 - **Roadmap** — AI-driven product roadmap with competitor analysis, generated via Claude

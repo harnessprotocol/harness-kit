@@ -13,6 +13,7 @@ export const NAV_PATHS = [
   "/roadmap",
   "/ai-chat",
   "/memory",
+  "/services",
 ] as const;
 
 interface Options {

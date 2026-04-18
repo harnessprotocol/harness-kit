@@ -1,4 +1,5 @@
 import { Command } from "commander";
+import chalk from "chalk";
 import { validateCommand } from "./commands/validate.js";
 import { compileCommand } from "./commands/compile.js";
 import { checkCommand } from "./commands/check.js";
@@ -15,17 +16,29 @@ import {
 
 declare const __CLI_VERSION__: string;
 
+// NO_COLOR / dumb terminal support (https://no-color.org)
+if (process.env.NO_COLOR !== undefined || process.env.TERM === "dumb") {
+  chalk.level = 0;
+}
+
 const program = new Command();
 
 program
-  .name("harness-kit")
+  .name("harness")
   .description("Compile and validate harness.yaml configurations")
-  .version(__CLI_VERSION__);
+  .version(__CLI_VERSION__)
+  .option("--no-color", "Disable colored output")
+  .hook("preAction", (thisCommand) => {
+    if (thisCommand.opts().color === false) {
+      chalk.level = 0;
+    }
+  });
 
 program
   .command("validate")
   .description("Validate a harness.yaml against the Harness Protocol v1 schema")
   .argument("[path]", "Path to harness.yaml", "harness.yaml")
+  .option("--json", "Output results as JSON")
   .addHelpText(
     "after",
     `
@@ -33,8 +46,8 @@ Examples:
   harness-kit validate                    Validate ./harness.yaml
   harness-kit validate ~/dotfiles/harness.yaml   Validate a specific file`,
   )
-  .action(async (path: string) => {
-    await validateCommand(path);
+  .action(async (path: string, flags) => {
+    await validateCommand(path, flags);
   });
 
 program
@@ -91,6 +104,7 @@ program
     "--target <targets>",
     "Target platforms to check (comma-separated), or all",
   )
+  .option("--json", "Output results as JSON")
   .addHelpText(
     "after",
     `
@@ -107,8 +121,9 @@ Exit code 0 if all ok. Exit code 1 if any drift or missing.`,
 program
   .command("detect")
   .description("Show which AI coding platforms are detected in the current directory")
-  .action(async () => {
-    await detectCommand();
+  .option("--json", "Output results as JSON")
+  .action(async (flags) => {
+    await detectCommand(flags);
   });
 
 const initCmd = program
@@ -164,6 +179,7 @@ program
   .command("scan")
   .description("Run security scan on a plugin directory")
   .argument("[path]", "Path to plugin directory", ".")
+  .option("--json", "Output results as JSON")
   .addHelpText(
     "after",
     `
@@ -171,8 +187,8 @@ Examples:
   harness-kit scan                        Scan current directory
   harness-kit scan ./plugins/research     Scan a specific plugin`,
   )
-  .action(async (path: string) => {
-    await scanCommand(path);
+  .action(async (path: string, flags) => {
+    await scanCommand(path, flags);
   });
 
 const orgCommand = program
@@ -200,5 +216,7 @@ orgCommand
   .action(async (slug: string) => {
     await joinOrganization(slug);
   });
+
+program.addHelpText('after', '\nDocs: https://harnesskit.ai/docs\n');
 
 program.parse();

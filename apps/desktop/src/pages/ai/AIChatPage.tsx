@@ -111,6 +111,13 @@ export default function AIChatPage() {
         onToggleMode={() => setMode((m) => m === 'styled' ? 'raw' : 'styled')}
       />
 
+      {/* Ollama not running notice */}
+      {!ollama.running && (
+        <div className="text-sm text-muted-foreground p-4">
+          Ollama is not running. <a href="https://ollama.ai" target="_blank" rel="noopener" className="underline">Install Ollama</a> to use AI Chat.
+        </div>
+      )}
+
       {/* Transcript area */}
       {mode === 'styled' ? (
         <TerminalTranscript

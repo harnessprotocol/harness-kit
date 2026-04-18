@@ -62,8 +62,21 @@ export async function generateMetadata(props: {
   const page = source.getPage(params.slug);
   if (!page) notFound();
 
+  const title = page.data.title;
+  const description = page.data.description ?? 'Harness Kit documentation';
+
   return {
-    title: page.data.title,
-    description: page.data.description,
+    title,
+    description,
+    openGraph: {
+      title: `${title} — Harness Kit`,
+      description,
+      type: 'article',
+    },
+    twitter: {
+      card: 'summary',
+      title: `${title} — Harness Kit`,
+      description,
+    },
   };
 }

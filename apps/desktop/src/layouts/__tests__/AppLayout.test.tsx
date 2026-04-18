@@ -34,6 +34,7 @@ vi.mock("../../lib/preferences", async (importOriginal) => {
     ...actual,
     initPreferences: vi.fn(),
     getHiddenSections: vi.fn(() => new Set()),
+    getMembrainEnabled: vi.fn(() => true),
   };
 });
 

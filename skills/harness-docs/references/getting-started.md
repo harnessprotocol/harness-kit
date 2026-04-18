@@ -64,8 +64,8 @@ brew install harness-kit
 npm install -g @harness-kit/cli
 
 # Verify
-harness-kit --version
-harness-kit validate
+harness --version
+harness validate
 ```
 
 ## Requirements per Plugin

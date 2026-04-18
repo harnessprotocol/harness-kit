@@ -118,9 +118,9 @@ function Chip({ label, color, onRemove }: {
   onRemove: () => void;
 }) {
   const colors = {
-    green: { bg: "rgba(22,163,74,0.08)", border: "rgba(22,163,74,0.22)", text: "#16a34a" },
-    red:   { bg: "rgba(220,38,38,0.08)",  border: "rgba(220,38,38,0.22)",  text: "#dc2626" },
-    amber: { bg: "rgba(217,119,6,0.08)",  border: "rgba(217,119,6,0.22)",  text: "#d97706" },
+    green: { bg: "var(--success-light)", border: "rgba(22,163,74,0.22)", text: "var(--success)" },
+    red:   { bg: "var(--danger-light)",  border: "rgba(220,38,38,0.22)",  text: "var(--danger)" },
+    amber: { bg: "var(--warning-light)", border: "rgba(217,119,6,0.22)",  text: "var(--warning)" },
   };
   const c = colors[color];
   return (
@@ -389,7 +389,7 @@ function CurrentConfigSummary({
     (o) => o.mode !== undefined || (o.allowedTools && o.allowedTools.length > 0)
   ).length;
 
-  const modeColor = mode === "skip" ? "#d97706" : mode === "auto" ? "#3b82f6" : "#16a34a";
+  const modeColor = mode === "skip" ? "var(--warning)" : mode === "auto" ? "var(--cat-blue)" : "var(--success)";
   const modeLabel = mode === "skip" ? "Skip All" : mode === "auto" ? "Auto" : "Allowed Tools";
 
   let detail: React.ReactNode;
@@ -706,9 +706,9 @@ function HarnessOverridesSection({
 // ── Preset colors ─────────────────────────────────────────────
 
 const PRESET_COLORS: Record<string, string> = {
-  Strict: "#16a34a",
-  Standard: "#3b82f6",
-  Permissive: "#d97706",
+  Strict: "var(--success)",
+  Standard: "var(--cat-blue)",
+  Permissive: "var(--warning)",
 };
 
 const PROFILE_LABELS: Record<ResilienceProfile, string> = {
@@ -934,7 +934,7 @@ export default function PermissionsPage() {
             flag="--dangerously-skip-permissions"
             description="No prompts. Claude can write files, run commands, and access your system freely."
             icon={<IconSkip />}
-            accentColor="#d97706"
+            accentColor="var(--warning)"
             selected={mode === "skip"}
             onClick={() => handleModeChange("skip")}
           />
@@ -945,7 +945,7 @@ export default function PermissionsPage() {
               flag="--permission-mode auto"
               description="AI classifiers approve non-destructive actions. Higher-risk operations still prompt."
               icon={<IconAuto />}
-              accentColor="#3b82f6"
+              accentColor="var(--cat-blue)"
               selected={mode === "auto"}
               onClick={() => handleModeChange("auto")}
             />
@@ -956,7 +956,7 @@ export default function PermissionsPage() {
             flag="--allowedTools <list>"
             description="Select which tools run without approval. All others prompt in the terminal."
             icon={<IconTools />}
-            accentColor="#16a34a"
+            accentColor="var(--success)"
             selected={mode === "allowed-tools"}
             onClick={() => handleModeChange("allowed-tools")}
           />
@@ -1102,9 +1102,9 @@ export default function PermissionsPage() {
                 {(() => {
                   const allTools = [...permissions.tools.allow, ...permissions.tools.deny, ...permissions.tools.ask];
                   const rows: { key: "allow" | "deny" | "ask"; label: string; color: string; chipColor: "green" | "red" | "amber" }[] = [
-                    { key: "allow", label: "Allow", color: "#16a34a", chipColor: "green" },
-                    { key: "deny",  label: "Deny",  color: "#dc2626", chipColor: "red"   },
-                    { key: "ask",   label: "Ask",   color: "#d97706", chipColor: "amber" },
+                    { key: "allow", label: "Allow", color: "var(--success)", chipColor: "green" },
+                    { key: "deny",  label: "Deny",  color: "var(--danger)",  chipColor: "red"   },
+                    { key: "ask",   label: "Ask",   color: "var(--warning)", chipColor: "amber" },
                   ];
                   return (
                     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -1153,7 +1153,7 @@ export default function PermissionsPage() {
                   return (
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
                       <div>
-                        <p style={{ fontSize: "11px", fontWeight: 600, color: "#16a34a", margin: "0 0 6px" }}>Writable</p>
+                        <p style={{ fontSize: "11px", fontWeight: 600, color: "var(--success)", margin: "0 0 6px" }}>Writable</p>
                         {permissions.paths.writable.length > 0 && (
                           <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "4px" }}>
                             {permissions.paths.writable.map((p) => (
@@ -1164,7 +1164,7 @@ export default function PermissionsPage() {
                         <SuggestInput onAdd={(v) => addToList("writable", v)} placeholder="Add path…" suggestions={PATH_SUGGESTIONS} existing={allPaths} />
                       </div>
                       <div>
-                        <p style={{ fontSize: "11px", fontWeight: 600, color: "#d97706", margin: "0 0 6px" }}>Read-only</p>
+                        <p style={{ fontSize: "11px", fontWeight: 600, color: "var(--warning)", margin: "0 0 6px" }}>Read-only</p>
                         {permissions.paths.readonly.length > 0 && (
                           <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "4px" }}>
                             {permissions.paths.readonly.map((p) => (

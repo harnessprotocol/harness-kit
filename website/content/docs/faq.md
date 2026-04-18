@@ -35,7 +35,7 @@ A prompt tells Claude what to do. A SKILL.md specifies how: step ordering, input
 
 ## Does this only work with Claude Code?
 
-The install system targets Claude Code's plugin marketplace. But SKILL.md files follow the [Agent Skills open standard](https://agentskills.io), a cross-platform spec for skill portability. VS Code Copilot reads `CLAUDE.md` natively via `chat.useClaudeMdFile`. See the [Cross-Harness setup guide](/docs/cross-harness/setup-guide) for Cursor, Windsurf, and others.
+The install system targets Claude Code's plugin marketplace. But SKILL.md files follow the [Agent Skills](https://agentskills.io) format, a proposed cross-platform spec for skill portability currently in development. VS Code Copilot reads `CLAUDE.md` natively via `chat.useClaudeMdFile`. See the [Cross-Harness setup guide](/docs/cross-harness/setup-guide) for Cursor, Windsurf, and others.
 
 ## How many skills can I install?
 

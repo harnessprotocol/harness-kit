@@ -4,7 +4,12 @@
 
 **Please do not report security vulnerabilities through public GitHub issues.**
 
-If you discover a security vulnerability in harness-kit, please report it through [GitHub Security Advisories](https://github.com/harnessprotocol/harness-kit/security/advisories/new) or email [security@harnesskit.ai](mailto:security@harnesskit.ai). Include the following information:
+If you discover a security vulnerability in harness-kit, please report it through one of:
+
+- [GitHub Security Advisories](https://github.com/harnessprotocol/harness-kit/security/advisories/new) (preferred)
+- Email: security@harnesskit.ai
+
+Include the following information:
 
 - Description of the vulnerability
 - Steps to reproduce the issue
@@ -116,7 +121,7 @@ Before deploying harness-kit services to production:
 
 - Code-sign the application for distribution
 - Keep Tauri and dependencies up to date
-- Follow Tauri security best practices: https://tauri.app/v1/guides/security/
+- Follow Tauri security best practices: https://v2.tauri.app/security/
 - Validate all IPC commands from the frontend
 - Limit filesystem access to necessary directories
 
@@ -215,11 +220,11 @@ In addition to dependency scanning, we recommend:
 ## Additional Resources
 
 - [OWASP Top 10](https://owasp.org/www-project-top-ten/)
-- [Tauri Security Guide](https://tauri.app/v1/guides/security/)
+- [Tauri Security Guide](https://v2.tauri.app/security/)
 - [Next.js Security Headers](https://nextjs.org/docs/advanced-features/security-headers)
 - [Supabase Security](https://supabase.com/docs/guides/auth/security)
 - [npm Security Best Practices](https://docs.npmjs.com/security-best-practices)
 
 ---
 
-**Last Updated:** 2026-03-28
+**Last Updated:** 2026-04-18

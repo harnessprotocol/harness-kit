@@ -14,11 +14,24 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata = {
+  metadataBase: new URL('https://harnesskit.ai'),
   title: {
     template: '%s | Harness Kit',
-    default: 'Harness Kit',
+    default: 'Harness Kit — Configure all your AI coding harnesses',
   },
   description: 'A harness-agnostic framework for AI coding tools.',
+  openGraph: {
+    title: 'Harness Kit — Configure all your AI coding harnesses',
+    description: 'A harness-agnostic framework for AI coding tools.',
+    url: 'https://harnesskit.ai',
+    siteName: 'Harness Kit',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Harness Kit — Configure all your AI coding harnesses',
+    description: 'A harness-agnostic framework for AI coding tools.',
+  },
 };
 
 export default function Layout({ children }: { children: ReactNode }) {

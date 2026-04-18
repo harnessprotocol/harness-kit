@@ -150,7 +150,7 @@
     {
       "name": "iterm-notify",
       "source": "./plugins/iterm-notify",
-      "description": "macOS desktop notifications and iTerm2 badge management for Claude Code lifecycle events.",
+      "description": "macOS desktop notifications and iTerm2 badge management for Claude Code lifecycle events",
       "version": "0.1.0",
       "author": { "name": "harnessprotocol" },
       "license": "Apache-2.0",
@@ -160,7 +160,7 @@
     {
       "name": "board",
       "source": "./plugins/board",
-      "description": "Lightweight Kanban board with real-time Claude ↔ web UI two-way sync via MCP.",
+      "description": "Lightweight Kanban board with real-time Claude ↔ web UI two-way sync via MCP",
       "version": "0.2.0",
       "author": { "name": "harnessprotocol" },
       "license": "Apache-2.0",
@@ -170,7 +170,7 @@
     {
       "name": "frontend-design",
       "source": "./plugins/frontend-design",
-      "description": "Production-grade frontend design skill that avoids AI slop — specific rules for typography, color (OKLCH), layout, motion, interaction, and UX writing.",
+      "description": "Production-grade frontend design skill that avoids AI slop — specific rules for typography, color (OKLCH), layout, motion, interaction, and UX writing",
       "version": "0.1.0",
       "author": { "name": "harnessprotocol" },
       "license": "Apache-2.0",

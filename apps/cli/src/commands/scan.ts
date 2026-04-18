@@ -2,16 +2,23 @@ import { resolve } from "node:path";
 import { scanPlugin, formatSecurityReport } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
 
-export async function scanCommand(pluginPath?: string): Promise<void> {
+interface ScanFlags {
+  json?: boolean;
+}
+
+export async function scanCommand(pluginPath?: string, flags: ScanFlags = {}): Promise<void> {
   const resolved = resolve(pluginPath ?? ".");
   const fs = new NodeFsProvider();
 
   // Check if the path exists
   const exists = await fs.exists(resolved);
   if (!exists) {
-    console.error(
-      `Plugin directory not found: ${resolved}. Specify a valid path: harness-kit scan <path>`,
-    );
+    const msg = `Plugin directory not found: ${resolved}. Specify a valid path: harness scan <path>`;
+    if (flags.json) {
+      console.log(JSON.stringify({ issues: [], count: 0, error: msg }));
+    } else {
+      console.error(msg);
+    }
     process.exit(1);
   }
 
@@ -19,9 +26,12 @@ export async function scanCommand(pluginPath?: string): Promise<void> {
   const manifestPath = fs.joinPath(resolved, ".claude-plugin/plugin.json");
   const manifestExists = await fs.exists(manifestPath);
   if (!manifestExists) {
-    console.error(
-      `No plugin manifest found at ${manifestPath}. Make sure you're scanning a valid plugin directory.`,
-    );
+    const msg = `No plugin manifest found at ${manifestPath}. Make sure you're scanning a valid plugin directory.`;
+    if (flags.json) {
+      console.log(JSON.stringify({ issues: [], count: 0, error: msg }));
+    } else {
+      console.error(msg);
+    }
     process.exit(1);
   }
 
@@ -35,8 +45,38 @@ export async function scanCommand(pluginPath?: string): Promise<void> {
     });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    console.error(`Security scan failed: ${msg}`);
+    if (flags.json) {
+      console.log(JSON.stringify({ issues: [], count: 0, error: `Security scan failed: ${msg}` }));
+    } else {
+      console.error(`Security scan failed: ${msg}`);
+    }
     process.exit(1);
+  }
+
+  if (flags.json) {
+    const issues = report.findings.map((f) => ({
+      id: f.id,
+      severity: f.severity,
+      category: f.category,
+      message: f.message,
+      ...(f.file_path !== undefined && { file_path: f.file_path }),
+      ...(f.line_number !== undefined && { line_number: f.line_number }),
+      ...(f.code_snippet !== undefined && { code_snippet: f.code_snippet }),
+      ...(f.recommendation !== undefined && { recommendation: f.recommendation }),
+    }));
+    console.log(JSON.stringify({
+      plugin_name: report.plugin_name,
+      plugin_version: report.plugin_version,
+      scan_status: report.scan_status,
+      scan_date: report.scan_date,
+      issues,
+      count: issues.length,
+      critical_count: report.critical_count,
+      warning_count: report.warning_count,
+      info_count: report.info_count,
+      permissions: report.permissions,
+    }));
+    process.exit(report.scan_status === "failed" ? 1 : 0);
   }
 
   // Format and display the report

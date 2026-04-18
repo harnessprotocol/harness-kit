@@ -85,7 +85,7 @@ export default function HomePage() {
       <section className="relative overflow-hidden border-b border-fd-border/30">
         {/* Copy block */}
         <div className="mx-auto max-w-3xl px-6 pb-10 pt-20 text-center">
-          <h1 className="font-display mb-5 text-[2.6rem] font-bold leading-tight tracking-tight text-fd-foreground sm:text-5xl">
+          <h1 className="font-display mb-5 text-5xl font-bold leading-tight tracking-tight text-fd-foreground sm:text-5xl">
             The configuration console{' '}
             <br className="hidden sm:block" />
             for all your harnesses.
@@ -94,13 +94,16 @@ export default function HomePage() {
             Configure, observe, and share your harness from one native app, built on an open harness.yaml spec.
           </p>
           <div className="mb-8 flex justify-center">
-            <CommandBox command="/plugin marketplace add harnessprotocol/harness-kit" />
+            <div className="flex flex-col items-center gap-0">
+              <p className="text-xs text-muted-foreground mb-2">Run inside Claude Code</p>
+              <CommandBox command="/plugin marketplace add harnessprotocol/harness-kit" />
+            </div>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/docs/getting-started/installation"
-              className="rounded-lg px-5 py-2.5 text-sm font-semibold text-white no-underline transition-all hover:opacity-90"
-              style={{ background: 'var(--accent)', boxShadow: '0 2px 12px var(--accent-glow)' }}
+              className="btn-primary rounded-lg px-5 py-2.5 text-sm font-semibold text-white no-underline transition-all hover:opacity-90"
+              style={{ boxShadow: '0 2px 12px var(--accent-glow)' }}
             >
               Get started
             </Link>
@@ -183,23 +186,9 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* ── CTA band ── */}
-      <section className="py-24 text-center">
-        <div className="mx-auto max-w-2xl px-6">
-          <h2 className="font-display mb-4 text-3xl font-bold tracking-tight text-fd-foreground sm:text-4xl">
-            Stop rebuilding your setup.
-          </h2>
-          <p className="mb-8 text-lg text-fd-muted-foreground">
-            One file. Every tool. Every machine. Every teammate.
-          </p>
-          <Link
-            href="/docs/getting-started/installation"
-            className="inline-flex items-center rounded-lg px-6 py-3 text-sm font-semibold text-white no-underline transition-all hover:opacity-90"
-            style={{ background: 'var(--accent)', boxShadow: '0 4px 20px var(--accent-glow)' }}
-          >
-            Get started →
-          </Link>
-        </div>
+      {/* ── Architecture link ── */}
+      <section className="py-12 text-center">
+        <a href="/docs/architecture" className="text-sm text-muted-foreground underline">Read the architecture →</a>
       </section>
 
       <SiteFooter />

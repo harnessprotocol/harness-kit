@@ -20,5 +20,5 @@ The harness-kit desktop app treats `harness.yaml` as a first-class element. The 
 ## Links
 
 - [Harness Protocol spec](https://harnessprotocol.io) — full specification, including architecture, field reference, security model, and plugin manifest format
-- [JSON Schema](https://harnessprotocol.ai/schema/v1/harness.schema.json) — machine-readable validation schema
+- [JSON Schema](https://harnessprotocol.io/schema/v1/harness.schema.json) — machine-readable validation schema
 - [harness-kit](https://github.com/harnessprotocol/harness-kit) — reference implementation

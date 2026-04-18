@@ -13,20 +13,7 @@ harness-kit/
 │   │   └── plugin.schema.json    ← Protocol JSON Schema for plugin manifest validation
 │   └── workflows/
 │       └── validate.yml          ← CI: manifest parsing, version alignment, schema validation, builds, tests
-├── plugins/                      ← one directory per plugin (marketplace)
-│   ├── research/
-│   │   ├── .claude-plugin/
-│   │   │   └── plugin.json       ← plugin manifest
-│   │   ├── scripts/
-│   │   │   └── rebuild-research-index.py
-│   │   └── skills/
-│   │       └── research/
-│   │           ├── SKILL.md      ← skill definition (what Claude reads)
-│   │           └── README.md     ← usage docs (what humans read)
-│   ├── explain/
-│   ├── lineage/
-│   ├── orient/
-│   └── iterm-notify/             ← (same structure as research/)
+├── plugins/                      ← 16 plugins; see .claude-plugin/marketplace.json for full list
 ├── packages/                     ← shared libraries and standalone servers
 │   ├── core/                     ← harness.yaml compile/parse/detect logic
 │   ├── shared/                   ← shared TypeScript types used across apps
@@ -34,6 +21,8 @@ harness-kit/
 │   ├── agent-server/             ← LangGraph execution engine for per-card agent runs (port 4802)
 │   └── chat-relay/               ← self-hosted WebSocket relay for team chat (port 4801)
 ├── functions/                    ← Cloudflare Pages Functions (server-side endpoints, e.g. /feedback proxy)
+├── website/                      ← documentation site (harnesskit.ai)
+├── homebrew/                     ← Homebrew tap formulae for CLI and desktop app
 ├── apps/                         ← end-user applications
 │   ├── desktop/                  ← Tauri desktop app (React + Rust)
 │   ├── cli/                      ← harness CLI

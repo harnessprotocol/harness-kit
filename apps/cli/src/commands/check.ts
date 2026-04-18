@@ -12,6 +12,7 @@ import type { CheckEntry, CheckResult, TargetPlatform } from "@harness-kit/core"
 
 interface CheckFlags {
   target?: string;
+  json?: boolean;
 }
 
 const ALL_TARGETS = getCheckableTargets();
@@ -82,7 +83,11 @@ export async function checkCommand(
   try {
     yamlString = await readFile(resolved, "utf-8");
   } catch {
-    console.error(`No harness.yaml found at ${resolved}.`);
+    if (flags.json) {
+      console.log(JSON.stringify({ drifted: false, changes: [], error: `No harness.yaml found at ${resolved}.` }));
+    } else {
+      console.error(`No harness.yaml found at ${resolved}.`);
+    }
     process.exit(1);
   }
 
@@ -90,20 +95,42 @@ export async function checkCommand(
   try {
     ({ config } = parseHarness(yamlString));
   } catch (e) {
-    console.error(e instanceof Error ? e.message : String(e));
+    const msg = e instanceof Error ? e.message : String(e);
+    if (flags.json) {
+      console.log(JSON.stringify({ drifted: false, changes: [], error: msg }));
+    } else {
+      console.error(msg);
+    }
     process.exit(1);
   }
 
   const validation = validateHarness(config);
   if (!validation.valid) {
-    console.error(`harness.yaml is invalid — run harness-kit validate for details.`);
+    const msg = `harness.yaml is invalid — run harness validate for details.`;
+    if (flags.json) {
+      console.log(JSON.stringify({ drifted: false, changes: [], error: msg }));
+    } else {
+      console.error(msg);
+    }
     process.exit(1);
   }
 
   const targets = flags.target ? parseTargets(flags.target) : ALL_TARGETS;
   const result = await checkCompiled(config, targets, fs);
 
-  console.log(formatCheckResult(result));
+  if (flags.json) {
+    console.log(JSON.stringify({
+      drifted: result.hasDrift,
+      changes: result.entries.map((e) => ({
+        kind: e.kind,
+        name: e.name,
+        target: e.target,
+        status: e.status,
+      })),
+    }));
+  } else {
+    console.log(formatCheckResult(result));
+  }
 
   if (result.hasDrift) {
     process.exit(1);

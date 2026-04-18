@@ -235,15 +235,15 @@ pub fn run() {
         .setup(|app| {
             let state = app.state::<BoardServerState>();
             if state.check() {
-                eprintln!("[board-server] running on :{}", 4800);
+                if cfg!(debug_assertions) { eprintln!("[board-server] running on :{}", 4800); }
             } else {
-                eprintln!("[board-server] not running — install with: pnpm board:install");
+                if cfg!(debug_assertions) { eprintln!("[board-server] not running — install with: pnpm board:install"); }
             }
             let agent_state = app.state::<AgentServerState>();
             if agent_state.check() {
-                eprintln!("[agent-server] running on :{}", 4802);
+                if cfg!(debug_assertions) { eprintln!("[agent-server] running on :{}", 4802); }
             } else {
-                eprintln!("[agent-server] not running — install with: pnpm agent:install");
+                if cfg!(debug_assertions) { eprintln!("[agent-server] not running — install with: pnpm agent:install"); }
             }
             // membrain server starts on-demand when the user navigates to the
             // Memory section (via useMembrainServerReady hook), not at app launch.

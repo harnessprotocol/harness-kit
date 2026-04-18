@@ -1,13 +1,13 @@
 {
   "title": "Harness Kit",
   "pages": [
-    "concepts",
     "getting-started",
-    "apps",
+    "concepts",
     "plugins",
-    "evals",
-    "guides",
     "cross-harness",
+    "apps",
+    "guides",
+    "evals",
     "faq"
   ]
 }

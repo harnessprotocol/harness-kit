@@ -279,6 +279,12 @@ export async function initSkillCommand(name: string): Promise<void> {
       `Edit ${chalk.white(`skills/${name}/SKILL.md`)} to describe your skill, then add it to harness.yaml.`,
     ),
   );
+  console.log(
+    chalk.yellow("  ⚠") +
+      chalk.dim(" Replace ") +
+      chalk.white("TODO") +
+      chalk.dim(" placeholders in SKILL.md and plugin.json before publishing."),
+  );
 }
 
 // ── Harness scaffold ──────────────────────────────────────────
@@ -333,7 +339,7 @@ export async function initCommand(outputPath: string): Promise<void> {
   console.log(chalk.green("Created harness.yaml"));
   console.log(
     chalk.dim(
-      `Run ${chalk.white("harness-kit compile")} to generate platform config files.`,
+      `Run ${chalk.white("harness compile")} to generate platform config files.`,
     ),
   );
 }

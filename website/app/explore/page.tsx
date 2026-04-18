@@ -79,7 +79,7 @@ const NAV_GROUPS: Group[] = [
         id: 'comparator',
         title: 'Comparator',
         description: 'Run the same prompt across Claude Code, Cursor, and Copilot side by side. Find what works.',
-        href: '/docs/cross-harness/concept-mapping',
+        href: '/docs/apps/comparator',
         accent: 'var(--cat-cyan)',
         icon: (
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -138,7 +138,7 @@ const NAV_GROUPS: Group[] = [
         id: 'roadmap',
         title: 'Roadmap',
         description: 'AI-generated quarterly roadmaps and competitor analysis, tied to your board and harness.',
-        href: '/docs/plugins/productivity/board',
+        href: '/docs/apps/roadmap',
         accent: 'var(--cat-purple)',
         icon: (
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -150,7 +150,7 @@ const NAV_GROUPS: Group[] = [
         id: 'ai-chat',
         title: 'AI Chat',
         description: 'Keyboard-first chat tied to your harness. Pipe files in, stream tool calls, keep every conversation.',
-        href: '/docs/plugins/overview',
+        href: '/docs/apps/ai-chat',
         accent: 'var(--cat-blue)',
         icon: (
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

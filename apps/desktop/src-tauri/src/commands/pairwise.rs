@@ -297,16 +297,16 @@ pub fn get_pairwise_analytics(
         win_map.entry(rname.clone()).or_insert((0, 0, 0));
         match row.result.as_str() {
             "left" => {
-                win_map.get_mut(&lname).unwrap().0 += 1;
-                win_map.get_mut(&rname).unwrap().1 += 1;
+                if let Some(e) = win_map.get_mut(&lname) { e.0 += 1; }
+                if let Some(e) = win_map.get_mut(&rname) { e.1 += 1; }
             }
             "right" => {
-                win_map.get_mut(&lname).unwrap().1 += 1;
-                win_map.get_mut(&rname).unwrap().0 += 1;
+                if let Some(e) = win_map.get_mut(&lname) { e.1 += 1; }
+                if let Some(e) = win_map.get_mut(&rname) { e.0 += 1; }
             }
             _ => {
-                win_map.get_mut(&lname).unwrap().2 += 1;
-                win_map.get_mut(&rname).unwrap().2 += 1;
+                if let Some(e) = win_map.get_mut(&lname) { e.2 += 1; }
+                if let Some(e) = win_map.get_mut(&rname) { e.2 += 1; }
             }
         }
     }
@@ -323,11 +323,11 @@ pub fn get_pairwise_analytics(
         dim_map.entry((lname.clone(), dim.clone())).or_insert((0, 0));
         dim_map.entry((rname.clone(), dim.clone())).or_insert((0, 0));
 
-        dim_map.get_mut(&(lname.clone(), dim.clone())).unwrap().1 += 1;
-        dim_map.get_mut(&(rname.clone(), dim.clone())).unwrap().1 += 1;
+        if let Some(e) = dim_map.get_mut(&(lname.clone(), dim.clone())) { e.1 += 1; }
+        if let Some(e) = dim_map.get_mut(&(rname.clone(), dim.clone())) { e.1 += 1; }
         match row.result.as_str() {
-            "left"  => { dim_map.get_mut(&(lname.clone(), dim.clone())).unwrap().0 += 1; }
-            "right" => { dim_map.get_mut(&(rname.clone(), dim.clone())).unwrap().0 += 1; }
+            "left"  => { if let Some(e) = dim_map.get_mut(&(lname.clone(), dim.clone())) { e.0 += 1; } }
+            "right" => { if let Some(e) = dim_map.get_mut(&(rname.clone(), dim.clone())) { e.0 += 1; } }
             _ => {} // tie counts as neither win
         }
     }

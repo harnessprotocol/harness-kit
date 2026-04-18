@@ -64,8 +64,8 @@ Profiles are pre-configured collections of plugins for specific roles. Each prof
 
 | Profile | Who it's for | Plugins included |
 |---------|-------------|-----------------|
-| [research-knowledge](/profiles/research-knowledge) | Research-focused roles | research, orient, capture, explain, docgen |
-| [data-engineer](/profiles/data-engineer) | Data engineers with SQL pipelines | lineage, research, orient, capture, explain, docgen, review |
-| [full-stack-engineer](/profiles/full-stack-engineer) | Full-stack feature shipping | review, open-pr, merge-pr, pr-sweep, explain, docgen, harness-share |
+| [research-knowledge](#) | Research-focused roles | research, orient, capture, explain, docgen |
+| [data-engineer](#) | Data engineers with SQL pipelines | lineage, research, orient, capture, explain, docgen, review |
+| [full-stack-engineer](#) | Full-stack feature shipping | review, open-pr, merge-pr, pr-sweep, explain, docgen, harness-share |
 
 Install a profile's plugins individually, or use `/harness-import` with the profile's YAML to install them all at once.

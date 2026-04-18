@@ -45,7 +45,7 @@ Search `Harness Kit` or open from `/Applications/Harness Kit.app`.
 <Step>
 **Download the DMG**
 
-Get `HarnessKit-vX.Y.Z-darwin-arm64.dmg` from [GitHub Releases](https://github.com/harnessprotocol/harness-kit/releases).
+Download the `.dmg` for your architecture from [GitHub Releases](https://github.com/harnessprotocol/harness-kit/releases/latest).
 </Step>
 <Step>
 **Drag to Applications**
@@ -143,12 +143,12 @@ Requires Node.js 22 or later.
 </Tab>
 
 <Tab value="Binary">
-Download the standalone binary (no Node.js required) from [GitHub Releases](https://github.com/harnessprotocol/harness-kit/releases):
+Download the standalone binary (no Node.js required) from [GitHub Releases](https://github.com/harnessprotocol/harness-kit/releases/latest):
 
 ```bash
-tar -xzf harness-kit-vX.Y.Z-darwin-arm64.tar.gz
-chmod +x harness-kit
-sudo mv harness-kit /usr/local/bin/
+tar -xzf harness-darwin-arm64.tar.gz
+chmod +x harness
+sudo mv harness /usr/local/bin/
 ```
 </Tab>
 </Tabs>
@@ -156,45 +156,9 @@ sudo mv harness-kit /usr/local/bin/
 **Verify:**
 
 ```bash
-harness-kit --version
-harness-kit validate
+harness --version
+harness validate
 ```
-
----
-
-## Plugin Requirements
-
-The Harness Kit desktop app provides a visual interface for managing configs, running evals, comparing AI tools, and monitoring your setup.
-
-<Tabs items={["Homebrew", "Direct download"]}>
-<Tab value="Homebrew">
-```bash
-brew tap harnessprotocol/tap  # skip if you already ran this for the CLI
-brew install --cask harness-kit
-```
-
-<Callout type="warn" title="Gatekeeper notice">
-  The app is not yet notarized. After installing, open Terminal and run:
-  ```bash
-  xattr -cr "/Applications/Harness Kit.app"
-  ```
-  Or right-click the app in Finder and select **Open**, then confirm.
-</Callout>
-</Tab>
-
-<Tab value="Direct download">
-Download `HarnessKit-vX.Y.Z-darwin-arm64.dmg` from the [latest release](https://github.com/harnessprotocol/harness-kit/releases/latest):
-
-1. Open the `.dmg` and drag **Harness Kit** to your Applications folder.
-2. Remove the quarantine flag before first launch:
-   ```bash
-   xattr -cr "/Applications/Harness Kit.app"
-   ```
-3. Open from Applications or Spotlight.
-
-macOS 14 (Sonoma) or later, Apple Silicon (arm64) required. Intel Mac builds are planned for a future release.
-</Tab>
-</Tabs>
 
 ---
 
