@@ -512,6 +512,64 @@ function PhasePlaceholder({ phase }: { phase: ComparisonPhase }) {
   );
 }
 
+// ── Clear All Header ─────────────────────────────────────────
+
+function ClearAllHeader({
+  sessions,
+  onClearAll,
+}: {
+  sessions: ComparisonSummary[];
+  onClearAll: () => void;
+}) {
+  const [confirm, setConfirm] = useState(false);
+  const timerRef = useRef<number>(0);
+
+  if (sessions.length === 0) {
+    return <div style={styles.sessionsHeader}>Sessions</div>;
+  }
+
+  return (
+    <div style={{ ...styles.sessionsHeader, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+      <span>Sessions</span>
+      <button
+        style={{
+          border: "none",
+          background: "transparent",
+          padding: "0 2px",
+          cursor: "pointer",
+          fontSize: 9,
+          fontWeight: 600,
+          fontFamily: fontStack,
+          letterSpacing: "0.04em",
+          color: confirm ? tokens.danger : tokens.fgPlaceholder,
+          transition: "color 150ms ease-out",
+          textTransform: "uppercase" as const,
+          lineHeight: 1,
+        }}
+        onClick={() => {
+          if (confirm) {
+            clearTimeout(timerRef.current);
+            setConfirm(false);
+            onClearAll();
+          } else {
+            setConfirm(true);
+            timerRef.current = window.setTimeout(() => setConfirm(false), 2500);
+          }
+        }}
+        onMouseEnter={(e) => {
+          if (!confirm) e.currentTarget.style.color = tokens.fgMuted;
+        }}
+        onMouseLeave={(e) => {
+          if (!confirm) e.currentTarget.style.color = tokens.fgPlaceholder;
+        }}
+        title="Delete all sessions"
+      >
+        {confirm ? "Sure?" : "Clear all"}
+      </button>
+    </div>
+  );
+}
+
 // ── Main Component ──────────────────────────────────────────
 
 export default function ComparatorPage() {
@@ -721,7 +779,11 @@ export default function ComparatorPage() {
         <div style={{ margin: "0 12px", height: 1, background: tokens.separator, flexShrink: 0 }} />
 
         {/* Sessions header */}
-        <div style={styles.sessionsHeader}>Sessions</div>
+        <ClearAllHeader sessions={sessions} onClearAll={() => {
+          // Delete all sessions sequentially; reset active state first
+          setPhase("setup");
+          Promise.allSettled(sessions.map((s) => deleteSession(s.id))).then(() => {});
+        }} />
 
         {/* Session list */}
         <div style={styles.sessionsList} className="comparator-rail">
