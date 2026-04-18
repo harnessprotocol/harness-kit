@@ -19,7 +19,7 @@ export interface ServiceHealthContextValue {
   onTransition: (cb: TransitionCallback) => () => void;
 }
 
-type TransitionCallback = (id: ServiceId, from: ServiceStatus, to: ServiceStatus) => void;
+export type TransitionCallback = (id: ServiceId, from: ServiceStatus, to: ServiceStatus) => void;
 
 const INITIAL: ServiceHealth[] = [
   { id: "board",    label: "Board & Roadmap", status: "unknown", lastUp: null, error: null },
