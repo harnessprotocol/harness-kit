@@ -95,12 +95,16 @@ Once connected, Claude Code has direct access to these tools — no skill invoca
 **Token-savings telemetry.** Every `search_nodes` and `open_nodes` response includes a `_membrain` stats block showing retrieved tokens vs. full-graph baseline and the percentage saved. On a mature graph this typically saves 80–95% of context overhead per query.
 
 ```json
-"_membrain": {
-  "retrieved_entities": 4,
-  "total_entities": 312,
-  "retrieved_tokens": 180,
-  "baseline_tokens": 14200,
-  "savings_pct": 98.7
+{
+  "entities": [...],
+  "relations": [...],
+  "_membrain": {
+    "retrieved_entities": 4,
+    "total_entities": 312,
+    "retrieved_tokens": 180,
+    "baseline_tokens": 14200,
+    "savings_pct": 98.7
+  }
 }
 ```
 
