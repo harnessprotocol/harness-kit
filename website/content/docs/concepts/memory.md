@@ -64,7 +64,7 @@ membrain registers tools and resources your agent can call directly during any s
 
 ## Token efficiency
 
-A naive memory implementation dumps the entire graph into every context window. membrain's `search_nodes` and `open_nodes` return a `_membrain.retrievalStats` block alongside results — showing exactly how many tokens were retrieved vs. what a full dump would have cost and the percentage saved. On a mature graph this typically saves 80–95% of context overhead per query.
+A naive memory implementation dumps the entire graph into every context window. membrain's `search_nodes` and `open_nodes` return a `_membrain` stats block alongside results — showing exactly how many tokens were retrieved vs. what a full dump would have cost and the percentage saved. On a mature graph this typically saves 80–95% of context overhead per query.
 
 ## Getting started
 
