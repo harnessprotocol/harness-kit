@@ -222,7 +222,6 @@ export function DesktopMock({
       aria-hidden="true"
       tabIndex={interactive ? 0 : -1}
       onKeyDown={handleKeyDown}
-      style={{ outline: 'none' }}
     >
       {/* Title bar */}
       <div className={styles.titlebar}>
