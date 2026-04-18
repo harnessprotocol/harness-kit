@@ -848,8 +848,8 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Account status — only shown when no data exists (diagnostic aid for first-time setup) */}
-      {(cache?.totalSessions ?? 0) === 0 && liveActivity.length === 0 && (
+      {/* Account status — shown when not logged in, or when no data exists yet */}
+      {((account && !account.logged_in) || ((cache?.totalSessions ?? 0) === 0 && liveActivity.length === 0)) && (
         <div style={{ marginBottom: "18px" }}>
           <AccountStatusBadge account={account} monthlyTokens={monthlyTokens} loading={accountLoading} />
         </div>

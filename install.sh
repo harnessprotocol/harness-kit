@@ -45,16 +45,35 @@ data = json.loads(sys.stdin.read())
 print('\n'.join(p['name'] for p in data['plugins']))
 " <<< "$MARKETPLACE_JSON")
 
+  # Fetch skill listing for each plugin.
+  # Most plugins have a single skill matching the plugin name.
+  # Multi-skill plugins (e.g. harness-share) list skills in plugin.json — we discover
+  # them dynamically so every skill is installed, not just the first one.
   for plugin in "${PLUGINS[@]}"; do
-    dest="${SKILLS_DEST}/${plugin}"
-    mkdir -p "$dest"
-    skill_url="${RAW_BASE}/plugins/${plugin}/skills/${plugin}/SKILL.md"
-    if curl -fsSL "$skill_url" -o "${dest}/SKILL.md"; then
-      curl -fsSL "${RAW_BASE}/plugins/${plugin}/skills/${plugin}/README.md" -o "${dest}/README.md" || true
-      echo "  ~/.claude/skills/${plugin}/"
-    else
-      rmdir "$dest" 2>/dev/null || true
-    fi
+    plugin_json_url="${RAW_BASE}/plugins/${plugin}/.claude-plugin/plugin.json"
+    plugin_json=$(curl -fsSL "$plugin_json_url" 2>/dev/null || echo "{}")
+    skill_names=$(python3 -c "
+import json, sys
+data = json.loads(sys.stdin.read())
+skills = data.get('skills', [])
+if skills:
+    print('\n'.join(s['name'] for s in skills))
+else:
+    print('$plugin')
+" <<< "$plugin_json")
+
+    while IFS= read -r skill; do
+      dest="${SKILLS_DEST}/${skill}"
+      mkdir -p "$dest"
+      skill_url="${RAW_BASE}/plugins/${plugin}/skills/${skill}/SKILL.md"
+      if curl -fsSL "$skill_url" -o "${dest}/SKILL.md"; then
+        curl -fsSL "${RAW_BASE}/plugins/${plugin}/skills/${skill}/README.md" -o "${dest}/README.md" 2>/dev/null || true
+        echo "  ~/.claude/skills/${skill}/"
+      else
+        echo "  [warn] Could not download ${plugin}/${skill} — skipping" >&2
+        rmdir "$dest" 2>/dev/null || true
+      fi
+    done <<< "$skill_names"
   done
 
   echo "Installed all skills."
