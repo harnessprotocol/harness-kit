@@ -42,26 +42,32 @@ function computeAggregate(services: ServiceHealth[]): AggregateStatus {
 const ServiceHealthContext = createContext<ServiceHealthContextValue | null>(null);
 
 export function ServiceHealthProvider({ children }: { children: React.ReactNode }) {
-  const [services, setServices] = useState<ServiceHealth[]>(INITIAL);
+  const servicesRef = useRef<ServiceHealth[]>(INITIAL);
+  const [services, setServices] = useState<ServiceHealth[]>(() => {
+    servicesRef.current = INITIAL;
+    return INITIAL;
+  });
   const listenersRef = useRef<Set<TransitionCallback>>(new Set());
 
   const report = useCallback((id: ServiceId, status: ServiceStatus, error?: string) => {
-    setServices((prev) => {
-      const idx = prev.findIndex((s) => s.id === id);
-      if (idx === -1) return prev;
-      const old = prev[idx];
-      if (old.status === status) return prev;
-      // Fire transition callbacks
-      listenersRef.current.forEach((cb) => cb(id, old.status, status));
-      const updated = [...prev];
-      updated[idx] = {
-        ...old,
-        status,
-        lastUp: status === "up" ? Date.now() : old.lastUp,
-        error: error ?? null,
-      };
-      return updated;
-    });
+    const prev = servicesRef.current;
+    const idx = prev.findIndex((s) => s.id === id);
+    if (idx === -1) return;
+    const old = prev[idx];
+    if (old.status === status) return;
+
+    // Fire callbacks OUTSIDE the state updater to avoid Strict Mode double-invocation
+    listenersRef.current.forEach((cb) => cb(id, old.status, status));
+
+    const updated = [...prev];
+    updated[idx] = {
+      ...old,
+      status,
+      lastUp: status === "up" ? Date.now() : old.lastUp,
+      error: error ?? null,
+    };
+    servicesRef.current = updated;
+    setServices(updated);
   }, []);
 
   const onTransition = useCallback((cb: TransitionCallback) => {
