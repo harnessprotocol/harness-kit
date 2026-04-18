@@ -224,106 +224,69 @@ pub async fn get_diff_against_commit(
     Ok(results)
 }
 
-/// Check how many commits the installed build is behind origin/main.
+/// Check whether a newer release is available on GitHub.
 ///
-/// `repo_path` — absolute path to the harness-kit repo root (embedded at build time).
-/// `installed_sha` — the git SHA that was HEAD when the app was built (embedded at build time).
+/// Hits the GitHub Releases API — no local git repo required.
+/// Works in shipped .app builds where VITE_REPO_PATH / VITE_GIT_SHA are unavailable.
 #[tauri::command]
-pub async fn check_for_updates(
-    app: AppHandle,
-    repo_path: String,
-    installed_sha: String,
-) -> UpdateStatus {
-    let shell = app.shell();
+pub async fn check_for_updates(app: AppHandle) -> UpdateStatus {
+    let current = app.package_info().version.to_string();
 
-    // Verify the path is a git repo
-    let check = shell.command("git")
-        .args(["rev-parse", "--is-inside-work-tree"])
-        .current_dir(&repo_path)
-        .output()
-        .await;
-
-    if check.map(|o| !o.status.success()).unwrap_or(true) {
-        return UpdateStatus {
-            local_sha: installed_sha,
+    let client = match reqwest::Client::builder()
+        .user_agent("harness-kit-desktop")
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+    {
+        Ok(c) => c,
+        Err(e) => return UpdateStatus {
+            local_sha: current,
             remote_sha: String::new(),
             commits_behind: 0,
             up_to_date: true,
-            error: Some(format!("Not a git repo: {}", repo_path)),
-        };
-    }
+            error: Some(e.to_string()),
+        },
+    };
 
-    // Validate installed_sha to prevent git flag injection — same pattern as get_diff_against_commit.
-    // A valid SHA is exactly 40 hex characters.
-    if installed_sha.len() != 40 || !installed_sha.chars().all(|c| c.is_ascii_hexdigit()) {
-        return UpdateStatus {
-            local_sha: installed_sha,
+    let resp = client
+        .get("https://api.github.com/repos/harnessprotocol/harness-kit/releases/latest")
+        .send()
+        .await;
+
+    let body = match resp {
+        Ok(r) if r.status().is_success() => match r.json::<serde_json::Value>().await {
+            Ok(v) => v,
+            Err(e) => return UpdateStatus {
+                local_sha: current,
+                remote_sha: String::new(),
+                commits_behind: 0,
+                up_to_date: true,
+                error: Some(format!("Parse error: {}", e)),
+            },
+        },
+        Ok(r) => return UpdateStatus {
+            local_sha: current,
             remote_sha: String::new(),
             commits_behind: 0,
             up_to_date: true,
-            error: Some("Invalid SHA format".to_string()),
-        };
-    }
-
-    // Fetch origin/main (silent, best-effort)
-    let _ = shell.command("git")
-        .args(["fetch", "origin", "main", "--quiet"])
-        .current_dir(&repo_path)
-        .output()
-        .await;
-
-    // Get SHA of origin/main
-    let remote_out = shell.command("git")
-        .args(["rev-parse", "origin/main"])
-        .current_dir(&repo_path)
-        .output()
-        .await;
-
-    let remote_sha = match remote_out {
-        Ok(o) if o.status.success() => {
-            String::from_utf8_lossy(&o.stdout).trim().to_string()
-        }
-        Ok(o) => {
-            let err = String::from_utf8_lossy(&o.stderr).trim().to_string();
-            return UpdateStatus {
-                local_sha: installed_sha,
-                remote_sha: String::new(),
-                commits_behind: 0,
-                up_to_date: true,
-                error: Some(format!("Could not resolve origin/main: {}", err)),
-            };
-        }
-        Err(e) => {
-            return UpdateStatus {
-                local_sha: installed_sha,
-                remote_sha: String::new(),
-                commits_behind: 0,
-                up_to_date: true,
-                error: Some(e.to_string()),
-            };
-        }
+            error: Some(format!("GitHub API returned {}", r.status())),
+        },
+        Err(e) => return UpdateStatus {
+            local_sha: current,
+            remote_sha: String::new(),
+            commits_behind: 0,
+            up_to_date: true,
+            error: Some(e.to_string()),
+        },
     };
 
-    // Count commits between installed SHA and origin/main
-    let count_out = shell.command("git")
-        .args(["rev-list", "--count", &format!("{}..origin/main", installed_sha)])
-        .current_dir(&repo_path)
-        .output()
-        .await;
-
-    let commits_behind = match count_out {
-        Ok(o) if o.status.success() => {
-            let s = String::from_utf8_lossy(&o.stdout).trim().to_string();
-            s.parse::<u32>().unwrap_or(0)
-        }
-        _ => 0,
-    };
+    let latest_tag = body["tag_name"].as_str().unwrap_or("").trim_start_matches('v');
+    let up_to_date = latest_tag.is_empty() || latest_tag == current;
 
     UpdateStatus {
-        local_sha: installed_sha,
-        remote_sha: remote_sha.clone(),
-        commits_behind,
-        up_to_date: commits_behind == 0,
+        local_sha: current,
+        remote_sha: latest_tag.to_string(),
+        commits_behind: if up_to_date { 0 } else { 1 },
+        up_to_date,
         error: None,
     }
 }

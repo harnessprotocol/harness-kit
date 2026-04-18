@@ -134,11 +134,8 @@ export default function PreferencesPage() {
   }, []);
 
   useEffect(() => {
-    const repoPath = import.meta.env.VITE_REPO_PATH;
-    const installedSha = import.meta.env.VITE_GIT_SHA;
-    if (!repoPath || !installedSha || installedSha === "unknown") return;
     setUpdateChecking(true);
-    invoke<UpdateStatus>("check_for_updates", { repoPath, installedSha })
+    invoke<UpdateStatus>("check_for_updates")
       .then(setUpdateStatus)
       .catch(() => {})
       .finally(() => setUpdateChecking(false));
