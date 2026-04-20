@@ -103,6 +103,20 @@ describe("sidebar renders all nav sections", () => {
   });
 });
 
+describe("ServiceHealthProvider requirement", () => {
+  it("throws when ServiceHealthProvider is absent", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(() => {
+      render(
+        <MemoryRouter initialEntries={["/harness/plugins"]}>
+          <AppLayout />
+        </MemoryRouter>,
+      );
+    }).toThrow("useServiceHealth must be used within ServiceHealthProvider");
+    spy.mockRestore();
+  });
+});
+
 describe("titlebar drag", () => {
   it("calls startDragging on mousedown in the drag region", async () => {
     mockStartDragging.mockClear();
