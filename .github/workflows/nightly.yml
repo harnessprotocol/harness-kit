@@ -1,0 +1,197 @@
+name: Nightly
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: nightly
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build-cli-standalone:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @harness-kit/shared build
+          pnpm --filter @harness-kit/core build
+
+      - name: Build standalone bundle
+        working-directory: apps/cli
+        run: pnpm tsup --config tsup.config.standalone.ts
+
+      - name: Create Node SEA blob
+        working-directory: apps/cli
+        run: node --experimental-sea-config sea-config.json
+
+      - name: Inject blob into Node binary
+        working-directory: apps/cli
+        run: |
+          cp "$(which node)" dist/harness-kit
+          codesign --remove-signature dist/harness-kit
+          npx postject dist/harness-kit NODE_SEA_BLOB dist/sea-prep.blob \
+            --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6ac44c7683b9e78a1 \
+            --macho-segment-name NODE_SEA
+          codesign --sign - dist/harness-kit
+
+      - name: Smoke test standalone binary
+        working-directory: apps/cli
+        run: ./dist/harness-kit --version
+
+      - name: Package standalone binary
+        working-directory: apps/cli
+        run: |
+          cp dist/harness-kit harness-kit
+          tar -czf harness-kit-nightly-darwin-arm64.tar.gz harness-kit
+          rm harness-kit
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cli-standalone-darwin-arm64
+          path: apps/cli/harness-kit-nightly-darwin-arm64.tar.gz
+          retention-days: 1
+
+  build-desktop:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace dependencies
+        run: |
+          pnpm --filter @harness-kit/shared build
+          pnpm --filter @harness-kit/core build
+          pnpm --filter board-server build
+
+      - name: Build desktop app
+        run: pnpm --filter harness-kit-desktop tauri build
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ""
+
+      - name: Locate and rename DMG
+        id: dmg
+        run: |
+          DMG=$(find apps/desktop/src-tauri/target/release/bundle -name "*.dmg" | head -1)
+          if [[ -z "$DMG" ]]; then
+            echo "::error::No .dmg found after tauri build"
+            exit 1
+          fi
+          cp "$DMG" "HarnessKit-nightly-darwin-arm64.dmg"
+          echo "path=HarnessKit-nightly-darwin-arm64.dmg" >> "$GITHUB_OUTPUT"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-darwin-arm64
+          path: ${{ steps.dmg.outputs.path }}
+          retention-days: 1
+
+  publish:
+    needs: [build-cli-standalone, build-desktop]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Download CLI standalone artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: cli-standalone-darwin-arm64
+
+      - name: Download desktop artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: desktop-darwin-arm64
+
+      - name: Compute SHA256 checksums
+        id: sha
+        run: |
+          CLI_SHA=$(sha256sum harness-kit-nightly-darwin-arm64.tar.gz | awk '{print $1}')
+          DMG_SHA=$(sha256sum HarnessKit-nightly-darwin-arm64.dmg | awk '{print $1}')
+          echo "cli_sha=$CLI_SHA" >> "$GITHUB_OUTPUT"
+          echo "dmg_sha=$DMG_SHA" >> "$GITHUB_OUTPUT"
+          echo "date=$(date +%Y%m%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Publish rolling nightly release
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          SHA=${{ github.sha }}
+
+          # Delete existing release and tag so we can recreate clean
+          gh release delete nightly --yes 2>/dev/null || true
+          git push origin :refs/tags/nightly 2>/dev/null || true
+
+          gh release create nightly \
+            --title "Nightly ($DATE)" \
+            --notes "Automated nightly build from \`main\`. Commit: [\`${SHA:0:7}\`](https://github.com/harnessprotocol/harness-kit/commit/$SHA)" \
+            --prerelease \
+            --target main \
+            harness-kit-nightly-darwin-arm64.tar.gz \
+            HarnessKit-nightly-darwin-arm64.dmg
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Update Homebrew tap
+        run: |
+          DATE=${{ steps.sha.outputs.date }}
+          CLI_SHA=${{ steps.sha.outputs.cli_sha }}
+          DMG_SHA=${{ steps.sha.outputs.dmg_sha }}
+
+          git clone "https://x-access-token:${{ secrets.TAP_PAT }}@github.com/harnessprotocol/homebrew-tap.git" tap
+          cd tap
+
+          # Formula: harness-kit-nightly (no @ -- Homebrew only supports @ with numeric versions)
+          cp ../homebrew/Formula/harness-kit-nightly.rb Formula/harness-kit-nightly.rb
+          sed -i "s/version \"[^\"]*\"/version \"${DATE}\"/" Formula/harness-kit-nightly.rb
+          sed -i "s/sha256 \"[^\"]*\"/sha256 \"${CLI_SHA}\"/" Formula/harness-kit-nightly.rb
+
+          # Cask: harness-kit@nightly (@ works fine for casks)
+          cp ../homebrew/Casks/harness-kit-nightly.rb "Casks/harness-kit@nightly.rb"
+          sed -i "s/version \"[^\"]*\"/version \"${DATE}\"/" "Casks/harness-kit@nightly.rb"
+          awk -v sha="$DMG_SHA" '
+            /^  sha256 "/ && !replaced { sub(/"[^"]*"/, "\"" sha "\""); replaced=1 }
+            { print }
+          ' "Casks/harness-kit@nightly.rb" > "Casks/harness-kit@nightly.rb.tmp"
+          mv "Casks/harness-kit@nightly.rb.tmp" "Casks/harness-kit@nightly.rb"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/harness-kit-nightly.rb "Casks/harness-kit@nightly.rb"
+          git commit -m "chore: nightly build $(date +%Y-%m-%d) (${GITHUB_SHA:0:7})"
+          git push
+        env:
+          GITHUB_SHA: ${{ github.sha }}
