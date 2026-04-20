@@ -20,6 +20,7 @@ export default function AIChatPage() {
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [baseUrl, setBaseUrl] = useState('http://localhost:11434');
   const [systemPrompt, setSystemPrompt] = useState<string | undefined>(undefined);
+  const [pullStatus, setPullStatus] = useState<{ model: string; percent: number } | null>(null);
 
   // Load runtime base URL once
   useEffect(() => {
@@ -131,6 +132,32 @@ export default function AIChatPage() {
 
   const modelInfo = ollama.models.find((m) => m.name === selectedModel) ?? null;
 
+  // Compute why the input is disabled (if at all)
+  const inputDisabled = !ollama.running || !selectedModel;
+  const disabledReason = (() => {
+    if (ollama.timedOut) return 'Could not connect to Ollama';
+    if (ollama.checking) return 'Checking for Ollama…';
+    if (!ollama.running) return 'Ollama is not running';
+    if (ollama.models.length === 0) return 'No models available — pull one below';
+    if (!selectedModel) return 'Select a model to start';
+    return undefined;
+  })();
+
+  const handlePullModel = useCallback(async (model: string) => {
+    try {
+      setPullStatus({ model, percent: 0 });
+      await ollama.pullModel(model, (p) => {
+        if (p.total && p.total > 0) {
+          setPullStatus({ model, percent: Math.round(((p.completed ?? 0) / p.total) * 100) });
+        }
+      });
+      setPullStatus(null);
+    } catch (e) {
+      setPullStatus(null);
+      console.error('[ai-chat] pull failed:', e);
+    }
+  }, [ollama]);
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', position: 'relative' }}>
       {/* Toolbar */}
@@ -152,10 +179,47 @@ export default function AIChatPage() {
         onToggleInspector={() => setInspectorOpen((o) => !o)}
       />
 
-      {/* Ollama not running notice */}
-      {!ollama.running && (
-        <div className="text-sm text-muted-foreground p-4">
-          Ollama is not running. <a href="https://ollama.ai" target="_blank" rel="noopener" className="underline">Install Ollama</a> to use AI Chat.
+      {/* Status notice */}
+      {!ollama.running && ollama.timedOut && (
+        <div style={{ padding: '12px 16px', fontSize: 13, color: 'var(--fg-muted)', display: 'flex', alignItems: 'center', gap: 8 }}>
+          Could not connect to Ollama. Check that it&rsquo;s running on {baseUrl}.
+          <button
+            onClick={ollama.retry}
+            style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 10px', fontSize: 11, color: 'var(--accent)', cursor: 'pointer' }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+      {!ollama.running && !ollama.timedOut && ollama.checking && (
+        <div style={{ padding: '12px 16px', fontSize: 13, color: 'var(--fg-muted)' }}>
+          Checking for Ollama…
+        </div>
+      )}
+      {!ollama.running && !ollama.timedOut && !ollama.checking && (
+        <div style={{ padding: '12px 16px', fontSize: 13, color: 'var(--fg-muted)' }}>
+          Ollama is not running.{' '}
+          <a href="https://ollama.ai" target="_blank" rel="noopener" style={{ color: 'var(--accent)', textDecoration: 'underline' }}>
+            Install Ollama
+          </a>{' '}
+          to use AI Chat.
+        </div>
+      )}
+      {ollama.running && ollama.models.length === 0 && (
+        <div style={{ padding: '12px 16px', fontSize: 13, color: 'var(--fg-muted)' }}>
+          Ollama is running but no models are installed.{' '}
+          {pullStatus ? (
+            <span style={{ color: 'var(--accent)' }}>
+              Pulling {pullStatus.model}… {pullStatus.percent}%
+            </span>
+          ) : (
+            <button
+              onClick={() => handlePullModel('llama3.2')}
+              style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 4, padding: '2px 10px', fontSize: 11, color: 'var(--accent)', cursor: 'pointer' }}
+            >
+              Pull llama3.2
+            </button>
+          )}
         </div>
       )}
 
@@ -195,7 +259,8 @@ export default function AIChatPage() {
             onSend={handleSend}
             isStreaming={chat.isStreaming}
             onCancel={chat.cancelStream}
-            disabled={!ollama.running || !selectedModel}
+            disabled={inputDisabled}
+            disabledReason={disabledReason}
           />
         </div>
 

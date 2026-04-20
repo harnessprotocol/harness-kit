@@ -2445,6 +2445,18 @@
           "markdownDescription": "Enables the destroy_terminal command without any pre-configured scope."
         },
         {
+          "description": "Enables the detect_agents command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-detect-agents",
+          "markdownDescription": "Enables the detect_agents command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the detect_claude_account command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-detect-claude-account",
+          "markdownDescription": "Enables the detect_claude_account command without any pre-configured scope."
+        },
+        {
           "description": "Enables the detect_harnesses command without any pre-configured scope.",
           "type": "string",
           "const": "allow-detect-harnesses",
@@ -2529,10 +2541,28 @@
           "markdownDescription": "Enables the get_evaluations command without any pre-configured scope."
         },
         {
+          "description": "Enables the get_harness_health command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-harness-health",
+          "markdownDescription": "Enables the get_harness_health command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_harness_recommendations command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-harness-recommendations",
+          "markdownDescription": "Enables the get_harness_recommendations command without any pre-configured scope."
+        },
+        {
           "description": "Enables the get_history_size command without any pre-configured scope.",
           "type": "string",
           "const": "allow-get-history-size",
           "markdownDescription": "Enables the get_history_size command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_ollama_version command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-ollama-version",
+          "markdownDescription": "Enables the get_ollama_version command without any pre-configured scope."
         },
         {
           "description": "Enables the get_pairwise_analytics command without any pre-configured scope.",
@@ -2647,6 +2677,12 @@
           "type": "string",
           "const": "allow-list-required-env",
           "markdownDescription": "Enables the list_required_env command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the list_running_models command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-list-running-models",
+          "markdownDescription": "Enables the list_running_models command without any pre-configured scope."
         },
         {
           "description": "Enables the list_security_presets command without any pre-configured scope.",
@@ -2787,6 +2823,12 @@
           "markdownDescription": "Enables the read_stats_cache command without any pre-configured scope."
         },
         {
+          "description": "Enables the record_harness_launch_result command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-record-harness-launch-result",
+          "markdownDescription": "Enables the record_harness_launch_result command without any pre-configured scope."
+        },
+        {
           "description": "Enables the remove_worktrees command without any pre-configured scope.",
           "type": "string",
           "const": "allow-remove-worktrees",
@@ -2871,6 +2913,12 @@
           "markdownDescription": "Enables the set_keychain_secret command without any pre-configured scope."
         },
         {
+          "description": "Enables the show_model command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-show-model",
+          "markdownDescription": "Enables the show_model command without any pre-configured scope."
+        },
+        {
           "description": "Enables the stream_chat command without any pre-configured scope.",
           "type": "string",
           "const": "allow-stream-chat",
@@ -2925,6 +2973,12 @@
           "markdownDescription": "Enables the sync_write_files command without any pre-configured scope."
         },
         {
+          "description": "Enables the tag_comparison_task_type command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-tag-comparison-task-type",
+          "markdownDescription": "Enables the tag_comparison_task_type command without any pre-configured scope."
+        },
+        {
           "description": "Enables the trigger_rebuild command without any pre-configured scope.",
           "type": "string",
           "const": "allow-trigger-rebuild",
@@ -2935,6 +2989,12 @@
           "type": "string",
           "const": "allow-uninstall-plugin",
           "markdownDescription": "Enables the uninstall_plugin command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the update_ai_session_prompt command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-update-ai-session-prompt",
+          "markdownDescription": "Enables the update_ai_session_prompt command without any pre-configured scope."
         },
         {
           "description": "Enables the update_ai_session_title command without any pre-configured scope.",
@@ -3243,6 +3303,18 @@
           "markdownDescription": "Denies the destroy_terminal command without any pre-configured scope."
         },
         {
+          "description": "Denies the detect_agents command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-detect-agents",
+          "markdownDescription": "Denies the detect_agents command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the detect_claude_account command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-detect-claude-account",
+          "markdownDescription": "Denies the detect_claude_account command without any pre-configured scope."
+        },
+        {
           "description": "Denies the detect_harnesses command without any pre-configured scope.",
           "type": "string",
           "const": "deny-detect-harnesses",
@@ -3327,10 +3399,28 @@
           "markdownDescription": "Denies the get_evaluations command without any pre-configured scope."
         },
         {
+          "description": "Denies the get_harness_health command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-harness-health",
+          "markdownDescription": "Denies the get_harness_health command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_harness_recommendations command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-harness-recommendations",
+          "markdownDescription": "Denies the get_harness_recommendations command without any pre-configured scope."
+        },
+        {
           "description": "Denies the get_history_size command without any pre-configured scope.",
           "type": "string",
           "const": "deny-get-history-size",
           "markdownDescription": "Denies the get_history_size command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_ollama_version command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-ollama-version",
+          "markdownDescription": "Denies the get_ollama_version command without any pre-configured scope."
         },
         {
           "description": "Denies the get_pairwise_analytics command without any pre-configured scope.",
@@ -3445,6 +3535,12 @@
           "type": "string",
           "const": "deny-list-required-env",
           "markdownDescription": "Denies the list_required_env command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the list_running_models command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-list-running-models",
+          "markdownDescription": "Denies the list_running_models command without any pre-configured scope."
         },
         {
           "description": "Denies the list_security_presets command without any pre-configured scope.",
@@ -3585,6 +3681,12 @@
           "markdownDescription": "Denies the read_stats_cache command without any pre-configured scope."
         },
         {
+          "description": "Denies the record_harness_launch_result command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-record-harness-launch-result",
+          "markdownDescription": "Denies the record_harness_launch_result command without any pre-configured scope."
+        },
+        {
           "description": "Denies the remove_worktrees command without any pre-configured scope.",
           "type": "string",
           "const": "deny-remove-worktrees",
@@ -3669,6 +3771,12 @@
           "markdownDescription": "Denies the set_keychain_secret command without any pre-configured scope."
         },
         {
+          "description": "Denies the show_model command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-show-model",
+          "markdownDescription": "Denies the show_model command without any pre-configured scope."
+        },
+        {
           "description": "Denies the stream_chat command without any pre-configured scope.",
           "type": "string",
           "const": "deny-stream-chat",
@@ -3723,6 +3831,12 @@
           "markdownDescription": "Denies the sync_write_files command without any pre-configured scope."
         },
         {
+          "description": "Denies the tag_comparison_task_type command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-tag-comparison-task-type",
+          "markdownDescription": "Denies the tag_comparison_task_type command without any pre-configured scope."
+        },
+        {
           "description": "Denies the trigger_rebuild command without any pre-configured scope.",
           "type": "string",
           "const": "deny-trigger-rebuild",
@@ -3733,6 +3847,12 @@
           "type": "string",
           "const": "deny-uninstall-plugin",
           "markdownDescription": "Denies the uninstall_plugin command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the update_ai_session_prompt command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-update-ai-session-prompt",
+          "markdownDescription": "Denies the update_ai_session_prompt command without any pre-configured scope."
         },
         {
           "description": "Denies the update_ai_session_title command without any pre-configured scope.",

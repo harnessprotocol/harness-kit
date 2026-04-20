@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-update-ai-session-prompt"
+description = "Enables the update_ai_session_prompt command without any pre-configured scope."
+commands.allow = ["update_ai_session_prompt"]
+
+[[permission]]
+identifier = "deny-update-ai-session-prompt"
+description = "Denies the update_ai_session_prompt command without any pre-configured scope."
+commands.deny = ["update_ai_session_prompt"]

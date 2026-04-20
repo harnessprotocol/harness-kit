@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-ollama-version"
+description = "Enables the get_ollama_version command without any pre-configured scope."
+commands.allow = ["get_ollama_version"]
+
+[[permission]]
+identifier = "deny-get-ollama-version"
+description = "Denies the get_ollama_version command without any pre-configured scope."
+commands.deny = ["get_ollama_version"]

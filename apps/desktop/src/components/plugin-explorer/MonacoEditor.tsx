@@ -1,5 +1,19 @@
 import { useRef, useEffect, useCallback } from "react";
 import Editor, { type OnMount, type Monaco } from "@monaco-editor/react";
+
+// Monaco loads language workers via `new Worker(new URL(..., import.meta.url), { type: 'module' })`.
+// Tauri's WKWebView rejects these module worker imports with "Importing a module script failed."
+// Setting MonacoEnvironment before the editor mounts redirects worker creation to a no-op blob
+// worker, which satisfies Monaco's protocol without triggering the WebView restriction.
+// Basic tokenization (YAML, JSON, Markdown) still works via Monaco's synchronous tokenizers.
+if (!window.MonacoEnvironment) {
+  window.MonacoEnvironment = {
+    getWorker(_moduleId: string, _label: string): Worker {
+      const blob = new Blob(["self.onmessage=function(){};"], { type: "application/javascript" });
+      return new Worker(URL.createObjectURL(blob));
+    },
+  };
+}
 import type { editor } from "monaco-editor";
 
 const EXT_TO_LANGUAGE: Record<string, string> = {
