@@ -6,7 +6,7 @@ import type { ServiceId, ServiceStatus } from "../contexts/ServiceHealthContext"
 interface Toast {
   id: number;
   message: string;
-  type: "info" | "warning" | "success";
+  type: "warning" | "success";
 }
 
 let toastId = 0;
@@ -71,12 +71,8 @@ export function ToastManager() {
             fontSize: 12,
             fontWeight: 500,
             fontFamily: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif',
-            background: toast.type === "success"
-              ? "var(--success)"
-              : toast.type === "warning"
-                ? "var(--warning)"
-                : "var(--bg-elevated)",
-            color: toast.type === "info" ? "var(--fg-base)" : "#fff",
+            background: toast.type === "success" ? "var(--success)" : "var(--warning)",
+            color: "#fff",
             boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
             animation: "toast-slide-in 200ms ease-out",
           }}

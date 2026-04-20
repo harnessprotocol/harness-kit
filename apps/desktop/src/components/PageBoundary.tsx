@@ -2,7 +2,6 @@ import React, { Suspense } from "react";
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
-  onReset: () => void;
 }
 
 interface ErrorBoundaryState {
@@ -20,7 +19,9 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error("[PageBoundary]", error, info.componentStack);
+    if (import.meta.env.DEV) {
+      console.error("[PageBoundary]", error, info.componentStack);
+    }
   }
 
   render() {
@@ -101,11 +102,8 @@ interface PageBoundaryProps {
 }
 
 export function PageBoundary({ children, locationKey }: PageBoundaryProps) {
-  const [resetKey, setResetKey] = React.useState(0);
-  const handleReset = React.useCallback(() => setResetKey((k) => k + 1), []);
-
   return (
-    <ErrorBoundary key={`${locationKey ?? ""}-${resetKey}`} onReset={handleReset}>
+    <ErrorBoundary key={locationKey ?? ""}>
       <Suspense fallback={<PageLoader />}>
         {children}
       </Suspense>
