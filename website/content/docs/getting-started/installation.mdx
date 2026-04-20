@@ -10,7 +10,7 @@ description: Three ways to install harness-kit — pick what fits your workflow.
 
 The full harness-kit experience. Observatory, Memory, Board, and AI Chat — all in one native app with a visual interface for managing your AI tool configurations.
 
-<Tabs items={["Homebrew", "DMG"]}>
+<Tabs items={["Homebrew", "DMG", "Nightly"]}>
 <Tab value="Homebrew">
 <Steps>
 <Step>
@@ -63,6 +63,39 @@ xattr -cr "/Applications/Harness Kit.app"
 **Launch from Applications or Spotlight**
 </Step>
 </Steps>
+</Tab>
+
+<Tab value="Nightly">
+<Steps>
+<Step>
+**Install the nightly build**
+
+Rebuilt daily from `main`. Use this to get the latest features before a stable release.
+
+```bash
+brew tap harnessprotocol/tap
+brew install --cask harnessprotocol/tap/'harness-kit@nightly'
+```
+</Step>
+<Step>
+**Clear the quarantine flag**
+
+```bash
+xattr -cr "/Applications/Harness Kit.app"
+```
+</Step>
+<Step>
+**To switch back to stable**
+
+```bash
+brew uninstall --cask harnessprotocol/tap/'harness-kit@nightly'
+brew install --cask harnessprotocol/tap/harness-kit
+```
+</Step>
+</Steps>
+<Callout type="warn" title="Nightly builds may be unstable">
+  These are unversioned builds from the tip of `main`. Rebuilt every day at midnight UTC. Data formats and APIs may change without notice.
+</Callout>
 </Tab>
 </Tabs>
 
@@ -126,7 +159,7 @@ This copies skill files to `~/.claude/skills/` over HTTPS. Bundled scripts (like
 
 Compile `harness.yaml`, sync plugins, detect drift — from the terminal.
 
-<Tabs items={["Homebrew", "npm", "Binary"]}>
+<Tabs items={["Homebrew", "npm", "Binary", "Nightly"]}>
 <Tab value="Homebrew">
 ```bash
 brew tap harnessprotocol/tap
@@ -150,6 +183,15 @@ tar -xzf harness-darwin-arm64.tar.gz
 chmod +x harness
 sudo mv harness /usr/local/bin/
 ```
+</Tab>
+
+<Tab value="Nightly">
+```bash
+brew tap harnessprotocol/tap
+brew install harnessprotocol/tap/harness-kit-nightly
+```
+
+Latest build from `main`. Rebuilt daily at midnight UTC. Installs as `harness-kit` binary.
 </Tab>
 </Tabs>
 
