@@ -1,4 +1,6 @@
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
+import { nextBackoffMs, resetBackoffMs } from '../lib/backoff';
+import { useServiceHealth } from '../contexts/ServiceHealthContext';
 import type {
   AnyMessage,
   Member,
@@ -72,6 +74,7 @@ function saveNick(nick: string) {
 // ── Hook ─────────────────────────────────────────────────────
 
 export function useChatRelay(): UseChatRelayReturn {
+  const { report } = useServiceHealth();
   const wsRef = useRef<WebSocket | null>(null);
   const mountedRef = useRef(true);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -322,6 +325,8 @@ export function useChatRelay(): UseChatRelayReturn {
     saveServer(serverUrl);
     setState({ status: "connecting" });
 
+    let reconnectMs = resetBackoffMs();
+
     try {
       const ws = new WebSocket(serverUrl);
       wsRef.current = ws;
@@ -329,6 +334,8 @@ export function useChatRelay(): UseChatRelayReturn {
       ws.onopen = () => {
         if (connIdRef.current !== connId) { ws.close(); return; }
         if (!mountedRef.current) return;
+        report("chat", "up");
+        reconnectMs = resetBackoffMs();
         setState({ status: "connected", serverUrl });
         // Auto-rejoin previous room if connection was re-established
         if (lastRoomRef.current) {
@@ -349,6 +356,7 @@ export function useChatRelay(): UseChatRelayReturn {
       ws.onclose = () => {
         if (connIdRef.current !== connId) return;
         if (!mountedRef.current) return;
+        report("chat", "down");
         // If we were in a room, drop back to connected-but-not-in-room
         const cur = stateRef.current;
         if (cur.status === "in_room") {
@@ -356,7 +364,8 @@ export function useChatRelay(): UseChatRelayReturn {
           // Attempt reconnect
           reconnectTimerRef.current = setTimeout(() => {
             if (mountedRef.current) connect(cur.serverUrl);
-          }, 2000);
+          }, reconnectMs);
+          reconnectMs = nextBackoffMs(reconnectMs);
         } else if (cur.status === "connected") {
           setState({ status: "disconnected" });
         } else {
@@ -366,10 +375,12 @@ export function useChatRelay(): UseChatRelayReturn {
 
       ws.onerror = () => ws.close();
     } catch {
+      report("chat", "down");
       setState({ status: "disconnected" });
       reconnectTimerRef.current = setTimeout(() => {
         if (mountedRef.current) connect(serverUrl);
-      }, 5000);
+      }, reconnectMs);
+      reconnectMs = nextBackoffMs(reconnectMs);
     }
   }, [handleServerMessage, send]);
 
