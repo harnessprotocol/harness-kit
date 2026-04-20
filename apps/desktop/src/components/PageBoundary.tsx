@@ -7,36 +7,24 @@ interface ErrorBoundaryProps {
 
 interface ErrorBoundaryState {
   error: Error | null;
-  resetting: boolean;
 }
 
-class ErrorBoundary extends React.Component<
-  ErrorBoundaryProps,
-  ErrorBoundaryState
-> {
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { error: null, resetting: false };
+    this.state = { error: null };
   }
 
-  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
-    return { error, resetting: false };
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { error };
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error("[PageBoundary]", error, info.componentStack);
   }
 
-  componentDidUpdate(_prevProps: ErrorBoundaryProps, prevState: ErrorBoundaryState) {
-    if (this.state.resetting && prevState.resetting === this.state.resetting) {
-      // resetting flag is unchanged but something else updated (parent provided
-      // new children). Safe to exit the resetting phase and render children.
-      this.setState({ resetting: false });
-    }
-  }
-
   render() {
-    if (this.state.error && !this.state.resetting) {
+    if (this.state.error) {
       return (
         <div
           data-testid="page-boundary-error"
@@ -67,7 +55,7 @@ class ErrorBoundary extends React.Component<
           )}
           <button
             onClick={() => {
-              this.setState({ error: null, resetting: true });
+              this.setState({ error: null });
             }}
             style={{
               padding: "6px 16px",
@@ -84,10 +72,6 @@ class ErrorBoundary extends React.Component<
           </button>
         </div>
       );
-    }
-
-    if (this.state.resetting) {
-      return null;
     }
 
     return this.props.children;

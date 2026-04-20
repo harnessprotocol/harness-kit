@@ -26,10 +26,17 @@ describe("PageBoundary", () => {
 
   it("retry button resets the boundary", async () => {
     const user = userEvent.setup();
-    const { rerender } = render(<PageBoundary><Bomb shouldThrow /></PageBoundary>);
+    let shouldThrow = true;
+    function DynamicBomb() {
+      if (shouldThrow) throw new Error("test explosion");
+      return <div>Safe content</div>;
+    }
+    render(<PageBoundary><DynamicBomb /></PageBoundary>);
     expect(screen.getByTestId("page-boundary-error")).toBeInTheDocument();
+
+    // Simulate the underlying problem resolving, then user clicks Retry
+    shouldThrow = false;
     await user.click(screen.getByRole("button", { name: /retry/i }));
-    rerender(<PageBoundary><Bomb shouldThrow={false} /></PageBoundary>);
     expect(screen.getByText("Safe content")).toBeInTheDocument();
   });
 
