@@ -45,3 +45,7 @@ Dark and light mode changes in the app are reflected in Membrain automatically.
 
 If the Membrain server goes offline, the view switches to an offline state with a
 restart button. The server can be restarted without restarting the full desktop app.
+
+The title bar health dot reflects the Memory server's status globally. Click it to open
+the Services page, which shows all background servers and lets you check or restart
+them individually.
