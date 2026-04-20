@@ -8,7 +8,7 @@ class HarnessKitNightly < Formula
   depends_on arch: :arm64
 
   def install
-    bin.install "harness-kit"
+    bin.install "harness-kit" => "harness-kit-nightly"
   end
 
   test do

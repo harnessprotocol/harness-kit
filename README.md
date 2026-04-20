@@ -44,7 +44,7 @@ Or download the `.dmg` directly from the [latest release](https://github.com/har
 
 ```bash
 brew tap harnessprotocol/tap  # skip if already added
-brew install harnessprotocol/tap/harness-kit-nightly          # CLI nightly
+brew install harnessprotocol/tap/harness-kit-nightly          # CLI nightly → installs as harness-kit-nightly
 brew install --cask harnessprotocol/tap/'harness-kit@nightly' # desktop nightly
 ```
 
