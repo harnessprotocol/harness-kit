@@ -63,3 +63,7 @@ status is shown on the card and in the detail panel in real time.
 The header shows a live connection indicator. If the board server goes offline, the
 header will display an **Offline** state and you can restart the server using the
 **Restart** button without leaving the board.
+
+The title bar health dot reflects the board server's status globally. Click it to open
+the Services page, which shows all background servers and lets you check or restart
+them individually.

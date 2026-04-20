@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import React from "react";
 import { ChatProvider } from "../../contexts/ChatContext";
+import { ServiceHealthProvider } from "../../contexts/ServiceHealthContext";
 import { useChatRelay } from "../useChatRelay";
 import type { ServerMessage } from "@harness-kit/shared";
 
@@ -54,7 +55,9 @@ vi.stubGlobal("WebSocket", MockWebSocket);
 // ── Helpers ───────────────────────────────────────────────────
 
 function wrapper({ children }: { children: React.ReactNode }) {
-  return React.createElement(ChatProvider, null, children);
+  return React.createElement(ServiceHealthProvider, null,
+    React.createElement(ChatProvider, null, children)
+  );
 }
 
 function renderChat() {

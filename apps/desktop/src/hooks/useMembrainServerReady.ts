@@ -1,3 +1,4 @@
+// apps/desktop/src/hooks/useMembrainServerReady.ts
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { MEMBRAIN_API } from '../lib/membrain-api';
 import {
@@ -5,8 +6,8 @@ import {
   membrainStart,
   membrainStop,
 } from '../lib/tauri';
-
-const MAX_POLLS = 10;
+import { nextBackoffMs, resetBackoffMs } from '../lib/backoff';
+import { useServiceHealth } from '../contexts/ServiceHealthContext';
 
 function fetchWithTimeout(url: string, ms: number): Promise<Response> {
   const controller = new AbortController();
@@ -31,10 +32,10 @@ export function useMembrainServerReady(): MembrainServerReadyState {
   const [installed, setInstalled] = useState<boolean | null>(null);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const pollCount = useRef(0);
   const hasAutoStarted = useRef(false);
+  const intervalRef = useRef<number>(0);
+  const { report } = useServiceHealth();
 
-  // Check if mem binary is on PATH
   useEffect(() => {
     membrainCheckInstalled()
       .then(setInstalled)
@@ -45,38 +46,63 @@ export function useMembrainServerReady(): MembrainServerReadyState {
     if (ready || timedOut) return;
 
     let mounted = true;
-    const check = () => {
+    let backoffMs = resetBackoffMs();
+    let totalWaitMs = 0;
+    const DOWN_THRESHOLD_MS = 60_000;
+    const HEARTBEAT_MS = 30_000;
+
+    function scheduleNext(delay: number) {
+      clearTimeout(intervalRef.current);
+      intervalRef.current = window.setTimeout(tick, delay);
+    }
+
+    function tick() {
       fetchWithTimeout(`${MEMBRAIN_API}/graph/stats`, 1500)
-        .then(res => {
+        .then((res) => {
           if (!mounted) return;
           if (res.ok) {
             setReady(true);
+            setTimedOut(false);
             setStarting(false);
             setError(null);
+            report("membrain", "up");
           } else {
-            pollCount.current += 1;
-            if (pollCount.current >= MAX_POLLS) setTimedOut(true);
+            onFailure();
           }
         })
         .catch(() => {
           if (!mounted) return;
-          pollCount.current += 1;
-          if (pollCount.current >= MAX_POLLS) setTimedOut(true);
-          // Auto-start on first failure if mem is installed
           if (!hasAutoStarted.current && installed === true) {
             hasAutoStarted.current = true;
             membrainStart().catch(() => {});
           }
+          onFailure();
         });
-    };
+    }
 
-    check();
-    const id = setInterval(check, 2000);
-    return () => { mounted = false; clearInterval(id); };
-  }, [ready, timedOut, installed]);
+    function onFailure() {
+      totalWaitMs += backoffMs;
+      if (totalWaitMs >= DOWN_THRESHOLD_MS && !timedOut) {
+        setTimedOut(true);
+        report("membrain", "down");
+        scheduleNext(HEARTBEAT_MS);
+        return;
+      }
+      backoffMs = nextBackoffMs(backoffMs);
+      scheduleNext(backoffMs);
+    }
+
+    report("membrain", "starting");
+    tick();
+
+    return () => {
+      mounted = false;
+      clearTimeout(intervalRef.current);
+    };
+  }, [ready, timedOut, installed, report]);
 
   const retry = useCallback(() => {
-    pollCount.current = 0;
+    hasAutoStarted.current = false;
     setTimedOut(false);
     setReady(false);
     setStarting(false);
@@ -100,10 +126,11 @@ export function useMembrainServerReady(): MembrainServerReadyState {
       await membrainStop();
       setReady(false);
       setTimedOut(false);
+      report("membrain", "down");
     } catch (e) {
       setError(String(e));
     }
-  }, []);
+  }, [report]);
 
   return { ready, timedOut, installed, starting, error, retry, start, stop };
 }

@@ -1,3 +1,4 @@
+// apps/desktop/src/hooks/useBoardServerReady.ts
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { BOARD_SERVER_BASE } from '../lib/board-api';
 import {
@@ -6,8 +7,8 @@ import {
   boardServerStart,
   boardServerRestart,
 } from '../lib/tauri';
-
-const MAX_POLLS = 5;
+import { nextBackoffMs, resetBackoffMs } from '../lib/backoff';
+import { useServiceHealth } from '../contexts/ServiceHealthContext';
 
 function fetchWithTimeout(url: string, ms: number): Promise<Response> {
   const controller = new AbortController();
@@ -33,9 +34,9 @@ export function useBoardServerReady(): BoardServerReadyState {
   const [installed, setInstalled] = useState<boolean | null>(null);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const pollCount = useRef(0);
+  const intervalRef = useRef<number>(0);
+  const { report } = useServiceHealth();
 
-  // Check if plist is installed on mount
   useEffect(() => {
     boardServerCheckInstalled()
       .then(setInstalled)
@@ -46,33 +47,60 @@ export function useBoardServerReady(): BoardServerReadyState {
     if (ready || timedOut) return;
 
     let mounted = true;
-    const check = () => {
+    let backoffMs = resetBackoffMs();
+    // After ~60s total wait, transition to "down" but keep a heartbeat
+    let totalWaitMs = 0;
+    const DOWN_THRESHOLD_MS = 60_000;
+    const HEARTBEAT_MS = 30_000;
+
+    function scheduleNext(delay: number) {
+      clearTimeout(intervalRef.current);
+      intervalRef.current = window.setTimeout(tick, delay);
+    }
+
+    function tick() {
       fetchWithTimeout(`${BOARD_SERVER_BASE}/health`, 1500)
-        .then(res => {
+        .then((res) => {
           if (!mounted) return;
           if (res.ok) {
             setReady(true);
+            setTimedOut(false);
             setStarting(false);
             setError(null);
+            report("board", "up");
           } else {
-            pollCount.current += 1;
-            if (pollCount.current >= MAX_POLLS) setTimedOut(true);
+            onFailure();
           }
         })
         .catch(() => {
           if (!mounted) return;
-          pollCount.current += 1;
-          if (pollCount.current >= MAX_POLLS) setTimedOut(true);
+          onFailure();
         });
-    };
+    }
 
-    check();
-    const id = setInterval(check, 2000);
-    return () => { mounted = false; clearInterval(id); };
-  }, [ready, timedOut]);
+    function onFailure() {
+      totalWaitMs += backoffMs;
+      if (totalWaitMs >= DOWN_THRESHOLD_MS && !timedOut) {
+        setTimedOut(true);
+        report("board", "down");
+        // Keep heartbeat — auto-recover when server comes back
+        scheduleNext(HEARTBEAT_MS);
+        return;
+      }
+      backoffMs = nextBackoffMs(backoffMs);
+      scheduleNext(backoffMs);
+    }
+
+    report("board", "starting");
+    tick();
+
+    return () => {
+      mounted = false;
+      clearTimeout(intervalRef.current);
+    };
+  }, [ready, timedOut, report]);
 
   const retry = useCallback(() => {
-    pollCount.current = 0;
     setTimedOut(false);
     setReady(false);
     setStarting(false);

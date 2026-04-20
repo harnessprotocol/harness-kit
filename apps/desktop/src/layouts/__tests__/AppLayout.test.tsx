@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import React from "react";
 import { MemoryRouter } from "react-router-dom";
 import AppLayout, { NAV_SECTIONS } from "../AppLayout";
 import { NAV_PATHS } from "../../hooks/useGlobalShortcuts";
+import { ServiceHealthProvider } from "../../contexts/ServiceHealthContext";
 
 // ── Mocks ─────────────────────────────────────────────────────
 
@@ -56,9 +58,11 @@ beforeEach(() => {
 
 function renderLayout() {
   return render(
-    <MemoryRouter initialEntries={["/harness/plugins"]}>
-      <AppLayout />
-    </MemoryRouter>,
+    <ServiceHealthProvider>
+      <MemoryRouter initialEntries={["/harness/plugins"]}>
+        <AppLayout />
+      </MemoryRouter>
+    </ServiceHealthProvider>,
   );
 }
 
@@ -96,6 +100,20 @@ describe("sidebar renders all nav sections", () => {
     for (const section of NAV_SECTIONS) {
       expect(screen.getByText(section.label)).toBeInTheDocument();
     }
+  });
+});
+
+describe("ServiceHealthProvider requirement", () => {
+  it("throws when ServiceHealthProvider is absent", () => {
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(() => {
+      render(
+        <MemoryRouter initialEntries={["/harness/plugins"]}>
+          <AppLayout />
+        </MemoryRouter>,
+      );
+    }).toThrow("useServiceHealth must be used within ServiceHealthProvider");
+    spy.mockRestore();
   });
 });
 

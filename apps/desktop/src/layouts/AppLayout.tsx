@@ -11,6 +11,8 @@ import { useChat } from "../contexts/ChatContext";
 import ChatPanel from "../components/chat/ChatPanel";
 import FeedbackModal from "../components/FeedbackModal";
 import { useClaudeFileList } from "../hooks/useClaudeFileList";
+import { useServiceHealth } from "../contexts/ServiceHealthContext";
+import { PageBoundary } from "../components/PageBoundary";
 
 type NavSection = {
   id: string;
@@ -318,6 +320,73 @@ function SidebarSubnav({ children }: { children: { label: string; path: string }
   );
 }
 
+function HealthBadge() {
+  const { services, aggregate } = useServiceHealth();
+  const navigate = useNavigate();
+  const [hovered, setHovered] = useState(false);
+
+  const started = services.filter((s) => s.status !== "unknown");
+  if (started.length === 0) return null;
+
+  const color =
+    aggregate === "all-up" ? "var(--success)" :
+    aggregate === "degraded" ? "var(--warning)" :
+    "var(--danger)";
+
+  return (
+    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+      <div
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: "50%",
+          background: color,
+          cursor: "pointer",
+          transition: "transform 150ms ease",
+          transform: hovered ? "scale(1.3)" : "scale(1)",
+        }}
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onClick={() => navigate("/services")}
+        title="Service health"
+      />
+      {hovered && (
+        <div style={{
+          position: "absolute",
+          top: "calc(100% + 8px)",
+          right: 0,
+          background: "var(--bg-elevated)",
+          border: "1px solid var(--border-base)",
+          borderRadius: 8,
+          padding: "8px 12px",
+          minWidth: 160,
+          boxShadow: "var(--shadow-sm)",
+          zIndex: 100,
+          display: "flex",
+          flexDirection: "column",
+          gap: 6,
+        }}>
+          {services.map((s) => (
+            <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{
+                width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
+                background:
+                  s.status === "up" ? "var(--success)" :
+                  s.status === "starting" ? "var(--warning)" :
+                  s.status === "down" ? "var(--danger)" :
+                  "var(--border-base)",
+              }} />
+              <span style={{ fontSize: 11, color: "var(--fg-muted)", fontFamily: "inherit" }}>
+                {s.label}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -450,7 +519,7 @@ export default function AppLayout() {
           onClick={() => setChatOpen(!chatOpen)}
           title="Team Chat (⌘⇧\)"
           aria-label="Team Chat (⌘⇧\)"
-          style={{ marginLeft: "auto", position: "relative" }}
+          style={{ marginLeft: "auto", marginRight: 8, position: "relative" }}
         >
           {/* Speech bubble icon — communicates team chat */}
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -464,6 +533,7 @@ export default function AppLayout() {
             }} />
           )}
         </button>
+        <HealthBadge />
       </div>
 
       {/* Content area: sidebar + main */}
@@ -693,7 +763,9 @@ export default function AppLayout() {
 
         {/* Main content */}
         <main className="flex-1 overflow-y-auto" style={{ background: "var(--bg-base)" }}>
-          <Outlet />
+          <PageBoundary locationKey={location.pathname}>
+            <Outlet />
+          </PageBoundary>
         </main>
 
         {/* Right sidebar: chat panel */}

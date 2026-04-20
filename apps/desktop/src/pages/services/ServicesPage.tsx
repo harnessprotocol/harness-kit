@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback } from "react";
+import { useServiceHealth, type ServiceId } from "../../contexts/ServiceHealthContext";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -53,6 +54,14 @@ const SERVICES: ServiceConfig[] = [
     devFilter: "membrain",
   },
 ];
+
+// Map page config IDs to ServiceHealthContext IDs
+const PAGE_ID_TO_CONTEXT_ID: Record<string, ServiceId> = {
+  "board-server": "board",
+  "agent-server": "agent",
+  "chat-relay": "chat",
+  "membrain": "membrain",
+};
 
 const TIMEOUT_MS = 2500;
 
@@ -305,30 +314,30 @@ function ServiceCard({
 // ── Page ─────────────────────────────────────────────────────
 
 export default function ServicesPage() {
-  const [states, setStates] = useState<Record<string, ServiceState>>(() =>
-    Object.fromEntries(SERVICES.map((s) => [s.id, { status: "unknown" as ServiceStatus }]))
+  const { services: contextServices, report } = useServiceHealth();
+
+  // Map context ServiceHealth to the local ServiceState shape
+  const states: Record<string, ServiceState> = Object.fromEntries(
+    SERVICES.map((s) => {
+      const ctxId = PAGE_ID_TO_CONTEXT_ID[s.id];
+      const ctxService = contextServices.find((cs) => cs.id === ctxId);
+      const ctxStatus = ctxService?.status ?? "unknown";
+      const localStatus: ServiceStatus =
+        ctxStatus === "starting" ? "checking" : ctxStatus;
+      return [s.id, { status: localStatus }];
+    })
   );
 
   const checkService = useCallback(async (service: ServiceConfig) => {
-    setStates((prev) => ({
-      ...prev,
-      [service.id]: { status: "checking" },
-    }));
+    const ctxId = PAGE_ID_TO_CONTEXT_ID[service.id];
+    report(ctxId, "starting");
     const ok = await pingService(service.healthUrl);
-    setStates((prev) => ({
-      ...prev,
-      [service.id]: { status: ok ? "up" : "down" },
-    }));
-  }, []);
+    report(ctxId, ok ? "up" : "down");
+  }, [report]);
 
   const checkAll = useCallback(() => {
     SERVICES.forEach((s) => checkService(s));
   }, [checkService]);
-
-  // Auto-check on mount
-  useEffect(() => {
-    checkAll();
-  }, [checkAll]);
 
   const allUp = SERVICES.every((s) => states[s.id]?.status === "up");
   const upCount = SERVICES.filter((s) => states[s.id]?.status === "up").length;
