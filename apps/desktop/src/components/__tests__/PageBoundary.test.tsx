@@ -3,9 +3,9 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { PageBoundary } from "../PageBoundary";
 
-const originalError = console.error;
-beforeEach(() => { console.error = vi.fn(); });
-afterEach(() => { console.error = originalError; });
+let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
+beforeEach(() => { consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {}); });
+afterEach(() => { consoleErrorSpy.mockRestore(); });
 
 function Bomb({ shouldThrow }: { shouldThrow: boolean }) {
   if (shouldThrow) throw new Error("test explosion");
@@ -30,6 +30,17 @@ describe("PageBoundary", () => {
     expect(screen.getByTestId("page-boundary-error")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /retry/i }));
     rerender(<PageBoundary><Bomb shouldThrow={false} /></PageBoundary>);
+    expect(screen.getByText("Safe content")).toBeInTheDocument();
+  });
+
+  it("resets error state when locationKey changes", () => {
+    const { rerender } = render(
+      <PageBoundary locationKey="/a"><Bomb shouldThrow /></PageBoundary>
+    );
+    expect(screen.getByTestId("page-boundary-error")).toBeInTheDocument();
+
+    // Navigate to a different route — locationKey changes → ErrorBoundary remounts
+    rerender(<PageBoundary locationKey="/b"><Bomb shouldThrow={false} /></PageBoundary>);
     expect(screen.getByText("Safe content")).toBeInTheDocument();
   });
 });

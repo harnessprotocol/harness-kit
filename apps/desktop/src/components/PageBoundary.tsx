@@ -3,12 +3,11 @@ import React, { Suspense } from "react";
 interface ErrorBoundaryProps {
   children: React.ReactNode;
   onReset: () => void;
-  /** Ref set to true by PageBoundary to skip one render cycle after reset. */
-  skipRef: React.MutableRefObject<boolean>;
 }
 
 interface ErrorBoundaryState {
   error: Error | null;
+  resetting: boolean;
 }
 
 class ErrorBoundary extends React.Component<
@@ -17,19 +16,28 @@ class ErrorBoundary extends React.Component<
 > {
   constructor(props: ErrorBoundaryProps) {
     super(props);
-    this.state = { error: null };
+    this.state = { error: null, resetting: false };
   }
 
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { error };
+  static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
+    return { error, resetting: false };
   }
 
   componentDidCatch(error: Error, info: React.ErrorInfo) {
     console.error("[PageBoundary]", error, info.componentStack);
   }
 
+  componentDidUpdate(_prevProps: ErrorBoundaryProps, prevState: ErrorBoundaryState) {
+    if (prevState.resetting && this.state.resetting) {
+      // One commit has passed with resetting=true (children rendered as null).
+      // Now it is safe to clear resetting — the caller will provide new children
+      // via rerender, which won't throw.
+      this.setState({ resetting: false });
+    }
+  }
+
   render() {
-    if (this.state.error) {
+    if (this.state.error && !this.state.resetting) {
       return (
         <div
           data-testid="page-boundary-error"
@@ -60,8 +68,7 @@ class ErrorBoundary extends React.Component<
           )}
           <button
             onClick={() => {
-              this.setState({ error: null });
-              this.props.onReset();
+              this.setState({ error: null, resetting: true });
             }}
             style={{
               padding: "6px 16px",
@@ -80,10 +87,7 @@ class ErrorBoundary extends React.Component<
       );
     }
 
-    // Skip one render cycle after reset so stale (potentially-throwing) children
-    // are not rendered before the caller has provided safe replacements via rerender.
-    if (this.props.skipRef.current) {
-      this.props.skipRef.current = false;
+    if (this.state.resetting) {
       return null;
     }
 
@@ -115,17 +119,10 @@ interface PageBoundaryProps {
 
 export function PageBoundary({ children, locationKey }: PageBoundaryProps) {
   const [resetKey, setResetKey] = React.useState(0);
-  const skipRef = React.useRef(false);
+  const handleReset = React.useCallback(() => setResetKey((k) => k + 1), []);
 
   return (
-    <ErrorBoundary
-      key={`${locationKey ?? ""}-${resetKey}`}
-      skipRef={skipRef}
-      onReset={() => {
-        skipRef.current = true;
-        setResetKey((k) => k + 1);
-      }}
-    >
+    <ErrorBoundary key={`${locationKey ?? ""}-${resetKey}`} onReset={handleReset}>
       <Suspense fallback={<PageLoader />}>
         {children}
       </Suspense>
