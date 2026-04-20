@@ -109,7 +109,7 @@ These are first-class operations, not workarounds.
 |--------|-------------|
 | **Pause** | Aborts the current LangGraph stream. The SQLite checkpointer has already saved state after the last completed node. |
 | **Resume** | Re-streams the graph from the last checkpoint — LangGraph picks up exactly where it left off without re-running completed nodes. |
-| **Steer** | Injects a `steeringMessage` into graph state while paused. On resume, every node reads this field and incorporates the instruction. Useful for course-correcting mid-run. |
+| **Steer** | Injects a `steeringMessage` into graph state and immediately resumes execution — this is steer + resume in a single operation. No separate Resume call is needed. Every node incorporates the instruction. |
 
 **Important:** you must pause before steering. The steer endpoint rejects
 requests while the graph is running.
@@ -130,7 +130,8 @@ subscribes automatically when it detects a running task.
 | `agent_done` | `taskId, exitCode` | When the graph reaches END normally |
 | `agent_error` | `taskId, message` | On unhandled errors |
 
-The full discriminated union is defined in
+All emitted event types are listed above. The complete TypeScript discriminated
+union (including reserved types not yet emitted) is in
 `packages/agent-server/src/types.ts`.
 
 ## Security and boundaries

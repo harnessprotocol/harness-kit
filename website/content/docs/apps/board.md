@@ -111,10 +111,10 @@ While an agent is running, the card shows:
 | Control | Behavior |
 |---------|----------|
 | **Start** | Begins a new agent run from the spec phase |
-| **Stop** | Cancels immediately; no checkpoint saved |
-| **Pause** | Aborts the running graph; SQLite checkpoint preserves state |
+| **Stop** | Terminates the run permanently; cannot be resumed. Completed phases remain checkpointed but the run is abandoned. |
+| **Pause** | Aborts the running graph; SQLite checkpoint preserves state for later resumption |
 | **Resume** | Re-streams from the last checkpoint; no re-running of completed phases |
-| **Steer** | Injects a free-text instruction into the paused run; picked up on resume |
+| **Steer** | Injects a free-text instruction and immediately resumes — steer is steer + resume in one operation; no separate Resume call needed |
 
 You must pause before steering. The steer endpoint rejects requests while the
 graph is active.
