@@ -4,22 +4,8 @@ import AppLayout from "./layouts/AppLayout";
 import { getDefaultSection, getWelcomeSeen, setWelcomeSeen } from "./lib/preferences";
 import { ChatProvider } from "./contexts/ChatContext";
 import { ObservatoryProvider } from "./hooks/useObservatoryData";
-
-function PageLoader() {
-  return (
-    <div style={{
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      height: "100%",
-      color: "var(--fg-subtle)",
-      fontSize: 13,
-      fontFamily: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif',
-    }}>
-      Loading…
-    </div>
-  );
-}
+import { ServiceHealthProvider } from "./contexts/ServiceHealthContext";
+import { ToastManager } from "./components/ToastManager";
 
 // Lazy-load all pages so the initial bundle only includes the shell + router
 const PreferencesPage = lazy(() => import("./pages/PreferencesPage"));
@@ -85,88 +71,91 @@ export default function App() {
   const [showWelcome, setShowWelcome] = useState(() => !getWelcomeSeen());
 
   return (
-    <ChatProvider>
-      <ObservatoryProvider>
-      {showWelcome && (
-        <Suspense fallback={null}>
-          <WelcomeScreen
-            onDismiss={() => {
-              setWelcomeSeen();
-              setShowWelcome(false);
-            }}
-          />
-        </Suspense>
-      )}
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<AppLayout />}>
-          {/* Harness Manager */}
-          <Route index element={<DefaultRedirect />} />
-          <Route path="harness/file" element={<Suspense fallback={<PageLoader />}><HarnessFilePage /></Suspense>} />
-          <Route path="harness/plugins" element={<Suspense fallback={<PageLoader />}><PluginsPage /></Suspense>} />
-          <Route path="harness/plugins/:pluginName" element={<Suspense fallback={<PageLoader />}><PluginExplorerPage /></Suspense>} />
-          <Route path="harness/mcp" element={<Suspense fallback={<PageLoader />}><McpServersPage /></Suspense>} />
-          <Route path="harness/hooks" element={<Suspense fallback={<PageLoader />}><HooksPage /></Suspense>} />
-          <Route path="harness/claude-md" element={<Suspense fallback={<PageLoader />}><ClaudeMdPage /></Suspense>} />
-          <Route path="harness/sync" element={<Suspense fallback={<PageLoader />}><SyncPage /></Suspense>} />
-          <Route path="harness/settings" element={<Suspense fallback={<PageLoader />}><SettingsPage /></Suspense>} />
-          <Route path="harness/config/:filename" element={<Suspense fallback={<PageLoader />}><ConfigFilePage /></Suspense>} />
+    <ServiceHealthProvider>
+      <ToastManager />
+      <ChatProvider>
+        <ObservatoryProvider>
+          {showWelcome && (
+            <Suspense fallback={null}>
+              <WelcomeScreen
+                onDismiss={() => {
+                  setWelcomeSeen();
+                  setShowWelcome(false);
+                }}
+              />
+            </Suspense>
+          )}
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<AppLayout />}>
+              {/* Harness Manager */}
+              <Route index element={<DefaultRedirect />} />
+              <Route path="harness/file" element={<HarnessFilePage />} />
+              <Route path="harness/plugins" element={<PluginsPage />} />
+              <Route path="harness/plugins/:pluginName" element={<PluginExplorerPage />} />
+              <Route path="harness/mcp" element={<McpServersPage />} />
+              <Route path="harness/hooks" element={<HooksPage />} />
+              <Route path="harness/claude-md" element={<ClaudeMdPage />} />
+              <Route path="harness/sync" element={<SyncPage />} />
+              <Route path="harness/settings" element={<SettingsPage />} />
+              <Route path="harness/config/:filename" element={<ConfigFilePage />} />
 
-          {/* Marketplace */}
-          <Route path="marketplace/:slug?" element={<Suspense fallback={<PageLoader />}><MarketplacePage /></Suspense>} />
-          <Route path="observatory" element={<Suspense fallback={<PageLoader />}><DashboardPage /></Suspense>} />
-          <Route path="observatory/sessions" element={<Suspense fallback={<PageLoader />}><SessionsPage /></Suspense>} />
+              {/* Marketplace */}
+              <Route path="marketplace/:slug?" element={<MarketplacePage />} />
+              <Route path="observatory" element={<DashboardPage />} />
+              <Route path="observatory/sessions" element={<SessionsPage />} />
 
-          {/* Agents */}
-          <Route path="agents" element={<Suspense fallback={<PageLoader />}><AgentsPage /></Suspense>} />
+              {/* Agents */}
+              <Route path="agents" element={<AgentsPage />} />
 
-          {/* Comparator */}
-          <Route path="comparator" element={<Suspense fallback={<PageLoader />}><ComparatorPage /></Suspense>} />
+              {/* Comparator */}
+              <Route path="comparator" element={<ComparatorPage />} />
 
-          {/* Terminals */}
-          <Route path="terminals" element={<Suspense fallback={<PageLoader />}><TerminalsPage /></Suspense>} />
+              {/* Terminals */}
+              <Route path="terminals" element={<TerminalsPage />} />
 
-          {/* Security */}
-          <Route path="security/permissions" element={<Suspense fallback={<PageLoader />}><PermissionsPage /></Suspense>} />
-          <Route path="security/secrets" element={<Suspense fallback={<PageLoader />}><SecretsPage /></Suspense>} />
-          <Route path="security/audit" element={<Suspense fallback={<PageLoader />}><AuditLogPage /></Suspense>} />
+              {/* Security */}
+              <Route path="security/permissions" element={<PermissionsPage />} />
+              <Route path="security/secrets" element={<SecretsPage />} />
+              <Route path="security/audit" element={<AuditLogPage />} />
 
-          {/* Parity */}
-          <Route path="parity" element={<Suspense fallback={<PageLoader />}><ParityDashboardPage /></Suspense>} />
+              {/* Parity */}
+              <Route path="parity" element={<ParityDashboardPage />} />
 
-          {/* Board */}
-          <Route path="board" element={<Suspense fallback={<PageLoader />}><BoardProjectsPage /></Suspense>} />
-          <Route path="board/:slug" element={<Suspense fallback={<PageLoader />}><BoardKanbanPage /></Suspense>} />
+              {/* Board */}
+              <Route path="board" element={<BoardProjectsPage />} />
+              <Route path="board/:slug" element={<BoardKanbanPage />} />
 
-          {/* Roadmap */}
-          <Route path="roadmap" element={<Suspense fallback={<PageLoader />}><RoadmapProjectsPage /></Suspense>} />
-          <Route path="roadmap/:slug" element={<Suspense fallback={<PageLoader />}><RoadmapPage /></Suspense>} />
+              {/* Roadmap */}
+              <Route path="roadmap" element={<RoadmapProjectsPage />} />
+              <Route path="roadmap/:slug" element={<RoadmapPage />} />
 
-          {/* AI Chat */}
-          <Route path="ai-chat" element={<Suspense fallback={<PageLoader />}><AIChatPage /></Suspense>} />
+              {/* AI Chat */}
+              <Route path="ai-chat" element={<AIChatPage />} />
 
-          {/* Memory */}
-          <Route path="memory" element={<Suspense fallback={<PageLoader />}><MemoryDashboardPage /></Suspense>} />
-          <Route path="memory/graph" element={<Suspense fallback={<PageLoader />}><MemoryGraphPage /></Suspense>} />
-          <Route path="memory/explore" element={<Suspense fallback={<PageLoader />}><MemoryExplorePage /></Suspense>} />
-          <Route path="memory/explore/*" element={<Suspense fallback={<PageLoader />}><MemoryExplorePage /></Suspense>} />
-          <Route path="memory/entities" element={<Suspense fallback={<PageLoader />}><MemoryEntitiesPage /></Suspense>} />
-          <Route path="memory/entities/*" element={<Suspense fallback={<PageLoader />}><MemoryEntitiesPage /></Suspense>} />
-          <Route path="memory/knowledge" element={<Suspense fallback={<PageLoader />}><MemoryKnowledgePage /></Suspense>} />
-          <Route path="memory/knowledge/*" element={<Suspense fallback={<PageLoader />}><MemoryKnowledgePage /></Suspense>} />
-          <Route path="memory/context" element={<Suspense fallback={<PageLoader />}><MemoryContextPage /></Suspense>} />
-          <Route path="memory/trace" element={<Suspense fallback={<PageLoader />}><MemoryTracePage /></Suspense>} />
-          <Route path="memory/settings" element={<Suspense fallback={<PageLoader />}><MemorySettingsPage /></Suspense>} />
+              {/* Memory */}
+              <Route path="memory" element={<MemoryDashboardPage />} />
+              <Route path="memory/graph" element={<MemoryGraphPage />} />
+              <Route path="memory/explore" element={<MemoryExplorePage />} />
+              <Route path="memory/explore/*" element={<MemoryExplorePage />} />
+              <Route path="memory/entities" element={<MemoryEntitiesPage />} />
+              <Route path="memory/entities/*" element={<MemoryEntitiesPage />} />
+              <Route path="memory/knowledge" element={<MemoryKnowledgePage />} />
+              <Route path="memory/knowledge/*" element={<MemoryKnowledgePage />} />
+              <Route path="memory/context" element={<MemoryContextPage />} />
+              <Route path="memory/trace" element={<MemoryTracePage />} />
+              <Route path="memory/settings" element={<MemorySettingsPage />} />
 
-          {/* Services */}
-          <Route path="services" element={<Suspense fallback={<PageLoader />}><ServicesPage /></Suspense>} />
+              {/* Services */}
+              <Route path="services" element={<ServicesPage />} />
 
-          {/* Preferences */}
-          <Route path="preferences" element={<Suspense fallback={<PageLoader />}><PreferencesPage /></Suspense>} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-      </ObservatoryProvider>
-    </ChatProvider>
+              {/* Preferences */}
+              <Route path="preferences" element={<PreferencesPage />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </ObservatoryProvider>
+      </ChatProvider>
+    </ServiceHealthProvider>
   );
 }

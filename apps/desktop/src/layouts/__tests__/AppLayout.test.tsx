@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
+import React from "react";
 import { MemoryRouter } from "react-router-dom";
 import AppLayout, { NAV_SECTIONS } from "../AppLayout";
 import { NAV_PATHS } from "../../hooks/useGlobalShortcuts";
+import { ServiceHealthProvider } from "../../contexts/ServiceHealthContext";
 
 // ── Mocks ─────────────────────────────────────────────────────
 
@@ -56,9 +58,11 @@ beforeEach(() => {
 
 function renderLayout() {
   return render(
-    <MemoryRouter initialEntries={["/harness/plugins"]}>
-      <AppLayout />
-    </MemoryRouter>,
+    <ServiceHealthProvider>
+      <MemoryRouter initialEntries={["/harness/plugins"]}>
+        <AppLayout />
+      </MemoryRouter>
+    </ServiceHealthProvider>,
   );
 }
 
