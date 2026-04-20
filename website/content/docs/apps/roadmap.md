@@ -26,7 +26,7 @@ Generation runs in three phases, visible in a progress view as it completes:
 
 The generated roadmap includes:
 
-- A **vision statement** (1–2 sentences)
+- A **vision statement** (1–2 sentences) shown at the top of the roadmap view
 - A **target audience** profile (primary persona, secondary personas, pain
   points, goals, usage context)
 - **Phases** ordered logically (foundation → growth → scale, or similar) with

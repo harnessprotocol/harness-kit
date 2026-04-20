@@ -47,6 +47,10 @@ stateDiagram-v2
     qa_review --> [*] : FAIL (attempts ≥ 3, hand off)
 ```
 
+The edge from `coding_node` to QA is conditional — it can skip QA entirely for
+tasks with no tests. In practice it always runs QA unless the task is
+explicitly flagged.
+
 ### Phase 1 — Spec
 
 Claude Opus reads the task title, description, and existing subtasks, then
@@ -84,8 +88,8 @@ and `state: done` or `state: error` after. These stream live to the card UI.
 ### Phase 4 — QA Review
 
 A separate read-only agent reviews the implementation against the spec's
-acceptance criteria. It can read files and run `bash` (for tests) but cannot
-write. It returns `PASS` or `FAIL` with details.
+acceptance criteria. It can read files, list directories, and run `bash` (for
+tests) but cannot write. It returns `PASS` or `FAIL` with details.
 
 **Output:** `qaPassed: boolean`, `qaAttempts` incremented on failure.
 

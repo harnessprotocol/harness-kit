@@ -154,9 +154,8 @@ don't need their own API key.
 
 The board agent defaults to **claude-opus-4-6** for all five phases (spec,
 planning, coding, QA review, QA fixing). You can override this per task with
-the `default_model` setting in the task detail panel. Full model IDs are
-accepted (e.g., `claude-sonnet-4-6`) or shorthand aliases (`opus`, `sonnet`,
-`haiku`).
+the `default_model` setting in the task detail panel. Use full model IDs
+(e.g., `claude-sonnet-4-6`, `claude-haiku-4-5-20251001`).
 
 Roadmap generation always uses claude-opus-4-6.
 

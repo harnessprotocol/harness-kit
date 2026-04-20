@@ -160,7 +160,7 @@ export function AgentExecutionDiagram() {
           fill={SURFACE} stroke={BORDER} />
         <text x={TOK.x + 10} y={TOK.y + 17}
           fontFamily={MONO} fontSize={8.5} fill={SUBTLE}>
-          🔑  ~/.harness-kit/agent-server.token  (0600)
+          ~/.harness-kit/agent-server.token (mode 0600)
         </text>
 
         {/* ══════════════════════════════════════════════════════════════════════
@@ -268,15 +268,6 @@ export function AgentExecutionDiagram() {
                 );
               })()}
 
-              {/* qa_fix ← qa_review: back-arrow */}
-              {(() => {
-                const qaRevIdx = 3;
-                const qaFixIdx = 4;
-                const x1 = startX + qaRevIdx * (chipW + gap) + chipW;
-                const x2 = startX + qaFixIdx * (chipW + gap);
-                const y1 = chipY + chipH * 0.4;
-                return null; // covered by forward arrows; skip duplicate
-              })()}
             </g>
           );
         })()}
@@ -305,7 +296,7 @@ export function AgentExecutionDiagram() {
           fill={SURFACE} stroke={BORDER} />
         <text x={CP.x + 10} y={CP.y + 17}
           fontFamily={MONO} fontSize={8} fill={SUBTLE}>
-          💾  SQLite checkpoint (pause/resume)
+          SQLite checkpoint — pause/resume state
         </text>
 
         {/* ── Arrow: LangGraph → worktree ── */}
