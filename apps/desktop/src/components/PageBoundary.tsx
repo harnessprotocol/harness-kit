@@ -28,10 +28,9 @@ class ErrorBoundary extends React.Component<
   }
 
   componentDidUpdate(_prevProps: ErrorBoundaryProps, prevState: ErrorBoundaryState) {
-    if (prevState.resetting && this.state.resetting) {
-      // One commit has passed with resetting=true (children rendered as null).
-      // Now it is safe to clear resetting — the caller will provide new children
-      // via rerender, which won't throw.
+    if (this.state.resetting && prevState.resetting === this.state.resetting) {
+      // resetting flag is unchanged but something else updated (parent provided
+      // new children). Safe to exit the resetting phase and render children.
       this.setState({ resetting: false });
     }
   }
