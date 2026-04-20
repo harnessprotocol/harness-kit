@@ -40,6 +40,18 @@ brew install --cask harness-kit
 Or download the `.dmg` directly from the [latest release](https://github.com/harnessprotocol/harness-kit/releases/latest) and drag **Harness Kit.app** to `/Applications`. Note: the app is not notarized — right-click and select **Open** on first launch.
 
 <details>
+<summary>Nightly builds (latest main, rebuilt daily — may be unstable)</summary>
+
+```bash
+brew tap harnessprotocol/tap  # skip if already added
+brew install harnessprotocol/tap/harness-kit-nightly          # CLI nightly
+brew install --cask harnessprotocol/tap/'harness-kit@nightly' # desktop nightly
+```
+
+Nightly builds track the tip of `main` and are rebuilt every day at midnight UTC. Use them to get the latest features before a stable release — at the cost of stability guarantees.
+</details>
+
+<details>
 <summary>Fallback: install skills with script (no Node required)</summary>
 
 If your Claude Code build doesn't support the plugin marketplace:
