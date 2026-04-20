@@ -54,7 +54,7 @@ jobs:
           cp /tmp/node-sea-base dist/harness-kit
           codesign --remove-signature dist/harness-kit
           npx postject dist/harness-kit NODE_SEA_BLOB dist/sea-prep.blob \
-            --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6ac44c7683b9e78a1 \
+            --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2 \
             --macho-segment-name NODE_SEA
           codesign --sign - dist/harness-kit
 

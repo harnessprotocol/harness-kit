@@ -1,5 +1,5 @@
 {
-  "main": "dist/harness-kit-standalone.js",
+  "main": "dist/harness-kit-standalone.cjs",
   "output": "dist/sea-prep.blob",
   "disableExperimentalSEAWarning": true
 }
