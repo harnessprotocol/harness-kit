@@ -9,10 +9,13 @@ cask "harness-kit" do
 
   app "Harness Kit.app"
 
+  postflight do
+    system_command "/usr/bin/xattr", args: ["-cr", "#{appdir}/Harness Kit.app"]
+  end
+
   caveats <<~EOS
-    This app is not notarized. After installing, run:
-      xattr -cr "/Applications/Harness Kit.app"
-    Or right-click the app and select Open.
+    This app is not notarized. The quarantine flag is cleared automatically on install.
+    If you still see a security warning, right-click the app and select Open.
   EOS
 
   zap trash: [
