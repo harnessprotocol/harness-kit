@@ -174,11 +174,12 @@ jobs:
           git clone "https://x-access-token:${{ secrets.TAP_PAT }}@github.com/harnessprotocol/homebrew-tap.git" tap
           cd tap
 
-          # Copy from repo (harness-kit-nightly.rb) and rename to tap convention (harness-kit@nightly.rb)
-          cp ../homebrew/Formula/harness-kit-nightly.rb "Formula/harness-kit@nightly.rb"
-          sed -i "s/version \"[^\"]*\"/version \"${DATE}\"/" "Formula/harness-kit@nightly.rb"
-          sed -i "s/sha256 \"[^\"]*\"/sha256 \"${CLI_SHA}\"/" "Formula/harness-kit@nightly.rb"
+          # Formula: harness-kit-nightly (no @ -- Homebrew only supports @ with numeric versions)
+          cp ../homebrew/Formula/harness-kit-nightly.rb Formula/harness-kit-nightly.rb
+          sed -i "s/version \"[^\"]*\"/version \"${DATE}\"/" Formula/harness-kit-nightly.rb
+          sed -i "s/sha256 \"[^\"]*\"/sha256 \"${CLI_SHA}\"/" Formula/harness-kit-nightly.rb
 
+          # Cask: harness-kit@nightly (@ works fine for casks)
           cp ../homebrew/Casks/harness-kit-nightly.rb "Casks/harness-kit@nightly.rb"
           sed -i "s/version \"[^\"]*\"/version \"${DATE}\"/" "Casks/harness-kit@nightly.rb"
           awk -v sha="$DMG_SHA" '
@@ -189,7 +190,7 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "Formula/harness-kit@nightly.rb" "Casks/harness-kit@nightly.rb"
+          git add Formula/harness-kit-nightly.rb "Casks/harness-kit@nightly.rb"
           git commit -m "chore: nightly build $(date +%Y-%m-%d) (${GITHUB_SHA:0:7})"
           git push
         env:
