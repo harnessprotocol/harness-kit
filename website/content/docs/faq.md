@@ -110,3 +110,81 @@ Two plugins have optional environment variable dependencies:
 - **review** — `GH_TOKEN` enables reviewing pull requests by number (`/review 123`). Without it, review works for local branches and paths.
 
 For setup instructions — shell profile, direnv, 1Password CLI, CI — see the [Secrets Management guide](/docs/guides/secrets-management).
+
+## Board & Agent Execution
+
+### Can I trust the board's agent to run unsupervised?
+
+It depends on the task. The agent is capable and runs autonomously, but it is
+designed to be steerable, not fire-and-forget. For long or risky tasks:
+
+- Use the **Pause** button and review progress after each major phase
+- Set `allowedTools` to restrict what the agent can do (e.g., read-only mode)
+- Keep `no_worktree` off so file changes are isolated in a git worktree
+
+The QA loop catches many errors automatically, but review before merging the
+worktree's changes. The agent's file edits don't touch your main branch until
+you explicitly merge them.
+
+### What happens if my laptop sleeps mid-run?
+
+The agent-server is a local Node.js process, so it will pause when the process
+is interrupted (sleep, app quit, crash). The LangGraph SQLite checkpoint
+preserves state after each completed node. When you reopen the desktop app and
+click **Resume**, the pipeline picks up from the last saved checkpoint — no
+re-running of completed phases.
+
+If the agent-server is not running when you try to resume, the Services page
+lets you restart it without restarting the full app.
+
+### Does this work without an Anthropic API key?
+
+**For the board's agent execution:** The agent-server uses `ANTHROPIC_API_KEY`
+if set. If not set, it falls back to Claude Code's stored OAuth token from the
+macOS Keychain. If you're already logged in to Claude Code, no extra setup is
+needed.
+
+**For roadmap generation:** Same — `ANTHROPIC_API_KEY` or Claude Code
+Keychain OAuth, checked in that order.
+
+**For plugins:** Skills run inside Claude Code, which handles auth. Plugins
+don't need their own API key.
+
+### What models does the agent use?
+
+The board agent defaults to **claude-opus-4-6** for all five phases (spec,
+planning, coding, QA review, QA fixing). You can override this per task with
+the `default_model` setting in the task detail panel. Full model IDs are
+accepted (e.g., `claude-sonnet-4-6`) or shorthand aliases (`opus`, `sonnet`,
+`haiku`).
+
+Roadmap generation always uses claude-opus-4-6.
+
+### Does the agent run remote code or make network calls?
+
+The agent runs entirely on your machine. It communicates over `localhost` only:
+
+- The agent-server listens on `:4802` (CORS restricted to `tauri://localhost`)
+- The board-server listens on `:4800`
+- File system access is scoped to the task's worktree path
+- The agent can run `bash` commands — this is intentional and necessary for
+  running tests, but you can restrict it via `allowedTools`
+
+The only external network call is to the Anthropic API for Claude completions.
+
+### How is this different from Devin, Cognition, or Cursor's background agents?
+
+Those are cloud-hosted services. The harness-kit board agent runs 100% locally:
+
+| | Cloud agents (Devin, etc.) | harness-kit board agent |
+|---|---|---|
+| **Where it runs** | Cloud VM | Your machine |
+| **Data leaves your network** | Yes | No (except Anthropic API calls) |
+| **Cost model** | Subscription + per-task | Your Anthropic API usage only |
+| **Pause, steer, inspect** | Varies | First-class: pause, steer, live event log |
+| **Checkpoint/resume** | Cloud-managed | SQLite on your disk |
+| **Integrates with your IDE** | Via plugin | Native — same machine, same files |
+
+The trade-off: cloud agents can run in the background while your laptop is off.
+The harness-kit agent requires the desktop app to be open. This is a deliberate
+design choice — local-first, inspectable, no data leaving your machine.
