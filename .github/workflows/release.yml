@@ -67,7 +67,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: '22.12.0'
           cache: pnpm
 
       - name: Stamp version
@@ -89,10 +89,17 @@ jobs:
         working-directory: apps/cli
         run: node --experimental-sea-config sea-config.json
 
+      - name: Download official Node binary for SEA injection
+        run: |
+          curl -fsSL "https://nodejs.org/dist/v22.12.0/node-v22.12.0-darwin-arm64.tar.gz" \
+            -o /tmp/node-dist.tar.gz
+          tar -xzf /tmp/node-dist.tar.gz -C /tmp "node-v22.12.0-darwin-arm64/bin/node"
+          mv "/tmp/node-v22.12.0-darwin-arm64/bin/node" /tmp/node-sea-base
+
       - name: Inject blob into Node binary
         working-directory: apps/cli
         run: |
-          cp "$(which node)" dist/harness-kit
+          cp /tmp/node-sea-base dist/harness-kit
           codesign --remove-signature dist/harness-kit
           npx postject dist/harness-kit NODE_SEA_BLOB dist/sea-prep.blob \
             --sentinel-fuse NODE_SEA_FUSE_fce680ab2cc467b6ac44c7683b9e78a1 \

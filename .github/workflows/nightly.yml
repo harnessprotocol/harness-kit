@@ -22,7 +22,7 @@ jobs:
 
       - uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: '22.12.0'
           cache: pnpm
 
       - name: Install dependencies
@@ -43,11 +43,10 @@ jobs:
 
       - name: Download official Node binary for SEA injection
         run: |
-          NODE_VERSION=$(node --version | tr -d v)
-          curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-darwin-arm64.tar.gz" \
+          curl -fsSL "https://nodejs.org/dist/v22.12.0/node-v22.12.0-darwin-arm64.tar.gz" \
             -o /tmp/node-dist.tar.gz
-          tar -xzf /tmp/node-dist.tar.gz -C /tmp "node-v${NODE_VERSION}-darwin-arm64/bin/node"
-          mv "/tmp/node-v${NODE_VERSION}-darwin-arm64/bin/node" /tmp/node-sea-base
+          tar -xzf /tmp/node-dist.tar.gz -C /tmp "node-v22.12.0-darwin-arm64/bin/node"
+          mv "/tmp/node-v22.12.0-darwin-arm64/bin/node" /tmp/node-sea-base
 
       - name: Inject blob into Node binary
         working-directory: apps/cli
