@@ -194,3 +194,64 @@ describe("pullModel()", () => {
     expect(mockAiPullModel).toHaveBeenCalledWith("tinyllama:1b", expect.anything());
   });
 });
+
+describe("model list retry when empty", () => {
+  it("retries aiListModels on subsequent ticks when models are empty", async () => {
+    vi.useFakeTimers();
+    mockAiCheckOllama.mockResolvedValue({ running: true });
+    // First call returns empty, subsequent calls return models
+    mockAiListModels
+      .mockResolvedValueOnce([])
+      .mockResolvedValue([{ name: "llama3.2:3b", size: 2_000_000_000, modified_at: null }]);
+    mockAiListRunningModels.mockResolvedValue([]);
+    mockAiGetOllamaVersion.mockResolvedValue("0.6.0");
+
+    const { result } = renderHook(() => useOllama());
+
+    // First tick fires immediately — running=true, models=[]
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+
+    expect(result.current.running).toBe(true);
+    expect(result.current.models).toEqual([]);
+    // aiListModels called once so far (initial load)
+    expect(mockAiListModels.mock.calls.length).toBeGreaterThanOrEqual(1);
+
+    // Second tick: retry fires because models are still empty
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(2000);
+    });
+
+    // Should have retried
+    expect(mockAiListModels.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(result.current.models[0]?.name).toBe("llama3.2:3b");
+  });
+
+  it("stops retrying once models are populated", async () => {
+    vi.useFakeTimers();
+    const models = [{ name: "llama3.2:3b", size: 2_000_000_000, modified_at: null }];
+    mockAiCheckOllama.mockResolvedValue({ running: true });
+    mockAiListModels.mockResolvedValue(models);
+    mockAiListRunningModels.mockResolvedValue([]);
+    mockAiGetOllamaVersion.mockResolvedValue("0.6.0");
+
+    renderHook(() => useOllama());
+
+    // First tick loads models
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(100);
+    });
+
+    const callCountAfterFirst = mockAiListModels.mock.calls.length;
+
+    // Advance several more ticks — should NOT call aiListModels again
+    for (let i = 0; i < 3; i++) {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(2000);
+      });
+    }
+
+    expect(mockAiListModels.mock.calls.length).toBe(callCountAfterFirst);
+  });
+});

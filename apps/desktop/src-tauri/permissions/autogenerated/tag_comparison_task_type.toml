@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-tag-comparison-task-type"
+description = "Enables the tag_comparison_task_type command without any pre-configured scope."
+commands.allow = ["tag_comparison_task_type"]
+
+[[permission]]
+identifier = "deny-tag-comparison-task-type"
+description = "Denies the tag_comparison_task_type command without any pre-configured scope."
+commands.deny = ["tag_comparison_task_type"]

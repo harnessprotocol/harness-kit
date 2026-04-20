@@ -5,9 +5,10 @@ interface Props {
   isStreaming: boolean;
   onCancel: () => void;
   disabled?: boolean;
+  disabledReason?: string;
 }
 
-export function TranscriptInput({ onSend, isStreaming, onCancel, disabled }: Props) {
+export function TranscriptInput({ onSend, isStreaming, onCancel, disabled, disabledReason }: Props) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastPromptRef = useRef('');
 
@@ -102,7 +103,7 @@ export function TranscriptInput({ onSend, isStreaming, onCancel, disabled }: Pro
       <textarea
         ref={textareaRef}
         rows={1}
-        placeholder={isStreaming ? '' : 'Message… (Enter to send, Shift+Enter for newline)'}
+        placeholder={isStreaming ? '' : (disabled && disabledReason) ? disabledReason : 'Message… (Enter to send, Shift+Enter for newline)'}
         disabled={isStreaming || disabled}
         onKeyDown={handleKeyDown}
         onInput={handleInput}

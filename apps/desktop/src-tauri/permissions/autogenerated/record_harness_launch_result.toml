@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-record-harness-launch-result"
+description = "Enables the record_harness_launch_result command without any pre-configured scope."
+commands.allow = ["record_harness_launch_result"]
+
+[[permission]]
+identifier = "deny-record-harness-launch-result"
+description = "Denies the record_harness_launch_result command without any pre-configured scope."
+commands.deny = ["record_harness_launch_result"]

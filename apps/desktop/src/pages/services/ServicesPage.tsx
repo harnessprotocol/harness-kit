@@ -1,4 +1,5 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import { useServiceHealth, type ServiceId } from "../../contexts/ServiceHealthContext";
 
 // ── Types ────────────────────────────────────────────────────
@@ -49,8 +50,8 @@ const SERVICES: ServiceConfig[] = [
     id: "membrain",
     name: "Membrain (Memory)",
     description: "MCP knowledge graph server for the Memory feature",
-    port: 4803,
-    healthUrl: "http://localhost:4803/health",
+    port: 3131,
+    healthUrl: "http://localhost:3131/health",
     devFilter: "membrain",
   },
 ];
@@ -156,10 +157,14 @@ function ServiceCard({
   service,
   state,
   onCheck,
+  onStart,
+  isStarting,
 }: {
   service: ServiceConfig;
   state: ServiceState;
   onCheck: () => void;
+  onStart?: () => void;
+  isStarting?: boolean;
 }) {
   const statusLabel =
     state.status === "up"
@@ -279,42 +284,76 @@ function ServiceCard({
         </button>
       </div>
 
-      {/* Tip when down */}
+      {/* Start / tip when down */}
       {state.status === "down" && (
-        <div
-          style={{
-            padding: "8px 10px",
-            borderRadius: 6,
-            background: t.bgSurface,
-            border: `1px solid ${t.borderSubtle}`,
-            fontSize: 11,
-            color: t.fgSubtle,
-            lineHeight: 1.5,
-          }}
-        >
-          Start it with:{" "}
-          <code
+        onStart ? (
+          <button
+            onClick={onStart}
+            disabled={isStarting}
             style={{
-              fontFamily: "ui-monospace, monospace",
-              color: t.fgMuted,
-              background: t.bgBase,
-              padding: "1px 5px",
-              borderRadius: 3,
-              border: `1px solid ${t.borderSubtle}`,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              padding: "5px 14px",
+              borderRadius: 6,
+              border: `1px solid ${t.accent}`,
+              background: isStarting ? t.bgSurface : t.accentLight,
+              color: isStarting ? t.fgSubtle : t.accentText,
+              fontSize: 11,
+              fontWeight: 600,
+              cursor: isStarting ? "default" : "pointer",
+              opacity: isStarting ? 0.7 : 1,
+              alignSelf: "flex-start",
+              transition: "background 0.15s, color 0.15s",
             }}
           >
-            pnpm --filter {service.devFilter} dev
-          </code>
-        </div>
+            {isStarting ? "Starting…" : "Start"}
+          </button>
+        ) : (
+          <div
+            style={{
+              padding: "8px 10px",
+              borderRadius: 6,
+              background: t.bgSurface,
+              border: `1px solid ${t.borderSubtle}`,
+              fontSize: 11,
+              color: t.fgSubtle,
+              lineHeight: 1.5,
+            }}
+          >
+            Start it with:{" "}
+            <code
+              style={{
+                fontFamily: "ui-monospace, monospace",
+                color: t.fgMuted,
+                background: t.bgBase,
+                padding: "1px 5px",
+                borderRadius: 3,
+                border: `1px solid ${t.borderSubtle}`,
+              }}
+            >
+              pnpm --filter {service.devFilter} dev
+            </code>
+          </div>
+        )
       )}
     </div>
   );
 }
 
+// ── Start commands ───────────────────────────────────────────
+
+const SERVICE_START_COMMANDS: Partial<Record<string, () => Promise<unknown>>> = {
+  "board-server": () => invoke("board_server_install"),
+  "agent-server": () => invoke("agent_server_install"),
+  "membrain": () => invoke("membrain_start", { port: null }),
+};
+
 // ── Page ─────────────────────────────────────────────────────
 
 export default function ServicesPage() {
   const { services: contextServices, report } = useServiceHealth();
+  const [starting, setStarting] = useState<Set<string>>(new Set());
 
   // Map context ServiceHealth to the local ServiceState shape
   const states: Record<string, ServiceState> = Object.fromEntries(
@@ -333,6 +372,25 @@ export default function ServicesPage() {
     report(ctxId, "starting");
     const ok = await pingService(service.healthUrl);
     report(ctxId, ok ? "up" : "down");
+  }, [report]);
+
+  const startService = useCallback(async (service: ServiceConfig) => {
+    const command = SERVICE_START_COMMANDS[service.id];
+    if (!command) return;
+    const ctxId = PAGE_ID_TO_CONTEXT_ID[service.id];
+    setStarting(prev => new Set([...prev, service.id]));
+    report(ctxId, "starting");
+    try {
+      await command();
+      // Give the process a moment to bind its port
+      await new Promise(r => setTimeout(r, 2000));
+      const ok = await pingService(service.healthUrl);
+      report(ctxId, ok ? "up" : "down");
+    } catch {
+      report(ctxId, "down");
+    } finally {
+      setStarting(prev => { const s = new Set(prev); s.delete(service.id); return s; });
+    }
   }, [report]);
 
   const checkAll = useCallback(() => {
@@ -473,6 +531,8 @@ export default function ServicesPage() {
               service={service}
               state={states[service.id]}
               onCheck={() => checkService(service)}
+              onStart={SERVICE_START_COMMANDS[service.id] ? () => startService(service) : undefined}
+              isStarting={starting.has(service.id)}
             />
           ))}
         </div>

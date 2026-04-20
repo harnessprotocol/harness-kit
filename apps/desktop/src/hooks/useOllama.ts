@@ -45,6 +45,9 @@ export function useOllama(): OllamaState {
   const mountedRef = useRef(true);
   // Track previous running state to detect false→true and true→false transitions
   const prevRunningRef = useRef(false);
+  // Guards to prevent overlapping model/version fetches
+  const modelsFetchingRef = useRef(false);
+  const modelsLoadedRef = useRef(false);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -73,12 +76,24 @@ export function useOllama(): OllamaState {
             .then((m) => { if (mountedRef.current) setRunningModels(m); })
             .catch(() => {}); // non-fatal — older Ollama versions may not support /api/ps
 
-          // Leading edge: only refresh model list + version when Ollama just came up
-          if (!wasRunning) {
-            setError(null);
+          // Fetch model list: on first detection AND retry while models are empty
+          const needsModelFetch = !wasRunning || !modelsLoadedRef.current;
+          if (needsModelFetch && !modelsFetchingRef.current) {
+            if (!wasRunning) setError(null);
+            modelsFetchingRef.current = true;
             aiListModels()
-              .then((m) => { if (mountedRef.current) setModels(m); })
-              .catch((e) => { if (mountedRef.current) { logAIError("listModels", e); setError(String(e)); } });
+              .then((m) => {
+                if (mountedRef.current) {
+                  setModels(m);
+                  modelsLoadedRef.current = m.length > 0;
+                }
+              })
+              .catch((e) => { if (mountedRef.current) { logAIError("listModels", e); setError(String(e)); } })
+              .finally(() => { modelsFetchingRef.current = false; });
+          }
+
+          // Version: only on leading edge
+          if (!wasRunning) {
             aiGetOllamaVersion()
               .then((v) => { if (mountedRef.current) setVersion(v); })
               .catch(() => {}); // non-fatal
@@ -88,6 +103,7 @@ export function useOllama(): OllamaState {
           setRunning(false);
           setChecking(true);
           setRunningModels([]);
+          modelsLoadedRef.current = false;
 
           // Transition: Ollama was running, now it's not
           if (wasRunning) {
@@ -105,6 +121,7 @@ export function useOllama(): OllamaState {
         prevRunningRef.current = false;
         setRunning(false);
         setRunningModels([]);
+        modelsLoadedRef.current = false;
         pollCount.current += 1;
         if (pollCount.current >= MAX_POLLS) {
           setTimedOut(true);
@@ -124,6 +141,8 @@ export function useOllama(): OllamaState {
     // Reset counters/state; the always-running interval will pick up the next tick
     pollCount.current = 0;
     prevRunningRef.current = false;
+    modelsLoadedRef.current = false;
+    modelsFetchingRef.current = false;
     setRunning(false);
     setChecking(true);
     setTimedOut(false);

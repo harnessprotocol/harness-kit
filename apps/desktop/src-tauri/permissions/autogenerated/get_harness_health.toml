@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-harness-health"
+description = "Enables the get_harness_health command without any pre-configured scope."
+commands.allow = ["get_harness_health"]
+
+[[permission]]
+identifier = "deny-get-harness-health"
+description = "Denies the get_harness_health command without any pre-configured scope."
+commands.deny = ["get_harness_health"]
