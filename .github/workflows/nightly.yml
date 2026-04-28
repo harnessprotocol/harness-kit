@@ -18,7 +18,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v6
         with:
@@ -70,7 +70,7 @@ jobs:
           rm harness-kit
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: cli-standalone-darwin-arm64
           path: apps/cli/harness-kit-nightly-darwin-arm64.tar.gz
@@ -81,7 +81,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
 
       - uses: actions/setup-node@v6
         with:
@@ -120,7 +120,7 @@ jobs:
           echo "path=HarnessKit-nightly-darwin-arm64.dmg" >> "$GITHUB_OUTPUT"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: desktop-darwin-arm64
           path: ${{ steps.dmg.outputs.path }}
@@ -135,12 +135,12 @@ jobs:
       - uses: actions/checkout@v6
 
       - name: Download CLI standalone artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: cli-standalone-darwin-arm64
 
       - name: Download desktop artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: desktop-darwin-arm64
 
