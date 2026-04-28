@@ -84,8 +84,8 @@ export default function HomePage() {
       {/* ── Hero ── */}
       <section className="relative overflow-hidden border-b border-fd-border/30">
         {/* Copy block */}
-        <div className="mx-auto max-w-3xl px-6 pb-10 pt-20 text-center">
-          <h1 className="font-display mb-5 text-5xl font-bold leading-tight tracking-tight text-fd-foreground sm:text-5xl">
+        <div className="mx-auto max-w-3xl px-5 pb-8 pt-14 text-center sm:px-6 sm:pb-10 sm:pt-20">
+          <h1 className="font-display mb-5 text-4xl font-bold leading-tight tracking-tight text-fd-foreground sm:text-5xl">
             The configuration console{' '}
             <br className="hidden sm:block" />
             for all your harnesses.
@@ -128,7 +128,7 @@ export default function HomePage() {
         {/* Surface callouts — what's inside, directly beneath the mock */}
         <div className="mx-auto max-w-5xl px-4 pb-16 sm:px-6">
           <div
-            className="grid grid-cols-2 gap-px lg:grid-cols-4"
+            className="grid grid-cols-1 gap-px sm:grid-cols-2 lg:grid-cols-4"
             style={{ background: 'var(--fd-border)' }}
           >
             {showcaseCards.map((card) => (

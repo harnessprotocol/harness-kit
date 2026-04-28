@@ -602,3 +602,145 @@
   margin-top: -6px;
   margin-bottom: 4px;
 }
+
+/* ── Mobile (<640px): demo becomes a marketing showcase ── */
+@media (max-width: 640px) {
+  .frame {
+    border-radius: 10px;
+  }
+  .titlebar {
+    padding: 9px 12px;
+    gap: 6px;
+  }
+  .tl { width: 9px; height: 9px; }
+  .titleText {
+    font-size: 10px;
+    margin-left: 10px;
+  }
+  .hintBtn {
+    font-size: 9px;
+    padding: 1px 5px;
+  }
+
+  /* Stack sidebar above content, not beside it */
+  .body {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+    min-height: 440px;
+  }
+
+  /* Sidebar -> horizontal tab rail */
+  .sidebar {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 8px 10px;
+    border-right: none;
+    border-bottom: 1px solid var(--border-base);
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .sidebar::-webkit-scrollbar { display: none; }
+  /* Flatten group wrappers so buttons become direct flex children of the sidebar rail */
+  .sidebar > div { display: contents; }
+  .groupHeader { display: none; }
+
+  .item {
+    flex-shrink: 0;
+    width: auto;
+    padding: 8px 12px;
+    font-size: 12px;
+    border-left: none !important;
+    border-radius: 999px;
+    margin-bottom: 0;
+    min-height: 36px;
+    white-space: nowrap;
+  }
+  .itemActive {
+    border-left: none !important;
+    padding-left: 12px !important;
+    background: var(--accent-light) !important;
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+  .item svg { width: 12px; height: 12px; }
+
+  /* Pane — tighter padding, larger body text */
+  .pane {
+    padding: 16px 14px;
+    gap: 10px;
+  }
+  .paneTitle { font-size: 15px; }
+  .paneSubtitle { font-size: 11px; }
+
+  /* Observatory metrics fit three-across at narrow width */
+  .metricRow { gap: 6px; }
+  .metricCard { padding: 8px 9px; }
+  .metricLabel { font-size: 8.5px; }
+  .metricValue { font-size: 16px; }
+  .metricDelta { font-size: 9px; }
+  .chartCard { min-height: 110px; padding: 10px; }
+  .chartSvg { height: 80px; }
+
+  /* Harness YAML code block */
+  .paneHarnessCode {
+    padding: 14px 12px;
+    font-size: 10.5px;
+    line-height: 1.7;
+  }
+
+  /* Marketplace + Agents — stack to single column */
+  .pluginGridMock { grid-template-columns: 1fr; gap: 8px; }
+  .agentGrid { grid-template-columns: 1fr; gap: 8px; }
+  .agentCard { padding: 11px 12px; }
+
+  /* Comparator terminals stack vertically */
+  .comparatorPane {
+    grid-template-columns: 1fr !important;
+    grid-template-rows: 1fr 1fr;
+  }
+  .term {
+    border-right: none;
+    border-bottom: 1px solid var(--border-base);
+    padding: 12px;
+    font-size: 10px;
+  }
+  .term:last-child { border-bottom: none; }
+  .termLine { font-size: 9.5px; }
+
+  /* Permissions — tighter rows */
+  .permRow {
+    padding: 8px 10px;
+    font-size: 10.5px;
+    gap: 10px;
+  }
+  .permStatus { font-size: 9px; min-width: 38px; padding: 2px 5px; }
+  .permRule { font-size: 10.5px; }
+
+  /* Parity table — allow horizontal scroll inside the pane */
+  .parityTable { font-size: 10px; }
+  .parityTable th, .parityTable td { padding: 5px 7px; }
+
+  /* Board — stack kanban columns as a list */
+  .boardCols {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  /* Roadmap — tighten labels */
+  .roadmapLabel { width: 40px; font-size: 9.5px; }
+  .roadmapStatus { width: 54px; font-size: 9px; }
+
+  /* AI Chat messages take more of the width on narrow screens */
+  .chatMsg { max-width: 95%; font-size: 11px; }
+
+  /* Memory nodes — smaller, fit inside the reduced pane */
+  .memoryNode {
+    width: 44px;
+    height: 44px;
+    font-size: 9px;
+  }
+}
