@@ -25,8 +25,11 @@ fn find_mem() -> Result<String, String> {
     // Check well-known locations first — Tauri apps don't inherit $PATH from the shell,
     // so ~/go/bin (the default `go install` output dir) is often missing.
     let home = std::env::var("HOME").unwrap_or_default();
+    let gopath = std::env::var("GOPATH").unwrap_or_else(|_| format!("{home}/go"));
     let candidates = [
+        format!("{gopath}/bin/mem"),
         format!("{home}/go/bin/mem"),
+        format!("{home}/software/go/bin/mem"),
         format!("{home}/.local/bin/mem"),
         "/usr/local/bin/mem".to_string(),
         "/opt/homebrew/bin/mem".to_string(),
@@ -53,28 +56,27 @@ pub fn membrain_check_installed() -> bool {
     find_mem().is_ok()
 }
 
-/// Spawns `mem serve --no-open --port {port}` as a background child process.
+/// Spawns `mem serve --no-open` as a background child process.
+/// The port is configured via membrain.yaml (default: 3131).
 #[tauri::command]
 pub fn membrain_start(
     state: tauri::State<'_, MembrainServerState>,
-    port: Option<u16>,
+    _port: Option<u16>,
 ) -> Result<String, String> {
-    let port = port.unwrap_or(DEFAULT_PORT);
-
-    if port_in_use(port) {
-        return Ok(format!("membrain already running on :{port}"));
+    if port_in_use(DEFAULT_PORT) {
+        return Ok(format!("membrain already running on :{DEFAULT_PORT}"));
     }
 
     let mem = find_mem()?;
     if cfg!(debug_assertions) { eprintln!("[membrain] using binary: {mem}"); }
 
     let child = Command::new(&mem)
-        .args(["serve", "--no-open", "--port", &port.to_string()])
+        .args(["serve", "--no-open", "--dev"])
         .spawn()
         .map_err(|e| format!("Failed to start membrain: {e}"))?;
 
     *state.child.lock().unwrap() = Some(child);
-    Ok(format!("membrain server started on :{port}"))
+    Ok(format!("membrain server started on :{DEFAULT_PORT}"))
 }
 
 /// Kills the membrain server child process if one was spawned by this app.
