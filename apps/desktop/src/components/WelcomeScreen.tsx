@@ -8,10 +8,18 @@ interface WelcomeScreenProps {
 
 const cards: { title: string; body: React.ReactNode }[] = [
   {
-    title: "AI Chat",
+    title: "Configure",
+    body: "Keep harness.yaml as the source of truth, then compile it to Claude Code, Cursor, Copilot, Codex, and other native configs.",
+  },
+  {
+    title: "Operate",
+    body: "Use Board, Roadmap, Agents, Terminals, and Comparator to turn AI coding into a repeatable workflow instead of one-off sessions.",
+  },
+  {
+    title: "Govern",
     body: (
       <>
-        Requires Ollama running locally.{" "}
+        Inspect permissions, secrets, audit logs, local services, parity, and usage. AI Chat still needs{" "}
         <button
           onClick={() => open("https://ollama.ai")}
           style={{
@@ -26,35 +34,9 @@ const cards: { title: string; body: React.ReactNode }[] = [
             textUnderlineOffset: "2px",
           }}
         >
-          Download Ollama ↗
+          Ollama
         </button>
-      </>
-    ),
-  },
-  {
-    title: "Board, Roadmap & Memory",
-    body: "These features run a local server. They start automatically when you navigate to them.",
-  },
-  {
-    title: "Plugins",
-    body: (
-      <>
-        Add the Claude Code marketplace to install skills:{" "}
-        <code
-          style={{
-            fontSize: "11px",
-            background: "var(--bg-base)",
-            border: "1px solid var(--border-subtle)",
-            borderRadius: "4px",
-            padding: "1px 5px",
-            color: "var(--fg-base)",
-            letterSpacing: "0",
-            fontFamily: "ui-monospace, 'SF Mono', Menlo, monospace",
-            wordBreak: "break-all",
-          }}
-        >
-          /plugin marketplace add harnessprotocol/harness-kit
-        </code>
+        .
       </>
     ),
   },
@@ -147,8 +129,7 @@ export default function WelcomeScreen({ onDismiss }: WelcomeScreenProps) {
             textAlign: "center",
           }}
         >
-          Your all-in-one desktop companion for Claude Code — manage harnesses, plugins,
-          AI chat, boards, and more.
+          Portable AI coding governance, workflows, and observability across every tool your team uses.
         </p>
 
         {/* Info cards */}

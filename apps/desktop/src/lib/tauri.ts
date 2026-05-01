@@ -9,6 +9,13 @@ import type {
   ComparisonSummary, ComparisonDetail, FileDiffInput, FileDiffRow,
 } from "@harness-kit/shared";
 
+export const DESKTOP_RUNTIME_UNAVAILABLE_MESSAGE =
+  "Browser preview mode: filesystem actions require the Harness Kit desktop runtime.";
+
+export function isTauriRuntimeAvailable(): boolean {
+  return typeof window !== "undefined" && !!(window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
+}
+
 // ── Plugin commands ──────────────────────────────────────────
 
 export async function listInstalledPlugins(): Promise<InstalledPlugin[]> {

@@ -64,6 +64,7 @@ function renderPage() {
 describe("AgentsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
   });
 
   it("shows loading skeletons before agents resolve", () => {
@@ -118,6 +119,8 @@ describe("AgentsPage", () => {
     await waitFor(() => {
       expect(screen.getByTestId("add-to-comparator-btn")).toBeDisabled();
     });
+    expect(screen.getByText("1 agent staged for the next comparison.")).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem("harness-kit-comparator-staged-agents") ?? "[]")).toEqual(["aider"]);
   });
 
   it("renders protocol badge for each agent", async () => {
