@@ -27,7 +27,7 @@
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^4",
-    "turbo": "^2.9.6"
+    "turbo": "^2.9.7"
   },
   "pnpm": {
     "overrides": {
