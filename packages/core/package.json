@@ -27,7 +27,7 @@
     "@harness-kit/shared": "workspace:*",
     "ajv": "^8",
     "ajv-formats": "^3",
-    "yaml": "^2.8.3"
+    "yaml": "^2.8.4"
   },
   "devDependencies": {
     "@types/node": "^22.19.17",
