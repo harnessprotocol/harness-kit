@@ -31,6 +31,7 @@ vi.mock("../../../lib/membrain-api", () => ({
   MEMBRAIN_SERVER_BASE: "http://localhost:3131",
   MEMBRAIN_API: "http://localhost:3131/api/v1",
   syncMembrainTheme: vi.fn(),
+  verifyMembrainServer: vi.fn().mockResolvedValue({ ok: true }),
 }));
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -157,23 +158,23 @@ describe("MemoryGraphPage — Ready state (iframe shown)", () => {
     expect(() => renderPage()).not.toThrow();
   });
 
-  it("renders the membrain iframe (graph lives inside it)", () => {
+  it("renders the membrain iframe (graph lives inside it)", async () => {
     renderPage();
     // The actual graph canvas/WebGL lives inside the membrain SvelteKit app.
     // We verify the container renders and the iframe is mounted.
-    expect(screen.getByTitle("membrain")).toBeInTheDocument();
+    expect(await screen.findByTitle("membrain")).toBeInTheDocument();
   });
 
-  it("iframe container renders without overflow issues", () => {
+  it("iframe container renders without overflow issues", async () => {
     renderPage();
-    const iframe = screen.getByTitle("membrain") as HTMLIFrameElement;
+    const iframe = await screen.findByTitle("membrain") as HTMLIFrameElement;
     // Container div must exist as parent
     expect(iframe.parentElement).toBeTruthy();
   });
 
-  it("iframe src includes /graph path", () => {
+  it("iframe src includes /graph path", async () => {
     renderPage();
-    const iframe = screen.getByTitle("membrain") as HTMLIFrameElement;
+    const iframe = await screen.findByTitle("membrain") as HTMLIFrameElement;
     expect(iframe.src).toContain("/graph");
   });
 

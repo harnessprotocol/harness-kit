@@ -32,6 +32,7 @@ vi.mock("../../../lib/membrain-api", () => ({
   MEMBRAIN_SERVER_BASE: "http://localhost:3131",
   MEMBRAIN_API: "http://localhost:3131/api/v1",
   syncMembrainTheme: vi.fn(),
+  verifyMembrainServer: vi.fn().mockResolvedValue({ ok: true }),
 }));
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -174,21 +175,21 @@ describe("MemorySettingsPage — Ready state (settings iframe shown)", () => {
     expect(() => renderPage()).not.toThrow();
   });
 
-  it("renders the membrain settings iframe", () => {
+  it("renders the membrain settings iframe", async () => {
     renderPage();
-    expect(screen.getByTitle("membrain")).toBeInTheDocument();
+    expect(await screen.findByTitle("membrain")).toBeInTheDocument();
   });
 
-  it("iframe src includes /settings path", () => {
+  it("iframe src includes /settings path", async () => {
     renderPage();
-    const iframe = screen.getByTitle("membrain") as HTMLIFrameElement;
+    const iframe = await screen.findByTitle("membrain") as HTMLIFrameElement;
     expect(iframe.src).toContain("/settings");
   });
 
-  it("iframe has allow-forms in sandbox (settings need form submission)", () => {
+  it("iframe sandbox is omitted after attestation", async () => {
     renderPage();
-    const iframe = screen.getByTitle("membrain") as HTMLIFrameElement;
-    expect(iframe.getAttribute("sandbox")).toContain("allow-forms");
+    const iframe = await screen.findByTitle("membrain") as HTMLIFrameElement;
+    expect(iframe.getAttribute("sandbox")).toBeNull();
   });
 
   it("does not show Labs teaser when ready", () => {
