@@ -141,7 +141,6 @@ export default function MemoryWebView() {
           display: 'block',
         }}
         title="membrain"
-        sandbox="allow-scripts allow-same-origin allow-forms"
       />
     </div>
   );
