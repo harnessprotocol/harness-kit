@@ -1,64 +1,19 @@
-name: Release
+name: Nightly
 
 on:
-  push:
-    tags:
-      - 'v*'
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: nightly
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  prepare:
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.extract.outputs.version }}
-    steps:
-      - name: Extract version from tag
-        id: extract
-        run: |
-          VERSION="${GITHUB_REF#refs/tags/v}"
-          if ! echo "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$'; then
-            echo "::error::Tag '$GITHUB_REF' is not a valid semver release tag (expected v1.2.3)"
-            exit 1
-          fi
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "Releasing v$VERSION"
-
-  build-cli-npm:
-    needs: prepare
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: pnpm/action-setup@v6
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: pnpm
-          registry-url: https://registry.npmjs.org
-
-      - name: Stamp version
-        run: bash scripts/stamp-version.sh ${{ needs.prepare.outputs.version }}
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build packages
-        run: pnpm turbo run build --filter=@harness-kit/cli...
-
-      - name: Publish to npm
-        run: |
-          pnpm --filter @harness-kit/shared publish --no-git-checks
-          pnpm --filter @harness-kit/core publish --no-git-checks
-          pnpm --filter @harness-kit/cli publish --no-git-checks
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
   build-cli-standalone:
-    needs: prepare
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v6
@@ -69,9 +24,6 @@ jobs:
         with:
           node-version: '22.12.0'
           cache: pnpm
-
-      - name: Stamp version
-        run: bash scripts/stamp-version.sh ${{ needs.prepare.outputs.version }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -113,20 +65,18 @@ jobs:
       - name: Package standalone binary
         working-directory: apps/cli
         run: |
-          VERSION=${{ needs.prepare.outputs.version }}
           cp dist/harness-kit harness-kit
-          tar -czf harness-kit-v${VERSION}-darwin-arm64.tar.gz harness-kit
+          tar -czf harness-kit-nightly-darwin-arm64.tar.gz harness-kit
           rm harness-kit
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: cli-standalone-darwin-arm64
-          path: apps/cli/harness-kit-v${{ needs.prepare.outputs.version }}-darwin-arm64.tar.gz
+          path: apps/cli/harness-kit-nightly-darwin-arm64.tar.gz
           retention-days: 1
 
   build-desktop:
-    needs: prepare
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v6
@@ -143,9 +93,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: apps/desktop/src-tauri
-
-      - name: Stamp version
-        run: bash scripts/stamp-version.sh ${{ needs.prepare.outputs.version }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -164,15 +111,13 @@ jobs:
       - name: Locate and rename DMG
         id: dmg
         run: |
-          VERSION=${{ needs.prepare.outputs.version }}
           DMG=$(find apps/desktop/src-tauri/target/release/bundle -name "*.dmg" | head -1)
           if [[ -z "$DMG" ]]; then
             echo "::error::No .dmg found after tauri build"
             exit 1
           fi
-          DEST="HarnessKit-v${VERSION}-darwin-arm64.dmg"
-          cp "$DMG" "$DEST"
-          echo "path=$DEST" >> "$GITHUB_OUTPUT"
+          cp "$DMG" "HarnessKit-nightly-darwin-arm64.dmg"
+          echo "path=HarnessKit-nightly-darwin-arm64.dmg" >> "$GITHUB_OUTPUT"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
@@ -181,8 +126,8 @@ jobs:
           path: ${{ steps.dmg.outputs.path }}
           retention-days: 1
 
-  release:
-    needs: [prepare, build-cli-standalone, build-desktop]
+  publish:
+    needs: [build-cli-standalone, build-desktop]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -202,51 +147,58 @@ jobs:
       - name: Compute SHA256 checksums
         id: sha
         run: |
-          VERSION=${{ needs.prepare.outputs.version }}
-          CLI_FILE="harness-kit-v${VERSION}-darwin-arm64.tar.gz"
-          DMG_FILE="HarnessKit-v${VERSION}-darwin-arm64.dmg"
-          CLI_SHA=$(sha256sum "$CLI_FILE" | awk '{print $1}')
-          DMG_SHA=$(sha256sum "$DMG_FILE" | awk '{print $1}')
+          CLI_SHA=$(sha256sum harness-kit-nightly-darwin-arm64.tar.gz | awk '{print $1}')
+          DMG_SHA=$(sha256sum HarnessKit-nightly-darwin-arm64.dmg | awk '{print $1}')
           echo "cli_sha=$CLI_SHA" >> "$GITHUB_OUTPUT"
           echo "dmg_sha=$DMG_SHA" >> "$GITHUB_OUTPUT"
-          echo "cli_file=$CLI_FILE" >> "$GITHUB_OUTPUT"
-          echo "dmg_file=$DMG_FILE" >> "$GITHUB_OUTPUT"
+          echo "date=$(date +%Y%m%d)" >> "$GITHUB_OUTPUT"
 
-      - name: Create GitHub Release
+      - name: Publish rolling nightly release
         run: |
-          VERSION=${{ needs.prepare.outputs.version }}
-          gh release create "v${VERSION}" \
-            --generate-notes \
-            --title "v${VERSION}" \
-            "${{ steps.sha.outputs.cli_file }}" \
-            "${{ steps.sha.outputs.dmg_file }}"
+          DATE=$(date +%Y-%m-%d)
+          SHA=${{ github.sha }}
+
+          # Delete existing release and tag so we can recreate clean
+          gh release delete nightly --yes 2>/dev/null || true
+          git push origin :refs/tags/nightly 2>/dev/null || true
+
+          gh release create nightly \
+            --title "Nightly ($DATE)" \
+            --notes "Automated nightly build from \`main\`. Commit: [\`${SHA:0:7}\`](https://github.com/harnessprotocol/harness-kit/commit/$SHA)" \
+            --prerelease \
+            --target main \
+            harness-kit-nightly-darwin-arm64.tar.gz \
+            HarnessKit-nightly-darwin-arm64.dmg
         env:
           GH_TOKEN: ${{ github.token }}
 
       - name: Update Homebrew tap
         run: |
-          VERSION=${{ needs.prepare.outputs.version }}
+          DATE=${{ steps.sha.outputs.date }}
           CLI_SHA=${{ steps.sha.outputs.cli_sha }}
           DMG_SHA=${{ steps.sha.outputs.dmg_sha }}
 
           git clone "https://x-access-token:${{ secrets.TAP_PAT }}@github.com/harnessprotocol/homebrew-tap.git" tap
           cd tap
 
-          # Update Formula
-          sed -i "s/version \"[^\"]*\"/version \"${VERSION}\"/" Formula/harness-kit.rb
-          sed -i "s/sha256 \"[^\"]*\"/sha256 \"${CLI_SHA}\"/" Formula/harness-kit.rb
+          # Formula: harness-kit-nightly (no @ -- Homebrew only supports @ with numeric versions)
+          cp ../homebrew/Formula/harness-kit-nightly.rb Formula/harness-kit-nightly.rb
+          sed -i "s/version \"[^\"]*\"/version \"${DATE}\"/" Formula/harness-kit-nightly.rb
+          sed -i "s/sha256 \"[^\"]*\"/sha256 \"${CLI_SHA}\"/" Formula/harness-kit-nightly.rb
 
-          # Update Cask
-          sed -i "s/version \"[^\"]*\"/version \"${VERSION}\"/" Casks/harness-kit.rb
-          # Only replace the sha256 line (not URL which also has quotes)
+          # Cask: harness-kit@nightly (@ works fine for casks)
+          cp ../homebrew/Casks/harness-kit-nightly.rb "Casks/harness-kit@nightly.rb"
+          sed -i "s/version \"[^\"]*\"/version \"${DATE}\"/" "Casks/harness-kit@nightly.rb"
           awk -v sha="$DMG_SHA" '
             /^  sha256 "/ && !replaced { sub(/"[^"]*"/, "\"" sha "\""); replaced=1 }
             { print }
-          ' Casks/harness-kit.rb > Casks/harness-kit.rb.tmp
-          mv Casks/harness-kit.rb.tmp Casks/harness-kit.rb
+          ' "Casks/harness-kit@nightly.rb" > "Casks/harness-kit@nightly.rb.tmp"
+          mv "Casks/harness-kit@nightly.rb.tmp" "Casks/harness-kit@nightly.rb"
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Formula/harness-kit.rb Casks/harness-kit.rb
-          git commit -m "chore: bump harness-kit to v${VERSION}"
+          git add Formula/harness-kit-nightly.rb "Casks/harness-kit@nightly.rb"
+          git commit -m "chore: nightly build $(date +%Y-%m-%d) (${GITHUB_SHA:0:7})"
           git push
+        env:
+          GITHUB_SHA: ${{ github.sha }}

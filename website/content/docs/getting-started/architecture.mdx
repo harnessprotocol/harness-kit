@@ -64,17 +64,30 @@ The desktop app is a management console organized into named sections. It reads 
 
 **WORKFLOWS**
 
-- **Board** — AI-native Kanban board with real-time two-way sync; agents pick up cards, flag for review
-- **Roadmap** — AI-generated quarterly roadmaps and competitor analysis tied to your board
+- **Board** — AI-native Kanban board; each card can be handed to an autonomous
+  agent that runs a five-phase LangGraph pipeline (spec → planning → coding →
+  QA review → QA fix) locally on your machine, streaming live progress back to
+  the card. See [Agentic Task Execution](/docs/concepts/agentic-task-execution).
+- **Roadmap** — AI-generated quarterly roadmaps and competitor analysis tied to
+  your board; features convert directly into board tasks
 
 **Standalone sections**
 
-- **Agents** — monitor and manage specialist subagents running across your harness
+- **Agents** — detection panel for AI coding agents installed on your machine
 - **Comparator** — run the same prompt across Claude Code, Cursor, and Copilot side by side
 - **Parity** — track which plugins, MCP servers, and skills are loaded in each connected AI tool
 - **AI Chat** — keyboard-first chat window with Ollama support and integrated tools
 - **Memory** — browse, search, and manage the knowledge graph your agents orient themselves in
-- **Services** — live status dashboard for the four background servers (Board, Chat, Memory, Agent); the title bar health dot links here
+- **Services** — live status dashboard for the four background servers; the title bar health dot links here
+
+**Background servers** — four processes run inside the desktop app:
+
+| Server | Port | Purpose |
+|--------|------|---------|
+| Board server | :4800 | YAML store, WebSocket hub, MCP endpoint, roadmap/competitor API |
+| Chat relay | :4801 | Self-hosted WebSocket relay for team chat |
+| Agent server | :4802 | LangGraph execution engine for per-card agent runs |
+| Membrain | — | Graph-based memory MCP server (enabled in Labs) |
 
 ---
 

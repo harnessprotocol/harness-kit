@@ -5,7 +5,7 @@ const pkg = JSON.parse(readFileSync("./package.json", "utf-8"));
 
 export default defineConfig({
   entry: { "harness-kit-standalone": "src/index.ts" },
-  format: ["esm"],
+  format: ["cjs"],
   clean: false,
   sourcemap: false,
   noExternal: [/.*/],

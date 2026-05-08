@@ -7,11 +7,17 @@ description: Kanban project board with real-time two-way sync between Claude and
 
 # board
 
-A lightweight Kanban board with real-time two-way sync between Claude and a web UI. Tasks live in `~/.harness/board/projects/<slug>.yaml`. Claude interacts via MCP tools; you interact via browser.
+A lightweight Kanban board with real-time two-way sync between Claude Code and
+the desktop app. Tasks live in `~/.harness/board/projects/<slug>.yaml`. Claude
+interacts via MCP tools; you interact via the Board page in the desktop app.
+
+This plugin is the **MCP surface** used by the agent-server during per-card
+autonomous runs. When the agent's planning phase creates subtasks or the
+coding phase marks them complete, it calls these same MCP tools.
 
 ## Requirements
 
-- Node.js (for the board server — installed as part of harness-kit desktop or via `pnpm board:install`)
+- Node.js (installed as part of harness-kit desktop, or via `pnpm board:install`)
 
 ## Install
 
@@ -22,13 +28,14 @@ A lightweight Kanban board with real-time two-way sync between Claude and a web 
 
 ## Usage
 
-### Open the board UI
+### Open the board
 
 ```
 /board
 ```
 
-Launches the board web UI. If the server is not running, the plugin prints instructions to install it as a persistent launchd service.
+Launches the Board page in the desktop app. If the board server is not running,
+the plugin prints instructions to start it as a persistent launchd service.
 
 ### Create a task
 
@@ -55,16 +62,21 @@ Shows a summary of all tasks grouped by status column.
 
 ## Status Columns
 
-| Status | Meaning |
-|--------|---------|
-| `backlog` | Not started |
-| `in-progress` | Being worked on |
-| `review` | Ready for human review |
-| `done` | Complete |
+The board uses six columns. Use the exact slugs below in MCP tool calls:
+
+| Slug | Display name | Meaning |
+|------|-------------|---------|
+| `backlog` | Backlog | Not started |
+| `planning` | Planning | Being scoped or designed |
+| `in-progress` | In Progress | Actively being worked on |
+| `ai-review` | AI Review | Agent finished, awaiting automated check |
+| `human-review` | Human Review | Waiting for a person to sign off |
+| `done` | Done | Complete |
 
 ## MCP Tools
 
-The board plugin exposes MCP tools for deeper integration:
+The board plugin exposes these MCP tools (available to Claude Code and to the
+agent-server's LangGraph pipeline):
 
 | Tool | Purpose |
 |------|---------|
@@ -73,19 +85,22 @@ The board plugin exposes MCP tools for deeper integration:
 | `create_task` | Create a task |
 | `update_task` | Edit title, description, flags |
 | `move_task` | Change status column |
-| `add_comment` | Post a comment |
-| `list_tasks` | Read board state (filterable) |
-| `link_branch` | Associate a branch or worktree |
+| `add_comment` | Post a comment (author: `claude` or `user`) |
+| `list_tasks` | Read board state (filterable by epic or status) |
+| `link_branch` | Associate a branch or worktree path |
 | `link_commit` | Attach a commit SHA |
-| `request_review` | Flag task ready for review |
+| `request_review` | Flag task ready for human review |
 | `block_task` / `unblock_task` | Mark or clear blocked status |
 
 ## Workflow Integration
 
-When Claude starts work on a task, it can automatically:
+When Claude Code starts work on a task from a terminal session, it can
+automatically:
 
 1. Move the task to `in-progress` and link the working branch
 2. Post progress comments as work proceeds
 3. Flag `request_review` when done
 4. Move to `done` after merge
 
+The same tools run during autonomous agent execution via the desktop app's
+agent-server — see [Agentic Task Execution](/docs/concepts/agentic-task-execution).

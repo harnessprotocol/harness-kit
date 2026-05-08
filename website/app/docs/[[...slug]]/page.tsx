@@ -15,6 +15,7 @@ import { MarkdownViewer } from '@/components/markdown-viewer';
 import { AgentSkillBanner } from '@/components/agent-skill-banner';
 import { InstallMethodCards } from '@/components/install-method-cards';
 import { ArchitectureDiagram } from '@/components/architecture-diagram';
+import { AgentExecutionDiagram } from '@/components/agent-execution-diagram';
 
 const mdxComponents = {
   ...defaultMdxComponents,
@@ -28,6 +29,7 @@ const mdxComponents = {
   MarkdownViewer,
   InstallMethodCards,
   ArchitectureDiagram,
+  AgentExecutionDiagram,
 };
 
 export default async function Page(props: {

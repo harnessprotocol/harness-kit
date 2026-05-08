@@ -215,6 +215,24 @@ export function DesktopMock({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [interactive]);
 
+  // On mobile, keep the active tab visible in the horizontal sidebar rail.
+  const sidebarRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    const sidebar = sidebarRef.current;
+    if (!sidebar) return;
+    const active = sidebar.querySelector<HTMLButtonElement>('[aria-pressed="true"]');
+    if (!active) return;
+    const sb = sidebar.getBoundingClientRect();
+    const ab = active.getBoundingClientRect();
+    const offLeft = ab.left - sb.left;
+    const offRight = ab.right - sb.right;
+    if (offLeft < 0) {
+      sidebar.scrollBy({ left: offLeft - 12, behavior: 'smooth' });
+    } else if (offRight > 0) {
+      sidebar.scrollBy({ left: offRight + 12, behavior: 'smooth' });
+    }
+  }, [activeSection]);
+
   return (
     <div
       className={frameClass}
@@ -241,7 +259,7 @@ export function DesktopMock({
       {/* Body */}
       <div className={styles.body}>
         {/* Sidebar */}
-        <aside className={styles.sidebar}>
+        <aside className={styles.sidebar} ref={sidebarRef}>
           {SECTIONS.map((group) => (
             <div key={group.group}>
               <div className={styles.groupHeader}>{group.group}</div>
