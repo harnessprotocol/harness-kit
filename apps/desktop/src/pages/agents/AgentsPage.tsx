@@ -246,7 +246,8 @@ export default function AgentsPage() {
         )));
       })
       .catch((e) => setError(String(e)));
-  }, [stagedAgentIds]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function handleAddToComparator(id: string) {
     const next = new Set(stagedAgentIds);
