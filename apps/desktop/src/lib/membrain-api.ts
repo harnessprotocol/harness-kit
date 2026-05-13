@@ -4,6 +4,60 @@ export const MEMBRAIN_PORT = 3131;
 export const MEMBRAIN_SERVER_BASE = `http://localhost:${MEMBRAIN_PORT}`;
 export const MEMBRAIN_API = `${MEMBRAIN_SERVER_BASE}/api/v1`;
 
+export interface MembrainAttestation {
+  ok: boolean;
+  reason?: string;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function hasMembrainStatsShape(value: unknown): boolean {
+  if (!isRecord(value)) return false;
+  return ['entities', 'relations', 'episodes'].every((key) => typeof value[key] === 'number');
+}
+
+export async function verifyMembrainServer(signal?: AbortSignal): Promise<MembrainAttestation> {
+  const expectedOrigin = new URL(MEMBRAIN_SERVER_BASE).origin;
+  if (expectedOrigin !== `http://localhost:${MEMBRAIN_PORT}`) {
+    return { ok: false, reason: 'Unexpected membrain origin.' };
+  }
+
+  try {
+    const statsRes = await fetch(`${MEMBRAIN_API}/graph/stats`, {
+      signal,
+      cache: 'no-store',
+      headers: { Accept: 'application/json' },
+    });
+    if (!statsRes.ok) return { ok: false, reason: 'membrain stats endpoint did not respond.' };
+
+    const stats = await statsRes.json();
+    if (!hasMembrainStatsShape(stats)) {
+      return { ok: false, reason: 'membrain stats endpoint returned an unexpected shape.' };
+    }
+
+    const rootRes = await fetch(MEMBRAIN_SERVER_BASE, {
+      signal,
+      cache: 'no-store',
+      headers: { Accept: 'text/html' },
+    });
+    if (!rootRes.ok) return { ok: false, reason: 'membrain web app did not respond.' };
+
+    const rootHtml = await rootRes.text();
+    if (!rootHtml.toLowerCase().includes('membrain')) {
+      return { ok: false, reason: 'membrain web app identity could not be verified.' };
+    }
+
+    return { ok: true };
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      return { ok: false, reason: 'membrain verification was cancelled.' };
+    }
+    return { ok: false, reason: 'membrain verification failed.' };
+  }
+}
+
 export async function checkMembrainHealth(): Promise<boolean> {
   try {
     const controller = new AbortController();

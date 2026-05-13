@@ -10,6 +10,7 @@ import MemoryDashboardPage from "../MemoryDashboardPage";
 
 let mockGetMembrainEnabled: () => boolean;
 let mockSetMembrainEnabled: (v: boolean) => void;
+let mockVerifyMembrainServer: ReturnType<typeof vi.fn>;
 
 vi.mock("../../../lib/preferences", () => ({
   get getMembrainEnabled() { return mockGetMembrainEnabled; },
@@ -37,6 +38,7 @@ vi.mock("../../../lib/membrain-api", () => ({
   MEMBRAIN_SERVER_BASE: "http://localhost:3131",
   MEMBRAIN_API: "http://localhost:3131/api/v1",
   syncMembrainTheme: vi.fn(),
+  get verifyMembrainServer() { return mockVerifyMembrainServer; },
 }));
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -68,6 +70,7 @@ function makeServerState(overrides: Partial<typeof mockServerState> = {}) {
 beforeEach(() => {
   mockGetMembrainEnabled = vi.fn().mockReturnValue(false);
   mockSetMembrainEnabled = vi.fn();
+  mockVerifyMembrainServer = vi.fn().mockResolvedValue({ ok: true });
   mockServerState = makeServerState();
 });
 
@@ -231,21 +234,32 @@ describe("MemoryDashboardPage — Ready state (membrain running)", () => {
     expect(() => renderPage()).not.toThrow();
   });
 
-  it("renders the membrain iframe", () => {
+  it("renders the membrain iframe after attestation", async () => {
     renderPage();
-    expect(screen.getByTitle("membrain")).toBeInTheDocument();
+    expect(await screen.findByTitle("membrain")).toBeInTheDocument();
+    expect(mockVerifyMembrainServer).toHaveBeenCalled();
   });
 
-  it("iframe points to the membrain server root", () => {
+  it("iframe points to the membrain server root", async () => {
     renderPage();
-    const iframe = screen.getByTitle("membrain") as HTMLIFrameElement;
+    const iframe = await screen.findByTitle("membrain") as HTMLIFrameElement;
     expect(iframe.src).toContain("localhost:3131");
   });
 
-  it("iframe has sandbox attribute for security", () => {
+  it("omits iframe sandbox only after attestation succeeds", async () => {
     renderPage();
-    const iframe = screen.getByTitle("membrain") as HTMLIFrameElement;
-    expect(iframe.getAttribute("sandbox")).toContain("allow-scripts");
+    const iframe = await screen.findByTitle("membrain") as HTMLIFrameElement;
+    expect(iframe.getAttribute("sandbox")).toBeNull();
+  });
+
+  it("blocks the iframe when attestation fails", async () => {
+    mockVerifyMembrainServer = vi.fn().mockResolvedValue({
+      ok: false,
+      reason: "membrain web app identity could not be verified.",
+    });
+    renderPage();
+    expect(await screen.findByText("Could not verify the membrain web app.")).toBeInTheDocument();
+    expect(screen.queryByTitle("membrain")).not.toBeInTheDocument();
   });
 
   it("does not show the Labs teaser", () => {

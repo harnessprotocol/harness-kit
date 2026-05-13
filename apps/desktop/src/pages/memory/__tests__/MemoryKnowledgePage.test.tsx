@@ -31,6 +31,7 @@ vi.mock("../../../lib/membrain-api", () => ({
   MEMBRAIN_SERVER_BASE: "http://localhost:3131",
   MEMBRAIN_API: "http://localhost:3131/api/v1",
   syncMembrainTheme: vi.fn(),
+  verifyMembrainServer: vi.fn().mockResolvedValue({ ok: true }),
 }));
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -108,14 +109,14 @@ describe("MemoryKnowledgePage — Ready state", () => {
     expect(() => renderPage()).not.toThrow();
   });
 
-  it("renders the membrain iframe", () => {
+  it("renders the membrain iframe", async () => {
     renderPage();
-    expect(screen.getByTitle("membrain")).toBeInTheDocument();
+    expect(await screen.findByTitle("membrain")).toBeInTheDocument();
   });
 
-  it("iframe src includes /knowledge path", () => {
+  it("iframe src includes /knowledge path", async () => {
     renderPage();
-    const iframe = screen.getByTitle("membrain") as HTMLIFrameElement;
+    const iframe = await screen.findByTitle("membrain") as HTMLIFrameElement;
     expect(iframe.src).toContain("/knowledge");
   });
 });
