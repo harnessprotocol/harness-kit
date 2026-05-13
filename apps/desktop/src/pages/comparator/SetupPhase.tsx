@@ -57,6 +57,7 @@ const monoStack = 'ui-monospace, "SF Mono", monospace';
 // ── Max harnesses ───────────────────────────────────────────
 
 const MAX_SELECTED = 4;
+const STAGED_AGENTS_KEY = "harness-kit-comparator-staged-agents";
 
 // ── Styles ──────────────────────────────────────────────────
 
@@ -310,16 +311,27 @@ export default function SetupPhase({ onStart }: SetupPhaseProps) {
     invoke<HarnessInfo[]>("detect_harnesses")
       .then((detected) => {
         setHarnesses(detected);
-        // Pre-select all available harnesses (up to MAX_SELECTED).
+        let staged = new Set<string>();
+        try {
+          staged = new Set<string>(JSON.parse(localStorage.getItem(STAGED_AGENTS_KEY) ?? "[]"));
+        } catch {}
+
         const map = new Map<string, HarnessSelection>();
         let count = 0;
+        const availableStaged = detected.filter((h) => h.available && staged.has(h.id));
+        const preselect = availableStaged.length > 0 ? availableStaged : detected.filter((h) => h.available);
+        const preselectIds = new Set(preselect.slice(0, MAX_SELECTED).map((h) => h.id));
+
         for (const h of detected) {
-          if (h.available && count < MAX_SELECTED) {
+          if (preselectIds.has(h.id) && count < MAX_SELECTED) {
             map.set(h.id, { selected: true, model: h.defaultModel ?? null });
             count++;
           } else {
             map.set(h.id, { selected: false, model: h.defaultModel ?? null });
           }
+        }
+        if (availableStaged.length > 0) {
+          try { localStorage.removeItem(STAGED_AGENTS_KEY); } catch {}
         }
         setSelections(map);
       })

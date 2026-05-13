@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import BoardProjectsPage from "../BoardProjectsPage";
 import type { Project } from "../../../lib/board-api";
@@ -17,10 +17,11 @@ vi.mock("../../../hooks/useBoardServerReady", () => ({
 // ── Mock board-api ─────────────────────────────────────────────
 
 let mockProjectsList: () => Promise<Project[]>;
+let mockProjectsCreate: (body: { name: string; description?: string; color?: string }) => Promise<Project>;
 
 vi.mock("../../../lib/board-api", () => ({
   get api() {
-    return { projects: { list: mockProjectsList } };
+    return { projects: { list: mockProjectsList, create: mockProjectsCreate } };
   },
   BOARD_SERVER_BASE: "http://localhost:4800",
 }));
@@ -55,6 +56,7 @@ function renderPage() {
 beforeEach(() => {
   mockUseBoardServerReady = () => ({ ready: false });
   mockProjectsList = vi.fn().mockResolvedValue([]);
+  mockProjectsCreate = vi.fn().mockResolvedValue(projectAlpha);
 });
 
 // ── Tests ──────────────────────────────────────────────────────
@@ -99,7 +101,25 @@ describe("BoardProjectsPage — ready with no projects", () => {
 
   it("shows 'No projects yet' message", async () => {
     renderPage();
-    expect(await screen.findByText("No projects yet")).toBeInTheDocument();
+    expect(await screen.findByText("Create your first project")).toBeInTheDocument();
+  });
+
+  it("creates a project from the empty state", async () => {
+    mockProjectsCreate = vi.fn().mockResolvedValue(projectAlpha);
+    renderPage();
+
+    fireEvent.change(await screen.findByPlaceholderText("Enterprise demo workspace"), {
+      target: { value: "Enterprise demo workspace" },
+    });
+    fireEvent.click(screen.getByText("Create Project"));
+
+    await waitFor(() => {
+      expect(mockProjectsCreate).toHaveBeenCalledWith({
+        name: "Enterprise demo workspace",
+        description: undefined,
+        color: "#0ea5e9",
+      });
+    });
   });
 });
 

@@ -6,6 +6,7 @@ export const NAV_PATHS = [
   "/marketplace",
   "/observatory",
   "/agents",
+  "/terminals",
   "/comparator",
   "/security/permissions",
   "/parity",

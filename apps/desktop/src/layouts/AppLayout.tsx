@@ -26,8 +26,8 @@ type NavSection = {
 export const NAV_SECTIONS: NavSection[] = [
   {
     id: "harness",
-    label: "Harness",
-    group: "CORE",
+    label: "Configure",
+    group: "CONFIGURE",
     icon: (
       <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
         <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
@@ -55,7 +55,6 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: "observatory",
     label: "Observatory",
-    group: "INSIGHTS",
     icon: (
       <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
         <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
@@ -70,6 +69,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: "agents",
     label: "Agents",
+    group: "OPERATE",
     icon: (
       <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
         <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
@@ -79,6 +79,16 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     id: "terminals",
+    label: "Terminals",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
+        <path fillRule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 2.293a1 1 0 011.414 0L9 9.586a1 1 0 010 1.414l-2.293 2.293a1 1 0 01-1.414-1.414L6.586 10 5.293 8.707a1 1 0 010-1.414zM10 13a1 1 0 100 2h4a1 1 0 100-2h-4z" clipRule="evenodd" />
+      </svg>
+    ),
+    path: "/terminals",
+  },
+  {
+    id: "comparator",
     label: "Comparator",
     icon: (
       <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
@@ -91,7 +101,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: "security",
     label: "Security",
-    group: "SYSTEM",
+    group: "GOVERN",
     icon: (
       <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
         <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
@@ -121,7 +131,6 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     id: "board",
     label: "Board",
-    group: "WORKFLOWS",
     icon: (
       <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
         <path d="M2 4a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H3a1 1 0 01-1-1V4zM3 9a1 1 0 000 2h6a1 1 0 000-2H3zM3 14a1 1 0 000 2h6a1 1 0 000-2H3zM14 9a1 1 0 000 2h3a1 1 0 000-2h-3zM14 14a1 1 0 000 2h3a1 1 0 000-2h-3z" />

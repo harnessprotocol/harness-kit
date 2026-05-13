@@ -25,6 +25,60 @@ const COMPONENT_TYPES: ComponentType[] = [
   "rules",
 ];
 
+const LOCAL_COMPONENTS: Component[] = [
+  {
+    id: "local-explain",
+    slug: "explain",
+    name: "Explain",
+    type: "skill",
+    description: "Layered code explanations for files, directories, and concepts.",
+    trust_tier: "official",
+    version: "0.2.0",
+    author: { name: "harnessprotocol" },
+    license: "Apache-2.0",
+    skill_md: null,
+    readme_md: "## Usage\n\nInstall with `/plugin install explain@harness-kit`, then run `/explain src/auth/`.",
+    repo_url: "https://github.com/harnessprotocol/harness-kit",
+    install_count: 0,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: "local-research",
+    slug: "research",
+    name: "Research",
+    type: "skill",
+    description: "Process sources into a structured, compounding knowledge base.",
+    trust_tier: "official",
+    version: "0.3.0",
+    author: { name: "harnessprotocol" },
+    license: "Apache-2.0",
+    skill_md: null,
+    readme_md: "## Usage\n\nInstall with `/plugin install research@harness-kit`, then run `/research https://...`.",
+    repo_url: "https://github.com/harnessprotocol/harness-kit",
+    install_count: 0,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: "local-review",
+    slug: "review",
+    name: "Review",
+    type: "skill",
+    description: "Comprehensive code review with severity labels and cross-file analysis.",
+    trust_tier: "official",
+    version: "0.2.0",
+    author: { name: "harnessprotocol" },
+    license: "Apache-2.0",
+    skill_md: null,
+    readme_md: "## Usage\n\nInstall with `/plugin install review@harness-kit`, then run `/review`.",
+    repo_url: "https://github.com/harnessprotocol/harness-kit",
+    install_count: 0,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+];
+
 export default function MarketplacePage() {
   const navigate = useNavigate();
   const { slug: selectedSlug } = useParams<{ slug?: string }>();
@@ -69,7 +123,7 @@ export default function MarketplacePage() {
   const [componentCategories, setComponentCategories] = useState<ComponentCategory[]>([]);
   const [componentTags, setComponentTags] = useState<ComponentTag[]>([]);
   const [tags, setTags] = useState<TagRow[]>([]);
-  const [listLoading, setListLoading] = useState(true);
+  const [listLoading, setListLoading] = useState(() => Boolean(supabase));
   const [listError, setListError] = useState<string | null>(null);
 
   // ── Detail panel state ──────────────────────────────────────
@@ -82,6 +136,7 @@ export default function MarketplacePage() {
   // ── Load list data ──────────────────────────────────────────
   useEffect(() => {
     if (!supabase) {
+      setComponents(LOCAL_COMPONENTS);
       setListLoading(false);
       return;
     }
@@ -120,6 +175,12 @@ export default function MarketplacePage() {
     }
 
     if (!supabase) {
+      const local = LOCAL_COMPONENTS.find((c) => c.slug === selectedSlug);
+      setDetail(local ?? null);
+      setDetailTags([]);
+      setRelated(LOCAL_COMPONENTS.filter((c) => c.slug !== selectedSlug).slice(0, 5));
+      setNotFound(!local);
+      setDetailLoading(false);
       return;
     }
 
@@ -277,36 +338,6 @@ export default function MarketplacePage() {
       })
     : null;
 
-  // ── No Supabase ─────────────────────────────────────────────
-  if (!supabase) {
-    return (
-      <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
-        <div style={{ width: "40%", borderRight: "1px solid var(--border-base)", padding: "20px 20px", overflowY: "auto" }}>
-          <PageHeader />
-          <div style={{
-            background: "var(--bg-surface)",
-            border: "1px solid var(--border-base)",
-            borderRadius: "8px",
-            padding: "32px 16px",
-            textAlign: "center",
-          }}>
-            <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0 }}>
-              Supabase not configured.
-            </p>
-            <p style={{ fontSize: "11px", color: "var(--fg-subtle)", margin: "4px 0 0" }}>
-              Add <code style={{ fontFamily: "ui-monospace, monospace" }}>VITE_SUPABASE_URL</code> and{" "}
-              <code style={{ fontFamily: "ui-monospace, monospace" }}>VITE_SUPABASE_ANON_KEY</code> to{" "}
-              <code style={{ fontFamily: "ui-monospace, monospace" }}>apps/desktop/.env</code>.
-            </p>
-          </div>
-        </div>
-        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>Select a plugin to view details</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
       {/* ── Master panel ── */}
@@ -321,6 +352,24 @@ export default function MarketplacePage() {
         {/* Fixed header + filters */}
         <div style={{ padding: "20px 20px 0", flexShrink: 0 }}>
           <PageHeader />
+
+          {!supabase && (
+            <div style={{
+              background: "var(--warning-light)",
+              border: "1px solid rgba(217,119,6,0.22)",
+              borderRadius: "8px",
+              padding: "9px 10px",
+              marginBottom: "12px",
+              fontSize: "11px",
+              lineHeight: 1.45,
+              color: "var(--fg-muted)",
+            }}>
+              <strong style={{ color: "var(--fg-base)" }}>Supabase not configured.</strong>{" "}
+              Showing a local demo catalog. Add{" "}
+              <code style={{ fontFamily: "ui-monospace, monospace" }}>VITE_SUPABASE_URL</code> and{" "}
+              <code style={{ fontFamily: "ui-monospace, monospace" }}>VITE_SUPABASE_ANON_KEY</code> to use the live marketplace.
+            </div>
+          )}
 
           {/* Active tag filter banner */}
           {selectedTag && (

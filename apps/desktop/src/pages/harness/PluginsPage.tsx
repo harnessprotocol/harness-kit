@@ -5,6 +5,7 @@ import {
   listInstalledPlugins, checkPluginUpdates, uninstallPlugin,
   importPluginFromPath, importPluginFromZip,
   exportPluginAsZip, exportPluginToFolder,
+  isTauriRuntimeAvailable,
 } from "../../lib/tauri";
 import type { InstalledPlugin, PluginUpdateInfo } from "@harness-kit/shared";
 import ContextMenu, { type ContextMenuItem } from "../../components/ContextMenu";
@@ -16,6 +17,41 @@ import UninstallDialog from "./plugins/UninstallDialog";
 import { useChat } from "../../contexts/ChatContext";
 import { emitChatShare } from "../../lib/chat-events";
 
+const PREVIEW_PLUGINS: InstalledPlugin[] = [
+  {
+    name: "research",
+    version: "0.3.0",
+    description: "Index source material and synthesize reusable project research.",
+    marketplace: "harness-kit",
+    source: "browser-preview://plugins/research",
+    category: "Knowledge",
+    tags: ["research", "memory"],
+    component_counts: { skills: 1, agents: 0, scripts: 2 },
+  },
+  {
+    name: "board",
+    version: "0.2.0",
+    description: "Manage project tasks through a lightweight local Kanban board.",
+    marketplace: "harness-kit",
+    source: "browser-preview://plugins/board",
+    category: "Operate",
+    tags: ["workflow", "tasks"],
+    component_counts: { skills: 1, agents: 0, scripts: 1 },
+  },
+  {
+    name: "harness-share",
+    version: "0.3.0",
+    description: "Compile and sync harness.yaml across AI tool configurations.",
+    marketplace: "harness-kit",
+    source: "browser-preview://plugins/harness-share",
+    category: "Configure",
+    tags: ["sync", "configuration"],
+    component_counts: { skills: 4, agents: 0, scripts: 3 },
+  },
+];
+
+const DESKTOP_RUNTIME_MESSAGE = "Browser preview mode: plugin filesystem actions require the Harness Kit desktop runtime.";
+
 export default function PluginsPage() {
   const navigate = useNavigate();
   const { state: chatState } = useChat();
@@ -23,6 +59,8 @@ export default function PluginsPage() {
   const [updates, setUpdates] = useState<Record<string, PluginUpdateInfo>>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [runtimeNotice, setRuntimeNotice] = useState<string | null>(null);
+  const [tauriAvailable] = useState(isTauriRuntimeAvailable);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; plugin: InstalledPlugin } | null>(null);
 
   // Filters
@@ -37,6 +75,17 @@ export default function PluginsPage() {
   const [uninstallTarget, setUninstallTarget] = useState<InstalledPlugin | null>(null);
 
   const loadPlugins = useCallback(() => {
+    if (!tauriAvailable) {
+      setPlugins(PREVIEW_PLUGINS);
+      setUpdates({});
+      setError(null);
+      setRuntimeNotice(DESKTOP_RUNTIME_MESSAGE);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
+    setRuntimeNotice(null);
     listInstalledPlugins()
       .then(setPlugins)
       .catch((e) => setError(String(e)))
@@ -49,9 +98,13 @@ export default function PluginsPage() {
         setUpdates(map);
       })
       .catch(() => {}); // updates are best-effort
-  }, []);
+  }, [tauriAvailable]);
 
   useEffect(loadPlugins, [loadPlugins]);
+
+  function showDesktopOnlyNotice() {
+    setRuntimeNotice(DESKTOP_RUNTIME_MESSAGE);
+  }
 
   // Derived data
   const categories = useMemo(
@@ -104,6 +157,11 @@ export default function PluginsPage() {
     dragRef.current = 0;
     setDragCount(0);
 
+    if (!tauriAvailable) {
+      showDesktopOnlyNotice();
+      return;
+    }
+
     const files = e.dataTransfer.files;
     if (files.length === 0) return;
 
@@ -134,6 +192,11 @@ export default function PluginsPage() {
   // ── Import from folder picker ────────────────────────────
 
   async function handleImportFolder() {
+    if (!tauriAvailable) {
+      showDesktopOnlyNotice();
+      return;
+    }
+
     try {
       const { open } = await import("@tauri-apps/plugin-dialog");
       const selected = await open({ directory: true, title: "Select plugin folder" });
@@ -162,6 +225,12 @@ export default function PluginsPage() {
 
   async function handleUninstall() {
     if (!uninstallTarget) return;
+    if (!tauriAvailable) {
+      setUninstallTarget(null);
+      showDesktopOnlyNotice();
+      return;
+    }
+
     const pluginName = uninstallTarget.name;
     try {
       await uninstallPlugin(pluginName);
@@ -179,6 +248,14 @@ export default function PluginsPage() {
   // ── Context menu builder ─────────────────────────────────
 
   function buildContextMenuItems(plugin: InstalledPlugin): ContextMenuItem[] {
+    if (!tauriAvailable) {
+      return [
+        { label: "Copy name", onClick: () => navigator.clipboard.writeText(plugin.name) },
+        { separator: true },
+        { label: "Desktop runtime required", onClick: showDesktopOnlyNotice },
+      ];
+    }
+
     return [
       { label: "Copy name", onClick: () => navigator.clipboard.writeText(plugin.name) },
       {
@@ -244,11 +321,14 @@ export default function PluginsPage() {
         <div style={{ display: "flex", gap: "8px" }}>
           <button
             onClick={handleImportFolder}
+            disabled={!tauriAvailable}
+            title={tauriAvailable ? "Import a plugin folder" : DESKTOP_RUNTIME_MESSAGE}
             style={{
               fontSize: "12px", fontWeight: 500, padding: "5px 12px",
               borderRadius: "6px", border: "1px solid var(--accent)",
               background: "rgba(91,80,232,0.08)", color: "var(--accent-text)",
-              cursor: "pointer",
+              cursor: tauriAvailable ? "pointer" : "not-allowed",
+              opacity: tauriAvailable ? 1 : 0.65,
             }}
           >
             Import Plugin
@@ -272,6 +352,16 @@ export default function PluginsPage() {
 
       {/* Import banner */}
       <ImportBanner status={importStatus} onDismiss={() => setImportStatus(null)} />
+
+      {runtimeNotice && (
+        <div style={{
+          background: "rgba(91,80,232,0.08)", border: "1px solid rgba(139,92,246,0.35)",
+          borderRadius: "8px", padding: "10px 14px", fontSize: "12px", color: "var(--fg-muted)",
+          marginBottom: "12px",
+        }}>
+          {runtimeNotice}
+        </div>
+      )}
 
       {loading && (
         <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</p>
@@ -338,7 +428,13 @@ export default function PluginsPage() {
                   update={updates[plugin.name]}
                   index={i}
                   isLast={i === filtered.length - 1}
-                  onClick={() => navigate(`/harness/plugins/${encodeURIComponent(plugin.name)}`)}
+                  onClick={() => {
+                    if (!tauriAvailable) {
+                      showDesktopOnlyNotice();
+                      return;
+                    }
+                    navigate(`/harness/plugins/${encodeURIComponent(plugin.name)}`);
+                  }}
                   onContextMenu={(e) => {
                     setContextMenu({ x: e.clientX, y: e.clientY, plugin });
                   }}

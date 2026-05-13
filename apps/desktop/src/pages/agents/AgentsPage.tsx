@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useNavigate } from "react-router-dom";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -224,17 +225,38 @@ function AgentCard({ agent, onAddToComparator }: {
 // ── Page ─────────────────────────────────────────────────────
 
 export default function AgentsPage() {
+  const navigate = useNavigate();
   const [agents, setAgents] = useState<AgentInfo[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [stagedAgentIds, setStagedAgentIds] = useState<Set<string>>(() => {
+    try {
+      return new Set<string>(JSON.parse(localStorage.getItem("harness-kit-comparator-staged-agents") ?? "[]"));
+    } catch {
+      return new Set();
+    }
+  });
 
   useEffect(() => {
     invoke<AgentInfo[]>("detect_agents")
-      .then(setAgents)
+      .then((detected) => {
+        setAgents(detected.map((agent) => (
+          stagedAgentIds.has(agent.id)
+            ? { ...agent, addToComparator: false }
+            : agent
+        )));
+      })
       .catch((e) => setError(String(e)));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleAddToComparator(id: string) {
-    // Mark the agent as no longer addable (prevents double-clicks)
+    const next = new Set(stagedAgentIds);
+    next.add(id);
+    setStagedAgentIds(next);
+    try {
+      localStorage.setItem("harness-kit-comparator-staged-agents", JSON.stringify([...next]));
+    } catch {}
+
     setAgents((prev) =>
       prev
         ? prev.map((a) => (a.id === id ? { ...a, addToComparator: false } : a))
@@ -267,6 +289,37 @@ export default function AgentsPage() {
             ? `${installedCount} of ${agents.length} agents detected on this machine`
             : "Detecting installed CLI agents…"}
         </p>
+        {stagedAgentIds.size > 0 && (
+          <div style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginTop: 14,
+            padding: "10px 12px",
+            borderRadius: 8,
+            border: `1px solid ${tokens.borderBase}`,
+            background: tokens.bgSurface,
+          }}>
+            <span style={{ flex: 1, fontSize: 12, color: tokens.fgMuted }}>
+              {stagedAgentIds.size} agent{stagedAgentIds.size === 1 ? "" : "s"} staged for the next comparison.
+            </span>
+            <button
+              onClick={() => navigate("/comparator")}
+              style={{
+                border: `1px solid ${tokens.accent}`,
+                borderRadius: 6,
+                background: "rgba(14,165,233,0.1)",
+                color: tokens.accent,
+                cursor: "pointer",
+                fontSize: 12,
+                fontWeight: 600,
+                padding: "5px 10px",
+              }}
+            >
+              Open Comparator
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Error state */}
