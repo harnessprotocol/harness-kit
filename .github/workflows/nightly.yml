@@ -90,6 +90,9 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
+      - name: Verify Rust toolchain
+        run: rustup show && cargo --version
+
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: apps/desktop/src-tauri
@@ -104,7 +107,9 @@ jobs:
           pnpm --filter board-server build
 
       - name: Build desktop app
-        run: pnpm --filter harness-kit-desktop tauri build
+        run: |
+          cargo --version
+          pnpm --filter harness-kit-desktop tauri build
         env:
           TAURI_SIGNING_PRIVATE_KEY: ""
 
