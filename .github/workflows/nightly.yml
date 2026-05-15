@@ -90,6 +90,9 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
+      - name: Verify Rust toolchain
+        run: rustup show && cargo --version
+
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: apps/desktop/src-tauri
