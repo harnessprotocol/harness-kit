@@ -108,17 +108,7 @@ jobs:
 
       - name: Build desktop app
         run: |
-          echo "=== PATH ==="
-          echo "$PATH" | tr ':' '\n'
-          echo "=== which cargo ==="
-          which cargo
-          echo "=== cargo --version ==="
           cargo --version
-          echo "=== ~/.cargo/bin/cargo ==="
-          file "$HOME/.cargo/bin/cargo" 2>/dev/null || echo "not found"
-          echo "=== CARGO_HOME/bin ==="
-          ls -la "$CARGO_HOME/bin/" 2>/dev/null | head -10
-          echo "=== build ==="
           pnpm --filter harness-kit-desktop tauri build
         env:
           TAURI_SIGNING_PRIVATE_KEY: ""
