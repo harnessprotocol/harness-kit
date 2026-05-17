@@ -1,4 +1,4 @@
 {
   "title": "Cross-Harness",
-  "pages": ["setup-guide", "concept-mapping", "ide-support"]
+  "pages": ["setup-guide", "concept-mapping", "ide-support", "llm-wiki-pattern"]
 }

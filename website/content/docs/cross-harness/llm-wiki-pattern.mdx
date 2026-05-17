@@ -1,0 +1,144 @@
+---
+title: Worked Example — Karpathy's LLM Wiki
+---
+
+# Worked Example — Karpathy's LLM Wiki
+
+In April 2026 Andrej Karpathy published a 75-line idea file ([gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)) describing a pattern for LLM-maintained personal knowledge bases. It crossed 5,000 gist stars and 16M X views within days and has since spawned multiple community extensions.
+
+The pattern is interesting on its own merits — *"the LLM doesn't just index the source for retrieval, it incrementally builds and maintains a persistent wiki"* — but it's also a textbook case for why a harness-agnostic framework matters. Karpathy's gist is one paragraph of architecture and three operations; the same paragraph runs unchanged on Claude Code, OpenAI Codex, OpenCode/Pi, and any other agent that can read a schema file. The configuration that makes it work — a schema doc, a few skills, an optional CLI — is portable across harnesses by design.
+
+This page walks through how the pattern packages cleanly as a harness-kit plugin and what it tells us about the shape of harness-portable workflows in general.
+
+## The Pattern in 30 Seconds
+
+Three layers:
+
+| Layer | What it is | Who writes it |
+|-------|-----------|---------------|
+| **Raw sources** (`raw/`) | Articles, papers, transcripts. Immutable. | Human (curator) |
+| **The wiki** (`wiki/`) | LLM-generated markdown — summaries, entity pages, concept pages, index, log. | LLM, exclusively |
+| **The schema** (`CLAUDE.md` / `AGENTS.md`) | Conventions, ingest workflow, query workflow, lint checklist. | Human + LLM co-evolved |
+
+Three operations:
+
+- **Ingest** — drop a source into `raw/`, the LLM reads it, writes a summary, updates 10-15 wiki pages, appends to the log
+- **Query** — ask a question; the LLM reads `index.md` first, drills into pages, returns an answer with citations; good answers get filed back as new wiki pages
+- **Lint** — periodic health check for contradictions, orphan pages, missing cross-references, stale claims
+
+Two special files:
+
+- **`index.md`** — content-oriented catalog; the LLM updates it on every ingest and reads it first on every query
+- **`log.md`** — append-only chronological record with grep-parseable prefixes (`## [2026-04-02] ingest | Article Title`)
+
+That's the entire pattern. Karpathy is explicit that everything beyond this is implementation detail. *"The document is intentionally abstract. It describes the idea, not a specific implementation."*
+
+## Why It's a Harness-Kit Showcase
+
+The pattern's architecture maps onto the five [configuration primitives](./concept-mapping) cleanly:
+
+| Pattern element | Configuration primitive | harness-kit treatment |
+|-----------------|------------------------|----------------------|
+| Schema document | **Instructions** | `CLAUDE.md` / `AGENTS.md` / `.cursor/rules/llm-wiki.mdc` — one source, compiled per harness |
+| Ingest workflow | **Skill / Prompt Template** | `wiki-ingest` skill — file in `.claude/skills/wiki-ingest/SKILL.md`, `.github/prompts/wiki-ingest.prompt.md`, etc. |
+| Query workflow | **Skill** | `wiki-query` skill |
+| Lint workflow | **Skill** | `wiki-lint` skill |
+| Optional search tool ([qmd](https://github.com/tobi/qmd)) | **Tool Server** | `.mcp.json` entry — same MCP server works in any harness that speaks MCP |
+
+A user who adopts this pattern in Claude Code can move to Codex or Cursor without rebuilding it. The compiled output looks different per harness — Claude Code uses `CLAUDE.md`-style includes, Copilot uses `.github/instructions/*.instructions.md` with `applyTo` globs, Cursor uses `.mdc` files — but the *source configuration is one set of files* in the harness-kit plugin format.
+
+This is the harness-kit thesis condensed into a single example: **the workflow is portable; the harness is the renderer**.
+
+## Packaging as a Plugin
+
+<Callout type="info" title="Illustrative, not shipped">
+The packaging below describes how the pattern would map onto harness-kit's plugin format. The `llm-wiki-plugin` itself has not been published yet — this section is a worked design, not a starter you can install. PRs welcome.
+</Callout>
+
+A reference packaging:
+
+```
+llm-wiki-plugin/
+├── plugin.json                          # name, version, description, deps
+├── instructions/
+│   └── schema.md                        # The Karpathy schema, source of truth
+├── skills/
+│   ├── wiki-ingest/SKILL.md            # Reads new sources, writes wiki pages
+│   ├── wiki-query/SKILL.md             # Answers questions from wiki; files back good answers
+│   └── wiki-lint/SKILL.md              # Periodic health checks
+├── mcp/
+│   └── qmd.json                         # Optional: local hybrid search MCP server
+└── templates/
+    ├── index.md.tmpl                    # Starter index
+    └── log.md.tmpl                      # Starter log
+```
+
+On `harness-kit compile`, this gets rendered to the active harness's format:
+
+```
+.claude/                                  # if Claude Code is active
+├── CLAUDE.md                             # composed from instructions/schema.md
+├── skills/wiki-ingest/SKILL.md
+├── skills/wiki-query/SKILL.md
+└── skills/wiki-lint/SKILL.md
+.mcp.json                                 # includes qmd entry
+
+# OR
+
+.github/                                  # if Copilot is active
+├── copilot-instructions.md
+├── prompts/wiki-ingest.prompt.md
+├── prompts/wiki-query.prompt.md
+└── prompts/wiki-lint.prompt.md
+.vscode/mcp.json
+```
+
+User runs the workflow the same way regardless of harness. The instruction format renders. The skill bodies render. The MCP entry renders. Nothing about the *user's experience* of the pattern depends on which harness is loaded.
+
+## What This Reveals About Portable Workflows
+
+The LLM Wiki pattern is unusually portable because Karpathy designed for portability: he names the configuration file as `CLAUDE.md` *or* `AGENTS.md` *or whatever your agent reads* in the first sentence of the gist. He treats the schema as an interface, not an implementation.
+
+Most workflows aren't designed this way. They assume Claude Code (or Cursor, or Copilot) specifically. The author writes a `CLAUDE.md`, hard-codes `.claude/` paths, references slash commands by their Claude Code spellings, and ships it. Even if the workflow is conceptually portable, the artifact isn't.
+
+harness-kit is the answer to this. The plugin format is the portable interface. Tool-specific compilation is the implementation layer. A user can adopt a workflow without committing to the harness it was originally written in.
+
+The LLM Wiki pattern is the cleanest illustration because:
+
+1. **Single conceptual surface** — three layers, three operations, two files, optional CLI tool. Small enough to think about whole.
+2. **Schema is the product** — the schema doc isn't auxiliary; it *is* the workflow. Whoever owns the schema owns the pattern.
+3. **All five primitives present** — instructions, skills, MCP. Nothing exotic.
+4. **Author explicitly punts on implementation** — the pattern is described as portable on purpose. Karpathy says so.
+
+If you're authoring workflows that you want to outlast a single tool's market position, this is a useful model to study.
+
+## Community Extensions Worth Knowing
+
+The pattern has spawned a small ecosystem worth scanning before you implement your own:
+
+- **[LLM Wiki v2 (rohitg00)](https://gist.github.com/rohitg00/2067ab416f7bbe447c1977edaaa681e2)** — extends the original with confidence scoring, typed knowledge graph on top of markdown, hybrid search (BM25 + vector + graph), memory consolidation tiers (working / episodic / semantic / procedural), event-driven automation. Lessons distilled from building a production agent-memory system.
+- **[llm-atomic-wiki (cablate)](https://github.com/cablate/llm-atomic-wiki)** — adds an "atom layer" between raw sources and wiki pages (each atom is a single claim with frontmatter and source provenance), topic-branch organization for the atom layer, and two-layer lint (programmatic checks first, LLM checks second). Distilled from running the original pattern end-to-end.
+- **[git-wiki (yysun, DEV.to)](https://dev.to/yysun/bringing-the-llm-wiki-idea-to-a-codebase-22go)** — applies the pattern to source code instead of documents, using git's change-detection as the natural incremental-update mechanism. *"Git gives us, almost for free: changed-file detection, rename and deletion tracking, a natural checkpoint."*
+
+A reference packaging of any of these as a harness-kit plugin would be a welcome contribution.
+
+## Comparison: Karpathy's Pattern vs Traditional RAG
+
+| Dimension | Karpathy's LLM Wiki | Traditional RAG |
+|-----------|---------------------|-----------------|
+| Cost model | Expensive on ingest, cheap on query | Cheap on ingest, expensive per query |
+| Source bound | Bounded (100-500 sources) | Unbounded |
+| Synthesis quality | Compounds (good answers get filed back) | Re-derived from raw chunks per query |
+| Maintenance burden | LLM handles it (the load-bearing claim) | Index drift, embedding refresh, none done by humans |
+| Infrastructure | Markdown files, optional CLI search tool | Vector DB, embedding service, retrieval pipeline |
+| Hallucination risk | Can bake hallucinations in as "facts" | Bound to retrieved chunks, citable per claim |
+| Best for | Personal/team knowledge bases, deep research, book/topic studies | Large, fast-moving corpora needing precise citation |
+
+Neither approach is universally correct. The LLM Wiki pattern is exemplary specifically *because* it picked a niche where its tradeoffs win — and packaged it small enough to be portable.
+
+## Further Reading
+
+- Original gist: [karpathy/442a6bf...](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)
+- DAIR.AI Academy walkthrough: [LLM Knowledge Bases](https://academy.dair.ai/blog/llm-knowledge-bases-karpathy)
+- Beyond RAG framing: ["Knowledge that compounds"](https://levelup.gitconnected.com/beyond-rag-how-andrej-karpathys-llm-wiki-pattern-builds-knowledge-that-actually-compounds-31a08528665e)
+- Memex (1945) — Karpathy explicitly cites Vannevar Bush's vision; this pattern is the part Bush couldn't solve (who does the maintenance)
