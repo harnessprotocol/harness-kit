@@ -1,9 +1,8 @@
 ---
-sidebar_position: 4
 title: Worked Example — Karpathy's LLM Wiki
 ---
 
-# Worked Example: Karpathy's LLM Wiki
+# Worked Example — Karpathy's LLM Wiki
 
 In April 2026 Andrej Karpathy published a 75-line idea file ([gist](https://gist.github.com/karpathy/442a6bf555914893e9891c11519de94f)) describing a pattern for LLM-maintained personal knowledge bases. It crossed 5,000 gist stars and 16M X views within days and has since spawned multiple community extensions.
 
@@ -51,6 +50,10 @@ A user who adopts this pattern in Claude Code can move to Codex or Cursor withou
 This is the harness-kit thesis condensed into a single example: **the workflow is portable; the harness is the renderer**.
 
 ## Packaging as a Plugin
+
+<Callout type="info" title="Illustrative, not shipped">
+The packaging below describes how the pattern would map onto harness-kit's plugin format. The `llm-wiki-plugin` itself has not been published yet — this section is a worked design, not a starter you can install. PRs welcome.
+</Callout>
 
 A reference packaging:
 
@@ -107,7 +110,7 @@ The LLM Wiki pattern is the cleanest illustration because:
 3. **All five primitives present** — instructions, skills, MCP. Nothing exotic.
 4. **Author explicitly punts on implementation** — the pattern is described as portable on purpose. Karpathy says so.
 
-If you're authoring workflows that you want to outlast a single tool's market position, this is the model to copy.
+If you're authoring workflows that you want to outlast a single tool's market position, this is a useful model to study.
 
 ## Community Extensions Worth Knowing
 
@@ -117,7 +120,7 @@ The pattern has spawned a small ecosystem worth scanning before you implement yo
 - **[llm-atomic-wiki (cablate)](https://github.com/cablate/llm-atomic-wiki)** — adds an "atom layer" between raw sources and wiki pages (each atom is a single claim with frontmatter and source provenance), topic-branch organization for the atom layer, and two-layer lint (programmatic checks first, LLM checks second). Distilled from running the original pattern end-to-end.
 - **[git-wiki (yysun, DEV.to)](https://dev.to/yysun/bringing-the-llm-wiki-idea-to-a-codebase-22go)** — applies the pattern to source code instead of documents, using git's change-detection as the natural incremental-update mechanism. *"Git gives us, almost for free: changed-file detection, rename and deletion tracking, a natural checkpoint."*
 
-A reference packaging of any of these as a harness-kit plugin would be a strong contribution.
+A reference packaging of any of these as a harness-kit plugin would be a welcome contribution.
 
 ## Comparison: Karpathy's Pattern vs Traditional RAG
 
