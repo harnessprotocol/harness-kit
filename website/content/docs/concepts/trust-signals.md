@@ -28,15 +28,20 @@ baked into the static marketplace data — there is no server, database, or runt
 
 | Badge | Scan status | Meaning |
 |-------|-------------|---------|
-| **Verified** | passed | No findings. |
-| **Caution** | warnings | Non-critical findings worth a glance (e.g. a declared sensitive env var, or an external URL). |
+| **Verified** | passed | No warning- or critical-level findings (informational notes may still appear). |
+| **Caution** | warnings | One or more warning-level findings worth a glance — e.g. a detected external URL, network access, or a broad filesystem write path. |
 | **Review** | failed | One or more critical findings — read the security panel before installing. |
 | **Unscanned** | not scanned | No scan result available. |
 
-A **Caution** badge is normal and expected for plugins that legitimately need network
-access or a token — for example, a plugin that fetches GitHub content declares a
-`GH_TOKEN`. The badge surfaces *what* a plugin can do so you can decide whether that
-matches what you expect it to do.
+A **Caution** badge is normal and expected for plugins that legitimately reach the network
+or write files — for example, a plugin whose skill references an external URL. The badge
+surfaces *what* a plugin can do so you can decide whether that matches what you expect it
+to do.
+
+Declaring a sensitive environment variable (such as a `GH_TOKEN`) is recorded as an
+**informational** note, not a warning — on its own it does not lower a plugin below
+**Verified**. It still appears in the permissions summary so you can see what the plugin
+reads.
 
 ## The permissions summary
 
