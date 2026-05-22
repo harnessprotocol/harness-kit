@@ -17,16 +17,16 @@ harness-kit/
 ├── packages/                     ← shared libraries and standalone servers
 │   ├── core/                     ← harness.yaml compile/parse/detect logic
 │   ├── shared/                   ← shared TypeScript types used across apps
+│   ├── marketplace-data/         ← build-time generator: git → static marketplace JSON (runs the security scanner)
 │   ├── board-server/             ← WebSocket + HTTP server for the Kanban board and Roadmap/Competitor Analysis features
 │   ├── agent-server/             ← LangGraph execution engine for per-card agent runs (port 4802)
 │   └── chat-relay/               ← self-hosted WebSocket relay for team chat (port 4801)
 ├── functions/                    ← Cloudflare Pages Functions (server-side endpoints, e.g. /feedback proxy)
-├── website/                      ← documentation site (harnesskit.ai)
+├── website/                      ← documentation site + plugin marketplace (harnesskit.ai)
 ├── homebrew/                     ← Homebrew tap formulae for CLI and desktop app
 ├── apps/                         ← end-user applications
 │   ├── desktop/                  ← Tauri desktop app (React + Rust)
-│   ├── cli/                      ← harness CLI
-│   └── marketplace/              ← Next.js marketplace web app
+│   └── cli/                      ← harness CLI
 ├── profiles/                     ← pre-configured harness.yaml bundles for different roles
 ├── evals/                        ← automated skill evaluation framework (Python + golden responses)
 ├── harness.yaml                  ← dogfooding config (plugins used to develop this repo)

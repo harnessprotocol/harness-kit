@@ -59,15 +59,6 @@ Sensitive configuration values should NEVER be committed to version control. Use
 
 **Required Secrets by Service:**
 
-**Marketplace (`apps/marketplace/`):**
-- `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL (public, but project-specific)
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anonymous key (public, rate-limited)
-- `SUPABASE_SERVICE_ROLE_KEY` - Server-side Supabase key (PRIVATE, keep secret)
-- `SUPABASE_URL` - Supabase URL for seed scripts (PRIVATE)
-- `REGISTER_API_KEY` - API key protecting the /api/register endpoint (PRIVATE, keep secret)
-- `GITHUB_TOKEN` - GitHub personal access token for sync operations (PRIVATE, optional)
-- `GITHUB_WEBHOOK_SECRET` - GitHub webhook secret (PRIVATE, keep secret)
-
 **Board Server (`packages/board-server/`):**
 - `BOARD_PORT` - WebSocket server port (default: 4800)
 
@@ -100,14 +91,6 @@ Before deploying harness-kit services to production:
 - [ ] Rate limiting is configured for public API endpoints
 - [ ] Logging is configured to exclude sensitive data
 - [ ] Security headers are configured (CSP, HSTS, X-Frame-Options, etc.)
-
-### Marketplace App (`apps/marketplace/`)
-
-- Deploy on a platform with built-in DDoS protection (e.g., Vercel, Cloudflare)
-- Configure Content Security Policy (CSP) headers
-- Enable Supabase RLS policies for all tables
-- Use `NEXT_PUBLIC_` prefix only for truly public variables
-- Never expose `SUPABASE_SERVICE_ROLE_KEY` to the client
 
 ### Board Server (`packages/board-server/`)
 

@@ -23,9 +23,6 @@ website/.next/
 website/out/
 website/.source/
 
-# Marketplace
-apps/marketplace/.next/
-apps/marketplace/out/
 *.tsbuildinfo
 
 # Supabase local
@@ -52,6 +49,9 @@ packages/board-server/dist/
 
 # Agent server
 packages/agent-server/dist/
+
+# Marketplace data generator
+packages/marketplace-data/dist/
 
 # Auto Claude data directory
 .auto-claude/

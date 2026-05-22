@@ -2,6 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react';
 import styles from './DesktopMock.module.css';
+import { getAllPlugins } from '@/lib/marketplace/data';
+
+// Real marketplace plugins drive the mock's plugin grid (kept to 6 for layout).
+const MOCK_PLUGINS = getAllPlugins()
+  .slice(0, 6)
+  .map((p) => ({ name: p.name, desc: p.description }));
 
 type SectionId = 'harness' | 'marketplace' | 'observatory' | 'agents' | 'comparator' | 'security' | 'parity' | 'board' | 'roadmap' | 'ai-chat' | 'memory';
 
@@ -354,14 +360,7 @@ export function DesktopMock({
               Search plugins…
             </div>
             <div className={styles.pluginGridMock}>
-              {[
-                { name: 'research', desc: 'Structured knowledge base from any source.' },
-                { name: 'orient', desc: 'Topic-focused session orientation.' },
-                { name: 'explain', desc: 'Layered explanations of files and concepts.' },
-                { name: 'review', desc: 'Cross-file code review with severity labels.' },
-                { name: 'data-lineage', desc: 'Column-level tracing through SQL and Kafka.' },
-                { name: 'capture-session', desc: 'Save session state for later reflection.' },
-              ].map((p) => (
+              {MOCK_PLUGINS.map((p) => (
                 <div key={p.name} className={styles.pluginTile}>
                   <div className={styles.pluginTileName}>{p.name}</div>
                   <div className={styles.pluginTileDesc}>{p.desc}</div>

@@ -38,7 +38,7 @@ const NAV_GROUPS: Group[] = [
         id: 'marketplace',
         title: 'Marketplace',
         description: 'Browse and install plugins by name. Research, review, data lineage, and more.',
-        href: '/docs/plugins/overview',
+        href: '/marketplace',
         accent: 'var(--cat-cyan)',
         icon: (
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
