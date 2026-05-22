@@ -9,6 +9,7 @@
     "cross-harness-portability",
     "comparison",
     "agent-client-protocol",
-    "harness-protocol"
+    "harness-protocol",
+    "trust-signals"
   ]
 }

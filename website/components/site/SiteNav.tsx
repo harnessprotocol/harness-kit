@@ -8,7 +8,7 @@ import { HarnessKitLogo } from '@/components/site/HarnessKitLogo';
 const navLinks = [
   { href: '/docs', label: 'Docs' },
   { href: '/explore', label: 'Explore' },
-  { href: '/docs/plugins/overview', label: 'Plugins' },
+  { href: '/marketplace', label: 'Marketplace' },
   { href: 'https://github.com/harnessprotocol/harness-kit', label: 'GitHub', external: true },
 ];
 

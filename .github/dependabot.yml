@@ -13,7 +13,7 @@ updates:
           - "*"
 
   # Root pnpm workspace — covers all workspace packages via shared lockfile
-  # (apps/board, apps/cli, apps/desktop, apps/marketplace, packages/*, evals/fixtures, etc.)
+  # (apps/cli, apps/desktop, packages/*, evals/fixtures, etc.)
   - package-ecosystem: "npm"
     directory: "/"
     schedule:

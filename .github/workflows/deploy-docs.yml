@@ -6,6 +6,9 @@ on:
     paths:
       - 'website/**'
       - 'functions/**'
+      - '.claude-plugin/**'
+      - 'plugins/**'
+      - 'packages/**'
       - '.github/workflows/deploy-docs.yml'
     tags-ignore:
       - '**'
@@ -33,7 +36,19 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-          cache-dependency-path: website/pnpm-lock.yaml
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            website/pnpm-lock.yaml
+
+      # Generate the static marketplace JSON the website consumes. Runs from the
+      # repo root with a filtered install so we pull only the generator and its
+      # workspace deps (core/shared) — not the heavy monorepo (desktop, native
+      # builds) that the website is deliberately installed in isolation from.
+      - name: Generate marketplace data
+        run: |
+          pnpm install --filter "@harness-kit/marketplace-data..." --frozen-lockfile
+          pnpm --filter @harness-kit/shared --filter @harness-kit/core build
+          pnpm --filter @harness-kit/marketplace-data generate --strict
 
       - name: Install dependencies
         working-directory: website
