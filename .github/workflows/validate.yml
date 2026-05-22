@@ -309,6 +309,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # The website imports a static marketplace JSON generated from git (gitignored
+      # build output). Generate it before the website build runs in the turbo graph.
+      - name: Generate marketplace data
+        run: |
+          pnpm --filter @harness-kit/shared --filter @harness-kit/core build
+          pnpm --filter @harness-kit/marketplace-data generate --strict
+
       - name: Build and test all packages
         run: pnpm turbo run build test
 
@@ -440,7 +447,19 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-          cache-dependency-path: website/pnpm-lock.yaml
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            website/pnpm-lock.yaml
+
+      # Generate the static marketplace JSON the website consumes. Runs from the
+      # repo root with a filtered install so we pull only the generator and its
+      # workspace deps (core/shared) — not the heavy monorepo — before the website
+      # is installed in isolation.
+      - name: Generate marketplace data
+        run: |
+          pnpm install --filter "@harness-kit/marketplace-data..." --frozen-lockfile
+          pnpm --filter @harness-kit/shared --filter @harness-kit/core build
+          pnpm --filter @harness-kit/marketplace-data generate --strict
 
       - name: Install dependencies
         working-directory: website

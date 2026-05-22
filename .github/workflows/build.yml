@@ -30,6 +30,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # The website imports a static marketplace JSON generated from git (gitignored
+      # build output). Generate it before the website build runs in the turbo graph.
+      - name: Generate marketplace data
+        run: |
+          pnpm --filter @harness-kit/shared --filter @harness-kit/core build
+          pnpm --filter @harness-kit/marketplace-data generate --strict
+
       - name: Build all packages
         # Desktop (Tauri) is excluded — requires Rust + platform-specific system libs.
         # Desktop is built and tested in the desktop-build-test job in validate.yml.
