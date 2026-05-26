@@ -77,10 +77,10 @@ export default function WelcomeScreen({ onDismiss }: WelcomeScreenProps) {
           gap: 0,
         }}
       >
-        {/* Logo */}
+        {/* Logo — PROVISIONAL mark, mirrors website HarnessKitLogo.tsx (redesign planned) */}
         <svg
           xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 28 28"
+          viewBox="0 0 32 32"
           style={{
             width: 36,
             height: 36,
@@ -89,18 +89,14 @@ export default function WelcomeScreen({ onDismiss }: WelcomeScreenProps) {
             flexShrink: 0,
           }}
         >
-          <rect width="28" height="28" rx="6" fill="#0d0d0d" />
-          <text
-            x="14"
-            y="19"
-            textAnchor="middle"
-            fontFamily="system-ui, sans-serif"
-            fontWeight="700"
-            fontSize="13"
-            fill="var(--accent)"
-          >
-            hk
-          </text>
+          <rect width="32" height="32" rx="7" fill="#13141d" />
+          <g stroke="#7d8dff" strokeWidth="2.8" strokeLinecap="round" fill="none">
+            <path d="M9 9.5 C 15 11, 17.5 13.5, 19.4 14.9" />
+            <path d="M9 22.5 C 15 21, 17.5 18.5, 19.4 17.1" />
+          </g>
+          <circle cx="9" cy="9.5" r="1.9" fill="#7d8dff" />
+          <circle cx="9" cy="22.5" r="1.9" fill="#7d8dff" />
+          <circle cx="22" cy="16" r="3.3" fill="#7d8dff" />
         </svg>
 
         {/* Headline */}

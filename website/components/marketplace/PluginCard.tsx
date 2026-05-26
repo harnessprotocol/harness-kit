@@ -9,7 +9,7 @@ export function PluginCard({ plugin, categoryName }: { plugin: MarketplacePlugin
   return (
     <Link
       href={`/marketplace/${plugin.slug}`}
-      className="group flex cursor-pointer flex-col rounded-xl border border-fd-border/50 bg-fd-background/80 p-5 no-underline backdrop-blur-sm transition-all duration-300 hover:border-fd-primary/20 hover:shadow-lg"
+      className="group flex cursor-pointer flex-col rounded-xl bg-fd-card/50 p-5 no-underline backdrop-blur-sm transition-all duration-300 hover:bg-fd-card/80 hover:shadow-lg"
       style={{ borderTop: `2px solid ${accent}` }}
     >
       <div className="mb-2.5 flex items-center justify-between gap-2">

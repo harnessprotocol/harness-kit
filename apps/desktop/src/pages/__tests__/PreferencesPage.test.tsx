@@ -16,22 +16,6 @@ vi.mock("@tauri-apps/api/app", () => ({
 vi.mock("../../lib/theme", () => ({
   getTheme: vi.fn(() => "system"),
   setTheme: vi.fn(),
-  getAccent: vi.fn(() => "purple"),
-  setAccent: vi.fn(),
-  ACCENT_PRESETS: {
-    purple: {
-      label: "Purple",
-      swatch: "#7c3aed",
-      dark: { accent: "#7c3aed", light: "rgba(124,58,237,0.15)", text: "#a78bfa" },
-      light: { accent: "#7c3aed", light: "rgba(124,58,237,0.10)", text: "#6d28d9" },
-    },
-    blue: {
-      label: "Blue",
-      swatch: "#2563eb",
-      dark: { accent: "#2563eb", light: "rgba(37,99,235,0.15)", text: "#60a5fa" },
-      light: { accent: "#2563eb", light: "rgba(37,99,235,0.10)", text: "#1d4ed8" },
-    },
-  },
 }));
 
 vi.mock("../../lib/preferences", async (importOriginal) => {

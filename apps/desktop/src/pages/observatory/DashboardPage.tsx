@@ -7,6 +7,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import HKTooltip from "../../components/Tooltip";
+import { Stat } from "../../components/ui";
 import AccountStatusBadge from "../../components/AccountStatusBadge";
 import { useObservatoryData } from "../../hooks/useObservatoryData";
 import { formatNumber, formatDate, formatHour, shortModelName } from "../../lib/format";
@@ -166,48 +167,14 @@ function useReducedMotion() {
 }
 
 function getAccentColor() {
-  return getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#5b50e8";
+  return getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#7588ff";
 }
 
 // ── Stat card ────────────────────────────────────────────────
+// Delegates to the shared, borderless Stat primitive.
 
-function StatCard({ label, value, sub, tooltip, accent }: { label: string; value: string; sub?: string; tooltip?: string; accent?: string }) {
-  const tint = accent ?? "var(--accent)";
-  const labelEl = (
-    <span style={{
-      fontSize: "11px", fontWeight: 500, fontVariantCaps: "all-small-caps",
-      letterSpacing: "0.03em", color: "var(--fg-subtle)",
-      ...(tooltip ? { borderBottom: "1px dotted var(--fg-subtle)", cursor: "help" } : {}),
-    }}>
-      {label}
-    </span>
-  );
-
-  return (
-    <div style={{
-      flex: 1,
-      minWidth: 0,
-      background: "var(--card-glass)",
-      backdropFilter: "blur(10px)",
-      WebkitBackdropFilter: "blur(10px)",
-      border: "1px solid var(--border-base)",
-      borderRadius: "12px",
-      padding: "12px 16px",
-      borderTop: `2px solid ${tint}`,
-    }}>
-      <div style={{ fontSize: "22px", fontWeight: 700, letterSpacing: "-0.5px", color: "var(--fg-base)", lineHeight: 1.1, fontVariantNumeric: "tabular-nums" }}>
-        {value}
-      </div>
-      <div style={{ marginTop: "5px" }}>
-        {tooltip ? <HKTooltip content={tooltip} position="bottom">{labelEl}</HKTooltip> : labelEl}
-      </div>
-      {sub && (
-        <div style={{ fontSize: "10px", color: "var(--fg-subtle)", marginTop: "2px" }}>
-          {sub}
-        </div>
-      )}
-    </div>
-  );
+function StatCard(props: { label: string; value: string; sub?: string; tooltip?: string; accent?: string }) {
+  return <Stat {...props} />;
 }
 
 // ── Pill button ───────────────────────────────────────────────

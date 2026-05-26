@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-shell";
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
-import Tooltip from "../components/Tooltip";
 import { NAV_SECTIONS } from "../layouts/AppLayout";
 import {
   getFontSize, setFontSize, FONT_SIZE_MIN, FONT_SIZE_MAX,
@@ -13,17 +12,13 @@ import {
   getMarkdownFont, setMarkdownFont,
   getConfirmSave, setConfirmSave,
   getMembrainEnabled, setMembrainEnabled,
+  getTerminalsEnabled, setTerminalsEnabled,
   getConfigFilesDetailLevel, setConfigFilesDetailLevel,
   type Density,
   type MarkdownFont,
   type ConfigFilesDetailLevel,
 } from "../lib/preferences";
-import {
-  getTheme, setTheme,
-  getAccent, setAccent,
-  ACCENT_PRESETS,
-  type AccentName,
-} from "../lib/theme";
+import { getTheme, setTheme } from "../lib/theme";
 
 interface UpdateStatus {
   localSha: string;
@@ -142,7 +137,6 @@ export default function PreferencesPage() {
   }, []);
 
   const [theme, setThemeState] = useState(getTheme);
-  const [accent, setAccentState] = useState(getAccent);
   const [fontSize, setFontSizeState] = useState(getFontSize);
   const [density, setDensityState] = useState(getDensity);
   const [defaultSection, setDefaultSectionState] = useState(getDefaultSection);
@@ -151,16 +145,12 @@ export default function PreferencesPage() {
   const [markdownFont, setMarkdownFontState] = useState(getMarkdownFont);
   const [confirmSave, setConfirmSaveState] = useState(getConfirmSave);
   const [membrainEnabled, setMembrainEnabledState] = useState(getMembrainEnabled);
+  const [terminalsEnabled, setTerminalsEnabledState] = useState(getTerminalsEnabled);
   const [configFilesDetail, setConfigFilesDetailState] = useState(getConfigFilesDetailLevel);
 
   function handleSetTheme(t: "light" | "dark" | "system") {
     setTheme(t);
     setThemeState(t);
-  }
-
-  function handleSetAccent(name: AccentName) {
-    setAccent(name);
-    setAccentState(name);
   }
 
   function handleFontSizeChange(delta: number) {
@@ -219,6 +209,11 @@ export default function PreferencesPage() {
     setMembrainEnabledState(value);
   }
 
+  function handleSetTerminalsEnabled(value: boolean) {
+    setTerminalsEnabled(value);
+    setTerminalsEnabledState(value);
+  }
+
   function handleSetConfigFilesDetail(level: ConfigFilesDetailLevel) {
     setConfigFilesDetailLevel(level);
     setConfigFilesDetailState(level);
@@ -274,30 +269,6 @@ export default function PreferencesPage() {
             value={theme}
             onChange={handleSetTheme}
           />
-        </SettingRow>
-
-        <SettingRow label="Accent color" description="Applies across the entire interface">
-          <div style={{ display: "flex", gap: "6px" }}>
-            {(Object.entries(ACCENT_PRESETS) as [AccentName, typeof ACCENT_PRESETS[AccentName]][]).map(([name, preset]) => (
-              <Tooltip key={name} content={preset.label}>
-                <button
-                  onClick={() => handleSetAccent(name)}
-                  aria-label={`Accent color: ${preset.label}`}
-                  style={{
-                    width: "22px",
-                    height: "22px",
-                    borderRadius: "50%",
-                    background: preset.swatch,
-                    border: accent === name ? "2px solid var(--fg-base)" : "2px solid transparent",
-                    cursor: "pointer",
-                    outline: accent === name ? "2px solid var(--accent)" : "none",
-                    outlineOffset: "1px",
-                    padding: 0,
-                  }}
-                />
-              </Tooltip>
-            ))}
-          </div>
         </SettingRow>
 
         <SettingRow label="Font size" description="Base text size for the interface">
@@ -523,6 +494,20 @@ export default function PreferencesPage() {
               onChange={handleSetMembrainEnabled}
             />
           </div>
+        </SettingRow>
+
+        <SettingRow
+          label="Terminals"
+          description="Run and watch agents across a grid of shell terminals. Off by default while it stabilizes."
+        >
+          <Segmented
+            options={[
+              { value: false, label: "Off" },
+              { value: true, label: "On" },
+            ]}
+            value={terminalsEnabled}
+            onChange={handleSetTerminalsEnabled}
+          />
         </SettingRow>
       </div>
 

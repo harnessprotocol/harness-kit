@@ -23,11 +23,6 @@ vi.mock("../../lib/theme", () => ({
   initTheme: vi.fn(),
   getTheme: vi.fn(() => "system"),
   setTheme: vi.fn(),
-  getAccent: vi.fn(() => "blue"),
-  setAccent: vi.fn(),
-  ACCENT_PRESETS: {
-    blue: { label: "Blue", swatch: "#5b50e8" },
-  },
 }));
 
 vi.mock("../../lib/preferences", async (importOriginal) => {
@@ -37,6 +32,7 @@ vi.mock("../../lib/preferences", async (importOriginal) => {
     initPreferences: vi.fn(),
     getHiddenSections: vi.fn(() => new Set()),
     getMembrainEnabled: vi.fn(() => true),
+    getTerminalsEnabled: vi.fn(() => true),
   };
 });
 

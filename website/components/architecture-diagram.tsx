@@ -4,10 +4,10 @@
 
 const FONT = 'system-ui, -apple-system, sans-serif';
 const MONO = 'Menlo, Monaco, Consolas, monospace';
-const CYAN = '#22b1ec';
-const CYAN_DIM = 'rgba(34,177,236,0.18)';
-const SURFACE = '#0d1016';
-const SURFACE_MID = '#111827';
+const CYAN = '#7588ff';
+const CYAN_DIM = 'rgba(117,136,255,0.18)';
+const SURFACE = '#12131c';
+const SURFACE_MID = '#1a1b26';
 const BORDER = 'rgba(255,255,255,0.09)';
 const BORDER_MID = 'rgba(255,255,255,0.14)';
 const MUTED = '#8b919e';
@@ -19,7 +19,7 @@ const desktopGroups = [
   { label: 'INSIGHTS',  items: ['Observatory'] },
   { label: 'SYSTEM',    items: ['Security'] },
   { label: 'WORKFLOWS', items: ['Board', 'Roadmap'] },
-  { label: 'OTHER',     items: ['Agents', 'Comparator', 'Parity', 'AI Chat', 'Memory'] },
+  { label: 'OTHER',     items: ['Agents', 'Comparator', 'Harness Parity', 'Command Palette', 'Memory'] },
 ];
 
 // Commands sourced from apps/cli/src/index.ts

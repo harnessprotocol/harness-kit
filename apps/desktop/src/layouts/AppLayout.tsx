@@ -6,7 +6,8 @@ import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
 import { useArrowNavigation } from "../hooks/useArrowNavigation";
 import { useSidebarResize } from "../hooks/useSidebarResize";
 import { initTheme } from "../lib/theme";
-import { initPreferences, getHiddenSections, getMembrainEnabled } from "../lib/preferences";
+import { initPreferences, getHiddenSections, getMembrainEnabled, getTerminalsEnabled } from "../lib/preferences";
+import { CommandPalette } from "../components/CommandPalette";
 import { useChat } from "../contexts/ChatContext";
 import ChatPanel from "../components/chat/ChatPanel";
 import FeedbackModal from "../components/FeedbackModal";
@@ -21,6 +22,8 @@ type NavSection = {
   icon?: React.ReactNode;
   group?: string;
   children?: { label: string; path: string }[];
+  /** When set, the nav item triggers an action instead of navigating. */
+  action?: "command-palette";
 };
 
 export const NAV_SECTIONS: NavSection[] = [
@@ -40,6 +43,20 @@ export const NAV_SECTIONS: NavSection[] = [
       { label: "Plugins", path: "/harness/plugins" },
       { label: "MCP Servers", path: "/harness/mcp" },
       { label: "Hooks", path: "/harness/hooks" },
+    ],
+  },
+  {
+    id: "parity",
+    label: "Harness Parity",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
+        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+        <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+      </svg>
+    ),
+    path: "/parity",
+    children: [
+      { label: "Dashboard", path: "/parity" },
     ],
   },
   {
@@ -115,20 +132,6 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    id: "parity",
-    label: "Parity",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
-        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-        <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-      </svg>
-    ),
-    path: "/parity",
-    children: [
-      { label: "Dashboard", path: "/parity" },
-    ],
-  },
-  {
     id: "board",
     label: "Board",
     icon: (
@@ -150,14 +153,15 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     id: "ai-chat",
-    label: "AI Chat",
+    label: "Command Palette",
     icon: (
-      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
-        <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
-        <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z" />
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7, flexShrink: 0 }}>
+        <rect x="2.5" y="3.5" width="15" height="13" rx="2.5" />
+        <path d="M6 8.5l2.5 1.5L6 11.5M10.5 11.5h3.5" />
       </svg>
     ),
     path: "/ai-chat",
+    action: "command-palette",
   },
   {
     id: "memory",
@@ -431,6 +435,8 @@ export default function AppLayout() {
 
   const [hiddenSections, setHiddenSectionsState] = useState(getHiddenSections);
   const [membrainEnabled, setMembrainEnabledState] = useState(getMembrainEnabled);
+  const [terminalsEnabled, setTerminalsEnabledState] = useState(getTerminalsEnabled);
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   useEffect(() => {
     initTheme();
@@ -441,6 +447,7 @@ export default function AppLayout() {
     function onPrefsChanged() {
       setHiddenSectionsState(getHiddenSections());
       setMembrainEnabledState(getMembrainEnabled());
+      setTerminalsEnabledState(getTerminalsEnabled());
     }
     window.addEventListener("harness-kit-prefs-changed", onPrefsChanged);
     return () => window.removeEventListener("harness-kit-prefs-changed", onPrefsChanged);
@@ -457,9 +464,24 @@ export default function AppLayout() {
     return () => window.removeEventListener("keydown", handler);
   }, [setChatOpen, chatOpen]);
 
-  // Memory section is a Labs feature — only show it when the user has opted in via Preferences
+  // Cmd+K opens the command palette from anywhere.
+  useEffect(() => {
+    function handler(e: KeyboardEvent) {
+      if (e.metaKey && !e.shiftKey && (e.key === "k" || e.key === "K")) {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
+    }
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
+  // Memory and Terminals are Labs features — only shown when opted in via Preferences
   const visibleSections = NAV_SECTIONS.filter(
-    (s) => !hiddenSections.has(s.id) && (s.id !== "memory" || membrainEnabled)
+    (s) =>
+      !hiddenSections.has(s.id) &&
+      (s.id !== "memory" || membrainEnabled) &&
+      (s.id !== "terminals" || terminalsEnabled)
   );
 
   const prefsActive = location.pathname === "/preferences";
@@ -575,23 +597,20 @@ export default function AppLayout() {
               style={{ height: "44px", borderBottom: "1px solid var(--separator)" }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                {/* PROVISIONAL mark — mirrors website HarnessKitLogo.tsx; redesign planned (see that file's TODO(brand)) */}
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 28 28"
+                  viewBox="0 0 32 32"
                   style={{ width: 22, height: 22, filter: "drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 50%, transparent))", flexShrink: 0 }}
                 >
-                  <rect width="28" height="28" rx="6" fill="var(--bg-sidebar-solid)" />
-                  <text
-                    x="14"
-                    y="19"
-                    textAnchor="middle"
-                    fontFamily="system-ui, sans-serif"
-                    fontWeight="700"
-                    fontSize="13"
-                    fill="var(--accent-fg)"
-                  >
-                    hk
-                  </text>
+                  <rect width="32" height="32" rx="7" fill="#13141d" />
+                  <g stroke="#7d8dff" strokeWidth="2.8" strokeLinecap="round" fill="none">
+                    <path d="M9 9.5 C 15 11, 17.5 13.5, 19.4 14.9" />
+                    <path d="M9 22.5 C 15 21, 17.5 18.5, 19.4 17.1" />
+                  </g>
+                  <circle cx="9" cy="9.5" r="1.9" fill="#7d8dff" />
+                  <circle cx="9" cy="22.5" r="1.9" fill="#7d8dff" />
+                  <circle cx="22" cy="16" r="3.3" fill="#7d8dff" />
                 </svg>
                 <span style={{ fontSize: "13px", fontWeight: 600, letterSpacing: "-0.1px", color: "var(--fg-base)" }}>
                   harness-kit
@@ -614,7 +633,21 @@ export default function AppLayout() {
                       <div className="sidebar-group-header">{section.group}</div>
                     )}
                     <div className="mb-0.5">
-                      {section.id === "harness" ? (
+                      {section.action === "command-palette" ? (
+                        <button
+                          onClick={() => setPaletteOpen(true)}
+                          className="sidebar-item"
+                          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", cursor: "pointer", border: "none", background: "transparent", textAlign: "left" }}
+                        >
+                          {section.icon}
+                          <span style={{ flex: 1 }}>{section.label}</span>
+                          {!sidebarCollapsed && (
+                            <span style={{ fontSize: 10, fontFamily: "ui-monospace, monospace", color: "var(--fg-subtle)", flexShrink: 0 }}>
+                              {"⌘"}K
+                            </span>
+                          )}
+                        </button>
+                      ) : section.id === "harness" ? (
                         <button
                           onClick={() => {
                             if (!active) {
@@ -789,6 +822,7 @@ export default function AppLayout() {
       </div>
 
       <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} sections={NAV_SECTIONS} />
     </div>
   );
 }
