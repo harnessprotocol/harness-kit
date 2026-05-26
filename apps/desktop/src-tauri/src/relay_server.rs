@@ -40,16 +40,29 @@ impl Room {
         self.messages.push_back(msg);
     }
 
-    fn broadcast(&self, msg: &Value, exclude: Option<&str>) {
+    /// Send `msg` to every member except `exclude`. Returns the number of failed
+    /// deliveries. A send fails when a member's receiver has been dropped (its socket
+    /// closed) but the member is still in the room map — previously this was swallowed
+    /// with `.ok()`, hiding dropped messages. We surface the count and log so a stuck
+    /// connection is observable rather than silent.
+    fn broadcast(&self, msg: &Value, exclude: Option<&str>) -> usize {
         let text = Message::Text(msg.to_string().into());
+        let mut failed = 0usize;
         for (addr, member) in &self.members {
             if exclude == Some(addr.as_str()) { continue; }
-            member.tx.send(text.clone()).ok();
+            if member.tx.send(text.clone()).is_err() {
+                failed += 1;
+                eprintln!(
+                    "[relay] dropped message to {} (nickname {:?}): receiver closed",
+                    addr, member.nickname
+                );
+            }
         }
+        failed
     }
 
-    fn broadcast_all(&self, msg: &Value) {
-        self.broadcast(msg, None);
+    fn broadcast_all(&self, msg: &Value) -> usize {
+        self.broadcast(msg, None)
     }
 
     fn members_list(&self) -> Value {
@@ -428,4 +441,57 @@ async fn handle_connection(
         leave_room_inner(&addr_str, &code, &mut st);
     }
     write_task.abort();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn member_with_live_rx() -> (Member, mpsc::UnboundedReceiver<Message>) {
+        let (tx, rx) = mpsc::unbounded_channel::<Message>();
+        (Member { nickname: "live".into(), tx }, rx)
+    }
+
+    fn member_with_dead_rx(nickname: &str) -> Member {
+        let (tx, rx) = mpsc::unbounded_channel::<Message>();
+        drop(rx); // simulate a disconnected member still in the room map
+        Member { nickname: nickname.into(), tx }
+    }
+
+    #[test]
+    fn broadcast_reports_failed_deliveries_to_closed_members() {
+        let mut room = Room::new(None, 0);
+        let (live, _rx) = member_with_live_rx();
+        room.members.insert("live-addr".into(), live);
+        room.members.insert("dead-addr".into(), member_with_dead_rx("ghost"));
+
+        let failed = room.broadcast_all(&json!({"type":"message"}));
+
+        // The closed member must be counted, not silently swallowed.
+        assert_eq!(failed, 1, "expected exactly one failed delivery (the dead member)");
+    }
+
+    #[test]
+    fn broadcast_reports_zero_when_all_members_reachable() {
+        let mut room = Room::new(None, 0);
+        let (live, _rx) = member_with_live_rx();
+        room.members.insert("live-addr".into(), live);
+
+        let failed = room.broadcast_all(&json!({"type":"message"}));
+
+        assert_eq!(failed, 0);
+    }
+
+    #[test]
+    fn broadcast_excludes_sender() {
+        let mut room = Room::new(None, 0);
+        let (live, mut rx) = member_with_live_rx();
+        room.members.insert("self-addr".into(), live);
+
+        let failed = room.broadcast(&json!({"type":"message"}), Some("self-addr"));
+
+        assert_eq!(failed, 0);
+        // Excluded member receives nothing.
+        assert!(rx.try_recv().is_err());
+    }
 }

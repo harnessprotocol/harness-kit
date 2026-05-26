@@ -13,11 +13,15 @@
   },
   "scripts": {
     "build": "tsc",
-    "generate": "tsx src/generate.ts"
+    "generate": "tsx src/generate.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@types/node": "^22.19.19",
+    "@vitest/coverage-v8": "^4",
     "tsx": "^4.7.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.6"
   }
 }

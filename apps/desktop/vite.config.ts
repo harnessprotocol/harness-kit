@@ -54,7 +54,15 @@ export default defineConfig(async () => ({
     exclude: ["**/node_modules/**", "**/dist/**", "e2e/**"],
     coverage: {
       provider: "v8",
-      include: ["src/pages/marketplace/**", "src/lib/markdown.ts", "src/lib/supabase.ts"],
+      reporter: ["text", "json", "html"],
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: [
+        "src/**/*.test.{ts,tsx}",
+        "src/**/__tests__/**",
+        "src/test-setup.ts",
+        "src/main.tsx",
+        "src/**/*.d.ts",
+      ],
     },
   },
 }));
