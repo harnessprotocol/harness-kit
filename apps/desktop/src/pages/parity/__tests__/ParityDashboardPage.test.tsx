@@ -131,8 +131,8 @@ describe("ParityDashboardPage", () => {
   it("renders the Parity heading and new subtitle", async () => {
     renderPage();
     await waitFor(() => {
-      expect(screen.getByText("Parity")).toBeInTheDocument();
-      expect(screen.getByText(/compare feature parity across your ai coding harnesses/i)).toBeInTheDocument();
+      expect(screen.getByText("Harness Parity")).toBeInTheDocument();
+      expect(screen.getByText(/confirm every connected ai tool ended up with the same/i)).toBeInTheDocument();
     });
   });
 

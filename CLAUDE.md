@@ -17,6 +17,7 @@ harness-kit/
 ├── packages/                     ← shared libraries and standalone servers
 │   ├── core/                     ← harness.yaml compile/parse/detect logic
 │   ├── shared/                   ← shared TypeScript types used across apps
+│   ├── design-tokens/            ← single source of truth for the shared color identity; generates CSS vars for app + website
 │   ├── marketplace-data/         ← build-time generator: git → static marketplace JSON (runs the security scanner)
 │   ├── board-server/             ← WebSocket + HTTP server for the Kanban board and Roadmap/Competitor Analysis features
 │   ├── agent-server/             ← LangGraph execution engine for per-card agent runs (port 4802)

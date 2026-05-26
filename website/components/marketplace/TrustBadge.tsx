@@ -60,8 +60,7 @@ export function TrustBadge({ tier, title }: { tier: TrustTier; title?: string })
       className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
       style={{
         color: meta.color,
-        background: `color-mix(in srgb, ${meta.color} 12%, transparent)`,
-        border: `1px solid color-mix(in srgb, ${meta.color} 35%, transparent)`,
+        background: `color-mix(in srgb, ${meta.color} 14%, transparent)`,
       }}
       title={title ?? `Security scan: ${meta.label}`}
     >

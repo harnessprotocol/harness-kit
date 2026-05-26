@@ -42,10 +42,10 @@ export function MarketplaceBrowser({ plugins, categories, tags }: Props) {
   }, [plugins, query, category, trust, tag]);
 
   const chip = (active: boolean) =>
-    `cursor-pointer rounded-full border px-3 py-1 text-sm transition-colors ${
+    `cursor-pointer rounded-full px-3 py-1 text-sm transition-colors ${
       active
-        ? 'border-fd-primary/40 text-fd-foreground'
-        : 'border-fd-border/60 text-fd-muted-foreground hover:text-fd-foreground'
+        ? 'bg-fd-primary/15 text-fd-foreground'
+        : 'bg-fd-card/60 text-fd-muted-foreground hover:bg-fd-card hover:text-fd-foreground'
     }`;
 
   return (
@@ -65,7 +65,7 @@ export function MarketplaceBrowser({ plugins, categories, tags }: Props) {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search plugins by name, description, or tag…"
           aria-label="Search plugins"
-          className="w-full rounded-xl border border-fd-border/60 bg-fd-card/60 py-2.5 pl-10 pr-4 text-sm text-fd-foreground outline-none transition-colors placeholder:text-fd-muted-foreground focus:border-fd-primary/50"
+          className="w-full rounded-xl bg-fd-card/60 py-2.5 pl-10 pr-4 text-sm text-fd-foreground outline-none transition-shadow placeholder:text-fd-muted-foreground focus:ring-2 focus:ring-fd-primary/40"
         />
       </div>
 
@@ -95,7 +95,7 @@ export function MarketplaceBrowser({ plugins, categories, tags }: Props) {
             value={tag}
             onChange={(e) => setTag(e.target.value)}
             aria-label="Filter by tag"
-            className="cursor-pointer rounded-full border border-fd-border/60 bg-fd-card/60 px-3 py-1 text-sm text-fd-foreground outline-none focus:border-fd-primary/50"
+            className="cursor-pointer rounded-full bg-fd-card/60 px-3 py-1 text-sm text-fd-foreground outline-none focus:ring-2 focus:ring-fd-primary/40"
           >
             <option value="all">All tags</option>
             {tags.map((t) => (
@@ -110,7 +110,7 @@ export function MarketplaceBrowser({ plugins, categories, tags }: Props) {
       </p>
 
       {results.length === 0 ? (
-        <div className="rounded-xl border border-fd-border/50 bg-fd-card/40 px-6 py-16 text-center">
+        <div className="rounded-xl bg-fd-card/50 px-6 py-16 text-center">
           <p className="text-fd-muted-foreground">No plugins match your filters.</p>
         </div>
       ) : (

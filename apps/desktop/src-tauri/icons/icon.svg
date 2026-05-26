@@ -1,36 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#1e1b4b"/>
-      <stop offset="100%" stop-color="#0f0e1e"/>
+      <stop offset="0%" stop-color="#1a1b2e"/>
+      <stop offset="100%" stop-color="#0a0a14"/>
     </linearGradient>
-    <linearGradient id="glyph" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#a78bfa"/>
-      <stop offset="100%" stop-color="#7c3aed"/>
+    <linearGradient id="glyph" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#a8b4ff"/>
+      <stop offset="100%" stop-color="#6d80f0"/>
     </linearGradient>
-    <!-- Subtle inner glow for depth -->
-    <radialGradient id="glow" cx="50%" cy="40%" r="60%">
-      <stop offset="0%" stop-color="#4c1d95" stop-opacity="0.5"/>
-      <stop offset="100%" stop-color="transparent" stop-opacity="0"/>
-    </radialGradient>
   </defs>
 
-  <!-- Background rounded square -->
   <rect width="1024" height="1024" rx="230" ry="230" fill="url(#bg)"/>
-  <!-- Inner glow -->
-  <rect width="1024" height="1024" rx="230" ry="230" fill="url(#glow)"/>
 
-  <!-- Stylized "H" glyph made of pill-shaped connectors -->
-  <!-- Left vertical bar -->
-  <rect x="248" y="252" width="118" height="520" rx="59" fill="url(#glyph)"/>
-  <!-- Right vertical bar -->
-  <rect x="658" y="252" width="118" height="520" rx="59" fill="url(#glyph)"/>
-  <!-- Crossbar (slightly above center, pill-shaped) -->
-  <rect x="248" y="453" width="528" height="118" rx="59" fill="url(#glyph)"/>
-
-  <!-- Small accent dots at bar ends — suggest connector terminals -->
-  <circle cx="307" cy="252" r="38" fill="#c4b5fd" opacity="0.85"/>
-  <circle cx="717" cy="252" r="38" fill="#c4b5fd" opacity="0.85"/>
-  <circle cx="307" cy="772" r="38" fill="#c4b5fd" opacity="0.85"/>
-  <circle cx="717" cy="772" r="38" fill="#c4b5fd" opacity="0.85"/>
+  <g stroke="url(#glyph)" stroke-width="66" stroke-linecap="round" fill="none">
+    <path d="M340 360 C 540 410, 600 470, 660 500"/>
+    <path d="M340 664 C 540 614, 600 554, 660 524"/>
+  </g>
+  <circle cx="340" cy="360" r="46" fill="url(#glyph)"/>
+  <circle cx="340" cy="664" r="46" fill="url(#glyph)"/>
+  <circle cx="700" cy="512" r="82" fill="url(#glyph)"/>
 </svg>

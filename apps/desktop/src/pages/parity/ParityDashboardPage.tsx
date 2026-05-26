@@ -350,10 +350,10 @@ export default function ParityDashboardPage() {
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
           <div>
             <h1 style={{ fontSize: 16, fontWeight: 700, margin: 0, color: "var(--fg-base)" }}>
-              Parity
+              Harness Parity
             </h1>
             <p style={{ margin: "3px 0 0", fontSize: 12, color: "var(--fg-subtle)" }}>
-              Compare feature parity across your AI coding harnesses.
+              After you compile your harness.yaml, confirm every connected AI tool ended up with the same plugins, MCP servers, and settings — and catch drift before it bites.
             </p>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>

@@ -53,6 +53,9 @@ packages/agent-server/dist/
 # Marketplace data generator
 packages/marketplace-data/dist/
 
+# Design tokens
+packages/design-tokens/dist/
+
 # Auto Claude data directory
 .auto-claude/
 

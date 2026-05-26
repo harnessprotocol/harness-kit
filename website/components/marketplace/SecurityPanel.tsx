@@ -9,7 +9,7 @@ const SEVERITY_COLOR: Record<string, string> = {
 
 function PermissionRow({ label, value, on }: { label: string; value: string; on: boolean }) {
   return (
-    <div className="flex items-center justify-between border-b border-fd-border/40 py-2 last:border-0">
+    <div className="flex items-center justify-between py-2">
       <span className="text-sm text-fd-muted-foreground">{label}</span>
       <span
         className="text-sm font-medium"
@@ -24,7 +24,7 @@ function PermissionRow({ label, value, on }: { label: string; value: string; on:
 function FindingItem({ finding }: { finding: MarketplaceFinding }) {
   const color = SEVERITY_COLOR[finding.severity] ?? 'var(--fg-subtle)';
   return (
-    <li className="rounded-lg border border-fd-border/50 p-3" style={{ borderLeft: `3px solid ${color}` }}>
+    <li className="rounded-lg rounded-l-none bg-fd-card/60 p-3" style={{ borderLeft: `3px solid ${color}` }}>
       <div className="flex items-center gap-2">
         <span className="text-[11px] font-semibold uppercase tracking-wide" style={{ color }}>
           {finding.severity}
@@ -54,7 +54,7 @@ export function SecurityPanel({ security }: { security: MarketplaceSecurity }) {
         <span className="text-sm text-fd-muted-foreground">{security.summary}</span>
       </div>
 
-      <div className="rounded-xl border border-fd-border/50 bg-fd-card/40 px-4 py-1">
+      <div className="rounded-xl bg-fd-card/60 px-4 py-1">
         <PermissionRow label="Network access" value={permissions.networkAccess ? 'Yes' : 'No'} on={permissions.networkAccess} />
         <PermissionRow label="File writes" value={permissions.fileWrites ? 'Yes' : 'No'} on={permissions.fileWrites} />
         <PermissionRow

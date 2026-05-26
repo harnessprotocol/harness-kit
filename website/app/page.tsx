@@ -71,8 +71,8 @@ const showcaseCards = [
   },
   {
     section: 'ai-chat' as const,
-    title: 'AI Chat',
-    desc: 'A keyboard-first chat window tied to your harness. Pipe files in, stream tool calls, keep every conversation.',
+    title: 'Command Palette',
+    desc: 'Cmd+K to navigate anywhere and operate the app — with Ask AI wired to a local Ollama chat.',
   },
 ];
 

@@ -8,6 +8,10 @@ The Terminals page is a multi-pane terminal manager built into the desktop app.
 You can run multiple terminal sessions side by side, assign a harness to each one,
 and invoke an AI agent across all terminals simultaneously.
 
+> **Off by default.** Terminals is currently a Labs feature while it stabilizes.
+> Turn it on under **Preferences → Labs → Terminals** to make it appear in the
+> sidebar.
+
 ## Opening Terminals
 
 A single terminal opens automatically when you navigate to the Terminals page,

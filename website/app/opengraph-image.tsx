@@ -16,7 +16,7 @@ export default function Image() {
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          background: '#0b0d12',
+          background: '#0a0a12',
           fontFamily: 'system-ui, sans-serif',
           position: 'relative',
           overflow: 'hidden',
@@ -29,7 +29,7 @@ export default function Image() {
             width: 600,
             height: 600,
             borderRadius: '50%',
-            background: 'radial-gradient(circle, rgba(34,177,236,0.12) 0%, transparent 70%)',
+            background: 'radial-gradient(circle, rgba(117,136,255,0.14) 0%, transparent 70%)',
             top: '50%',
             left: '50%',
             transform: 'translate(-50%, -50%)',
@@ -40,18 +40,26 @@ export default function Image() {
         {/* Logo mark */}
         <div
           style={{
-            width: 64,
-            height: 64,
-            borderRadius: 14,
-            background: '#0d1016',
-            border: '1.5px solid rgba(34,177,236,0.3)',
+            width: 72,
+            height: 72,
+            borderRadius: 16,
+            background: '#13141d',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             marginBottom: 28,
           }}
         >
-          <span style={{ fontSize: 28, fontWeight: 700, color: '#4ec7f2', letterSpacing: -1 }}>hk</span>
+          {/* PROVISIONAL mark — mirrors HarnessKitLogo.tsx; redesign planned */}
+          <svg width="72" height="72" viewBox="0 0 32 32" fill="none">
+            <g stroke="#7d8dff" strokeWidth="2.8" strokeLinecap="round">
+              <path d="M9 9.5 C 15 11, 17.5 13.5, 19.4 14.9" />
+              <path d="M9 22.5 C 15 21, 17.5 18.5, 19.4 17.1" />
+            </g>
+            <circle cx="9" cy="9.5" r="1.9" fill="#7d8dff" />
+            <circle cx="9" cy="22.5" r="1.9" fill="#7d8dff" />
+            <circle cx="22" cy="16" r="3.3" fill="#7d8dff" />
+          </svg>
         </div>
 
         {/* Headline */}

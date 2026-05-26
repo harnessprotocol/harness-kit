@@ -4,14 +4,14 @@
 
 const FONT = 'system-ui, -apple-system, sans-serif';
 const MONO = 'Menlo, Monaco, Consolas, monospace';
-const CYAN = '#22b1ec';
-const CYAN_DIM = 'rgba(34,177,236,0.18)';
-const AMBER = '#f59e0b';
-const AMBER_DIM = 'rgba(245,158,11,0.18)';
-const EMERALD = '#34d399';
-const EMERALD_DIM = 'rgba(52,211,153,0.18)';
-const SURFACE = '#0d1016';
-const SURFACE_MID = '#111827';
+const CYAN = '#7588ff';
+const CYAN_DIM = 'rgba(117,136,255,0.18)';
+const AMBER = '#e0a33d';
+const AMBER_DIM = 'rgba(224,163,61,0.18)';
+const EMERALD = '#3fb07a';
+const EMERALD_DIM = 'rgba(63,176,122,0.18)';
+const SURFACE = '#12131c';
+const SURFACE_MID = '#1a1b26';
 const BORDER = 'rgba(255,255,255,0.09)';
 const BORDER_MID = 'rgba(255,255,255,0.14)';
 const MUTED = '#8b919e';

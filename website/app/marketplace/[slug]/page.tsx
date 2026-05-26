@@ -82,7 +82,7 @@ export default async function PluginDetailPage(props: { params: Promise<{ slug: 
         {plugin.tags.length > 0 && (
           <section className="mb-10 flex flex-wrap gap-2">
             {plugin.tags.map((t) => (
-              <span key={t} className="rounded-full border border-fd-border/60 px-2.5 py-0.5 text-xs text-fd-muted-foreground">
+              <span key={t} className="rounded-full bg-fd-muted/70 px-2.5 py-0.5 text-xs text-fd-muted-foreground">
                 {t}
               </span>
             ))}
@@ -93,9 +93,9 @@ export default async function PluginDetailPage(props: { params: Promise<{ slug: 
         {plugin.requiresEnv.length > 0 && (
           <section className="mb-10">
             <h2 className="font-display mb-3 text-lg font-semibold text-fd-foreground">Environment</h2>
-            <div className="overflow-hidden rounded-xl border border-fd-border/50">
+            <div className="flex flex-col gap-px overflow-hidden rounded-xl bg-fd-card/60">
               {plugin.requiresEnv.map((env) => (
-                <div key={env.name} className="border-b border-fd-border/40 px-4 py-3 last:border-0">
+                <div key={env.name} className="px-4 py-3">
                   <div className="flex flex-wrap items-center gap-2">
                     <code className="font-mono text-sm text-fd-foreground">{env.name}</code>
                     <span className="text-[11px] text-fd-muted-foreground">
@@ -119,7 +119,7 @@ export default async function PluginDetailPage(props: { params: Promise<{ slug: 
         {plugin.mcp && (
           <section className="mb-10">
             <h2 className="font-display mb-3 text-lg font-semibold text-fd-foreground">MCP server</h2>
-            <div className="rounded-xl border border-fd-border/50 bg-fd-card/40 px-4 py-3 font-mono text-sm text-fd-foreground">
+            <div className="rounded-xl bg-fd-card/60 px-4 py-3 font-mono text-sm text-fd-foreground">
               {plugin.mcp.command} {plugin.mcp.args.join(' ')}
               <span className="ml-2 text-xs text-fd-muted-foreground">({plugin.mcp.transport})</span>
             </div>

@@ -38,7 +38,7 @@ export function FeatureTile({ icon, title, description, href, accent }: FeatureT
     </>
   );
 
-  const cls = `group rounded-xl border border-fd-border/50 bg-fd-background/80 p-6 backdrop-blur-sm transition-all duration-300 hover:border-fd-primary/20 hover:shadow-lg${href ? ' cursor-pointer no-underline block' : ''}`;
+  const cls = `group rounded-xl bg-fd-card/50 p-6 backdrop-blur-sm transition-all duration-300 hover:bg-fd-card/80 hover:shadow-lg${href ? ' cursor-pointer no-underline block' : ''}`;
   const style = accent ? { borderTop: `2px solid ${accent}` } : undefined;
 
   if (href) {

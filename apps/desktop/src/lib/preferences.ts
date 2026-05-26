@@ -145,6 +145,20 @@ export function setMembrainEnabled(enabled: boolean) {
   window.dispatchEvent(new CustomEvent("harness-kit-prefs-changed"));
 }
 
+// ── Labs: terminals ──────────────────────────────────────────
+
+const KEY_TERMINALS_LABS = "harness-kit-terminals-labs";
+
+/** Terminals is off by default; the user opts in via Preferences → Labs. */
+export function getTerminalsEnabled(): boolean {
+  return localStorage.getItem(KEY_TERMINALS_LABS) === "true";
+}
+
+export function setTerminalsEnabled(enabled: boolean) {
+  localStorage.setItem(KEY_TERMINALS_LABS, String(enabled));
+  window.dispatchEvent(new CustomEvent("harness-kit-prefs-changed"));
+}
+
 // ── Sidebar Width ────────────────────────────────────────────
 
 export function getSidebarWidth(): number {

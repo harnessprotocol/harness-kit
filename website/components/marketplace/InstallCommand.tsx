@@ -17,15 +17,7 @@ export function InstallCommand({ command }: { command: string }) {
 
   return (
     <div className="relative block w-full">
-      <div
-        className="absolute -inset-[1px] rounded-xl blur-[1px]"
-        style={{
-          background:
-            'linear-gradient(90deg, rgba(34,177,236,0.3), rgba(14,165,233,0.2), rgba(34,177,236,0.3))',
-        }}
-        aria-hidden="true"
-      />
-      <div className="relative flex items-center gap-3 overflow-hidden rounded-xl border border-white/5 bg-fd-card px-4 py-2.5 sm:px-5 sm:py-3">
+      <div className="relative flex items-center gap-3 overflow-hidden rounded-xl bg-fd-card px-4 py-2.5 shadow-[var(--shadow-sm)] sm:px-5 sm:py-3">
         <code className="flex-1 overflow-x-auto whitespace-nowrap font-mono text-[12px] text-fd-foreground sm:text-sm">
           <span className="text-fd-muted-foreground" aria-hidden="true">$ </span>
           {command}

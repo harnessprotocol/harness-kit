@@ -2,31 +2,27 @@
 
 /* ── Theme tokens ── */
 :root {
-  /* Backgrounds — cool, bright */
+  /* design-tokens:light:start */
+  /* generated — edit packages/design-tokens/src/tokens.ts, then run generate */
   --bg-base: #f4f6f9;
   --bg-surface: #f8fafc;
   --bg-elevated: #ffffff;
   --bg-sidebar: rgba(228, 233, 242, 0.82);
   --bg-sidebar-solid: #e8ecf4;
-
-  /* Foregrounds */
   --fg-base: #181a20;
   --fg-muted: #5a6070;
   --fg-subtle: #9299a8;
   --fg-placeholder: #b8bfcc;
-
-  /* Borders */
   --border-base: rgba(0, 0, 0, 0.08);
   --border-strong: rgba(0, 0, 0, 0.14);
   --border-subtle: rgba(0, 0, 0, 0.05);
   --separator: rgba(0, 0, 0, 0.07);
-
-  /* Accent — sky blue */
-  --accent: #0ea5e9;
-  --accent-light: rgba(14, 165, 233, 0.09);
-  --accent-fg: #0284c7;
-  --accent-text: #0284c7;
-  --accent-glow: rgba(14, 165, 233, 0.30);
+  --accent: #5566e6;
+  --accent-light: rgba(85, 102, 230, 0.10);
+  --accent-fg: #4452cc;
+  --accent-text: #4452cc;
+  --accent-glow: rgba(85, 102, 230, 0.30);
+  /* design-tokens:light:end */
 
   /* Category accents */
   --cat-blue:   #3b82f6;
@@ -34,13 +30,13 @@
   --cat-purple: #a855f7;
   --cat-green:  #10b981;
 
-  /* Status */
-  --success: #16a34a;
-  --success-light: rgba(22, 163, 74, 0.08);
-  --warning: #d97706;
-  --warning-light: rgba(217, 119, 6, 0.08);
-  --danger: #dc2626;
-  --danger-light: rgba(220, 38, 38, 0.08);
+  /* Status — fixed semantic identity (distinct from periwinkle brand) */
+  --success: #3fb07a;
+  --success-light: rgba(63, 176, 122, 0.10);
+  --warning: #e0a33d;
+  --warning-light: rgba(224, 163, 61, 0.10);
+  --danger: #f2555a;
+  --danger-light: rgba(242, 85, 90, 0.10);
 
   /* Sidebar */
   --sidebar-width: 240px;
@@ -74,31 +70,27 @@
 }
 
 .dark {
-  /* Backgrounds — deep blue-tinted */
-  --bg-base: #0b0d12;
-  --bg-surface: #12151c;
-  --bg-elevated: #1a1e27;
-  --bg-sidebar: rgba(13, 16, 22, 0.82);
-  --bg-sidebar-solid: #0d1016;
-
-  /* Foregrounds — cool neutral */
-  --fg-base: #e6e8ee;
-  --fg-muted: #9aa0ad;
-  --fg-subtle: #6b7280;
-  --fg-placeholder: #4b5563;
-
-  /* Borders — cool off-white */
-  --border-base: rgba(230, 238, 255, 0.08);
-  --border-strong: rgba(230, 238, 255, 0.14);
-  --border-subtle: rgba(230, 238, 255, 0.05);
-  --separator: rgba(230, 238, 255, 0.07);
-
-  /* Accent — cyan-blue */
-  --accent: #22b1ec;
-  --accent-light: rgba(34, 177, 236, 0.12);
-  --accent-fg: #4ec7f2;
-  --accent-text: #4ec7f2;
-  --accent-glow: rgba(34, 177, 236, 0.35);
+  /* design-tokens:dark:start */
+  /* generated — edit packages/design-tokens/src/tokens.ts, then run generate */
+  --bg-base: #0a0a12;
+  --bg-surface: #12131c;
+  --bg-elevated: #1a1b26;
+  --bg-sidebar: rgba(10, 10, 18, 0.82);
+  --bg-sidebar-solid: #0c0c15;
+  --fg-base: #eaeaf2;
+  --fg-muted: #9498a8;
+  --fg-subtle: #6b6f80;
+  --fg-placeholder: #4b4f60;
+  --border-base: rgba(230, 233, 255, 0.08);
+  --border-strong: rgba(230, 233, 255, 0.14);
+  --border-subtle: rgba(230, 233, 255, 0.05);
+  --separator: rgba(230, 233, 255, 0.07);
+  --accent: #7588ff;
+  --accent-light: rgba(117, 136, 255, 0.14);
+  --accent-fg: #9fa9ff;
+  --accent-text: #9fa9ff;
+  --accent-glow: rgba(117, 136, 255, 0.35);
+  /* design-tokens:dark:end */
 
   /* Category accents */
   --cat-blue:   #3b82f6;
@@ -107,9 +99,9 @@
   --cat-green:  #10b981;
 
   /* Status — higher alpha on dark backgrounds */
-  --success-light: rgba(22, 163, 74, 0.14);
-  --warning-light: rgba(217, 119, 6, 0.14);
-  --danger-light: rgba(220, 38, 38, 0.14);
+  --success-light: rgba(63, 176, 122, 0.16);
+  --warning-light: rgba(224, 163, 61, 0.16);
+  --danger-light: rgba(242, 85, 90, 0.16);
 
   /* Board status (dark) */
   --status-backlog: #6e6a64;
