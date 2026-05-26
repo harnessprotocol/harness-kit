@@ -1,12 +1,14 @@
 ---
-title: Parity
+title: Harness Parity
 ---
 
-# Parity
+# Harness Parity
 
-Parity is a feature comparison matrix for your AI coding harnesses. It shows which
-capabilities — config files, settings keys, CLI flags, MCP servers, plugin types —
-are supported by each tool installed on your machine, and which ones are actually
+Harness Parity is the other half of the cross-harness compiler: after you compile
+your `harness.yaml`, it confirms every connected AI tool actually ended up with the
+same capabilities — config files, settings keys, CLI flags, MCP servers, plugin
+types — and catches drift before it bites. It shows which capabilities are
+supported by each tool installed on your machine, and which ones are actually
 present on disk.
 
 ## The Capability Grid

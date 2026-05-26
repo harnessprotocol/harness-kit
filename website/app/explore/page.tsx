@@ -106,9 +106,9 @@ const NAV_GROUPS: Group[] = [
       },
       {
         id: 'parity',
-        title: 'Parity',
-        description: 'Track which plugins, MCP servers, hooks, and skills are running on each AI tool.',
-        href: '/docs/cross-harness/ide-support',
+        title: 'Harness Parity',
+        description: 'After you compile, confirm every connected AI tool ended up with the same plugins, MCP servers, hooks, and skills — and catch drift.',
+        href: '/docs/apps/parity',
         accent: 'var(--cat-green)',
         icon: (
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -148,9 +148,9 @@ const NAV_GROUPS: Group[] = [
       },
       {
         id: 'ai-chat',
-        title: 'AI Chat',
-        description: 'Keyboard-first chat tied to your harness. Pipe files in, stream tool calls, keep every conversation.',
-        href: '/docs/apps/ai-chat',
+        title: 'Command Palette',
+        description: 'Press Cmd+K to navigate anywhere and run actions — or Ask AI to reach the local Ollama chat.',
+        href: '/docs/apps/command-palette',
         accent: 'var(--cat-blue)',
         icon: (
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
