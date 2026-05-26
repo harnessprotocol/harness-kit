@@ -25,10 +25,44 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Releasing v$VERSION"
 
-  build-cli-npm:
+  # Hard gate: a release must not build or publish anything unless the full test
+  # suite, dependency audit, and manifest checks pass on the tagged commit. This
+  # mirrors the Validate workflow so a tag can never ship code that wouldn't pass CI.
+  gate:
     needs: prepare
     runs-on: ubuntu-latest
-    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate plugin & marketplace manifests
+        run: bash scripts/validate-manifests.sh
+
+      - name: Dependency audit
+        run: pnpm audit --audit-level=moderate
+
+      # The website build (part of the turbo graph) consumes a static marketplace
+      # JSON generated from git; generate it before build+test runs.
+      - name: Generate marketplace data
+        run: |
+          pnpm --filter @harness-kit/shared --filter @harness-kit/core build
+          pnpm --filter @harness-kit/marketplace-data generate --strict
+
+      - name: Build and test all packages
+        run: pnpm turbo run build test
+
+  build-cli-npm:
+    needs: [prepare, gate]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
 
@@ -58,7 +92,7 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   build-cli-standalone:
-    needs: prepare
+    needs: [prepare, gate]
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v6
@@ -108,7 +142,22 @@ jobs:
 
       - name: Smoke test standalone binary
         working-directory: apps/cli
-        run: ./dist/harness-kit --version
+        # Exercise real subcommands, not just --version, so the SEA binary actually
+        # loads and runs the compile/parse code paths. Catches the ESM-vs-CJS and
+        # Node-version SEA breakage that shipped in 3d33f32 / 1b7da36 (which --version missed).
+        run: |
+          set -euo pipefail
+          ./dist/harness-kit --version
+          echo "== validate (valid fixture, expect exit 0) =="
+          ./dist/harness-kit validate __tests__/fixtures/valid-harness.yaml --json
+          echo "== compile --dry-run (expect exit 0) =="
+          ./dist/harness-kit compile __tests__/fixtures/valid-harness.yaml --target all --dry-run
+          echo "== validate (invalid fixture, expect non-zero) =="
+          if ./dist/harness-kit validate __tests__/fixtures/invalid-harness.yaml --json; then
+            echo "::error::invalid harness.yaml unexpectedly passed validation"
+            exit 1
+          fi
+          echo "Standalone binary smoke passed."
 
       - name: Package standalone binary
         working-directory: apps/cli
@@ -126,7 +175,7 @@ jobs:
           retention-days: 1
 
   build-desktop:
-    needs: prepare
+    needs: [prepare, gate]
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v6
@@ -182,7 +231,7 @@ jobs:
           retention-days: 1
 
   release:
-    needs: [prepare, build-cli-standalone, build-desktop]
+    needs: [prepare, build-cli-npm, build-cli-standalone, build-desktop]
     runs-on: ubuntu-latest
     permissions:
       contents: write

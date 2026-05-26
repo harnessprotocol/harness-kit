@@ -744,4 +744,56 @@ describe("yaml-store", () => {
       expect(tasks[0].epic_name).toBe("Test Epic");
     });
   });
+
+  // Regression guard for the board YAML corruption class: task/epic/project text that
+  // contains YAML-significant characters (": ", leading "-", newlines, quotes) must
+  // survive a write → read round-trip. A corrupt file 500s the whole /api/v1/projects
+  // endpoint, so this also covers the write-time roundtrip validation in writeProject.
+  describe("YAML round-trip safety (corruption regression)", () => {
+    const NASTY_STRINGS = [
+      "Next: 5-tier production hardening sweep", // colon-space — the original corruption trigger
+      ": leading colon",
+      "- leading dash",
+      "trailing colon:",
+      'embedded "double" quotes',
+      "embedded 'single' quotes",
+      "multi\nline\ndescription",
+      "key: value: nested: colons",
+      "#hash and *asterisk and &anchor and !bang",
+      "{braces} [brackets] | pipe > gt",
+    ];
+
+    it("preserves nasty task descriptions through write → read", () => {
+      const project = store.createProject({ name: "Corruption Test" });
+      const epic = store.createEpic(project.slug, "Edge cases");
+      for (const text of NASTY_STRINGS) {
+        const task = store.createTask(project.slug, epic.id, text, text);
+        const reloaded = store.findTask(store.readProject(project.slug)!, task.id);
+        expect(reloaded?.task.title).toBe(text);
+        expect(reloaded?.task.description).toBe(text);
+      }
+    });
+
+    it("preserves nasty project and epic names through write → read", () => {
+      for (const text of NASTY_STRINGS) {
+        const project = store.createProject({ name: `Proj ${text}`, description: text });
+        store.createEpic(project.slug, `Epic ${text}`, text);
+        const reloaded = store.readProject(project.slug)!;
+        expect(reloaded.description).toBe(text);
+        expect(reloaded.epics[0].name).toBe(`Epic ${text}`);
+        expect(reloaded.epics[0].description).toBe(text);
+      }
+    });
+
+    it("preserves nasty comment bodies through write → read", () => {
+      const project = store.createProject({ name: "Comment corruption" });
+      const epic = store.createEpic(project.slug, "E");
+      const task = store.createTask(project.slug, epic.id, "T");
+      for (const text of NASTY_STRINGS) {
+        store.addComment(project.slug, task.id, "user", text);
+      }
+      const reloaded = store.findTask(store.readProject(project.slug)!, task.id);
+      expect(reloaded?.task.comments.map((c) => c.body)).toEqual(NASTY_STRINGS);
+    });
+  });
 });

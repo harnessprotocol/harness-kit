@@ -73,6 +73,20 @@ export function writeProject(project: Project): void {
   ensureBoardDir();
   const filePath = projectPath(project.slug);
   const raw = yaml.dump(project, { lineWidth: 120 });
+
+  // Roundtrip guard: re-parse before persisting and fail if the serialized form does
+  // not load back to the same data. A corrupt project file takes down the whole
+  // /api/v1/projects endpoint (500), so it is far better to reject the write here than
+  // to leave an unreadable file on disk. Compared against a JSON-normalized copy because
+  // yaml.dump drops undefined keys exactly as JSON does.
+  const reparsed = yaml.load(raw);
+  const normalized = JSON.parse(JSON.stringify(project));
+  if (JSON.stringify(reparsed) !== JSON.stringify(normalized)) {
+    throw new Error(
+      `Refusing to persist project "${project.slug}": serialized YAML does not round-trip to the original data (possible corruption).`,
+    );
+  }
+
   // Atomic write: temp file → rename
   const tmpPath = `${filePath}.tmp`;
   fs.writeFileSync(tmpPath, raw, 'utf-8');
