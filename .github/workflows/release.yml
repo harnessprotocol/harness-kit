@@ -64,6 +64,7 @@ jobs:
 
   build-cli-npm:
     needs: [prepare, gate]
+    if: secrets.NPM_TOKEN != ''
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -233,7 +234,7 @@ jobs:
           retention-days: 1
 
   release:
-    needs: [prepare, build-cli-npm, build-cli-standalone, build-desktop]
+    needs: [prepare, build-cli-standalone, build-desktop]
     runs-on: ubuntu-latest
     permissions:
       contents: write
