@@ -48,7 +48,9 @@ jobs:
         run: bash scripts/validate-manifests.sh
 
       - name: Dependency audit
-        run: pnpm audit --audit-level=moderate
+        # Block releases on high/critical advisories. Moderate transitive CVEs are
+        # tracked via Dependabot rather than blocking the release train.
+        run: pnpm audit --audit-level=high
 
       # The website build (part of the turbo graph) consumes a static marketplace
       # JSON generated from git; generate it before build+test runs.
