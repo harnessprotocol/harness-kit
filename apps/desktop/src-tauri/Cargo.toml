@@ -34,7 +34,7 @@ tokio-tungstenite = "0.29"
 futures-util = "0.3"
 reqwest = { version = "0.13", default-features = false, features = ["json", "stream", "native-tls"] }
 url = "2"
-rusqlite = { version = "0.39", features = ["bundled"] }
+rusqlite = { version = "0.40", features = ["bundled"] }
 rand = "0.10"
 portable-pty = "0.9"
 
