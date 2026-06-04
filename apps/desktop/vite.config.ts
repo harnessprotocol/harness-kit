@@ -46,6 +46,12 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**", "**/.auto-claude/**"],
     },
   },
+  // Tauri 2 ships modern WebView2 / WKWebView / WebKitGTK — Vite's default
+  // target list (which includes chrome87) is older than any supported Tauri
+  // runtime and prevents esbuild from downleveling modern destructuring.
+  build: {
+    target: "es2022",
+  },
 
   test: {
     globals: true,
