@@ -4,6 +4,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { readPluginSkills } from "./read-skills.js";
 import { scanForMarketplace } from "./scan.js";
+import { readProfiles, fetchRepoStars } from "./profiles.js";
 import type { MarketplaceCategory, MarketplaceData, MarketplaceMcp, MarketplacePlugin } from "./types.js";
 
 // ── marketplace.json shape (input) ──────────────────────────────
@@ -83,7 +84,7 @@ function toMcp(manifest: RawPluginManifest): MarketplaceMcp | null {
 }
 
 /** Builds the full marketplace data blob from the git repo at `repoRoot`. */
-export async function generateMarketplaceData(repoRoot: string): Promise<MarketplaceData> {
+export async function generateMarketplaceData(repoRoot: string, strict = false): Promise<MarketplaceData> {
   const marketplace = await readJson<RawMarketplace>(
     join(repoRoot, ".claude-plugin", "marketplace.json"),
   );
@@ -130,12 +131,22 @@ export async function generateMarketplaceData(repoRoot: string): Promise<Marketp
     });
   }
 
+  // Profiles are generated AFTER plugins so component refs can resolve
+  const profiles = await readProfiles(repoRoot, plugins, strict);
+
+  // GitHub stars — single fetch for the first-party repo; optional
+  const repoStars = await fetchRepoStars(
+    `${marketplace.owner?.name ?? "harnessprotocol"}/${marketplaceName}`,
+  );
+
   return {
     generatedAt: new Date().toISOString(),
     marketplaceName,
     owner: marketplace.owner?.name ?? "unknown",
     categories,
     plugins,
+    profiles,
+    ...(repoStars !== undefined ? { repoStars } : {}),
   };
 }
 
@@ -160,21 +171,35 @@ async function main(): Promise<void> {
   const repoRoot = findRepoRoot(dirname(fileURLToPath(import.meta.url)));
   const { strict, outPath } = parseArgs(process.argv.slice(2), repoRoot);
 
-  const data = await generateMarketplaceData(repoRoot);
+  const data = await generateMarketplaceData(repoRoot, strict);
 
   await mkdir(dirname(outPath), { recursive: true });
   await writeFile(outPath, `${JSON.stringify(data, null, 2)}\n`, "utf-8");
 
-  const failed = data.plugins.filter((p) => p.security.status === "failed");
-  console.log(
-    `Generated ${data.plugins.length} plugins → ${outPath}` +
-      (failed.length ? ` (${failed.length} failed security scan)` : ""),
+  const failedPlugins = data.plugins.filter((p) => p.security.status === "failed");
+  const unresolvedProfiles = data.profiles.filter((pr) =>
+    pr.plugins.some((ref) => !ref.resolved),
   );
 
-  if (strict && failed.length > 0) {
+  console.log(
+    `Generated ${data.plugins.length} plugins + ${data.profiles.length} profiles → ${outPath}` +
+      (data.repoStars !== undefined ? ` (⭐ ${data.repoStars})` : "") +
+      (failedPlugins.length ? ` (${failedPlugins.length} failed security scan)` : ""),
+  );
+
+  if (strict && failedPlugins.length > 0) {
     console.error(
-      `Strict mode: ${failed.length} plugin(s) failed the security scan: ${failed
+      `Strict mode: ${failedPlugins.length} plugin(s) failed the security scan: ${failedPlugins
         .map((p) => p.name)
+        .join(", ")}`,
+    );
+    process.exitCode = 1;
+  }
+
+  if (strict && unresolvedProfiles.length > 0) {
+    console.error(
+      `Strict mode: ${unresolvedProfiles.length} profile(s) have unresolved components: ${unresolvedProfiles
+        .map((pr) => pr.name)
         .join(", ")}`,
     );
     process.exitCode = 1;

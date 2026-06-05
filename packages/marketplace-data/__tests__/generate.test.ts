@@ -3,8 +3,10 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { findRepoRoot, generateMarketplaceData } from "../src/generate.js";
 import { parseSkillMarkdown } from "../src/read-skills.js";
+import { buildHarnessYaml } from "../src/profiles.js";
 import { trustFromStatus } from "../src/trust.js";
 import { StaticSource } from "../src/source.js";
+import { validateHarnessYaml } from "@harness-kit/core";
 import type { MarketplaceData } from "../src/types.js";
 
 const repoRoot = findRepoRoot(dirname(fileURLToPath(import.meta.url)));
@@ -114,4 +116,158 @@ describe("StaticSource", () => {
 
 it("finds the repo root from a nested directory", () => {
   expect(findRepoRoot(join(repoRoot, "packages", "marketplace-data", "src"))).toBe(repoRoot);
+});
+
+// ── Profile tests ─────────────────────────────────────────────
+
+describe("profiles", () => {
+  it("emits 3 profiles (data-engineer, full-stack-engineer, research-knowledge)", async () => {
+    const data = await getData();
+    expect(data.profiles).toBeDefined();
+    expect(data.profiles.length).toBe(3);
+    const slugs = data.profiles.map((p) => p.slug).sort();
+    expect(slugs).toEqual(["data-engineer", "full-stack-engineer", "research-knowledge"]);
+  });
+
+  it("resolves all profile components against marketplace plugins", async () => {
+    const data = await getData();
+    for (const profile of data.profiles) {
+      for (const ref of profile.plugins) {
+        expect(
+          ref.resolved,
+          `Profile "${profile.name}": component "${ref.name}" should resolve`,
+        ).toBe(true);
+        expect(ref.slug).toBeDefined();
+        expect(ref.category).toBeDefined();
+        expect(ref.trust).toBeDefined();
+      }
+    }
+  });
+
+  it("sets liveVersion from marketplace plugins (not stale profile pin)", async () => {
+    const data = await getData();
+    for (const profile of data.profiles) {
+      for (const ref of profile.plugins) {
+        if (!ref.resolved) continue;
+        const livePlugin = data.plugins.find((p) => p.name === ref.name);
+        expect(ref.liveVersion).toBe(livePlugin?.version);
+      }
+    }
+  });
+
+  it("computes aggregateTrust as worst-case across resolved plugins", async () => {
+    const data = await getData();
+    const severityOf = (t: string) =>
+      ({ warning: 3, caution: 2, unscanned: 1, verified: 0 })[t] ?? -1;
+
+    for (const profile of data.profiles) {
+      const maxSeverity = profile.plugins
+        .filter((r) => r.resolved && r.trust)
+        .reduce((max, r) => Math.max(max, severityOf(r.trust!)), 0);
+      const expectedSeverity = severityOf(profile.aggregateTrust);
+      expect(
+        expectedSeverity,
+        `Profile "${profile.name}" aggregateTrust severity should be >= per-plugin max`,
+      ).toBeGreaterThanOrEqual(maxSeverity);
+    }
+  });
+
+  it("emits a valid v1 harness.yaml for every profile", async () => {
+    const data = await getData();
+    for (const profile of data.profiles) {
+      const result = validateHarnessYaml(profile.harnessYaml);
+      expect(
+        result.valid,
+        `Profile "${profile.name}" harnessYaml validation errors: ${result.errors
+          .map((e) => `${e.path}: ${e.message}`)
+          .join("; ")}`,
+      ).toBe(true);
+    }
+  });
+
+  it("harnessYaml includes only resolved plugins with live versions", async () => {
+    const data = await getData();
+    for (const profile of data.profiles) {
+      // Every resolved component appears in the harnessYaml
+      const resolved = profile.plugins.filter((r) => r.resolved);
+      for (const ref of resolved) {
+        expect(profile.harnessYaml).toContain(`name: ${ref.name}`);
+        expect(profile.harnessYaml).toContain(`source: harnessprotocol/harness-kit`);
+        // Uses live version, not profile-pinned version
+        if (ref.liveVersion) {
+          expect(profile.harnessYaml).toContain(`version: "${ref.liveVersion}"`);
+        }
+      }
+    }
+  });
+
+  it("derives a human-readable persona from the profile name", async () => {
+    const data = await getData();
+    const byName = Object.fromEntries(data.profiles.map((p) => [p.name, p.persona]));
+    expect(byName["data-engineer"]).toBe("Data Engineer");
+    expect(byName["full-stack-engineer"]).toBe("Full Stack Engineer");
+    expect(byName["research-knowledge"]).toBe("Research Knowledge");
+  });
+
+  it("preserves knowledge and rules from profile YAML", async () => {
+    const data = await getData();
+    const fullStack = data.profiles.find((p) => p.name === "full-stack-engineer");
+    expect(fullStack?.knowledge?.backend).toBe("memory-md");
+    expect(fullStack?.rules.length).toBeGreaterThan(0);
+
+    const dataEngineer = data.profiles.find((p) => p.name === "data-engineer");
+    expect(dataEngineer?.knowledge?.backend).toBe("memory-md");
+    expect(dataEngineer?.knowledge?.seedDocs.length).toBeGreaterThan(0);
+    expect(dataEngineer?.rules.length).toBeGreaterThan(0);
+  });
+
+  it("profiles are sorted by name", async () => {
+    const data = await getData();
+    const names = data.profiles.map((p) => p.name);
+    expect(names).toEqual([...names].sort());
+  });
+
+  it("tags all profiles as first-party", async () => {
+    const data = await getData();
+    expect(data.profiles.every((p) => p.sourceId === "first-party")).toBe(true);
+  });
+});
+
+describe("buildHarnessYaml (unit)", () => {
+  const PROFILE_YAML = {
+    name: "test-profile",
+    description: "A minimal test profile for unit testing the YAML builder.",
+    author: { name: "testauthor" },
+    components: [],
+    rules: ["Always write tests first", "Review before merging"],
+  };
+
+  it("produces YAML that validates against the v1 schema", () => {
+    const yaml = buildHarnessYaml(PROFILE_YAML, [
+      { name: "review", version: "0.3.0" },
+    ]);
+    const result = validateHarnessYaml(yaml);
+    expect(result.valid, result.errors.map((e) => e.message).join("; ")).toBe(true);
+  });
+
+  it("includes rules in instructions.behavioral", () => {
+    const yaml = buildHarnessYaml(PROFILE_YAML, []);
+    expect(yaml).toContain("instructions:");
+    expect(yaml).toContain("behavioral:");
+    expect(yaml).toContain("- Always write tests first");
+    expect(yaml).toContain("- Review before merging");
+  });
+
+  it("truncates description to 256 chars max", () => {
+    const longDesc = "x".repeat(300);
+    const yaml = buildHarnessYaml({ ...PROFILE_YAML, description: longDesc }, []);
+    const result = validateHarnessYaml(yaml);
+    expect(result.valid, result.errors.map((e) => e.message).join("; ")).toBe(true);
+  });
+
+  it("omits plugins block when no resolved plugins passed", () => {
+    const yaml = buildHarnessYaml({ ...PROFILE_YAML, rules: [] }, []);
+    expect(yaml).not.toContain("plugins:");
+    expect(yaml).not.toContain("instructions:");
+  });
 });

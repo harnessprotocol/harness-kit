@@ -3,6 +3,7 @@ import type {
   MarketplaceCategory,
   MarketplaceData,
   MarketplacePlugin,
+  MarketplaceProfile,
   MarketplaceSource,
 } from './types';
 
@@ -50,6 +51,19 @@ export function getCategoryName(slug: string): string {
 
 export function getAllTags(): string[] {
   return [...new Set(data.plugins.flatMap((p) => p.tags))].sort();
+}
+
+export function getAllProfiles(): MarketplaceProfile[] {
+  // Defensive ?? [] so a stale generated JSON (no profiles key) never crashes the build
+  return (data.profiles ?? []);
+}
+
+export function getProfile(slug: string): MarketplaceProfile | undefined {
+  return (data.profiles ?? []).find((p) => p.slug === slug);
+}
+
+export function getRepoStars(): number | undefined {
+  return data.repoStars;
 }
 
 export function getMarketplaceMeta(): Pick<MarketplaceData, 'marketplaceName' | 'owner' | 'generatedAt'> {
