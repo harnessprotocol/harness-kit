@@ -5,7 +5,7 @@ title: Plugin Overview
 
 # Plugins
 
-harness-kit ships 16 plugins across 7 categories. Each packages a proven workflow as a portable prompt template, currently distributed through Claude Code's plugin marketplace.
+harness-kit ships 17 plugins across 7 categories. Each packages a proven workflow as a portable prompt template, currently distributed through Claude Code's plugin marketplace.
 
 ## At a Glance
 
@@ -16,6 +16,7 @@ harness-kit ships 16 plugins across 7 categories. Each packages a proven workflo
 | [capture](research-knowledge/capture) | Capture session information into a staging file for later reflection | None |
 | [review](code-quality/review) | Structured code review for branches, PRs, or paths with severity labels | `gh` CLI (PR review only) |
 | [explain](code-quality/explain) | Layered explanations of files, functions, directories, or concepts | None |
+| [rubber-ducky](code-quality/rubber-ducky) | Cross-model second opinion on your plans, designs, code, and tests before you commit | None |
 | [lineage](data-engineering/lineage) | Column-level lineage tracing through SQL, Kafka, Spark, JDBC | None |
 | [docgen](documentation/docgen) | Generate or update README, API docs, architecture overview, or changelog | None |
 | [open-pr](devops/open-pr) | Pre-flight checks and PR creation: tests, PR, review, CI | `gh` CLI |

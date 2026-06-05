@@ -1,0 +1,8 @@
+{
+  "name": "rubber-ducky",
+  "description": "A constructive critic that gives a second opinion on your own plans, designs, code, and tests — spawning independent read-only reviewers on different Claude models than the one driving the session",
+  "version": "0.1.0",
+  "category": "code-quality",
+  "tags": ["rubber-duck", "second-opinion", "critique", "debugging", "code-review", "multi-model"],
+  "x-developed-with": "claude-opus-4-8"
+}

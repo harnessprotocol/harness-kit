@@ -1,0 +1,88 @@
+---
+sidebar_position: 8
+title: rubber-ducky
+---
+
+> **[View in Marketplace →](#)** for install tracking, related plugins, and profiles.
+
+# rubber-ducky
+
+A constructive critic that gives a second opinion on your own plans, designs, code, and tests —
+spawning independent read-only reviewers on **different Claude models** than the one driving your session.
+
+## Requirements
+
+- **Claude Code** — required (uses subagents with a per-agent model override)
+- No external dependencies
+
+## What It Does
+
+At a high-leverage moment — after planning a non-trivial change, mid-way through complex work, after writing tests, or when stuck on repeated failures — the duck:
+
+1. Decides whether the change is non-trivial enough to be worth a critique (skips trivial edits)
+2. Picks the two model aliases your session is **not** using, from `{opus, sonnet, haiku}`
+3. Articulates the work into a self-contained brief: the goal, the plan/diff/tests, key assumptions, and scope boundaries
+4. Spawns two **read-only** critics in parallel, one per model
+5. Synthesizes their findings — agreement signals high confidence, divergence is surfaced
+6. Reports back what mattered and acts on the blocking items
+
+## Why different models
+
+A model that didn't produce the work is far more likely to see what's wrong with it. Running the critics on the two models your session isn't using means you get genuinely independent perspectives rather than a re-run of the same reasoning that produced the plan — fewer shared blind spots.
+
+| Session model | Critic 1 | Critic 2 |
+|---------------|----------|----------|
+| Opus          | `sonnet` | `haiku`  |
+| Sonnet        | `opus`   | `haiku`  |
+| Haiku         | `opus`   | `sonnet` |
+
+## Output Structure
+
+Findings come back in three severity tiers, each as *issue → impact → concrete fix*:
+
+| Tier | Meaning |
+|------|---------|
+| **Blocking** | Must be fixed for the work to succeed |
+| **Non-blocking** | Should be fixed to improve quality, but won't cause failure |
+| **Suggestions** | Lower-priority improvements that still have real impact |
+
+"No issues found" is a valid and valuable result — the duck won't manufacture nitpicks to seem useful. It deliberately ignores style, formatting, naming, and minor refactors.
+
+## Usage
+
+### Critique the current plan or work
+
+```
+/rubber-ducky
+```
+
+### Focus the critique
+
+```
+/rubber-ducky what edge cases am I missing?
+```
+
+It also fires from natural phrasing — "rubber duck this before I build it", "poke holes in my approach", "sanity-check my plan", "what am I missing here".
+
+## rubber-ducky vs review
+
+Both are read-only critics, but they fire at different stages:
+
+- **rubber-ducky** pressure-tests your *in-progress thinking* — a plan, design, or approach — **before or during** implementation, using cross-model critics.
+- **[review](code-quality/review)** evaluates a *finished* branch diff or PR after the code exists.
+
+Reach for the duck while the decision is still cheap to change; reach for `/review` when the work is done.
+
+## Design Notes
+
+### Why read-only?
+
+The critics review; you decide. They never modify files or run stateful commands, so consulting the duck is always safe — the worst case is spending an extra reasoning pass.
+
+### Why before implementation?
+
+The single highest-leverage moment is after you've planned a change but before you've written the code. A design flaw caught there costs a paragraph to fix; caught after implementation it costs a rewrite.
+
+### Why skip trivial changes?
+
+The duck adds a reasoning pass on two other models. That's worth it for architecture, multi-file changes, and unfamiliar code — and pure friction for a one-line fix or a rename. Triviality is a judgment call; when in doubt on a non-trivial change, consult it.

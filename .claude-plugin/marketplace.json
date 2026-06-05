@@ -88,6 +88,16 @@
       "tags": ["code-review", "pull-request", "static-analysis", "github"]
     },
     {
+      "name": "rubber-ducky",
+      "source": "./plugins/rubber-ducky",
+      "description": "A constructive critic that gives a second opinion on your own plans, designs, code, and tests — spawning independent read-only reviewers on different Claude models than the one driving the session",
+      "version": "0.1.0",
+      "author": { "name": "harnessprotocol" },
+      "license": "Apache-2.0",
+      "category": "code-quality",
+      "tags": ["rubber-duck", "second-opinion", "critique", "debugging", "code-review", "multi-model"]
+    },
+    {
       "name": "docgen",
       "source": "./plugins/docgen",
       "description": "Generate or update README, API docs, architecture overview, or changelog — always confirms before writing",
