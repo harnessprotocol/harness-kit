@@ -1,0 +1,18 @@
+{
+  "name": "dependabot-sweep",
+  "description": "End-to-end Dependabot remediation: fetch open alerts, fix per ecosystem, verify, and open/merge a PR",
+  "version": "0.1.0",
+  "category": "devops",
+  "tags": ["security", "dependabot", "dependencies", "ci-cd", "automation"],
+  "requires": {
+    "env": [
+      {
+        "name": "GH_TOKEN",
+        "description": "GitHub token used by the gh CLI to read Dependabot alerts, open PRs, watch CI, and merge",
+        "required": true,
+        "sensitive": true,
+        "when": "All dependabot-sweep operations require GitHub access"
+      }
+    ]
+  }
+}

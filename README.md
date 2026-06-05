@@ -93,7 +93,7 @@ A few highlights to get started:
 | [`lineage`](plugins/lineage/skills/lineage/README.md) | Column-level data lineage through SQL, Kafka, Spark, and JDBC | `/lineage orders.amount` |
 | [`rubber-ducky`](plugins/rubber-ducky/skills/rubber-ducky/README.md) | Cross-model second opinion on your plans and code before you commit | `/rubber-ducky` |
 
-> 📋 **[Browse all 17 plugins →](.claude-plugin/marketplace.json)** or run `/plugin marketplace browse harness-kit`
+> 📋 **[Browse all 18 plugins →](.claude-plugin/marketplace.json)** or run `/plugin marketplace browse harness-kit`
 
 ### 🌍 Community
 
