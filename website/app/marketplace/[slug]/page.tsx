@@ -7,7 +7,6 @@ import { MarkdownViewer } from '@/components/markdown-viewer';
 import { InstallWidget } from '@/components/marketplace/InstallWidget';
 import { SecurityPanel } from '@/components/marketplace/SecurityPanel';
 import { RankingBadges } from '@/components/marketplace/RankingBadges';
-import { TrustBadge } from '@/components/marketplace/TrustBadge';
 import { categoryAccent } from '@/lib/marketplace/category';
 import { getAllPlugins, getCategoryName, getPlugin, getRepoStars } from '@/lib/marketplace/data';
 
