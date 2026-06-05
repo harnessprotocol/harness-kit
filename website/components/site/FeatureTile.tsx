@@ -6,7 +6,6 @@ interface FeatureTileProps {
   title: string;
   description: string;
   href?: string;
-  accent?: string;
 }
 
 export function FeatureTile({ icon, title, description, href }: FeatureTileProps) {

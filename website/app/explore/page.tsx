@@ -211,7 +211,6 @@ export default function ExplorePage() {
                   title={tile.title}
                   description={tile.description}
                   href={tile.href}
-                  accent={tile.accent}
                 />
               ))}
             </div>

@@ -169,7 +169,7 @@ body {
   background: var(--bg-surface);
 }
 .dark .glass {
-  background: rgba(18, 21, 28, 0.7);
+  background: rgba(15, 16, 17, 0.7); /* --bg-surface #0f1011 at 70% opacity */
 }
 
 /* ── Page fade-in ── */
@@ -346,7 +346,8 @@ input:focus-visible,
    is the lift. Used by marketplace + feature cards. */
 .surface-card {
   background: var(--bg-surface);
-  transition: background 0.15s var(--ease-default, ease), box-shadow 0.15s var(--ease-default, ease);
+  /* Linear ease: cubic-bezier(0.25,0.46,0.45,0.94) — easeOutQuad */
+  transition: background 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 .surface-card:hover {
   box-shadow: var(--shadow-sm);
@@ -374,12 +375,9 @@ pre {
   position: relative;
   border-radius: 0.5rem;
   background: var(--bg-surface) !important;
-  box-shadow: none;
-  font-feature-settings: 'cv01', 'ss03';
-}
-/* hairline only in light, where the surface lift alone is too subtle */
-pre {
+  /* hairline in light (surface lift alone is too subtle); none in dark (luminance stacking) */
   box-shadow: inset 0 0 0 1px var(--border-base);
+  font-feature-settings: 'cv01', 'ss03';
 }
 .dark pre {
   box-shadow: none;
