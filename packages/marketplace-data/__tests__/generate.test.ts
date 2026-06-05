@@ -18,7 +18,7 @@ async function getData(): Promise<MarketplaceData> {
 describe("generateMarketplaceData", () => {
   it("emits every plugin from marketplace.json", async () => {
     const data = await getData();
-    expect(data.plugins.length).toBe(16);
+    expect(data.plugins.length).toBe(17);
     expect(data.owner).toBe("harnessprotocol");
     expect(data.marketplaceName).toBe("harness-kit");
   });
