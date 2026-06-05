@@ -148,6 +148,16 @@
       "tags": ["pull-request", "triage", "ci-cd", "code-review", "multi-repo"]
     },
     {
+      "name": "dependabot-sweep",
+      "source": "./plugins/dependabot-sweep",
+      "description": "End-to-end Dependabot remediation: fetch open alerts, fix per ecosystem, verify, and open/merge a PR",
+      "version": "0.1.0",
+      "author": { "name": "harnessprotocol" },
+      "license": "Apache-2.0",
+      "category": "devops",
+      "tags": ["security", "dependabot", "dependencies", "ci-cd", "automation"]
+    },
+    {
       "name": "stats",
       "source": "./plugins/stats",
       "description": "Interactive dashboard for Claude Code usage — tokens, sessions, models, and activity patterns",
