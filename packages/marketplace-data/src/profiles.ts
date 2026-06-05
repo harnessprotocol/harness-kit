@@ -149,9 +149,12 @@ export async function readProfiles(
   try {
     const entries = await readdir(profilesDir);
     files = entries.filter((f) => f.endsWith(".yaml") || f.endsWith(".yml"));
-  } catch {
-    // profiles/ directory absent — not an error
-    return [];
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") {
+      // profiles/ directory absent — not an error
+      return [];
+    }
+    throw err; // Permission denied, I/O error, etc. — surface it
   }
 
   const pluginMap = new Map(plugins.map((p) => [p.name, p]));
@@ -220,9 +223,11 @@ export async function readProfiles(
       trust: aggregateTrust,
       pluginCount: refs.length,
       verifiedCount: refs.filter((r) => r.trust === "verified").length,
-      cautionCount: refs.filter((r) => r.trust === "caution").length,
+      // Unresolved refs degrade the aggregate to "caution" (see aggregateTrust logic above),
+      // so count them under cautionCount to keep the headline and breakdown consistent.
+      cautionCount: refs.filter((r) => r.trust === "caution" || !r.resolved).length,
       warningCount: refs.filter((r) => r.trust === "warning").length,
-      unscannedCount: refs.filter((r) => r.trust === "unscanned" || !r.resolved).length,
+      unscannedCount: refs.filter((r) => r.trust === "unscanned").length,
     };
 
     profiles.push({

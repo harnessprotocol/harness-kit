@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { SiteNav } from '@/components/site/SiteNav';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import { ProfileDetail } from '@/components/marketplace/ProfileDetail';
-import { getAllProfiles, getProfile } from '@/lib/marketplace/data';
+import { getAllProfiles, getProfile, getRepoStars } from '@/lib/marketplace/data';
 
 export function generateStaticParams() {
   return getAllProfiles().map((p) => ({ slug: p.slug }));
@@ -24,10 +24,15 @@ export default async function ProfileDetailPage(props: { params: Promise<{ slug:
   const profile = getProfile(slug);
   if (!profile) notFound();
 
+  // Inject repo-level stars onto the profile, same as the landing page does for cards.
+  // The generator writes repoStars at the MarketplaceData level, not per-profile.
+  const stars = getRepoStars();
+  const profileWithStars = stars !== undefined ? { ...profile, stars } : profile;
+
   return (
     <main className="min-h-screen">
       <SiteNav />
-      <ProfileDetail profile={profile} />
+      <ProfileDetail profile={profileWithStars} />
       <SiteFooter />
     </main>
   );

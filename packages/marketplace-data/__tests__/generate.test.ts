@@ -233,6 +233,42 @@ describe("profiles", () => {
   });
 });
 
+describe("readProfiles — unresolved component handling", () => {
+  it("marks missing components as resolved: false and degrades aggregateTrust", async () => {
+    // Simulate a plugin set that is missing some components from a profile
+    const { readProfiles } = await import("../src/profiles.js");
+    const repoRoot = findRepoRoot(dirname(fileURLToPath(import.meta.url)));
+
+    // Pass a plugin list that only contains one of the data-engineer components
+    const partialPlugins = (await getData()).plugins.filter((p) => p.name === "review");
+
+    const profiles = await readProfiles(repoRoot, partialPlugins);
+    const de = profiles.find((p) => p.name === "data-engineer");
+    expect(de).toBeDefined();
+
+    // All non-"review" components should be unresolved
+    const unresolvedRefs = de!.plugins.filter((r) => !r.resolved);
+    expect(unresolvedRefs.length).toBeGreaterThan(0);
+
+    // Unresolved refs should push aggregate trust to at least caution
+    const severity = { warning: 3, caution: 2, unscanned: 1, verified: 0 };
+    expect(severity[de!.aggregateTrust]).toBeGreaterThanOrEqual(severity["caution"]);
+
+    // Trust breakdown: unresolved refs counted under cautionCount (not unscannedCount)
+    expect(de!.security.cautionCount).toBeGreaterThanOrEqual(unresolvedRefs.length);
+  });
+
+  it("throws in strict mode when a component is unresolved", async () => {
+    const { readProfiles } = await import("../src/profiles.js");
+    const repoRoot = findRepoRoot(dirname(fileURLToPath(import.meta.url)));
+
+    // Empty plugin list — every component will be unresolved
+    await expect(readProfiles(repoRoot, [], /* strict */ true)).rejects.toThrow(
+      /not found in marketplace\.json/,
+    );
+  });
+});
+
 describe("buildHarnessYaml (unit)", () => {
   const PROFILE_YAML = {
     name: "test-profile",
