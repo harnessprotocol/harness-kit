@@ -1,16 +1,13 @@
 import './global.css';
 import { RootProvider } from 'fumadocs-ui/provider/next';
-import { Inter, Space_Grotesk } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import type { ReactNode } from 'react';
 
+// Linear uses Inter Variable for every role (display + body). The geometric
+// cv01/ss03 features and weight 510/590 are applied in global.css.
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
-});
-
-const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  variable: '--font-display',
 });
 
 export const metadata = {
@@ -44,7 +41,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${spaceGrotesk.variable}`}
+      className={`${inter.variable}`}
       suppressHydrationWarning
     >
       <body className="font-sans antialiased">

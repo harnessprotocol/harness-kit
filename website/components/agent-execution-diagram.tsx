@@ -4,7 +4,7 @@
 
 const FONT = 'system-ui, -apple-system, sans-serif';
 const MONO = 'Menlo, Monaco, Consolas, monospace';
-const CYAN = '#7588ff';
+const CYAN = '#635bff';
 const CYAN_DIM = 'rgba(117,136,255,0.18)';
 const AMBER = '#e0a33d';
 const AMBER_DIM = 'rgba(224,163,61,0.18)';

@@ -89,14 +89,14 @@ export default function WelcomeScreen({ onDismiss }: WelcomeScreenProps) {
             flexShrink: 0,
           }}
         >
-          <rect width="32" height="32" rx="7" fill="#13141d" />
-          <g stroke="#7d8dff" strokeWidth="2.8" strokeLinecap="round" fill="none">
+          <rect width="32" height="32" rx="7" fill="#11151f" />
+          <g stroke="#7a8bff" strokeWidth="2.8" strokeLinecap="round" fill="none">
             <path d="M9 9.5 C 15 11, 17.5 13.5, 19.4 14.9" />
             <path d="M9 22.5 C 15 21, 17.5 18.5, 19.4 17.1" />
           </g>
-          <circle cx="9" cy="9.5" r="1.9" fill="#7d8dff" />
-          <circle cx="9" cy="22.5" r="1.9" fill="#7d8dff" />
-          <circle cx="22" cy="16" r="3.3" fill="#7d8dff" />
+          <circle cx="9" cy="9.5" r="1.9" fill="#7a8bff" />
+          <circle cx="9" cy="22.5" r="1.9" fill="#7a8bff" />
+          <circle cx="22" cy="16" r="3.3" fill="#7a8bff" />
         </svg>
 
         {/* Headline */}
@@ -182,7 +182,9 @@ export default function WelcomeScreen({ onDismiss }: WelcomeScreenProps) {
             borderRadius: 8,
             border: "none",
             background: "var(--accent)",
-            color: "var(--accent-fg)",
+            // White label on the indigo fill (Linear primary button); --accent-fg
+            // is the violet link/hover color and is unreadable on --accent.
+            color: "#f7f8f8",
             cursor: "pointer",
             letterSpacing: "-0.1px",
             outline: "none",

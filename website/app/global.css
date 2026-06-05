@@ -1,33 +1,46 @@
 @import 'tailwindcss';
 @import 'fumadocs-ui/style.css';
 
-/* ── Font system ── */
+/* ── Font system — Linear: Inter Variable everywhere with cv01 + ss03 ── */
 body {
-  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-inter), 'SF Pro Display', system-ui, sans-serif;
+  /* THE signature: single-story 'a' (cv01) + geometric alternates (ss03).
+     Applied globally so every element inherits it. Never remove. */
+  font-feature-settings: 'cv01', 'ss03';
 }
 
+/* Linear uses Inter for display too — weight 590, tight tracking (no Space Grotesk) */
 .font-display {
-  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+  font-family: var(--font-inter), 'SF Pro Display', system-ui, sans-serif;
+  font-variation-settings: 'wght' 590;
+  letter-spacing: -0.022em;
 }
 
 /* ── Light theme ── */
 :root {
-  --color-fd-primary: 233 70% 62%;
+  /* Accent: Linear Indigo #5e6ad2 — exact match to --accent */
+  --color-fd-primary: 234 56% 60%;
   --color-fd-primary-foreground: 0 0% 100%;
-  --color-fd-background: 240 33% 99%;
-  --color-fd-foreground: 220 15% 10%;
-  --color-fd-card: 220 10% 96%;
-  --color-fd-card-foreground: 220 15% 10%;
-  --color-fd-muted: 220 8% 93%;
-  --color-fd-muted-foreground: 220 8% 42%;
-  --color-fd-border: 220 8% 88%;
-  --color-fd-accent: 233 70% 95%;
-  --color-fd-accent-foreground: 233 60% 45%;
+  /* Background: Linear marketing (light) #f7f8f8 */
+  --color-fd-background: 180 6% 97%;
+  /* Foreground: text-primary #08090a */
+  --color-fd-foreground: 210 11% 4%;
+  /* Card: panel #ffffff */
+  --color-fd-card: 0 0% 100%;
+  --color-fd-card-foreground: 210 11% 4%;
+  /* Muted: level3 #f0f1f2 */
+  --color-fd-muted: 210 9% 95%;
+  /* Muted fg: text-tertiary #5a5f6b */
+  --color-fd-muted-foreground: 222 9% 39%;
+  /* Border: border-standard rgba(0,0,0,0.10) flattened */
+  --color-fd-border: 214 9% 88%;
+  --color-fd-accent: 234 60% 95%;
+  --color-fd-accent-foreground: 233 49% 54%;
   --color-fd-popover: 0 0% 100%;
-  --color-fd-popover-foreground: 220 15% 10%;
-  --color-fd-secondary: 240 12% 95%;
-  --color-fd-secondary-foreground: 220 15% 10%;
-  --color-fd-ring: 233 70% 62%;
+  --color-fd-popover-foreground: 210 11% 4%;
+  --color-fd-secondary: 210 9% 95%;
+  --color-fd-secondary-foreground: 210 11% 4%;
+  --color-fd-ring: 234 56% 60%;
   --fd-layout-width: 1400px;
   --cat-blue:   #3b82f6;
   --cat-cyan:   #06b6d4;
@@ -38,24 +51,24 @@ body {
 
   /* design-tokens:light:start */
   /* generated — edit packages/design-tokens/src/tokens.ts, then run generate */
-  --bg-base: #f4f6f9;
-  --bg-surface: #f8fafc;
-  --bg-elevated: #ffffff;
-  --bg-sidebar: rgba(228, 233, 242, 0.82);
-  --bg-sidebar-solid: #e8ecf4;
-  --fg-base: #181a20;
-  --fg-muted: #5a6070;
-  --fg-subtle: #9299a8;
-  --fg-placeholder: #b8bfcc;
-  --border-base: rgba(0, 0, 0, 0.08);
-  --border-strong: rgba(0, 0, 0, 0.14);
-  --border-subtle: rgba(0, 0, 0, 0.05);
-  --separator: rgba(0, 0, 0, 0.07);
-  --accent: #5566e6;
-  --accent-light: rgba(85, 102, 230, 0.10);
-  --accent-fg: #4452cc;
-  --accent-text: #4452cc;
-  --accent-glow: rgba(85, 102, 230, 0.30);
+  --bg-base: #f7f8f8;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f0f1f2;
+  --bg-sidebar: rgba(247, 248, 248, 0.85);
+  --bg-sidebar-solid: #ffffff;
+  --fg-base: #08090a;
+  --fg-muted: #2c2e33;
+  --fg-subtle: #5a5f6b;
+  --fg-placeholder: #8a8f98;
+  --border-base: rgba(0, 0, 0, 0.06);
+  --border-strong: rgba(0, 0, 0, 0.10);
+  --border-subtle: rgba(0, 0, 0, 0.03);
+  --separator: rgba(0, 0, 0, 0.06);
+  --accent: #5e6ad2;
+  --accent-light: rgba(94, 106, 210, 0.12);
+  --accent-fg: #4b57c8;
+  --accent-text: #4b57c8;
+  --accent-glow: rgba(94, 106, 210, 0.35);
   /* design-tokens:light:end */
 
   /* Shadows */
@@ -66,29 +79,29 @@ body {
 
 /* ── Dark theme — matches harness-kit desktop app tokens ── */
 .dark {
-  /* Accent: Iris periwinkle #7588ff — exact match to desktop --accent */
-  --color-fd-primary: 232 100% 73%;
-  --color-fd-primary-foreground: 240 30% 8%;
-  /* Background: matches desktop --bg-base #0a0a12 */
-  --color-fd-background: 240 29% 5%;
-  /* Foreground: matches desktop --fg-base #eaeaf2 */
-  --color-fd-foreground: 240 20% 93%;
-  /* Card: matches desktop --bg-surface #12131c */
-  --color-fd-card: 234 22% 9%;
-  --color-fd-card-foreground: 240 20% 93%;
-  /* Muted: matches desktop --bg-elevated #1a1b26 */
-  --color-fd-muted: 234 20% 13%;
-  /* Muted fg: matches desktop --fg-muted #9498a8 */
-  --color-fd-muted-foreground: 232 10% 62%;
-  /* Border: matches desktop --border-base feel */
-  --color-fd-border: 234 18% 15%;
-  --color-fd-accent: 233 40% 14%;
-  --color-fd-accent-foreground: 233 90% 80%;
-  --color-fd-popover: 240 26% 6%;
-  --color-fd-popover-foreground: 240 20% 93%;
-  --color-fd-secondary: 234 18% 11%;
-  --color-fd-secondary-foreground: 240 20% 93%;
-  --color-fd-ring: 232 100% 73%;
+  /* Accent: Linear Indigo #5e6ad2 — exact match to --accent */
+  --color-fd-primary: 234 56% 60%;
+  --color-fd-primary-foreground: 180 6% 97%;
+  /* Background: Marketing Black #08090a */
+  --color-fd-background: 210 11% 4%;
+  /* Foreground: text-primary #f7f8f8 */
+  --color-fd-foreground: 180 6% 97%;
+  /* Card: panel #0f1011 */
+  --color-fd-card: 210 6% 6%;
+  --color-fd-card-foreground: 180 6% 97%;
+  /* Muted: level3 #191a1b */
+  --color-fd-muted: 210 4% 10%;
+  /* Muted fg: text-tertiary #8a8f98 */
+  --color-fd-muted-foreground: 218 7% 57%;
+  /* Border: border-standard rgba(255,255,255,0.08) flattened */
+  --color-fd-border: 220 5% 14%;
+  --color-fd-accent: 234 30% 15%;
+  --color-fd-accent-foreground: 232 100% 76%;
+  --color-fd-popover: 210 4% 10%;
+  --color-fd-popover-foreground: 180 6% 97%;
+  --color-fd-secondary: 210 4% 10%;
+  --color-fd-secondary-foreground: 180 6% 97%;
+  --color-fd-ring: 234 56% 60%;
   --cat-blue:   #3b82f6;
   --cat-cyan:   #06b6d4;
   --cat-purple: #a855f7;
@@ -98,24 +111,24 @@ body {
 
   /* design-tokens:dark:start */
   /* generated — edit packages/design-tokens/src/tokens.ts, then run generate */
-  --bg-base: #0a0a12;
-  --bg-surface: #12131c;
-  --bg-elevated: #1a1b26;
-  --bg-sidebar: rgba(10, 10, 18, 0.82);
-  --bg-sidebar-solid: #0c0c15;
-  --fg-base: #eaeaf2;
-  --fg-muted: #9498a8;
-  --fg-subtle: #6b6f80;
-  --fg-placeholder: #4b4f60;
-  --border-base: rgba(230, 233, 255, 0.08);
-  --border-strong: rgba(230, 233, 255, 0.14);
-  --border-subtle: rgba(230, 233, 255, 0.05);
-  --separator: rgba(230, 233, 255, 0.07);
-  --accent: #7588ff;
-  --accent-light: rgba(117, 136, 255, 0.14);
-  --accent-fg: #9fa9ff;
-  --accent-text: #9fa9ff;
-  --accent-glow: rgba(117, 136, 255, 0.35);
+  --bg-base: #08090a;
+  --bg-surface: #0f1011;
+  --bg-elevated: #191a1b;
+  --bg-sidebar: rgba(8, 9, 10, 0.85);
+  --bg-sidebar-solid: #0f1011;
+  --fg-base: #f7f8f8;
+  --fg-muted: #d0d6e0;
+  --fg-subtle: #8a8f98;
+  --fg-placeholder: #62666d;
+  --border-base: rgba(255, 255, 255, 0.05);
+  --border-strong: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.02);
+  --separator: rgba(255, 255, 255, 0.05);
+  --accent: #5e6ad2;
+  --accent-light: rgba(94, 106, 210, 0.15);
+  --accent-fg: #828fff;
+  --accent-text: #828fff;
+  --accent-glow: rgba(94, 106, 210, 0.40);
   /* design-tokens:dark:end */
 
   /* Shadows */
@@ -156,7 +169,7 @@ body {
   background: var(--bg-surface);
 }
 .dark .glass {
-  background: rgba(18, 21, 28, 0.7);
+  background: rgba(15, 16, 17, 0.7); /* --bg-surface #0f1011 at 70% opacity */
 }
 
 /* ── Page fade-in ── */
@@ -191,9 +204,13 @@ body {
   }
 }
 
-/* ── Heading typography ── */
-h1, h2, h3 {
-  letter-spacing: -0.03em;
+/* ── Heading typography — Linear weight 590/510, progressive negative tracking ── */
+h1, h2, h3, h4 {
+  font-variation-settings: 'wght' 510;
+  letter-spacing: -0.022em;
+}
+h1 {
+  font-variation-settings: 'wght' 590;
 }
 
 /* ── Content spacing — breathing room ── */
@@ -219,11 +236,14 @@ h1, h2, h3 {
   margin: 1.5em 0;
 }
 
-/* ── Nav bar ── */
+/* ── Nav bar — Linear sticky chrome: blur(12px) saturate(180%), standard border ── */
+[data-fumadocs-nav] {
+  border-bottom: 1px solid var(--border-strong);
+  background: rgba(247, 248, 248, 0.85);
+  backdrop-filter: blur(12px) saturate(180%);
+}
 .dark [data-fumadocs-nav] {
-  border-bottom: 1px solid hsl(var(--color-fd-border) / 0.6);
-  background: hsla(220, 25%, 3%, 0.9);
-  backdrop-filter: blur(16px);
+  background: rgba(8, 9, 10, 0.85);
 }
 
 /* ── Sidebar ── */
@@ -239,20 +259,21 @@ h1, h2, h3 {
   font-size: 0.875rem;
 }
 [data-fumadocs-sidebar] a:hover {
-  background: hsla(220, 10%, 50%, 0.08);
+  background: rgba(0, 0, 0, 0.04);
 }
 .dark [data-fumadocs-sidebar] a:hover {
-  background: hsla(220, 15%, 55%, 0.09);
+  /* luminance lift, not a tint */
+  background: rgba(255, 255, 255, 0.05);
 }
 [data-fumadocs-sidebar] [aria-current="page"],
 [data-fumadocs-sidebar] [data-active="true"] {
   background: var(--accent-light);
   color: hsl(var(--color-fd-primary));
-  font-weight: 500;
+  font-variation-settings: 'wght' 510;
 }
 .dark [data-fumadocs-sidebar] [aria-current="page"],
 .dark [data-fumadocs-sidebar] [data-active="true"] {
-  background: hsla(232, 60%, 50%, 0.1);
+  background: var(--accent-light);
   color: hsl(var(--color-fd-primary));
 }
 
@@ -260,8 +281,8 @@ h1, h2, h3 {
 [data-sidebar-panel] [data-state] > button,
 [data-sidebar-panel] [data-state] button:first-child {
   font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.07em;
+  font-variation-settings: 'wght' 510;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   padding-top: 1rem;
   padding-bottom: 0.35rem;
@@ -277,9 +298,12 @@ h1, h2, h3 {
   color: hsla(220, 10%, 72%, 1);
 }
 
-/* Sidebar: matches desktop --bg-sidebar-solid #0d1016 */
+/* Sidebar surface — off-white in light (Stripe), deep panel in dark */
+[data-sidebar-panel] {
+  background: var(--bg-surface);
+}
 .dark [data-sidebar-panel] {
-  background: #0d1016;
+  background: var(--bg-sidebar-solid);
 }
 
 /* ── TOC — smooth active indicator ── */
@@ -293,17 +317,47 @@ h1, h2, h3 {
   border-left-color: var(--accent);
 }
 
-/* ── Global focus-visible ── */
+/* ── Global focus-visible — Linear: links use a single indigo outline ── */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-/* ── Search — focus glow ── */
+/* ── Interactive controls — Linear multi-layer indigo focus ring ──
+   Keep the indigo outline as a clip-proof fallback: box-shadow rings are
+   clipped by any ancestor overflow:hidden (e.g. the InstallCommand wrapper),
+   which would make keyboard focus invisible. The outline always renders. */
 [data-fumadocs-nav] button:focus-visible,
-[data-fumadocs-nav] input:focus-visible {
-  box-shadow: 0 0 0 2px var(--accent-glow);
-  outline: none;
+[data-fumadocs-nav] input:focus-visible,
+[data-fumadocs-sidebar] a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+[data-card]:focus-visible {
+  box-shadow:
+    0 0 0 2px rgba(94, 106, 210, 0.4),
+    0 0 0 4px rgba(94, 106, 210, 0.2);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* ── Card surface — Linear luminance stacking ──
+   In dark, a transparent-white lift reads as "higher" (panel-over-black is
+   too faint to perceive). In light, the solid panel over the off-white canvas
+   is the lift. Used by marketplace + feature cards. */
+.surface-card {
+  background: var(--bg-surface);
+  /* Linear ease: cubic-bezier(0.25,0.46,0.45,0.94) — easeOutQuad */
+  transition: background 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.15s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.surface-card:hover {
+  box-shadow: var(--shadow-sm);
+}
+.dark .surface-card {
+  background: rgba(255, 255, 255, 0.04);
+}
+.dark .surface-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: none;
 }
 
 /* ── Fumadocs Tabs — remove outer container border ── */
@@ -311,7 +365,7 @@ div[data-orientation="horizontal"]:not([role="tablist"]):not([role="tabpanel"]) 
   border: none !important;
 }
 
-/* ── Code blocks — clean with depth shadow ── */
+/* ── Code blocks — Linear: luminance surface, no drop shadow (level-2) ── */
 figure.shiki,
 figure:has(pre) {
   border: none !important;
@@ -319,13 +373,14 @@ figure:has(pre) {
 pre {
   border: none !important;
   position: relative;
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   background: var(--bg-surface) !important;
-  box-shadow: var(--shadow-sm);
+  /* hairline in light (surface lift alone is too subtle); none in dark (luminance stacking) */
+  box-shadow: inset 0 0 0 1px var(--border-base);
+  font-feature-settings: 'cv01', 'ss03';
 }
 .dark pre {
-  box-shadow: 0 -1px 20px -8px hsla(232, 65%, 50%, 0.15),
-              0 4px 16px -4px hsla(220, 25%, 0%, 0.3);
+  box-shadow: none;
 }
 
 /* Copy button — ghost style, fade on hover */
@@ -376,7 +431,7 @@ blockquote {
 }
 .dark [role="alert"],
 .dark [data-callout] {
-  background: hsla(220, 18%, 8%, 0.5) !important;
+  background: rgba(230, 237, 243, 0.03) !important;
 }
 
 /* ── Horizontal rules — very faint ── */
@@ -401,13 +456,13 @@ table thead {
   background: hsla(0, 0%, 50%, 0.06);
 }
 .dark table thead {
-  background: hsla(220, 18%, 10%, 0.8);
+  background: rgba(230, 237, 243, 0.04);
 }
 table tbody tr:nth-child(even) {
   background: hsla(0, 0%, 50%, 0.03);
 }
 .dark table tbody tr:nth-child(even) {
-  background: hsla(220, 18%, 8%, 0.5);
+  background: rgba(230, 237, 243, 0.03);
 }
 table td,
 table th {
@@ -478,13 +533,12 @@ h5 > a[data-card], h6 > a[data-card] {
 
 /* ── Steps — warm accent badges + styled line ── */
 .dark .fd-steps {
-  border-color: hsla(232, 65%, 48%, 0.2) !important;
+  border-color: var(--border-base) !important;
 }
 .dark .fd-step::before {
   background: var(--accent) !important;
   color: white !important;
   font-weight: 600;
-  box-shadow: 0 0 12px -2px hsla(232, 82%, 53%, 0.4);
 }
 
 /* ── Inline code — subtle background, no border ── */
@@ -501,19 +555,18 @@ pre code {
   border-radius: 0 !important;
 }
 
-/* ── Docs headings — display font ── */
-.dark [data-fumadocs-body] h1,
-.dark [data-fumadocs-body] h2,
-.dark [data-fumadocs-body] h3 {
-  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
-  letter-spacing: -0.03em;
+/* ── Docs headings — Linear: Inter weight 510, progressive negative tracking ── */
+[data-fumadocs-body] h1,
+[data-fumadocs-body] h2,
+[data-fumadocs-body] h3 {
+  font-variation-settings: 'wght' 510;
+  letter-spacing: -0.022em;
 }
 
-/* ── Docs page title — display font, bold, harness-kit brand ── */
+/* ── Docs page title — heading-lg: weight 590, tighter tracking ── */
 #nd-docs-layout h1 {
-  font-family: var(--font-display), ui-sans-serif, system-ui, sans-serif;
-  font-weight: 700;
-  letter-spacing: -0.03em;
+  font-variation-settings: 'wght' 590;
+  letter-spacing: -0.022em;
   font-size: 2rem;
 }
 
@@ -662,16 +715,16 @@ pre code {
   font-weight: 600;
 }
 .mv-preview a {
-  color: hsl(232, 82%, 65%);
+  color: var(--accent-text);
   text-decoration: underline;
   text-decoration-style: dotted;
 }
 
 /* ── Agent Skill Banner ── */
 .agent-skill-banner {
-  border-left: 3px solid hsl(232, 82%, 55%);
+  border-left: 3px solid var(--accent);
   border-radius: 0 0.75rem 0.75rem 0;
-  background: hsla(232, 25%, 9%, 0.5);
+  background: var(--bg-elevated);
   padding: 0.75rem 1rem;
   margin-bottom: 1.5rem;
   display: flex;
@@ -684,13 +737,13 @@ pre code {
   gap: 0.5rem;
   font-size: 0.8125rem;
   font-weight: 500;
-  color: hsl(232, 60%, 75%);
+  color: var(--accent-fg);
 }
 .asb-icon {
   width: 1rem;
   height: 1rem;
   flex-shrink: 0;
-  color: hsl(232, 82%, 55%);
+  color: var(--accent);
 }
 .asb-label {
   line-height: 1.4;
@@ -699,7 +752,7 @@ pre code {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: hsla(220, 20%, 6%, 0.7);
+  background: var(--bg-base);
   border-radius: 0.5rem;
   padding: 0.4rem 0.6rem 0.4rem 0.75rem;
 }
@@ -707,7 +760,7 @@ pre code {
   flex: 1;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 0.75rem;
-  color: hsl(232, 75%, 80%);
+  color: var(--accent-fg);
   background: transparent;
   border: none;
   white-space: nowrap;
@@ -725,13 +778,13 @@ pre code {
   border: none;
   border-radius: 0.375rem;
   background: transparent;
-  color: hsl(232, 60%, 65%);
+  color: var(--accent-fg);
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
 .asb-copy-btn:hover {
-  background: hsla(232, 82%, 55%, 0.12);
-  color: hsl(232, 82%, 75%);
+  background: var(--accent-light);
+  color: var(--accent-fg);
 }
 .asb-copy-icon {
   width: 0.875rem;

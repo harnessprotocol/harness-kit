@@ -6,12 +6,12 @@ interface FeatureTileProps {
   title: string;
   description: string;
   href?: string;
-  accent?: string;
 }
 
-export function FeatureTile({ icon, title, description, href, accent }: FeatureTileProps) {
-  const iconBg = accent ? `color-mix(in srgb, ${accent} 15%, transparent)` : 'var(--accent-light)';
-  const iconColor = accent ?? 'var(--accent)';
+export function FeatureTile({ icon, title, description, href }: FeatureTileProps) {
+  // Restrained: a single brand accent for every tile, no rainbow category colors.
+  const iconBg = 'var(--accent-light)';
+  const iconColor = 'var(--accent)';
 
   const inner = (
     <>
@@ -38,20 +38,15 @@ export function FeatureTile({ icon, title, description, href, accent }: FeatureT
     </>
   );
 
-  const cls = `group rounded-xl bg-fd-card/50 p-6 backdrop-blur-sm transition-all duration-300 hover:bg-fd-card/80 hover:shadow-lg${href ? ' cursor-pointer no-underline block' : ''}`;
-  const style = accent ? { borderTop: `2px solid ${accent}` } : undefined;
+  const cls = `group surface-card rounded-xl p-6${href ? ' cursor-pointer no-underline block' : ''}`;
 
   if (href) {
     return (
-      <Link href={href} className={cls} style={style}>
+      <Link href={href} className={cls}>
         {inner}
       </Link>
     );
   }
 
-  return (
-    <div className={cls} style={style}>
-      {inner}
-    </div>
-  );
+  return <div className={cls}>{inner}</div>;
 }

@@ -61,7 +61,7 @@
 }
 .hintBtn:hover {
   opacity: 1;
-  background: rgba(34,177,236,0.1);
+  background: var(--accent-light);
   animation: none;
 }
 @keyframes hintPulse {
@@ -237,7 +237,7 @@
 /* ── Harness YAML ── */
 .paneHarness {
   padding: 0 !important;
-  background: #06080d !important;
+  background: var(--bg-base) !important;
   overflow: hidden;
 }
 .paneHarnessCode {
@@ -278,15 +278,10 @@
 .pluginTile {
   background: var(--bg-elevated);
   border: 1px solid var(--border-base);
-  border-top: 2px solid var(--cat-cyan);
+  border-top: 2px solid var(--accent);
   border-radius: 7px;
   padding: 11px 12px;
 }
-.pluginTile:nth-child(2) { border-top-color: var(--cat-purple); }
-.pluginTile:nth-child(3) { border-top-color: var(--cat-blue); }
-.pluginTile:nth-child(4) { border-top-color: var(--cat-green); }
-.pluginTile:nth-child(5) { border-top-color: var(--cat-purple); }
-.pluginTile:nth-child(6) { border-top-color: var(--cat-cyan); }
 .pluginTileName { font-family: ui-monospace, monospace; font-size: 11px; font-weight: 700; color: var(--accent-fg); }
 .pluginTileDesc { font-size: 10px; color: var(--fg-muted); margin-top: 3px; line-height: 1.4; }
 
@@ -485,7 +480,7 @@
   flex-shrink: 0;
   margin-top: 1px;
 }
-.boardTagFeat  { background: rgba(34,177,236,0.15); color: var(--accent-fg); }
+.boardTagFeat  { background: var(--accent-light); color: var(--accent-fg); }
 .boardTagFix   { background: rgba(239,68,68,0.15);  color: #f87171; }
 .boardTagDocs  { background: rgba(16,185,129,0.15); color: #10b981; }
 .boardTagChore { background: rgba(148,163,184,0.12); color: #94a3b8; }
@@ -556,7 +551,7 @@
 .memoryGraphBg {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse at 50% 50%, rgba(34,177,236,0.05) 0%, transparent 70%);
+  background: radial-gradient(ellipse at 50% 50%, rgba(122,139,255,0.05) 0%, transparent 70%);
 }
 .memoryNodes {
   position: relative;
@@ -579,7 +574,7 @@
   box-shadow: 0 0 20px -8px var(--accent-glow);
   transform: translate(-50%, -50%);
 }
-.memoryNodeAltA { border-color: rgba(34,177,236,0.3); color: var(--accent-fg); }
+.memoryNodeAltA { border-color: rgba(122,139,255,0.3); color: var(--accent-fg); }
 .memoryNodeAltB { border-color: rgba(168,85,247,0.3); color: #c084fc; }
 .memoryNodeAltC { border-color: rgba(16,185,129,0.3);  color: #10b981; }
 .memoryEdge {

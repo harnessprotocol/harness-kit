@@ -315,13 +315,13 @@ export function DesktopMock({
               <svg className={styles.chartSvg} viewBox="0 0 400 140" preserveAspectRatio="none">
                 <defs>
                   <linearGradient id="dm-lg1" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#22b1ec" stopOpacity="0.45" />
-                    <stop offset="100%" stopColor="#22b1ec" stopOpacity="0" />
+                    <stop offset="0%" stopColor="#7a8bff" stopOpacity="0.45" />
+                    <stop offset="100%" stopColor="#7a8bff" stopOpacity="0" />
                   </linearGradient>
                 </defs>
                 <path d="M0,110 L30,95 L60,100 L90,80 L120,85 L150,60 L180,65 L210,45 L240,55 L270,35 L300,40 L330,25 L360,30 L400,15 L400,140 L0,140 Z" fill="url(#dm-lg1)" />
-                <path d="M0,110 L30,95 L60,100 L90,80 L120,85 L150,60 L180,65 L210,45 L240,55 L270,35 L300,40 L330,25 L360,30 L400,15" fill="none" stroke="#22b1ec" strokeWidth="2" />
-                <circle cx="400" cy="15" r="3.5" fill="#22b1ec" />
+                <path d="M0,110 L30,95 L60,100 L90,80 L120,85 L150,60 L180,65 L210,45 L240,55 L270,35 L300,40 L330,25 L360,30 L400,15" fill="none" stroke="#7a8bff" strokeWidth="2" />
+                <circle cx="400" cy="15" r="3.5" fill="#7a8bff" />
               </svg>
             </div>
           </div>
@@ -561,7 +561,7 @@ export function DesktopMock({
                 {/* plugin → skill */}
                 <line x1="58%" y1="12%" x2="36%" y2="42%" stroke="rgba(148,163,184,0.35)" strokeWidth="1" />
                 {/* skill → MCP */}
-                <line x1="36%" y1="42%" x2="72%" y2="48%" stroke="rgba(34,177,236,0.40)" strokeWidth="1" />
+                <line x1="36%" y1="42%" x2="72%" y2="48%" stroke="rgba(122,139,255,0.40)" strokeWidth="1" />
                 {/* skill → hook */}
                 <line x1="36%" y1="42%" x2="12%" y2="68%" stroke="rgba(168,85,247,0.35)" strokeWidth="1" />
                 {/* skill → CLAUDE.md */}
