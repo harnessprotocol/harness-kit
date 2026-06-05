@@ -19,7 +19,8 @@
   },
   "dependencies": {
     "@harness-kit/core": "workspace:*",
-    "@harness-kit/shared": "workspace:*"
+    "@harness-kit/shared": "workspace:*",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@types/node": "^22.19.19",

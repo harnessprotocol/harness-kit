@@ -86,12 +86,70 @@ export interface MarketplacePlugin {
   security: MarketplaceSecurity;
 }
 
+// ── Profile types (keep in sync with packages/marketplace-data/src/types.ts) ──
+
+export interface ProfileSeedDoc {
+  topic: string;
+  description: string;
+}
+
+export interface ProfileKnowledge {
+  backend: string;
+  seedDocs: ProfileSeedDoc[];
+}
+
+export interface ProfilePluginRef {
+  name: string;
+  /** Version pinned in the profile YAML. */
+  version: string;
+  /** Current live version from marketplace.json; undefined when unresolved. */
+  liveVersion?: string;
+  resolved: boolean;
+  slug?: string;
+  category?: string;
+  trust?: TrustTier;
+}
+
+export interface ProfileSecurity {
+  trust: TrustTier;
+  pluginCount: number;
+  verifiedCount: number;
+  cautionCount: number;
+  warningCount: number;
+  unscannedCount: number;
+}
+
+export interface MarketplaceProfile {
+  name: string;
+  slug: string;
+  description: string;
+  author: string;
+  /** Human-readable persona label derived from the profile name (title-cased). */
+  persona: string;
+  plugins: ProfilePluginRef[];
+  knowledge: ProfileKnowledge | null;
+  rules: string[];
+  /** A valid v1 harness.yaml string suitable for download and running with the CLI. */
+  harnessYaml: string;
+  /** Worst-case security trust across all resolved plugins. */
+  aggregateTrust: TrustTier;
+  security: ProfileSecurity;
+  /** GitHub repo stars at build time; undefined when fetch fails or is skipped. */
+  stars?: number;
+  /** Install count from telemetry; undefined until Phase 6 telemetry is live. */
+  installs?: number;
+  sourceId: string;
+}
+
 export interface MarketplaceData {
   generatedAt: string;
   marketplaceName: string;
   owner: string;
   categories: MarketplaceCategory[];
   plugins: MarketplacePlugin[];
+  profiles: MarketplaceProfile[];
+  /** GitHub repo stars at build time; undefined when fetch fails. */
+  repoStars?: number;
 }
 
 /**

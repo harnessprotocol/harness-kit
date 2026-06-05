@@ -6,10 +6,15 @@ export type {
   MarketplaceMcp,
   MarketplacePermissions,
   MarketplacePlugin,
+  MarketplaceProfile,
   MarketplaceSecurity,
   MarketplaceSkill,
   MarketplaceSource,
   PluginSourceId,
+  ProfileKnowledge,
+  ProfilePluginRef,
+  ProfileSecurity,
+  ProfileSeedDoc,
   TrustTier,
 } from "./types.js";
 

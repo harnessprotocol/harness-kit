@@ -49,6 +49,8 @@ jobs:
           pnpm install --filter "@harness-kit/marketplace-data..." --frozen-lockfile
           pnpm --filter @harness-kit/shared --filter @harness-kit/core build
           pnpm --filter @harness-kit/marketplace-data generate --strict
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install dependencies
         working-directory: website

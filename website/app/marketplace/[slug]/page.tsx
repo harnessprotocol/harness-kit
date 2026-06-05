@@ -4,11 +4,11 @@ import { notFound } from 'next/navigation';
 import { SiteNav } from '@/components/site/SiteNav';
 import { SiteFooter } from '@/components/site/SiteFooter';
 import { MarkdownViewer } from '@/components/markdown-viewer';
-import { InstallCommand } from '@/components/marketplace/InstallCommand';
+import { InstallWidget } from '@/components/marketplace/InstallWidget';
 import { SecurityPanel } from '@/components/marketplace/SecurityPanel';
-import { TrustBadge } from '@/components/marketplace/TrustBadge';
+import { RankingBadges } from '@/components/marketplace/RankingBadges';
 import { categoryAccent } from '@/lib/marketplace/category';
-import { getAllPlugins, getCategoryName, getPlugin } from '@/lib/marketplace/data';
+import { getAllPlugins, getCategoryName, getPlugin, getRepoStars } from '@/lib/marketplace/data';
 
 export function generateStaticParams() {
   return getAllPlugins().map((p) => ({ slug: p.slug }));
@@ -30,6 +30,7 @@ export default async function PluginDetailPage(props: { params: Promise<{ slug: 
   if (!plugin) notFound();
 
   const accent = categoryAccent(plugin.category);
+  const stars = getRepoStars();
   const repoUrl = `https://github.com/harnessprotocol/harness-kit/tree/main/${plugin.repoPath.replace(/^\.\//, '')}`;
 
   return (
@@ -50,7 +51,6 @@ export default async function PluginDetailPage(props: { params: Promise<{ slug: 
             >
               {getCategoryName(plugin.category)}
             </span>
-            <TrustBadge tier={plugin.security.trust} />
             {plugin.mcp && (
               <span
                 className="rounded px-1.5 py-0.5 text-xs font-medium"
@@ -65,17 +65,20 @@ export default async function PluginDetailPage(props: { params: Promise<{ slug: 
             <span className="font-mono text-base font-normal text-fd-muted-foreground">v{plugin.version}</span>
           </h1>
           <p className="text-base leading-relaxed text-fd-muted-foreground">{plugin.description}</p>
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-fd-muted-foreground">
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-fd-muted-foreground">
             <span>By {plugin.author}</span>
             <span>{plugin.license}</span>
             <a href={repoUrl} className="underline" target="_blank" rel="noreferrer">Source ↗</a>
+          </div>
+          <div className="mt-3">
+            <RankingBadges sourceId={plugin.sourceId} trust={plugin.security.trust} stars={stars} />
           </div>
         </header>
 
         {/* Install */}
         <section className="mb-10">
-          <h2 className="font-display mb-2 text-lg font-semibold text-fd-foreground">Install</h2>
-          <InstallCommand command={plugin.installCommand} />
+          <h2 className="font-display mb-3 text-lg font-semibold text-fd-foreground">Install</h2>
+          <InstallWidget kind="plugin" plugin={plugin} />
         </section>
 
         {/* Tags */}
