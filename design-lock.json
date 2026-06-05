@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "designs": {
+    "linear": {
+      "source": "soulcore-dev/soul-design-md",
+      "sourcePath": "designs/linear/DESIGN.md",
+      "outputPath": "DESIGN.md",
+      "ref": "HEAD",
+      "commitSha": "d194d8a0dbcd05697d72da85f49b6b982a366edf",
+      "contentHash": "cecdc2f723fbaa16996b5fcbb6fbc1bc8faca935a251c03c9cd5510eac44dd8c",
+      "fetchedAt": "2026-06-05T05:23:51.927Z"
+    }
+  }
+}

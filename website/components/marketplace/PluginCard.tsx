@@ -1,32 +1,22 @@
 import Link from 'next/link';
 import type { MarketplacePlugin } from '@/lib/marketplace/types';
-import { categoryAccent } from '@/lib/marketplace/category';
 import { TrustBadge } from './TrustBadge';
 
 export function PluginCard({ plugin, categoryName }: { plugin: MarketplacePlugin; categoryName: string }) {
-  const accent = categoryAccent(plugin.category);
-
   return (
     <Link
       href={`/marketplace/${plugin.slug}`}
-      className="group flex cursor-pointer flex-col rounded-xl bg-fd-card/50 p-5 no-underline backdrop-blur-sm transition-all duration-300 hover:bg-fd-card/80 hover:shadow-lg"
-      style={{ borderTop: `2px solid ${accent}` }}
+      className="group surface-card flex cursor-pointer flex-col rounded-xl p-5 no-underline"
     >
       <div className="mb-2.5 flex items-center justify-between gap-2">
-        <span
-          className="rounded-full px-2 py-0.5 text-[11px] font-medium"
-          style={{
-            color: accent,
-            background: `color-mix(in srgb, ${accent} 12%, transparent)`,
-          }}
-        >
+        <span className="rounded-full bg-fd-muted px-2 py-0.5 text-[11px] font-medium text-fd-muted-foreground">
           {categoryName}
         </span>
         <TrustBadge tier={plugin.security.trust} />
       </div>
 
       <div className="mb-1 flex items-baseline gap-2">
-        <h3 className="font-display font-semibold text-fd-foreground">{plugin.name}</h3>
+        <h3 className="font-semibold text-fd-foreground">{plugin.name}</h3>
         <span className="font-mono text-xs text-fd-muted-foreground">v{plugin.version}</span>
       </div>
 

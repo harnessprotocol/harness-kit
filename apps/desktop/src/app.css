@@ -4,24 +4,24 @@
 :root {
   /* design-tokens:light:start */
   /* generated — edit packages/design-tokens/src/tokens.ts, then run generate */
-  --bg-base: #f4f6f9;
-  --bg-surface: #f8fafc;
-  --bg-elevated: #ffffff;
-  --bg-sidebar: rgba(228, 233, 242, 0.82);
-  --bg-sidebar-solid: #e8ecf4;
-  --fg-base: #181a20;
-  --fg-muted: #5a6070;
-  --fg-subtle: #9299a8;
-  --fg-placeholder: #b8bfcc;
-  --border-base: rgba(0, 0, 0, 0.08);
-  --border-strong: rgba(0, 0, 0, 0.14);
-  --border-subtle: rgba(0, 0, 0, 0.05);
-  --separator: rgba(0, 0, 0, 0.07);
-  --accent: #5566e6;
-  --accent-light: rgba(85, 102, 230, 0.10);
-  --accent-fg: #4452cc;
-  --accent-text: #4452cc;
-  --accent-glow: rgba(85, 102, 230, 0.30);
+  --bg-base: #f7f8f8;
+  --bg-surface: #ffffff;
+  --bg-elevated: #f0f1f2;
+  --bg-sidebar: rgba(247, 248, 248, 0.85);
+  --bg-sidebar-solid: #ffffff;
+  --fg-base: #08090a;
+  --fg-muted: #2c2e33;
+  --fg-subtle: #5a5f6b;
+  --fg-placeholder: #8a8f98;
+  --border-base: rgba(0, 0, 0, 0.06);
+  --border-strong: rgba(0, 0, 0, 0.10);
+  --border-subtle: rgba(0, 0, 0, 0.03);
+  --separator: rgba(0, 0, 0, 0.06);
+  --accent: #5e6ad2;
+  --accent-light: rgba(94, 106, 210, 0.12);
+  --accent-fg: #4b57c8;
+  --accent-text: #4b57c8;
+  --accent-glow: rgba(94, 106, 210, 0.35);
   /* design-tokens:light:end */
 
   /* Category accents */
@@ -72,24 +72,24 @@
 .dark {
   /* design-tokens:dark:start */
   /* generated — edit packages/design-tokens/src/tokens.ts, then run generate */
-  --bg-base: #0a0a12;
-  --bg-surface: #12131c;
-  --bg-elevated: #1a1b26;
-  --bg-sidebar: rgba(10, 10, 18, 0.82);
-  --bg-sidebar-solid: #0c0c15;
-  --fg-base: #eaeaf2;
-  --fg-muted: #9498a8;
-  --fg-subtle: #6b6f80;
-  --fg-placeholder: #4b4f60;
-  --border-base: rgba(230, 233, 255, 0.08);
-  --border-strong: rgba(230, 233, 255, 0.14);
-  --border-subtle: rgba(230, 233, 255, 0.05);
-  --separator: rgba(230, 233, 255, 0.07);
-  --accent: #7588ff;
-  --accent-light: rgba(117, 136, 255, 0.14);
-  --accent-fg: #9fa9ff;
-  --accent-text: #9fa9ff;
-  --accent-glow: rgba(117, 136, 255, 0.35);
+  --bg-base: #08090a;
+  --bg-surface: #0f1011;
+  --bg-elevated: #191a1b;
+  --bg-sidebar: rgba(8, 9, 10, 0.85);
+  --bg-sidebar-solid: #0f1011;
+  --fg-base: #f7f8f8;
+  --fg-muted: #d0d6e0;
+  --fg-subtle: #8a8f98;
+  --fg-placeholder: #62666d;
+  --border-base: rgba(255, 255, 255, 0.05);
+  --border-strong: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.02);
+  --separator: rgba(255, 255, 255, 0.05);
+  --accent: #5e6ad2;
+  --accent-light: rgba(94, 106, 210, 0.15);
+  --accent-fg: #828fff;
+  --accent-text: #828fff;
+  --accent-glow: rgba(94, 106, 210, 0.40);
   /* design-tokens:dark:end */
 
   /* Category accents */
@@ -108,8 +108,8 @@
   --status-planning: #6e6a64;
 
   /* Interactive hover — cool tint */
-  --hover-bg: rgba(230, 238, 255, 0.05);
-  --active-bg: rgba(230, 238, 255, 0.09);
+  --hover-bg: rgba(230, 237, 243, 0.05);
+  --active-bg: rgba(230, 237, 243, 0.09);
 
   /* Glassmorphic card surface — dark mode */
   --card-glass: rgba(26, 30, 39, 0.70);
@@ -207,7 +207,7 @@ body {
   border-radius: 3px;
 }
 .dark ::-webkit-scrollbar-thumb {
-  background: rgba(255, 248, 230, 0.18);
+  background: rgba(230, 237, 243, 0.18);
 }
 
 /* ── Display font ── */

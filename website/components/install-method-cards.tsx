@@ -60,17 +60,15 @@ export function InstallMethodCards() {
           className="group relative flex flex-col gap-3 rounded-xl p-5 no-underline transition-all duration-200"
           style={{
             background: m.featured
-              ? 'linear-gradient(135deg, rgba(34,177,236,0.10) 0%, rgba(34,177,236,0.04) 100%)'
+              ? 'linear-gradient(135deg, rgba(99,91,255,0.10) 0%, rgba(99,91,255,0.04) 100%)'
               : 'var(--bg-surface)',
-            border: m.featured
-              ? '1px solid rgba(34,177,236,0.25)'
-              : '1px solid var(--border-base)',
+            border: '1px solid var(--border-strong)',
           }}
         >
           {m.featured && (
             <span
               className="absolute right-4 top-4 rounded-full px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide"
-              style={{ background: 'rgba(34,177,236,0.15)', color: 'var(--accent)' }}
+              style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}
             >
               Start here
             </span>
@@ -78,7 +76,7 @@ export function InstallMethodCards() {
           <div
             className="flex size-9 items-center justify-center rounded-lg"
             style={{
-              background: m.featured ? 'rgba(34,177,236,0.15)' : 'var(--bg-elevated)',
+              background: m.featured ? 'var(--accent-light)' : 'var(--bg-elevated)',
               color: m.featured ? 'var(--accent)' : 'var(--fg-muted)',
             }}
           >
