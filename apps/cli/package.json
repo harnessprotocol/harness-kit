@@ -17,9 +17,11 @@
   },
   "dependencies": {
     "@harness-kit/core": "workspace:*",
+    "@harness-kit/exchange": "workspace:*",
     "@inquirer/prompts": "^7",
     "chalk": "^5",
-    "commander": "^13"
+    "commander": "^13",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@types/node": "^22.19.20",

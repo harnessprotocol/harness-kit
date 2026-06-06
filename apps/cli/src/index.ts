@@ -13,6 +13,11 @@ import {
   createOrganization,
   joinOrganization,
 } from "./commands/org.js";
+import {
+  keygenCommand,
+  offerCommand,
+  acceptCommand,
+} from "./commands/exchange.js";
 
 declare const __CLI_VERSION__: string;
 
@@ -215,6 +220,44 @@ orgCommand
   .argument("<slug>", "Organization slug to join")
   .action(async (slug: string) => {
     await joinOrganization(slug);
+  });
+
+// ─── exchange command group ───────────────────────────────────────────────────
+
+const exchangeCommand = program
+  .command("exchange")
+  .description("Peer-to-peer harness fragment sharing (HEP-7)");
+
+exchangeCommand
+  .command("keygen")
+  .description("Generate an ed25519 keypair for Exchange")
+  .option("--force", "Overwrite an existing keypair")
+  .option("--json", "Output as JSON")
+  .action(async (flags) => {
+    await keygenCommand(flags);
+  });
+
+exchangeCommand
+  .command("offer")
+  .description("Build and sign an offer envelope from a fragment file")
+  .argument("<fragment>", "Path to the fragment .harness.yaml file")
+  .option("--out <file>", "Write the offer envelope to a file (default: stdout)")
+  .option("--expires <value>", "Expiry: ISO 8601 or +Nd/+Nh shorthand (default: +7d)")
+  .option("--message <text>", "Optional message to include in the offer")
+  .option("--json", "Force JSON output")
+  .action(async (fragment: string, flags) => {
+    await offerCommand(fragment, flags);
+  });
+
+exchangeCommand
+  .command("accept")
+  .description("Review and accept/edit/reject a received offer envelope")
+  .argument("<offer>", "Path to the offer JSON file")
+  .option("--into <harness>", "Target harness.yaml to add the extends entry (default: ./harness.yaml)")
+  .option("--yes", "Auto-accept without the interactive prompt (preview is still shown)")
+  .option("--json", "Output result as JSON")
+  .action(async (offer: string, flags) => {
+    await acceptCommand(offer, flags);
   });
 
 program.addHelpText('after', '\nDocs: https://harnesskit.ai/docs\n');
