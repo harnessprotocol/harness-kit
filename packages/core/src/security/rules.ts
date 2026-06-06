@@ -86,19 +86,48 @@ const BROAD_FILESYSTEM_PATTERNS: Array<{
   { pattern: /\.\.\/\.\.\//g, reason: "Parent directory traversal" },
 ];
 
-/**
- * Markdown/plain-text files are documentation, not executable behavior. Behavioral
- * heuristics (filesystem globs, env-var reads, network/URL patterns) skip them so that
- * glob examples and code samples inside docs aren't reported as plugin behavior. The
- * authoritative signal for what a plugin can actually do is its declared manifest
- * permissions, which are analyzed separately and are never skipped.
- */
-function isDocumentation(filePath: string): boolean {
-  return filePath.endsWith(".md") || filePath.endsWith(".mdx") || filePath.endsWith(".txt");
+function isMarkdown(filePath: string): boolean {
+  return filePath.endsWith(".md") || filePath.endsWith(".mdx");
 }
 
-/** Path characters that, when immediately before `/**`, indicate a *relative* glob
- *  (e.g. `research/**`) rather than a root-level one. */
+// Matches a fenced-code delimiter line (``` or ~~~, optionally indented up to 3 spaces).
+const FENCE_DELIMITER = /^\s{0,3}(?:```|~~~)/;
+
+/**
+ * Returns markdown content with everything OUTSIDE fenced code blocks blanked to empty
+ * lines (line numbers are preserved). Prose — including inline-code globs like the
+ * `research` recursive-glob example and env-var mentions — is documentation and is
+ * dropped, eliminating false positives. Fenced code blocks are kept and scanned like
+ * code, because a hook can actually execute what a doc presents as a runnable command.
+ */
+export function extractFencedCode(content: string): string {
+  const lines = content.split("\n");
+  let inFence = false;
+  const out: string[] = [];
+
+  for (const line of lines) {
+    if (FENCE_DELIMITER.test(line)) {
+      inFence = !inFence;
+      out.push(""); // the delimiter line itself is not code
+      continue;
+    }
+    out.push(inFence ? line : "");
+  }
+
+  return out.join("\n");
+}
+
+/**
+ * The content a behavioral rule should scan. For markdown docs that is only the fenced
+ * code blocks; for everything else it is the file verbatim. Declared manifest permissions
+ * remain the authoritative capability signal and are analyzed separately.
+ */
+function behavioralContent(filePath: string, content: string): string {
+  return isMarkdown(filePath) ? extractFencedCode(content) : content;
+}
+
+/** Path characters that, when immediately before a root glob, indicate a *relative* glob
+ *  (e.g. the `research` recursive-glob example) rather than a root-level one. */
 const RELATIVE_PATH_PREFIX = /[\w.\-~/]/;
 
 // ── Helper functions ────────────────────────────────────────────
@@ -144,12 +173,9 @@ function isSensitiveEnvVar(varName: string): boolean {
 
 export function detectExternalUrls(context: ScanContext): RuleResult {
   const findings: SecurityFinding[] = [];
-  const { filePath, content } = context;
-
-  // Skip documentation — URLs in docs/examples are expected, not behavior.
-  if (isDocumentation(filePath)) {
-    return { findings };
-  }
+  const { filePath } = context;
+  // In markdown, scan only fenced code blocks — prose URLs are documentation.
+  const content = behavioralContent(filePath, context.content);
 
   const urls = new Set<string>();
 
@@ -210,12 +236,9 @@ export function detectExternalUrls(context: ScanContext): RuleResult {
 
 export function detectEnvVarExfiltration(context: ScanContext): RuleResult {
   const findings: SecurityFinding[] = [];
-  const { filePath, content } = context;
-
-  // Skip documentation — `$VAR` / `process.env.X` shown in docs are examples, not reads.
-  if (isDocumentation(filePath)) {
-    return { findings };
-  }
+  const { filePath } = context;
+  // In markdown, scan only fenced code blocks — `$VAR` in prose is an example, not a read.
+  const content = behavioralContent(filePath, context.content);
 
   const envVars = new Map<string, number[]>();
 
@@ -289,13 +312,10 @@ export function detectEnvVarExfiltration(context: ScanContext): RuleResult {
 
 export function detectBroadFilesystemAccess(context: ScanContext): RuleResult {
   const findings: SecurityFinding[] = [];
-  const { filePath, content } = context;
-
-  // Skip documentation — glob examples like `docs/**/*.md` describe what a plugin reads,
-  // not broad access it requests. Declared writable paths are analyzed from the manifest.
-  if (isDocumentation(filePath)) {
-    return { findings };
-  }
+  const { filePath } = context;
+  // In markdown, scan only fenced code blocks — glob examples in prose describe what a
+  // plugin reads, not broad access it requests. Declared paths come from the manifest.
+  const content = behavioralContent(filePath, context.content);
 
   for (const { pattern, reason, requireRootBoundary } of BROAD_FILESYSTEM_PATTERNS) {
     let match;
@@ -356,9 +376,10 @@ export function detectBroadFilesystemAccess(context: ScanContext): RuleResult {
 
 export function detectSuspiciousScripts(context: ScanContext): RuleResult {
   const findings: SecurityFinding[] = [];
-  const { filePath, content } = context;
+  const { filePath } = context;
 
-  // Only scan script files and hooks
+  // Scan script files/hooks in full. For markdown, scan only fenced code blocks — a hook
+  // can run what a doc presents as a command, but prose ("eval() is dangerous") is not code.
   const isScript =
     filePath.endsWith(".sh") ||
     filePath.endsWith(".py") ||
@@ -367,7 +388,12 @@ export function detectSuspiciousScripts(context: ScanContext): RuleResult {
     filePath.includes("scripts/") ||
     filePath.includes("hooks/");
 
-  if (!isScript) {
+  let content: string;
+  if (isScript) {
+    content = context.content;
+  } else if (isMarkdown(filePath)) {
+    content = extractFencedCode(context.content);
+  } else {
     return { findings };
   }
 
@@ -397,12 +423,9 @@ export function detectSuspiciousScripts(context: ScanContext): RuleResult {
 
 export function detectNetworkAccess(context: ScanContext): RuleResult {
   const findings: SecurityFinding[] = [];
-  const { filePath, content } = context;
-
-  // Skip documentation — socket/bind references in docs are examples, not behavior.
-  if (isDocumentation(filePath)) {
-    return { findings };
-  }
+  const { filePath } = context;
+  // In markdown, scan only fenced code blocks — socket references in prose are examples.
+  const content = behavioralContent(filePath, context.content);
 
   const networkPatterns = [
     { pattern: /socket\./gi, reason: "Direct socket access" },
