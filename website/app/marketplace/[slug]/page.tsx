@@ -8,7 +8,7 @@ import { InstallWidget } from '@/components/marketplace/InstallWidget';
 import { SecurityPanel } from '@/components/marketplace/SecurityPanel';
 import { RankingBadges } from '@/components/marketplace/RankingBadges';
 import { categoryAccent } from '@/lib/marketplace/category';
-import { getAllPlugins, getCategoryName, getPlugin, getRepoStars } from '@/lib/marketplace/data';
+import { getAllPlugins, getCategoryName, getPlugin } from '@/lib/marketplace/data';
 
 export function generateStaticParams() {
   return getAllPlugins().map((p) => ({ slug: p.slug }));
@@ -30,7 +30,6 @@ export default async function PluginDetailPage(props: { params: Promise<{ slug: 
   if (!plugin) notFound();
 
   const accent = categoryAccent(plugin.category);
-  const stars = getRepoStars();
   const repoUrl = `https://github.com/harnessprotocol/harness-kit/tree/main/${plugin.repoPath.replace(/^\.\//, '')}`;
 
   return (
@@ -71,7 +70,7 @@ export default async function PluginDetailPage(props: { params: Promise<{ slug: 
             <a href={repoUrl} className="underline" target="_blank" rel="noreferrer">Source ↗</a>
           </div>
           <div className="mt-3">
-            <RankingBadges sourceId={plugin.sourceId} trust={plugin.security.trust} stars={stars} />
+            <RankingBadges sourceId={plugin.sourceId} trust={plugin.security.trust} />
           </div>
         </header>
 
@@ -134,18 +133,37 @@ export default async function PluginDetailPage(props: { params: Promise<{ slug: 
           <SecurityPanel security={plugin.security} />
         </div>
 
-        {/* Skills */}
+        {/* Skills — collapsed by default; SKILL.md bodies can be very long */}
         {plugin.skills.length > 0 && (
           <section>
             <h2 className="font-display mb-3 text-lg font-semibold text-fd-foreground">
               {plugin.skills.length === 1 ? 'Skill' : 'Skills'}
+              <span className="ml-2 text-sm font-normal text-fd-muted-foreground">
+                {plugin.skills.length}
+              </span>
             </h2>
-            <div className="flex flex-col gap-6">
-              {plugin.skills.map((skill) => (
-                <div key={skill.dir}>
-                  <h3 className="mb-2 font-mono text-sm text-fd-muted-foreground">skills/{skill.dir}/SKILL.md</h3>
-                  <MarkdownViewer content={skill.body} filename={`${skill.name}`} />
-                </div>
+            <div className="flex flex-col gap-3">
+              {plugin.skills.map((skill, i) => (
+                <details
+                  key={skill.dir}
+                  open={i === 0}
+                  className="group overflow-hidden rounded-xl bg-fd-card/40"
+                >
+                  <summary className="flex cursor-pointer select-none items-center justify-between gap-3 px-4 py-3 text-sm text-fd-foreground transition-colors hover:bg-fd-card/70">
+                    <span className="flex items-center gap-2 min-w-0">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 text-fd-muted-foreground transition-transform group-open:rotate-90" aria-hidden="true">
+                        <polyline points="9 18 15 12 9 6" />
+                      </svg>
+                      <span className="font-medium">{skill.name}</span>
+                      <span className="font-mono text-[11px] text-fd-muted-foreground truncate">
+                        skills/{skill.dir}/SKILL.md
+                      </span>
+                    </span>
+                  </summary>
+                  <div className="px-4 pb-4 pt-1">
+                    <MarkdownViewer content={skill.body} filename={`${skill.name}`} />
+                  </div>
+                </details>
               ))}
             </div>
           </section>

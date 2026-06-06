@@ -80,17 +80,24 @@ export async function scanPlugin(options: ScanOptions): Promise<SecurityReport> 
     findings.push(...fileFindings);
   }
 
-  // Analyze manifest for permission requests
-  const manifestFindings = analyzeManifestPermissions(manifest, manifestPath);
+  // Analyze manifest for permission requests. Use the plugin-relative manifest path so
+  // findings never leak the absolute build/CI path (e.g. /home/runner/work/...) into the
+  // published report — file-content findings are already relative to the plugin dir.
+  const manifestFindings = analyzeManifestPermissions(manifest, ".claude-plugin/plugin.json");
   findings.push(...manifestFindings);
 
+  // Collapse repeats of the same issue in the same file. A single pattern (e.g. a glob)
+  // matched on many lines of one file is one finding, not many — repeated identical
+  // findings are noise that drowns out genuine signal and inflates severity counts.
+  const dedupedFindings = dedupeFindings(findings);
+
   // Build permissions summary
-  const permissions = buildPermissionsSummary(manifest, findings);
+  const permissions = buildPermissionsSummary(manifest, dedupedFindings);
 
   // Filter findings by severity if needed
   const filteredFindings = includeInfo
-    ? findings
-    : findings.filter((f) => f.severity !== "info");
+    ? dedupedFindings
+    : dedupedFindings.filter((f) => f.severity !== "info");
 
   // Calculate severity counts
   const criticalCount = filteredFindings.filter((f) => f.severity === "critical").length;
@@ -115,6 +122,27 @@ export async function scanPlugin(options: ScanOptions): Promise<SecurityReport> 
 }
 
 // ── Helper functions ────────────────────────────────────────────
+
+/**
+ * De-duplicates findings that describe the same issue in the same file. Two findings
+ * are considered duplicates when their severity, category, message, and file path all
+ * match — i.e. the same pattern matched on several lines of one file. The first
+ * occurrence (with its line number and snippet) is kept; the rest are dropped.
+ * Findings in different files, or with different messages, are always preserved.
+ */
+export function dedupeFindings(findings: SecurityFinding[]): SecurityFinding[] {
+  const seen = new Set<string>();
+  const deduped: SecurityFinding[] = [];
+
+  for (const finding of findings) {
+    const key = `${finding.severity}|${finding.category}|${finding.message}|${finding.file_path ?? ""}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    deduped.push(finding);
+  }
+
+  return deduped;
+}
 
 async function collectScannableFiles(
   pluginDir: string,

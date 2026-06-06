@@ -16,11 +16,28 @@ const TRUST_FILTERS: { value: TrustTier | 'all'; label: string }[] = [
   { value: 'caution', label: 'Caution' },
 ];
 
+type SortKey = 'name' | 'skills' | 'trust';
+
+const SORTS: { value: SortKey; label: string }[] = [
+  { value: 'name', label: 'Name (A–Z)' },
+  { value: 'skills', label: 'Most skills' },
+  { value: 'trust', label: 'Verified first' },
+];
+
+// Lower rank = shown earlier when sorting by trust.
+const TRUST_RANK: Record<TrustTier, number> = {
+  verified: 0,
+  caution: 1,
+  warning: 2,
+  unscanned: 3,
+};
+
 export function MarketplaceBrowser({ plugins, categories, tags }: Props) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<string>('all');
   const [trust, setTrust] = useState<TrustTier | 'all'>('all');
   const [tag, setTag] = useState<string>('all');
+  const [sort, setSort] = useState<SortKey>('name');
 
   const categoryNames = useMemo(
     () => new Map(categories.map((c) => [c.slug, c.name])),
@@ -29,7 +46,7 @@ export function MarketplaceBrowser({ plugins, categories, tags }: Props) {
 
   const results = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return plugins.filter((p) => {
+    const filtered = plugins.filter((p) => {
       if (category !== 'all' && p.category !== category) return false;
       if (trust !== 'all' && p.security.trust !== trust) return false;
       if (tag !== 'all' && !p.tags.includes(tag)) return false;
@@ -39,7 +56,15 @@ export function MarketplaceBrowser({ plugins, categories, tags }: Props) {
       }
       return true;
     });
-  }, [plugins, query, category, trust, tag]);
+
+    const sorted = [...filtered];
+    sorted.sort((a, b) => {
+      if (sort === 'skills') return b.skills.length - a.skills.length || a.name.localeCompare(b.name);
+      if (sort === 'trust') return TRUST_RANK[a.security.trust] - TRUST_RANK[b.security.trust] || a.name.localeCompare(b.name);
+      return a.name.localeCompare(b.name);
+    });
+    return sorted;
+  }, [plugins, query, category, trust, tag, sort]);
 
   const chip = (active: boolean) =>
     `cursor-pointer rounded-full px-3 py-1 text-sm transition-colors ${
@@ -100,6 +125,20 @@ export function MarketplaceBrowser({ plugins, categories, tags }: Props) {
             <option value="all">All tags</option>
             {tags.map((t) => (
               <option key={t} value={t}>{t}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="ml-auto flex items-center gap-2 text-sm text-fd-muted-foreground">
+          <span className="text-xs">Sort</span>
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SortKey)}
+            aria-label="Sort plugins"
+            className="cursor-pointer rounded-full bg-fd-card/60 px-3 py-1 text-sm text-fd-foreground outline-none focus:ring-2 focus:ring-fd-primary/40"
+          >
+            {SORTS.map((s) => (
+              <option key={s.value} value={s.value}>{s.label}</option>
             ))}
           </select>
         </label>

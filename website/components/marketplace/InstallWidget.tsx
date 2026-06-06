@@ -9,9 +9,18 @@ import type { MarketplaceMcp, MarketplacePlugin, MarketplaceProfile } from '@/li
 
 type Tab = 'claude' | 'cli' | 'cursor';
 
-const TABS: { id: Tab; label: string }[] = [
+// Plugins lead with Claude Code (a single command). Profiles lead with the Harness CLI,
+// the only genuine one-shot path — Claude Code runs slash commands one at a time, so it
+// can't install a whole bundle in one action.
+const PLUGIN_TABS: { id: Tab; label: string }[] = [
   { id: 'claude', label: 'Claude Code' },
   { id: 'cli', label: 'npx / CLI' },
+  { id: 'cursor', label: 'Cursor' },
+];
+
+const PROFILE_TABS: { id: Tab; label: string }[] = [
+  { id: 'cli', label: 'Harness CLI' },
+  { id: 'claude', label: 'Claude Code' },
   { id: 'cursor', label: 'Cursor' },
 ];
 
@@ -38,6 +47,53 @@ function DownloadYaml({ slug, yaml }: { slug: string; yaml: string }) {
       </svg>
       <code className="font-mono text-[12px] sm:text-sm">{slug}.harness.yaml</code>
     </button>
+  );
+}
+
+// ── Multi-command block with a single "Copy all" ─────────────
+
+function CommandBlock({ commands }: { commands: string[] }) {
+  const [copied, setCopied] = useState(false);
+
+  const copyAll = async () => {
+    try {
+      await navigator.clipboard.writeText(commands.join('\n'));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch {
+      // Clipboard unavailable — no-op.
+    }
+  };
+
+  return (
+    <div className="relative w-full overflow-hidden rounded-xl bg-fd-card shadow-[var(--shadow-sm)]">
+      <button
+        type="button"
+        onClick={copyAll}
+        aria-label={copied ? 'Copied all commands' : 'Copy all commands'}
+        className="absolute right-2 top-2 flex cursor-pointer items-center gap-1.5 rounded-md bg-fd-card/80 px-2 py-1 text-[11px] font-medium text-fd-muted-foreground backdrop-blur transition-colors hover:bg-fd-accent hover:text-fd-accent-foreground"
+      >
+        {copied ? (
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--cat-green)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M20 6 9 17l-5-5" />
+          </svg>
+        ) : (
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
+        )}
+        {copied ? 'Copied' : 'Copy all'}
+      </button>
+      <pre className="overflow-x-auto px-4 py-3 pr-20 font-mono text-[12px] leading-relaxed text-fd-foreground sm:text-sm">
+        {commands.map((c, i) => (
+          <div key={i} className="whitespace-pre">
+            <span className="text-fd-muted-foreground" aria-hidden="true">$ </span>
+            {c}
+          </div>
+        ))}
+      </pre>
+    </div>
   );
 }
 
@@ -120,17 +176,22 @@ function PluginCursorTab({ plugin }: { plugin: MarketplacePlugin }) {
 // ── Profile install content ───────────────────────────────────
 
 function ProfileClaudeTab({ profile }: { profile: MarketplaceProfile }) {
+  const installs = profile.plugins
+    .filter((r) => r.resolved)
+    .map((ref) => `/plugin install ${ref.name}@harness-kit`);
   return (
     <div className="flex flex-col gap-3">
       <p className="text-sm text-fd-muted-foreground">
-        Add the marketplace once, then install each plugin in the profile:
+        Add the marketplace once, then run each install (Claude Code executes slash commands one at a
+        time). Use <strong className="font-medium text-fd-foreground">Copy all</strong> to grab the
+        full set:
       </p>
       <InstallCommand command="/plugin marketplace add harnessprotocol/harness-kit" />
-      {profile.plugins
-        .filter((r) => r.resolved)
-        .map((ref) => (
-          <InstallCommand key={ref.name} command={`/plugin install ${ref.name}@harness-kit`} />
-        ))}
+      <CommandBlock commands={installs} />
+      <p className="text-xs text-fd-muted-foreground">
+        Prefer one command? The <strong className="font-medium text-fd-foreground">Harness CLI</strong>{' '}
+        tab applies the whole profile — and every other AI tool — in one shot.
+      </p>
     </div>
   );
 }
@@ -138,10 +199,16 @@ function ProfileClaudeTab({ profile }: { profile: MarketplaceProfile }) {
 function ProfileCliTab({ profile }: { profile: MarketplaceProfile }) {
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <p className="mb-2 text-sm text-fd-muted-foreground">
-          Download the profile&apos;s <code className="font-mono text-xs">harness.yaml</code>, then
-          sync and compile for all your AI tools:
+      <div
+        className="rounded-xl p-4"
+        style={{ background: 'var(--accent-light)' }}
+      >
+        <p className="mb-1 text-sm font-medium text-fd-foreground">
+          One-shot setup — download &amp; apply the whole profile
+        </p>
+        <p className="mb-3 text-xs leading-relaxed text-fd-muted-foreground">
+          Grab the profile&apos;s <code className="font-mono">harness.yaml</code>, then sync and
+          compile. Works across Claude Code, Cursor, and Copilot at once.
         </p>
         <DownloadYaml slug={profile.slug} yaml={profile.harnessYaml} />
       </div>
@@ -185,10 +252,12 @@ type InstallWidgetProps =
   | { kind: 'profile'; profile: MarketplaceProfile };
 
 export function InstallWidget(props: InstallWidgetProps) {
-  const [tab, setTab] = useState<Tab>('claude');
+  // Profiles default to the Harness CLI (the only true one-shot path); plugins to Claude Code.
+  const [tab, setTab] = useState<Tab>(props.kind === 'profile' ? 'cli' : 'claude');
 
   const hasMcp = props.kind === 'plugin' ? Boolean(props.plugin.mcp) : false;
-  const visibleTabs = TABS.filter((t) => t.id !== 'cursor' || hasMcp || props.kind === 'profile');
+  const tabs = props.kind === 'profile' ? PROFILE_TABS : PLUGIN_TABS;
+  const visibleTabs = tabs.filter((t) => t.id !== 'cursor' || hasMcp || props.kind === 'profile');
 
   const chip = (active: boolean) =>
     `cursor-pointer rounded-full px-3 py-1 text-sm font-medium transition-colors ${

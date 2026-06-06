@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { MarketplaceProfile } from '@/lib/marketplace/types';
 import { TrustBadge } from './TrustBadge';
 import { RankingBadges } from './RankingBadges';
+import { ProfileSecuritySummary } from './ProfileSecuritySummary';
 import { InstallWidget } from './InstallWidget';
 import { categoryAccent } from '@/lib/marketplace/category';
 
@@ -60,13 +61,11 @@ export function ProfileDetail({ profile }: { profile: MarketplaceProfile }) {
 
       {/* Header */}
       <header className="mb-8 mt-4">
-        <div className="mb-3">
-          <RankingBadges
-            sourceId={profile.sourceId}
-            trust={profile.aggregateTrust}
-            stars={profile.stars}
-            installs={profile.installs}
-          />
+        <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5">
+          {/* Provenance only — security is shown as a count-based summary, not a
+              worst-case badge that one flagged plugin could dominate. */}
+          <RankingBadges sourceId={profile.sourceId} trust={profile.aggregateTrust} showTrust={false} />
+          <ProfileSecuritySummary security={profile.security} verbose />
         </div>
         <div className="mb-1 flex items-center gap-2.5">
           <span

@@ -25,13 +25,20 @@ export type SecurityRule = (context: ScanContext) => RuleResult;
 
 // ── Pattern definitions ─────────────────────────────────────────
 
-const EXTERNAL_URL_PATTERNS = [
-  // Bounded repetition prevents ReDoS on adversarial input
-  /https?:\/\/[^\s"'`]{1,2048}/gi,
-  /curl\s+[^\s]{1,512}/gi,
-  /wget\s+[^\s]{1,512}/gi,
-  /fetch\s*\(\s*['"`]https?:\/\//gi,
-];
+// A single canonical URL pattern. Bounded repetition prevents ReDoS on adversarial
+// input. We intentionally do NOT use bare `curl <token>` / `wget <token>` patterns —
+// they report flags like `curl -sf` as if they were URLs. Any real URL passed to
+// curl/wget/fetch is still captured by this pattern.
+const EXTERNAL_URL_PATTERNS = [/https?:\/\/[^\s"'`]{1,2048}/gi];
+
+// Loopback hosts are local, not external. Matched as a string (not via URL parsing) so
+// that shell-variable ports like http://localhost:${PORT}/health are still recognised
+// as local — `new URL()` throws on the `${...}`, which previously leaked them through.
+const LOOPBACK_URL = /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(?:[:/]|$)/i;
+
+// Trailing punctuation that prose/markup tacks onto a URL, e.g. "https://x.com)." — trimmed
+// with a linear scan rather than a `[...]+$` regex, which backtracks polynomially (ReDoS).
+const TRAILING_URL_PUNCT = new Set([")", ".", ",", ";", ":", "'", '"', "`"]);
 
 const ENV_VAR_PATTERNS = [
   /\$\{?([A-Z_][A-Z0-9_]*)\}?/g,
@@ -57,7 +64,9 @@ const SUSPICIOUS_SCRIPT_PATTERNS = [
   { pattern: /eval\s*\(/gi, reason: "Dynamic code evaluation (eval)" },
   // Negative lookbehind excludes regex .exec() calls (e.g. /foo/.exec(str))
   { pattern: /(?<!\.)\bexec\s*\(/gi, reason: "Command execution (exec)" },
-  { pattern: /system\s*\(/gi, reason: "System command execution" },
+  // `os.system(` (Python) or a bare `system(` call — but NOT `platform.system()`,
+  // `subsystem(`, etc., which merely contain the substring "system".
+  { pattern: /\bos\.system\s*\(|(?<![.\w])system\s*\(/gi, reason: "System command execution" },
   { pattern: /shell\s*=\s*True/gi, reason: "Shell command with shell=True" },
   { pattern: /\|\s*bash/gi, reason: "Piped bash execution" },
   { pattern: /\|\s*sh/gi, reason: "Piped shell execution" },
@@ -65,11 +74,65 @@ const SUSPICIOUS_SCRIPT_PATTERNS = [
   { pattern: /chmod\s+777/gi, reason: "Overly permissive file permissions" },
 ];
 
-const BROAD_FILESYSTEM_PATTERNS = [
-  { pattern: /\/\*\*/g, reason: "Root-level recursive access" },
+const BROAD_FILESYSTEM_PATTERNS: Array<{
+  pattern: RegExp;
+  reason: string;
+  /**
+   * When true, the root-glob match must begin a path token (start of string, or after a
+   * quote/space/bracket/etc.) to count as root-level access. This prevents matching a
+   * recursive glob inside a relative path like "research/" + glob, which merely
+   * describes what files a plugin reads — not broad root access.
+   */
+  requireRootBoundary?: boolean;
+}> = [
+  { pattern: /\/\*\*/g, reason: "Root-level recursive access", requireRootBoundary: true },
   { pattern: /~\/\*\*/g, reason: "Home directory recursive access" },
   { pattern: /\.\.\/\.\.\//g, reason: "Parent directory traversal" },
 ];
+
+function isMarkdown(filePath: string): boolean {
+  return filePath.endsWith(".md") || filePath.endsWith(".mdx");
+}
+
+// Matches a fenced-code delimiter line (``` or ~~~, optionally indented up to 3 spaces).
+const FENCE_DELIMITER = /^\s{0,3}(?:```|~~~)/;
+
+/**
+ * Returns markdown content with everything OUTSIDE fenced code blocks blanked to empty
+ * lines (line numbers are preserved). Prose — including inline-code globs like the
+ * `research` recursive-glob example and env-var mentions — is documentation and is
+ * dropped, eliminating false positives. Fenced code blocks are kept and scanned like
+ * code, because a hook can actually execute what a doc presents as a runnable command.
+ */
+export function extractFencedCode(content: string): string {
+  const lines = content.split("\n");
+  let inFence = false;
+  const out: string[] = [];
+
+  for (const line of lines) {
+    if (FENCE_DELIMITER.test(line)) {
+      inFence = !inFence;
+      out.push(""); // the delimiter line itself is not code
+      continue;
+    }
+    out.push(inFence ? line : "");
+  }
+
+  return out.join("\n");
+}
+
+/**
+ * The content a behavioral rule should scan. For markdown docs that is only the fenced
+ * code blocks; for everything else it is the file verbatim. Declared manifest permissions
+ * remain the authoritative capability signal and are analyzed separately.
+ */
+function behavioralContent(filePath: string, content: string): string {
+  return isMarkdown(filePath) ? extractFencedCode(content) : content;
+}
+
+/** Path characters that, when immediately before a root glob, indicate a *relative* glob
+ *  (e.g. the `research` recursive-glob example) rather than a root-level one. */
+const RELATIVE_PATH_PREFIX = /[\w.\-~/]/;
 
 // ── Helper functions ────────────────────────────────────────────
 
@@ -114,12 +177,9 @@ function isSensitiveEnvVar(varName: string): boolean {
 
 export function detectExternalUrls(context: ScanContext): RuleResult {
   const findings: SecurityFinding[] = [];
-  const { filePath, content } = context;
-
-  // Skip if this is a markdown file (URLs in docs are expected)
-  if (filePath.endsWith(".md")) {
-    return { findings };
-  }
+  const { filePath } = context;
+  // In markdown, scan only fenced code blocks — prose URLs are documentation.
+  const content = behavioralContent(filePath, context.content);
 
   const urls = new Set<string>();
 
@@ -127,7 +187,14 @@ export function detectExternalUrls(context: ScanContext): RuleResult {
     let match;
     const regex = new RegExp(pattern);
     while ((match = regex.exec(content)) !== null) {
-      const url = match[0];
+      // Strip trailing punctuation picked up from prose/markup, e.g. "https://x.com)".
+      const raw = match[0];
+      let cut = raw.length;
+      while (cut > 0 && TRAILING_URL_PUNCT.has(raw[cut - 1])) cut--;
+      const url = raw.slice(0, cut);
+
+      // Loopback/local hosts are not external (string check tolerates ${PORT} vars).
+      if (LOOPBACK_URL.test(url)) continue;
 
       // Skip common safe patterns — use hostname comparison, not includes(),
       // to prevent bypass via subdomain spoofing (e.g. github.com.evil.com)
@@ -155,7 +222,10 @@ export function detectExternalUrls(context: ScanContext): RuleResult {
 
         findings.push(
           createFinding(
-            "warning",
+            // An external URL reference is informational, not a warning. The dangerous
+            // case — sending secrets to a URL — is caught separately as `critical`
+            // exfiltration. Surfacing every referenced URL as a warning cried wolf.
+            "info",
             "external_url",
             `External URL detected: ${url}`,
             filePath,
@@ -173,7 +243,9 @@ export function detectExternalUrls(context: ScanContext): RuleResult {
 
 export function detectEnvVarExfiltration(context: ScanContext): RuleResult {
   const findings: SecurityFinding[] = [];
-  const { filePath, content } = context;
+  const { filePath } = context;
+  // In markdown, scan only fenced code blocks — `$VAR` in prose is an example, not a read.
+  const content = behavioralContent(filePath, context.content);
 
   const envVars = new Map<string, number[]>();
 
@@ -247,12 +319,21 @@ export function detectEnvVarExfiltration(context: ScanContext): RuleResult {
 
 export function detectBroadFilesystemAccess(context: ScanContext): RuleResult {
   const findings: SecurityFinding[] = [];
-  const { filePath, content } = context;
+  const { filePath } = context;
+  // In markdown, scan only fenced code blocks — glob examples in prose describe what a
+  // plugin reads, not broad access it requests. Declared paths come from the manifest.
+  const content = behavioralContent(filePath, context.content);
 
-  for (const { pattern, reason } of BROAD_FILESYSTEM_PATTERNS) {
+  for (const { pattern, reason, requireRootBoundary } of BROAD_FILESYSTEM_PATTERNS) {
     let match;
     const regex = new RegExp(pattern);
     while ((match = regex.exec(content)) !== null) {
+      // `/**` mid-path (e.g. `research/**`) is a relative glob, not root-level access.
+      if (requireRootBoundary && match.index > 0) {
+        const prevChar = content[match.index - 1];
+        if (RELATIVE_PATH_PREFIX.test(prevChar)) continue;
+      }
+
       const lineNumber = findLineNumber(content, match.index);
       const snippet = extractCodeSnippet(content, match.index, match[0].length);
 
@@ -302,9 +383,10 @@ export function detectBroadFilesystemAccess(context: ScanContext): RuleResult {
 
 export function detectSuspiciousScripts(context: ScanContext): RuleResult {
   const findings: SecurityFinding[] = [];
-  const { filePath, content } = context;
+  const { filePath } = context;
 
-  // Only scan script files and hooks
+  // Scan script files/hooks in full. For markdown, scan only fenced code blocks — a hook
+  // can run what a doc presents as a command, but prose ("eval() is dangerous") is not code.
   const isScript =
     filePath.endsWith(".sh") ||
     filePath.endsWith(".py") ||
@@ -313,7 +395,12 @@ export function detectSuspiciousScripts(context: ScanContext): RuleResult {
     filePath.includes("scripts/") ||
     filePath.includes("hooks/");
 
-  if (!isScript) {
+  let content: string;
+  if (isScript) {
+    content = context.content;
+  } else if (isMarkdown(filePath)) {
+    content = extractFencedCode(context.content);
+  } else {
     return { findings };
   }
 
@@ -343,7 +430,9 @@ export function detectSuspiciousScripts(context: ScanContext): RuleResult {
 
 export function detectNetworkAccess(context: ScanContext): RuleResult {
   const findings: SecurityFinding[] = [];
-  const { filePath, content } = context;
+  const { filePath } = context;
+  // In markdown, scan only fenced code blocks — socket references in prose are examples.
+  const content = behavioralContent(filePath, context.content);
 
   const networkPatterns = [
     { pattern: /socket\./gi, reason: "Direct socket access" },
