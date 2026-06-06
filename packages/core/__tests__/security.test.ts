@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { scanPlugin } from "../src/security/scanner.js";
+import type { SecurityFinding } from "@harness-kit/shared";
+import { scanPlugin, dedupeFindings } from "../src/security/scanner.js";
 import {
   detectExternalUrls,
   detectEnvVarExfiltration,
@@ -284,12 +285,52 @@ describe("detectExternalUrls", () => {
 
     const result = detectExternalUrls(context);
 
-    // Multiple patterns may match URLs (curl/wget patterns plus generic URL pattern)
     expect(result.findings.length).toBeGreaterThan(0);
     expect(result.findings[0].category).toBe("external_url");
-    expect(result.findings[0].severity).toBe("warning");
+    // A plain external URL reference is informational, not a warning.
+    expect(result.findings[0].severity).toBe("info");
     // Verify we detected the actual URLs (check message prefix, not includes, to avoid static analysis false positives)
     expect(result.findings.some((f) => f.message.startsWith("External URL detected:"))).toBe(true);
+  });
+
+  it("does not report curl/wget flags as URLs", () => {
+    const context = {
+      pluginName: "test",
+      filePath: "scripts/check.sh",
+      content: 'curl -sf --max-time 2 https://api.untrusted.io/health',
+    };
+
+    const result = detectExternalUrls(context);
+
+    // Only the real URL is reported — not "curl -sf".
+    expect(result.findings.length).toBe(1);
+    expect(result.findings[0].message).toContain("https://api.untrusted.io/health");
+    expect(result.findings.some((f) => f.message.includes("curl"))).toBe(false);
+  });
+
+  it("treats localhost with a shell-variable port as local, not external", () => {
+    const context = {
+      pluginName: "test",
+      filePath: "scripts/check.sh",
+      content: 'curl -sf "http://localhost:${PORT}/api/v1/stats"',
+    };
+
+    const result = detectExternalUrls(context);
+
+    expect(result.findings.length).toBe(0);
+  });
+
+  it("strips trailing punctuation from URLs in comments", () => {
+    const context = {
+      pluginName: "test",
+      filePath: "scripts/notify.sh",
+      content: "# Prerequisites: iTerm2 (https://iterm2.com)",
+    };
+
+    const result = detectExternalUrls(context);
+
+    expect(result.findings.length).toBe(1);
+    expect(result.findings[0].message).toBe("External URL detected: https://iterm2.com");
   });
 
   it("skips safe URLs", () => {
@@ -393,6 +434,18 @@ describe("detectEnvVarExfiltration", () => {
     expect(exfiltrationFinding).toBeDefined();
     expect(exfiltrationFinding?.severity).toBe("critical");
   });
+
+  it("skips documentation files (env vars shown in docs are examples)", () => {
+    const context = {
+      pluginName: "test",
+      filePath: "skills/setup/SKILL.md",
+      content: "Set `$API_KEY` and read `process.env.GITHUB_TOKEN` in your script.",
+    };
+
+    const result = detectEnvVarExfiltration(context);
+
+    expect(result.findings.length).toBe(0);
+  });
 });
 
 describe("detectBroadFilesystemAccess", () => {
@@ -449,6 +502,32 @@ describe("detectBroadFilesystemAccess", () => {
     const criticalFinding = result.findings.find((f) => f.severity === "critical");
     expect(criticalFinding).toBeDefined();
     expect(criticalFinding?.message).toContain("root or home directory");
+  });
+
+  it("does NOT flag relative globs as root-level access", () => {
+    // `research/**` is a relative glob describing what files are read — not root access.
+    const context = {
+      pluginName: "test",
+      filePath: "scripts/index.py",
+      content: '# Scans all synthesis files in research/**/*.md\nfiles = glob("docs/**/*.md")',
+    };
+
+    const result = detectBroadFilesystemAccess(context);
+
+    expect(result.findings.length).toBe(0);
+  });
+
+  it("skips documentation files entirely", () => {
+    // SKILL.md prose mentioning globs (and even a literal /** example) is documentation.
+    const context = {
+      pluginName: "test",
+      filePath: "skills/research/SKILL.md",
+      content: 'Scan `research/**/*.md` and `docs/**`. Example root pattern: "/**".',
+    };
+
+    const result = detectBroadFilesystemAccess(context);
+
+    expect(result.findings.length).toBe(0);
   });
 });
 
@@ -518,6 +597,22 @@ describe("detectSuspiciousScripts", () => {
     expect(result.findings[0].message).toContain("permissions");
   });
 
+  it("flags os.system() but not platform.system()", () => {
+    const dangerous = detectSuspiciousScripts({
+      pluginName: "test",
+      filePath: "scripts/run.py",
+      content: 'import os\nos.system("rm -rf x")',
+    });
+    expect(dangerous.findings.some((f) => f.message.includes("System command execution"))).toBe(true);
+
+    const benign = detectSuspiciousScripts({
+      pluginName: "test",
+      filePath: "scripts/info.py",
+      content: 'import platform\nname = platform.system()',
+    });
+    expect(benign.findings.length).toBe(0);
+  });
+
   it("only scans script files", () => {
     const context = {
       pluginName: "test",
@@ -570,6 +665,60 @@ describe("detectNetworkAccess", () => {
 
     expect(result.findings.length).toBeGreaterThan(0);
     expect(result.findings[0].message).toContain("Network binding");
+  });
+
+  it("skips documentation files (socket references in docs are examples)", () => {
+    const context = {
+      pluginName: "test",
+      filePath: "skills/server/SKILL.md",
+      content: "Open a `socket.bind(('0.0.0.0', 8080))` to listen for connections.",
+    };
+
+    const result = detectNetworkAccess(context);
+
+    expect(result.findings.length).toBe(0);
+  });
+});
+
+describe("dedupeFindings", () => {
+  const finding = (over: Partial<SecurityFinding>): SecurityFinding => ({
+    id: Math.random().toString(36),
+    severity: "warning",
+    category: "filesystem_access",
+    message: "Broad filesystem access pattern detected: Parent directory traversal",
+    file_path: "scripts/clean.sh",
+    ...over,
+  });
+
+  it("collapses the same issue repeated on different lines of one file", () => {
+    const result = dedupeFindings([
+      finding({ line_number: 1 }),
+      finding({ line_number: 2 }),
+      finding({ line_number: 3 }),
+    ]);
+
+    expect(result.length).toBe(1);
+    // The first occurrence (with its line number) is the one kept.
+    expect(result[0].line_number).toBe(1);
+  });
+
+  it("keeps the same issue when it appears in different files", () => {
+    const result = dedupeFindings([
+      finding({ file_path: "scripts/a.sh" }),
+      finding({ file_path: "scripts/b.sh" }),
+    ]);
+
+    expect(result.length).toBe(2);
+  });
+
+  it("keeps findings that differ in severity, category, or message", () => {
+    const result = dedupeFindings([
+      finding({ message: "External URL detected: https://a.com", category: "external_url" }),
+      finding({ message: "External URL detected: https://b.com", category: "external_url" }),
+      finding({ severity: "critical" }),
+    ]);
+
+    expect(result.length).toBe(3);
   });
 });
 

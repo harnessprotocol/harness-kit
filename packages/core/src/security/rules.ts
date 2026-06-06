@@ -25,13 +25,16 @@ export type SecurityRule = (context: ScanContext) => RuleResult;
 
 // ── Pattern definitions ─────────────────────────────────────────
 
-const EXTERNAL_URL_PATTERNS = [
-  // Bounded repetition prevents ReDoS on adversarial input
-  /https?:\/\/[^\s"'`]{1,2048}/gi,
-  /curl\s+[^\s]{1,512}/gi,
-  /wget\s+[^\s]{1,512}/gi,
-  /fetch\s*\(\s*['"`]https?:\/\//gi,
-];
+// A single canonical URL pattern. Bounded repetition prevents ReDoS on adversarial
+// input. We intentionally do NOT use bare `curl <token>` / `wget <token>` patterns —
+// they report flags like `curl -sf` as if they were URLs. Any real URL passed to
+// curl/wget/fetch is still captured by this pattern.
+const EXTERNAL_URL_PATTERNS = [/https?:\/\/[^\s"'`]{1,2048}/gi];
+
+// Loopback hosts are local, not external. Matched as a string (not via URL parsing) so
+// that shell-variable ports like http://localhost:${PORT}/health are still recognised
+// as local — `new URL()` throws on the `${...}`, which previously leaked them through.
+const LOOPBACK_URL = /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(?:[:/]|$)/i;
 
 const ENV_VAR_PATTERNS = [
   /\$\{?([A-Z_][A-Z0-9_]*)\}?/g,
@@ -57,7 +60,9 @@ const SUSPICIOUS_SCRIPT_PATTERNS = [
   { pattern: /eval\s*\(/gi, reason: "Dynamic code evaluation (eval)" },
   // Negative lookbehind excludes regex .exec() calls (e.g. /foo/.exec(str))
   { pattern: /(?<!\.)\bexec\s*\(/gi, reason: "Command execution (exec)" },
-  { pattern: /system\s*\(/gi, reason: "System command execution" },
+  // `os.system(` (Python) or a bare `system(` call — but NOT `platform.system()`,
+  // `subsystem(`, etc., which merely contain the substring "system".
+  { pattern: /\bos\.system\s*\(|(?<![.\w])system\s*\(/gi, reason: "System command execution" },
   { pattern: /shell\s*=\s*True/gi, reason: "Shell command with shell=True" },
   { pattern: /\|\s*bash/gi, reason: "Piped bash execution" },
   { pattern: /\|\s*sh/gi, reason: "Piped shell execution" },
@@ -65,11 +70,36 @@ const SUSPICIOUS_SCRIPT_PATTERNS = [
   { pattern: /chmod\s+777/gi, reason: "Overly permissive file permissions" },
 ];
 
-const BROAD_FILESYSTEM_PATTERNS = [
-  { pattern: /\/\*\*/g, reason: "Root-level recursive access" },
+const BROAD_FILESYSTEM_PATTERNS: Array<{
+  pattern: RegExp;
+  reason: string;
+  /**
+   * When true, the root-glob match must begin a path token (start of string, or after a
+   * quote/space/bracket/etc.) to count as root-level access. This prevents matching a
+   * recursive glob inside a relative path like "research/" + glob, which merely
+   * describes what files a plugin reads — not broad root access.
+   */
+  requireRootBoundary?: boolean;
+}> = [
+  { pattern: /\/\*\*/g, reason: "Root-level recursive access", requireRootBoundary: true },
   { pattern: /~\/\*\*/g, reason: "Home directory recursive access" },
   { pattern: /\.\.\/\.\.\//g, reason: "Parent directory traversal" },
 ];
+
+/**
+ * Markdown/plain-text files are documentation, not executable behavior. Behavioral
+ * heuristics (filesystem globs, env-var reads, network/URL patterns) skip them so that
+ * glob examples and code samples inside docs aren't reported as plugin behavior. The
+ * authoritative signal for what a plugin can actually do is its declared manifest
+ * permissions, which are analyzed separately and are never skipped.
+ */
+function isDocumentation(filePath: string): boolean {
+  return filePath.endsWith(".md") || filePath.endsWith(".mdx") || filePath.endsWith(".txt");
+}
+
+/** Path characters that, when immediately before `/**`, indicate a *relative* glob
+ *  (e.g. `research/**`) rather than a root-level one. */
+const RELATIVE_PATH_PREFIX = /[\w.\-~/]/;
 
 // ── Helper functions ────────────────────────────────────────────
 
@@ -116,8 +146,8 @@ export function detectExternalUrls(context: ScanContext): RuleResult {
   const findings: SecurityFinding[] = [];
   const { filePath, content } = context;
 
-  // Skip if this is a markdown file (URLs in docs are expected)
-  if (filePath.endsWith(".md")) {
+  // Skip documentation — URLs in docs/examples are expected, not behavior.
+  if (isDocumentation(filePath)) {
     return { findings };
   }
 
@@ -127,7 +157,11 @@ export function detectExternalUrls(context: ScanContext): RuleResult {
     let match;
     const regex = new RegExp(pattern);
     while ((match = regex.exec(content)) !== null) {
-      const url = match[0];
+      // Strip trailing punctuation picked up from prose/markup, e.g. "https://x.com)".
+      const url = match[0].replace(/[).,;:'"`]+$/, "");
+
+      // Loopback/local hosts are not external (string check tolerates ${PORT} vars).
+      if (LOOPBACK_URL.test(url)) continue;
 
       // Skip common safe patterns — use hostname comparison, not includes(),
       // to prevent bypass via subdomain spoofing (e.g. github.com.evil.com)
@@ -155,7 +189,10 @@ export function detectExternalUrls(context: ScanContext): RuleResult {
 
         findings.push(
           createFinding(
-            "warning",
+            // An external URL reference is informational, not a warning. The dangerous
+            // case — sending secrets to a URL — is caught separately as `critical`
+            // exfiltration. Surfacing every referenced URL as a warning cried wolf.
+            "info",
             "external_url",
             `External URL detected: ${url}`,
             filePath,
@@ -174,6 +211,11 @@ export function detectExternalUrls(context: ScanContext): RuleResult {
 export function detectEnvVarExfiltration(context: ScanContext): RuleResult {
   const findings: SecurityFinding[] = [];
   const { filePath, content } = context;
+
+  // Skip documentation — `$VAR` / `process.env.X` shown in docs are examples, not reads.
+  if (isDocumentation(filePath)) {
+    return { findings };
+  }
 
   const envVars = new Map<string, number[]>();
 
@@ -249,10 +291,22 @@ export function detectBroadFilesystemAccess(context: ScanContext): RuleResult {
   const findings: SecurityFinding[] = [];
   const { filePath, content } = context;
 
-  for (const { pattern, reason } of BROAD_FILESYSTEM_PATTERNS) {
+  // Skip documentation — glob examples like `docs/**/*.md` describe what a plugin reads,
+  // not broad access it requests. Declared writable paths are analyzed from the manifest.
+  if (isDocumentation(filePath)) {
+    return { findings };
+  }
+
+  for (const { pattern, reason, requireRootBoundary } of BROAD_FILESYSTEM_PATTERNS) {
     let match;
     const regex = new RegExp(pattern);
     while ((match = regex.exec(content)) !== null) {
+      // `/**` mid-path (e.g. `research/**`) is a relative glob, not root-level access.
+      if (requireRootBoundary && match.index > 0) {
+        const prevChar = content[match.index - 1];
+        if (RELATIVE_PATH_PREFIX.test(prevChar)) continue;
+      }
+
       const lineNumber = findLineNumber(content, match.index);
       const snippet = extractCodeSnippet(content, match.index, match[0].length);
 
@@ -344,6 +398,11 @@ export function detectSuspiciousScripts(context: ScanContext): RuleResult {
 export function detectNetworkAccess(context: ScanContext): RuleResult {
   const findings: SecurityFinding[] = [];
   const { filePath, content } = context;
+
+  // Skip documentation — socket/bind references in docs are examples, not behavior.
+  if (isDocumentation(filePath)) {
+    return { findings };
+  }
 
   const networkPatterns = [
     { pattern: /socket\./gi, reason: "Direct socket access" },
