@@ -12,27 +12,16 @@ updates:
         patterns:
           - "*"
 
-  # Root pnpm workspace — covers all workspace packages via shared lockfile
-  # (apps/cli, apps/desktop, packages/*, evals/fixtures, etc.)
+  # Root pnpm workspace — covers ALL workspace packages via the shared root lockfile,
+  # including website/ (a member of pnpm-workspace.yaml: apps/*, packages/*, website).
+  # website/pnpm-lock.yaml is vestigial — pnpm resolves website against the root
+  # lockfile — so website is intentionally NOT a separate npm ecosystem. Adding one
+  # produces broken PRs that touch website/package.json without updating the root lock.
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
       interval: "daily"
     open-pull-requests-limit: 3
-    ignore:
-      - dependency-name: "*"
-        update-types: ["version-update:semver-major"]
-    groups:
-      npm_and_yarn:
-        patterns:
-          - "*"
-
-  # website — standalone pnpm-lock.yaml, must be listed separately
-  - package-ecosystem: "npm"
-    directory: "/website"
-    schedule:
-      interval: "daily"
-    open-pull-requests-limit: 2
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
