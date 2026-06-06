@@ -88,6 +88,7 @@ jobs:
         run: |
           pnpm --filter @harness-kit/shared build
           pnpm --filter @harness-kit/core build
+          pnpm --filter @harness-kit/exchange build
 
       - name: Build standalone bundle
         working-directory: apps/cli
@@ -142,7 +143,7 @@ jobs:
           rm harness-kit
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v8
         with:
           name: cli-standalone-darwin-arm64
           path: apps/cli/harness-kit-v${{ needs.prepare.outputs.version }}-darwin-arm64.tar.gz
@@ -198,7 +199,7 @@ jobs:
           echo "path=$DEST" >> "$GITHUB_OUTPUT"
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v8
         with:
           name: desktop-darwin-arm64
           path: ${{ steps.dmg.outputs.path }}
