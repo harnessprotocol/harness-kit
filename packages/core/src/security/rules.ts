@@ -36,6 +36,10 @@ const EXTERNAL_URL_PATTERNS = [/https?:\/\/[^\s"'`]{1,2048}/gi];
 // as local — `new URL()` throws on the `${...}`, which previously leaked them through.
 const LOOPBACK_URL = /^https?:\/\/(localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\])(?:[:/]|$)/i;
 
+// Trailing punctuation that prose/markup tacks onto a URL, e.g. "https://x.com)." — trimmed
+// with a linear scan rather than a `[...]+$` regex, which backtracks polynomially (ReDoS).
+const TRAILING_URL_PUNCT = new Set([")", ".", ",", ";", ":", "'", '"', "`"]);
+
 const ENV_VAR_PATTERNS = [
   /\$\{?([A-Z_][A-Z0-9_]*)\}?/g,
   /process\.env\.([A-Z_][A-Z0-9_]*)/g,
@@ -184,7 +188,10 @@ export function detectExternalUrls(context: ScanContext): RuleResult {
     const regex = new RegExp(pattern);
     while ((match = regex.exec(content)) !== null) {
       // Strip trailing punctuation picked up from prose/markup, e.g. "https://x.com)".
-      const url = match[0].replace(/[).,;:'"`]+$/, "");
+      const raw = match[0];
+      let cut = raw.length;
+      while (cut > 0 && TRAILING_URL_PUNCT.has(raw[cut - 1])) cut--;
+      const url = raw.slice(0, cut);
 
       // Loopback/local hosts are not external (string check tolerates ${PORT} vars).
       if (LOOPBACK_URL.test(url)) continue;
