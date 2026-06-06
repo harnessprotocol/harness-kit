@@ -101,10 +101,19 @@ mod tests {
 
     #[test]
     fn port_in_use_returns_false_for_free_port() {
-        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
-        let port = listener.local_addr().unwrap().port();
-        drop(listener);
-        assert!(!port_in_use(port));
+        // No port is guaranteed free across an arbitrary window: the OS can hand a
+        // just-released ephemeral port to another process (or a sibling test running
+        // concurrently in this binary) before we check it. So retry — a lost race is
+        // expected, but a port that never reads as free is a real bug.
+        for _ in 0..50 {
+            let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+            let port = listener.local_addr().unwrap().port();
+            drop(listener);
+            if !port_in_use(port) {
+                return;
+            }
+        }
+        panic!("no freshly-released ephemeral port read as free after 50 attempts");
     }
 
     #[test]

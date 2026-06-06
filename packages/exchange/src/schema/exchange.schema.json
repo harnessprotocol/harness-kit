@@ -1,0 +1,121 @@
+{
+  "$comment": "VENDORED from harness-protocol. Source: https://harnessprotocol.io/schema/v2/exchange.schema.json — last synced 2026-06-06. Re-diff against the harness-protocol repo before each release.",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://harnessprotocol.io/schema/v2/exchange.schema.json",
+  "title": "Harness Protocol v2 — Exchange Offer Envelope",
+  "description": "Schema for Exchange-layer offer envelopes: a signed wrapper that carries a harness fragment from a sender to a receiver through the consent-first exchange flow. The wrapped fragment is opaque to this schema; it MUST independently validate against the harness schema (https://harnessprotocol.io/schema/v1/harness.schema.json) with kind: fragment semantics.",
+  "type": "object",
+  "required": ["version", "type", "sender", "expires", "signature"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema URI for editor tooling. Recommended value: 'https://harnessprotocol.io/schema/v2/exchange.schema.json'."
+    },
+    "version": {
+      "type": "string",
+      "const": "1",
+      "description": "Offer-envelope format version. Must be the string '1'. This is the Exchange layer's own format version — independent of the harness.yaml 'version' field and of the v2 milestone label. Receivers MUST reject envelopes with an unrecognized version and surface a clear error."
+    },
+    "type": {
+      "type": "string",
+      "enum": ["offer"],
+      "description": "Envelope type. Only 'offer' is defined in this version. Receivers MUST reject unknown types. The value 'receipt' is reserved for a future version (signed acknowledgement of receipt)."
+    },
+    "sender": {
+      "type": "object",
+      "required": ["key"],
+      "description": "The sender's self-sovereign identity. The only authenticated identity is the key; 'display' is advisory.",
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "The sender's ed25519 public key, lowercase hex-encoded (32 bytes / 64 hex chars). This key is the sender's identity. Receivers SHOULD show a fingerprint derived from it (see the Exchange specification) rather than the raw key."
+        },
+        "display": {
+          "type": "string",
+          "maxLength": 64,
+          "description": "Optional, UNVERIFIED display name. A hint only — receivers MUST NOT treat it as authenticated identity."
+        }
+      },
+      "additionalProperties": false
+    },
+    "recipient": {
+      "type": "object",
+      "required": ["key"],
+      "description": "The intended recipient. REQUIRED for encrypted envelopes (the payload is encrypted to this key) and absent for unaddressed plaintext offers.",
+      "properties": {
+        "key": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$",
+          "description": "The recipient's ed25519 public key, lowercase hex-encoded. Converted to its X25519 equivalent to derive the shared secret for payload encryption."
+        }
+      },
+      "additionalProperties": false
+    },
+    "message": {
+      "type": "string",
+      "maxLength": 1024,
+      "description": "Optional human-readable message from the sender, displayed to the receiver at preview time. Not covered by the signature (it is not security-critical content)."
+    },
+    "fragment": {
+      "type": "object",
+      "description": "The plaintext fragment being offered: a harness document with kind: fragment, serialized as a JSON object (YAML-equivalent fields, JSON types). Opaque to this schema; it MUST independently validate against the harness schema with fragment semantics before the envelope is considered well-formed. Present only in unencrypted envelopes; mutually exclusive with 'encrypted-fragment'."
+    },
+    "encrypted-fragment": {
+      "type": "object",
+      "required": ["algorithm", "nonce", "ciphertext"],
+      "description": "The fragment encrypted to the recipient's key. Present only in encrypted envelopes; mutually exclusive with 'fragment'. The receiver decrypts and then validates the decrypted content against the harness schema.",
+      "properties": {
+        "algorithm": {
+          "type": "string",
+          "const": "x25519-xsalsa20-poly1305",
+          "description": "Authenticated encryption scheme: X25519 key agreement with XSalsa20-Poly1305 (the NaCl 'box' construction)."
+        },
+        "nonce": {
+          "type": "string",
+          "contentEncoding": "base64",
+          "description": "Base64-encoded encryption nonce."
+        },
+        "ciphertext": {
+          "type": "string",
+          "contentEncoding": "base64",
+          "description": "Base64-encoded ciphertext of the canonical-JSON fragment bytes."
+        }
+      },
+      "additionalProperties": false
+    },
+    "suggested-import-mode": {
+      "type": "string",
+      "enum": ["merge", "replace", "skip"],
+      "description": "A non-binding hint about how the fragment should be applied. The receiver sets the actual import-mode and MAY override this at the Accept step."
+    },
+    "expires": {
+      "type": "string",
+      "format": "date-time",
+      "description": "ISO 8601 timestamp after which the offer is stale. Receivers MUST NOT apply an expired offer. This bounds replay: an offer intercepted in transit cannot be applied indefinitely."
+    },
+    "signature": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{128}$",
+      "description": "Detached ed25519 signature, lowercase hex-encoded (64 bytes / 128 hex chars), produced by the sender's private key. For plaintext envelopes it covers the canonical-JSON bytes of 'fragment'; for encrypted envelopes it covers the raw 'encrypted-fragment.ciphertext' bytes. Receivers MUST verify the signature before preview; verification failure is a hard rejection with no 'proceed anyway' path."
+    }
+  },
+  "oneOf": [
+    {
+      "title": "Plaintext offer",
+      "required": ["fragment"],
+      "not": { "anyOf": [{ "required": ["encrypted-fragment"] }, { "required": ["recipient"] }] }
+    },
+    {
+      "title": "Encrypted offer",
+      "required": ["encrypted-fragment", "recipient"],
+      "not": { "required": ["fragment"] }
+    }
+  ],
+  "patternProperties": {
+    "^x-": {
+      "description": "Implementation-specific extension field. The x- prefix signals a non-standard field. Implementations MUST ignore unrecognized x- fields to ensure forward compatibility."
+    }
+  },
+  "additionalProperties": false
+}
