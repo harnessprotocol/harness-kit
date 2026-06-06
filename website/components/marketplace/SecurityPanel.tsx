@@ -54,6 +54,9 @@ export function SecurityPanel({ security }: { security: MarketplaceSecurity }) {
         <span className="text-sm text-fd-muted-foreground">{security.summary}</span>
       </div>
 
+      <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-fd-muted-foreground">
+        Declared capabilities
+      </p>
       <div className="rounded-xl bg-fd-card/60 px-4 py-1">
         <PermissionRow label="Network access" value={permissions.networkAccess ? 'Yes' : 'No'} on={permissions.networkAccess} />
         <PermissionRow label="File writes" value={permissions.fileWrites ? 'Yes' : 'No'} on={permissions.fileWrites} />
@@ -74,12 +77,30 @@ export function SecurityPanel({ security }: { security: MarketplaceSecurity }) {
         />
       </div>
 
-      {findings.length > 0 && (
-        <ul className="mt-4 flex flex-col gap-2">
-          {findings.map((f, i) => (
-            <FindingItem key={`${f.category}-${i}`} finding={f} />
-          ))}
-        </ul>
+      {findings.length > 0 ? (
+        <>
+          <p className="mb-1.5 mt-4 text-xs font-medium uppercase tracking-wide text-fd-muted-foreground">
+            Scan observations
+          </p>
+          <ul className="flex flex-col gap-2">
+            {findings.map((f, i) => (
+              <FindingItem key={`${f.category}-${i}`} finding={f} />
+            ))}
+          </ul>
+        </>
+      ) : (
+        <div
+          className="mt-3 flex items-center gap-2 rounded-xl px-4 py-3 text-sm"
+          style={{
+            color: 'var(--cat-green)',
+            background: 'color-mix(in srgb, var(--cat-green) 10%, transparent)',
+          }}
+        >
+          <svg viewBox="0 0 24 24" className="size-4 shrink-0" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+            <path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
+          No risky patterns detected in the plugin source.
+        </div>
       )}
 
       <p className="mt-3 text-xs text-fd-muted-foreground">

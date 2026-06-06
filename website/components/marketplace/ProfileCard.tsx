@@ -1,64 +1,68 @@
 import Link from 'next/link';
 import type { MarketplaceProfile } from '@/lib/marketplace/types';
-import { TrustBadge } from './TrustBadge';
 import { categoryAccent } from '@/lib/marketplace/category';
+import { ProfileSecuritySummary } from './ProfileSecuritySummary';
 
 export function ProfileCard({ profile }: { profile: MarketplaceProfile }) {
+  const resolved = profile.plugins.filter((r) => r.resolved);
+  const shown = resolved.slice(0, 4);
+  const extra = resolved.length - shown.length;
+
   return (
     <Link
       href={`/marketplace/profiles/${profile.slug}`}
-      className="group flex cursor-pointer flex-col rounded-xl bg-fd-card/50 p-5 no-underline backdrop-blur-sm transition-all duration-300 hover:bg-fd-card/80 hover:shadow-lg"
+      className="group surface-card flex cursor-pointer flex-col rounded-xl p-5 no-underline"
       style={{ borderTop: '2px solid var(--accent)' }}
     >
-      {/* Header row */}
-      <div className="mb-2.5 flex items-center justify-between gap-2">
-        <span
-          className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
-          style={{ color: 'var(--accent)', background: 'var(--accent-light)' }}
+      {/* Header: persona identity */}
+      <div className="mb-3 flex items-center gap-3">
+        <div
+          className="flex size-10 shrink-0 items-center justify-center rounded-lg"
+          style={{ background: 'var(--accent-light)', color: 'var(--accent)' }}
         >
-          Profile
-        </span>
-        <TrustBadge tier={profile.aggregateTrust} title={`Aggregate security trust: ${profile.aggregateTrust}`} />
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <polygon points="12 2 2 7 12 12 22 7 12 2" />
+            <polyline points="2 17 12 22 22 17" />
+            <polyline points="2 12 12 17 22 12" />
+          </svg>
+        </div>
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold uppercase tracking-wide" style={{ color: 'var(--accent)' }}>
+            Profile
+          </div>
+          <h3 className="font-display font-semibold leading-tight text-fd-foreground">{profile.persona}</h3>
+        </div>
       </div>
 
-      {/* Name */}
-      <h3 className="font-display mb-1 font-semibold text-fd-foreground">{profile.persona}</h3>
-
       {/* Description */}
-      <p className="mb-3 line-clamp-3 flex-1 text-sm leading-relaxed text-fd-muted-foreground">
+      <p className="mb-4 line-clamp-2 text-sm leading-relaxed text-fd-muted-foreground">
         {profile.description}
       </p>
 
-      {/* Footer: plugin category dots + count */}
-      <div className="flex items-center gap-2">
-        {/* Mini category colour dots for bundled plugins */}
-        <div className="flex items-center -space-x-0.5">
-          {[...new Set(profile.plugins.filter((r) => r.resolved && r.category).map((r) => r.category!))]
-            .slice(0, 5)
-            .map((cat) => (
-              <span
-                key={cat}
-                className="size-2.5 rounded-full ring-1 ring-fd-card/80"
-                style={{ background: categoryAccent(cat) }}
-                title={cat}
-              />
-            ))}
-        </div>
-        <span className="text-[11px] text-fd-muted-foreground">
-          {profile.plugins.filter((r) => r.resolved).length} plugin
-          {profile.plugins.filter((r) => r.resolved).length === 1 ? '' : 's'}
-        </span>
-        {profile.stars !== undefined && (
-          <>
-            <span className="text-fd-muted-foreground/40">·</span>
-            <span className="inline-flex items-center gap-0.5 text-[11px] text-fd-muted-foreground">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-              </svg>
-              {profile.stars}
-            </span>
-          </>
+      {/* What's inside — plugin preview chips */}
+      <div className="mb-4 flex flex-1 flex-wrap content-start gap-1.5">
+        {shown.map((ref) => (
+          <span
+            key={ref.name}
+            className="inline-flex items-center gap-1.5 rounded-full bg-fd-card/70 px-2 py-0.5 font-mono text-[11px] text-fd-muted-foreground"
+          >
+            <span className="size-1.5 rounded-full" style={{ background: categoryAccent(ref.category ?? '') }} />
+            {ref.name}
+          </span>
+        ))}
+        {extra > 0 && (
+          <span className="inline-flex items-center rounded-full bg-fd-card/70 px-2 py-0.5 text-[11px] text-fd-muted-foreground">
+            +{extra} more
+          </span>
         )}
+      </div>
+
+      {/* Footer: count + honest security summary */}
+      <div className="flex items-center justify-between text-[11px] text-fd-muted-foreground">
+        <span>
+          {resolved.length} plugin{resolved.length === 1 ? '' : 's'}
+        </span>
+        <ProfileSecuritySummary security={profile.security} />
       </div>
     </Link>
   );
