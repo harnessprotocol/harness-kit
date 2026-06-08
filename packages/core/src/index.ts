@@ -51,6 +51,7 @@ export { compileInstructions, getAllInstructionFilePaths, getSlotMappings } from
 export { compileMcpServers } from "./compile/mcp-servers.js";
 export { compileSkills } from "./compile/skills.js";
 export { compilePermissions, buildPermissionsText } from "./compile/permissions.js";
+export { resolveExtends } from "./compile/extends.js";
 
 // Discovery (manifest-first skill resolution utilities)
 export { findSkillFiles, computeSourceDir } from "./compile/discovery.js";
