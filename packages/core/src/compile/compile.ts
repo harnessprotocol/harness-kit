@@ -14,6 +14,7 @@ import { compileMcpServers } from "./mcp-servers.js";
 import { compileSkills } from "./skills.js";
 import { compilePermissions, buildPermissionsText } from "./permissions.js";
 import { appendMarkerBlock, findMarkerBlock, replaceMarkerBlock } from "./markers.js";
+import { resolveExtends } from "./extends.js";
 
 // ── Source fingerprint ────────────────────────────────────────
 
@@ -93,11 +94,15 @@ export async function compile(
     throw new Error(`harness.yaml validation failed:\n${errMsgs}`);
   }
 
-  const harnessName = config.metadata?.name ?? "default";
   const cwd = fs.cwd();
 
+  // Phase 1b: resolve extends fragments into the effective config
+  const resolvedConfig = await resolveExtends(config, fs, cwd);
+
+  const harnessName = resolvedConfig.metadata?.name ?? "default";
+
   // Stage 3: Compute source fingerprint
-  const fingerprint = computeSourceFingerprint(yamlString, config);
+  const fingerprint = computeSourceFingerprint(yamlString, resolvedConfig);
   const targetKey = [...targets].sort().join(",");
 
   // Stage 4: Skip if unchanged (bypass with --force or dry-run)
@@ -122,28 +127,28 @@ export async function compile(
   // Stage 5: Resolve targets (already passed in — future: filter by detected binaries)
 
   // Stage 6: Generate instructions
-  const instrResult = await compileInstructions(config, targets, fs);
+  const instrResult = await compileInstructions(resolvedConfig, targets, fs);
   allFiles.push(...instrResult.files);
   allWarnings.push(...instrResult.warnings);
 
-  if (config.permissions) {
-    const permText = buildPermissionsText(config.permissions);
+  if (resolvedConfig.permissions) {
+    const permText = buildPermissionsText(resolvedConfig.permissions);
     if (permText) {
-      appendPermissionsToInstructions(allFiles, config, permText);
+      appendPermissionsToInstructions(allFiles, resolvedConfig, permText);
     }
   }
 
   // Stage 7: Generate MCP config
-  const mcpResult = await compileMcpServers(config, targets, fs);
+  const mcpResult = await compileMcpServers(resolvedConfig, targets, fs);
   allFiles.push(...mcpResult.files);
   allWarnings.push(...mcpResult.warnings);
 
   // Compile skills + permissions
-  const skillsResult = await compileSkills(config, targets, fs);
+  const skillsResult = await compileSkills(resolvedConfig, targets, fs);
   allFiles.push(...skillsResult.files);
   allSkipped.push(...skillsResult.skippedPlugins);
 
-  const permsResult = await compilePermissions(config, targets, fs);
+  const permsResult = await compilePermissions(resolvedConfig, targets, fs);
   allFiles.push(...permsResult.files);
   allWarnings.push(...permsResult.warnings);
 
