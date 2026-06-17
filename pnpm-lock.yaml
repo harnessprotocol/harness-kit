@@ -94,7 +94,7 @@ importers:
         version: 2.108.2
       '@tauri-apps/api':
         specifier: ^2
-        version: 2.11.0
+        version: 2.11.1
       '@tauri-apps/plugin-dialog':
         specifier: ^2
         version: 2.7.1
@@ -112,7 +112,7 @@ importers:
         version: 6.0.0
       dompurify:
         specifier: '>=3.3.2'
-        version: 3.4.10
+        version: 3.4.11
       framer-motion:
         specifier: ^12.40.0
         version: 12.40.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -199,20 +199,20 @@ importers:
   packages/agent-server:
     dependencies:
       '@langchain/anthropic':
-        specifier: ^1.4.1
-        version: 1.4.1(@langchain/core@1.1.49(ws@8.21.0))
+        specifier: ^1.5.0
+        version: 1.5.0(@langchain/core@1.2.0(ws@8.21.0))
       '@langchain/core':
-        specifier: ^1.1.49
-        version: 1.1.49(ws@8.21.0)
+        specifier: ^1.2.0
+        version: 1.2.0(ws@8.21.0)
       '@langchain/langgraph':
         specifier: ^1.4.2
-        version: 1.4.2(@langchain/core@1.1.49(ws@8.21.0))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(zod-to-json-schema@3.25.2(zod@3.25.76))(zod@3.25.76)
+        version: 1.4.2(@langchain/core@1.2.0(ws@8.21.0))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(zod-to-json-schema@3.25.2(zod@3.25.76))(zod@3.25.76)
       '@langchain/langgraph-checkpoint-sqlite':
         specifier: ^1.0.3
-        version: 1.0.3(@langchain/core@1.1.49(ws@8.21.0))(@langchain/langgraph-checkpoint@1.1.1(@langchain/core@1.1.49(ws@8.21.0)))
+        version: 1.0.3(@langchain/core@1.2.0(ws@8.21.0))(@langchain/langgraph-checkpoint@1.1.1(@langchain/core@1.2.0(ws@8.21.0)))
       '@langchain/mcp-adapters':
         specifier: ^1.1.0
-        version: 1.1.3(@cfworker/json-schema@4.1.1)(@langchain/core@1.1.49(ws@8.21.0))(@langchain/langgraph@1.4.2(@langchain/core@1.1.49(ws@8.21.0))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(zod-to-json-schema@3.25.2(zod@3.25.76))(zod@3.25.76))
+        version: 1.1.3(@cfworker/json-schema@4.1.1)(@langchain/core@1.2.0(ws@8.21.0))(@langchain/langgraph@1.4.2(@langchain/core@1.2.0(ws@8.21.0))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(zod-to-json-schema@3.25.2(zod@3.25.76))(zod@3.25.76))
       better-sqlite3:
         specifier: ^9.4.0
         version: 9.6.0
@@ -451,14 +451,14 @@ importers:
   website:
     dependencies:
       fumadocs-core:
-        specifier: ^16.10.3
-        version: 16.10.3(@mdx-js/mdx@3.1.1)(@types/estree-jsx@1.0.5)(@types/hast@3.0.4)(@types/mdast@4.0.4)(@types/react@19.2.17)(lucide-react@1.20.0(react@19.2.7))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react-router@7.18.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(zod@4.3.6)
+        specifier: ^16.10.4
+        version: 16.10.4(@mdx-js/mdx@3.1.1)(@types/estree-jsx@1.0.5)(@types/hast@3.0.4)(@types/mdast@4.0.4)(@types/react@19.2.17)(lucide-react@1.20.0(react@19.2.7))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react-router@7.18.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(zod@4.3.6)
       fumadocs-mdx:
         specifier: ^14.3.2
-        version: 14.3.2(@types/mdast@4.0.4)(@types/mdx@2.0.13)(@types/react@19.2.17)(fumadocs-core@16.10.3(@mdx-js/mdx@3.1.1)(@types/estree-jsx@1.0.5)(@types/hast@3.0.4)(@types/mdast@4.0.4)(@types/react@19.2.17)(lucide-react@1.20.0(react@19.2.7))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react-router@7.18.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(zod@4.3.6))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(vite@6.4.3(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
+        version: 14.3.2(@types/mdast@4.0.4)(@types/mdx@2.0.13)(@types/react@19.2.17)(fumadocs-core@16.10.4(@mdx-js/mdx@3.1.1)(@types/estree-jsx@1.0.5)(@types/hast@3.0.4)(@types/mdast@4.0.4)(@types/react@19.2.17)(lucide-react@1.20.0(react@19.2.7))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react-router@7.18.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(zod@4.3.6))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(vite@6.4.3(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))
       fumadocs-ui:
-        specifier: ^16.10.3
-        version: 16.10.3(@tailwindcss/oxide@4.3.1)(@types/mdx@2.0.13)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(fumadocs-core@16.10.3(@mdx-js/mdx@3.1.1)(@types/estree-jsx@1.0.5)(@types/hast@3.0.4)(@types/mdast@4.0.4)(@types/react@19.2.17)(lucide-react@1.20.0(react@19.2.7))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react-router@7.18.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(zod@4.3.6))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(tailwindcss@4.3.1)
+        specifier: ^16.10.4
+        version: 16.10.4(@tailwindcss/oxide@4.3.1)(@types/mdx@2.0.13)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(fumadocs-core@16.10.4(@mdx-js/mdx@3.1.1)(@types/estree-jsx@1.0.5)(@types/hast@3.0.4)(@types/mdast@4.0.4)(@types/react@19.2.17)(lucide-react@1.20.0(react@19.2.7))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react-router@7.18.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(zod@4.3.6))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(tailwindcss@4.3.1)
       mdast-util-from-markdown:
         specifier: ^2.0.3
         version: 2.0.3
@@ -1391,14 +1391,14 @@ packages:
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
 
-  '@langchain/anthropic@1.4.1':
-    resolution: {integrity: sha512-h3b6hxThcfh0WdmpuWr+qBi74MN+0BpNI/4H681vwXxbD3hLr2qMYN6ghqcPQhCxGJjg8ufs85qu2/ldSWonYQ==}
+  '@langchain/anthropic@1.5.0':
+    resolution: {integrity: sha512-IhWeK87QRAYyhlvSE0p+Zh4oylnZoa+16XP7XgvsPsLEbW4YMueVYl7aT4EsbsM37xbr3l/P7euIRdowc8WfOA==}
     engines: {node: '>=20'}
     peerDependencies:
-      '@langchain/core': ^1.1.49
+      '@langchain/core': ^1.2.0
 
-  '@langchain/core@1.1.49':
-    resolution: {integrity: sha512-7wkN3Qv/qZqsY0p3h48CNu6E6y5GMYatYxj+JrX4uVNBiqIVQm1Z528QrmayJWVW9SQTQicqRNoyTCzl+K9F8Q==}
+  '@langchain/core@1.2.0':
+    resolution: {integrity: sha512-nXmyH0FbcsASlRmC9sbqX0gjQdxgB9KcS13vkw9PMaH0zzylwZkGFU9sY0XCPa2/AokmaNTU9DOW3IUDfAtQow==}
     engines: {node: '>=20'}
 
   '@langchain/langgraph-checkpoint-sqlite@1.0.3':
@@ -2373,8 +2373,8 @@ packages:
     peerDependencies:
       vite: '>=6.4.2'
 
-  '@tauri-apps/api@2.11.0':
-    resolution: {integrity: sha512-7CinYODhky9lmO23xHnUFv0Xt43fbtWMyxZcLcRBlFkcgXKuEirBvHpmtJ89YMhyeGcq20Wuc47Fa4XjyniywA==}
+  '@tauri-apps/api@2.11.1':
+    resolution: {integrity: sha512-M2FPuYND2m+wh5hfW9ZpSdxMPdEJovPBWwoHJmwUpysTYNHaOkVFN419m/K0LIgjb/7KU2vBgsUepJWugQCvAA==}
 
   '@tauri-apps/cli-darwin-arm64@2.11.2':
     resolution: {integrity: sha512-+4UZzLt+eOAEQCwgd+TqKgyUJMrvx+BgdXLLaqJYmPqzP+nE6YZr/hY6CWLYGQb8jFn99jEkmC6uA3tNvamA1w==}
@@ -3157,8 +3157,8 @@ packages:
   dom-accessibility-api@0.6.3:
     resolution: {integrity: sha512-7ZgogeTnjuHbo+ct10G9Ffp0mif17idi0IyWNVA/wcwcm7NPOD/WEHVP3n7n3MhXqxoIYm8d6MuZohYWIZ4T3w==}
 
-  dompurify@3.4.10:
-    resolution: {integrity: sha512-0xzNv0e7oYC6yyuOGZIABPM4qtg3QxLFniDNPP4ZP90wR8Yq3zgwpRbrNiT4N3IKqDbbYFEJLV+JWEs19aZ//w==}
+  dompurify@3.4.11:
+    resolution: {integrity: sha512-zhlUV12GsaRzMsf9q5M254YhA4+VuF0fG+QFqu6aYpoGlKtz+w8//jBcGVYBgQkR5GHjUomejY84AV+/uPbWdw==}
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -3392,8 +3392,8 @@ packages:
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
     os: [darwin]
 
-  fumadocs-core@16.10.3:
-    resolution: {integrity: sha512-xXhqz/fqbN7pLlshJb/B5L+vzMJOmWxoPj7+KMRTa/4A669hKeeCBPpRAiooMqjblWqIRSxLiO02/ds8ltvUPQ==}
+  fumadocs-core@16.10.4:
+    resolution: {integrity: sha512-YpS6i8QFGgnXfE90MjlNPNE0tW3v/kg0n34CTP1SREHrFaXiPlQXnaBRTpBVT1g5TCK43yK6bkpKkkT8Ji+P4w==}
     peerDependencies:
       '@mdx-js/mdx': '*'
       '@mixedbread/sdk': 0.x.x
@@ -3410,7 +3410,7 @@ packages:
       next: 16.x.x
       react: ^19.2.0
       react-dom: ^19.2.0
-      react-router: 7.x.x
+      react-router: 7.x.x || 8.x.x
       waku: '*'
       zod: 4.x.x
     peerDependenciesMeta:
@@ -3479,13 +3479,13 @@ packages:
       vite:
         optional: true
 
-  fumadocs-ui@16.10.3:
-    resolution: {integrity: sha512-0aSLdQ73EWoCmYcQYr2uNHlSB/s2fD+NMugtdZF3vC4lqs0MfyOtwnZPyYAskUnXNs6HECly/Hu6oY5JqmlkHg==}
+  fumadocs-ui@16.10.4:
+    resolution: {integrity: sha512-/PzeT0ml4V87ilvdf10O4/EjGMJe5qKLrN9dG6wKYxWvvZgZE9414E/36LHOf+vFmr40Shjnl6QpkHhlQYwtcw==}
     peerDependencies:
       '@takumi-rs/image-response': '*'
       '@types/mdx': '*'
       '@types/react': '*'
-      fumadocs-core: 16.10.3
+      fumadocs-core: 16.10.4
       next: 16.x.x
       react: ^19.2.0
       react-dom: ^19.2.0
@@ -5822,13 +5822,13 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
-  '@langchain/anthropic@1.4.1(@langchain/core@1.1.49(ws@8.21.0))':
+  '@langchain/anthropic@1.5.0(@langchain/core@1.2.0(ws@8.21.0))':
     dependencies:
       '@anthropic-ai/sdk': 0.103.0(zod@3.25.76)
-      '@langchain/core': 1.1.49(ws@8.21.0)
+      '@langchain/core': 1.2.0(ws@8.21.0)
       zod: 3.25.76
 
-  '@langchain/core@1.1.49(ws@8.21.0)':
+  '@langchain/core@1.2.0(ws@8.21.0)':
     dependencies:
       '@cfworker/json-schema': 4.1.1
       '@standard-schema/spec': 1.1.0
@@ -5844,19 +5844,19 @@ snapshots:
       - openai
       - ws
 
-  '@langchain/langgraph-checkpoint-sqlite@1.0.3(@langchain/core@1.1.49(ws@8.21.0))(@langchain/langgraph-checkpoint@1.1.1(@langchain/core@1.1.49(ws@8.21.0)))':
+  '@langchain/langgraph-checkpoint-sqlite@1.0.3(@langchain/core@1.2.0(ws@8.21.0))(@langchain/langgraph-checkpoint@1.1.1(@langchain/core@1.2.0(ws@8.21.0)))':
     dependencies:
-      '@langchain/core': 1.1.49(ws@8.21.0)
-      '@langchain/langgraph-checkpoint': 1.1.1(@langchain/core@1.1.49(ws@8.21.0))
+      '@langchain/core': 1.2.0(ws@8.21.0)
+      '@langchain/langgraph-checkpoint': 1.1.1(@langchain/core@1.2.0(ws@8.21.0))
       better-sqlite3: 12.10.0
 
-  '@langchain/langgraph-checkpoint@1.1.1(@langchain/core@1.1.49(ws@8.21.0))':
+  '@langchain/langgraph-checkpoint@1.1.1(@langchain/core@1.2.0(ws@8.21.0))':
     dependencies:
-      '@langchain/core': 1.1.49(ws@8.21.0)
+      '@langchain/core': 1.2.0(ws@8.21.0)
 
-  '@langchain/langgraph-sdk@1.9.22(@langchain/core@1.1.49(ws@8.21.0))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
+  '@langchain/langgraph-sdk@1.9.22(@langchain/core@1.2.0(ws@8.21.0))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)':
     dependencies:
-      '@langchain/core': 1.1.49(ws@8.21.0)
+      '@langchain/core': 1.2.0(ws@8.21.0)
       '@langchain/protocol': 0.0.16
       '@types/json-schema': 7.0.15
       p-queue: 9.3.0
@@ -5865,11 +5865,11 @@ snapshots:
       react: 19.2.7
       react-dom: 19.2.7(react@19.2.7)
 
-  '@langchain/langgraph@1.4.2(@langchain/core@1.1.49(ws@8.21.0))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(zod-to-json-schema@3.25.2(zod@3.25.76))(zod@3.25.76)':
+  '@langchain/langgraph@1.4.2(@langchain/core@1.2.0(ws@8.21.0))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(zod-to-json-schema@3.25.2(zod@3.25.76))(zod@3.25.76)':
     dependencies:
-      '@langchain/core': 1.1.49(ws@8.21.0)
-      '@langchain/langgraph-checkpoint': 1.1.1(@langchain/core@1.1.49(ws@8.21.0))
-      '@langchain/langgraph-sdk': 1.9.22(@langchain/core@1.1.49(ws@8.21.0))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      '@langchain/core': 1.2.0(ws@8.21.0)
+      '@langchain/langgraph-checkpoint': 1.1.1(@langchain/core@1.2.0(ws@8.21.0))
+      '@langchain/langgraph-sdk': 1.9.22(@langchain/core@1.2.0(ws@8.21.0))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@langchain/protocol': 0.0.16
       '@standard-schema/spec': 1.1.0
       zod: 3.25.76
@@ -5881,10 +5881,10 @@ snapshots:
       - svelte
       - vue
 
-  '@langchain/mcp-adapters@1.1.3(@cfworker/json-schema@4.1.1)(@langchain/core@1.1.49(ws@8.21.0))(@langchain/langgraph@1.4.2(@langchain/core@1.1.49(ws@8.21.0))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(zod-to-json-schema@3.25.2(zod@3.25.76))(zod@3.25.76))':
+  '@langchain/mcp-adapters@1.1.3(@cfworker/json-schema@4.1.1)(@langchain/core@1.2.0(ws@8.21.0))(@langchain/langgraph@1.4.2(@langchain/core@1.2.0(ws@8.21.0))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(zod-to-json-schema@3.25.2(zod@3.25.76))(zod@3.25.76))':
     dependencies:
-      '@langchain/core': 1.1.49(ws@8.21.0)
-      '@langchain/langgraph': 1.4.2(@langchain/core@1.1.49(ws@8.21.0))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(zod-to-json-schema@3.25.2(zod@3.25.76))(zod@3.25.76)
+      '@langchain/core': 1.2.0(ws@8.21.0)
+      '@langchain/langgraph': 1.4.2(@langchain/core@1.2.0(ws@8.21.0))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(zod-to-json-schema@3.25.2(zod@3.25.76))(zod@3.25.76)
       '@modelcontextprotocol/sdk': 1.27.1(@cfworker/json-schema@4.1.1)(zod@3.25.76)
       debug: 4.4.3
       zod: 3.25.76
@@ -6695,7 +6695,7 @@ snapshots:
       tailwindcss: 4.3.1
       vite: 6.4.3(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0)
 
-  '@tauri-apps/api@2.11.0': {}
+  '@tauri-apps/api@2.11.1': {}
 
   '@tauri-apps/cli-darwin-arm64@2.11.2':
     optional: true
@@ -6746,15 +6746,15 @@ snapshots:
 
   '@tauri-apps/plugin-dialog@2.7.1':
     dependencies:
-      '@tauri-apps/api': 2.11.0
+      '@tauri-apps/api': 2.11.1
 
   '@tauri-apps/plugin-fs@2.5.1':
     dependencies:
-      '@tauri-apps/api': 2.11.0
+      '@tauri-apps/api': 2.11.1
 
   '@tauri-apps/plugin-shell@2.3.5':
     dependencies:
-      '@tauri-apps/api': 2.11.0
+      '@tauri-apps/api': 2.11.1
 
   '@testing-library/dom@10.4.1':
     dependencies:
@@ -6883,7 +6883,7 @@ snapshots:
 
   '@types/dompurify@3.2.0':
     dependencies:
-      dompurify: 3.4.10
+      dompurify: 3.4.11
 
   '@types/estree-jsx@1.0.5':
     dependencies:
@@ -7447,7 +7447,7 @@ snapshots:
 
   dom-accessibility-api@0.6.3: {}
 
-  dompurify@3.4.10:
+  dompurify@3.4.11:
     optionalDependencies:
       '@types/trusted-types': 2.0.7
 
@@ -7787,7 +7787,7 @@ snapshots:
   fsevents@2.3.3:
     optional: true
 
-  fumadocs-core@16.10.3(@mdx-js/mdx@3.1.1)(@types/estree-jsx@1.0.5)(@types/hast@3.0.4)(@types/mdast@4.0.4)(@types/react@19.2.17)(lucide-react@1.20.0(react@19.2.7))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react-router@7.18.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(zod@4.3.6):
+  fumadocs-core@16.10.4(@mdx-js/mdx@3.1.1)(@types/estree-jsx@1.0.5)(@types/hast@3.0.4)(@types/mdast@4.0.4)(@types/react@19.2.17)(lucide-react@1.20.0(react@19.2.7))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react-router@7.18.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(zod@4.3.6):
     dependencies:
       '@orama/orama': 3.1.18
       estree-util-value-to-estree: 3.5.0
@@ -7821,14 +7821,14 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  fumadocs-mdx@14.3.2(@types/mdast@4.0.4)(@types/mdx@2.0.13)(@types/react@19.2.17)(fumadocs-core@16.10.3(@mdx-js/mdx@3.1.1)(@types/estree-jsx@1.0.5)(@types/hast@3.0.4)(@types/mdast@4.0.4)(@types/react@19.2.17)(lucide-react@1.20.0(react@19.2.7))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react-router@7.18.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(zod@4.3.6))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(vite@6.4.3(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0)):
+  fumadocs-mdx@14.3.2(@types/mdast@4.0.4)(@types/mdx@2.0.13)(@types/react@19.2.17)(fumadocs-core@16.10.4(@mdx-js/mdx@3.1.1)(@types/estree-jsx@1.0.5)(@types/hast@3.0.4)(@types/mdast@4.0.4)(@types/react@19.2.17)(lucide-react@1.20.0(react@19.2.7))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react-router@7.18.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(zod@4.3.6))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(vite@6.4.3(@types/node@22.19.21)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0)):
     dependencies:
       '@mdx-js/mdx': 3.1.1
       '@standard-schema/spec': 1.1.0
       chokidar: 5.0.0
       esbuild: 0.28.0
       estree-util-value-to-estree: 3.5.0
-      fumadocs-core: 16.10.3(@mdx-js/mdx@3.1.1)(@types/estree-jsx@1.0.5)(@types/hast@3.0.4)(@types/mdast@4.0.4)(@types/react@19.2.17)(lucide-react@1.20.0(react@19.2.7))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react-router@7.18.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(zod@4.3.6)
+      fumadocs-core: 16.10.4(@mdx-js/mdx@3.1.1)(@types/estree-jsx@1.0.5)(@types/hast@3.0.4)(@types/mdast@4.0.4)(@types/react@19.2.17)(lucide-react@1.20.0(react@19.2.7))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react-router@7.18.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(zod@4.3.6)
       js-yaml: 4.2.0
       mdast-util-mdx: 3.0.0
       mdast-util-to-markdown: 2.1.2
@@ -7851,7 +7851,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  fumadocs-ui@16.10.3(@tailwindcss/oxide@4.3.1)(@types/mdx@2.0.13)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(fumadocs-core@16.10.3(@mdx-js/mdx@3.1.1)(@types/estree-jsx@1.0.5)(@types/hast@3.0.4)(@types/mdast@4.0.4)(@types/react@19.2.17)(lucide-react@1.20.0(react@19.2.7))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react-router@7.18.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(zod@4.3.6))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(tailwindcss@4.3.1):
+  fumadocs-ui@16.10.4(@tailwindcss/oxide@4.3.1)(@types/mdx@2.0.13)(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(fumadocs-core@16.10.4(@mdx-js/mdx@3.1.1)(@types/estree-jsx@1.0.5)(@types/hast@3.0.4)(@types/mdast@4.0.4)(@types/react@19.2.17)(lucide-react@1.20.0(react@19.2.7))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react-router@7.18.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(zod@4.3.6))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(tailwindcss@4.3.1):
     dependencies:
       '@fuma-translate/react': 1.0.2(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       '@fumadocs/tailwind': 0.0.5(@tailwindcss/oxide@4.3.1)(tailwindcss@4.3.1)
@@ -7866,7 +7866,7 @@ snapshots:
       '@radix-ui/react-slot': 1.3.0(@types/react@19.2.17)(react@19.2.7)
       '@radix-ui/react-tabs': 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       class-variance-authority: 0.7.1
-      fumadocs-core: 16.10.3(@mdx-js/mdx@3.1.1)(@types/estree-jsx@1.0.5)(@types/hast@3.0.4)(@types/mdast@4.0.4)(@types/react@19.2.17)(lucide-react@1.20.0(react@19.2.7))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react-router@7.18.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(zod@4.3.6)
+      fumadocs-core: 16.10.4(@mdx-js/mdx@3.1.1)(@types/estree-jsx@1.0.5)(@types/hast@3.0.4)(@types/mdast@4.0.4)(@types/react@19.2.17)(lucide-react@1.20.0(react@19.2.7))(next@16.2.9(@playwright/test@1.61.0)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react-router@7.18.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(zod@4.3.6)
       lucide-react: 1.20.0(react@19.2.7)
       motion: 12.40.0(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       next-themes: 0.4.6(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -8773,7 +8773,7 @@ snapshots:
 
   monaco-editor@0.55.1:
     dependencies:
-      dompurify: 3.4.10
+      dompurify: 3.4.11
       marked: 14.0.0
 
   motion-dom@12.40.0:
