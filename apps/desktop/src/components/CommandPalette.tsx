@@ -21,16 +21,12 @@ interface CommandPaletteProps {
   open: boolean;
   onClose: () => void;
   sections: NavLike[];
-  /** Route of the retained Ollama chat (the "Ask AI" target). */
-  askAiPath?: string;
 }
 
 /**
- * VS-Code-style command palette. Primary "talk to the app" surface — navigate
- * anywhere and run a few actions. Replaces the standalone AI Chat nav entry;
- * the Ollama chat is preserved and reachable via the "Ask AI" command.
+ * VS-Code-style command palette. Navigate anywhere and run a few actions.
  */
-export function CommandPalette({ open, onClose, sections, askAiPath = "/ai-chat" }: CommandPaletteProps) {
+export function CommandPalette({ open, onClose, sections }: CommandPaletteProps) {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
@@ -42,17 +38,15 @@ export function CommandPalette({ open, onClose, sections, askAiPath = "/ai-chat"
       onClose();
     };
     const list: Command[] = [];
-    list.push({ id: "ask-ai", label: "Ask AI", group: "Actions", hint: "Ollama chat", run: go(askAiPath) });
     list.push({ id: "toggle-theme", label: "Toggle light / dark theme", group: "Actions", run: () => { toggleTheme(); onClose(); } });
     for (const s of sections) {
-      if (s.id === "ai-chat") continue; // the palette itself
       list.push({ id: `nav-${s.id}`, label: `Go to ${s.label}`, group: "Navigate", run: go(s.path) });
       for (const c of s.children ?? []) {
         list.push({ id: `nav-${s.id}-${c.path}`, label: `${s.label}: ${c.label}`, group: "Navigate", run: go(c.path) });
       }
     }
     return list;
-  }, [sections, navigate, onClose, askAiPath]);
+  }, [sections, navigate, onClose]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

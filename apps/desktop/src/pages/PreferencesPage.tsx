@@ -11,8 +11,6 @@ import {
   getObservatoryRefresh, setObservatoryRefresh,
   getMarkdownFont, setMarkdownFont,
   getConfirmSave, setConfirmSave,
-  getMembrainEnabled, setMembrainEnabled,
-  getTerminalsEnabled, setTerminalsEnabled,
   getConfigFilesDetailLevel, setConfigFilesDetailLevel,
   type Density,
   type MarkdownFont,
@@ -144,8 +142,6 @@ export default function PreferencesPage() {
   const [observatoryRefresh, setObservatoryRefreshState] = useState(getObservatoryRefresh);
   const [markdownFont, setMarkdownFontState] = useState(getMarkdownFont);
   const [confirmSave, setConfirmSaveState] = useState(getConfirmSave);
-  const [membrainEnabled, setMembrainEnabledState] = useState(getMembrainEnabled);
-  const [terminalsEnabled, setTerminalsEnabledState] = useState(getTerminalsEnabled);
   const [configFilesDetail, setConfigFilesDetailState] = useState(getConfigFilesDetailLevel);
 
   function handleSetTheme(t: "light" | "dark" | "system") {
@@ -202,16 +198,6 @@ export default function PreferencesPage() {
   function handleSetConfirmSave(value: boolean) {
     setConfirmSave(value);
     setConfirmSaveState(value);
-  }
-
-  function handleSetMembrainEnabled(value: boolean) {
-    setMembrainEnabled(value);
-    setMembrainEnabledState(value);
-  }
-
-  function handleSetTerminalsEnabled(value: boolean) {
-    setTerminalsEnabled(value);
-    setTerminalsEnabledState(value);
   }
 
   function handleSetConfigFilesDetail(level: ConfigFilesDetailLevel) {
@@ -459,54 +445,6 @@ export default function PreferencesPage() {
             ]}
             value={configFilesDetail}
             onChange={handleSetConfigFilesDetail}
-          />
-        </SettingRow>
-      </div>
-
-      {/* ── Labs ───────────────────────────────────────────────── */}
-      <div style={{ marginBottom: "28px" }}>
-        <SectionHeader>Labs</SectionHeader>
-
-        <SettingRow
-          label="Memory"
-          description="Connect to your local membrain knowledge graph. Personal use — requires mem binary."
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              padding: "2px 6px",
-              borderRadius: 4,
-              background: "var(--accent-light)",
-              color: "var(--accent-text)",
-              border: "1px solid var(--accent)",
-            }}>
-              Alpha
-            </span>
-            <Segmented
-              options={[
-                { value: false, label: "Off" },
-                { value: true, label: "On" },
-              ]}
-              value={membrainEnabled}
-              onChange={handleSetMembrainEnabled}
-            />
-          </div>
-        </SettingRow>
-
-        <SettingRow
-          label="Terminals"
-          description="Run and watch agents across a grid of shell terminals. Off by default while it stabilizes."
-        >
-          <Segmented
-            options={[
-              { value: false, label: "Off" },
-              { value: true, label: "On" },
-            ]}
-            value={terminalsEnabled}
-            onChange={handleSetTerminalsEnabled}
           />
         </SettingRow>
       </div>

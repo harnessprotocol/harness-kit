@@ -51,12 +51,6 @@ packages/core/dist/
 # CLI
 apps/cli/dist/
 
-# Board server
-packages/board-server/dist/
-
-# Agent server
-packages/agent-server/dist/
-
 # Marketplace data generator
 packages/marketplace-data/dist/
 

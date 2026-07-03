@@ -104,7 +104,6 @@ jobs:
         run: |
           pnpm --filter @harness-kit/shared build
           pnpm --filter @harness-kit/core build
-          pnpm --filter board-server build
 
       - name: Build desktop app
         run: |

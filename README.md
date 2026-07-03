@@ -8,7 +8,7 @@ Portable configuration for AI coding tools.
 [![Validate](https://img.shields.io/github/actions/workflow/status/harnessprotocol/harness-kit/validate.yml?style=flat-square&label=validate)](https://github.com/harnessprotocol/harness-kit/actions/workflows/validate.yml)
 [![Build](https://img.shields.io/github/actions/workflow/status/harnessprotocol/harness-kit/build.yml?style=flat-square&label=build)](https://github.com/harnessprotocol/harness-kit/actions/workflows/build.yml)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](LICENSE)
-[![Plugins](https://img.shields.io/badge/plugins-16-8A2BE2?style=flat-square)](.claude-plugin/marketplace.json)
+[![Plugins](https://img.shields.io/badge/plugins-17-8A2BE2?style=flat-square)](.claude-plugin/marketplace.json)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](CONTRIBUTING.md)
 
 Works with [Claude Code](https://claude.ai/claude-code) · [Cursor](https://cursor.com) · [GitHub Copilot](https://github.com/features/copilot) · [Codex](https://openai.com/codex) · [OpenCode](https://opencode.ai) · [Windsurf](https://codeium.com/windsurf) · [Gemini CLI](https://github.com/google-gemini/gemini-cli) · [Junie](https://www.jetbrains.com/junie/)
@@ -93,7 +93,7 @@ A few highlights to get started:
 | [`lineage`](plugins/lineage/skills/lineage/README.md) | Column-level data lineage through SQL, Kafka, Spark, and JDBC | `/lineage orders.amount` |
 | [`rubber-ducky`](plugins/rubber-ducky/skills/rubber-ducky/README.md) | Cross-model second opinion on your plans and code before you commit | `/rubber-ducky` |
 
-> 📋 **[Browse all 18 plugins →](.claude-plugin/marketplace.json)** or run `/plugin marketplace browse harness-kit`
+> 📋 **[Browse all 17 plugins →](.claude-plugin/marketplace.json)** or run `/plugin marketplace browse harness-kit`
 
 ### 🌍 Community
 
@@ -141,21 +141,16 @@ See the [Secrets Management guide](website/content/docs/guides/secrets-managemen
 
 ## 🖥️ Desktop App
 
-A Tauri desktop companion that brings the harness concept to a native UI.
+A Tauri desktop control plane for your AI coding harnesses — config console with reverse-import and drift-repair. No external services required for any core path.
 
 - **Sync engine** — compiles `harness.yaml` to platform configs
 - **Plugin explorer** — browse and manage installed plugins
 - **Marketplace** — embedded plugin browser for discovering and installing from the marketplace
-- **Observatory** — live session dashboard with stats and transcripts
-- **Comparator** — structured evaluation workbench: configure harnesses, run side-by-side comparisons, review file diffs, and judge results across a 4-phase workflow
+- **Observatory** — live session dashboard with stats and transcripts, reading local `~/.claude` data
+- **Comparator** — structured evaluation workbench: configure harnesses, run side-by-side comparisons, review file diffs, and judge results across a 4-phase workflow, local-only
 - **Harness editor** — inline editing with custom profiles
-- **Board** — kanban project board with real-time Claude-to-web sync; per-card agent execution via LangGraph with live phase/progress streaming, subtask tracking, steering, pause/resume, and tool-level permission controls
-- **Roadmap** — AI-driven product roadmap with competitor analysis, generated via Claude
 - **Parity** — cross-platform feature parity tracking across AI coding tools
 - **Security** — permissions editor, secrets management, and audit logging
-- **Memory** — [membrain](https://github.com/siracusa5/membrain) MCP server: graph-based agent memory with 11 graph tools, semantic dedup, and token-savings telemetry
-- **Team chat** — IRC-style chat backed by a self-hosted WebSocket relay
-- **AI Chat** — streaming conversations with local LLMs via Ollama, with session persistence and inline model downloads
 
 See [`apps/desktop/`](apps/desktop/) for build instructions. The desktop app is a separate product from the plugin marketplace.
 

@@ -14,8 +14,6 @@ import PluginRow from "./plugins/PluginRow";
 import ImportOverlay from "./plugins/ImportOverlay";
 import ImportBanner, { type ImportStatus } from "./plugins/ImportBanner";
 import UninstallDialog from "./plugins/UninstallDialog";
-import { useChat } from "../../contexts/ChatContext";
-import { emitChatShare } from "../../lib/chat-events";
 
 const PREVIEW_PLUGINS: InstalledPlugin[] = [
   {
@@ -27,16 +25,6 @@ const PREVIEW_PLUGINS: InstalledPlugin[] = [
     category: "Knowledge",
     tags: ["research", "memory"],
     component_counts: { skills: 1, agents: 0, scripts: 2 },
-  },
-  {
-    name: "board",
-    version: "0.2.0",
-    description: "Manage project tasks through a lightweight local Kanban board.",
-    marketplace: "harness-kit",
-    source: "browser-preview://plugins/board",
-    category: "Operate",
-    tags: ["workflow", "tasks"],
-    component_counts: { skills: 1, agents: 0, scripts: 1 },
   },
   {
     name: "harness-share",
@@ -54,7 +42,6 @@ const DESKTOP_RUNTIME_MESSAGE = "Browser preview mode: plugin filesystem actions
 
 export default function PluginsPage() {
   const navigate = useNavigate();
-  const { state: chatState } = useChat();
   const [plugins, setPlugins] = useState<InstalledPlugin[]>([]);
   const [updates, setUpdates] = useState<Record<string, PluginUpdateInfo>>({});
   const [loading, setLoading] = useState(true);
@@ -181,9 +168,6 @@ export default function PluginsPage() {
       }
       setImportStatus({ state: "success", name });
       loadPlugins();
-      if (chatState.status === "in_room") {
-        emitChatShare({ action: "plugin_installed", target: name, detail: null, diff: null, pullable: false });
-      }
     } catch (err) {
       setImportStatus({ state: "error", message: String(err) });
     }
@@ -210,9 +194,6 @@ export default function PluginsPage() {
         await importPluginFromPath(path);
         setImportStatus({ state: "success", name });
         loadPlugins();
-        if (chatState.status === "in_room") {
-          emitChatShare({ action: "plugin_installed", target: name, detail: null, diff: null, pullable: false });
-        }
       } catch (err) {
         setImportStatus({ state: "error", message: String(err) });
       }
@@ -236,9 +217,6 @@ export default function PluginsPage() {
       await uninstallPlugin(pluginName);
       setUninstallTarget(null);
       loadPlugins();
-      if (chatState.status === "in_room") {
-        emitChatShare({ action: "plugin_uninstalled", target: pluginName, detail: null, diff: null, pullable: false });
-      }
     } catch (err) {
       setError(String(err));
       setUninstallTarget(null);

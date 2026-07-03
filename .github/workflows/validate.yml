@@ -193,9 +193,6 @@ jobs:
       - name: Run desktop tests
         run: pnpm --filter harness-kit-desktop test
 
-      - name: Build board-server (mirrors tauri beforeBuildCommand)
-        run: pnpm --filter board-server build
-
       - name: Build desktop frontend
         run: pnpm --filter harness-kit-desktop exec vite build
 
@@ -206,45 +203,6 @@ jobs:
 
       - name: Production-build smoke (blank-screen guard)
         run: pnpm --filter harness-kit-desktop test:e2e:preview
-
-  board-build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: pnpm/action-setup@v6
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build board-server
-        run: pnpm --filter board-server build
-
-      - name: Start board-server (smoke test)
-        run: node packages/board-server/dist/index.js &
-        working-directory: .
-
-      - name: Wait for board-server to be ready
-        run: |
-          for i in $(seq 1 10); do
-            if curl -sf http://localhost:4800/health; then
-              echo "board-server is up"
-              exit 0
-            fi
-            sleep 1
-          done
-          echo "board-server did not start in time"
-          exit 1
-
-      - name: Kill board-server
-        if: always()
-        run: kill $(lsof -ti:4800) 2>/dev/null || true
-
 
   docs-build:
     runs-on: ubuntu-latest
