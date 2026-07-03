@@ -5,6 +5,9 @@ import { compileSkills } from "../../compile/skills.js";
 import { compilePermissions, buildPermissionsText } from "../../compile/permissions.js";
 import { appendMarkerBlock, findMarkerBlock, replaceMarkerBlock } from "../../compile/markers.js";
 import type { AdapterContext, AdapterCapabilities, FilePlan, HarnessAdapter } from "../adapter.js";
+import type { ImportedFragment } from "../../import/types.js";
+import { readInstructionFileAsOpaqueBlock } from "../../import/read-instructions.js";
+import { readMcpConfigFile } from "../../import/read-mcp.js";
 
 const TARGET = "cursor" as const;
 
@@ -13,6 +16,13 @@ const TARGET = "cursor" as const;
 // copied into .cursor/skills — full. Permissions are NOT machine-enforced for
 // cursor (only described in instruction text, with a warning) — partial.
 // Subagents/hooks/model are not emitted at all.
+//
+// Import (WP-2.2): every *.mdc rule file under .cursor/rules/ is read back
+// as an opaque instruction block (frontmatter stripped, never parsed) —
+// full. .cursor/mcp.json is structured JSON, reversed exactly — full.
+// Skills/subagents/hooks/model/permissions have no importable structured
+// artifact for cursor (permissions are prose-only, not machine-readable) —
+// none.
 const capabilities: AdapterCapabilities = {
   export: {
     instructions: "full",
@@ -24,10 +34,10 @@ const capabilities: AdapterCapabilities = {
     model: "none",
   },
   import: {
-    instructions: "none",
+    instructions: "full",
     skills: "none",
     subagents: "none",
-    mcp: "none",
+    mcp: "full",
     permissions: "none",
     hooks: "none",
     model: "none",
@@ -106,9 +116,92 @@ async function detect(ctx: AdapterContext) {
   return detections.find((d) => d.platform === TARGET) ?? null;
 }
 
+/**
+ * Reverse-import: every *.mdc file under .cursor/rules/ → one opaque
+ * instruction block each (frontmatter stripped — it's tooling metadata, not
+ * user prose). `harness.mdc` and `behavioral.mdc` are harness-kit's own
+ * export filenames for the operational/behavioral slots respectively (see
+ * instructions.ts's SLOT_MAPPINGS) — read back into the matching slot so a
+ * round trip doesn't relocate previously-exported behavioral content into
+ * the operational bucket. Any other *.mdc file (a user's own custom cursor
+ * rule, not one harness-kit itself would have written) is a rule cursor
+ * applies generally, so it defaults to the operational slot. .cursor/mcp.json
+ * → mcp-servers.
+ */
+function slotForRuleFile(filename: string): "operational" | "behavioral" {
+  if (filename === "behavioral.mdc") return "behavioral";
+  return "operational";
+}
+
+async function importConfig(ctx: AdapterContext): Promise<ImportedFragment[]> {
+  const fragments: ImportedFragment[] = [];
+  const rulesDir = ".cursor/rules";
+  const fullRulesDir = ctx.fs.joinPath(ctx.projectRoot, rulesDir);
+
+  const blocks = [];
+  const skipped: Array<{ file: string; reason: string }> = [];
+
+  if (await ctx.fs.exists(fullRulesDir)) {
+    let entries: string[] = [];
+    try {
+      entries = await ctx.fs.readDir(fullRulesDir);
+    } catch {
+      entries = [];
+    }
+
+    const mdcFiles = entries.filter((e) => e.endsWith(".mdc")).sort();
+    for (const entry of mdcFiles) {
+      const relPath = ctx.fs.joinPath(rulesDir, entry);
+      const block = await readInstructionFileAsOpaqueBlock(
+        ctx.fs,
+        relPath,
+        slotForRuleFile(entry),
+        "cursor",
+        { stripFrontmatter: true },
+      );
+      if (block) {
+        blocks.push(block);
+      } else {
+        skipped.push({
+          file: relPath,
+          reason: "file exists but contains only frontmatter and/or harness-kit-generated marker blocks — nothing new to import.",
+        });
+      }
+    }
+  }
+
+  if (blocks.length > 0) {
+    fragments.push({
+      domain: "instructions",
+      config: {},
+      warnings: [],
+      instructions: { blocks },
+      skipped,
+    });
+  }
+
+  const { imported: mcpServers, skipped: mcpSkipped } = await readMcpConfigFile(
+    ctx.fs,
+    ".cursor/mcp.json",
+    "cursor",
+  );
+  if (mcpServers) {
+    fragments.push({
+      domain: "mcp",
+      config: {},
+      warnings: [],
+      mcpServers,
+      skipped: mcpSkipped,
+    });
+  }
+
+  return fragments;
+}
+
 export const cursorAdapter: HarnessAdapter = {
   id: "cursor",
   capabilities,
   detect,
   exportConfig,
+  importConfig,
 };

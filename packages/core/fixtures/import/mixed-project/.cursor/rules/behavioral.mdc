@@ -1,0 +1,7 @@
+---
+description: Harness behavioral preferences
+globs: "**/*"
+alwaysApply: true
+---
+
+Ask before deleting any file the user didn't explicitly name.

@@ -6,6 +6,8 @@ import { compilePermissions, buildPermissionsText } from "../../compile/permissi
 import { appendMarkerBlock, findMarkerBlock, replaceMarkerBlock } from "../../compile/markers.js";
 import { AGENTS_MD_TARGETS } from "../target-metadata.js";
 import type { AdapterContext, AdapterCapabilities, FilePlan, HarnessAdapter } from "../adapter.js";
+import type { ImportedFragment } from "../../import/types.js";
+import { readInstructionFileAsOpaqueBlock } from "../../import/read-instructions.js";
 
 /**
  * The AGENTS.md family. Today the compiler treats codex, opencode, windsurf,
@@ -48,12 +50,14 @@ const capabilities: AdapterCapabilities = {
     hooks: "none",
     model: "none",
   },
-  // Reverse-import for this family is instructions-only (per WP-2.1 spec) —
-  // bodies land in WP-2.2, but the declared shape must be instructions-only,
-  // not a blanket "none": AGENTS.md is the one artifact all five tools in
-  // this family share and that a future importer can read back reliably.
+  // Reverse-import for this family is instructions-only (per spec):
+  // AGENTS.md is the one artifact all five tools in this family share and
+  // that this adapter reads back reliably, as a single opaque operational
+  // bucket — never parsed into structured fields. mcp/skills/permissions
+  // vary too much per-tool within the family (or are prose-only) to import
+  // structurally, so those stay "none".
   import: {
-    instructions: "none",
+    instructions: "full",
     skills: "none",
     subagents: "none",
     mcp: "none",
@@ -149,9 +153,55 @@ async function detect(ctx: AdapterContext) {
   return match ?? null;
 }
 
+/**
+ * Reverse-import: AGENTS.md → one opaque instruction block, operational slot
+ * only (per spec: import = instructions-only, single operational bucket —
+ * this family has no behavioral/identity file convention at all, see
+ * instructions.ts's SLOT_MAPPINGS where every non-operational slot maps to
+ * null for this family).
+ */
+async function importConfig(ctx: AdapterContext): Promise<ImportedFragment[]> {
+  const block = await readInstructionFileAsOpaqueBlock(
+    ctx.fs,
+    "AGENTS.md",
+    "operational",
+    "agents-md",
+  );
+
+  if (!block) {
+    const skipped: Array<{ file: string; reason: string }> = [];
+    if (await ctx.fs.exists(ctx.fs.joinPath(ctx.projectRoot, "AGENTS.md"))) {
+      skipped.push({
+        file: "AGENTS.md",
+        reason: "file exists but contains only harness-kit-generated marker blocks — nothing new to import.",
+      });
+    }
+    if (skipped.length === 0) return [];
+    return [
+      {
+        domain: "instructions",
+        config: {},
+        warnings: [],
+        skipped,
+      },
+    ];
+  }
+
+  return [
+    {
+      domain: "instructions",
+      config: {},
+      warnings: [],
+      instructions: { blocks: [block] },
+      skipped: [],
+    },
+  ];
+}
+
 export const agentsMdAdapter: HarnessAdapter = {
   id: "agents-md",
   capabilities,
   detect,
   exportConfig,
+  importConfig,
 };

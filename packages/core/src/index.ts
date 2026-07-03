@@ -107,11 +107,13 @@ export {
 } from "./security/rules.js";
 export { formatSecurityReport } from "./security/report.js";
 
-// ── Adapters (WP-2.1) ─────────────────────────────────────────
+// ── Adapters (WP-2.1 + WP-2.2) ─────────────────────────────────
 //
 // The bidirectional adapter abstraction. `exportConfig` bodies are real and
-// refactored from the pre-existing compile pipeline (byte-identical output);
-// `importConfig`/`diff` are typed but unimplemented — bodies land in WP-2.2+.
+// refactored from the pre-existing compile pipeline (byte-identical output).
+// `importConfig` bodies are now real too (WP-2.2) for all four registered
+// adapters — see each adapter's index.ts and ../import/. `diff` remains
+// typed but unimplemented — lands in a future WP.
 export type {
   AdapterId,
   HarnessDomain,
@@ -138,3 +140,36 @@ export { claudeCodeAdapter } from "./adapters/claude-code/index.js";
 export { cursorAdapter } from "./adapters/cursor/index.js";
 export { copilotAdapter } from "./adapters/copilot/index.js";
 export { agentsMdAdapter } from "./adapters/agents-md/index.js";
+
+// ── Import (WP-2.2): reverse-import engine ────────────────────
+//
+// Scans a machine's existing native tool configs and synthesizes one
+// schema-valid harness.yaml. Node-agnostic — only touches disk through the
+// supplied FsProvider.
+export type {
+  ImportSource,
+  Provenance,
+  OpaqueInstructionBlock,
+  ImportedInstructions,
+  ImportedMcpServers,
+  ImportedPermissions,
+  ImportedSkillRef,
+  ImportedSkills,
+  AdapterImportResult,
+  AdapterFindingsSummary,
+  ImportFindings,
+  ImportConflict,
+  ImportProvenanceMap,
+  ImportProjectResult,
+} from "./import/types.js";
+export type { ImportContext } from "./import/import-project.js";
+export type { SynthesizeResult } from "./import/synthesize.js";
+export { importProject, importMachine, importProjectValidated } from "./import/import-project.js";
+export { synthesize } from "./import/synthesize.js";
+export {
+  stripHarnessMarkerBlocks,
+  isEntirelyMarkerGenerated,
+  readInstructionFileAsOpaqueBlock,
+} from "./import/read-instructions.js";
+export { readMcpConfigFile } from "./import/read-mcp.js";
+export { readClaudeSettingsPermissions } from "./import/read-permissions.js";

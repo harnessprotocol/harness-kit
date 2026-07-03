@@ -5,6 +5,7 @@ import type {
   HarnessConfig,
   TargetPlatform as CompileTargetPlatform,
 } from "../types.js";
+import type { ImportedFragment as ImportedFragmentType } from "../import/types.js";
 
 // ── Adapter identity ──────────────────────────────────────────
 //
@@ -88,13 +89,19 @@ export interface FilePlan {
 
 export type DetectResult = DetectedPlatform;
 
-/** A fragment of harness.yaml reconstructed by reading a tool's native config. Body: WP-2.2. */
-export interface ImportedFragment {
-  domain: HarnessDomain;
-  /** Partial HarnessConfig contribution from this domain — merged by the importer in WP-2.2. */
-  config: Partial<HarnessConfig>;
-  warnings: string[];
-}
+/**
+ * A fragment of harness.yaml reconstructed by reading a tool's native config.
+ *
+ * WP-2.2 fleshes this out for real: the full, provenance-carrying shape lives
+ * in `../import/types.js` (re-exported here) rather than being redefined —
+ * every imported value carries `{ value, source: { adapter, file, span? } }`,
+ * and free-form prose becomes an opaque instruction block, never parsed
+ * fields. `config: Partial<HarnessConfig>` is retained on the type for
+ * backward shape-compatibility but importers leave it empty — the typed
+ * side-channels (`instructions`/`mcpServers`/`permissions`/`skills`) are what
+ * the synthesizer (`../import/synthesize.js`) actually consumes.
+ */
+export type { ImportedFragment } from "../import/types.js";
 
 /** One divergence between harness.yaml and what's actually deployed for a domain. Body: WP-2.2. */
 export interface DriftEntry {
@@ -129,8 +136,14 @@ export interface HarnessAdapter {
    */
   exportConfig(config: HarnessConfig, ctx: AdapterContext): Promise<FilePlan>;
 
-  /** Reverse-import: tool config → harness.yaml fragment. Stub/omitted this WP — bodies land in WP-2.2. */
-  importConfig?(ctx: AdapterContext): Promise<ImportedFragment>;
+  /**
+   * Reverse-import: tool config → harness.yaml fragments (WP-2.2). One
+   * adapter can cover several domains at once (e.g. claude-code reads
+   * instructions + permissions + mcp in one pass), so this returns an array —
+   * zero or more fragments, one per domain actually found. Omitted entirely
+   * on adapters with nothing importable.
+   */
+  importConfig?(ctx: AdapterContext): Promise<ImportedFragmentType[]>;
 
   /** Drift detection: harness.yaml vs deployed tool config. Stub/omitted this WP — bodies land in WP-2.2. */
   diff?(config: HarnessConfig, ctx: AdapterContext): Promise<DriftReport>;

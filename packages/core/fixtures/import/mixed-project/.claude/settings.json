@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": ["Read", "Bash(git *)"],
+    "deny": ["Bash(rm -rf *)"],
+    "additionalDirectories": ["sql/", "migrations/"]
+  }
+}

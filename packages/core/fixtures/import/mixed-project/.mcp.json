@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "postgres": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["mcp-server-postgres"],
+      "env": { "DATABASE_URL": "postgres://localhost/acme" }
+    },
+    "acme-api": {
+      "type": "http",
+      "url": "https://api.acme.example.com/mcp",
+      "headers": { "Authorization": "Bearer sk-FAKE" }
+    }
+  }
+}

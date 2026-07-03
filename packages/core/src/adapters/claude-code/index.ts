@@ -5,6 +5,10 @@ import { compileSkills } from "../../compile/skills.js";
 import { compilePermissions, buildPermissionsText } from "../../compile/permissions.js";
 import { appendMarkerBlock, findMarkerBlock, replaceMarkerBlock } from "../../compile/markers.js";
 import type { AdapterContext, AdapterCapabilities, FilePlan, HarnessAdapter } from "../adapter.js";
+import type { ImportedFragment } from "../../import/types.js";
+import { readInstructionFileAsOpaqueBlock } from "../../import/read-instructions.js";
+import { readMcpConfigFile } from "../../import/read-mcp.js";
+import { readClaudeSettingsPermissions } from "../../import/read-permissions.js";
 
 const TARGET = "claude-code" as const;
 
@@ -13,6 +17,14 @@ const TARGET = "claude-code" as const;
 // (.claude/settings.json) — full. Skills are handled by Claude Code's plugin
 // install system, not file emission here, so "none". Subagents/hooks/model
 // are not emitted at all today.
+//
+// Import (WP-2.2): CLAUDE.md/AGENT.md/SOUL.md are read back as opaque
+// instruction blocks (never parsed into structured fields) — full.
+// .mcp.json is structured JSON, reversed exactly — full. .claude/settings.json
+// permissions are structured JSON, reversed exactly — full. Skills are not
+// read back (no on-disk artifact to reverse — claude-code skills come from
+// the plugin install system, not a file this adapter can inspect) — none.
+// Subagents/hooks/model have no importable artifact yet — none.
 const capabilities: AdapterCapabilities = {
   export: {
     instructions: "full",
@@ -24,11 +36,11 @@ const capabilities: AdapterCapabilities = {
     model: "none",
   },
   import: {
-    instructions: "none",
+    instructions: "full",
     skills: "none",
     subagents: "none",
-    mcp: "none",
-    permissions: "none",
+    mcp: "full",
+    permissions: "full",
     hooks: "none",
     model: "none",
   },
@@ -115,9 +127,78 @@ async function detect(ctx: AdapterContext) {
   return detections.find((d) => d.platform === TARGET) ?? null;
 }
 
+/**
+ * Reverse-import: CLAUDE.md/AGENT.md/SOUL.md → opaque instruction blocks,
+ * .claude/settings.json → permissions, .mcp.json → mcp-servers. Only
+ * structured surfaces are parsed (JSON files); instruction file prose is
+ * NEVER parsed, only stripped of harness-kit's own marker blocks and kept
+ * verbatim.
+ */
+async function importConfig(ctx: AdapterContext): Promise<ImportedFragment[]> {
+  const fragments: ImportedFragment[] = [];
+  const instructionSkipped: Array<{ file: string; reason: string }> = [];
+
+  const instructionFiles: Array<{ path: string; slot: "operational" | "behavioral" | "identity" }> = [
+    { path: "CLAUDE.md", slot: "operational" },
+    { path: "AGENT.md", slot: "behavioral" },
+    { path: "SOUL.md", slot: "identity" },
+  ];
+
+  const blocks = [];
+  for (const { path, slot } of instructionFiles) {
+    const block = await readInstructionFileAsOpaqueBlock(ctx.fs, path, slot, "claude-code");
+    if (block) {
+      blocks.push(block);
+    } else if (await ctx.fs.exists(ctx.fs.joinPath(ctx.projectRoot, path))) {
+      instructionSkipped.push({
+        file: path,
+        reason: "file exists but contains only harness-kit-generated marker blocks — nothing new to import.",
+      });
+    }
+  }
+
+  if (blocks.length > 0) {
+    fragments.push({
+      domain: "instructions",
+      config: {},
+      warnings: [],
+      instructions: { blocks },
+      skipped: instructionSkipped,
+    });
+  }
+
+  const permissions = await readClaudeSettingsPermissions(ctx.fs, ".claude/settings.json", "claude-code");
+  if (permissions) {
+    fragments.push({
+      domain: "permissions",
+      config: {},
+      warnings: [],
+      permissions,
+    });
+  }
+
+  const { imported: mcpServers, skipped: mcpSkipped } = await readMcpConfigFile(
+    ctx.fs,
+    ".mcp.json",
+    "claude-code",
+  );
+  if (mcpServers) {
+    fragments.push({
+      domain: "mcp",
+      config: {},
+      warnings: [],
+      mcpServers,
+      skipped: mcpSkipped,
+    });
+  }
+
+  return fragments;
+}
+
 export const claudeCodeAdapter: HarnessAdapter = {
   id: "claude-code",
   capabilities,
   detect,
   exportConfig,
+  importConfig,
 };

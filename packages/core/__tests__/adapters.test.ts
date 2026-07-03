@@ -90,12 +90,47 @@ describe("adapter capabilities are honestly declared", () => {
     expect(agentsMdAdapter.capabilities.export.permissions).toBe("partial");
   });
 
-  it("no adapter aspirationally claims import support this WP (all 'none')", () => {
-    for (const adapter of ADAPTERS) {
-      for (const support of Object.values(adapter.capabilities.import)) {
-        expect(support).toBe("none");
-      }
-    }
+  it("import (WP-2.2): every adapter imports only structured surfaces it can honestly reverse", () => {
+    // claude-code: CLAUDE.md/AGENT.md/SOUL.md (opaque), .claude/settings.json, .mcp.json — all full.
+    expect(claudeCodeAdapter.capabilities.import).toEqual({
+      instructions: "full",
+      skills: "none",
+      subagents: "none",
+      mcp: "full",
+      permissions: "full",
+      hooks: "none",
+      model: "none",
+    });
+    // cursor: *.mdc rules (opaque) + .cursor/mcp.json — full; permissions is prose-only, not machine-readable.
+    expect(cursorAdapter.capabilities.import).toEqual({
+      instructions: "full",
+      skills: "none",
+      subagents: "none",
+      mcp: "full",
+      permissions: "none",
+      hooks: "none",
+      model: "none",
+    });
+    // copilot: copilot-instructions.md (opaque) + .vscode/mcp.json — full.
+    expect(copilotAdapter.capabilities.import).toEqual({
+      instructions: "full",
+      skills: "none",
+      subagents: "none",
+      mcp: "full",
+      permissions: "none",
+      hooks: "none",
+      model: "none",
+    });
+    // agents-md: AGENTS.md only, single opaque operational bucket — instructions-only.
+    expect(agentsMdAdapter.capabilities.import).toEqual({
+      instructions: "full",
+      skills: "none",
+      subagents: "none",
+      mcp: "none",
+      permissions: "none",
+      hooks: "none",
+      model: "none",
+    });
   });
 
   it("no adapter claims diff support this WP", () => {
@@ -104,9 +139,9 @@ describe("adapter capabilities are honestly declared", () => {
     }
   });
 
-  it("importConfig/diff are not implemented (stubs only)", () => {
+  it("importConfig is implemented for all four adapters (WP-2.2); diff remains a stub", () => {
     for (const adapter of ADAPTERS) {
-      expect(adapter.importConfig).toBeUndefined();
+      expect(adapter.importConfig).toBeInstanceOf(Function);
       expect(adapter.diff).toBeUndefined();
     }
   });

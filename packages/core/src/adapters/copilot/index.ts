@@ -5,6 +5,9 @@ import { compileSkills } from "../../compile/skills.js";
 import { compilePermissions, buildPermissionsText } from "../../compile/permissions.js";
 import { appendMarkerBlock, findMarkerBlock, replaceMarkerBlock } from "../../compile/markers.js";
 import type { AdapterContext, AdapterCapabilities, FilePlan, HarnessAdapter } from "../adapter.js";
+import type { ImportedFragment } from "../../import/types.js";
+import { readInstructionFileAsOpaqueBlock } from "../../import/read-instructions.js";
+import { readMcpConfigFile } from "../../import/read-mcp.js";
 
 const TARGET = "copilot" as const;
 
@@ -13,6 +16,11 @@ const TARGET = "copilot" as const;
 // (.vscode/mcp.json) are emitted — full. Skills copied to .github/skills —
 // full. Permissions are described in instructions only, not enforced —
 // partial. Subagents/hooks/model are not emitted at all.
+//
+// Import (WP-2.2): .github/copilot-instructions.md → opaque instruction
+// block (frontmatter stripped, never parsed) — full. .vscode/mcp.json is
+// structured JSON, reversed exactly — full. Skills/subagents/hooks/model/
+// permissions have no importable structured artifact for copilot — none.
 const capabilities: AdapterCapabilities = {
   export: {
     instructions: "full",
@@ -24,10 +32,10 @@ const capabilities: AdapterCapabilities = {
     model: "none",
   },
   import: {
-    instructions: "none",
+    instructions: "full",
     skills: "none",
     subagents: "none",
-    mcp: "none",
+    mcp: "full",
     permissions: "none",
     hooks: "none",
     model: "none",
@@ -106,9 +114,73 @@ async function detect(ctx: AdapterContext) {
   return detections.find((d) => d.platform === TARGET) ?? null;
 }
 
+/**
+ * Reverse-import: .github/copilot-instructions.md → opaque instruction block
+ * (operational slot only — copilot has no behavioral/identity file of its
+ * own that this adapter reads back; behavioral.instructions.md, when
+ * present, is also read as an additional opaque operational block since it's
+ * still just prose, never parsed). .vscode/mcp.json → mcp-servers.
+ */
+async function importConfig(ctx: AdapterContext): Promise<ImportedFragment[]> {
+  const fragments: ImportedFragment[] = [];
+  const skipped: Array<{ file: string; reason: string }> = [];
+  const blocks = [];
+
+  const instructionFiles = [
+    ".github/copilot-instructions.md",
+    ".github/instructions/behavioral.instructions.md",
+  ];
+
+  for (const relPath of instructionFiles) {
+    const block = await readInstructionFileAsOpaqueBlock(
+      ctx.fs,
+      relPath,
+      "operational",
+      "copilot",
+      { stripFrontmatter: true },
+    );
+    if (block) {
+      blocks.push(block);
+    } else if (await ctx.fs.exists(ctx.fs.joinPath(ctx.projectRoot, relPath))) {
+      skipped.push({
+        file: relPath,
+        reason: "file exists but contains only frontmatter and/or harness-kit-generated marker blocks — nothing new to import.",
+      });
+    }
+  }
+
+  if (blocks.length > 0) {
+    fragments.push({
+      domain: "instructions",
+      config: {},
+      warnings: [],
+      instructions: { blocks },
+      skipped,
+    });
+  }
+
+  const { imported: mcpServers, skipped: mcpSkipped } = await readMcpConfigFile(
+    ctx.fs,
+    ".vscode/mcp.json",
+    "copilot",
+  );
+  if (mcpServers) {
+    fragments.push({
+      domain: "mcp",
+      config: {},
+      warnings: [],
+      mcpServers,
+      skipped: mcpSkipped,
+    });
+  }
+
+  return fragments;
+}
+
 export const copilotAdapter: HarnessAdapter = {
   id: "copilot",
   capabilities,
   detect,
   exportConfig,
+  importConfig,
 };
