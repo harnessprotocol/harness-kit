@@ -106,3 +106,35 @@ export {
   ALL_RULES,
 } from "./security/rules.js";
 export { formatSecurityReport } from "./security/report.js";
+
+// ── Adapters (WP-2.1) ─────────────────────────────────────────
+//
+// The bidirectional adapter abstraction. `exportConfig` bodies are real and
+// refactored from the pre-existing compile pipeline (byte-identical output);
+// `importConfig`/`diff` are typed but unimplemented — bodies land in WP-2.2+.
+export type {
+  AdapterId,
+  HarnessDomain,
+  FeatureSupport,
+  AdapterCapabilities,
+  AdapterContext,
+  HarnessAdapter,
+  FilePlan,
+  DetectResult,
+  ImportedFragment,
+  DriftEntry,
+  DriftReport,
+} from "./adapters/adapter.js";
+export { domainSkippedWarning } from "./adapters/adapter.js";
+export { domainHasContent } from "./adapters/domain-content.js";
+export {
+  ADAPTERS,
+  getAdapter,
+  getAllAdapters,
+  adapterIdForTarget,
+  groupTargetsByAdapter,
+} from "./adapters/registry.js";
+export { claudeCodeAdapter } from "./adapters/claude-code/index.js";
+export { cursorAdapter } from "./adapters/cursor/index.js";
+export { copilotAdapter } from "./adapters/copilot/index.js";
+export { agentsMdAdapter } from "./adapters/agents-md/index.js";

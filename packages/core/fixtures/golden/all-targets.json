@@ -14,6 +14,7 @@
   "warnings": [
     "OpenAI Codex: MCP config is global-only, skipping project-level write",
     "Windsurf: MCP config is global-only, skipping project-level write",
+    "[claude-code] domain 'skills' is not exported by this adapter (capabilities.export.skills = \"none\") — skipped. Requested targets: claude-code.",
     "permissions.tools.deny is not machine-enforceable for target 'codex'.\n  Denied tools: mcp__postgres__drop_table\n  Instructions have been updated to describe the intended permissions,\n  but manual tool configuration is required.",
     "permissions.tools.deny is not machine-enforceable for target 'copilot'.\n  Denied tools: mcp__postgres__drop_table\n  Instructions have been updated to describe the intended permissions,\n  but manual tool configuration is required.",
     "permissions.tools.deny is not machine-enforceable for target 'cursor'.\n  Denied tools: mcp__postgres__drop_table\n  Instructions have been updated to describe the intended permissions,\n  but manual tool configuration is required.",

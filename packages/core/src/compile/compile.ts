@@ -9,12 +9,20 @@ import type {
 } from "../types.js";
 import { parseHarness } from "../parser/parse-harness.js";
 import { validateHarness } from "../schema/validate.js";
-import { compileInstructions } from "./instructions.js";
-import { compileMcpServers } from "./mcp-servers.js";
-import { compileSkills } from "./skills.js";
-import { compilePermissions, buildPermissionsText } from "./permissions.js";
-import { appendMarkerBlock, findMarkerBlock, replaceMarkerBlock } from "./markers.js";
 import { resolveExtends } from "./extends.js";
+import { groupTargetsByAdapter } from "../adapters/registry.js";
+import { domainHasContent } from "../adapters/domain-content.js";
+import { domainSkippedWarning, type AdapterContext, type HarnessDomain } from "../adapters/adapter.js";
+
+const ALL_DOMAINS: HarnessDomain[] = [
+  "instructions",
+  "skills",
+  "subagents",
+  "mcp",
+  "permissions",
+  "hooks",
+  "model",
+];
 
 // ── Source fingerprint ────────────────────────────────────────
 
@@ -126,31 +134,53 @@ export async function compile(
 
   // Stage 5: Resolve targets (already passed in — future: filter by detected binaries)
 
-  // Stage 6: Generate instructions
-  const instrResult = await compileInstructions(resolvedConfig, targets, fs);
-  allFiles.push(...instrResult.files);
-  allWarnings.push(...instrResult.warnings);
+  // Stages 6-7: Generate instructions, MCP config, skills, and permissions by
+  // dispatching to each target's adapter. Grouping preserves the exact same
+  // shared-service calls (compileInstructions/compileMcpServers/compileSkills/
+  // compilePermissions) the pre-refactor pipeline made — same inputs, same
+  // targets subset per call, same bytes out. See adapters/registry.ts and
+  // adapters/{claude-code,cursor,copilot,agents-md}/index.ts.
+  const adapterGroups = groupTargetsByAdapter(targets);
+  const ctx: AdapterContext = {
+    fs,
+    projectRoot: cwd,
+    homeRoot: await fs.homedir(),
+  };
 
-  if (resolvedConfig.permissions) {
-    const permText = buildPermissionsText(resolvedConfig.permissions);
-    if (permText) {
-      appendPermissionsToInstructions(allFiles, resolvedConfig, permText);
+  for (const { adapter, legacyTargets } of adapterGroups) {
+    const groupCtx: AdapterContext = { ...ctx, legacyTargets };
+    const plan = await adapter.exportConfig(resolvedConfig, groupCtx);
+    allFiles.push(...plan.files);
+    allWarnings.push(...plan.warnings);
+    allSkipped.push(...plan.skippedPlugins);
+
+    // AD-3: emitting a domain the adapter marks "none" when harness.yaml has
+    // content for it must produce a structured warning, never throw.
+    for (const domain of ALL_DOMAINS) {
+      if (
+        adapter.capabilities.export[domain] === "none" &&
+        domainHasContent(resolvedConfig, domain)
+      ) {
+        allWarnings.push(
+          domainSkippedWarning(
+            adapter.id,
+            domain,
+            `Requested targets: ${legacyTargets.join(", ")}.`,
+          ),
+        );
+      }
     }
   }
 
-  // Stage 7: Generate MCP config
-  const mcpResult = await compileMcpServers(resolvedConfig, targets, fs);
-  allFiles.push(...mcpResult.files);
-  allWarnings.push(...mcpResult.warnings);
-
-  // Compile skills + permissions
-  const skillsResult = await compileSkills(resolvedConfig, targets, fs);
-  allFiles.push(...skillsResult.files);
-  allSkipped.push(...skillsResult.skippedPlugins);
-
-  const permsResult = await compilePermissions(resolvedConfig, targets, fs);
-  allFiles.push(...permsResult.files);
-  allWarnings.push(...permsResult.warnings);
+  // compileSkills resolves each plugin's SKILL.md content independently of
+  // target (only file *placement* is per-target) — the pre-refactor pipeline
+  // called it exactly once for the whole targets list, so a plugin with no
+  // resolvable SKILL.md produced exactly one skip message per compile() call.
+  // Dispatching per-adapter-group now calls compileSkills once per group, so
+  // dedupe here to preserve that exact one-per-plugin cardinality.
+  const dedupedSkipped = [...new Set(allSkipped)];
+  allSkipped.length = 0;
+  allSkipped.push(...dedupedSkipped);
 
   // Stage 8: Materialize — atomic writes (unless dry-run)
   if (!options.dryRun) {
@@ -191,35 +221,5 @@ async function materializeFiles(
     }
 
     await writeFileAtomic(fullPath, file.content, fs);
-  }
-}
-
-function appendPermissionsToInstructions(
-  files: FileAction[],
-  config: HarnessConfig,
-  permText: string,
-): void {
-  const harnessName = config.metadata?.name ?? "default";
-
-  for (const file of files) {
-    if (file.slot === "operational" && file.platform !== "claude-code") {
-      const existingBlock = findMarkerBlock(file.content, harnessName, "operational");
-      if (existingBlock) {
-        const newContent = existingBlock.content + "\n\n" + permText;
-        file.content = replaceMarkerBlock(
-          file.content,
-          harnessName,
-          "operational",
-          newContent,
-        );
-      } else {
-        file.content = appendMarkerBlock(
-          file.content,
-          harnessName,
-          "permissions",
-          permText,
-        );
-      }
-    }
   }
 }
