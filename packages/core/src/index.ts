@@ -138,6 +138,8 @@ export { claudeCodeAdapter } from "./adapters/claude-code/index.js";
 export { cursorAdapter } from "./adapters/cursor/index.js";
 export { copilotAdapter } from "./adapters/copilot/index.js";
 export { agentsMdAdapter } from "./adapters/agents-md/index.js";
+export { opencodeAdapter } from "./adapters/opencode/index.js";
+export { piAdapter } from "./adapters/pi/index.js";
 
 // ── Import (WP-2.2): reverse-import engine ────────────────────
 //
