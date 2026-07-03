@@ -31,7 +31,16 @@ export class TauriFsProvider implements FsProvider {
   }
 
   async exists(path: string): Promise<boolean> {
-    return exists(path);
+    try {
+      return await exists(path);
+    } catch {
+      // Tauri's fs plugin throws "forbidden path" for paths outside the
+      // capability fs:scope. Platform detection probes many candidate paths
+      // (some intentionally outside scope, e.g. ~/opencode.json) — for those,
+      // "unreadable" means "not present here", not a fatal error. Returning
+      // false keeps detection robust instead of crashing the whole scan.
+      return false;
+    }
   }
 
   async mkdir(path: string, options?: { recursive?: boolean }): Promise<void> {

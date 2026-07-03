@@ -97,6 +97,25 @@ export function FleetView({
     );
   }
 
+  if (error && !report) {
+    return (
+      <div className="hk-page">
+        <div className="hk-page-head">
+          <div>
+            <h1 className="hk-page-title">Fleet</h1>
+            <p className="hk-page-subtitle">
+              Every harness on this machine, and how far each has drifted from your source of truth.
+            </p>
+          </div>
+          <Button variant="primary" onClick={onScan}>
+            Retry scan
+          </Button>
+        </div>
+        <div className="hk-page-error">Scan failed: {error}</div>
+      </div>
+    );
+  }
+
   const allNotInstalled =
     report &&
     report.rows.length > 0 &&
