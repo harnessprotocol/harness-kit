@@ -1,17 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import React from "react";
 import { MemoryRouter } from "react-router-dom";
 import AppLayout, { NAV_SECTIONS } from "../AppLayout";
 import { NAV_PATHS } from "../../hooks/useGlobalShortcuts";
-import { ServiceHealthProvider } from "../../contexts/ServiceHealthContext";
 
 // ── Mocks ─────────────────────────────────────────────────────
-
-vi.mock("../../contexts/ChatContext", () => ({
-  useChat: () => ({ state: { status: "disconnected" }, isOpen: false, setOpen: vi.fn(), unreadCount: 0 }),
-  ChatProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
 
 const mockStartDragging = vi.fn().mockResolvedValue(undefined);
 vi.mock("@tauri-apps/api/window", () => ({
@@ -31,8 +24,6 @@ vi.mock("../../lib/preferences", async (importOriginal) => {
     ...actual,
     initPreferences: vi.fn(),
     getHiddenSections: vi.fn(() => new Set()),
-    getMembrainEnabled: vi.fn(() => true),
-    getTerminalsEnabled: vi.fn(() => true),
   };
 });
 
@@ -54,11 +45,9 @@ beforeEach(() => {
 
 function renderLayout() {
   return render(
-    <ServiceHealthProvider>
-      <MemoryRouter initialEntries={["/harness/plugins"]}>
-        <AppLayout />
-      </MemoryRouter>
-    </ServiceHealthProvider>,
+    <MemoryRouter initialEntries={["/harness/plugins"]}>
+      <AppLayout />
+    </MemoryRouter>,
   );
 }
 
@@ -96,20 +85,6 @@ describe("sidebar renders all nav sections", () => {
     for (const section of NAV_SECTIONS) {
       expect(screen.getByText(section.label)).toBeInTheDocument();
     }
-  });
-});
-
-describe("ServiceHealthProvider requirement", () => {
-  it("throws when ServiceHealthProvider is absent", () => {
-    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
-    expect(() => {
-      render(
-        <MemoryRouter initialEntries={["/harness/plugins"]}>
-          <AppLayout />
-        </MemoryRouter>,
-      );
-    }).toThrow("useServiceHealth must be used within ServiceHealthProvider");
-    spy.mockRestore();
   });
 });
 

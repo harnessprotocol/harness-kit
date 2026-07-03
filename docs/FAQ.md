@@ -28,7 +28,7 @@ A prompt tells Claude what to do. A SKILL.md specifies how: step ordering, input
 
 The primary install path targets Claude Code's plugin marketplace. But harness-kit has a few other interfaces:
 
-- **Desktop app** (`apps/desktop/`) — a Tauri native app with a full GUI for managing harness configs, browsing plugins, running the observatory, comparator, board, roadmap, and more
+- **Desktop app** (`apps/desktop/`) — a Tauri native app with a full GUI for managing harness configs, browsing plugins, running the observatory, comparator, and more
 - **CLI** (`harness-kit` command) — `validate`, `compile`, `detect`, and `init` commands for working with `harness.yaml` from any terminal
 - **SKILL.md files** are plain markdown — any tool that reads prompt files can use them. VS Code Copilot reads `CLAUDE.md` natively via `chat.useClaudeMdFile`
 

@@ -6,15 +6,9 @@ export const NAV_PATHS = [
   "/marketplace",
   "/observatory",
   "/agents",
-  "/terminals",
   "/comparator",
   "/security/permissions",
   "/parity",
-  "/board",
-  "/roadmap",
-  "/ai-chat",
-  "/memory",
-  "/services",
 ] as const;
 
 interface Options {

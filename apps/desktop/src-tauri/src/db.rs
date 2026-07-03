@@ -108,30 +108,6 @@ pub fn init(data_dir: &Path) -> Result<Db, String> {
         );
         CREATE INDEX IF NOT EXISTS idx_parity_drift_ack ON parity_drift(acknowledged);
 
-        CREATE TABLE IF NOT EXISTS chat_rooms (
-            code        TEXT PRIMARY KEY,
-            name        TEXT,
-            nickname    TEXT NOT NULL,
-            server_url  TEXT NOT NULL,
-            joined_at   TEXT NOT NULL,
-            left_at     TEXT
-        );
-
-        CREATE TABLE IF NOT EXISTS chat_messages (
-            id          TEXT PRIMARY KEY,
-            room_code   TEXT NOT NULL REFERENCES chat_rooms(code) ON DELETE CASCADE,
-            type        TEXT NOT NULL,
-            nickname    TEXT NOT NULL,
-            timestamp   TEXT NOT NULL,
-            body        TEXT,
-            action      TEXT,
-            target      TEXT,
-            detail      TEXT,
-            event_type  TEXT
-        );
-
-        CREATE INDEX IF NOT EXISTS idx_chat_msg_room ON chat_messages(room_code, timestamp);
-
         CREATE TABLE IF NOT EXISTS evaluation_sessions (
             id              TEXT PRIMARY KEY,
             comparison_id   TEXT NOT NULL REFERENCES comparisons(id) ON DELETE CASCADE,
@@ -155,25 +131,6 @@ pub fn init(data_dir: &Path) -> Result<Db, String> {
         CREATE INDEX IF NOT EXISTS idx_pairwise_votes_comp ON pairwise_votes(comparison_id);
         CREATE INDEX IF NOT EXISTS idx_pairwise_votes_session ON pairwise_votes(session_id);
         CREATE UNIQUE INDEX IF NOT EXISTS idx_pairwise_votes_unique ON pairwise_votes(session_id, dimension);
-
-        CREATE TABLE IF NOT EXISTS ai_sessions (
-            id          TEXT PRIMARY KEY,
-            title       TEXT,
-            model       TEXT,
-            created_at  TEXT NOT NULL,
-            updated_at  TEXT NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS idx_ai_sessions_updated ON ai_sessions(updated_at);
-        CREATE INDEX IF NOT EXISTS idx_ai_sessions_created ON ai_sessions(created_at);
-
-        CREATE TABLE IF NOT EXISTS ai_messages (
-            id          TEXT PRIMARY KEY,
-            session_id  TEXT NOT NULL REFERENCES ai_sessions(id) ON DELETE CASCADE,
-            role        TEXT NOT NULL,
-            content     TEXT NOT NULL,
-            timestamp   TEXT NOT NULL
-        );
-        CREATE INDEX IF NOT EXISTS idx_ai_messages_session ON ai_messages(session_id, timestamp);
     ",
     )
     .map_err(|e| format!("Failed to run schema: {}", e))?;
@@ -191,33 +148,6 @@ pub fn init(data_dir: &Path) -> Result<Db, String> {
         let msg = e.to_string();
         if !msg.contains("duplicate column name") {
             return Err(format!("Migration failed (task_type): {}", msg));
-        }
-    }
-
-    // Migration: extend ai_messages for tool-calling support
-    for (col, ddl) in &[
-        ("metadata_json", "ALTER TABLE ai_messages ADD COLUMN metadata_json TEXT;"),
-        ("tool_name", "ALTER TABLE ai_messages ADD COLUMN tool_name TEXT;"),
-        ("tool_call_id", "ALTER TABLE ai_messages ADD COLUMN tool_call_id TEXT;"),
-    ] {
-        if let Err(e) = conn.execute_batch(ddl) {
-            let msg = e.to_string();
-            if !msg.contains("duplicate column name") {
-                return Err(format!("Migration failed (ai_messages.{}): {}", col, msg));
-            }
-        }
-    }
-
-    // Migration: extend ai_sessions with visible system prompt and context source config
-    for (col, ddl) in &[
-        ("system_prompt", "ALTER TABLE ai_sessions ADD COLUMN system_prompt TEXT;"),
-        ("context_sources_json", "ALTER TABLE ai_sessions ADD COLUMN context_sources_json TEXT;"),
-    ] {
-        if let Err(e) = conn.execute_batch(ddl) {
-            let msg = e.to_string();
-            if !msg.contains("duplicate column name") {
-                return Err(format!("Migration failed (ai_sessions.{}): {}", col, msg));
-            }
         }
     }
 

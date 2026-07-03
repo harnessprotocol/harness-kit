@@ -12,8 +12,8 @@ const LIB_RS = `
         // Plugins
         commands::plugins::list_installed_plugins,
         commands::plugins::uninstall_plugin,
-        // Board server
-        board_server::board_server_start,
+        // Parity
+        commands::parity::run_parity_scan,
     ])
     .setup(|app| {
 `;
@@ -24,7 +24,7 @@ const CAPS = JSON.stringify({
     "fs:allow-read-text-file", // namespaced plugin perm — must be ignored
     "allow-list-installed-plugins",
     "allow-uninstall-plugin",
-    "allow-board-server-start",
+    "allow-run-parity-scan",
     { identifier: "shell:allow-execute", allow: [] }, // namespaced object — ignored
   ],
 });
@@ -33,8 +33,8 @@ describe("capability-coverage parser", () => {
   it("extracts registered command names from generate_handler!", () => {
     const registered = parseRegisteredCommands(LIB_RS);
     expect([...registered].sort()).toEqual([
-      "board_server_start",
       "list_installed_plugins",
+      "run_parity_scan",
       "uninstall_plugin",
     ]);
   });
@@ -42,8 +42,8 @@ describe("capability-coverage parser", () => {
   it("extracts only bare allow-* permissions (ignores namespaced)", () => {
     const allowed = parseAllowedCommands(CAPS);
     expect([...allowed].sort()).toEqual([
-      "board-server-start",
       "list-installed-plugins",
+      "run-parity-scan",
       "uninstall-plugin",
     ]);
   });
