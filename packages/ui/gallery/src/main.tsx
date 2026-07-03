@@ -1,12 +1,13 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
-import "./app.css";
+import { injectTokens } from "./tokens-bootstrap";
 import "@harness-kit/ui/styles.css";
-import "@fontsource-variable/space-grotesk";
+import { Gallery } from "./Gallery";
+
+injectTokens();
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <App />
+    <Gallery />
   </React.StrictMode>
 );

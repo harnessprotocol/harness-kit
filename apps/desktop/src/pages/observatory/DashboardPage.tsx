@@ -167,7 +167,7 @@ function useReducedMotion() {
 }
 
 function getAccentColor() {
-  return getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#635bff";
+  return getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#2E9BE6";
 }
 
 // ── Stat card ────────────────────────────────────────────────

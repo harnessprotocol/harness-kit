@@ -17,7 +17,7 @@ export default function ImportOverlay({ visible }: ImportOverlayProps) {
             position: "fixed",
             inset: 0,
             zIndex: 100,
-            background: "rgba(91,80,232,0.08)",
+            background: "var(--accent-light)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
