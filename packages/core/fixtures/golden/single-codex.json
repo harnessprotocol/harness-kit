@@ -1,0 +1,24 @@
+{
+  "fixture": "valid-harness.yaml",
+  "targets": [
+    "codex"
+  ],
+  "harnessName": "my-harness",
+  "warnings": [
+    "OpenAI Codex: MCP config is global-only, skipping project-level write",
+    "permissions.tools.deny is not machine-enforceable for target 'codex'.\n  Denied tools: mcp__postgres__drop_table\n  Instructions have been updated to describe the intended permissions,\n  but manual tool configuration is required."
+  ],
+  "skippedPlugins": [
+    "explain: skipped (no SKILL.md found — checked inline declaration, source dir, and legacy paths)",
+    "research: skipped (no SKILL.md found — checked inline declaration, source dir, and legacy paths)"
+  ],
+  "files": [
+    {
+      "path": "AGENTS.md",
+      "platform": "codex",
+      "slot": "operational",
+      "action": "create",
+      "content": "<!-- BEGIN harness:my-harness:operational -->\n## Commands\n- Build: `pnpm build`\n- Test: `pnpm test`\n\n\n## Tool Permissions\n\nThis harness specifies the following tool permissions:\n- **Allowed**: Read, Glob, Grep, Write, Edit\n- **Denied**: mcp__postgres__drop_table\n\nPlease configure your tool's permission settings to match these constraints.\n<!-- END harness:my-harness:operational -->\n"
+    }
+  ]
+}

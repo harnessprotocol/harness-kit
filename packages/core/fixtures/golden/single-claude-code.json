@@ -1,0 +1,42 @@
+{
+  "fixture": "valid-harness.yaml",
+  "targets": [
+    "claude-code"
+  ],
+  "harnessName": "my-harness",
+  "warnings": [],
+  "skippedPlugins": [
+    "explain: skipped (no SKILL.md found — checked inline declaration, source dir, and legacy paths)",
+    "research: skipped (no SKILL.md found — checked inline declaration, source dir, and legacy paths)"
+  ],
+  "files": [
+    {
+      "path": ".claude/settings.json",
+      "platform": "claude-code",
+      "slot": "permissions",
+      "action": "create",
+      "content": "{\n  \"permissions\": {\n    \"allow\": [\n      \"Read\",\n      \"Glob\",\n      \"Grep\",\n      \"Write\",\n      \"Edit\"\n    ],\n    \"deny\": [\n      \"mcp__postgres__drop_table\"\n    ],\n    \"additionalDirectories\": [\n      \"sql/\",\n      \"migrations/\"\n    ]\n  }\n}\n"
+    },
+    {
+      "path": ".mcp.json",
+      "platform": "claude-code",
+      "slot": "mcp-servers",
+      "action": "create",
+      "content": "{\n  \"mcpServers\": {\n    \"postgres\": {\n      \"type\": \"stdio\",\n      \"command\": \"uvx\",\n      \"args\": [\n        \"mcp-server-postgres\",\n        \"${DB_CONNECTION_STRING}\"\n      ]\n    }\n  }\n}\n"
+    },
+    {
+      "path": "AGENT.md",
+      "platform": "claude-code",
+      "slot": "behavioral",
+      "action": "create",
+      "content": "<!-- BEGIN harness:my-harness:behavioral -->\nBe concise. Prefer short answers.\n\n<!-- END harness:my-harness:behavioral -->\n"
+    },
+    {
+      "path": "CLAUDE.md",
+      "platform": "claude-code",
+      "slot": "operational",
+      "action": "create",
+      "content": "<!-- BEGIN harness:my-harness:operational -->\n## Commands\n- Build: `pnpm build`\n- Test: `pnpm test`\n\n<!-- END harness:my-harness:operational -->\n"
+    }
+  ]
+}
