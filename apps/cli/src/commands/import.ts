@@ -12,6 +12,41 @@ interface ImportFlags {
   force?: boolean;
 }
 
+// ── First-run sprawl summary ─────────────────────────────────────
+//
+// Terminal analogue of the desktop onboarding "sprawl reveal": before we
+// write anything, tell the user what config sprawl we found across their
+// tools, count-forward and without editorializing. Derived entirely from
+// the findings/provenance the import engine already computed — no
+// rescanning, no re-synthesis, just a rollup view over the same data
+// formatFindingsSummary() renders in detail below.
+
+function formatSprawlSummary(result: ImportProjectResult): string {
+  const { findings, provenance } = result;
+  const lines: string[] = [];
+
+  const detectedAdapters = findings.adapters.filter((a) => a.detected || a.found.length > 0);
+  const totalFiles = new Set(
+    detectedAdapters.flatMap((a) => a.found.map((f) => `${a.adapter}:${f.file}`)),
+  ).size;
+  const totalConflicts = provenance.conflicts.length;
+
+  lines.push(chalk.bold("Sprawl summary:"));
+  lines.push(
+    `  ${detectedAdapters.length} harness${detectedAdapters.length === 1 ? "" : "es"} found, ` +
+      `${totalFiles} config file${totalFiles === 1 ? "" : "s"}` +
+      (totalConflicts > 0
+        ? `, ${totalConflicts} conflict${totalConflicts === 1 ? "" : "s"} to reconcile`
+        : ""),
+  );
+  if (detectedAdapters.length > 0) {
+    const names = detectedAdapters.map((a) => a.adapter).join(", ");
+    lines.push(chalk.dim(`  harnesses: ${names}`));
+  }
+
+  return lines.join("\n");
+}
+
 // ── Findings summary formatting ────────────────────────────────
 
 function formatFindingsSummary(findings: ImportFindings, driftNote = ""): string {
@@ -135,6 +170,16 @@ export async function importCommand(flags: ImportFlags): Promise<void> {
   const projectFs = new NodeFsProvider(cwd);
   const projectName = basename(cwd);
 
+  const outPath = resolve("harness.yaml");
+  let existing = false;
+  try {
+    await access(outPath);
+    existing = true;
+  } catch {
+    // Doesn't exist — fine.
+  }
+  const firstRun = !existing;
+
   let projectResult: ImportProjectResult;
   try {
     projectResult = await importProjectValidated({
@@ -150,6 +195,16 @@ export async function importCommand(flags: ImportFlags): Promise<void> {
 
   console.log(chalk.bold(`Scanning ${cwd}`));
   console.log("");
+
+  // First-run sprawl reveal: before writing anything, show the count-forward
+  // rollup (the terminal analogue of the desktop onboarding reveal). Only
+  // shown when harness.yaml doesn't exist yet — on subsequent runs (re-import,
+  // --force) the detailed findings dump below is enough.
+  if (firstRun) {
+    console.log(formatSprawlSummary(projectResult));
+    console.log("");
+  }
+
   console.log(formatFindingsSummary(projectResult.findings));
 
   let finalYaml = projectResult.harnessYaml;
@@ -182,15 +237,6 @@ export async function importCommand(flags: ImportFlags): Promise<void> {
 
   const conflictsText = formatConflicts(projectResult);
   if (conflictsText) console.log(conflictsText);
-
-  const outPath = resolve("harness.yaml");
-  let existing = false;
-  try {
-    await access(outPath);
-    existing = true;
-  } catch {
-    // Doesn't exist — fine.
-  }
 
   if (flags.dryRun) {
     console.log("");
