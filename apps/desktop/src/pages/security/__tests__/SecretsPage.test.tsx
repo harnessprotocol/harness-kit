@@ -185,7 +185,7 @@ describe("SecretsPage — secrets list", () => {
     renderPage();
     await screen.findByText("ANTHROPIC_API_KEY");
     // The status badge is a <span>, distinct from the "Update" action button
-    const setSpan = document.querySelector("span[style*='rgba(22']");
+    const setSpan = document.querySelector("span[style*='var(--success']");
     expect(setSpan?.textContent).toBe("Set");
   });
 
