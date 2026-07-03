@@ -124,8 +124,6 @@ export type {
   FilePlan,
   DetectResult,
   ImportedFragment,
-  DriftEntry,
-  DriftReport,
 } from "./adapters/adapter.js";
 export { domainSkippedWarning } from "./adapters/adapter.js";
 export { domainHasContent } from "./adapters/domain-content.js";
@@ -173,3 +171,32 @@ export {
 } from "./import/read-instructions.js";
 export { readMcpConfigFile } from "./import/read-mcp.js";
 export { readClaudeSettingsPermissions } from "./import/read-permissions.js";
+
+// ── Fix (WP-2.3): drift diff + repair engine ──────────────────
+//
+// Detects when a tool's deployed config has diverged from harness.yaml,
+// classifies why (missing / modified-inside-markers / user-modified-outside
+// / orphaned), and builds a dry-run FixPlan that repairs everything except
+// user-authored content outside harness marker blocks — that is NEVER
+// auto-touched. Node-agnostic — only touches disk through FsProvider;
+// applyFix's caller supplies the backup timestamp (core never calls
+// Date.now()).
+export type {
+  DriftClass,
+  DriftItem,
+  DriftReport,
+  FixPlan,
+  FixFileChange,
+  FixOperation,
+  ApplyFixResult,
+} from "./fix/types.js";
+export type { ApplyFixContext } from "./fix/apply.js";
+export { detectDrift } from "./fix/index.js";
+export { buildFixPlan } from "./fix/plan.js";
+export { applyFix } from "./fix/apply.js";
+export {
+  detectInstructionDrift,
+  classifyInstructionFile,
+  stripAllMarkerBlocks,
+  toDriftReport,
+} from "./fix/detect.js";

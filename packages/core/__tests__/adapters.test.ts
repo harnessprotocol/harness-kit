@@ -133,16 +133,16 @@ describe("adapter capabilities are honestly declared", () => {
     });
   });
 
-  it("no adapter claims diff support this WP", () => {
+  it("every adapter claims diff support (WP-2.3)", () => {
     for (const adapter of ADAPTERS) {
-      expect(adapter.capabilities.diff).toBe(false);
+      expect(adapter.capabilities.diff).toBe(true);
     }
   });
 
-  it("importConfig is implemented for all four adapters (WP-2.2); diff remains a stub", () => {
+  it("importConfig and diff are both implemented for all four adapters", () => {
     for (const adapter of ADAPTERS) {
       expect(adapter.importConfig).toBeInstanceOf(Function);
-      expect(adapter.diff).toBeUndefined();
+      expect(adapter.diff).toBeInstanceOf(Function);
     }
   });
 });

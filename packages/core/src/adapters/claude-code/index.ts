@@ -4,11 +4,12 @@ import { compileMcpServers } from "../../compile/mcp-servers.js";
 import { compileSkills } from "../../compile/skills.js";
 import { compilePermissions, buildPermissionsText } from "../../compile/permissions.js";
 import { appendMarkerBlock, findMarkerBlock, replaceMarkerBlock } from "../../compile/markers.js";
-import type { AdapterContext, AdapterCapabilities, FilePlan, HarnessAdapter } from "../adapter.js";
+import type { AdapterContext, AdapterCapabilities, FilePlan, HarnessAdapter, DriftReport } from "../adapter.js";
 import type { ImportedFragment } from "../../import/types.js";
 import { readInstructionFileAsOpaqueBlock } from "../../import/read-instructions.js";
 import { readMcpConfigFile } from "../../import/read-mcp.js";
 import { readClaudeSettingsPermissions } from "../../import/read-permissions.js";
+import { detectInstructionDrift, toDriftReport } from "../../fix/detect.js";
 
 const TARGET = "claude-code" as const;
 
@@ -44,7 +45,7 @@ const capabilities: AdapterCapabilities = {
     hooks: "none",
     model: "none",
   },
-  diff: false,
+  diff: true,
   scopes: ["project"],
 };
 
@@ -195,10 +196,24 @@ async function importConfig(ctx: AdapterContext): Promise<ImportedFragment[]> {
   return fragments;
 }
 
+/**
+ * Drift detection (WP-2.3): compares CLAUDE.md/AGENT.md/SOUL.md's harness
+ * marker blocks against what compile() would currently produce. Scoped to
+ * the `instructions` domain — the only domain this adapter emits via
+ * harness-kit's own marker-block convention (mcp/permissions are structured
+ * JSON files this adapter owns wholesale on write, not marker-delimited, so
+ * they're out of scope for marker-based drift classification).
+ */
+async function diff(config: HarnessConfig, ctx: AdapterContext): Promise<DriftReport> {
+  const items = await detectInstructionDrift(ctx.fs, config, [TARGET], "claude-code");
+  return toDriftReport(items);
+}
+
 export const claudeCodeAdapter: HarnessAdapter = {
   id: "claude-code",
   capabilities,
   detect,
   exportConfig,
   importConfig,
+  diff,
 };

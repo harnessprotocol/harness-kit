@@ -4,10 +4,11 @@ import { compileMcpServers } from "../../compile/mcp-servers.js";
 import { compileSkills } from "../../compile/skills.js";
 import { compilePermissions, buildPermissionsText } from "../../compile/permissions.js";
 import { appendMarkerBlock, findMarkerBlock, replaceMarkerBlock } from "../../compile/markers.js";
-import type { AdapterContext, AdapterCapabilities, FilePlan, HarnessAdapter } from "../adapter.js";
+import type { AdapterContext, AdapterCapabilities, FilePlan, HarnessAdapter, DriftReport } from "../adapter.js";
 import type { ImportedFragment } from "../../import/types.js";
 import { readInstructionFileAsOpaqueBlock } from "../../import/read-instructions.js";
 import { readMcpConfigFile } from "../../import/read-mcp.js";
+import { detectInstructionDrift, toDriftReport } from "../../fix/detect.js";
 
 const TARGET = "copilot" as const;
 
@@ -40,7 +41,7 @@ const capabilities: AdapterCapabilities = {
     hooks: "none",
     model: "none",
   },
-  diff: false,
+  diff: true,
   scopes: ["project"],
 };
 
@@ -177,10 +178,21 @@ async function importConfig(ctx: AdapterContext): Promise<ImportedFragment[]> {
   return fragments;
 }
 
+/**
+ * Drift detection (WP-2.3): copilot-instructions.md's marker block vs
+ * compiled output. Scoped to `instructions` — the only marker-delimited
+ * domain this adapter owns.
+ */
+async function diff(config: HarnessConfig, ctx: AdapterContext): Promise<DriftReport> {
+  const items = await detectInstructionDrift(ctx.fs, config, [TARGET], "copilot");
+  return toDriftReport(items);
+}
+
 export const copilotAdapter: HarnessAdapter = {
   id: "copilot",
   capabilities,
   detect,
   exportConfig,
   importConfig,
+  diff,
 };

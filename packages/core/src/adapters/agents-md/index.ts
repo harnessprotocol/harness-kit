@@ -5,9 +5,10 @@ import { compileSkills } from "../../compile/skills.js";
 import { compilePermissions, buildPermissionsText } from "../../compile/permissions.js";
 import { appendMarkerBlock, findMarkerBlock, replaceMarkerBlock } from "../../compile/markers.js";
 import { AGENTS_MD_TARGETS } from "../target-metadata.js";
-import type { AdapterContext, AdapterCapabilities, FilePlan, HarnessAdapter } from "../adapter.js";
+import type { AdapterContext, AdapterCapabilities, FilePlan, HarnessAdapter, DriftReport } from "../adapter.js";
 import type { ImportedFragment } from "../../import/types.js";
 import { readInstructionFileAsOpaqueBlock } from "../../import/read-instructions.js";
+import { detectInstructionDrift, toDriftReport } from "../../fix/detect.js";
 
 /**
  * The AGENTS.md family. Today the compiler treats codex, opencode, windsurf,
@@ -65,7 +66,7 @@ const capabilities: AdapterCapabilities = {
     hooks: "none",
     model: "none",
   },
-  diff: false,
+  diff: true,
   scopes: ["project"],
 };
 
@@ -198,10 +199,26 @@ async function importConfig(ctx: AdapterContext): Promise<ImportedFragment[]> {
   ];
 }
 
+/**
+ * Drift detection (WP-2.3): AGENTS.md's single operational marker block vs
+ * compiled output. Every legacy target in the family shares the same file,
+ * so `detectInstructionDrift`'s own per-path dedup means this naturally
+ * reports one item per drift, not one per legacy target sharing the file.
+ */
+async function diff(config: HarnessConfig, ctx: AdapterContext): Promise<DriftReport> {
+  const requested = ctx.legacyTargets
+    ? LEGACY_TARGETS.filter((t) => ctx.legacyTargets!.includes(t))
+    : LEGACY_TARGETS;
+  if (requested.length === 0) return toDriftReport([]);
+  const items = await detectInstructionDrift(ctx.fs, config, requested, "agents-md");
+  return toDriftReport(items);
+}
+
 export const agentsMdAdapter: HarnessAdapter = {
   id: "agents-md",
   capabilities,
   detect,
   exportConfig,
   importConfig,
+  diff,
 };

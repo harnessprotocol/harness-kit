@@ -6,6 +6,7 @@ import type {
   TargetPlatform as CompileTargetPlatform,
 } from "../types.js";
 import type { ImportedFragment as ImportedFragmentType } from "../import/types.js";
+import type { DriftReport as DriftReportType } from "../fix/types.js";
 
 // ── Adapter identity ──────────────────────────────────────────
 //
@@ -103,20 +104,12 @@ export type DetectResult = DetectedPlatform;
  */
 export type { ImportedFragment } from "../import/types.js";
 
-/** One divergence between harness.yaml and what's actually deployed for a domain. Body: WP-2.2. */
-export interface DriftEntry {
-  domain: HarnessDomain;
-  path: string;
-  status: "ok" | "drift" | "missing";
-  detail?: string;
-}
-
-/** Body: WP-2.2. */
-export interface DriftReport {
-  adapter: AdapterId;
-  entries: DriftEntry[];
-  hasDrift: boolean;
-}
+/**
+ * Full drift report shape, implemented in `../fix/types.js` (WP-2.3).
+ * Re-exported here so adapter authors importing from `adapter.js` see the
+ * real, load-bearing shape rather than a stub.
+ */
+export type { DriftClass, DriftItem, DriftReport, FixPlan, FixFileChange, FixOperation } from "../fix/types.js";
 
 // ── The adapter interface ─────────────────────────────────────
 
@@ -145,8 +138,13 @@ export interface HarnessAdapter {
    */
   importConfig?(ctx: AdapterContext): Promise<ImportedFragmentType[]>;
 
-  /** Drift detection: harness.yaml vs deployed tool config. Stub/omitted this WP — bodies land in WP-2.2. */
-  diff?(config: HarnessConfig, ctx: AdapterContext): Promise<DriftReport>;
+  /**
+   * Drift detection: harness.yaml vs deployed tool config for this adapter's
+   * targets. Real bodies land in WP-2.3 (`../fix/`) — see each adapter's
+   * index.ts, which delegates to `../fix/detect.js`'s shared
+   * `detectInstructionDrift` so detection logic isn't duplicated per adapter.
+   */
+  diff?(config: HarnessConfig, ctx: AdapterContext): Promise<DriftReportType>;
 }
 
 // ── Shared helper: build a "domain has content but adapter can't export it" warning ──
