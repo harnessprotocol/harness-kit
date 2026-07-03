@@ -90,21 +90,15 @@ export default function HomePage() {
       <section className="relative overflow-hidden border-b border-fd-border/30">
         {/* Copy block */}
         <div className="mx-auto max-w-3xl px-5 pb-8 pt-14 text-center sm:px-6 sm:pb-10 sm:pt-20">
-          <div
-            className="mb-4 inline-block rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em]"
-            style={{ background: 'var(--accent-light)', color: 'var(--accent-fg)' }}
-          >
-            Draft copy — pending sign-off
-          </div>
           <h1 className="font-display mb-5 text-4xl font-bold leading-tight tracking-tight text-fd-foreground sm:text-5xl">
-            You already have five{' '}
+            The control plane for your{' '}
             <br className="hidden sm:block" />
-            AI tool configs. Now you have one.
+            AI coding harnesses.
           </h1>
-          <p className="mx-auto mb-8 max-w-lg text-lg leading-relaxed text-fd-muted-foreground">
-            Run <code className="rounded bg-fd-accent px-1.5 py-0.5 font-mono text-base">harness import</code> and
-            harness-kit reads the Claude Code, Cursor, Copilot, and other configs already on your machine — no
-            authoring, no starting over — then reconciles them into one portable harness.yaml.
+          <p className="mx-auto mb-8 max-w-xl text-lg leading-relaxed text-fd-muted-foreground">
+            harness-kit reads the Claude Code, Cursor, Copilot, and other configs you already have, shows you
+            where they disagree, and reconciles them into one{' '}
+            <code className="rounded bg-fd-accent px-1.5 py-0.5 font-mono text-base">harness.yaml</code> you control.
           </p>
           <div className="mb-8 flex justify-center">
             <div className="flex flex-col items-center gap-0">
