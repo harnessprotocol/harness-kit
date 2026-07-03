@@ -200,3 +200,23 @@ export {
   stripAllMarkerBlocks,
   toDriftReport,
 } from "./fix/detect.js";
+
+// ── Fleet (WP-2.4): cross-scope status aggregation ────────────
+//
+// Composes existing detect() + detectDrift() across every registered
+// adapter and every caller-supplied scope (project root, or the user's
+// global config root) into one serializable FleetReport. No new detection
+// or drift-classification logic — pure aggregation. This is the stable
+// contract the CLI's `status` command and the desktop Fleet page consume.
+export type {
+  FleetScopeKind,
+  FleetScope,
+  FleetStatus,
+  FleetCell,
+  FleetRow,
+  FleetSummaryCounts,
+  FleetReport,
+  FleetScopeInput,
+  BuildFleetReportContext,
+} from "./fleet/index.js";
+export { buildFleetReport } from "./fleet/index.js";
