@@ -37,8 +37,8 @@ export default function ImportBanner({ status, onDismiss }: ImportBannerProps) {
             alignItems: "center",
             justifyContent: "space-between",
             ...(status.state === "importing" ? {
-              background: "rgba(91,80,232,0.08)",
-              border: "1px solid rgba(91,80,232,0.2)",
+              background: "var(--accent-light)",
+              border: "1px solid var(--accent-glow)",
               color: "var(--accent-text)",
             } : status.state === "success" ? {
               background: "rgba(22,163,74,0.08)",

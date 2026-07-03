@@ -28,6 +28,7 @@ const tokens = {
   borderSubtle: "var(--border-subtle)",
   accent: "var(--accent)",
   accentFg: "var(--accent-fg)",
+  accentLight: "var(--accent-light)",
   success: "var(--success)",
   danger: "var(--danger)",
 };
@@ -127,9 +128,9 @@ function AgentCard({ agent, onAddToComparator }: {
             borderRadius: "8px",
             background: agent.protocol === "http"
               ? "rgba(37,99,235,0.12)"
-              : "rgba(91,80,232,0.12)",
+              : tokens.accentLight,
             color: agent.protocol === "http" ? "#2563eb" : tokens.accent,
-            border: `1px solid ${agent.protocol === "http" ? "rgba(37,99,235,0.2)" : "rgba(91,80,232,0.2)"}`,
+            border: `1px solid ${agent.protocol === "http" ? "rgba(37,99,235,0.2)" : "var(--accent-glow)"}`,
             flexShrink: 0,
           }}
         >
@@ -207,7 +208,7 @@ function AgentCard({ agent, onAddToComparator }: {
               borderRadius: "6px",
               border: `1px solid ${agent.addToComparator ? tokens.accent : tokens.borderSubtle}`,
               background: agent.addToComparator
-                ? "rgba(91,80,232,0.1)"
+                ? tokens.accentLight
                 : tokens.bgElevated,
               color: agent.addToComparator ? tokens.accent : tokens.fgSubtle,
               cursor: agent.addToComparator ? "pointer" : "not-allowed",

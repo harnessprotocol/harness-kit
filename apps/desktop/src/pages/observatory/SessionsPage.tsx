@@ -78,7 +78,7 @@ function ProjectPill({ name }: { name: string }) {
 
 const ROLE_COLORS: Record<string, string> = {
   user: "var(--status-in-progress)",
-  assistant: "#5b50e8",
+  assistant: "var(--accent)",
   system: "#636366",
   result: "#0d9488",
 };
@@ -129,7 +129,7 @@ function TranscriptRow({ entry }: { entry: TranscriptEntry }) {
           fontSize: "9px",
           padding: "1px 6px",
           borderRadius: "4px",
-          background: "rgba(91,80,232,0.10)",
+          background: "var(--accent-light)",
           color: "var(--accent-text)",
           flexShrink: 0,
           alignSelf: "center",
@@ -260,7 +260,7 @@ function SessionDetail({
           <span>{transcript.modelsUsed.map(shortModelName).join(", ")}</span>
           {transcript.subagentCount > 0 && (
             <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-              <span style={{ color: "#5b50e8" }}>{transcript.subagentCount}</span> subagent{transcript.subagentCount > 1 ? "s" : ""}
+              <span style={{ color: "var(--accent)" }}>{transcript.subagentCount}</span> subagent{transcript.subagentCount > 1 ? "s" : ""}
             </span>
           )}
           {transcript.truncated && (

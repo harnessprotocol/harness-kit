@@ -501,7 +501,7 @@ function AllowedToolsSection({
                 alignItems: "center", gap: "6px",
                 padding: "5px 8px", marginBottom: "3px",
                 borderRadius: "6px",
-                border: "1px solid rgba(99,102,241,0.2)",
+                border: "1px solid var(--accent-glow)",
                 background: "var(--accent-light)",
               }}>
                 <span style={{
@@ -1370,7 +1370,7 @@ export default function PermissionsPage() {
                               padding: "2px 8px",
                               borderRadius: "4px",
                               border: `1px solid ${profile === p ? "var(--accent)" : "var(--border-base)"}`,
-                              background: profile === p ? "rgba(91,80,232,0.12)" : "transparent",
+                              background: profile === p ? "var(--accent-light)" : "transparent",
                               color: profile === p ? "var(--accent-text)" : "var(--fg-muted)",
                               cursor: "pointer",
                             }}

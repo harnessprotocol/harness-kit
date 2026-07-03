@@ -683,9 +683,9 @@ function HarnessCard({
               letterSpacing: "0.05em",
               padding: "1px 5px",
               borderRadius: "3px",
-              background: "rgba(99, 102, 241, 0.15)",
-              color: "rgb(129, 140, 248)",
-              border: "1px solid rgba(99, 102, 241, 0.3)",
+              background: "var(--accent-light)",
+              color: "var(--accent-text)",
+              border: "1px solid var(--accent-glow)",
               textTransform: "uppercase" as const,
             }}
             title="ACP compatible — uses structured JSON-RPC events"

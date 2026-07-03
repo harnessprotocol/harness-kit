@@ -333,7 +333,7 @@ export default function PluginsPage() {
 
       {runtimeNotice && (
         <div style={{
-          background: "rgba(91,80,232,0.08)", border: "1px solid rgba(139,92,246,0.35)",
+          background: "var(--accent-light)", border: "1px solid var(--accent-glow)",
           borderRadius: "8px", padding: "10px 14px", fontSize: "12px", color: "var(--fg-muted)",
           marginBottom: "12px",
         }}>

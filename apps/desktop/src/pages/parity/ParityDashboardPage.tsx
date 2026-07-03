@@ -609,7 +609,7 @@ export default function ParityDashboardPage() {
                             display: "flex", flexDirection: "column",
                             alignItems: "center", justifyContent: "center",
                             position: "relative",
-                            background: selected ? "rgba(99, 102, 241, 0.08)" : "transparent",
+                            background: selected ? "var(--accent-light)" : "transparent",
                             cursor: interactive ? "pointer" : "default",
                             userSelect: "none",
                             opacity: !h.available && filterInstalled === false ? 0.35 : 1,
