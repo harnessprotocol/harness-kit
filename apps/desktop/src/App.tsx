@@ -6,7 +6,7 @@ import { ObservatoryProvider } from "./hooks/useObservatoryData";
 
 // Lazy-load all pages so the initial bundle only includes the shell + router
 const PreferencesPage = lazy(() => import("./pages/PreferencesPage"));
-const WelcomeScreen = lazy(() => import("./components/WelcomeScreen"));
+const OnboardingPage = lazy(() => import("./pages/onboarding/OnboardingPage"));
 const HarnessFilePage = lazy(() => import("./pages/harness/HarnessFilePage"));
 const PluginsPage = lazy(() => import("./pages/harness/PluginsPage"));
 const HooksPage = lazy(() => import("./pages/harness/HooksPage"));
@@ -27,11 +27,12 @@ const FleetPage = lazy(() => import("./pages/fleet/FleetPage"));
 const DriftPage = lazy(() => import("./pages/drift/DriftPage"));
 const AgentsPage = lazy(() => import("./pages/agents/AgentsPage"));
 
-// Dev-only screenshot fixtures (DESIGN.md §8 verification) — render Fleet/Drift's
-// presentational views with static data, no Tauri/core backend required. Not
-// linked from any nav; only mounted below when import.meta.env.DEV is true.
+// Dev-only screenshot fixtures (DESIGN.md §8 verification) — render Fleet/Drift/
+// Onboarding's presentational views with static data, no Tauri/core backend
+// required. Not linked from any nav; only mounted below when import.meta.env.DEV is true.
 const FleetFixture = lazy(() => import("./pages/__fixtures__/FleetFixture"));
 const DriftFixture = lazy(() => import("./pages/__fixtures__/DriftFixture"));
+const OnboardingFixture = lazy(() => import("./pages/__fixtures__/OnboardingFixture"));
 
 function DefaultRedirect() {
   const defaultSection = getDefaultSection();
@@ -64,8 +65,8 @@ export default function App() {
       <ObservatoryProvider>
         {showWelcome && (
           <Suspense fallback={null}>
-            <WelcomeScreen
-              onDismiss={() => {
+            <OnboardingPage
+              onFinish={() => {
                 setWelcomeSeen();
                 setShowWelcome(false);
               }}
@@ -78,6 +79,7 @@ export default function App() {
               <>
                 <Route path="__fixtures__/fleet" element={<FleetFixture />} />
                 <Route path="__fixtures__/drift" element={<DriftFixture />} />
+                <Route path="__fixtures__/onboarding" element={<OnboardingFixture />} />
               </>
             )}
             <Route path="/" element={<AppLayout />}>
