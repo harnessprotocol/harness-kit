@@ -26,8 +26,36 @@ fn detect_git_branch() -> Option<String> {
     }
 }
 
+/// GUI apps launched from Finder inherit only a minimal PATH, so the Tauri
+/// shell plugin can't find CLIs installed under ~/.local/bin, Homebrew, npm,
+/// etc. Resolve the user's real login-shell PATH once and merge it into the
+/// process environment so allow-listed probes (claude, codex, ...) resolve.
+fn ensure_shell_path() {
+    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
+    if let Ok(output) = std::process::Command::new(&shell)
+        .args(["-lc", "printf %s \"$PATH\""])
+        .output()
+    {
+        if output.status.success() {
+            let login_path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !login_path.is_empty() {
+                let current = std::env::var("PATH").unwrap_or_default();
+                let mut seen = std::collections::HashSet::new();
+                let merged: Vec<String> = login_path
+                    .split(':')
+                    .chain(current.split(':'))
+                    .filter(|p| !p.is_empty() && seen.insert(p.to_string()))
+                    .map(|p| p.to_string())
+                    .collect();
+                std::env::set_var("PATH", merged.join(":"));
+            }
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    ensure_shell_path();
     let data_dir = dirs::home_dir()
         .expect("No home directory")
         .join(".harness-kit");

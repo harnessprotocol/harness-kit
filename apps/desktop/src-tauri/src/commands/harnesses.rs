@@ -31,7 +31,7 @@ pub async fn detect_harnesses(app: AppHandle) -> Result<Vec<HarnessInfo>, String
         ("claude", "Claude Code", "claude", vec![
             "claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5",
         ]),
-        ("cursor-agent", "Cursor Agent", "agent", vec![]),
+        ("cursor-agent", "Cursor Agent", "cursor-agent", vec![]),
         ("copilot", "GitHub Copilot", "copilot", vec![
             "claude-sonnet-4", "gpt-5",
         ]),
@@ -44,17 +44,12 @@ pub async fn detect_harnesses(app: AppHandle) -> Result<Vec<HarnessInfo>, String
     ];
 
     let mut harnesses = Vec::new();
-    // GUI apps launched from Finder don't inherit the user's interactive shell
-    // PATH, so a bare `claude --version` can't find Homebrew/npm/etc. binaries.
-    // Probe through a login shell so the real PATH is loaded first.
-    let user_shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
 
     for (id, name, check_cmd, default_models) in &definitions {
         let shell = app.shell();
-        let probe = format!("{} --version", check_cmd);
         let output = shell
-            .command(&user_shell)
-            .args(vec!["-lc", probe.as_str()])
+            .command(check_cmd)
+            .args(vec!["--version"])
             .output()
             .await;
 
