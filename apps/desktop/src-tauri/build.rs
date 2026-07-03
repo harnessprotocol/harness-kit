@@ -109,17 +109,13 @@ fn main() {
                 "read_harness_file",
                 "write_harness_file",
                 "scan_claude_config",
-                // Harness detection (used by Parity)
+                // Harness detection (used by Fleet)
                 "detect_harnesses",
-                // Parity
-                "run_parity_scan",
-                "get_parity_snapshot",
-                "get_parity_drift",
-                "acknowledge_drift",
-                "get_parity_history",
-                "create_config_file",
-                "add_to_parity_baseline",
+                // Drift (capability probing + acknowledgement persistence)
                 "probe_harness_capabilities",
+                "acknowledge_drift_item",
+                "unacknowledge_drift_item",
+                "get_acknowledged_drift_items",
                 // Feedback
                 "get_system_info",
                 "submit_feedback",

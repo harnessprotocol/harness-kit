@@ -17,7 +17,8 @@
         { "path": "$HOME/.claude" },
         { "path": "$HOME/.claude/**" },
         { "path": "$HOME/.harness-kit" },
-        { "path": "$HOME/.harness-kit/**" }
+        { "path": "$HOME/.harness-kit/**" },
+        { "path": "$HOME/**" }
       ]
     },
     "dialog:default",
@@ -128,14 +129,10 @@
     "allow-record-harness-launch-result",
     "allow-get-harness-health",
     "allow-detect-harnesses",
-    "allow-run-parity-scan",
-    "allow-get-parity-snapshot",
-    "allow-get-parity-drift",
-    "allow-acknowledge-drift",
-    "allow-get-parity-history",
-    "allow-create-config-file",
-    "allow-add-to-parity-baseline",
     "allow-probe-harness-capabilities",
+    "allow-acknowledge-drift-item",
+    "allow-unacknowledge-drift-item",
+    "allow-get-acknowledged-drift-items",
     "allow-get-system-info",
     "allow-submit-feedback"
   ]

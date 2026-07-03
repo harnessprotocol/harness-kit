@@ -6,6 +6,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "@harness-kit/ui-gallery", "dev"],
       "port": 4900
+    },
+    {
+      "name": "desktop",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "harness-kit-desktop", "dev"],
+      "port": 1422
     }
   ]
 }

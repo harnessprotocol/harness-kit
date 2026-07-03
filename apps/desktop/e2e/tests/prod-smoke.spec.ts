@@ -14,6 +14,7 @@ import { test, expect } from "../fixtures";
  * Those richer assertions live in the dev-server config (test:e2e).
  */
 const ROUTES = [
+  "/fleet",
   "/harness/plugins",
   "/harness/hooks",
   "/harness/claude-md",
@@ -24,6 +25,7 @@ const ROUTES = [
   "/security/permissions",
   "/security/secrets",
   "/board",
+  "/drift",
 ];
 
 // Known-broken in the production bundle (NOT in dev mode, which is why daily use hides it):
@@ -32,7 +34,7 @@ const ROUTES = [
 // non-Node bundle, so the route trips the error boundary. Quarantined here so the guard
 // still protects every other route; remove from this list once the crypto import is
 // browser-safe (tracked separately).
-const KNOWN_BROKEN_ROUTES = ["/harness/file", "/harness/sync", "/comparator", "/parity"];
+const KNOWN_BROKEN_ROUTES = ["/harness/file", "/harness/sync", "/comparator"];
 
 const ERROR_BOUNDARY_TEXT = "Something went wrong loading this page.";
 

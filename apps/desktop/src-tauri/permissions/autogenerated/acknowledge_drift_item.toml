@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-acknowledge-drift-item"
+description = "Enables the acknowledge_drift_item command without any pre-configured scope."
+commands.allow = ["acknowledge_drift_item"]
+
+[[permission]]
+identifier = "deny-acknowledge-drift-item"
+description = "Denies the acknowledge_drift_item command without any pre-configured scope."
+commands.deny = ["acknowledge_drift_item"]

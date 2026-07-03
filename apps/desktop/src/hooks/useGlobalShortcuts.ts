@@ -2,13 +2,14 @@ import { useEffect } from "react";
 import type { NavigateFunction } from "react-router-dom";
 
 export const NAV_PATHS = [
+  "/fleet",
   "/harness/plugins",
+  "/drift",
   "/marketplace",
   "/observatory",
   "/agents",
   "/comparator",
   "/security/permissions",
-  "/parity",
 ] as const;
 
 interface Options {

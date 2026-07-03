@@ -23,8 +23,15 @@ const ComparatorPage = lazy(() => import("./pages/comparator/ComparatorPage"));
 const PermissionsPage = lazy(() => import("./pages/security/PermissionsPage"));
 const SecretsPage = lazy(() => import("./pages/security/SecretsPage"));
 const AuditLogPage = lazy(() => import("./pages/security/AuditLogPage"));
-const ParityDashboardPage = lazy(() => import("./pages/parity/ParityDashboardPage"));
+const FleetPage = lazy(() => import("./pages/fleet/FleetPage"));
+const DriftPage = lazy(() => import("./pages/drift/DriftPage"));
 const AgentsPage = lazy(() => import("./pages/agents/AgentsPage"));
+
+// Dev-only screenshot fixtures (DESIGN.md §8 verification) — render Fleet/Drift's
+// presentational views with static data, no Tauri/core backend required. Not
+// linked from any nav; only mounted below when import.meta.env.DEV is true.
+const FleetFixture = lazy(() => import("./pages/__fixtures__/FleetFixture"));
+const DriftFixture = lazy(() => import("./pages/__fixtures__/DriftFixture"));
 
 function DefaultRedirect() {
   const defaultSection = getDefaultSection();
@@ -67,9 +74,18 @@ export default function App() {
         )}
         <BrowserRouter>
           <Routes>
+            {import.meta.env.DEV && (
+              <>
+                <Route path="__fixtures__/fleet" element={<FleetFixture />} />
+                <Route path="__fixtures__/drift" element={<DriftFixture />} />
+              </>
+            )}
             <Route path="/" element={<AppLayout />}>
-            {/* Harness Manager */}
+            {/* Fleet — home */}
             <Route index element={<DefaultRedirect />} />
+            <Route path="fleet" element={<FleetPage />} />
+
+            {/* Harness Manager */}
             <Route path="harness/file" element={<HarnessFilePage />} />
             <Route path="harness/plugins" element={<PluginsPage />} />
             <Route path="harness/plugins/:pluginName" element={<PluginExplorerPage />} />
@@ -96,8 +112,8 @@ export default function App() {
             <Route path="security/secrets" element={<SecretsPage />} />
             <Route path="security/audit" element={<AuditLogPage />} />
 
-            {/* Parity */}
-            <Route path="parity" element={<ParityDashboardPage />} />
+            {/* Drift */}
+            <Route path="drift" element={<DriftPage />} />
 
             {/* Preferences */}
             <Route path="preferences" element={<PreferencesPage />} />

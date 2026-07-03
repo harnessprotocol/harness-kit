@@ -2211,16 +2211,10 @@
       "description": "Permission identifier",
       "oneOf": [
         {
-          "description": "Enables the acknowledge_drift command without any pre-configured scope.",
+          "description": "Enables the acknowledge_drift_item command without any pre-configured scope.",
           "type": "string",
-          "const": "allow-acknowledge-drift",
-          "markdownDescription": "Enables the acknowledge_drift command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the add_to_parity_baseline command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-add-to-parity-baseline",
-          "markdownDescription": "Enables the add_to_parity_baseline command without any pre-configured scope."
+          "const": "allow-acknowledge-drift-item",
+          "markdownDescription": "Enables the acknowledge_drift_item command without any pre-configured scope."
         },
         {
           "description": "Enables the apply_security_preset command without any pre-configured scope.",
@@ -2257,12 +2251,6 @@
           "type": "string",
           "const": "allow-compute-live-stats",
           "markdownDescription": "Enables the compute_live_stats command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the create_config_file command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-create-config-file",
-          "markdownDescription": "Enables the create_config_file command without any pre-configured scope."
         },
         {
           "description": "Enables the create_evaluation_session command without any pre-configured scope.",
@@ -2335,6 +2323,12 @@
           "type": "string",
           "const": "allow-export-plugin-to-folder",
           "markdownDescription": "Enables the export_plugin_to_folder command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_acknowledged_drift_items command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-acknowledged-drift-items",
+          "markdownDescription": "Enables the get_acknowledged_drift_items command without any pre-configured scope."
         },
         {
           "description": "Enables the get_comparator_analytics command without any pre-configured scope.",
@@ -2413,24 +2407,6 @@
           "type": "string",
           "const": "allow-get-panel-diffs",
           "markdownDescription": "Enables the get_panel_diffs command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the get_parity_drift command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-get-parity-drift",
-          "markdownDescription": "Enables the get_parity_drift command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the get_parity_history command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-get-parity-history",
-          "markdownDescription": "Enables the get_parity_history command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the get_parity_snapshot command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-get-parity-snapshot",
-          "markdownDescription": "Enables the get_parity_snapshot command without any pre-configured scope."
         },
         {
           "description": "Enables the get_system_info command without any pre-configured scope.",
@@ -2619,12 +2595,6 @@
           "markdownDescription": "Enables the reveal_evaluation_session command without any pre-configured scope."
         },
         {
-          "description": "Enables the run_parity_scan command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-run-parity-scan",
-          "markdownDescription": "Enables the run_parity_scan command without any pre-configured scope."
-        },
-        {
           "description": "Enables the save_comparison command without any pre-configured scope.",
           "type": "string",
           "const": "allow-save-comparison",
@@ -2733,6 +2703,12 @@
           "markdownDescription": "Enables the trigger_rebuild command without any pre-configured scope."
         },
         {
+          "description": "Enables the unacknowledge_drift_item command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-unacknowledge-drift-item",
+          "markdownDescription": "Enables the unacknowledge_drift_item command without any pre-configured scope."
+        },
+        {
           "description": "Enables the uninstall_plugin command without any pre-configured scope.",
           "type": "string",
           "const": "allow-uninstall-plugin",
@@ -2799,16 +2775,10 @@
           "markdownDescription": "Enables the write_plugin_file command without any pre-configured scope."
         },
         {
-          "description": "Denies the acknowledge_drift command without any pre-configured scope.",
+          "description": "Denies the acknowledge_drift_item command without any pre-configured scope.",
           "type": "string",
-          "const": "deny-acknowledge-drift",
-          "markdownDescription": "Denies the acknowledge_drift command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the add_to_parity_baseline command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-add-to-parity-baseline",
-          "markdownDescription": "Denies the add_to_parity_baseline command without any pre-configured scope."
+          "const": "deny-acknowledge-drift-item",
+          "markdownDescription": "Denies the acknowledge_drift_item command without any pre-configured scope."
         },
         {
           "description": "Denies the apply_security_preset command without any pre-configured scope.",
@@ -2845,12 +2815,6 @@
           "type": "string",
           "const": "deny-compute-live-stats",
           "markdownDescription": "Denies the compute_live_stats command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the create_config_file command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-create-config-file",
-          "markdownDescription": "Denies the create_config_file command without any pre-configured scope."
         },
         {
           "description": "Denies the create_evaluation_session command without any pre-configured scope.",
@@ -2923,6 +2887,12 @@
           "type": "string",
           "const": "deny-export-plugin-to-folder",
           "markdownDescription": "Denies the export_plugin_to_folder command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_acknowledged_drift_items command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-acknowledged-drift-items",
+          "markdownDescription": "Denies the get_acknowledged_drift_items command without any pre-configured scope."
         },
         {
           "description": "Denies the get_comparator_analytics command without any pre-configured scope.",
@@ -3001,24 +2971,6 @@
           "type": "string",
           "const": "deny-get-panel-diffs",
           "markdownDescription": "Denies the get_panel_diffs command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the get_parity_drift command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-get-parity-drift",
-          "markdownDescription": "Denies the get_parity_drift command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the get_parity_history command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-get-parity-history",
-          "markdownDescription": "Denies the get_parity_history command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the get_parity_snapshot command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-get-parity-snapshot",
-          "markdownDescription": "Denies the get_parity_snapshot command without any pre-configured scope."
         },
         {
           "description": "Denies the get_system_info command without any pre-configured scope.",
@@ -3207,12 +3159,6 @@
           "markdownDescription": "Denies the reveal_evaluation_session command without any pre-configured scope."
         },
         {
-          "description": "Denies the run_parity_scan command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-run-parity-scan",
-          "markdownDescription": "Denies the run_parity_scan command without any pre-configured scope."
-        },
-        {
           "description": "Denies the save_comparison command without any pre-configured scope.",
           "type": "string",
           "const": "deny-save-comparison",
@@ -3319,6 +3265,12 @@
           "type": "string",
           "const": "deny-trigger-rebuild",
           "markdownDescription": "Denies the trigger_rebuild command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the unacknowledge_drift_item command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-unacknowledge-drift-item",
+          "markdownDescription": "Denies the unacknowledge_drift_item command without any pre-configured scope."
         },
         {
           "description": "Denies the uninstall_plugin command without any pre-configured scope.",

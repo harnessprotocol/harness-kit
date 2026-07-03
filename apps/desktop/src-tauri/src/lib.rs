@@ -155,17 +155,15 @@ pub fn run() {
             commands::sync::sync_create_backup,
             commands::sync::sync_list_backups,
             commands::sync::sync_restore_backup,
-            // Harness detection (used by Parity)
+            // Harness detection (used by Fleet)
             commands::harnesses::detect_harnesses,
-            // Parity
-            commands::parity::run_parity_scan,
-            commands::parity::get_parity_snapshot,
-            commands::parity::get_parity_drift,
-            commands::parity::acknowledge_drift,
-            commands::parity::get_parity_history,
-            commands::parity::create_config_file,
-            commands::parity::add_to_parity_baseline,
+            // Drift (capability probing + acknowledgement persistence;
+            // drift computation itself lives in packages/core, run from the
+            // Drift page — see commands/parity.rs module docs)
             commands::parity::probe_harness_capabilities,
+            commands::parity::acknowledge_drift_item,
+            commands::parity::unacknowledge_drift_item,
+            commands::parity::get_acknowledged_drift_items,
             // Feedback
             commands::feedback::get_system_info,
             commands::feedback::submit_feedback,

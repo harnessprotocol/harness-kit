@@ -68,7 +68,7 @@ export function setDensity(density: Density) {
 // ── Default Section ──────────────────────────────────────────
 
 export function getDefaultSection(): string {
-  return localStorage.getItem(KEY_DEFAULT_SECTION) ?? "/harness/plugins";
+  return localStorage.getItem(KEY_DEFAULT_SECTION) ?? "/fleet";
 }
 
 export function setDefaultSection(path: string) {
