@@ -1,4 +1,5 @@
-import { createHash } from "node:crypto";
+import { sha256 } from "@noble/hashes/sha256";
+import { bytesToHex } from "@noble/hashes/utils";
 import type { FsProvider } from "../fs-provider.js";
 import type {
   CompileOptions,
@@ -22,12 +23,16 @@ export function computeSourceFingerprint(
   yamlContent: string,
   config: HarnessConfig,
 ): string {
-  const hash = createHash("sha256");
-  hash.update(yamlContent);
+  const hash = sha256.create();
+  hash.update(new TextEncoder().encode(yamlContent));
   for (const plugin of config.plugins ?? []) {
-    hash.update(plugin.name + plugin.source + (plugin.version ?? ""));
+    hash.update(
+      new TextEncoder().encode(
+        plugin.name + plugin.source + (plugin.version ?? ""),
+      ),
+    );
   }
-  return hash.digest("hex");
+  return bytesToHex(hash.digest());
 }
 
 // ── Fingerprint cache ─────────────────────────────────────────

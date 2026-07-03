@@ -1,4 +1,5 @@
-import { createHash } from "node:crypto";
+import { sha256 } from "@noble/hashes/sha256";
+import { bytesToHex } from "@noble/hashes/utils";
 import type { FsProvider } from "../fs-provider.js";
 import type { HarnessConfig, TargetPlatform } from "../types.js";
 import { findMarkerBlock } from "./markers.js";
@@ -9,7 +10,7 @@ import { TARGETS } from "./targets.js";
 // ── Low-level utilities ──────────────────────────────────────
 
 export function computeFileHash(content: string): string {
-  return createHash("sha256").update(content).digest("hex");
+  return bytesToHex(sha256(new TextEncoder().encode(content)));
 }
 
 /**
@@ -63,7 +64,7 @@ export async function directorySignature(
   const records: string[] = [];
   await collectRecords(rootDir, rootDir, fs, records, 0, maxDepth);
   records.sort();
-  return createHash("sha256").update(records.join("\n")).digest("hex");
+  return bytesToHex(sha256(new TextEncoder().encode(records.join("\n"))));
 }
 
 async function collectRecords(
