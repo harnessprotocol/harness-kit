@@ -12,6 +12,12 @@
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["--filter", "harness-kit-desktop", "dev"],
       "port": 1422
+    },
+    {
+      "name": "website",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "harness-kit-docs", "dev"],
+      "port": 3000
     }
   ]
 }
