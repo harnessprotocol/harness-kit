@@ -2,8 +2,8 @@ import type { Component, ComponentType } from "@harness-kit/shared";
 
 export function TrustBadge({ tier }: { tier: Component["trust_tier"] }) {
   const colors: Record<Component["trust_tier"], { bg: string; color: string }> = {
-    official: { bg: "rgba(59,130,246,0.12)", color: "#3b82f6" },
-    verified: { bg: "rgba(34,197,94,0.12)", color: "#16a34a" },
+    official: { bg: "var(--accent-light)", color: "var(--accent-text)" },
+    verified: { bg: "var(--success-light)", color: "var(--success)" },
     community: { bg: "var(--bg-base)", color: "var(--fg-subtle)" },
   };
   const c = colors[tier];

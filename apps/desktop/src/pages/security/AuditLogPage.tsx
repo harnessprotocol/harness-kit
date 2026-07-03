@@ -33,9 +33,9 @@ function Pill({ label, active, onClick }: { label: string; active: boolean; onCl
 function EventBadge({ eventType }: { eventType: string }) {
   const colors: Record<string, { bg: string; text: string }> = {
     permission_change: { bg: "rgba(91,80,232,0.1)", text: "var(--accent-text)" },
-    preset_applied: { bg: "rgba(22,163,74,0.1)", text: "#16a34a" },
-    secret_access: { bg: "rgba(217,119,6,0.1)", text: "#d97706" },
-    secret_delete: { bg: "rgba(220,38,38,0.1)", text: "#dc2626" },
+    preset_applied: { bg: "var(--success-light)", text: "var(--success)" },
+    secret_access: { bg: "var(--warning-light)", text: "var(--warning)" },
+    secret_delete: { bg: "var(--danger-light)", text: "var(--danger)" },
   };
   const c = colors[eventType] ?? { bg: "var(--bg-base)", text: "var(--fg-muted)" };
   const label = eventType.replace(/_/g, " ");

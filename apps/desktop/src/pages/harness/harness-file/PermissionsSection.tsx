@@ -90,23 +90,23 @@ const toolItemStyle: CSSProperties = {
 
 const allowToolStyle: CSSProperties = {
   ...toolItemStyle,
-  background: "rgba(40,167,69,0.10)",
-  color: "#28a745",
-  border: "1px solid rgba(40,167,69,0.2)",
+  background: "var(--success-light)",
+  color: "var(--success)",
+  border: "1px solid var(--success-light)",
 };
 
 const denyToolStyle: CSSProperties = {
   ...toolItemStyle,
-  background: "rgba(220,53,69,0.10)",
+  background: "var(--danger-light)",
   color: "var(--danger)",
-  border: "1px solid rgba(220,53,69,0.2)",
+  border: "1px solid var(--danger-light)",
 };
 
 const askToolStyle: CSSProperties = {
   ...toolItemStyle,
-  background: "rgba(255,193,7,0.10)",
-  color: "#856404",
-  border: "1px solid rgba(255,193,7,0.2)",
+  background: "var(--warning-light)",
+  color: "var(--warning)",
+  border: "1px solid var(--warning-light)",
 };
 
 const monoPathStyle: CSSProperties = {
@@ -160,12 +160,12 @@ export default function PermissionsSection({ permissions }: PermissionsSectionPr
           {tools?.allow && tools.allow.length > 0 && (
             <div style={{ marginBottom: "10px" }}>
               <div style={{
-                fontSize: "10px", fontWeight: 600, color: "#28a745",
+                fontSize: "10px", fontWeight: 600, color: "var(--success)",
                 marginBottom: "6px", display: "flex", alignItems: "center", gap: "4px",
               }}>
                 <span style={{
                   width: "6px", height: "6px", borderRadius: "50%",
-                  background: "#28a745", display: "inline-block",
+                  background: "var(--success)", display: "inline-block",
                 }} />
                 Allow ({tools.allow.length})
               </div>
@@ -198,12 +198,12 @@ export default function PermissionsSection({ permissions }: PermissionsSectionPr
           {tools?.ask && tools.ask.length > 0 && (
             <div style={{ marginBottom: "10px" }}>
               <div style={{
-                fontSize: "10px", fontWeight: 600, color: "#856404",
+                fontSize: "10px", fontWeight: 600, color: "var(--warning)",
                 marginBottom: "6px", display: "flex", alignItems: "center", gap: "4px",
               }}>
                 <span style={{
                   width: "6px", height: "6px", borderRadius: "50%",
-                  background: "#d4a017", display: "inline-block",
+                  background: "var(--warning)", display: "inline-block",
                 }} />
                 Ask ({tools.ask.length})
               </div>
@@ -221,9 +221,9 @@ export default function PermissionsSection({ permissions }: PermissionsSectionPr
           <div style={labelStyle("paths")}>Paths</div>
           {paths?.writable && paths.writable.length > 0 && (
             <div style={{ marginBottom: "6px" }}>
-              <div style={{ ...categoryLabelStyle, color: "#28a745" }}>Writable</div>
+              <div style={{ ...categoryLabelStyle, color: "var(--success)" }}>Writable</div>
               {paths.writable.map((p) => (
-                <code key={p} style={{ ...monoPathStyle, color: "#28a745" }}>{p}</code>
+                <code key={p} style={{ ...monoPathStyle, color: "var(--success)" }}>{p}</code>
               ))}
             </div>
           )}

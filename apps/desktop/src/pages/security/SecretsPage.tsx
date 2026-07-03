@@ -10,9 +10,9 @@ function StatusBadge({ isSet }: { isSet: boolean }) {
     <span style={{
       fontSize: "10px", fontWeight: 500, padding: "1px 7px",
       borderRadius: "4px",
-      background: isSet ? "rgba(22,163,74,0.1)" : "rgba(217,119,6,0.1)",
-      color: isSet ? "#16a34a" : "#d97706",
-      border: `1px solid ${isSet ? "rgba(22,163,74,0.25)" : "rgba(217,119,6,0.25)"}`,
+      background: isSet ? "var(--success-light)" : "var(--warning-light)",
+      color: isSet ? "var(--success)" : "var(--warning)",
+      border: `1px solid ${isSet ? "var(--success-light)" : "var(--warning-light)"}`,
     }}>
       {isSet ? "Set" : "Missing"}
     </span>
