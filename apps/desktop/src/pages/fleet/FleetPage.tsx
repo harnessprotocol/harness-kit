@@ -5,7 +5,7 @@ import { buildFleetReport } from "@harness-kit/core";
 import type { FleetReport } from "@harness-kit/core";
 import type { HarnessInfo } from "@harness-kit/shared";
 import { TauriFsProvider } from "../../lib/harness-fs";
-import { detectHarnesses } from "../../lib/tauri";
+import { detectHarnesses, grantProjectScope } from "../../lib/tauri";
 import { getCurrentProjectDir, projectDirLabel } from "../../lib/project-dir";
 import { FleetView } from "./FleetView";
 
@@ -28,9 +28,19 @@ export default function FleetPage() {
     setError(null);
     try {
       const [home, harnessData] = await Promise.all([homeDir(), detectHarnesses()]);
+      // Grant runtime FS scope for the project dir before touching it — the
+      // static capability only lists known harness config roots under $HOME,
+      // not the project dir. A stale/deleted project dir shouldn't take down
+      // the whole report, so just drop it from the scan on failure.
+      const projectScopeReady = projectDir
+        ? await grantProjectScope(projectDir).then(
+            () => true,
+            () => false,
+          )
+        : false;
       const scopes = [
         { kind: "global" as const, label: "Global", fs: new TauriFsProvider(home) },
-        ...(projectDir
+        ...(projectDir && projectScopeReady
           ? [{ kind: "project" as const, label: projectDirLabel(projectDir), fs: new TauriFsProvider(projectDir) }]
           : []),
       ];

@@ -157,6 +157,8 @@ pub fn run() {
             commands::sync::sync_restore_backup,
             // Harness detection (used by Fleet)
             commands::harnesses::detect_harnesses,
+            // Runtime FS scope grants (used by Fleet/Drift's project scope)
+            commands::fs_scope::grant_project_scope,
             // Drift (capability probing + acknowledgement persistence;
             // drift computation itself lives in packages/core, run from the
             // Drift page — see commands/parity.rs module docs)

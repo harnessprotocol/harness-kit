@@ -22,3 +22,4 @@ pub mod comparator_panels;
 pub mod agents;
 pub mod harnesses;
 pub mod feedback;
+pub mod fs_scope;
