@@ -218,6 +218,18 @@ export async function detectHarnesses(): Promise<HarnessInfo[]> {
   return invoke<HarnessInfo[]>("detect_harnesses");
 }
 
+/**
+ * Extend the Tauri FS plugin's runtime scope to cover a user-chosen project
+ * directory, in-memory for this app session. The static capability
+ * (capabilities/default.json) only lists known harness config roots under
+ * $HOME — it never grants a blanket $HOME/** scope — so callers that need
+ * TauriFsProvider access to an arbitrary project dir (Fleet, Drift) must
+ * grant it here first.
+ */
+export async function grantProjectScope(path: string): Promise<void> {
+  return invoke<void>("grant_project_scope", { path });
+}
+
 // ── Security commands ───────────────────────────────────────
 
 export async function readPermissions(): Promise<PermissionsState> {

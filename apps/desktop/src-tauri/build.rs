@@ -111,6 +111,8 @@ fn main() {
                 "scan_claude_config",
                 // Harness detection (used by Fleet)
                 "detect_harnesses",
+                // Runtime FS scope grants (used by Fleet/Drift's project scope)
+                "grant_project_scope",
                 // Drift (capability probing + acknowledgement persistence)
                 "probe_harness_capabilities",
                 "acknowledge_drift_item",
