@@ -47,7 +47,7 @@ describe("importProject: schema validity + provenance", () => {
     const result = await importProject({ fs, name: "acme", description: "d" });
 
     const adapterIds = result.findings.adapters.map((a) => a.adapter).sort();
-    expect(adapterIds).toEqual(["agents-md", "claude-code", "copilot", "cursor"]);
+    expect(adapterIds).toEqual(["agents-md", "claude-code", "copilot", "cursor", "opencode", "pi"]);
 
     const claudeCode = result.findings.adapters.find((a) => a.adapter === "claude-code")!;
     expect(claudeCode.detected).toBe(true);
@@ -63,6 +63,20 @@ describe("importProject: schema validity + provenance", () => {
     const copilot = result.findings.adapters.find((a) => a.adapter === "copilot")!;
     expect(copilot.detected).toBe(false);
     expect(copilot.found).toEqual([]);
+
+    // opencode: this fixture has AGENTS.md (read the same as agents-md) but no
+    // opencode.json/.opencode dir — its own detect() (opencode.json/.opencode
+    // paths only) reports not-detected even though importConfig still reads
+    // the AGENTS.md content it shares with agents-md (deduped downstream by
+    // synthesize()'s byte-identical block dedupe).
+    const opencode = result.findings.adapters.find((a) => a.adapter === "opencode")!;
+    expect(opencode.detected).toBe(false);
+    expect(opencode.found.some((f) => f.file === "AGENTS.md")).toBe(true);
+
+    // pi: this fixture has no .pi/APPEND_SYSTEM.md — not detected, nothing found.
+    const pi = result.findings.adapters.find((a) => a.adapter === "pi")!;
+    expect(pi.detected).toBe(false);
+    expect(pi.found).toEqual([]);
   });
 
   it("records the postgres mcp-server naming conflict between claude-code and cursor under x-harness-import, never a silent pick", async () => {

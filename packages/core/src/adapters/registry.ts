@@ -4,21 +4,32 @@ import { claudeCodeAdapter } from "./claude-code/index.js";
 import { cursorAdapter } from "./cursor/index.js";
 import { copilotAdapter } from "./copilot/index.js";
 import { agentsMdAdapter } from "./agents-md/index.js";
+import { opencodeAdapter } from "./opencode/index.js";
+import { piAdapter } from "./pi/index.js";
 import { AGENTS_MD_TARGETS } from "./target-metadata.js";
 
 /**
  * The adapter registry. `compile.ts` looks adapters up here instead of
  * hand-rolling per-target dispatch.
  *
- * Only adapters with a REAL exportConfig exist here this WP. `pi` is sized
- * into the `AdapterId` enum (see adapter.ts) for a future WP but has no
- * registered adapter yet.
+ * WP-2.5 adds `opencodeAdapter` and `piAdapter` — both are STANDALONE
+ * adapters (detect/importConfig/diff/exportConfig all real), but neither is
+ * wired into `LEGACY_TARGET_TO_ADAPTER` below. The legacy `TargetPlatform`
+ * "opencode" continues to route through `agentsMdAdapter` exactly as before
+ * (unchanged golden compile output) — `opencodeAdapter` is a richer,
+ * additional surface reachable via `getAdapter("opencode")` directly, not
+ * through `compile()`'s legacy target dispatch. `pi` was never a legacy
+ * `TargetPlatform` at all (see types.ts) — `piAdapter` is reachable the same
+ * standalone way. Both are picked up automatically by
+ * `importProject()`/`getAllAdapters()`.
  */
 export const ADAPTERS: HarnessAdapter[] = [
   claudeCodeAdapter,
   cursorAdapter,
   copilotAdapter,
   agentsMdAdapter,
+  opencodeAdapter,
+  piAdapter,
 ];
 
 const ADAPTERS_BY_ID = new Map<AdapterId, HarnessAdapter>(
