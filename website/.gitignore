@@ -5,3 +5,6 @@ out/
 
 # Build output from @harness-kit/marketplace-data (regenerated in CI)
 lib/marketplace/marketplace.generated.json
+
+# Build output from @harness-kit/website-data (regenerated in CI)
+lib/capability-matrix.generated.json

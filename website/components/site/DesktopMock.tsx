@@ -315,13 +315,13 @@ export function DesktopMock({
               <svg className={styles.chartSvg} viewBox="0 0 400 140" preserveAspectRatio="none">
                 <defs>
                   <linearGradient id="dm-lg1" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#7a8bff" stopOpacity="0.45" />
-                    <stop offset="100%" stopColor="#7a8bff" stopOpacity="0" />
+                    <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.45" />
+                    <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
                   </linearGradient>
                 </defs>
                 <path d="M0,110 L30,95 L60,100 L90,80 L120,85 L150,60 L180,65 L210,45 L240,55 L270,35 L300,40 L330,25 L360,30 L400,15 L400,140 L0,140 Z" fill="url(#dm-lg1)" />
-                <path d="M0,110 L30,95 L60,100 L90,80 L120,85 L150,60 L180,65 L210,45 L240,55 L270,35 L300,40 L330,25 L360,30 L400,15" fill="none" stroke="#7a8bff" strokeWidth="2" />
-                <circle cx="400" cy="15" r="3.5" fill="#7a8bff" />
+                <path d="M0,110 L30,95 L60,100 L90,80 L120,85 L150,60 L180,65 L210,45 L240,55 L270,35 L300,40 L330,25 L360,30 L400,15" fill="none" stroke="var(--accent)" strokeWidth="2" />
+                <circle cx="400" cy="15" r="3.5" fill="var(--accent)" />
               </svg>
             </div>
           </div>

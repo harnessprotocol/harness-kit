@@ -71,6 +71,14 @@ body {
   --accent-glow: rgba(46, 155, 230, 0.25);
   /* design-tokens:light:end */
 
+  /* Status colors — shared across themes, NOT the accent (DESIGN.md §2) */
+  --success: #3FB07A;
+  --success-light: rgba(63, 176, 122, 0.14);
+  --warning: #E0A33D;
+  --warning-light: rgba(224, 163, 61, 0.16);
+  --danger: #F2555A;
+  --danger-light: rgba(242, 85, 90, 0.14);
+
   /* Shadows — warm-tinted (Direction A, DESIGN.md §2) */
   --shadow-sm: 0 1px 2px rgba(20,15,10,.08);
   --shadow-md: 0 8px 24px -8px rgba(20,15,10,.14);
@@ -131,6 +139,14 @@ body {
   --accent-glow: rgba(46, 155, 230, 0.35);
   /* design-tokens:dark:end */
 
+  /* Status colors — shared across themes, NOT the accent (DESIGN.md §2) */
+  --success: #3FB07A;
+  --success-light: rgba(63, 176, 122, 0.14);
+  --warning: #E0A33D;
+  --warning-light: rgba(224, 163, 61, 0.16);
+  --danger: #F2555A;
+  --danger-light: rgba(242, 85, 90, 0.14);
+
   /* Shadows — warm-tinted, stronger in dark mode (Direction A, DESIGN.md §2) */
   --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
   --shadow-md: 0 6px 20px -6px rgba(0,0,0,.55);
@@ -141,6 +157,32 @@ body {
 .btn-primary {
   background: var(--accent);
 }
+
+/* ── Capability chips — tinted bg + colored text + 6px dot, never a solid
+   pill (DESIGN.md §2/§7, same visual language as packages/ui's StatusChip) ── */
+.cap-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 550;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.cap-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.cap-chip-full { background: var(--success-light); color: var(--success); }
+.cap-chip-full .cap-chip-dot { background: var(--success); }
+.cap-chip-partial { background: var(--warning-light); color: var(--warning); }
+.cap-chip-partial .cap-chip-dot { background: var(--warning); }
+.cap-chip-none { background: var(--bg-elevated); color: var(--fg-subtle); }
+.cap-chip-none .cap-chip-dot { background: var(--fg-subtle); }
 
 .glow-cyan {
   box-shadow: 0 0 40px -10px var(--accent-glow);

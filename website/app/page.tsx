@@ -5,6 +5,8 @@ import { CommandBox } from '@/components/site/CommandBox';
 import { SectionHeader } from '@/components/site/SectionHeader';
 import { FeatureTile } from '@/components/site/FeatureTile';
 import { DesktopMock } from '@/components/site/DesktopMock';
+import { SprawlReveal } from '@/components/site/SprawlReveal';
+import { CapabilityMatrix } from '@/components/site/CapabilityMatrix';
 import { AgentSkillBanner } from '@/components/agent-skill-banner';
 
 /* ── Icons (inline SVG, no icon library) ── */
@@ -81,22 +83,33 @@ export default function HomePage() {
     <main className="min-h-screen">
       <SiteNav />
 
-      {/* ── Hero ── */}
+      {/* ── Hero ──
+          DRAFT COPY — not locked. See report for 3 headline/subhead options;
+          this is option 2 ("import-first"), the strongest of the three by
+          our read, but John approves the final wording before this ships. */}
       <section className="relative overflow-hidden border-b border-fd-border/30">
         {/* Copy block */}
         <div className="mx-auto max-w-3xl px-5 pb-8 pt-14 text-center sm:px-6 sm:pb-10 sm:pt-20">
+          <div
+            className="mb-4 inline-block rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.08em]"
+            style={{ background: 'var(--accent-light)', color: 'var(--accent-fg)' }}
+          >
+            Draft copy — pending sign-off
+          </div>
           <h1 className="font-display mb-5 text-4xl font-bold leading-tight tracking-tight text-fd-foreground sm:text-5xl">
-            The configuration console{' '}
+            You already have five{' '}
             <br className="hidden sm:block" />
-            for all your harnesses.
+            AI tool configs. Now you have one.
           </h1>
           <p className="mx-auto mb-8 max-w-lg text-lg leading-relaxed text-fd-muted-foreground">
-            Configure, observe, and share your harness from one native app, built on an open harness.yaml spec.
+            Run <code className="rounded bg-fd-accent px-1.5 py-0.5 font-mono text-base">harness import</code> and
+            harness-kit reads the Claude Code, Cursor, Copilot, and other configs already on your machine — no
+            authoring, no starting over — then reconciles them into one portable harness.yaml.
           </p>
           <div className="mb-8 flex justify-center">
             <div className="flex flex-col items-center gap-0">
-              <p className="text-xs text-muted-foreground mb-2">Run inside Claude Code</p>
-              <CommandBox command="/plugin marketplace add harnessprotocol/harness-kit" />
+              <p className="text-xs text-muted-foreground mb-2">Import what you already have</p>
+              <CommandBox command="brew install harness-kit && harness import" />
             </div>
           </div>
           <div className="flex flex-wrap items-center justify-center gap-3">
@@ -142,6 +155,30 @@ export default function HomePage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── Sprawl reveal ── */}
+      <section className="border-b border-fd-border/30 py-24">
+        <div className="mx-auto max-w-5xl px-6">
+          <SectionHeader
+            eyebrow="Import-first"
+            title="Your AI tools don't agree. Now you can see it."
+            subtitle="Every tool you've installed already wrote a config file somewhere. harness-kit reads every one of them and converges them into a single source of truth — before you write a line of YAML."
+          />
+          <SprawlReveal />
+        </div>
+      </section>
+
+      {/* ── Capability matrix ── */}
+      <section className="border-b border-fd-border/30 py-24">
+        <div className="mx-auto max-w-5xl px-6">
+          <SectionHeader
+            eyebrow="No marketing gloss"
+            title="What each tool can actually do"
+            subtitle="Every AI coding tool has a different ceiling. This table is generated at build time from harness-kit's own adapter code — it can't drift from what's actually implemented, and it won't pretend a tool supports something it doesn't."
+          />
+          <CapabilityMatrix />
         </div>
       </section>
 
