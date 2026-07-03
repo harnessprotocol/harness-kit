@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { Card } from "@harness-kit/ui";
 
 interface SectionCardProps {
   label: string;
@@ -8,9 +9,9 @@ interface SectionCardProps {
 }
 
 const labelStyle: CSSProperties = {
-  fontSize: "10px",
-  fontWeight: 600,
-  letterSpacing: "0.06em",
+  fontSize: "10.5px",
+  fontWeight: 650,
+  letterSpacing: "0.07em",
   textTransform: "uppercase",
   color: "var(--fg-subtle)",
   display: "flex",
@@ -35,14 +36,6 @@ const explanationStyle: CSSProperties = {
   margin: "2px 0 0",
 };
 
-const cardStyle: CSSProperties = {
-  background: "var(--bg-surface)",
-  border: "1px solid var(--border-base)",
-  borderRadius: "8px",
-  padding: "12px",
-  marginTop: "8px",
-};
-
 export default function SectionCard({ label, explanation, count, children }: SectionCardProps) {
   return (
     <div>
@@ -53,7 +46,7 @@ export default function SectionCard({ label, explanation, count, children }: Sec
         )}
       </div>
       <p style={explanationStyle}>{explanation}</p>
-      <div style={cardStyle}>{children}</div>
+      <Card padding="sm" style={{ marginTop: "8px" }}>{children}</Card>
     </div>
   );
 }

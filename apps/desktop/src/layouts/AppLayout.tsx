@@ -64,18 +64,21 @@ export const NAV_SECTIONS: NavSection[] = [
     path: "/drift",
   },
   {
-    id: "marketplace",
-    label: "Marketplace",
+    id: "comparator",
+    label: "Comparator",
+    group: "WORKSPACE",
     icon: (
       <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
-        <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
+        <path d="M3 4a1 1 0 000 2h11.586l-2.293 2.293a1 1 0 001.414 1.414l4-4a1 1 0 000-1.414l-4-4a1 1 0 10-1.414 1.414L14.586 4H3zM17 16a1 1 0 000-2H5.414l2.293-2.293a1 1 0 00-1.414-1.414l-4 4a1 1 0 000 1.414l4 4a1 1 0 001.414-1.414L5.414 16H17z" />
       </svg>
     ),
-    path: "/marketplace",
+    path: "/comparator",
+    children: [],
   },
   {
     id: "observatory",
     label: "Observatory",
+    group: "WORKSPACE",
     icon: (
       <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
         <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
@@ -88,42 +91,30 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    id: "marketplace",
+    label: "Marketplace",
+    group: "WORKSPACE",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
+        <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
+      </svg>
+    ),
+    path: "/marketplace",
+  },
+];
+
+// Demoted from top-level nav (harness-detection overlaps Fleet — DESIGN.md §5).
+// Route stays reachable at /agents; not rendered in the sidebar or shortcuts.
+export const DEMOTED_SECTIONS: NavSection[] = [
+  {
     id: "agents",
     label: "Agents",
-    group: "OPERATE",
     icon: (
       <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
         <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
       </svg>
     ),
     path: "/agents",
-  },
-  {
-    id: "comparator",
-    label: "Comparator",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
-        <path d="M3 4a1 1 0 000 2h11.586l-2.293 2.293a1 1 0 001.414 1.414l4-4a1 1 0 000-1.414l-4-4a1 1 0 10-1.414 1.414L14.586 4H3zM17 16a1 1 0 000-2H5.414l2.293-2.293a1 1 0 00-1.414-1.414l-4 4a1 1 0 000 1.414l4 4a1 1 0 001.414-1.414L5.414 16H17z" />
-      </svg>
-    ),
-    path: "/comparator",
-    children: [],
-  },
-  {
-    id: "security",
-    label: "Security",
-    group: "GOVERN",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
-        <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-      </svg>
-    ),
-    path: "/security/permissions",
-    children: [
-      { label: "Permissions", path: "/security/permissions" },
-      { label: "Secrets", path: "/security/secrets" },
-      { label: "Audit Log", path: "/security/audit" },
-    ],
   },
 ];
 
@@ -327,7 +318,7 @@ export default function AppLayout() {
 
   const visibleSections = NAV_SECTIONS.filter((s) => !hiddenSections.has(s.id));
 
-  const prefsActive = location.pathname === "/preferences";
+  const prefsActive = location.pathname.startsWith("/preferences");
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   function isActive(section: NavSection) {
@@ -590,7 +581,7 @@ export default function AppLayout() {
                 <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
                 </svg>
-                Preferences
+                Settings
               </button>
             </div>
           </aside>

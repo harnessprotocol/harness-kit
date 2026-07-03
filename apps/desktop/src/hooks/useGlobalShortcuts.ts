@@ -1,15 +1,16 @@
 import { useEffect } from "react";
 import type { NavigateFunction } from "react-router-dom";
 
+// Mirrors NAV_SECTIONS order in AppLayout.tsx (DESIGN.md §5): Fleet, Configure,
+// Drift, Comparator, Observatory, Marketplace. Settings is pinned bottom and
+// reachable via ⌘, — not part of the numbered ⌘1-6 shortcuts.
 export const NAV_PATHS = [
   "/fleet",
-  "/harness/plugins",
+  "/harness/file",
   "/drift",
-  "/marketplace",
-  "/observatory",
-  "/agents",
   "/comparator",
-  "/security/permissions",
+  "/observatory",
+  "/marketplace",
 ] as const;
 
 interface Options {

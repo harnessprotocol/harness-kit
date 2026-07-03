@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { open } from "@tauri-apps/plugin-shell";
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
@@ -17,6 +18,22 @@ import {
   type ConfigFilesDetailLevel,
 } from "../lib/preferences";
 import { getTheme, setTheme } from "../lib/theme";
+
+// Security surfaces are re-homed under Settings (DESIGN.md §5) — lazy-loaded
+// so the General tab's bundle stays light. Routes under /security/* still
+// work directly (e.g. FirstRunPermissionModal deep-links there).
+const PermissionsPage = lazy(() => import("./security/PermissionsPage"));
+const SecretsPage = lazy(() => import("./security/SecretsPage"));
+const AuditLogPage = lazy(() => import("./security/AuditLogPage"));
+
+type SettingsTab = "general" | "permissions" | "secrets" | "audit";
+
+const TABS: { id: SettingsTab; label: string }[] = [
+  { id: "general", label: "General" },
+  { id: "permissions", label: "Permissions" },
+  { id: "secrets", label: "Secrets" },
+  { id: "audit", label: "Audit Log" },
+];
 
 interface UpdateStatus {
   localSha: string;
@@ -113,9 +130,9 @@ function Segmented<T extends string | number | boolean>({
   );
 }
 
-// ── Main component ──────────────────────────────────────────────
+// ── General tab (existing Preferences content) ──────────────────
 
-export default function PreferencesPage() {
+function GeneralTab() {
   const [appVersion, setAppVersion] = useState("0.0.0");
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null);
   const [updateChecking, setUpdateChecking] = useState(false);
@@ -579,6 +596,78 @@ export default function PreferencesPage() {
             GitHub
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Settings shell (tab bar + General/Permissions/Secrets/Audit Log) ────
+// Security surfaces re-home here per DESIGN.md §5 — folded under Settings,
+// removed from top-level nav. Routes under /security/* remain reachable
+// directly (e.g. FirstRunPermissionModal deep-links to /security/permissions).
+
+function SettingsTabBar({ active, onChange }: { active: SettingsTab; onChange: (tab: SettingsTab) => void }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: "4px",
+        padding: "16px 24px 0",
+        borderBottom: "1px solid var(--border-subtle)",
+      }}
+    >
+      {TABS.map((tab) => {
+        const isActive = tab.id === active;
+        return (
+          <button
+            key={tab.id}
+            className="hk-reset-btn"
+            onClick={() => onChange(tab.id)}
+            aria-current={isActive ? "page" : undefined}
+            style={{
+              fontSize: "13px",
+              fontWeight: isActive ? 550 : 450,
+              padding: "8px 4px 10px",
+              marginRight: "16px",
+              color: isActive ? "var(--fg-base)" : "var(--fg-muted)",
+              cursor: "pointer",
+              borderBottom: isActive ? "2px solid var(--accent)" : "2px solid transparent",
+            }}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+const TAB_BY_PARAM: Record<string, SettingsTab> = {
+  general: "general",
+  permissions: "permissions",
+  secrets: "secrets",
+  audit: "audit",
+};
+
+export default function PreferencesPage() {
+  const navigate = useNavigate();
+  const { tab: tabParam } = useParams<{ tab?: string }>();
+  const activeTab: SettingsTab = (tabParam && TAB_BY_PARAM[tabParam]) || "general";
+
+  function handleTabChange(tab: SettingsTab) {
+    navigate(tab === "general" ? "/preferences" : `/preferences/${tab}`);
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+      <SettingsTabBar active={activeTab} onChange={handleTabChange} />
+      <div style={{ flex: 1, overflowY: "auto" }}>
+        <Suspense fallback={<div style={{ padding: "20px 24px", fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</div>}>
+          {activeTab === "general" && <GeneralTab />}
+          {activeTab === "permissions" && <PermissionsPage />}
+          {activeTab === "secrets" && <SecretsPage />}
+          {activeTab === "audit" && <AuditLogPage />}
+        </Suspense>
       </div>
     </div>
   );

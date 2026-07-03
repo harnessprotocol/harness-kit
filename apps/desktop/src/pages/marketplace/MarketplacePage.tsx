@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { X } from "lucide-react";
+import { Card, EmptyState, Input } from "@harness-kit/ui";
 import { supabase } from "../../lib/supabase";
 import MarkdownPanel from "../../components/MarkdownPanel";
 import { TrustBadge, TypeBadge } from "./components/PluginBadges";
@@ -354,21 +356,21 @@ export default function MarketplacePage() {
           <PageHeader />
 
           {!supabase && (
-            <div style={{
-              background: "var(--warning-light)",
-              border: "1px solid rgba(217,119,6,0.22)",
-              borderRadius: "8px",
-              padding: "9px 10px",
-              marginBottom: "12px",
-              fontSize: "11px",
-              lineHeight: 1.45,
-              color: "var(--fg-muted)",
-            }}>
+            <Card
+              padding="sm"
+              style={{
+                background: "var(--warning-light)",
+                marginBottom: "12px",
+                fontSize: "11px",
+                lineHeight: 1.45,
+                color: "var(--fg-muted)",
+              }}
+            >
               <strong style={{ color: "var(--fg-base)" }}>Supabase not configured.</strong>{" "}
               Showing a local demo catalog. Add{" "}
               <code style={{ fontFamily: "ui-monospace, monospace" }}>VITE_SUPABASE_URL</code> and{" "}
               <code style={{ fontFamily: "ui-monospace, monospace" }}>VITE_SUPABASE_ANON_KEY</code> to use the live marketplace.
-            </div>
+            </Card>
           )}
 
           {/* Active tag filter banner */}
@@ -391,40 +393,20 @@ export default function MarketplacePage() {
               }}>
                 {selectedTag}
               </span>
-              <button
-                onClick={() => setSelectedTag("")}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  fontSize: "11px",
-                  color: "var(--fg-subtle)",
-                  padding: 0,
-                }}
-              >
-                ✕ clear
+              <button className="hk-reset-btn" onClick={() => setSelectedTag("")} style={{ display: "inline-flex", alignItems: "center", gap: "3px", cursor: "pointer", fontSize: "11px", color: "var(--fg-subtle)" }}>
+                <X size={11} strokeWidth={1.7} />
+                clear
               </button>
             </div>
           )}
 
           {/* Search */}
           <div style={{ marginBottom: "12px" }}>
-            <input
+            <Input
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search plugins…"
-              style={{
-                width: "100%",
-                padding: "6px 10px",
-                borderRadius: "6px",
-                border: "1px solid var(--border-base)",
-                background: "var(--bg-surface)",
-                color: "var(--fg-base)",
-                fontSize: "13px",
-                outline: "none",
-                boxSizing: "border-box",
-              }}
             />
           </div>
 
@@ -486,34 +468,21 @@ export default function MarketplacePage() {
           )}
 
           {listError && (
-            <div style={{
-              background: "var(--bg-surface)",
-              border: "1px solid var(--border-base)",
-              borderRadius: "8px",
-              padding: "10px 14px",
-              fontSize: "13px",
-              color: "var(--danger)",
-            }}>
+            <Card padding="sm" style={{ fontSize: "13px", color: "var(--danger)" }}>
               {listError}
-            </div>
+            </Card>
           )}
 
           {!listLoading && !listError && filtered.length === 0 && (
-            <div style={{
-              background: "var(--bg-surface)",
-              border: "1px solid var(--border-base)",
-              borderRadius: "8px",
-              padding: "32px 16px",
-              textAlign: "center",
-            }}>
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ color: "var(--fg-subtle)", marginBottom: "10px" }}>
-                <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.5"/>
-                <path d="M16.5 16.5L21 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-              <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0 }}>
-                No plugins found.
-              </p>
-            </div>
+            <EmptyState
+              icon={
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" strokeWidth="1.5">
+                  <circle cx="11" cy="11" r="7" stroke="currentColor" />
+                  <path d="M16.5 16.5L21 21" stroke="currentColor" strokeLinecap="round" />
+                </svg>
+              }
+              title="No plugins found"
+            />
           )}
 
           {!listLoading && !listError && filtered.length > 0 && (
@@ -596,37 +565,29 @@ export default function MarketplacePage() {
           </div>
         ) : notFound || !detail ? (
           <div style={{ padding: "20px 24px" }}>
-            <div style={{
-              background: "var(--bg-surface)",
-              border: "1px solid var(--border-base)",
-              borderRadius: "8px",
-              padding: "32px 16px",
-              textAlign: "center",
-            }}>
+            <Card padding="lg" style={{ textAlign: "center" }}>
               <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0 }}>
                 Plugin not found.
               </p>
-            </div>
+            </Card>
           </div>
         ) : (
           <div style={{ padding: "20px 24px" }}>
             {/* Close button */}
             <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "12px" }}>
               <button
+                className="hk-reset-btn"
                 onClick={() => navigate("/marketplace", { replace: true })}
                 aria-label="Close detail panel"
                 style={{
-                  background: "none",
-                  border: "none",
                   cursor: "pointer",
-                  fontSize: "16px",
                   color: "var(--fg-subtle)",
                   padding: "2px 6px",
                   borderRadius: "4px",
                   lineHeight: 1,
                 }}
               >
-                ✕
+                <X size={16} strokeWidth={1.7} />
               </button>
             </div>
 
@@ -646,17 +607,11 @@ export default function MarketplacePage() {
                 <TypeBadge type={detail.type} />
               </div>
               {/* Description hero */}
-              <div style={{
-                marginTop: "10px",
-                background: "var(--bg-surface)",
-                border: "1px solid var(--border-base)",
-                borderRadius: "8px",
-                padding: "12px 14px",
-              }}>
+              <Card padding="sm" style={{ marginTop: "10px" }}>
                 <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0 }}>
                   {detail.description}
                 </p>
-              </div>
+              </Card>
             </div>
 
             {/* Stats bar */}
@@ -680,13 +635,13 @@ export default function MarketplacePage() {
                 {detailTags.map((tag) => (
                   <button
                     key={tag}
+                    className="hk-reset-btn"
                     onClick={() => setSelectedTag(tag)}
                     style={{
                       fontSize: "10px",
                       padding: "2px 8px",
                       borderRadius: "10px",
-                      border: "1px solid var(--border-base)",
-                      background: "transparent",
+                      background: "var(--bg-elevated)",
                       color: "var(--fg-subtle)",
                       cursor: "pointer",
                     }}
@@ -701,13 +656,7 @@ export default function MarketplacePage() {
               {/* Main column */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 {/* Install command */}
-                <div style={{
-                  marginBottom: "16px",
-                  background: "var(--bg-surface)",
-                  border: "1px solid var(--border-base)",
-                  borderRadius: "8px",
-                  padding: "10px 12px",
-                }}>
+                <Card padding="sm" style={{ marginBottom: "16px" }}>
                   <p style={{
                     fontSize: "10px",
                     fontWeight: 600,
@@ -730,7 +679,7 @@ export default function MarketplacePage() {
                   }}>
                     /plugin install {detail.slug}@harness-kit
                   </code>
-                </div>
+                </Card>
 
                 {detail.skill_md && (
                   <MarkdownPanel content={detail.skill_md} title="Skill Definition" />
@@ -746,12 +695,7 @@ export default function MarketplacePage() {
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                   {/* Author */}
                   {detail.author?.name && (
-                    <div style={{
-                      background: "var(--bg-surface)",
-                      border: "1px solid var(--border-base)",
-                      borderRadius: "8px",
-                      padding: "10px 12px",
-                    }}>
+                    <Card padding="sm">
                       <p style={{
                         fontSize: "10px",
                         fontWeight: 600,
@@ -774,17 +718,12 @@ export default function MarketplacePage() {
                           {detail.author.name}
                         </span>
                       )}
-                    </div>
+                    </Card>
                   )}
 
                   {/* GitHub link */}
                   {detail.repo_url && (
-                    <div style={{
-                      background: "var(--bg-surface)",
-                      border: "1px solid var(--border-base)",
-                      borderRadius: "8px",
-                      padding: "10px 12px",
-                    }}>
+                    <Card padding="sm">
                       <a
                         href={detail.repo_url}
                         target="_blank"
@@ -801,17 +740,12 @@ export default function MarketplacePage() {
                         <GitHubIcon />
                         View on GitHub
                       </a>
-                    </div>
+                    </Card>
                   )}
 
                   {/* Related plugins */}
                   {related.length > 0 && (
-                    <div style={{
-                      background: "var(--bg-surface)",
-                      border: "1px solid var(--border-base)",
-                      borderRadius: "8px",
-                      padding: "10px 12px",
-                    }}>
+                    <Card padding="sm">
                       <p style={{
                         fontSize: "10px",
                         fontWeight: 600,
@@ -824,11 +758,9 @@ export default function MarketplacePage() {
                         {related.map((r) => (
                           <li key={r.id} style={{ marginBottom: "6px" }}>
                             <button
+                              className="hk-reset-btn"
                               onClick={() => navigate(`/marketplace/${r.slug}`, { replace: true })}
                               style={{
-                                background: "none",
-                                border: "none",
-                                padding: 0,
                                 cursor: "pointer",
                                 display: "flex",
                                 justifyContent: "space-between",
@@ -853,7 +785,7 @@ export default function MarketplacePage() {
                           </li>
                         ))}
                       </ul>
-                    </div>
+                    </Card>
                   )}
                 </div>
               </aside>

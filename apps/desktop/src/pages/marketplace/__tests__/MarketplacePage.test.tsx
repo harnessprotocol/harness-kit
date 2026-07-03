@@ -343,7 +343,7 @@ describe("MarketplacePage — list panel", () => {
         target: { value: "xyznotreal" },
       });
 
-      expect(screen.getByText("No plugins found.")).toBeInTheDocument();
+      expect(screen.getByText("No plugins found")).toBeInTheDocument();
     });
 
     it("filters case-insensitively", async () => {

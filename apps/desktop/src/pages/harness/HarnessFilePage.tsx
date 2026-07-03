@@ -1,5 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Button, Card, Input } from "@harness-kit/ui";
 import { readHarnessFile, scanClaudeConfig, writeHarnessFile, saveCustomProfile } from "../../lib/tauri";
 import { parseHarness, validateHarnessYaml } from "@harness-kit/core";
 import type { HarnessConfig, ValidationResult } from "@harness-kit/core";
@@ -178,84 +179,66 @@ export default function HarnessFilePage() {
   const toolbarActions = found && !loading ? (
     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
       {/* Sync */}
-      <button
+      <Button
+        variant="ghost"
+        size="sm"
         onClick={() => navigate("/harness/sync")}
-        style={{
-          display: "flex", alignItems: "center", gap: "4px",
-          padding: "3px 8px", borderRadius: "5px",
-          border: "1px solid var(--border-base)",
-          background: "var(--bg-elevated)",
-          color: "var(--fg-subtle)", fontSize: "11px",
-          cursor: "pointer", whiteSpace: "nowrap",
-          fontFamily: "inherit",
-        }}
         title="Sync harness.yaml to platform config files"
       >
-        <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor">
+        <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style={{ marginRight: 4 }}>
           <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
         </svg>
         Sync
-      </button>
+      </Button>
       {/* Save as Profile */}
       <div style={{ position: "relative" }}>
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => { setProfileNameOpen((v) => !v); setProfileSaveError(null); }}
-          style={{
-            display: "flex", alignItems: "center", gap: "4px",
-            padding: "3px 8px", borderRadius: "5px",
-            border: "1px solid var(--border-base)",
-            background: "var(--bg-elevated)",
-            color: "var(--fg-subtle)", fontSize: "11px",
-            cursor: "pointer", whiteSpace: "nowrap",
-            fontFamily: "inherit",
-          }}
           title="Save current harness as a reusable profile"
         >
           Save as profile
-        </button>
+        </Button>
         {profileSavedMsg && (
           <span style={{ position: "absolute", top: "calc(100% + 6px)", right: 0, fontSize: "11px", color: "var(--accent)", whiteSpace: "nowrap", zIndex: 50 }}>
-            Profile saved!
+            Profile saved
           </span>
         )}
         {profileNameOpen && (
-          <div style={{
-            position: "absolute", top: "calc(100% + 6px)", right: 0,
-            background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-            borderRadius: "8px", padding: "10px 12px",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
-            zIndex: 50, minWidth: "220px",
-            display: "flex", flexDirection: "column", gap: "8px",
-          }}>
-            <span style={{ fontSize: "11px", fontWeight: 600, color: "var(--fg-base)" }}>Profile name</span>
-            <input
+          <Card
+            padding="sm"
+            style={{
+              position: "absolute", top: "calc(100% + 6px)", right: 0,
+              boxShadow: "var(--shadow-md)",
+              zIndex: 50, minWidth: "220px",
+              display: "flex", flexDirection: "column", gap: "8px",
+            }}
+          >
+            <Input
               autoFocus
-              type="text"
+              label="Profile name"
               value={profileNameInput}
               onChange={(e) => setProfileNameInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleSaveAsProfile(); if (e.key === "Escape") setProfileNameOpen(false); }}
               placeholder="e.g. my-setup"
-              style={{
-                padding: "5px 8px", borderRadius: "5px",
-                border: "1px solid var(--border-base)",
-                background: "var(--bg-elevated)",
-                color: "var(--fg-base)", fontSize: "12px", outline: "none",
-              }}
+              error={Boolean(profileSaveError)}
+              helperText={profileSaveError ?? undefined}
             />
-            {profileSaveError && <span style={{ fontSize: "10px", color: "var(--danger)" }}>{profileSaveError}</span>}
             <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
-              <button onClick={() => setProfileNameOpen(false)} style={{ padding: "4px 10px", borderRadius: "5px", border: "1px solid var(--border-base)", background: "transparent", color: "var(--fg-subtle)", fontSize: "11px", cursor: "pointer" }}>
+              <Button variant="ghost" size="sm" onClick={() => setProfileNameOpen(false)}>
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={handleSaveAsProfile}
                 disabled={!profileNameInput.trim() || profileSaving}
-                style={{ padding: "4px 10px", borderRadius: "5px", border: "none", background: profileNameInput.trim() ? "var(--accent)" : "var(--bg-elevated)", color: profileNameInput.trim() ? "var(--accent-text, #fff)" : "var(--fg-subtle)", fontSize: "11px", fontWeight: 600, cursor: profileNameInput.trim() ? "pointer" : "not-allowed" }}
               >
-                {profileSaving ? "Saving..." : "Save"}
-              </button>
+                {profileSaving ? "Saving…" : "Save"}
+              </Button>
             </div>
-          </div>
+          </Card>
         )}
       </div>
     </div>
@@ -300,22 +283,14 @@ export default function HarnessFilePage() {
 
         {/* Fetch error */}
         {fetchError && (
-          <div style={{
-            background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-            borderRadius: "8px", padding: "10px 14px",
-            fontSize: "13px", color: "var(--danger)", marginTop: "4px",
-          }}>
+          <Card padding="sm" style={{ fontSize: "13px", color: "var(--danger)", marginTop: "4px" }}>
             {fetchError}
-          </div>
+          </Card>
         )}
 
         {/* Empty state — no harness found, not yet in editor */}
         {!loading && !fetchError && !found && view !== "editor" && (
-          <div style={{
-            background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-            borderRadius: "8px", padding: "32px 24px",
-            textAlign: "center", maxWidth: "540px", marginTop: "4px",
-          }}>
+          <Card padding="lg" style={{ textAlign: "center", maxWidth: "540px", marginTop: "4px" }}>
             <h2 style={{ fontSize: "15px", fontWeight: 600, color: "var(--fg-base)", margin: "0 0 6px" }}>
               No harness.yaml found
             </h2>
@@ -330,42 +305,17 @@ export default function HarnessFilePage() {
             )}
 
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "center" }}>
-              <button
-                onClick={handleGenerate}
-                disabled={generating}
-                style={{
-                  padding: "7px 14px", borderRadius: "6px", border: "none",
-                  background: "var(--accent)", color: "var(--accent-text, #fff)",
-                  fontSize: "12px", fontWeight: 600,
-                  cursor: generating ? "not-allowed" : "pointer",
-                }}
-              >
-                {generating ? "Scanning..." : "Generate from Claude Code setup"}
-              </button>
-              <button
-                onClick={() => setProfilePickerOpen(true)}
-                style={{
-                  padding: "7px 14px", borderRadius: "6px",
-                  border: "1px solid var(--border-base)",
-                  background: "var(--bg-elevated)", color: "var(--fg-base)",
-                  fontSize: "12px", cursor: "pointer",
-                }}
-              >
+              <Button variant="primary" onClick={handleGenerate} disabled={generating}>
+                {generating ? "Scanning…" : "Generate from Claude Code setup"}
+              </Button>
+              <Button variant="ghost" onClick={() => setProfilePickerOpen(true)}>
                 Start from a profile
-              </button>
-              <button
-                onClick={() => openEditor(HARNESS_TEMPLATE)}
-                style={{
-                  padding: "7px 14px", borderRadius: "6px",
-                  border: "1px solid var(--border-base)",
-                  background: "var(--bg-elevated)", color: "var(--fg-base)",
-                  fontSize: "12px", cursor: "pointer",
-                }}
-              >
+              </Button>
+              <Button variant="ghost" onClick={() => openEditor(HARNESS_TEMPLATE)}>
                 Create from scratch
-              </button>
+              </Button>
             </div>
-          </div>
+          </Card>
         )}
 
         {/* Editor view (works for both empty and found states) */}
@@ -378,23 +328,13 @@ export default function HarnessFilePage() {
                 </span>
                 <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                   {saveError && <span style={{ fontSize: "11px", color: "var(--danger)" }}>{saveError}</span>}
-                  <button
-                    onClick={handleSave}
-                    disabled={!saveable || saving}
-                    style={{
-                      padding: "5px 14px", borderRadius: "6px", border: "none",
-                      background: saveable && !saving ? "var(--accent)" : "var(--bg-elevated)",
-                      color: saveable && !saving ? "var(--accent-text, #fff)" : "var(--fg-subtle)",
-                      fontSize: "12px", fontWeight: 600,
-                      cursor: saveable && !saving ? "pointer" : "not-allowed",
-                    }}
-                  >
-                    {saving ? "Saving..." : "Save harness.yaml"}
-                  </button>
+                  <Button variant="primary" size="sm" onClick={handleSave} disabled={!saveable || saving}>
+                    {saving ? "Saving…" : "Save harness.yaml"}
+                  </Button>
                 </div>
               </div>
             )}
-            <div style={{ flex: 1, overflow: "hidden", border: "1px solid var(--border-base)", borderRadius: found ? 0 : "8px" }}>
+            <div style={{ flex: 1, overflow: "hidden", borderRadius: found ? 0 : "8px" }}>
               <Suspense fallback={
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", fontSize: "12px", color: "var(--fg-subtle)" }}>
                   Loading editor...
@@ -416,13 +356,9 @@ export default function HarnessFilePage() {
           <>
             {/* Parse error */}
             {parsed.parseError && (
-              <div style={{
-                background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-                borderRadius: "8px", padding: "10px 14px",
-                fontSize: "13px", color: "var(--danger)", marginBottom: "16px", marginTop: "4px",
-              }}>
+              <Card padding="sm" style={{ fontSize: "13px", color: "var(--danger)", marginBottom: "16px", marginTop: "4px" }}>
                 {parsed.parseError}
-              </div>
+              </Card>
             )}
 
             {view === "formatted" ? (
@@ -449,11 +385,7 @@ export default function HarnessFilePage() {
                 )}
               </div>
             ) : (
-              <div style={{
-                background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-                borderRadius: "8px", padding: "14px 16px",
-                overflowX: "auto", marginTop: "4px",
-              }}>
+              <Card padding="md" style={{ overflowX: "auto", marginTop: "4px" }}>
                 <pre style={{
                   margin: 0, fontFamily: "ui-monospace, monospace",
                   fontSize: "11px", lineHeight: "1.6",
@@ -461,7 +393,7 @@ export default function HarnessFilePage() {
                 }}>
                   {diskContent}
                 </pre>
-              </div>
+              </Card>
             )}
           </>
         )}

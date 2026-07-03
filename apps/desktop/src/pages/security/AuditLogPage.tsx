@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
+import { Button, Card, EmptyState, StatusChip, type StatusChipVariant } from "@harness-kit/ui";
+import { ScrollText } from "lucide-react";
 import { listAuditEntries, clearAuditEntries } from "../../lib/tauri";
 import type { AuditEntry } from "@harness-kit/shared";
 import { useArrowNavigation } from "../../hooks/useArrowNavigation";
@@ -11,6 +13,7 @@ type CategoryFilter = "all" | "permissions" | "secrets";
 function Pill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
     <button
+      className="hk-reset-btn"
       onClick={onClick}
       aria-pressed={active}
       style={{
@@ -18,9 +21,7 @@ function Pill({ label, active, onClick }: { label: string; active: boolean; onCl
         fontWeight: active ? 600 : 400,
         padding: "3px 10px",
         borderRadius: "12px",
-        border: "1px solid",
-        borderColor: active ? "var(--accent)" : "var(--border-base)",
-        background: active ? "var(--accent-light)" : "transparent",
+        background: active ? "var(--accent-light)" : "var(--bg-elevated)",
         color: active ? "var(--accent-text)" : "var(--fg-muted)",
         cursor: "pointer",
       }}
@@ -30,24 +31,19 @@ function Pill({ label, active, onClick }: { label: string; active: boolean; onCl
   );
 }
 
-function EventBadge({ eventType }: { eventType: string }) {
-  const colors: Record<string, { bg: string; text: string }> = {
-    permission_change: { bg: "rgba(91,80,232,0.1)", text: "var(--accent-text)" },
-    preset_applied: { bg: "var(--success-light)", text: "var(--success)" },
-    secret_access: { bg: "var(--warning-light)", text: "var(--warning)" },
-    secret_delete: { bg: "var(--danger-light)", text: "var(--danger)" },
-  };
-  const c = colors[eventType] ?? { bg: "var(--bg-base)", text: "var(--fg-muted)" };
-  const label = eventType.replace(/_/g, " ");
+const EVENT_VARIANT: Record<string, StatusChipVariant> = {
+  permission_change: "subtle",
+  preset_applied: "success",
+  secret_access: "warning",
+  secret_delete: "danger",
+};
 
+function EventBadge({ eventType }: { eventType: string }) {
+  const label = eventType.replace(/_/g, " ");
   return (
-    <span style={{
-      fontSize: "10px", fontWeight: 500, padding: "1px 7px",
-      borderRadius: "4px", background: c.bg, color: c.text,
-      whiteSpace: "nowrap",
-    }}>
+    <StatusChip variant={EVENT_VARIANT[eventType] ?? "subtle"} hideDot>
       {label}
-    </span>
+    </StatusChip>
   );
 }
 
@@ -128,13 +124,9 @@ export default function AuditLogPage() {
       </div>
 
       {error && (
-        <div style={{
-          background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-          borderRadius: "8px", padding: "10px 14px", fontSize: "13px",
-          color: "var(--danger)", marginBottom: "16px",
-        }}>
+        <Card padding="sm" style={{ fontSize: "13px", color: "var(--danger)", marginBottom: "16px" }}>
           {error}
-        </div>
+        </Card>
       )}
 
       {/* Filter bar */}
@@ -146,53 +138,30 @@ export default function AuditLogPage() {
         <div style={{ flex: 1 }} />
 
         {!confirmClear ? (
-          <button
-            onClick={() => setConfirmClear(true)}
-            style={{
-              fontSize: "11px", padding: "3px 10px", borderRadius: "5px",
-              border: "1px solid var(--border-base)", background: "transparent",
-              color: "var(--fg-muted)", cursor: "pointer",
-            }}
-          >
+          <Button variant="ghost" size="sm" onClick={() => setConfirmClear(true)}>
             Clear old entries
-          </button>
+          </Button>
         ) : (
           <div style={{ display: "flex", gap: "4px", alignItems: "center" }}>
             <span style={{ fontSize: "11px", color: "var(--fg-muted)" }}>
               Clear entries older than 30 days?
             </span>
-            <button
-              onClick={handleClear}
-              style={{
-                fontSize: "11px", padding: "2px 8px", borderRadius: "4px",
-                border: "none", background: "var(--danger)", color: "#fff",
-                cursor: "pointer",
-              }}
-            >
+            <Button variant="danger" size="sm" onClick={handleClear}>
               Confirm
-            </button>
-            <button
-              onClick={() => setConfirmClear(false)}
-              style={{
-                fontSize: "11px", padding: "2px 8px", borderRadius: "4px",
-                border: "1px solid var(--border-base)", background: "transparent",
-                color: "var(--fg-muted)", cursor: "pointer",
-              }}
-            >
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setConfirmClear(false)}>
               Cancel
-            </button>
+            </Button>
           </div>
         )}
       </div>
 
       {/* Table */}
-      <div
+      <Card
+        padding="none"
         tabIndex={0}
         onKeyDown={onAuditKeyDown}
-        style={{
-          background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-          borderRadius: "8px", overflow: "hidden",
-        }}
+        style={{ overflow: "hidden" }}
       >
         {/* Header row */}
         <div style={{
@@ -212,17 +181,11 @@ export default function AuditLogPage() {
             <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>Loading...</p>
           </div>
         ) : entries.length === 0 ? (
-          <div style={{ padding: "24px 16px", textAlign: "center" }}>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ color: "var(--fg-subtle)", marginBottom: "10px" }}>
-              <path d="M12 3L4 6v6c0 4.418 3.582 8 8 9 4.418-1 8-4.582 8-9V6l-8-3z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/>
-            </svg>
-            <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0 }}>
-              No audit entries found.
-            </p>
-            <p style={{ fontSize: "11px", color: "var(--fg-subtle)", margin: "4px 0 0" }}>
-              Entries are created when permissions or secrets are modified.
-            </p>
-          </div>
+          <EmptyState
+            icon={<ScrollText size={28} strokeWidth={1.5} />}
+            title="No audit entries found"
+            description="Entries are created when permissions or secrets are modified."
+          />
         ) : (
           entries.map((entry, idx) => (
             <div key={entry.id}>
@@ -279,38 +242,20 @@ export default function AuditLogPage() {
             </div>
           ))
         )}
-      </div>
+      </Card>
 
       {/* Pagination */}
       {!loading && entries.length > 0 && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", marginTop: "12px" }}>
-          <button
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
-            style={{
-              fontSize: "11px", padding: "4px 10px", borderRadius: "5px",
-              border: "1px solid var(--border-base)", background: "transparent",
-              color: page === 0 ? "var(--fg-subtle)" : "var(--fg-muted)",
-              cursor: page === 0 ? "default" : "pointer",
-            }}
-          >
+          <Button variant="ghost" size="sm" onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>
             Prev
-          </button>
+          </Button>
           <span style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>
             Page {page + 1}
           </span>
-          <button
-            onClick={() => setPage((p) => p + 1)}
-            disabled={entries.length < PAGE_SIZE}
-            style={{
-              fontSize: "11px", padding: "4px 10px", borderRadius: "5px",
-              border: "1px solid var(--border-base)", background: "transparent",
-              color: entries.length < PAGE_SIZE ? "var(--fg-subtle)" : "var(--fg-muted)",
-              cursor: entries.length < PAGE_SIZE ? "default" : "pointer",
-            }}
-          >
+          <Button variant="ghost" size="sm" onClick={() => setPage((p) => p + 1)} disabled={entries.length < PAGE_SIZE}>
             Next
-          </button>
+          </Button>
         </div>
       )}
 

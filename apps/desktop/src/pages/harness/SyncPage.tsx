@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { Wrench, Pencil, Check, X as XIcon } from "lucide-react";
+import { Button, Card, EmptyState, Input } from "@harness-kit/ui";
 import { compile, detectPlatforms, parseHarness } from "@harness-kit/core";
 import type { CompileResult, DetectedPlatform, TargetPlatform } from "@harness-kit/core";
 import {
@@ -51,23 +53,10 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
-  return (
-    <div style={{
-      background: "var(--bg-surface)",
-      border: "1px solid var(--border-base)",
-      borderRadius: "8px",
-      padding: "14px 16px",
-      ...style,
-    }}>
-      {children}
-    </div>
-  );
-}
-
 // ── Main page ─────────────────────────────────────────────────
 
 export default function SyncPage() {
+  const navigate = useNavigate();
   // Harness file state
   const [harnessContent, setHarnessContent] = useState<string | null>(null);
   const [harnessPath, setHarnessPath] = useState<string | null>(null);
@@ -226,56 +215,24 @@ export default function SyncPage() {
             </p>
           </div>
 
-          <Link
-            to="/harness/file"
-            style={{
-              display: "flex", alignItems: "center", gap: "5px",
-              padding: "5px 11px", borderRadius: "6px",
-              border: "1px solid var(--border-base)",
-              background: "var(--bg-elevated)",
-              color: "var(--fg-base)", fontSize: "11px", fontWeight: 500,
-              cursor: "pointer", textDecoration: "none", flexShrink: 0,
-            }}
-          >
-            <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-            </svg>
+          <Button variant="ghost" size="sm" onClick={() => navigate("/harness/file")}>
+            <Pencil size={12} strokeWidth={1.7} style={{ marginRight: 5 }} />
             Edit harness.yaml
-          </Link>
+          </Button>
         </div>
 
         {/* No harness.yaml — empty state */}
         {!harnessLoading && !harnessContent && (
-          <Card>
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "10px", padding: "16px 0 8px", textAlign: "center" }}>
-              <div style={{
-                width: "40px", height: "40px", borderRadius: "10px",
-                background: "var(--bg-elevated)", border: "1px solid var(--border-base)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontSize: "20px",
-              }}>
-                🧰
-              </div>
-              <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)", margin: 0 }}>
-                No harness.yaml found
-              </p>
-              <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: 0, maxWidth: "400px", lineHeight: "1.5" }}>
-                Create your harness.yaml first, then come back to sync it to your projects.
-              </p>
-              <Link
-                to="/harness/file"
-                style={{
-                  padding: "7px 14px", borderRadius: "6px",
-                  border: "none",
-                  background: "var(--accent)", color: "var(--accent-text, #fff)",
-                  fontSize: "12px", fontWeight: 600, cursor: "pointer",
-                  textDecoration: "none", marginTop: "4px",
-                }}
-              >
+          <EmptyState
+            icon={<Wrench size={28} strokeWidth={1.5} />}
+            title="No harness.yaml found"
+            description="Create your harness.yaml first, then come back to sync it to your projects."
+            action={
+              <Button variant="primary" onClick={() => navigate("/harness/file")}>
                 Create harness.yaml
-              </Link>
-            </div>
-          </Card>
+              </Button>
+            }
+          />
         )}
 
         {/* Harness source card */}
@@ -305,35 +262,28 @@ export default function SyncPage() {
             <div>
               <SectionLabel>Project Directory</SectionLabel>
               <div style={{ display: "flex", gap: "6px" }}>
-                <input
-                  type="text"
-                  value={projectDir}
-                  onChange={(e) => handleDirChange(e.target.value)}
-                  placeholder="~/repos/my-project"
-                  style={{
-                    flex: 1, padding: "6px 10px", borderRadius: "6px",
-                    border: `1px solid ${dirValid ? "var(--accent)" : "var(--border-base)"}`,
-                    background: "var(--bg-elevated)", color: "var(--fg-base)",
-                    fontSize: "12px", fontFamily: "ui-monospace, monospace", outline: "none",
-                  }}
-                />
-                <button
-                  onClick={openDirectoryPicker}
-                  style={{
-                    padding: "6px 12px", borderRadius: "6px",
-                    border: "1px solid var(--border-base)",
-                    background: "var(--bg-elevated)", color: "var(--fg-base)",
-                    fontSize: "12px", cursor: "pointer", whiteSpace: "nowrap",
-                  }}
-                >
+                <div style={{ flex: 1 }}>
+                  <Input
+                    type="text"
+                    value={projectDir}
+                    onChange={(e) => handleDirChange(e.target.value)}
+                    placeholder="~/repos/my-project"
+                    style={{ fontFamily: "ui-monospace, monospace" }}
+                  />
+                </div>
+                <Button variant="ghost" onClick={openDirectoryPicker}>
                   Browse…
-                </button>
+                </Button>
               </div>
 
               {/* Status / recent */}
               {projectDir && !dirChecking && (
-                <p style={{ margin: "5px 0 0", fontSize: "11px", color: dirValid ? "var(--accent)" : "var(--danger)" }}>
-                  {dirValid ? "✓ Directory found" : "✗ Directory not found"}
+                <p style={{
+                  margin: "5px 0 0", fontSize: "11px", display: "flex", alignItems: "center", gap: "4px",
+                  color: dirValid ? "var(--success)" : "var(--danger)",
+                }}>
+                  {dirValid ? <Check size={11} strokeWidth={2} /> : <XIcon size={11} strokeWidth={2} />}
+                  {dirValid ? "Directory found" : "Directory not found"}
                 </p>
               )}
               {dirChecking && (
@@ -344,10 +294,10 @@ export default function SyncPage() {
                   {recentDirs.slice(0, 5).map((d) => (
                     <button
                       key={d}
+                      className="hk-reset-btn"
                       onClick={() => handleDirChange(d)}
                       style={{
                         padding: "2px 8px", borderRadius: "4px",
-                        border: "1px solid var(--border-base)",
                         background: "var(--bg-elevated)", color: "var(--fg-subtle)",
                         fontSize: "10px", fontFamily: "ui-monospace, monospace", cursor: "pointer",
                         maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
@@ -370,20 +320,20 @@ export default function SyncPage() {
                   return (
                     <button
                       key={platform}
+                      className="hk-reset-btn"
                       onClick={() => toggleTarget(platform)}
                       style={{
                         display: "flex", alignItems: "center", gap: "5px",
                         padding: "5px 12px", borderRadius: "6px",
-                        border: `1px solid ${checked ? "var(--accent)" : "var(--border-base)"}`,
-                        background: checked ? "var(--accent-light, #1a1a2e)" : "var(--bg-elevated)",
-                        color: checked ? "var(--accent)" : "var(--fg-subtle)",
+                        background: checked ? "var(--accent-light)" : "var(--bg-elevated)",
+                        color: checked ? "var(--accent-text)" : "var(--fg-subtle)",
                         fontSize: "12px", fontWeight: checked ? 600 : 400, cursor: "pointer",
-                        transition: "all 0.1s",
+                        transition: "background-color 0.15s ease-out",
                       }}
                     >
                       <span style={{
                         width: "6px", height: "6px", borderRadius: "50%",
-                        background: checked ? "var(--accent)" : "var(--border-base)",
+                        background: checked ? "var(--accent)" : "var(--border-strong)",
                         flexShrink: 0,
                       }} />
                       {PLATFORM_LABELS[platform]}
@@ -398,20 +348,9 @@ export default function SyncPage() {
 
             {/* Preview button */}
             <div>
-              <button
-                onClick={handlePreview}
-                disabled={!canPreview}
-                style={{
-                  padding: "7px 18px", borderRadius: "6px", border: "none",
-                  background: canPreview ? "var(--accent)" : "var(--bg-elevated)",
-                  color: canPreview ? "var(--accent-text, #fff)" : "var(--fg-subtle)",
-                  fontSize: "12px", fontWeight: 600,
-                  cursor: canPreview ? "pointer" : "not-allowed",
-                  transition: "all 0.1s",
-                }}
-              >
+              <Button variant="primary" onClick={handlePreview} disabled={!canPreview}>
                 {phase === "previewing" ? "Previewing…" : "Preview Changes"}
-              </button>
+              </Button>
             </div>
           </Card>
         )}
@@ -442,7 +381,7 @@ export default function SyncPage() {
         {phase === "applied" && (
           <Card style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
             <div>
-              <p style={{ margin: "0 0 2px", fontSize: "13px", fontWeight: 600, color: "var(--accent)" }}>
+              <p style={{ margin: "0 0 2px", fontSize: "13px", fontWeight: 600, color: "var(--success)" }}>
                 Sync complete
               </p>
               {appliedBackupId && (
@@ -452,17 +391,9 @@ export default function SyncPage() {
               )}
             </div>
             <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
-              <button
-                onClick={handleReset}
-                style={{
-                  padding: "5px 12px", borderRadius: "6px",
-                  border: "1px solid var(--border-base)",
-                  background: "var(--bg-elevated)", color: "var(--fg-base)",
-                  fontSize: "12px", cursor: "pointer",
-                }}
-              >
+              <Button variant="ghost" size="sm" onClick={handleReset}>
                 Sync again
-              </button>
+              </Button>
             </div>
           </Card>
         )}

@@ -115,8 +115,9 @@ export default function App() {
             {/* Drift */}
             <Route path="drift" element={<DriftPage />} />
 
-            {/* Preferences */}
+            {/* Preferences / Settings (Security folds in here as tabs — DESIGN.md §5) */}
             <Route path="preferences" element={<PreferencesPage />} />
+            <Route path="preferences/:tab" element={<PreferencesPage />} />
             </Route>
           </Routes>
         </BrowserRouter>

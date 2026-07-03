@@ -1,4 +1,6 @@
 import type { CSSProperties } from "react";
+import { CheckCircle2 } from "lucide-react";
+import { Card } from "@harness-kit/ui";
 import type { ValidationResult } from "@harness-kit/core";
 
 interface ValidationBannerProps {
@@ -7,52 +9,35 @@ interface ValidationBannerProps {
 
 export default function ValidationBanner({ result }: ValidationBannerProps) {
   if (result.valid && !result.isLegacyFormat) {
-    const style: CSSProperties = {
-      background: "var(--accent-light)",
-      color: "var(--accent-text)",
-      borderRadius: "8px",
-      padding: "10px 12px",
-      fontSize: "13px",
-      display: "flex",
-      alignItems: "center",
-      gap: "6px",
-    };
     return (
-      <div style={style}>
-        <span>✓</span>
+      <Card
+        padding="sm"
+        style={{
+          background: "var(--accent-light)",
+          color: "var(--accent-text)",
+          fontSize: "13px",
+          display: "flex",
+          alignItems: "center",
+          gap: "6px",
+        }}
+      >
+        <CheckCircle2 size={14} strokeWidth={1.7} aria-hidden="true" />
         <span>Valid harness.yaml</span>
-      </div>
+      </Card>
     );
   }
 
   if (result.isLegacyFormat) {
-    const style: CSSProperties = {
-      background: "var(--bg-surface)",
-      color: "var(--fg-muted)",
-      border: "1px solid var(--border-base)",
-      borderRadius: "8px",
-      padding: "10px 12px",
-      fontSize: "13px",
-    };
     return (
-      <div style={style}>
+      <Card padding="sm" style={{ color: "var(--fg-muted)", fontSize: "13px" }}>
         Legacy format detected — consider upgrading to Protocol v1
-      </div>
+      </Card>
     );
   }
 
   const MAX_SHOWN = 5;
   const shown = result.errors.slice(0, MAX_SHOWN);
   const overflow = result.errors.length - MAX_SHOWN;
-
-  const style: CSSProperties = {
-    background: "var(--bg-surface)",
-    color: "var(--danger)",
-    border: "1px solid var(--border-base)",
-    borderRadius: "8px",
-    padding: "10px 12px",
-    fontSize: "13px",
-  };
 
   const listStyle: CSSProperties = {
     margin: "6px 0 0",
@@ -62,7 +47,7 @@ export default function ValidationBanner({ result }: ValidationBannerProps) {
   };
 
   return (
-    <div style={style}>
+    <Card padding="sm" style={{ color: "var(--danger)", fontSize: "13px" }}>
       <span style={{ fontWeight: 600 }}>Validation errors:</span>
       <ul style={listStyle}>
         {shown.map((err, i) => (
@@ -72,6 +57,6 @@ export default function ValidationBanner({ result }: ValidationBannerProps) {
           <li style={{ color: "var(--fg-muted)" }}>+{overflow} more</li>
         )}
       </ul>
-    </div>
+    </Card>
   );
 }

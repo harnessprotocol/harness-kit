@@ -38,15 +38,12 @@ export default function ImportBanner({ status, onDismiss }: ImportBannerProps) {
             justifyContent: "space-between",
             ...(status.state === "importing" ? {
               background: "var(--accent-light)",
-              border: "1px solid var(--accent-glow)",
               color: "var(--accent-text)",
             } : status.state === "success" ? {
-              background: "rgba(22,163,74,0.08)",
-              border: "1px solid rgba(22,163,74,0.2)",
+              background: "var(--success-light)",
               color: "var(--success)",
             } : {
-              background: "rgba(220,38,38,0.08)",
-              border: "1px solid rgba(220,38,38,0.2)",
+              background: "var(--danger-light)",
               color: "var(--danger)",
             }),
           }}>
