@@ -9,6 +9,7 @@ import {
 } from "@harness-kit/core";
 import { TauriFsProvider } from "../../lib/harness-fs";
 import { getCurrentProjectDir, projectDirLabel } from "../../lib/project-dir";
+import { grantProjectScope } from "../../lib/tauri";
 
 export interface DriftScope {
   kind: "global" | "project";
@@ -55,12 +56,22 @@ export async function buildDriftScopes(): Promise<DriftScope[]> {
     { kind: "global", root: home, label: "Global", fs: new TauriFsProvider(home) },
   ];
   if (projectDir) {
-    scopes.push({
-      kind: "project",
-      root: projectDir,
-      label: projectDirLabel(projectDir),
-      fs: new TauriFsProvider(projectDir),
-    });
+    // Static capability scope only covers known harness config roots under
+    // $HOME — grant runtime access to this arbitrary project dir before
+    // scanning it. A stale/deleted dir just drops the project scope rather
+    // than failing the whole Drift scan.
+    const granted = await grantProjectScope(projectDir).then(
+      () => true,
+      () => false,
+    );
+    if (granted) {
+      scopes.push({
+        kind: "project",
+        root: projectDir,
+        label: projectDirLabel(projectDir),
+        fs: new TauriFsProvider(projectDir),
+      });
+    }
   }
   return scopes;
 }
