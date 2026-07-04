@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
 import type {
   ComparisonSummary,
   ComparisonPhase,
 } from "@harness-kit/shared";
-import { buildInvokeCommand, getHarness } from "../lib/harness-definitions";
-import { getResilienceConfig } from "../lib/preferences";
+import { getHarness } from "../lib/harness-definitions";
 import {
   saveComparison,
   savePanel,
@@ -15,14 +13,12 @@ import {
   deleteComparison,
   updateComparisonTitle,
   updateComparisonStatus,
-  updatePanelResult,
 } from "../lib/tauri";
 
 // ── Types ────────────────────────────────────────────────────
 
 export interface PanelState {
   id: string;
-  terminalId: string;
   harnessId: string;
   harnessName: string;
   model: string | null;
@@ -46,16 +42,6 @@ export interface ComparisonState {
   createdAt: string;
 }
 
-interface TerminalOutputPayload {
-  terminalId: string;
-  data: string;
-}
-
-interface TerminalExitPayload {
-  terminalId: string;
-  exitCode: number;
-}
-
 export interface UseComparatorReturn {
   // Session list
   sessions: ComparisonSummary[];
@@ -67,6 +53,9 @@ export interface UseComparatorReturn {
   setPhase: (phase: ComparisonPhase) => void;
 
   // Setup
+  // NOTE: Live in-app execution (spawning a harness process and streaming its
+  // output) is not available in this build. This records the comparison and
+  // its panels so they can be reviewed/annotated, but does not run anything.
   startComparison: (opts: {
     title: string;
     prompt: string;
@@ -76,25 +65,13 @@ export interface UseComparatorReturn {
     taskType?: string;
   }) => Promise<void>;
 
-  // Execution
-  sendToPanel: (panelId: string, data: string) => Promise<void>;
-  broadcastToAll: (prompt: string) => Promise<void>;
   endSession: () => Promise<void>;
 
   // Session management
   loadComparison: (id: string) => Promise<void>;
   deleteSession: (id: string) => Promise<void>;
   updateTitle: (title: string) => Promise<void>;
-
-  // Terminal data
-  getRawChunks: (terminalId: string) => string[];
-  outputTick: number;
 }
-
-// ── Constants ────────────────────────────────────────────────
-
-/** Max raw chunks per terminal before trimming (prevents unbounded memory growth). */
-const MAX_RAW_CHUNKS = 5000;
 
 // ── Hook ─────────────────────────────────────────────────────
 
@@ -102,10 +79,6 @@ export function useComparator(): UseComparatorReturn {
   const [sessions, setSessions] = useState<ComparisonSummary[]>([]);
   const [active, setActive] = useState<ComparisonState | null>(null);
   const [phase, setPhase] = useState<ComparisonPhase>("setup");
-  const [outputTick, setOutputTick] = useState(0);
-
-  // Raw chunks stored outside React state for performance — a Map of terminalId → string[].
-  const rawChunksRef = useRef<Map<string, string[]>>(new Map());
 
   // Refs for accessing latest state in callbacks without stale closures.
   const activeRef = useRef<ComparisonState | null>(null);
@@ -130,149 +103,12 @@ export function useComparator(): UseComparatorReturn {
     loadSessions();
   }, [loadSessions]);
 
-  // ── Event listeners ─────────────────────────────────────────
-
-  useEffect(() => {
-    const unlistenOutput = listen<TerminalOutputPayload>("terminal://output", (event) => {
-      const { terminalId, data } = event.payload;
-      const chunks = rawChunksRef.current.get(terminalId);
-      if (chunks) {
-        chunks.push(data);
-        // Trim old chunks to prevent unbounded memory growth.
-        if (chunks.length > MAX_RAW_CHUNKS) {
-          const excess = chunks.length - MAX_RAW_CHUNKS;
-          chunks.splice(0, excess);
-        }
-        setOutputTick((t) => (t + 1) & 0x7fffffff);
-      }
-    });
-
-    const unlistenExit = listen<TerminalExitPayload>("terminal://exit", (event) => {
-      const { terminalId, exitCode } = event.payload;
-      const now = Date.now();
-
-      setActive((prev) => {
-        if (!prev) return prev;
-
-        const exitedPanel = prev.panels.find((p) => p.terminalId === terminalId);
-        if (!exitedPanel) return prev;
-
-        // Record health result (best-effort — don't block state update).
-        invoke("record_harness_launch_result", {
-          harnessId: exitedPanel.harnessId,
-          exitCode,
-        }).catch(() => {});
-
-        // Check resilience config for fallback on failure.
-        let fallbackPanel: PanelState | null = null;
-        if (exitCode !== 0) {
-          const resilienceConfig = getResilienceConfig();
-          const cfg = resilienceConfig[exitedPanel.harnessId];
-          if (cfg?.fallbackHarnessId) {
-            const fallbackId = cfg.fallbackHarnessId;
-            // Only fall back if no panel for this harness is already running.
-            const alreadyRunning = prev.panels.some(
-              (p) => p.harnessId === fallbackId && p.status === "running",
-            );
-            if (!alreadyRunning) {
-              const panelId = crypto.randomUUID();
-              const newTerminalId = `fallback-${panelId}`;
-              fallbackPanel = {
-                id: panelId,
-                terminalId: newTerminalId,
-                harnessId: fallbackId,
-                harnessName: fallbackId,
-                model: exitedPanel.model,
-                status: "running" as const,
-                startedAt: now,
-              };
-
-              // Launch PTY for fallback harness.
-              (async () => {
-                try {
-                  const tid = await invoke<string>("create_terminal", {
-                    projectPath: prev.workingDir,
-                  });
-                  rawChunksRef.current.set(tid, []);
-                  const command = buildInvokeCommand(
-                    fallbackId,
-                    prev.prompt,
-                    exitedPanel.model ?? undefined,
-                  );
-                  if (command) {
-                    await invoke("write_terminal", { terminalId: tid, data: command + "\n" });
-                  }
-                  // Update the fallback panel with the real terminalId.
-                  setActive((s) => {
-                    if (!s) return s;
-                    return {
-                      ...s,
-                      panels: s.panels.map((p) =>
-                        p.id === panelId ? { ...p, terminalId: tid } : p,
-                      ),
-                    };
-                  });
-                } catch (e) {
-                  console.error("Failed to launch fallback harness:", e);
-                }
-              })();
-            }
-          }
-        }
-
-        const durationMs = now - exitedPanel.startedAt;
-        const status = exitCode === 0 ? ("completed" as const) : ("failed" as const);
-        const fallbackReason = fallbackPanel
-          ? `Primary failed (exit ${exitCode}), switching to ${fallbackPanel.harnessName}`
-          : undefined;
-
-        // Persist panel result to backend.
-        updatePanelResult(prev.id, exitedPanel.id, exitCode, durationMs, status).catch(console.error);
-
-        const updatedPanels = prev.panels.map((p) =>
-          p.terminalId === terminalId
-            ? { ...p, status, exitCode, durationMs, fallbackReason }
-            : p,
-        );
-
-        const allPanels = fallbackPanel
-          ? [...updatedPanels, fallbackPanel]
-          : updatedPanels;
-
-        // Check if all panels have finished.
-        const allDone = allPanels.every((p) => p.status !== "running");
-
-        if (allDone) {
-          // Transition to results phase and mark comparison as completed.
-          updateComparisonStatus(prev.id, "completed").catch(console.error);
-          setPhase("results");
-          // Refresh session list so the sidebar reflects the new status.
-          loadSessions().catch(console.error);
-        }
-
-        return { ...prev, panels: allPanels };
-      });
-    });
-
-    return () => {
-      unlistenOutput.then((f) => f());
-      unlistenExit.then((f) => f());
-    };
-  }, [loadSessions]);
-
-  // ── Cleanup PTY sessions on unmount ─────────────────────────
-
-  useEffect(() => {
-    return () => {
-      const current = activeRef.current;
-      if (!current) return;
-      for (const panel of current.panels) {
-        invoke("destroy_terminal", { terminalId: panel.terminalId }).catch(() => {});
-      }
-    };
-  }, []);
-
   // ── Start a new comparison ──────────────────────────────────
+  //
+  // Live in-app execution isn't available in this build (the terminal/PTY
+  // backend was removed). This persists the comparison and its panels so
+  // they exist as a record, but panels are never actually run — results
+  // must be recorded manually.
 
   const startComparison = useCallback(
     async (opts: {
@@ -297,7 +133,7 @@ export function useComparator(): UseComparatorReturn {
         }).catch((e) => console.warn("tag_comparison_task_type failed:", e));
       }
 
-      // Create a panel + terminal for each harness.
+      // Create a panel record for each harness (no live process is started).
       const panels: PanelState[] = [];
 
       for (const harness of opts.harnesses) {
@@ -306,29 +142,15 @@ export function useComparator(): UseComparatorReturn {
         // Persist panel to backend.
         await savePanel(panelId, comparisonId, harness.id, harness.name, harness.model);
 
-        // Create PTY terminal for this panel.
-        const terminalId = await invoke<string>("create_terminal", { projectPath: opts.workingDir });
-        rawChunksRef.current.set(terminalId, []);
-
-        const panel: PanelState = {
+        panels.push({
           id: panelId,
-          terminalId,
           harnessId: harness.id,
           harnessName: harness.name,
           model: harness.model,
-          status: "running",
+          status: "completed",
           startedAt: Date.now(),
           acpMode: getHarness(harness.id)?.protocol === "acp",
-        };
-        panels.push(panel);
-
-        // Send the harness invoke command to the terminal.
-        const command = buildInvokeCommand(harness.id, opts.prompt, harness.model ?? undefined);
-        if (command) {
-          await invoke("write_terminal", { terminalId, data: command + "\n" });
-        } else {
-          console.error(`Unknown harness: ${harness.id}`);
-        }
+        });
       }
 
       const state: ComparisonState = {
@@ -337,55 +159,20 @@ export function useComparator(): UseComparatorReturn {
         prompt: opts.prompt,
         workingDir: opts.workingDir,
         pinnedCommit: opts.pinnedCommit,
-        phase: "execution",
+        phase: "results",
         panels,
         createdAt,
       };
 
+      await updateComparisonStatus(comparisonId, "completed").catch(console.error);
+
       setActive(state);
-      setPhase("execution");
+      setPhase("results");
 
       // Refresh session list to include the new comparison.
       loadSessions().catch(console.error);
     },
     [loadSessions],
-  );
-
-  // ── Send data to a specific panel ───────────────────────────
-
-  const sendToPanel = useCallback(async (panelId: string, data: string) => {
-    const current = activeRef.current;
-    if (!current) return;
-
-    const panel = current.panels.find((p) => p.id === panelId);
-    if (!panel) {
-      console.error(`Panel not found: ${panelId}`);
-      return;
-    }
-
-    await invoke("write_terminal", { terminalId: panel.terminalId, data });
-  }, []);
-
-  // ── Broadcast a prompt to all running panels ────────────────
-
-  const broadcastToAll = useCallback(
-    async (prompt: string) => {
-      const current = activeRef.current;
-      if (!current) return;
-
-      const running = current.panels.filter((p) => p.status === "running");
-      await Promise.all(
-        running.map((panel) => {
-          const command = buildInvokeCommand(panel.harnessId, prompt, panel.model ?? undefined);
-          if (!command) return Promise.resolve();
-          return invoke("write_terminal", {
-            terminalId: panel.terminalId,
-            data: command + "\n",
-          });
-        }),
-      );
-    },
-    [],
   );
 
   // ── End the active session ──────────────────────────────────
@@ -394,19 +181,10 @@ export function useComparator(): UseComparatorReturn {
     const current = activeRef.current;
     if (!current) return;
 
-    // Destroy all terminals.
-    for (const panel of current.panels) {
-      invoke("destroy_terminal", { terminalId: panel.terminalId }).catch(() => {});
-    }
-
     // Mark any still-running panels as completed in local state.
-    const now = Date.now();
-    const finalPanels = current.panels.map((p) => {
-      if (p.status !== "running") return p;
-      const durationMs = now - p.startedAt;
-      updatePanelResult(current.id, p.id, -1, durationMs, "completed").catch(console.error);
-      return { ...p, status: "completed" as const, exitCode: -1, durationMs };
-    });
+    const finalPanels = current.panels.map((p) =>
+      p.status !== "running" ? p : { ...p, status: "completed" as const },
+    );
 
     await updateComparisonStatus(current.id, "completed").catch(console.error);
 
@@ -419,16 +197,6 @@ export function useComparator(): UseComparatorReturn {
 
   const loadComparison = useCallback(async (id: string) => {
     try {
-      // Destroy terminals from any currently-active live comparison.
-      const current = activeRef.current;
-      if (current) {
-        for (const panel of current.panels) {
-          if (panel.terminalId) {
-            invoke("destroy_terminal", { terminalId: panel.terminalId }).catch(() => {});
-          }
-        }
-      }
-
       const detail = await getComparison(id);
       if (!detail) {
         console.error("Comparison not found:", id);
@@ -438,7 +206,6 @@ export function useComparator(): UseComparatorReturn {
 
       const panels: PanelState[] = detail.panels.map((p) => ({
         id: p.id,
-        terminalId: "", // No live terminal for past sessions.
         harnessId: p.harnessId,
         harnessName: p.harnessName,
         model: p.model,
@@ -471,14 +238,7 @@ export function useComparator(): UseComparatorReturn {
   const deleteSession = useCallback(
     async (id: string) => {
       try {
-        // Destroy live terminals if deleting the active comparison.
-        const current = activeRef.current;
-        if (current?.id === id) {
-          for (const panel of current.panels) {
-            if (panel.terminalId) {
-              invoke("destroy_terminal", { terminalId: panel.terminalId }).catch(() => {});
-            }
-          }
+        if (activeRef.current?.id === id) {
           setActive(null);
           setPhase("setup");
         }
@@ -511,12 +271,6 @@ export function useComparator(): UseComparatorReturn {
     [loadSessions],
   );
 
-  // ── Terminal data access ────────────────────────────────────
-
-  const getRawChunks = useCallback((terminalId: string): string[] => {
-    return rawChunksRef.current.get(terminalId) ?? [];
-  }, []);
-
   // ── Return ──────────────────────────────────────────────────
 
   return {
@@ -526,13 +280,9 @@ export function useComparator(): UseComparatorReturn {
     phase,
     setPhase,
     startComparison,
-    sendToPanel,
-    broadcastToAll,
     endSession,
     loadComparison,
     deleteSession,
     updateTitle,
-    getRawChunks,
-    outputTick,
   };
 }

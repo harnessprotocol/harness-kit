@@ -6,15 +6,9 @@ import HarnessPanel from "../../components/comparator/HarnessPanel";
 
 export interface ExecutionPhaseProps {
   active: ComparisonState;
-  getRawChunks: (terminalId: string) => string[];
-  outputTick: number;
   onEndSession: () => void;
   onUpdateTitle: (title: string) => void;
-  onSendToPanel: (panelId: string, data: string) => void;
-  onBroadcast: (prompt: string) => void;
 }
-
-type BroadcastMode = "broadcast" | "single";
 
 // ── Design Tokens ───────────────────────────────────────────
 
@@ -137,62 +131,18 @@ const styles = {
     overflow: "hidden",
   } as React.CSSProperties,
 
-  // Broadcast bar
-  broadcastBar: {
+  // Unavailable notice bar (replaces the old broadcast bar)
+  noticeBar: {
     display: "flex",
     alignItems: "center",
-    height: 44,
-    minHeight: 44,
-    padding: "0 12px",
+    gap: 8,
+    minHeight: 36,
+    padding: "8px 12px",
     borderTop: `1px solid ${tokens.borderBase}`,
     background: tokens.bgSurface,
-    gap: 8,
-    flexShrink: 0,
-  } as React.CSSProperties,
-
-  modeBtn: {
-    fontSize: 10,
-    fontWeight: 500,
-    fontFamily: fontStack,
-    padding: "4px 10px",
-    borderRadius: 4,
-    cursor: "pointer",
-    transition: "all 150ms ease-out",
-    border: "none",
-    flexShrink: 0,
-  } as React.CSSProperties,
-
-  broadcastInput: {
-    flex: 1,
-    fontSize: 12,
-    fontFamily: monoStack,
-    color: tokens.fgBase,
-    background: tokens.bgElevated,
-    border: `1px solid ${tokens.borderBase}`,
-    borderRadius: 5,
-    padding: "5px 10px",
-    outline: "none",
-    transition: "border-color 150ms ease-out",
-  } as React.CSSProperties,
-
-  sendBtn: {
     fontSize: 11,
-    fontWeight: 600,
     fontFamily: fontStack,
-    color: "#ffffff",
-    background: tokens.accent,
-    border: "none",
-    borderRadius: 5,
-    padding: "5px 14px",
-    cursor: "pointer",
-    transition: "background 150ms ease-out, transform 100ms ease-out",
-    flexShrink: 0,
-  } as React.CSSProperties,
-
-  hint: {
-    fontSize: 9,
-    color: tokens.fgPlaceholder,
-    fontFamily: fontStack,
+    color: tokens.fgMuted,
     flexShrink: 0,
   } as React.CSSProperties,
 };
@@ -224,22 +174,12 @@ function gridRows(panelCount: number): string {
 
 export default function ExecutionPhase({
   active,
-  getRawChunks,
-  outputTick,
   onEndSession,
   onUpdateTitle,
-  onSendToPanel,
-  onBroadcast,
 }: ExecutionPhaseProps) {
   const [title, setTitle] = useState(active.title);
   const [elapsed, setElapsed] = useState(0);
-  const [mode, setMode] = useState<BroadcastMode>("broadcast");
-  const [inputValue, setInputValue] = useState("");
-  const [selectedPanelId, setSelectedPanelId] = useState<string | null>(
-    active.panels.length > 0 ? active.panels[0].id : null,
-  );
 
-  const inputRef = useRef<HTMLInputElement>(null);
   const startTimeRef = useRef(Date.now());
 
   // ── Elapsed timer ──────────────────────────────────────────
@@ -272,34 +212,6 @@ export default function ExecutionPhase({
       onUpdateTitle(trimmed);
     }
   }, [title, active.title, onUpdateTitle]);
-
-  // ── Send handler ───────────────────────────────────────────
-
-  const handleSend = useCallback(() => {
-    const value = inputValue.trim();
-    if (!value) return;
-
-    if (mode === "broadcast") {
-      onBroadcast(value);
-    } else if (selectedPanelId) {
-      onSendToPanel(selectedPanelId, value + "\n");
-    }
-
-    setInputValue("");
-    inputRef.current?.focus();
-  }, [inputValue, mode, selectedPanelId, onBroadcast, onSendToPanel]);
-
-  // ── Keyboard shortcut: Cmd+Enter to send ───────────────────
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        handleSend();
-      }
-    },
-    [handleSend],
-  );
 
   // ── Unique harness names for badges ────────────────────────
 
@@ -360,7 +272,7 @@ export default function ExecutionPhase({
         </button>
       </div>
 
-      {/* ── Execution Grid ──────────────────────────────────── */}
+      {/* Execution Grid */}
       <div style={gridStyle}>
         {active.panels.map((panel) => (
           <div
@@ -368,90 +280,21 @@ export default function ExecutionPhase({
             style={{
               background: tokens.bgElevated,
               overflow: "hidden",
-              ...(mode === "single" && selectedPanelId === panel.id
-                ? { boxShadow: `inset 0 0 0 2px ${tokens.accent}` }
-                : {}),
-            }}
-            onClick={() => {
-              if (mode === "single") setSelectedPanelId(panel.id);
             }}
           >
             <HarnessPanel
               panel={panel}
-              rawChunks={getRawChunks(panel.terminalId)}
-              outputTick={outputTick}
-              onSend={(data) => onSendToPanel(panel.id, data)}
+              rawChunks={[]}
+              outputTick={0}
+              onSend={() => {}}
             />
           </div>
         ))}
       </div>
 
-      {/* ── Broadcast Bar ───────────────────────────────────── */}
-      <div style={styles.broadcastBar}>
-        {/* Mode toggle */}
-        <button
-          style={{
-            ...styles.modeBtn,
-            background: mode === "broadcast" ? tokens.accent : "transparent",
-            color: mode === "broadcast" ? "#ffffff" : tokens.fgSubtle,
-          }}
-          onClick={() => setMode("broadcast")}
-        >
-          Broadcast
-        </button>
-        <button
-          style={{
-            ...styles.modeBtn,
-            background: mode === "single" ? tokens.accent : "transparent",
-            color: mode === "single" ? "#ffffff" : tokens.fgSubtle,
-          }}
-          onClick={() => setMode("single")}
-        >
-          Single
-        </button>
-
-        {/* Input */}
-        <input
-          ref={inputRef}
-          type="text"
-          value={inputValue}
-          onChange={(e) => setInputValue(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={
-            mode === "broadcast"
-              ? "Send to all panels..."
-              : `Send to ${active.panels.find((p) => p.id === selectedPanelId)?.harnessName ?? "panel"}...`
-          }
-          style={styles.broadcastInput}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = tokens.accent;
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = tokens.borderBase;
-          }}
-        />
-
-        {/* Send button */}
-        <button
-          style={{
-            ...styles.sendBtn,
-            ...(inputValue.trim() ? {} : { opacity: 0.5, cursor: "not-allowed" }),
-          }}
-          onClick={handleSend}
-          onMouseEnter={(e) => {
-            if (!inputValue.trim()) return;
-            e.currentTarget.style.background = tokens.accentFg;
-            e.currentTarget.style.transform = "scale(0.97)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = tokens.accent;
-            e.currentTarget.style.transform = "scale(1)";
-          }}
-        >
-          Send
-        </button>
-
-        <span style={styles.hint}>\u2318\u23CE</span>
+      {/* Unavailable notice bar */}
+      <div style={styles.noticeBar}>
+        Live in-app execution isn't available in this build — record results manually.
       </div>
     </div>
   );

@@ -585,12 +585,8 @@ export default function ComparatorPage() {
     startComparison,
     loadComparison,
     deleteSession,
-    sendToPanel,
-    broadcastToAll,
     endSession,
     updateTitle,
-    getRawChunks,
-    outputTick,
   } = useComparator();
 
   // ── Resizable rail ───────────────────────────────────────────
@@ -723,12 +719,8 @@ export default function ComparatorPage() {
         return active ? (
           <ExecutionPhase
             active={active}
-            getRawChunks={getRawChunks}
-            outputTick={outputTick}
             onEndSession={endSession}
             onUpdateTitle={updateTitle}
-            onSendToPanel={sendToPanel}
-            onBroadcast={broadcastToAll}
           />
         ) : (
           <PhasePlaceholder phase="execution" />
