@@ -50,7 +50,14 @@ mcp-servers:
 
 env:
   - name: GITHUB_PERSONAL_ACCESS_TOKEN
-    description: GitHub token for the github MCP server and gh CLI (repo scope).
+    description: GitHub token for the github MCP server (repo scope).
+    required: true
+    sensitive: true
+  - name: GH_TOKEN
+    description: >-
+      GitHub token for the gh CLI (repo scope) — read by review, open-pr,
+      merge-pr, pr-sweep, and dependabot-sweep. A separate variable from
+      GITHUB_PERSONAL_ACCESS_TOKEN because gh doesn't read that name.
     required: true
     sensitive: true
   - name: NODE_ENV
