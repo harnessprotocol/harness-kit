@@ -32,7 +32,7 @@ export interface NavItemProps extends HTMLAttributes<HTMLDivElement> {
  * Active state = --accent-light background + 2.5px inset azure rail on the
  * left (DESIGN.md §5). Inactive = --fg-muted, hover -> --bg-elevated + --fg-base.
  */
-export function NavItem({ active = false, icon, badge, children, className = "", ...rest }: NavItemProps) {
+export function NavItem({ active = false, icon, badge, children, className = "", onKeyDown, ...rest }: NavItemProps) {
   return (
     <div
       role="link"
@@ -40,6 +40,15 @@ export function NavItem({ active = false, icon, badge, children, className = "",
       data-active={active ? "true" : undefined}
       tabIndex={0}
       className={["hk-nav-item", className].filter(Boolean).join(" ")}
+      onKeyDown={(e) => {
+        // A role="link" div gets no native keyboard activation; forward Enter/Space
+        // to the click handler so keyboard and screen-reader users can navigate.
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          e.currentTarget.click();
+        }
+        onKeyDown?.(e);
+      }}
       {...rest}
     >
       {icon && (

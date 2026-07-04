@@ -141,6 +141,16 @@ jobs:
       - name: Run dependency audit
         run: pnpm audit --audit-level=critical
 
+      # The precompiled standalone validator (validate.generated.js) is committed so
+      # runtime/tests need no build step, and lets the desktop prod CSP forbid
+      # 'unsafe-eval'. Regenerating must be a no-op — a diff means the schema changed
+      # without running `pnpm --filter @harness-kit/core generate:validator`.
+      - name: Verify generated validator is in sync with schema
+        run: |
+          pnpm --filter @harness-kit/core generate:validator
+          git diff --exit-code packages/core/src/schema/validate.generated.js \
+            || { echo "::error::validate.generated.js is stale — run 'pnpm --filter @harness-kit/core generate:validator' and commit."; exit 1; }
+
       - name: Build and test core stack
         run: pnpm turbo run build test --filter=@harness-kit/cli...
 

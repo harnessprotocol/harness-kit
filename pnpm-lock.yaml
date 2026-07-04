@@ -110,12 +110,6 @@ importers:
       '@tauri-apps/plugin-shell':
         specifier: ^2
         version: 2.3.5
-      '@xterm/addon-fit':
-        specifier: ^0.11.0
-        version: 0.11.0
-      '@xterm/xterm':
-        specifier: ^6.0.0
-        version: 6.0.0
       dompurify:
         specifier: '>=3.3.2'
         version: 3.4.11
@@ -213,12 +207,6 @@ importers:
       '@noble/hashes':
         specifier: ^1.8.0
         version: 1.8.0
-      ajv:
-        specifier: ^8
-        version: 8.20.0
-      ajv-formats:
-        specifier: ^3
-        version: 3.0.1(ajv@8.20.0)
       yaml:
         specifier: ^2.9.0
         version: 2.9.0
@@ -229,9 +217,21 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^4
         version: 4.1.9(vitest@4.1.9)
+      ajv:
+        specifier: ^8
+        version: 8.20.0
+      ajv-formats:
+        specifier: ^3
+        version: 3.0.1(ajv@8.20.0)
+      esbuild:
+        specifier: '>=0.25.0'
+        version: 0.28.1
       tsup:
         specifier: ^8
         version: 8.5.1(jiti@2.7.0)(postcss@8.5.16)(tsx@4.23.0)(typescript@5.9.3)(yaml@2.9.0)
+      tsx:
+        specifier: ^4
+        version: 4.23.0
       typescript:
         specifier: ^5
         version: 5.9.3
@@ -2670,12 +2670,6 @@ packages:
 
   '@vitest/utils@4.1.9':
     resolution: {integrity: sha512-A51o8ymO5PpqlWNnBP9ZHPXDIpuMtTLlGSjN7la4US+LJzoUMyhwjA5QXlm39JexgwHKW4Xjs8Z2d3dLCXOeuA==}
-
-  '@xterm/addon-fit@0.11.0':
-    resolution: {integrity: sha512-jYcgT6xtVYhnhgxh3QgYDnnNMYTcf8ElbxxFzX0IZo+vabQqSPAjC3c1wJrKB5E19VwQei89QCiZZP86DCPF7g==}
-
-  '@xterm/xterm@6.0.0':
-    resolution: {integrity: sha512-TQwDdQGtwwDt+2cgKDLn0IRaSxYu1tSUjgKarSDkUM0ZNiSRXFpjxEsvc/Zgc5kq5omJ+V0a8/kIM2WD3sMOYg==}
 
   acorn-jsx@5.3.2:
     resolution: {integrity: sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ==}
@@ -6230,10 +6224,6 @@ snapshots:
       convert-source-map: 2.0.0
       tinyrainbow: 3.1.0
 
-  '@xterm/addon-fit@0.11.0': {}
-
-  '@xterm/xterm@6.0.0': {}
-
   acorn-jsx@5.3.2(acorn@8.16.0):
     dependencies:
       acorn: 8.16.0
@@ -6709,7 +6699,7 @@ snapshots:
       '@mdx-js/mdx': 3.1.1
       '@standard-schema/spec': 1.1.0
       chokidar: 5.0.0
-      esbuild: 0.28.0
+      esbuild: 0.28.1
       estree-util-value-to-estree: 3.5.0
       fumadocs-core: 16.10.7(@mdx-js/mdx@3.1.1)(@types/estree-jsx@1.0.5)(@types/hast@3.0.4)(@types/mdast@4.0.4)(@types/react@19.2.17)(lucide-react@1.23.0(react@19.2.7))(next@16.2.10(@playwright/test@1.61.1)(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react-dom@19.2.7(react@19.2.7))(react-router@7.18.1(react-dom@19.2.7(react@19.2.7))(react@19.2.7))(react@19.2.7)(zod@4.3.6)
       js-yaml: 4.3.0

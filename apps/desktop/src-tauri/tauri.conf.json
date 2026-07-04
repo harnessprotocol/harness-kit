@@ -6,7 +6,7 @@
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1422",
-    "beforeBuildCommand": "pnpm --filter board-server build && pnpm build",
+    "beforeBuildCommand": "pnpm build",
     "frontendDist": "../dist"
   },
   "app": {
@@ -25,13 +25,12 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data: https:; connect-src 'self' ipc: http://ipc.localhost asset: http://asset.localhost https: http://localhost:* ws: wss: ws://localhost:*;",
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' asset: http://asset.localhost data: https:; connect-src 'self' ipc: http://ipc.localhost asset: http://asset.localhost https: http://localhost:* ws: wss: ws://localhost:*;",
       "devCsp": {
         "default-src": "'self'",
         "script-src": "'self' 'unsafe-inline'",
         "style-src": "'self' 'unsafe-inline'",
         "connect-src": "'self' ipc: http://ipc.localhost http://localhost:* ws://localhost:*",
-        "frame-src": "http://localhost:3131",
         "img-src": "'self' asset: http://asset.localhost data: blob:",
         "font-src": "'self' data:",
         "object-src": "'none'",

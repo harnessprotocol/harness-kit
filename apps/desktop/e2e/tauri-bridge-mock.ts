@@ -33,34 +33,38 @@ export const MOCK_RESPONSES: Record<string, unknown> = {
   read_stats_cache: null,
   read_live_activity: [],
   list_active_sessions: [],
+  // Shape must match HarnessInfo (@harness-kit/shared): models[] + authenticated required.
   detect_harnesses: [
-    { id: "claude", name: "Claude Code", command: "claude", available: true, version: "1.5.0", mode: "supported" },
-    { id: "gh-copilot", name: "GitHub Copilot", command: "copilot", available: true, version: "1.0.0", mode: "supported" },
-    { id: "cursor", name: "Cursor", command: "cursor", available: false },
+    { id: "claude", name: "Claude Code", command: "claude", available: true, authenticated: true, version: "1.5.0", mode: "supported", models: ["claude-sonnet-4-6", "claude-opus-4-6"], defaultModel: "claude-sonnet-4-6" },
+    { id: "gh-copilot", name: "GitHub Copilot", command: "copilot", available: true, authenticated: true, version: "1.0.0", mode: "supported", models: ["gpt-4o"], defaultModel: "gpt-4o" },
+    { id: "cursor", name: "Cursor", command: "cursor", available: false, authenticated: false, models: [] },
   ],
+  get_harness_recommendations: [],
+  tag_comparison_task_type: null,
+  // Shape must match ComparisonSummary (@harness-kit/shared): flat harnessNames +
+  // panelCount + title, as serialized by the Rust list_comparisons command.
   list_comparisons: [
     {
       id: "mock-cmp-1",
+      title: null,
       prompt: "write a hello world function",
       workingDir: "/tmp/project",
       pinnedCommit: null,
       createdAt: new Date(Date.now() - 3_600_000).toISOString(),
       status: "complete",
-      panels: [
-        { id: "panel-1", harnessId: "claude", harnessName: "Claude Code", model: "claude-sonnet-4-6", exitCode: 0, durationMs: 4200, status: "complete" },
-        { id: "panel-2", harnessId: "gh-copilot", harnessName: "GitHub Copilot", model: "gpt-4o", exitCode: 0, durationMs: 3800, status: "complete" },
-      ],
+      panelCount: 2,
+      harnessNames: ["Claude Code", "GitHub Copilot"],
     },
     {
       id: "mock-cmp-2",
+      title: "Auth refactor A/B",
       prompt: "refactor the auth module",
       workingDir: "/tmp/project",
       pinnedCommit: "abc1234",
       createdAt: new Date(Date.now() - 86_400_000).toISOString(),
       status: "complete",
-      panels: [
-        { id: "panel-3", harnessId: "claude", harnessName: "Claude Code", model: "claude-opus-4-6", exitCode: 0, durationMs: 12000, status: "complete" },
-      ],
+      panelCount: 1,
+      harnessNames: ["Claude Code"],
     },
   ],
   delete_comparison: null,

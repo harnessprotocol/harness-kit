@@ -2,6 +2,7 @@ import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { open } from "@tauri-apps/plugin-shell";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { NavGroupLabel, NavItem } from "@harness-kit/ui";
 import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
 import { useArrowNavigation } from "../hooks/useArrowNavigation";
 import { useSidebarResize } from "../hooks/useSidebarResize";
@@ -444,11 +445,24 @@ export default function AppLayout() {
                 return (
                   <div key={section.id}>
                     {showGroupHeader && (
-                      <div className="sidebar-group-header">{section.group}</div>
+                      <NavGroupLabel>{section.group}</NavGroupLabel>
                     )}
                     <div className="mb-0.5">
                       {section.id === "harness" ? (
-                        <button
+                        <NavItem
+                          active={active}
+                          icon={section.icon}
+                          badge={
+                            <svg
+                              width="10"
+                              height="10"
+                              viewBox="0 0 16 16"
+                              fill="currentColor"
+                              style={{ transform: harnessExpanded ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.15s ease", flexShrink: 0, opacity: 0.6 }}
+                            >
+                              <path d="M8 10.5L2.5 5h11L8 10.5z" />
+                            </svg>
+                          }
                           onClick={() => {
                             if (!active) {
                               navigate(section.path);
@@ -457,38 +471,31 @@ export default function AppLayout() {
                               setHarnessExpanded((v) => !v);
                             }
                           }}
-                          className={`sidebar-item${active ? " active" : ""}`}
-                          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", cursor: "pointer", border: "none", background: "transparent", textAlign: "left" }}
                         >
-                          {section.icon}
-                          <span style={{ flex: 1 }}>{section.label}</span>
-                          <svg
-                            width="10"
-                            height="10"
-                            viewBox="0 0 16 16"
-                            fill="currentColor"
-                            style={{ transform: harnessExpanded ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.15s ease", flexShrink: 0, opacity: 0.6 }}
-                          >
-                            <path d="M8 10.5L2.5 5h11L8 10.5z" />
-                          </svg>
-                        </button>
+                          {section.label}
+                        </NavItem>
                       ) : (
-                        <NavLink to={section.path} className={`sidebar-item${active ? " active" : ""}`}>
-                          {section.icon}
-                          <span style={{ flex: 1 }}>{section.label}</span>
-                          {shortcutNum && !sidebarCollapsed && (
-                            <span
-                              style={{
-                                fontSize: 10,
-                                fontFamily: 'ui-monospace, monospace',
-                                color: 'var(--fg-subtle)',
-                                flexShrink: 0,
-                              }}
-                            >
-                              {'\u2318'}{shortcutNum}
-                            </span>
-                          )}
-                        </NavLink>
+                        <NavItem
+                          active={active}
+                          icon={section.icon}
+                          onClick={() => navigate(section.path)}
+                          badge={
+                            shortcutNum && !sidebarCollapsed ? (
+                              <span
+                                style={{
+                                  fontSize: 10,
+                                  fontFamily: 'ui-monospace, monospace',
+                                  color: 'var(--fg-subtle)',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {'\u2318'}{shortcutNum}
+                              </span>
+                            ) : undefined
+                          }
+                        >
+                          {section.label}
+                        </NavItem>
                       )}
 
                       {active && section.id === "harness" && harnessExpanded && (

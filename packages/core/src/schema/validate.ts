@@ -1,14 +1,11 @@
-import Ajv2020 from "ajv/dist/2020.js";
-import addFormats from "ajv-formats";
 import { parse as parseYaml } from "yaml";
-import harnessSchema from "./harness.schema.json" with { type: "json" };
 import type { ValidationError, ValidationResult } from "../types.js";
 import { isLegacyFormat } from "../utils/legacy.js";
-
-const ajv = new Ajv2020({ allErrors: true, verbose: true });
-addFormats(ajv);
-
-const validate = ajv.compile(harnessSchema);
+// Precompiled standalone validator (no `eval`/`new Function`), so the desktop
+// prod CSP can forbid `unsafe-eval`. Regenerate with `pnpm generate:validator`
+// after any change to harness.schema.json — this is a manual step; CI's
+// drift-guard step (validate.yml) fails the build if you forget.
+import validate from "./validate.generated.js";
 
 const COMMON_FIXES: Record<string, string> = {
   "/version": 'Change version: 1 to version: "1" (add quotes).',
