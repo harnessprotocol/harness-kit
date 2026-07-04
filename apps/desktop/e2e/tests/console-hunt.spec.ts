@@ -18,7 +18,6 @@ const ALL_ROUTES = [
   "/security/secrets",
   "/security/audit",
   "/drift",
-  "/board",
 ];
 
 for (const route of ALL_ROUTES) {

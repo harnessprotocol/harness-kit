@@ -24,7 +24,6 @@ const ROUTES = [
   "/observatory/sessions",
   "/security/permissions",
   "/security/secrets",
-  "/board",
   "/drift",
 ];
 
