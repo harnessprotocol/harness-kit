@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
+import { Card } from "@harness-kit/ui";
 import { readClaudeMd } from "../../lib/tauri";
 import MarkdownPanel from "../../components/MarkdownPanel";
 
@@ -32,21 +34,20 @@ export default function FileViewerPage() {
       {/* Header */}
       <div style={{ marginBottom: "16px", flexShrink: 0 }}>
         <button
+          className="hk-reset-btn"
           onClick={() => navigate("/harness/settings")}
           style={{
             display: "flex",
             alignItems: "center",
             gap: "4px",
-            background: "none",
-            border: "none",
-            padding: 0,
             cursor: "pointer",
             fontSize: "12px",
             color: "var(--fg-subtle)",
             marginBottom: "10px",
           }}
         >
-          ← Config Files
+          <ArrowLeft size={12} strokeWidth={1.7} aria-hidden="true" />
+          Config Files
         </button>
         <h1 style={{
           fontSize: "17px",
@@ -66,16 +67,9 @@ export default function FileViewerPage() {
       {loading && <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</p>}
 
       {error && (
-        <div style={{
-          background: "var(--bg-surface)",
-          border: "1px solid var(--border-base)",
-          borderRadius: "8px",
-          padding: "10px 14px",
-          fontSize: "13px",
-          color: "var(--danger)",
-        }}>
+        <Card padding="sm" style={{ fontSize: "13px", color: "var(--danger)" }}>
           {error}
-        </div>
+        </Card>
       )}
 
       {!loading && !error && content !== null && (

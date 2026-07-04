@@ -42,15 +42,18 @@ const tokens = {
 const fontStack = '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif';
 const monoStack = 'ui-monospace, "SF Mono", monospace';
 
-// ── Harness accent palette (for timeline bars) ─────────────
+// ── Harness accent palette (for timeline bars) ──────────────
+// Categorical data-series palette distinguishing harnesses in the timeline
+// chart — deliberately avoids indigo/purple/violet per DESIGN.md §1 (those
+// hues are reserved for the azure accent's visual territory in this direction).
 
 const HARNESS_COLORS = [
-  "#5b50e8", // indigo
+  "#2E9BE6", // azure (accent)
   "#0891b2", // cyan
   "#d97706", // amber
   "#dc2626", // red
   "#16a34a", // green
-  "#9333ea", // purple
+  "#b45309", // brown/copper
   "#0d9488", // teal
   "#ea580c", // orange
 ];
@@ -517,9 +520,9 @@ export default function ResultsPhase({ active, onStartJudge }: ResultsPhaseProps
                           fontWeight: 600,
                           padding: "1px 5px",
                           borderRadius: "3px",
-                          background: "rgba(99, 102, 241, 0.12)",
-                          color: "rgb(129, 140, 248)",
-                          border: "1px solid rgba(99, 102, 241, 0.25)",
+                          background: "var(--accent-light)",
+                          color: "var(--accent-text)",
+                          border: "1px solid var(--accent-glow)",
                           marginLeft: 5,
                           textTransform: "none" as const,
                           letterSpacing: 0,

@@ -130,7 +130,7 @@ describe("AuditLogPage — basic render", () => {
 describe("AuditLogPage — empty state", () => {
   it("shows empty state message when no entries exist", async () => {
     renderPage();
-    expect(await screen.findByText("No audit entries found.")).toBeInTheDocument();
+    expect(await screen.findByText("No audit entries found")).toBeInTheDocument();
   });
 
   it("shows hint text in empty state", async () => {

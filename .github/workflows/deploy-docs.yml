@@ -52,6 +52,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # Generate the static capability matrix JSON straight from
+      # @harness-kit/core's adapter registry — never hand-written, so the
+      # marketing table can't drift from the adapters' real capabilities.
+      - name: Generate capability matrix data
+        run: |
+          pnpm install --filter "@harness-kit/website-data..." --frozen-lockfile
+          pnpm --filter @harness-kit/website-data generate
+
       - name: Install dependencies
         working-directory: website
         run: pnpm install --frozen-lockfile

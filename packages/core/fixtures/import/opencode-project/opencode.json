@@ -1,0 +1,21 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "railway": {
+      "command": ["railway", "mcp"],
+      "enabled": true,
+      "type": "local"
+    },
+    "acme-api": {
+      "type": "remote",
+      "url": "https://api.acme.example.com/mcp",
+      "headers": { "Authorization": "Bearer sk-FAKE" }
+    }
+  },
+  "permission": {
+    "bash": {
+      "git *": "allow",
+      "rm -rf *": "deny"
+    }
+  }
+}

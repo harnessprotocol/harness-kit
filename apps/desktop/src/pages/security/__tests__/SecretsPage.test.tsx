@@ -134,7 +134,7 @@ describe("SecretsPage — basic render", () => {
 describe("SecretsPage — empty state", () => {
   it("shows empty state message when no secrets are configured", async () => {
     renderPage();
-    expect(await screen.findByText("No plugins require secrets.")).toBeInTheDocument();
+    expect(await screen.findByText("No plugins require secrets")).toBeInTheDocument();
   });
 
   it("shows install hint in secrets empty state", async () => {
@@ -184,8 +184,9 @@ describe("SecretsPage — secrets list", () => {
   it("shows 'Set' status badge for secrets that are set", async () => {
     renderPage();
     await screen.findByText("ANTHROPIC_API_KEY");
-    // The status badge is a <span>, distinct from the "Update" action button
-    const setSpan = document.querySelector("span[style*='rgba(22']");
+    // The status badge is a StatusChip (packages/ui) — success variant — distinct
+    // from the "Update" action button.
+    const setSpan = document.querySelector("span.hk-chip-success");
     expect(setSpan?.textContent).toBe("Set");
   });
 

@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@harness-kit/shared": "workspace:*",
+    "@noble/hashes": "^1.8.0",
     "ajv": "^8",
     "ajv-formats": "^3",
     "yaml": "^2.9.0"

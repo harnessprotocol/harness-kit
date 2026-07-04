@@ -43,7 +43,7 @@ export default function Image() {
             width: 72,
             height: 72,
             borderRadius: 16,
-            background: '#11151f',
+            background: '#131215',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -52,13 +52,13 @@ export default function Image() {
         >
           {/* PROVISIONAL mark — mirrors HarnessKitLogo.tsx; redesign planned */}
           <svg width="72" height="72" viewBox="0 0 32 32" fill="none">
-            <g stroke="#7a8bff" strokeWidth="2.8" strokeLinecap="round">
+            <g stroke="#2E9BE6" strokeWidth="2.8" strokeLinecap="round">
               <path d="M9 9.5 C 15 11, 17.5 13.5, 19.4 14.9" />
               <path d="M9 22.5 C 15 21, 17.5 18.5, 19.4 17.1" />
             </g>
-            <circle cx="9" cy="9.5" r="1.9" fill="#7a8bff" />
-            <circle cx="9" cy="22.5" r="1.9" fill="#7a8bff" />
-            <circle cx="22" cy="16" r="3.3" fill="#7a8bff" />
+            <circle cx="9" cy="9.5" r="1.9" fill="#2E9BE6" />
+            <circle cx="9" cy="22.5" r="1.9" fill="#2E9BE6" />
+            <circle cx="22" cy="16" r="3.3" fill="#2E9BE6" />
           </svg>
         </div>
 

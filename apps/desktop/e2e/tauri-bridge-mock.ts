@@ -93,60 +93,12 @@ export const MOCK_RESPONSES: Record<string, unknown> = {
     dimensionWinRates: [],
   },
   sync_list_backups: [],
-  // Parity
-  get_parity_snapshot: {
-    id: "mock-snapshot-1",
-    timestamp: new Date(Date.now() - 60_000).toISOString(),
-    ccVersion: "1.2.3",
-    ccInstalled: true,
-    categories: {
-      cli_flag: [
-        { name: "--version", category: "cli_flag", value: null, knownToHarness: true },
-        { name: "--help", category: "cli_flag", value: null, knownToHarness: true },
-      ],
-      settings_key: [
-        { name: "permissions.allow", category: "settings_key", value: null, knownToHarness: true },
-        { name: "someNewKey", category: "settings_key", value: null, knownToHarness: false },
-      ],
-      config_file: [
-        { name: "CLAUDE.md", category: "config_file", value: "detected", knownToHarness: true },
-        { name: "AGENT.md", category: "config_file", value: "not_found", knownToHarness: true },
-      ],
-    },
-  },
-  get_parity_drift: [
-    {
-      id: 1,
-      category: "settings_key",
-      featureName: "someNewKey",
-      driftType: "new_feature",
-      details: "Key 'someNewKey' found in settings.json but not tracked",
-      detectedAt: new Date(Date.now() - 60_000).toISOString(),
-      acknowledged: false,
-    },
-    {
-      id: 2,
-      category: "config_file",
-      featureName: "AGENT.md",
-      driftType: "missing_file",
-      details: "AGENT.md is expected but not found",
-      detectedAt: new Date(Date.now() - 60_000).toISOString(),
-      acknowledged: false,
-    },
-  ],
-  run_parity_scan: {
-    snapshotId: "mock-snapshot-1",
-    ccVersion: "1.2.3",
-    ccInstalled: true,
-    featuresDetected: 6,
-    driftCount: 2,
-    driftItems: [],
-    scannedAt: new Date().toISOString(),
-  },
-  get_parity_history: [],
-  acknowledge_drift: null,
-  create_config_file: "/home/user/AGENT.md",
-  add_to_parity_baseline: null,
+  // Drift (capability probing + acknowledgement persistence — drift itself
+  // is computed by @harness-kit/core against the mocked FsProvider, not IPC)
+  probe_harness_capabilities: {},
+  acknowledge_drift_item: null,
+  unacknowledge_drift_item: null,
+  get_acknowledged_drift_items: [],
   // Chat
   chat_save_room: null,
   chat_leave_room: null,

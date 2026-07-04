@@ -1,4 +1,4 @@
-import { invoke, Channel } from "@tauri-apps/api/core";
+import { invoke } from "@tauri-apps/api/core";
 import type {
   InstalledPlugin, KnownMarketplace, PluginUpdateInfo, HooksConfig, StatsCache,
   SessionSummary, SessionFacet, ActiveSession, LiveDailyActivity,
@@ -212,10 +212,22 @@ export async function readSessionTranscript(sessionId: string, project: string):
   return invoke<SessionTranscript>("read_session_transcript", { sessionId, project });
 }
 
-// ── Terminal commands ───────────────────────────────────────
+// ── Harness detection (used by Parity) ───────────────────────
 
 export async function detectHarnesses(): Promise<HarnessInfo[]> {
   return invoke<HarnessInfo[]>("detect_harnesses");
+}
+
+/**
+ * Extend the Tauri FS plugin's runtime scope to cover a user-chosen project
+ * directory, in-memory for this app session. The static capability
+ * (capabilities/default.json) only lists known harness config roots under
+ * $HOME — it never grants a blanket $HOME/** scope — so callers that need
+ * TauriFsProvider access to an arbitrary project dir (Fleet, Drift) must
+ * grant it here first.
+ */
+export async function grantProjectScope(path: string): Promise<void> {
+  return invoke<void>("grant_project_scope", { path });
 }
 
 // ── Security commands ───────────────────────────────────────
@@ -321,98 +333,44 @@ export async function syncRestoreBackup(backupId: string): Promise<void> {
   return invoke<void>("sync_restore_backup", { backupId });
 }
 
-// ── Parity commands ──────────────────────────────────────────
+// ── Drift acknowledgement persistence (used by the Drift page) ──
+//
+// Drift itself is computed live in the webview via @harness-kit/core's
+// detectDrift()/buildFixPlan()/applyFix() — these commands only persist
+// which specific items the user has acknowledged/reviewed (always
+// `user-modified-outside` items, which are never auto-fixed).
 
-export interface ParityFeature {
-  name: string;
-  /** Category key: "config_file" | "settings_key" | "cli_flag" | "cli_subcommand" | "mcp_transport" | "plugin_type" */
-  category: string;
-  /** For config files: "detected" | "not_found" | null. For other categories: null. */
-  value: "detected" | "not_found" | string | null;
-  knownToHarness: boolean;
+export interface DriftAcknowledgement {
+  scopeRoot: string;
+  adapter: string;
+  path: string;
+  harnessName: string;
+  slot: string;
+  acknowledgedAt: string;
 }
 
-export interface ParityDriftItem {
-  id: number;
-  category: string;
-  featureName: string;
-  /** "missing_file" — a known config file was not found on disk.
-   *  "new_feature"  — a detected feature is absent from both compiled and user baselines. */
-  driftType: "missing_file" | "new_feature";
-  details: string | null;
-  detectedAt: string;
-  acknowledged: boolean;
+export async function acknowledgeDriftItem(key: {
+  scopeRoot: string;
+  adapter: string;
+  path: string;
+  harnessName: string;
+  slot: string;
+}): Promise<void> {
+  return invoke<void>("acknowledge_drift_item", key);
 }
 
-export interface ParityScanResult {
-  snapshotId: string;
-  ccVersion: string | null;
-  ccInstalled: boolean;
-  featuresDetected: number;
-  driftCount: number;
-  driftItems: ParityDriftItem[];
-  scannedAt: string;
+export async function unacknowledgeDriftItem(key: {
+  scopeRoot: string;
+  adapter: string;
+  path: string;
+  harnessName: string;
+  slot: string;
+}): Promise<void> {
+  return invoke<void>("unacknowledge_drift_item", key);
 }
 
-export interface ParitySnapshot {
-  id: string;
-  timestamp: string;
-  ccVersion: string | null;
-  ccInstalled: boolean;
-  /** Feature matrix keyed by category (e.g. "cli_flag", "settings_key"). */
-  categories: Record<string, ParityFeature[]>;
-}
-
-export interface ParitySnapshotSummary {
-  id: string;
-  timestamp: string;
-  ccVersion: string | null;
-  featuresDetected: number;
-  driftCount: number;
-}
-
-/** Run all parity probes and persist a new snapshot. Auto-scanned on page mount when stale. */
-export async function runParityScan(): Promise<ParityScanResult> {
-  return invoke<ParityScanResult>("run_parity_scan");
-}
-
-/** Return the most recent snapshot, or null if no scan has run yet. */
-export async function getParitySnapshot(): Promise<ParitySnapshot | null> {
-  return invoke<ParitySnapshot | null>("get_parity_snapshot");
-}
-
-/** Return drift items from the latest snapshot. Excludes acknowledged items by default. */
-export async function getParityDrift(includeAcknowledged?: boolean): Promise<ParityDriftItem[]> {
-  return invoke<ParityDriftItem[]>("get_parity_drift", {
-    includeAcknowledged: includeAcknowledged ?? false,
-  });
-}
-
-/** Mark a drift item as reviewed. Hidden from the default list; visible with includeAcknowledged. */
-export async function acknowledgeDrift(driftId: number): Promise<void> {
-  return invoke<void>("acknowledge_drift", { driftId });
-}
-
-/** Return up to `limit` (default 20) scan summaries, newest first. */
-export async function getParityHistory(limit?: number): Promise<ParitySnapshotSummary[]> {
-  return invoke<ParitySnapshotSummary[]>("get_parity_history", { limit });
-}
-
-/**
- * Create a config file at its canonical location from a built-in template.
- * Accepted names: "CLAUDE.md", "AGENT.md", "SOUL.md", ".mcp.json", ".claude/settings.json".
- * Returns the absolute path of the created file. Errors if the file already exists.
- */
-export async function createConfigFile(name: string): Promise<string> {
-  return invoke<string>("create_config_file", { name });
-}
-
-/**
- * Add a feature to the user-level baseline so it is no longer flagged as drift.
- * Persisted to ~/.harness-kit/parity-baseline.json and merged on each rescan.
- */
-export async function addToParityBaseline(category: string, featureName: string): Promise<void> {
-  return invoke<void>("add_to_parity_baseline", { category, featureName });
+export async function getAcknowledgedDriftItems(): Promise<DriftAcknowledgement[]> {
+  return invoke<DriftAcknowledgement[]>("get_acknowledged_drift_items");
 }
 
 export type FileProbeState = "detected" | "missing" | "not_applicable";
@@ -422,118 +380,6 @@ export type FileProbeState = "detected" | "missing" | "not_applicable";
  * Requires the `probe_harness_capabilities` Rust command. */
 export async function probeHarnessCapabilities(): Promise<Record<string, FileProbeState>> {
   return invoke<Record<string, FileProbeState>>("probe_harness_capabilities");
-}
-
-// ── Chat commands ────────────────────────────────────────────
-
-export interface ChatRoomRow {
-  code: string;
-  name: string | null;
-  nickname: string;
-  serverUrl: string;
-  joinedAt: string;
-  leftAt: string | null;
-}
-
-export interface ChatMessageRow {
-  id: string;
-  roomCode: string;
-  /** "chat" | "share" | "system" */
-  msgType: string;
-  nickname: string;
-  timestamp: string;
-  body: string | null;
-  action: string | null;
-  target: string | null;
-  detail: string | null;
-  eventType: string | null;
-}
-
-export async function chatSaveRoom(
-  code: string,
-  name: string | null,
-  nickname: string,
-  serverUrl: string,
-): Promise<void> {
-  return invoke<void>("chat_save_room", { code, name, nickname, serverUrl });
-}
-
-export async function chatLeaveRoom(code: string): Promise<void> {
-  return invoke<void>("chat_leave_room", { code });
-}
-
-export async function chatListRooms(): Promise<ChatRoomRow[]> {
-  return invoke<ChatRoomRow[]>("chat_list_rooms");
-}
-
-export async function chatSaveMessages(messages: ChatMessageRow[]): Promise<void> {
-  return invoke<void>("chat_save_messages", { messages });
-}
-
-export async function chatLoadMessages(
-  roomCode: string,
-  limit: number,
-  before?: string,
-): Promise<ChatMessageRow[]> {
-  return invoke<ChatMessageRow[]>("chat_load_messages", {
-    roomCode,
-    limit,
-    before: before ?? null,
-  });
-}
-
-export async function chatPurgeRoom(code: string): Promise<void> {
-  return invoke<void>("chat_purge_room", { code });
-}
-
-// ── Board server commands ──────────────────────────────────
-
-export async function boardServerCheckInstalled(): Promise<boolean> {
-  return invoke<boolean>("board_server_check_installed");
-}
-
-export async function boardServerInstall(): Promise<string> {
-  return invoke<string>("board_server_install");
-}
-
-export async function boardServerStart(): Promise<string> {
-  return invoke<string>("board_server_start");
-}
-
-export async function boardServerRestart(): Promise<string> {
-  return invoke<string>("board_server_restart");
-}
-
-// ── Local relay commands ─────────────────────────────────────
-
-export function chatStartLocalRelay(port?: number): Promise<number> {
-  return invoke<number>("chat_start_local_relay", { port });
-}
-
-export function chatStopLocalRelay(): Promise<void> {
-  return invoke<void>("chat_stop_local_relay");
-}
-
-export function chatLocalRelayRunning(): Promise<boolean> {
-  return invoke<boolean>("chat_local_relay_running");
-}
-
-// ── membrain commands ────────────────────────────────────
-
-export async function membrainCheckInstalled(): Promise<boolean> {
-  return invoke<boolean>("membrain_check_installed");
-}
-
-export async function membrainStart(port?: number): Promise<string> {
-  return invoke<string>("membrain_start", { port: port ?? null });
-}
-
-export async function membrainStop(): Promise<void> {
-  return invoke<void>("membrain_stop");
-}
-
-export async function membrainGetPort(): Promise<number> {
-  return invoke<number>("membrain_get_port");
 }
 
 // ── Comparator session commands ─────────────────────────────
@@ -610,206 +456,6 @@ export async function getPanelDiffs(
   panelId: string,
 ): Promise<FileDiffRow[]> {
   return invoke<FileDiffRow[]>("get_panel_diffs", { comparisonId, panelId });
-}
-
-// ── AI Chat commands ─────────────────────────────────────────
-
-export interface OllamaStatus {
-  running: boolean;
-  message: string;
-}
-
-export interface AIModelInfo {
-  name: string;
-  size: number | null;
-  modified_at: string | null;
-}
-
-// ── Tool-calling schema (mirrors Rust types.rs) ──────────────────────────────
-
-export interface ToolCallFunction {
-  name: string;
-  arguments: Record<string, unknown>;
-}
-
-export interface ToolCall {
-  id?: string;
-  function: ToolCallFunction;
-}
-
-export interface ToolDefFunction {
-  name: string;
-  description: string;
-  parameters: Record<string, unknown>;
-}
-
-export interface ToolDef {
-  type: "function";
-  function: ToolDefFunction;
-}
-
-// ── Chat message / streaming ──────────────────────────────────────────────────
-
-export interface AIChatMessage {
-  role: "system" | "user" | "assistant" | "tool";
-  content: string;
-  name?: string;
-  tool_calls?: ToolCall[];
-}
-
-/** Tagged streaming event — switch on `event.kind`. */
-export type StreamEvent =
-  | { kind: "text"; data: { content: string } }
-  | { kind: "toolCalls"; data: { calls: ToolCall[] } }
-  | {
-      kind: "done";
-      data: {
-        evalCount?: number;
-        promptEvalCount?: number;
-        totalDuration?: number;
-        loadDuration?: number;
-        promptEvalDuration?: number;
-        evalDuration?: number;
-      };
-    }
-  | { kind: "warn"; data: { message: string } };
-
-export interface DownloadProgress {
-  model: string;
-  status: string;
-  completed: number | null;
-  total: number | null;
-  done: boolean;
-}
-
-export interface AISessionRow {
-  id: string;
-  title: string | null;
-  model: string | null;
-  createdAt: string;
-  updatedAt: string;
-  systemPrompt: string | null;
-  contextSourcesJson: string | null;
-}
-
-export interface AIMessageRow {
-  id: string;
-  sessionId: string;
-  role: string;
-  content: string;
-  timestamp: string;
-  metadataJson: string | null;
-}
-
-export interface RunningModel {
-  name: string;
-  sizeVram: number | null;
-  expiresAt: string | null;
-}
-
-export interface ModelDetails {
-  name: string;
-  family: string | null;
-  parameterSize: string | null;
-  quantizationLevel: string | null;
-  capabilities: string[];
-  contextLength: number | null;
-}
-
-export interface AISessionDetail {
-  session: AISessionRow;
-  messages: AIMessageRow[];
-}
-
-export async function aiCheckOllama(): Promise<OllamaStatus> {
-  return invoke<OllamaStatus>("check_ollama_running");
-}
-
-export async function aiListModels(): Promise<AIModelInfo[]> {
-  return invoke<AIModelInfo[]>("list_models");
-}
-
-export async function aiPullModel(
-  model: string,
-  channel: Channel<DownloadProgress>,
-): Promise<void> {
-  return invoke<void>("pull_model", { model, channel });
-}
-
-export async function aiStreamChat(
-  model: string,
-  messages: AIChatMessage[],
-  channel: Channel<StreamEvent>,
-  tools?: ToolDef[],
-  options?: Record<string, unknown>,
-): Promise<void> {
-  return invoke<void>("ai_stream_chat", { model, messages, tools, options, channel });
-}
-
-export async function aiCancelStream(): Promise<void> {
-  return invoke<void>("cancel_ai_stream");
-}
-
-export async function aiCreateSession(id: string, model: string): Promise<void> {
-  return invoke<void>("create_ai_session", { id, model });
-}
-
-export async function aiUpdateSessionTitle(id: string, title: string): Promise<void> {
-  return invoke<void>("update_ai_session_title", { id, title });
-}
-
-export async function aiDeleteSession(id: string): Promise<void> {
-  return invoke<void>("delete_ai_session", { id });
-}
-
-export async function aiListSessions(): Promise<AISessionRow[]> {
-  return invoke<AISessionRow[]>("list_ai_sessions");
-}
-
-export async function aiLoadSession(sessionId: string): Promise<[AISessionRow, AIMessageRow[]]> {
-  return invoke<[AISessionRow, AIMessageRow[]]>("load_ai_session", { sessionId });
-}
-
-export async function aiSaveMessage(
-  id: string,
-  sessionId: string,
-  role: string,
-  content: string,
-  metadataJson?: string,
-): Promise<void> {
-  return invoke<void>("save_ai_message", { id, sessionId, role, content, metadataJson });
-}
-
-export async function aiUpdateSessionPrompt(
-  id: string,
-  systemPrompt: string | null,
-  contextSourcesJson: string | null,
-): Promise<void> {
-  return invoke<void>("update_ai_session_prompt", { id, systemPrompt, contextSourcesJson });
-}
-
-export async function aiListRunningModels(): Promise<RunningModel[]> {
-  return invoke<RunningModel[]>("list_running_models");
-}
-
-export async function aiShowModel(name: string): Promise<ModelDetails> {
-  return invoke<ModelDetails>("show_model", { name });
-}
-
-export async function aiGetOllamaVersion(): Promise<string> {
-  return invoke<string>("get_ollama_version");
-}
-
-export interface AIConfig {
-  baseUrl: string;
-}
-
-export async function aiGetConfig(): Promise<AIConfig> {
-  return invoke<AIConfig>("get_ai_config");
-}
-
-export async function aiSetConfig(baseUrl: string): Promise<void> {
-  return invoke<void>("set_ai_config", { baseUrl });
 }
 
 // ── Harness health ───────────────────────────────────────────

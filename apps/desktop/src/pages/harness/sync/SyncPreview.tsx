@@ -1,3 +1,4 @@
+import { Button, Card, StatusChip, type StatusChipVariant } from "@harness-kit/ui";
 import type { CompileResult, FileAction, TargetPlatform } from "@harness-kit/core";
 
 interface SyncPreviewProps {
@@ -6,11 +7,11 @@ interface SyncPreviewProps {
   onApply: () => void;
 }
 
-const ACTION_COLORS: Record<string, string> = {
-  create: "var(--success, #22c55e)",
-  update: "var(--accent)",
-  skip: "var(--fg-subtle)",
-  "needs-confirmation": "var(--warning, #f59e0b)",
+const ACTION_VARIANT: Record<string, StatusChipVariant> = {
+  create: "success",
+  update: "subtle",
+  skip: "subtle",
+  "needs-confirmation": "warning",
 };
 
 const PLATFORM_LABELS: Record<TargetPlatform, string> = {
@@ -26,21 +27,9 @@ const PLATFORM_LABELS: Record<TargetPlatform, string> = {
 
 function ActionBadge({ action }: { action: string }) {
   return (
-    <span style={{
-      display: "inline-flex",
-      alignItems: "center",
-      padding: "1px 6px",
-      borderRadius: "4px",
-      fontSize: "10px",
-      fontWeight: 600,
-      textTransform: "uppercase",
-      letterSpacing: "0.3px",
-      background: `${ACTION_COLORS[action] ?? "var(--fg-subtle)"}20`,
-      color: ACTION_COLORS[action] ?? "var(--fg-subtle)",
-      border: `1px solid ${ACTION_COLORS[action] ?? "var(--fg-subtle)"}40`,
-    }}>
+    <StatusChip variant={ACTION_VARIANT[action] ?? "subtle"} hideDot>
       {action}
-    </span>
+    </StatusChip>
   );
 }
 
@@ -55,7 +44,6 @@ function PlatformBadge({ platform }: { platform: TargetPlatform }) {
       fontWeight: 500,
       background: "var(--bg-elevated)",
       color: "var(--fg-subtle)",
-      border: "1px solid var(--border-base)",
     }}>
       {PLATFORM_LABELS[platform]}
     </span>
@@ -64,7 +52,7 @@ function PlatformBadge({ platform }: { platform: TargetPlatform }) {
 
 function FileRow({ file }: { file: FileAction }) {
   return (
-    <tr style={{ borderBottom: "1px solid var(--border-base)" }}>
+    <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
       <td style={{ padding: "6px 8px", fontFamily: "ui-monospace, monospace", fontSize: "11px", color: "var(--fg-base)" }}>
         {file.path}
       </td>
@@ -89,18 +77,7 @@ export default function SyncPreview({ result, applying, onApply }: SyncPreviewPr
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
       {/* Summary bar */}
-      <div style={{
-        display: "flex",
-        gap: "16px",
-        padding: "10px 14px",
-        background: "var(--bg-surface)",
-        border: "1px solid var(--border-base)",
-        borderRadius: "8px",
-        fontSize: "12px",
-        color: "var(--fg-muted)",
-        flexWrap: "wrap",
-        alignItems: "center",
-      }}>
+      <Card padding="sm" style={{ display: "flex", gap: "16px", fontSize: "12px", color: "var(--fg-muted)", flexWrap: "wrap", alignItems: "center" }}>
         <span>
           <strong style={{ color: "var(--fg-base)" }}>{result.harnessName}</strong>
         </span>
@@ -112,23 +89,18 @@ export default function SyncPreview({ result, applying, onApply }: SyncPreviewPr
           <strong style={{ color: "var(--fg-base)" }}>{writeCount}</strong> write{writeCount !== 1 ? "s" : ""}
         </span>
         {warningCount > 0 && (
-          <span style={{ color: "var(--warning, #f59e0b)" }}>
+          <span style={{ color: "var(--warning)" }}>
             {warningCount} warning{warningCount !== 1 ? "s" : ""}
           </span>
         )}
-      </div>
+      </Card>
 
       {/* File table */}
       {fileCount > 0 && (
-        <div style={{
-          background: "var(--bg-surface)",
-          border: "1px solid var(--border-base)",
-          borderRadius: "8px",
-          overflow: "hidden",
-        }}>
+        <Card padding="none" style={{ overflow: "hidden" }}>
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
-              <tr style={{ borderBottom: "1px solid var(--border-base)", background: "var(--bg-elevated)" }}>
+              <tr style={{ borderBottom: "1px solid var(--border-subtle)", background: "var(--bg-elevated)" }}>
                 <th style={{ padding: "6px 8px", textAlign: "left", fontSize: "10px", fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.3px" }}>Path</th>
                 <th style={{ padding: "6px 8px", textAlign: "left", fontSize: "10px", fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.3px" }}>Action</th>
                 <th style={{ padding: "6px 8px", textAlign: "left", fontSize: "10px", fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.3px" }}>Platform</th>
@@ -141,18 +113,13 @@ export default function SyncPreview({ result, applying, onApply }: SyncPreviewPr
               ))}
             </tbody>
           </table>
-        </div>
+        </Card>
       )}
 
       {/* Warnings */}
       {result.warnings.length > 0 && (
-        <div style={{
-          background: "var(--bg-surface)",
-          border: "1px solid var(--border-base)",
-          borderRadius: "8px",
-          padding: "10px 14px",
-        }}>
-          <p style={{ fontSize: "11px", fontWeight: 600, color: "var(--warning, #f59e0b)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+        <Card padding="sm">
+          <p style={{ fontSize: "11px", fontWeight: 600, color: "var(--warning)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.3px" }}>
             Warnings
           </p>
           <ul style={{ margin: 0, paddingLeft: "16px" }}>
@@ -160,28 +127,15 @@ export default function SyncPreview({ result, applying, onApply }: SyncPreviewPr
               <li key={i} style={{ fontSize: "12px", color: "var(--fg-muted)", marginBottom: "2px" }}>{w}</li>
             ))}
           </ul>
-        </div>
+        </Card>
       )}
 
       {/* Apply button */}
       {writeCount > 0 && (
         <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <button
-            onClick={onApply}
-            disabled={applying}
-            style={{
-              padding: "7px 16px",
-              borderRadius: "6px",
-              border: "none",
-              background: applying ? "var(--bg-elevated)" : "var(--accent)",
-              color: applying ? "var(--fg-subtle)" : "var(--accent-text, #fff)",
-              fontSize: "12px",
-              fontWeight: 600,
-              cursor: applying ? "not-allowed" : "pointer",
-            }}
-          >
+          <Button variant="primary" onClick={onApply} disabled={applying}>
             {applying ? "Applying…" : `Apply ${writeCount} file${writeCount !== 1 ? "s" : ""}`}
-          </button>
+          </Button>
           <span style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>
             A backup will be created automatically before writing.
           </span>

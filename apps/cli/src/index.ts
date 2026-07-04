@@ -7,7 +7,10 @@ import { detectCommand } from "./commands/detect.js";
 import { initCommand, initSkillCommand } from "./commands/init.js";
 import { scanCommand } from "./commands/scan.js";
 import { syncCommand } from "./commands/sync.js";
-import { runCommand } from "./commands/run.js";
+import { importCommand } from "./commands/import.js";
+import { statusCommand } from "./commands/status.js";
+import { diffCommand } from "./commands/diff.js";
+import { fixCommand } from "./commands/fix.js";
 import {
   listOrganizations,
   createOrganization,
@@ -67,6 +70,7 @@ program
   .option("--clean", "Remove orphaned marker blocks from previous compilations")
   .option("--verbose", "Show skipped slots and extra detail")
   .option("--force", "Recompile even if source fingerprint is unchanged")
+  .option("--watch", "Watch harness.yaml and recompile automatically on change")
   .addHelpText(
     "after",
     `
@@ -75,7 +79,8 @@ Examples:
   harness-kit compile --target all --dry-run    Preview output for all platforms
   harness-kit compile --target claude-code      Compile for Claude Code only
   harness-kit compile --target cursor,copilot   Compile for Cursor and Copilot
-  harness-kit compile --clean                   Compile and remove orphaned blocks`,
+  harness-kit compile --clean                   Compile and remove orphaned blocks
+  harness-kit compile --watch                   Recompile automatically on harness.yaml changes`,
   )
   .action(async (path: string, flags) => {
     await compileCommand(path, flags);
@@ -159,25 +164,84 @@ Creates:
   });
 
 program
-  .command("run")
-  .description("Run a skill ephemerally with the active AI tool — nothing persisted")
-  .argument("<plugin>", "Plugin name, optionally with source: name@owner/repo or name@./path")
-  .option("--tool <tool>", "Tool to use (auto-detected if omitted)")
-  .option("--prompt <text>", "Non-interactive: pass a prompt and exit")
-  .option("-i, --interactive", "Interactive mode (default when --prompt is omitted)")
+  .command("import")
+  .description("Scan existing AI tool configs and synthesize a harness.yaml")
+  .option("--global", "Also scan user-level (global) config roots, merged into the result")
+  .option("--dry-run", "Preview the synthesized harness.yaml without writing it")
+  .option("--force", "Overwrite an existing harness.yaml")
   .addHelpText(
     "after",
     `
 Examples:
-  harness-kit run research                              Auto-detect tool, interactive
-  harness-kit run research@harnessprotocol/harness-kit  Explicit source
-  harness-kit run my-skill@./plugins/my-skill           Local plugin
-  harness-kit run research --tool claude-code --prompt "Analyze this repo"
-
-Nothing is written to harness.yaml, harness.lock, or any persistent skill directory.`,
+  harness-kit import                Scan the current project and write harness.yaml
+  harness-kit import --dry-run      Preview the synthesized harness.yaml
+  harness-kit import --global       Also scan global config, merged into the result
+  harness-kit import --force        Overwrite an existing harness.yaml`,
   )
-  .action(async (handle: string, flags) => {
-    await runCommand(handle, flags);
+  .action(async (flags) => {
+    await importCommand(flags);
+  });
+
+program
+  .command("status")
+  .description("Show the fleet: which harnesses are installed, where, and how drifted")
+  .option("--json", "Output the raw FleetReport as JSON")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  harness-kit status              Human-readable fleet table
+  harness-kit status --json       Machine-readable FleetReport`,
+  )
+  .action(async (flags) => {
+    await statusCommand(flags);
+  });
+
+program
+  .command("diff")
+  .description("Show drift between harness.yaml and deployed tool configs")
+  .argument("[path]", "Path to harness.yaml", "harness.yaml")
+  .option(
+    "--target <targets>",
+    "Target platforms to check (comma-separated), or all",
+  )
+  .option("--json", "Output the raw DriftReport as JSON")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  harness-kit diff                        Show drift for all targets
+  harness-kit diff --target claude-code   Show drift for Claude Code only
+
+Exit code 0 if no drift. Exit code 1 if any drift.`,
+  )
+  .action(async (path: string, flags) => {
+    await diffCommand(path, flags);
+  });
+
+program
+  .command("fix")
+  .description("Repair drift between harness.yaml and deployed tool configs")
+  .argument("[path]", "Path to harness.yaml", "harness.yaml")
+  .option(
+    "--target <targets>",
+    "Target platforms to fix (comma-separated), or all",
+  )
+  .option("--apply", "Execute the fix plan (default is dry-run preview only)")
+  .option("--yes", "Skip the confirmation prompt when applying")
+  .option("--json", "Output the raw FixPlan as JSON")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  harness-kit fix                  Preview the fix plan (dry run, default)
+  harness-kit fix --apply          Apply the fix plan (writes a backup first)
+  harness-kit fix --apply --yes    Apply without the confirmation prompt
+
+"user-modified-outside" items are never auto-repaired — they are listed for manual review.`,
+  )
+  .action(async (path: string, flags) => {
+    await fixCommand(path, flags);
   });
 
 program

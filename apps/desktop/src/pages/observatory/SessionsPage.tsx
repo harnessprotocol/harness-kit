@@ -9,7 +9,7 @@ import ContextMenu from "../../components/ContextMenu";
 
 const OUTCOME_COLORS: Record<string, { bg: string; color: string }> = {
   fully_achieved:    { bg: "var(--success-light)",  color: "var(--success)" },
-  mostly_achieved:   { bg: "rgba(13,148,136,0.12)", color: "#0f766e" },
+  mostly_achieved:   { bg: "var(--accent-light)",   color: "var(--accent-text)" },
   partially_achieved: { bg: "var(--warning-light)",  color: "var(--warning)" },
   not_achieved:      { bg: "var(--danger-light)",   color: "var(--danger)" },
 };
@@ -78,9 +78,9 @@ function ProjectPill({ name }: { name: string }) {
 
 const ROLE_COLORS: Record<string, string> = {
   user: "var(--status-in-progress)",
-  assistant: "#5b50e8",
-  system: "#636366",
-  result: "#0d9488",
+  assistant: "var(--accent)",
+  system: "var(--fg-subtle)",
+  result: "var(--success)",
 };
 
 // ── Transcript entry row ──────────────────────────────────────
@@ -129,7 +129,7 @@ function TranscriptRow({ entry }: { entry: TranscriptEntry }) {
           fontSize: "9px",
           padding: "1px 6px",
           borderRadius: "4px",
-          background: "rgba(91,80,232,0.10)",
+          background: "var(--accent-light)",
           color: "var(--accent-text)",
           flexShrink: 0,
           alignSelf: "center",
@@ -147,8 +147,8 @@ function TranscriptRow({ entry }: { entry: TranscriptEntry }) {
               fontSize: "9px",
               padding: "1px 5px",
               borderRadius: "4px",
-              background: "rgba(13,148,136,0.10)",
-              color: "#0d9488",
+              background: "var(--success-light)",
+              color: "var(--success)",
               fontWeight: 500,
             }}>
               {name}
@@ -252,15 +252,15 @@ function SessionDetail({
           fontWeight: 500,
         }}>
           <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-            <span style={{ color: "#ea580c" }}>{formatNumber(transcript.totalOutputTokens)}</span> tokens out
+            <span style={{ color: "var(--warning)" }}>{formatNumber(transcript.totalOutputTokens)}</span> tokens out
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-            <span style={{ color: "#0d9488" }}>{formatNumber(transcript.totalToolCalls)}</span> tool calls
+            <span style={{ color: "var(--success)" }}>{formatNumber(transcript.totalToolCalls)}</span> tool calls
           </span>
           <span>{transcript.modelsUsed.map(shortModelName).join(", ")}</span>
           {transcript.subagentCount > 0 && (
             <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-              <span style={{ color: "#5b50e8" }}>{transcript.subagentCount}</span> subagent{transcript.subagentCount > 1 ? "s" : ""}
+              <span style={{ color: "var(--accent)" }}>{transcript.subagentCount}</span> subagent{transcript.subagentCount > 1 ? "s" : ""}
             </span>
           )}
           {transcript.truncated && (

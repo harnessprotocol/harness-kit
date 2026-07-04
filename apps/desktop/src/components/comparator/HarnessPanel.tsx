@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import type { PanelState } from "../../hooks/useComparator";
-import TerminalView from "./TerminalView";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -375,24 +374,22 @@ export default function HarnessPanel({ panel, rawChunks, outputTick, onSend: _on
       case "terminal":
         return (
           <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
-            {panel.terminalId ? (
-              <TerminalView terminalId={panel.terminalId} rawChunks={rawChunks} />
-            ) : (
-              <div
-                style={{
-                  flex: 1,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 11,
-                  color: tokens.fgPlaceholder,
-                  fontFamily: fontStack,
-                  background: tokens.terminalBg,
-                }}
-              >
-                No live terminal (past session)
-              </div>
-            )}
+            <div
+              style={{
+                flex: 1,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 11,
+                color: tokens.fgPlaceholder,
+                fontFamily: fontStack,
+                background: tokens.terminalBg,
+                padding: "24px",
+                textAlign: "center",
+              }}
+            >
+              Live in-app execution isn&apos;t available in this build — record results manually.
+            </div>
           </div>
         );
 

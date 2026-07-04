@@ -10,7 +10,7 @@ const requiredBadgeStyle: CSSProperties = {
   fontSize: "10px",
   padding: "1px 6px",
   borderRadius: "10px",
-  background: "rgba(220,53,69,0.1)",
+  background: "var(--danger-light)",
   color: "var(--danger)",
 };
 

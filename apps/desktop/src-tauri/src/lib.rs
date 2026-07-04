@@ -1,10 +1,5 @@
-mod ai;
-mod agent_server;
 mod commands;
 mod db;
-mod board_server;
-mod relay_server;
-mod membrain_commands;
 
 /// Process-wide lock for tests that mutate the HOME env variable.
 /// All `with_home()` helpers across test modules must hold this lock
@@ -13,11 +8,6 @@ mod membrain_commands;
 pub static HOME_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
 
 use tauri::{LogicalSize, Manager};
-use ai::client::OllamaState;
-use commands::terminal::TerminalState;
-use board_server::BoardServerState;
-use agent_server::AgentServerState;
-use membrain_commands::MembrainServerState;
 
 /// Detect the current git branch by running `git branch --show-current`
 /// from the process working directory. Returns `None` when not in a git
@@ -36,8 +26,36 @@ fn detect_git_branch() -> Option<String> {
     }
 }
 
+/// GUI apps launched from Finder inherit only a minimal PATH, so the Tauri
+/// shell plugin can't find CLIs installed under ~/.local/bin, Homebrew, npm,
+/// etc. Resolve the user's real login-shell PATH once and merge it into the
+/// process environment so allow-listed probes (claude, codex, ...) resolve.
+fn ensure_shell_path() {
+    let shell = std::env::var("SHELL").unwrap_or_else(|_| "/bin/zsh".to_string());
+    if let Ok(output) = std::process::Command::new(&shell)
+        .args(["-lc", "printf %s \"$PATH\""])
+        .output()
+    {
+        if output.status.success() {
+            let login_path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !login_path.is_empty() {
+                let current = std::env::var("PATH").unwrap_or_default();
+                let mut seen = std::collections::HashSet::new();
+                let merged: Vec<String> = login_path
+                    .split(':')
+                    .chain(current.split(':'))
+                    .filter(|p| !p.is_empty() && seen.insert(p.to_string()))
+                    .map(|p| p.to_string())
+                    .collect();
+                std::env::set_var("PATH", merged.join(":"));
+            }
+        }
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    ensure_shell_path();
     let data_dir = dirs::home_dir()
         .expect("No home directory")
         .join(".harness-kit");
@@ -55,13 +73,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
-        .manage(TerminalState::default())
         .manage(database)
-        .manage(BoardServerState::new())
-        .manage(AgentServerState::new())
-        .manage(commands::relay::LocalRelay(tokio::sync::Mutex::new(None)))
-        .manage(MembrainServerState::new())
-        .manage(OllamaState::new(ai::commands::load_ai_config().base_url))
         .invoke_handler(tauri::generate_handler![
             // Plugins
             commands::plugins::list_installed_plugins,
@@ -104,13 +116,6 @@ pub fn run() {
             commands::observatory::read_live_activity,
             commands::observatory::compute_live_stats,
             commands::observatory::read_session_transcript,
-            // Terminal sessions
-            commands::terminal::get_cwd,
-            commands::terminal::create_terminal,
-            commands::terminal::destroy_terminal,
-            commands::terminal::write_terminal,
-            commands::terminal::resize_terminal,
-            commands::terminal::detect_harnesses,
             // Git
             commands::git::check_git_repo,
             commands::git::create_worktrees,
@@ -178,81 +183,22 @@ pub fn run() {
             commands::sync::sync_create_backup,
             commands::sync::sync_list_backups,
             commands::sync::sync_restore_backup,
-            // Board server
-            board_server::board_server_check_installed,
-            board_server::board_server_install,
-            board_server::board_server_start,
-            board_server::board_server_restart,
-            // Agent server
-            agent_server::get_agent_server_token,
-            agent_server::agent_server_check_installed,
-            agent_server::agent_server_install,
-            agent_server::agent_server_start,
-            agent_server::agent_server_restart,
-            // membrain
-            membrain_commands::membrain_check_installed,
-            membrain_commands::membrain_start,
-            membrain_commands::membrain_stop,
-            membrain_commands::membrain_get_port,
-            // Parity
-            commands::parity::run_parity_scan,
-            commands::parity::get_parity_snapshot,
-            commands::parity::get_parity_drift,
-            commands::parity::acknowledge_drift,
-            commands::parity::get_parity_history,
-            commands::parity::create_config_file,
-            commands::parity::add_to_parity_baseline,
+            // Harness detection (used by Fleet)
+            commands::harnesses::detect_harnesses,
+            // Runtime FS scope grants (used by Fleet/Drift's project scope)
+            commands::fs_scope::grant_project_scope,
+            // Drift (capability probing + acknowledgement persistence;
+            // drift computation itself lives in packages/core, run from the
+            // Drift page — see commands/parity.rs module docs)
             commands::parity::probe_harness_capabilities,
-            // Chat
-            commands::chat::chat_save_room,
-            commands::chat::chat_leave_room,
-            commands::chat::chat_list_rooms,
-            commands::chat::chat_save_messages,
-            commands::chat::chat_load_messages,
-            commands::chat::chat_purge_room,
-            // Local relay
-            commands::relay::chat_start_local_relay,
-            commands::relay::chat_stop_local_relay,
-            commands::relay::chat_local_relay_running,
+            commands::parity::acknowledge_drift_item,
+            commands::parity::unacknowledge_drift_item,
+            commands::parity::get_acknowledged_drift_items,
             // Feedback
             commands::feedback::get_system_info,
             commands::feedback::submit_feedback,
-            // AI Chat
-            ai::commands::check_ollama_running,
-            ai::commands::list_models,
-            ai::commands::pull_model,
-            ai::commands::ai_stream_chat,
-            ai::commands::cancel_ai_stream,
-            ai::commands::create_ai_session,
-            ai::commands::update_ai_session_title,
-            ai::commands::update_ai_session_prompt,
-            ai::commands::delete_ai_session,
-            ai::commands::list_ai_sessions,
-            ai::commands::load_ai_session,
-            ai::commands::save_ai_message,
-            ai::commands::get_ai_config,
-            ai::commands::set_ai_config,
-            ai::commands::list_running_models,
-            ai::commands::show_model,
-            ai::commands::get_ollama_version,
         ])
         .setup(|app| {
-            let state = app.state::<BoardServerState>();
-            if state.check() {
-                if cfg!(debug_assertions) { eprintln!("[board-server] running on :{}", 4800); }
-            } else {
-                if cfg!(debug_assertions) { eprintln!("[board-server] not running — install with: pnpm board:install"); }
-            }
-            let agent_state = app.state::<AgentServerState>();
-            if agent_state.check() {
-                if cfg!(debug_assertions) { eprintln!("[agent-server] running on :{}", 4802); }
-            } else {
-                if cfg!(debug_assertions) { eprintln!("[agent-server] not running — install with: pnpm agent:install"); }
-            }
-            // membrain server starts on-demand when the user navigates to the
-            // Memory section (via useMembrainServerReady hook), not at app launch.
-            // This avoids opening a network listener until the Labs feature is enabled.
-
             // Size the main window to 75% of the primary monitor on launch.
             if let Some(window) = app.get_webview_window("main") {
                 if let Ok(Some(monitor)) = window.primary_monitor() {

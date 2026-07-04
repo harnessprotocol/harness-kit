@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { KeyRound } from "lucide-react";
+import { Button, Card, EmptyState, Input, Modal, StatusChip } from "@harness-kit/ui";
 import {
   listRequiredEnv, setKeychainSecret, deleteKeychainSecret,
   readEnvConfig, writeEnvConfig,
@@ -7,15 +9,9 @@ import type { KeychainSecretInfo, EnvConfigEntry } from "@harness-kit/shared";
 
 function StatusBadge({ isSet }: { isSet: boolean }) {
   return (
-    <span style={{
-      fontSize: "10px", fontWeight: 500, padding: "1px 7px",
-      borderRadius: "4px",
-      background: isSet ? "rgba(22,163,74,0.1)" : "rgba(217,119,6,0.1)",
-      color: isSet ? "#16a34a" : "#d97706",
-      border: `1px solid ${isSet ? "rgba(22,163,74,0.25)" : "rgba(217,119,6,0.25)"}`,
-    }}>
+    <StatusChip variant={isSet ? "success" : "warning"}>
       {isSet ? "Set" : "Missing"}
-    </span>
+    </StatusChip>
   );
 }
 
@@ -125,54 +121,38 @@ export default function SecretsPage() {
       </div>
 
       {error && (
-        <div style={{
-          background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-          borderRadius: "8px", padding: "10px 14px", fontSize: "13px",
-          color: "var(--danger)", marginBottom: "16px",
-        }}>
+        <Card padding="sm" style={{ fontSize: "13px", color: "var(--danger)", marginBottom: "16px" }}>
           {error}
           <button
+            className="hk-reset-btn"
             onClick={() => setError(null)}
-            style={{
-              marginLeft: "8px", border: "none", background: "none",
-              color: "var(--fg-muted)", cursor: "pointer", fontSize: "11px",
-            }}
+            style={{ marginLeft: "8px", color: "var(--fg-muted)", cursor: "pointer", fontSize: "11px" }}
           >
             dismiss
           </button>
-        </div>
+        </Card>
       )}
 
       {/* Secrets Vault */}
-      <div style={{
-        background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-        borderRadius: "8px", marginBottom: "16px", overflow: "hidden",
-      }}>
-        <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--separator)" }}>
+      <Card padding="none" style={{ marginBottom: "16px", overflow: "hidden" }}>
+        <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border-subtle)" }}>
           <p style={{ fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--fg-subtle)", margin: 0 }}>
             Secrets Vault
           </p>
         </div>
 
         {secrets.length === 0 ? (
-          <div style={{ padding: "24px 16px", textAlign: "center" }}>
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ color: "var(--fg-subtle)", marginBottom: "10px" }}>
-              <circle cx="9" cy="12" r="4" stroke="currentColor" strokeWidth="1.5"/>
-              <path d="M13 12h7M17 12v3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-            <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0 }}>
-              No plugins require secrets.
-            </p>
-            <p style={{ fontSize: "11px", color: "var(--fg-subtle)", margin: "4px 0 0" }}>
-              Install plugins from the Marketplace to see their secret requirements.
-            </p>
-          </div>
+          <EmptyState
+            icon={<KeyRound size={28} strokeWidth={1.5} />}
+            title="No plugins require secrets"
+            description="Install plugins from the Marketplace to see their secret requirements."
+          />
         ) : (
           <div>
             {/* Header row */}
             <div style={{
               display: "grid", gridTemplateColumns: "1fr 2fr 1fr 80px 120px",
-              padding: "6px 16px", borderBottom: "1px solid var(--separator)",
+              padding: "6px 16px", borderBottom: "1px solid var(--border-subtle)",
               fontSize: "10px", fontWeight: 600, textTransform: "uppercase",
               letterSpacing: "0.05em", color: "var(--fg-subtle)",
             }}>
@@ -203,120 +183,61 @@ export default function SecretsPage() {
                 </span>
                 <StatusBadge isSet={secret.isSet} />
                 <div style={{ display: "flex", gap: "6px" }}>
-                  <button
-                    onClick={() => { setModalSecret(secret.name); setSecretValue(""); }}
-                    style={{
-                      fontSize: "11px", padding: "2px 8px", borderRadius: "4px",
-                      border: "1px solid var(--border-base)", background: "transparent",
-                      color: "var(--accent-text)", cursor: "pointer",
-                    }}
-                  >
+                  <Button variant="ghost" size="sm" onClick={() => { setModalSecret(secret.name); setSecretValue(""); }}>
                     {secret.isSet ? "Update" : "Set"}
-                  </button>
+                  </Button>
                   {secret.isSet && (
-                    <button
-                      onClick={() => handleDeleteSecret(secret.name)}
-                      style={{
-                        fontSize: "11px", padding: "2px 8px", borderRadius: "4px",
-                        border: "1px solid var(--border-base)", background: "transparent",
-                        color: "var(--danger)", cursor: "pointer",
-                      }}
-                    >
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteSecret(secret.name)} style={{ color: "var(--danger)" }}>
                       Delete
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
             ))}
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Set secret modal */}
-      {modalSecret && (
-        <div style={{
-          position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)",
-          backdropFilter: "blur(8px)",
-          WebkitBackdropFilter: "blur(8px)",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          zIndex: 100,
-        }}>
-          <div style={{
-            background: "var(--bg-elevated)", border: "1px solid var(--border-base)",
-            borderRadius: "10px", padding: "20px", width: "380px",
-            boxShadow: "var(--shadow-popover)",
-          }}>
-            <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)", margin: "0 0 12px" }}>
-              Set secret: {modalSecret}
-            </p>
-            <input
-              type="password"
-              value={secretValue}
-              onChange={(e) => setSecretValue(e.target.value)}
-              placeholder="Enter secret value"
-              autoFocus
-              onKeyDown={(e) => { if (e.key === "Enter") handleSetSecret(); }}
-              style={{
-                width: "100%", fontSize: "13px", padding: "8px 10px",
-                borderRadius: "6px", border: "1px solid var(--border-base)",
-                background: "var(--bg-base)", color: "var(--fg-base)",
-                boxSizing: "border-box",
-              }}
-            />
-            <div style={{ display: "flex", gap: "8px", marginTop: "14px", justifyContent: "flex-end" }}>
-              <button
-                onClick={() => { setModalSecret(null); setSecretValue(""); }}
-                style={{
-                  fontSize: "12px", padding: "6px 14px", borderRadius: "6px",
-                  border: "1px solid var(--border-base)", background: "transparent",
-                  color: "var(--fg-muted)", cursor: "pointer",
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSetSecret}
-                disabled={!secretValue || savingSecret}
-                style={{
-                  fontSize: "12px", fontWeight: 500, padding: "6px 14px",
-                  borderRadius: "6px", border: "none",
-                  background: secretValue ? "var(--accent)" : "var(--bg-surface)",
-                  color: secretValue ? "#fff" : "var(--fg-subtle)",
-                  cursor: secretValue ? "pointer" : "default",
-                  opacity: savingSecret ? 0.6 : 1,
-                }}
-              >
-                {savingSecret ? "Saving..." : "Save"}
-              </button>
-            </div>
+      <Modal
+        open={!!modalSecret}
+        onClose={() => { setModalSecret(null); setSecretValue(""); }}
+        title={`Set secret: ${modalSecret ?? ""}`}
+        footer={
+          <div style={{ display: "flex", gap: "8px", justifyContent: "flex-end" }}>
+            <Button variant="ghost" onClick={() => { setModalSecret(null); setSecretValue(""); }}>
+              Cancel
+            </Button>
+            <Button variant="primary" onClick={handleSetSecret} disabled={!secretValue || savingSecret}>
+              {savingSecret ? "Saving…" : "Save"}
+            </Button>
           </div>
-        </div>
-      )}
+        }
+      >
+        <Input
+          type="password"
+          value={secretValue}
+          onChange={(e) => setSecretValue(e.target.value)}
+          placeholder="Enter secret value"
+          autoFocus
+          onKeyDown={(e) => { if (e.key === "Enter") handleSetSecret(); }}
+        />
+      </Modal>
 
       {/* Environment Config */}
-      <div style={{
-        background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-        borderRadius: "8px", overflow: "hidden",
-      }}>
+      <Card padding="none" style={{ overflow: "hidden" }}>
         <div style={{
           padding: "12px 16px",
-          borderBottom: "1px solid var(--separator)",
+          borderBottom: "1px solid var(--border-subtle)",
           display: "flex", justifyContent: "space-between", alignItems: "center",
         }}>
           <p style={{ fontSize: "11px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--fg-subtle)", margin: 0 }}>
             Environment Config
           </p>
           {envDirty && (
-            <button
-              onClick={handleSaveEnv}
-              style={{
-                fontSize: "11px", fontWeight: 500, padding: "3px 10px",
-                borderRadius: "5px", border: "none",
-                background: "var(--accent)", color: "#fff", cursor: "pointer",
-              }}
-            >
+            <Button variant="primary" size="sm" onClick={handleSaveEnv}>
               Save All
-            </button>
+            </Button>
           )}
         </div>
 
@@ -334,7 +255,7 @@ export default function SecretsPage() {
             {/* Header row */}
             <div style={{
               display: "grid", gridTemplateColumns: "1fr 1.5fr 1fr 1.5fr",
-              padding: "6px 16px", borderBottom: "1px solid var(--separator)",
+              padding: "6px 16px", borderBottom: "1px solid var(--border-subtle)",
               fontSize: "10px", fontWeight: 600, textTransform: "uppercase",
               letterSpacing: "0.05em", color: "var(--fg-subtle)",
             }}>
@@ -377,7 +298,7 @@ export default function SecretsPage() {
             ))}
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 }

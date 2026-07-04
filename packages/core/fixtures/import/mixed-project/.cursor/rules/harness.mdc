@@ -1,0 +1,8 @@
+---
+description: Harness operational instructions
+globs: "**/*"
+alwaysApply: true
+---
+
+Prefer small, reviewable diffs. When editing generated code, edit the
+generator instead of the output file.

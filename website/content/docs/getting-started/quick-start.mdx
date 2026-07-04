@@ -5,7 +5,94 @@ title: Quick Start
 
 # Quick Start
 
-Install a plugin and try it in under a minute.
+Don't start from a blank `harness.yaml`. Point harness-kit at the AI tool configs you already have and let it read them.
+
+<Steps>
+<Step>
+### Install the CLI
+
+```bash
+brew install harness-kit
+```
+
+See [Installation](/docs/getting-started/installation) for npm, binary, and nightly options.
+</Step>
+
+<Step>
+### Import your existing setup
+
+Run this from any project that already has a Claude Code, Cursor, Copilot, opencode, pi, or AGENTS.md config:
+
+```bash
+harness import
+```
+
+harness-kit scans every tool config it can find, reports what it found per tool (file counts, anything it had to skip, any conflicting values between tools), and synthesizes a single `harness.yaml` — but doesn't write it yet.
+
+```
+Scanning /Users/you/your-project
+
+Findings:
+  ✓ claude-code    3 files
+      .claude/settings.json — permissions, MCP servers
+      CLAUDE.md — operational instructions
+  ✓ cursor         1 file
+      .cursor/rules — instructions
+  ✗ copilot        not detected
+
+1 conflict(s) recorded under x-harness-import:
+  instructions.operational:
+      claude-code (CLAUDE.md): "Always create a feature branch..."
+      cursor (.cursor/rules): "Create a branch before committing..."
+```
+
+Conflicts aren't hidden — they're recorded in the synthesized YAML under `x-harness-import` so you can resolve them deliberately instead of silently picking one tool's version.
+</Step>
+
+<Step>
+### Preview before writing anything
+
+```bash
+harness import --dry-run
+```
+
+Prints the synthesized `harness.yaml` to your terminal. Nothing touches disk until you're ready.
+</Step>
+
+<Step>
+### Write it
+
+```bash
+harness import
+```
+
+Run without `--dry-run` and, if no `harness.yaml` exists yet, it's written straight away. Add `--global` to also fold in your user-level (`~`) configs — global values only fill gaps the project scan left, project-level values always win on conflict. Add `--force` if a `harness.yaml` already exists and you want to overwrite it (you'll be asked to confirm).
+
+```bash
+harness import --global
+```
+</Step>
+
+<Step>
+### Compile it back out
+
+```bash
+harness compile
+```
+
+Writes native config files for every AI tool `harness import` detected — `.claude/settings.json`, `.cursor/rules`, and so on — from the one `harness.yaml` you just reviewed. Re-run `harness compile --watch` to keep them in sync as you edit.
+</Step>
+</Steps>
+
+<Callout type="info" title="What harness import can and can't reconstruct yet">
+  Every adapter's real read-back support is listed on the [homepage capability matrix](/) — generated straight from
+  the adapter code, not hand-maintained. Instructions, MCP servers, and (for some tools) permissions round-trip
+  today; skills, subagents, hooks, and model config are export-only for now on most tools.
+</Callout>
+
+## No existing config? Start with a plugin
+
+If you're trying harness-kit from scratch with nothing to import yet, install a plugin instead and try it in under a minute.
 
 <Steps>
 <Step>

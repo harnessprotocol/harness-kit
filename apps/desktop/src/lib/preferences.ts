@@ -68,7 +68,7 @@ export function setDensity(density: Density) {
 // ── Default Section ──────────────────────────────────────────
 
 export function getDefaultSection(): string {
-  return localStorage.getItem(KEY_DEFAULT_SECTION) ?? "/harness/plugins";
+  return localStorage.getItem(KEY_DEFAULT_SECTION) ?? "/fleet";
 }
 
 export function setDefaultSection(path: string) {
@@ -129,34 +129,6 @@ export function getConfirmSave(): boolean {
 
 export function setConfirmSave(confirm: boolean) {
   localStorage.setItem(KEY_CONFIRM_SAVE, String(confirm));
-}
-
-// ── Labs: membrain ───────────────────────────────────────────
-
-const KEY_MEMBRAIN_LABS = "harness-kit-membrain-labs";
-
-/** Returns true only if the user has explicitly opted in to the membrain Labs feature. */
-export function getMembrainEnabled(): boolean {
-  return localStorage.getItem(KEY_MEMBRAIN_LABS) === "true";
-}
-
-export function setMembrainEnabled(enabled: boolean) {
-  localStorage.setItem(KEY_MEMBRAIN_LABS, String(enabled));
-  window.dispatchEvent(new CustomEvent("harness-kit-prefs-changed"));
-}
-
-// ── Labs: terminals ──────────────────────────────────────────
-
-const KEY_TERMINALS_LABS = "harness-kit-terminals-labs";
-
-/** Terminals is off by default; the user opts in via Preferences → Labs. */
-export function getTerminalsEnabled(): boolean {
-  return localStorage.getItem(KEY_TERMINALS_LABS) === "true";
-}
-
-export function setTerminalsEnabled(enabled: boolean) {
-  localStorage.setItem(KEY_TERMINALS_LABS, String(enabled));
-  window.dispatchEvent(new CustomEvent("harness-kit-prefs-changed"));
 }
 
 // ── Sidebar Width ────────────────────────────────────────────

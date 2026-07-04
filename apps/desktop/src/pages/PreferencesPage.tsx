@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { open } from "@tauri-apps/plugin-shell";
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
@@ -11,14 +12,28 @@ import {
   getObservatoryRefresh, setObservatoryRefresh,
   getMarkdownFont, setMarkdownFont,
   getConfirmSave, setConfirmSave,
-  getMembrainEnabled, setMembrainEnabled,
-  getTerminalsEnabled, setTerminalsEnabled,
   getConfigFilesDetailLevel, setConfigFilesDetailLevel,
   type Density,
   type MarkdownFont,
   type ConfigFilesDetailLevel,
 } from "../lib/preferences";
 import { getTheme, setTheme } from "../lib/theme";
+
+// Security surfaces are re-homed under Settings (DESIGN.md §5) — lazy-loaded
+// so the General tab's bundle stays light. Routes under /security/* still
+// work directly (e.g. FirstRunPermissionModal deep-links there).
+const PermissionsPage = lazy(() => import("./security/PermissionsPage"));
+const SecretsPage = lazy(() => import("./security/SecretsPage"));
+const AuditLogPage = lazy(() => import("./security/AuditLogPage"));
+
+type SettingsTab = "general" | "permissions" | "secrets" | "audit";
+
+const TABS: { id: SettingsTab; label: string }[] = [
+  { id: "general", label: "General" },
+  { id: "permissions", label: "Permissions" },
+  { id: "secrets", label: "Secrets" },
+  { id: "audit", label: "Audit Log" },
+];
 
 interface UpdateStatus {
   localSha: string;
@@ -115,9 +130,9 @@ function Segmented<T extends string | number | boolean>({
   );
 }
 
-// ── Main component ──────────────────────────────────────────────
+// ── General tab (existing Preferences content) ──────────────────
 
-export default function PreferencesPage() {
+function GeneralTab() {
   const [appVersion, setAppVersion] = useState("0.0.0");
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null);
   const [updateChecking, setUpdateChecking] = useState(false);
@@ -144,8 +159,6 @@ export default function PreferencesPage() {
   const [observatoryRefresh, setObservatoryRefreshState] = useState(getObservatoryRefresh);
   const [markdownFont, setMarkdownFontState] = useState(getMarkdownFont);
   const [confirmSave, setConfirmSaveState] = useState(getConfirmSave);
-  const [membrainEnabled, setMembrainEnabledState] = useState(getMembrainEnabled);
-  const [terminalsEnabled, setTerminalsEnabledState] = useState(getTerminalsEnabled);
   const [configFilesDetail, setConfigFilesDetailState] = useState(getConfigFilesDetailLevel);
 
   function handleSetTheme(t: "light" | "dark" | "system") {
@@ -202,16 +215,6 @@ export default function PreferencesPage() {
   function handleSetConfirmSave(value: boolean) {
     setConfirmSave(value);
     setConfirmSaveState(value);
-  }
-
-  function handleSetMembrainEnabled(value: boolean) {
-    setMembrainEnabled(value);
-    setMembrainEnabledState(value);
-  }
-
-  function handleSetTerminalsEnabled(value: boolean) {
-    setTerminalsEnabled(value);
-    setTerminalsEnabledState(value);
   }
 
   function handleSetConfigFilesDetail(level: ConfigFilesDetailLevel) {
@@ -463,54 +466,6 @@ export default function PreferencesPage() {
         </SettingRow>
       </div>
 
-      {/* ── Labs ───────────────────────────────────────────────── */}
-      <div style={{ marginBottom: "28px" }}>
-        <SectionHeader>Labs</SectionHeader>
-
-        <SettingRow
-          label="Memory"
-          description="Connect to your local membrain knowledge graph. Personal use — requires mem binary."
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{
-              fontSize: 10,
-              fontWeight: 700,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              padding: "2px 6px",
-              borderRadius: 4,
-              background: "var(--accent-light)",
-              color: "var(--accent-text)",
-              border: "1px solid var(--accent)",
-            }}>
-              Alpha
-            </span>
-            <Segmented
-              options={[
-                { value: false, label: "Off" },
-                { value: true, label: "On" },
-              ]}
-              value={membrainEnabled}
-              onChange={handleSetMembrainEnabled}
-            />
-          </div>
-        </SettingRow>
-
-        <SettingRow
-          label="Terminals"
-          description="Run and watch agents across a grid of shell terminals. Off by default while it stabilizes."
-        >
-          <Segmented
-            options={[
-              { value: false, label: "Off" },
-              { value: true, label: "On" },
-            ]}
-            value={terminalsEnabled}
-            onChange={handleSetTerminalsEnabled}
-          />
-        </SettingRow>
-      </div>
-
       {/* ── Updates ────────────────────────────────────────────────────────────── */}
       {import.meta.env.VITE_REPO_PATH && (
         <div style={{ marginBottom: "28px" }}>
@@ -641,6 +596,78 @@ export default function PreferencesPage() {
             GitHub
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Settings shell (tab bar + General/Permissions/Secrets/Audit Log) ────
+// Security surfaces re-home here per DESIGN.md §5 — folded under Settings,
+// removed from top-level nav. Routes under /security/* remain reachable
+// directly (e.g. FirstRunPermissionModal deep-links to /security/permissions).
+
+function SettingsTabBar({ active, onChange }: { active: SettingsTab; onChange: (tab: SettingsTab) => void }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        gap: "4px",
+        padding: "16px 24px 0",
+        borderBottom: "1px solid var(--border-subtle)",
+      }}
+    >
+      {TABS.map((tab) => {
+        const isActive = tab.id === active;
+        return (
+          <button
+            key={tab.id}
+            className="hk-reset-btn"
+            onClick={() => onChange(tab.id)}
+            aria-current={isActive ? "page" : undefined}
+            style={{
+              fontSize: "13px",
+              fontWeight: isActive ? 550 : 450,
+              padding: "8px 4px 10px",
+              marginRight: "16px",
+              color: isActive ? "var(--fg-base)" : "var(--fg-muted)",
+              cursor: "pointer",
+              borderBottom: isActive ? "2px solid var(--accent)" : "2px solid transparent",
+            }}
+          >
+            {tab.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+const TAB_BY_PARAM: Record<string, SettingsTab> = {
+  general: "general",
+  permissions: "permissions",
+  secrets: "secrets",
+  audit: "audit",
+};
+
+export default function PreferencesPage() {
+  const navigate = useNavigate();
+  const { tab: tabParam } = useParams<{ tab?: string }>();
+  const activeTab: SettingsTab = (tabParam && TAB_BY_PARAM[tabParam]) || "general";
+
+  function handleTabChange(tab: SettingsTab) {
+    navigate(tab === "general" ? "/preferences" : `/preferences/${tab}`);
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+      <SettingsTabBar active={activeTab} onChange={handleTabChange} />
+      <div style={{ flex: 1, overflowY: "auto" }}>
+        <Suspense fallback={<div style={{ padding: "20px 24px", fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</div>}>
+          {activeTab === "general" && <GeneralTab />}
+          {activeTab === "permissions" && <PermissionsPage />}
+          {activeTab === "secrets" && <SecretsPage />}
+          {activeTab === "audit" && <AuditLogPage />}
+        </Suspense>
       </div>
     </div>
   );

@@ -18,29 +18,29 @@ body {
 
 /* ── Light theme ── */
 :root {
-  /* Accent: Linear Indigo #5e6ad2 — exact match to --accent */
-  --color-fd-primary: 234 56% 60%;
+  /* Accent: Direction A azure #2E9BE6 — exact match to --accent */
+  --color-fd-primary: 204 79% 54%;
   --color-fd-primary-foreground: 0 0% 100%;
-  /* Background: Linear marketing (light) #f7f8f8 */
-  --color-fd-background: 180 6% 97%;
-  /* Foreground: text-primary #08090a */
-  --color-fd-foreground: 210 11% 4%;
+  /* Background: warm paper-neutral #F4F2EF */
+  --color-fd-background: 40 12% 95%;
+  /* Foreground: text-primary #1A1714 */
+  --color-fd-foreground: 20 15% 10%;
   /* Card: panel #ffffff */
   --color-fd-card: 0 0% 100%;
-  --color-fd-card-foreground: 210 11% 4%;
-  /* Muted: level3 #f0f1f2 */
-  --color-fd-muted: 210 9% 95%;
-  /* Muted fg: text-tertiary #5a5f6b */
-  --color-fd-muted-foreground: 222 9% 39%;
-  /* Border: border-standard rgba(0,0,0,0.10) flattened */
-  --color-fd-border: 214 9% 88%;
-  --color-fd-accent: 234 60% 95%;
-  --color-fd-accent-foreground: 233 49% 54%;
+  --color-fd-card-foreground: 20 15% 10%;
+  /* Muted: bg-elevated #ECEAE5 */
+  --color-fd-muted: 48 15% 92%;
+  /* Muted fg: fg-subtle #8B8479 */
+  --color-fd-muted-foreground: 33 9% 49%;
+  /* Border: border-standard rgba(20,15,10,0.10) flattened */
+  --color-fd-border: 30 10% 88%;
+  --color-fd-accent: 204 70% 95%;
+  --color-fd-accent-foreground: 206 77% 37%;
   --color-fd-popover: 0 0% 100%;
-  --color-fd-popover-foreground: 210 11% 4%;
-  --color-fd-secondary: 210 9% 95%;
-  --color-fd-secondary-foreground: 210 11% 4%;
-  --color-fd-ring: 234 56% 60%;
+  --color-fd-popover-foreground: 20 15% 10%;
+  --color-fd-secondary: 48 15% 92%;
+  --color-fd-secondary-foreground: 20 15% 10%;
+  --color-fd-ring: 204 79% 54%;
   --fd-layout-width: 1400px;
   --cat-blue:   #3b82f6;
   --cat-cyan:   #06b6d4;
@@ -51,57 +51,65 @@ body {
 
   /* design-tokens:light:start */
   /* generated — edit packages/design-tokens/src/tokens.ts, then run generate */
-  --bg-base: #f7f8f8;
-  --bg-surface: #ffffff;
-  --bg-elevated: #f0f1f2;
-  --bg-sidebar: rgba(247, 248, 248, 0.85);
-  --bg-sidebar-solid: #ffffff;
-  --fg-base: #08090a;
-  --fg-muted: #2c2e33;
-  --fg-subtle: #5a5f6b;
-  --fg-placeholder: #8a8f98;
-  --border-base: rgba(0, 0, 0, 0.06);
-  --border-strong: rgba(0, 0, 0, 0.10);
-  --border-subtle: rgba(0, 0, 0, 0.03);
-  --separator: rgba(0, 0, 0, 0.06);
-  --accent: #5e6ad2;
-  --accent-light: rgba(94, 106, 210, 0.12);
-  --accent-fg: #4b57c8;
-  --accent-text: #4b57c8;
-  --accent-glow: rgba(94, 106, 210, 0.35);
+  --bg-base: #F4F2EF;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #ECEAE5;
+  --bg-sidebar: rgba(244, 242, 239, 0.85);
+  --bg-sidebar-solid: #FFFFFF;
+  --fg-base: #1A1714;
+  --fg-muted: #57514A;
+  --fg-subtle: #8B8479;
+  --fg-placeholder: #A8A199;
+  --border-base: rgba(20, 15, 10, 0.06);
+  --border-strong: rgba(20, 15, 10, 0.10);
+  --border-subtle: rgba(20, 15, 10, 0.03);
+  --separator: rgba(20, 15, 10, 0.06);
+  --accent: #2E9BE6;
+  --accent-light: rgba(46, 155, 230, 0.10);
+  --accent-fg: #1668A6;
+  --accent-text: #1668A6;
+  --accent-glow: rgba(46, 155, 230, 0.25);
   /* design-tokens:light:end */
 
-  /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(0,0,0,.10), 0 1px 2px rgba(0,0,0,.06);
-  --shadow-md: 0 4px 12px rgba(0,0,0,.12), 0 2px 4px rgba(0,0,0,.06);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,.14), 0 4px 8px rgba(0,0,0,.08);
+  /* Status colors — shared across themes, NOT the accent (DESIGN.md §2) */
+  --success: #3FB07A;
+  --success-light: rgba(63, 176, 122, 0.14);
+  --warning: #E0A33D;
+  --warning-light: rgba(224, 163, 61, 0.16);
+  --danger: #F2555A;
+  --danger-light: rgba(242, 85, 90, 0.14);
+
+  /* Shadows — warm-tinted (Direction A, DESIGN.md §2) */
+  --shadow-sm: 0 1px 2px rgba(20,15,10,.08);
+  --shadow-md: 0 8px 24px -8px rgba(20,15,10,.14);
+  --shadow-lg: 0 18px 48px -16px rgba(20,15,10,.18);
 }
 
 /* ── Dark theme — matches harness-kit desktop app tokens ── */
 .dark {
-  /* Accent: Linear Indigo #5e6ad2 — exact match to --accent */
-  --color-fd-primary: 234 56% 60%;
-  --color-fd-primary-foreground: 180 6% 97%;
-  /* Background: Marketing Black #08090a */
-  --color-fd-background: 210 11% 4%;
-  /* Foreground: text-primary #f7f8f8 */
-  --color-fd-foreground: 180 6% 97%;
-  /* Card: panel #0f1011 */
-  --color-fd-card: 210 6% 6%;
-  --color-fd-card-foreground: 180 6% 97%;
-  /* Muted: level3 #191a1b */
-  --color-fd-muted: 210 4% 10%;
-  /* Muted fg: text-tertiary #8a8f98 */
-  --color-fd-muted-foreground: 218 7% 57%;
-  /* Border: border-standard rgba(255,255,255,0.08) flattened */
-  --color-fd-border: 220 5% 14%;
-  --color-fd-accent: 234 30% 15%;
-  --color-fd-accent-foreground: 232 100% 76%;
-  --color-fd-popover: 210 4% 10%;
-  --color-fd-popover-foreground: 180 6% 97%;
-  --color-fd-secondary: 210 4% 10%;
-  --color-fd-secondary-foreground: 180 6% 97%;
-  --color-fd-ring: 234 56% 60%;
+  /* Accent: Direction A azure #2E9BE6 — exact match to --accent */
+  --color-fd-primary: 204 79% 54%;
+  --color-fd-primary-foreground: 40 15% 92%;
+  /* Background: warm graphite #131215 */
+  --color-fd-background: 260 6% 8%;
+  /* Foreground: text-primary #EDEAE6 */
+  --color-fd-foreground: 40 15% 92%;
+  /* Card: bg-surface #1B191E */
+  --color-fd-card: 260 8% 10%;
+  --color-fd-card-foreground: 40 15% 92%;
+  /* Muted: bg-elevated #242128 */
+  --color-fd-muted: 258 7% 15%;
+  /* Muted fg: fg-subtle #6C665F */
+  --color-fd-muted-foreground: 27 8% 41%;
+  /* Border: border-standard rgba(255,255,255,0.09) flattened */
+  --color-fd-border: 258 5% 17%;
+  --color-fd-accent: 204 40% 18%;
+  --color-fd-accent-foreground: 203 87% 69%;
+  --color-fd-popover: 260 8% 10%;
+  --color-fd-popover-foreground: 40 15% 92%;
+  --color-fd-secondary: 258 7% 15%;
+  --color-fd-secondary-foreground: 40 15% 92%;
+  --color-fd-ring: 204 79% 54%;
   --cat-blue:   #3b82f6;
   --cat-cyan:   #06b6d4;
   --cat-purple: #a855f7;
@@ -111,36 +119,70 @@ body {
 
   /* design-tokens:dark:start */
   /* generated — edit packages/design-tokens/src/tokens.ts, then run generate */
-  --bg-base: #08090a;
-  --bg-surface: #0f1011;
-  --bg-elevated: #191a1b;
-  --bg-sidebar: rgba(8, 9, 10, 0.85);
-  --bg-sidebar-solid: #0f1011;
-  --fg-base: #f7f8f8;
-  --fg-muted: #d0d6e0;
-  --fg-subtle: #8a8f98;
-  --fg-placeholder: #62666d;
+  --bg-base: #131215;
+  --bg-surface: #1B191E;
+  --bg-elevated: #242128;
+  --bg-sidebar: rgba(27, 25, 30, 0.85);
+  --bg-sidebar-solid: #1B191E;
+  --fg-base: #EDEAE6;
+  --fg-muted: #A29C95;
+  --fg-subtle: #6C665F;
+  --fg-placeholder: #514C46;
   --border-base: rgba(255, 255, 255, 0.05);
-  --border-strong: rgba(255, 255, 255, 0.08);
-  --border-subtle: rgba(255, 255, 255, 0.02);
+  --border-strong: rgba(255, 255, 255, 0.09);
+  --border-subtle: rgba(255, 255, 255, 0.03);
   --separator: rgba(255, 255, 255, 0.05);
-  --accent: #5e6ad2;
-  --accent-light: rgba(94, 106, 210, 0.15);
-  --accent-fg: #828fff;
-  --accent-text: #828fff;
-  --accent-glow: rgba(94, 106, 210, 0.40);
+  --accent: #2E9BE6;
+  --accent-light: rgba(46, 155, 230, 0.14);
+  --accent-fg: #6BC0F5;
+  --accent-text: #6BC0F5;
+  --accent-glow: rgba(46, 155, 230, 0.35);
   /* design-tokens:dark:end */
 
-  /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(0,0,0,.30), 0 1px 2px rgba(0,0,0,.20);
-  --shadow-md: 0 4px 12px rgba(0,0,0,.40), 0 2px 4px rgba(0,0,0,.20);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,.50), 0 4px 8px rgba(0,0,0,.30);
+  /* Status colors — shared across themes, NOT the accent (DESIGN.md §2) */
+  --success: #3FB07A;
+  --success-light: rgba(63, 176, 122, 0.14);
+  --warning: #E0A33D;
+  --warning-light: rgba(224, 163, 61, 0.16);
+  --danger: #F2555A;
+  --danger-light: rgba(242, 85, 90, 0.14);
+
+  /* Shadows — warm-tinted, stronger in dark mode (Direction A, DESIGN.md §2) */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+  --shadow-md: 0 6px 20px -6px rgba(0,0,0,.55);
+  --shadow-lg: 0 16px 40px -12px rgba(0,0,0,.6);
 }
 
 /* ── Utility classes ── */
 .btn-primary {
   background: var(--accent);
 }
+
+/* ── Capability chips — tinted bg + colored text + 6px dot, never a solid
+   pill (DESIGN.md §2/§7, same visual language as packages/ui's StatusChip) ── */
+.cap-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 550;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+.cap-chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.cap-chip-full { background: var(--success-light); color: var(--success); }
+.cap-chip-full .cap-chip-dot { background: var(--success); }
+.cap-chip-partial { background: var(--warning-light); color: var(--warning); }
+.cap-chip-partial .cap-chip-dot { background: var(--warning); }
+.cap-chip-none { background: var(--bg-elevated); color: var(--fg-subtle); }
+.cap-chip-none .cap-chip-dot { background: var(--fg-subtle); }
 
 .glow-cyan {
   box-shadow: 0 0 40px -10px var(--accent-glow);
@@ -317,14 +359,14 @@ h1 {
   border-left-color: var(--accent);
 }
 
-/* ── Global focus-visible — Linear: links use a single indigo outline ── */
+/* ── Global focus-visible — single azure outline ── */
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-/* ── Interactive controls — Linear multi-layer indigo focus ring ──
-   Keep the indigo outline as a clip-proof fallback: box-shadow rings are
+/* ── Interactive controls — multi-layer azure focus ring ──
+   Keep the azure outline as a clip-proof fallback: box-shadow rings are
    clipped by any ancestor overflow:hidden (e.g. the InstallCommand wrapper),
    which would make keyboard focus invisible. The outline always renders. */
 [data-fumadocs-nav] button:focus-visible,
@@ -334,8 +376,8 @@ button:focus-visible,
 input:focus-visible,
 [data-card]:focus-visible {
   box-shadow:
-    0 0 0 2px rgba(94, 106, 210, 0.4),
-    0 0 0 4px rgba(94, 106, 210, 0.2);
+    0 0 0 2px var(--accent-glow),
+    0 0 0 4px var(--accent-light);
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }

@@ -48,7 +48,9 @@ export default function FirstRunPermissionModal({ onProceed }: FirstRunPermissio
   }
 
   function handleChange() {
-    navigate("/security/permissions");
+    // Permissions now lives as a Settings tab (DESIGN.md §5); /security/permissions
+    // still resolves directly for any external deep links.
+    navigate("/preferences/permissions");
   }
 
   return createPortal(

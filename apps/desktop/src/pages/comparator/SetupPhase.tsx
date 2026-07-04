@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { homeDir } from "@tauri-apps/api/path";
 import type { HarnessInfo } from "@harness-kit/shared";
 import { getHarness } from "../../lib/harness-definitions";
 
@@ -58,6 +59,11 @@ const monoStack = 'ui-monospace, "SF Mono", monospace';
 
 const MAX_SELECTED = 4;
 const STAGED_AGENTS_KEY = "harness-kit-comparator-staged-agents";
+
+// Live in-app harness execution (spawning a PTY per harness and streaming output)
+// is not available in this build. Comparisons can still be set up and results
+// recorded manually. See CLAUDE.md "The Cut" for context.
+const LIVE_EXECUTION_AVAILABLE = false;
 
 // ── Styles ──────────────────────────────────────────────────
 
@@ -296,7 +302,7 @@ export default function SetupPhase({ onStart }: SetupPhaseProps) {
   // ── Load project directory + git info ───────────────────────
 
   useEffect(() => {
-    invoke<string>("get_cwd")
+    homeDir()
       .then((dir) => {
         setWorkingDir(dir);
         return invoke<GitInfo>("check_git_repo", { dir });
@@ -345,7 +351,7 @@ export default function SetupPhase({ onStart }: SetupPhaseProps) {
     [selections],
   );
 
-  const canStart = selectedCount > 0 && prompt.trim().length > 0;
+  const canStart = LIVE_EXECUTION_AVAILABLE && selectedCount > 0 && prompt.trim().length > 0;
 
   // ── Toggle harness selection ────────────────────────────────
 
@@ -584,6 +590,31 @@ export default function SetupPhase({ onStart }: SetupPhaseProps) {
           />
         </div>
 
+        {/* ── Live execution unavailable notice ───────────────── */}
+        {!LIVE_EXECUTION_AVAILABLE && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "8px 12px",
+              background: "rgba(234, 88, 12, 0.10)",
+              border: "1px solid rgba(234, 88, 12, 0.25)",
+              borderRadius: 6,
+              fontSize: 11,
+              fontFamily: fontStack,
+              color: tokens.fgMuted,
+            }}
+          >
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <path d="M8 2L14 14H2L8 2z" />
+              <line x1="8" y1="7" x2="8" y2="10" />
+              <line x1="8" y1="12" x2="8.01" y2="12" />
+            </svg>
+            Live in-app execution isn&apos;t available in this build — set up comparisons and record results manually.
+          </div>
+        )}
+
         {/* ── Start Button ───────────────────────────────────── */}
         <button
           style={{
@@ -594,6 +625,7 @@ export default function SetupPhase({ onStart }: SetupPhaseProps) {
             opacity: canStart ? 1 : 0.7,
           }}
           disabled={!canStart}
+          title={LIVE_EXECUTION_AVAILABLE ? undefined : "Live in-app execution isn't available in this build"}
           onClick={handleStart}
           onMouseEnter={(e) => {
             if (!canStart) return;
@@ -607,7 +639,7 @@ export default function SetupPhase({ onStart }: SetupPhaseProps) {
           }}
         >
           <PlayIcon />
-          Start Comparison
+          {LIVE_EXECUTION_AVAILABLE ? "Start Comparison" : "Live Execution Unavailable"}
         </button>
       </div>
     </div>
@@ -683,9 +715,9 @@ function HarnessCard({
               letterSpacing: "0.05em",
               padding: "1px 5px",
               borderRadius: "3px",
-              background: "rgba(99, 102, 241, 0.15)",
-              color: "rgb(129, 140, 248)",
-              border: "1px solid rgba(99, 102, 241, 0.3)",
+              background: "var(--accent-light)",
+              color: "var(--accent-text)",
+              border: "1px solid var(--accent-glow)",
               textTransform: "uppercase" as const,
             }}
             title="ACP compatible — uses structured JSON-RPC events"

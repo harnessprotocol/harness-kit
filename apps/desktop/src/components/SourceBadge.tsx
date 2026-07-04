@@ -3,8 +3,8 @@ export default function SourceBadge({ marketplace }: { marketplace?: string }) {
     return (
       <span style={{
         fontSize: "10px", fontWeight: 500, padding: "1px 7px", borderRadius: "10px",
-        background: "rgba(217,119,6,0.10)", color: "var(--warning)",
-        border: "1px solid rgba(217,119,6,0.25)", whiteSpace: "nowrap",
+        background: "var(--warning-light)", color: "var(--warning)",
+        border: "1px solid var(--warning-light)", whiteSpace: "nowrap",
       }}>
         local
       </span>
@@ -14,8 +14,8 @@ export default function SourceBadge({ marketplace }: { marketplace?: string }) {
     return (
       <span style={{
         fontSize: "10px", fontWeight: 500, padding: "1px 7px", borderRadius: "10px",
-        background: "rgba(59,130,246,0.12)", color: "#3b82f6",
-        border: "1px solid rgba(59,130,246,0.25)", whiteSpace: "nowrap",
+        background: "var(--accent-light)", color: "var(--accent-text)",
+        border: "1px solid var(--accent-light)", whiteSpace: "nowrap",
       }}>
         official
       </span>

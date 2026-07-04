@@ -1,0 +1,301 @@
+import { describe, it, expect } from "vitest";
+import { resolve } from "node:path";
+import { importProject, importProjectValidated } from "../src/import/import-project.js";
+import { synthesize } from "../src/import/synthesize.js";
+import { compile } from "../src/compile/compile.js";
+import { validateHarness } from "../src/schema/validate.js";
+import { parseHarness } from "../src/parser/parse-harness.js";
+import type { TargetPlatform } from "../src/types.js";
+import { loadFixtureProject } from "./helpers/load-fixture-tree.js";
+import { MockFsProvider } from "./helpers/mock-fs.js";
+
+const FIXTURES_DIR = resolve(import.meta.dirname, "..", "fixtures", "import");
+
+describe("importProject: schema validity + provenance", () => {
+  it("produces a schema-valid harness.yaml (AJV) for a mixed multi-tool project", async () => {
+    const fs = loadFixtureProject(resolve(FIXTURES_DIR, "mixed-project"));
+    const result = await importProjectValidated({ fs, name: "acme", description: "Imported from Acme" });
+
+    const validation = validateHarness(result.harnessConfig);
+    expect(validation.valid).toBe(true);
+    expect(validation.errors).toEqual([]);
+
+    // Round-trips through the YAML parser too, not just the in-memory object.
+    const reparsed = parseHarness(result.harnessYaml);
+    expect(validateHarness(reparsed.config).valid).toBe(true);
+  });
+
+  it("carries provenance on every field that made it into harness.yaml", async () => {
+    const fs = loadFixtureProject(resolve(FIXTURES_DIR, "mixed-project"));
+    const result = await importProject({ fs, name: "acme", description: "d" });
+
+    expect(result.provenance.entries.length).toBeGreaterThan(0);
+    for (const entry of result.provenance.entries) {
+      expect(entry.source.adapter).toBeTruthy();
+      expect(entry.source.file).toBeTruthy();
+    }
+
+    // instructions, mcp-servers, and permissions were all present in the fixture.
+    const fields = result.provenance.entries.map((e) => e.field);
+    expect(fields).toContain("instructions.operational");
+    expect(fields.some((f) => f.startsWith("mcp-servers."))).toBe(true);
+    expect(fields).toContain("permissions");
+  });
+
+  it("produces a per-adapter findings summary describing what was found where", async () => {
+    const fs = loadFixtureProject(resolve(FIXTURES_DIR, "mixed-project"));
+    const result = await importProject({ fs, name: "acme", description: "d" });
+
+    const adapterIds = result.findings.adapters.map((a) => a.adapter).sort();
+    expect(adapterIds).toEqual(["agents-md", "claude-code", "copilot", "cursor", "opencode", "pi"]);
+
+    const claudeCode = result.findings.adapters.find((a) => a.adapter === "claude-code")!;
+    expect(claudeCode.detected).toBe(true);
+    expect(claudeCode.found.some((f) => f.file === "CLAUDE.md")).toBe(true);
+    expect(claudeCode.found.some((f) => f.domain === "permissions")).toBe(true);
+    expect(claudeCode.found.some((f) => f.domain === "mcp")).toBe(true);
+
+    const cursor = result.findings.adapters.find((a) => a.adapter === "cursor")!;
+    expect(cursor.detected).toBe(true);
+    expect(cursor.found.some((f) => f.file === ".cursor/rules/harness.mdc")).toBe(true);
+
+    // copilot has no artifacts in this fixture — detected false, nothing found.
+    const copilot = result.findings.adapters.find((a) => a.adapter === "copilot")!;
+    expect(copilot.detected).toBe(false);
+    expect(copilot.found).toEqual([]);
+
+    // opencode: this fixture has AGENTS.md (read the same as agents-md) but no
+    // opencode.json/.opencode dir — its own detect() (opencode.json/.opencode
+    // paths only) reports not-detected even though importConfig still reads
+    // the AGENTS.md content it shares with agents-md (deduped downstream by
+    // synthesize()'s byte-identical block dedupe).
+    const opencode = result.findings.adapters.find((a) => a.adapter === "opencode")!;
+    expect(opencode.detected).toBe(false);
+    expect(opencode.found.some((f) => f.file === "AGENTS.md")).toBe(true);
+
+    // pi: this fixture has no .pi/APPEND_SYSTEM.md — not detected, nothing found.
+    const pi = result.findings.adapters.find((a) => a.adapter === "pi")!;
+    expect(pi.detected).toBe(false);
+    expect(pi.found).toEqual([]);
+  });
+
+  it("records the postgres mcp-server naming conflict between claude-code and cursor under x-harness-import, never a silent pick", async () => {
+    const fs = loadFixtureProject(resolve(FIXTURES_DIR, "mixed-project"));
+    const result = await importProject({ fs, name: "acme", description: "d" });
+
+    const conflict = result.provenance.conflicts.find((c) => c.field === "mcp-servers.postgres");
+    expect(conflict).toBeDefined();
+    expect(conflict!.alternates.length).toBe(2);
+    expect(conflict!.alternates.map((a) => a.adapter).sort()).toEqual(["claude-code", "cursor"]);
+
+    const doc = result.harnessConfig as unknown as Record<string, unknown>;
+    expect(doc["x-harness-import"]).toBeDefined();
+    const xImport = doc["x-harness-import"] as { conflicts: Array<{ field: string }> };
+    expect(xImport.conflicts.some((c) => c.field === "mcp-servers.postgres")).toBe(true);
+
+    // The value that WAS picked is still fully present and valid (deterministic
+    // first-seen-in-adapter-registry-order — not a lost value).
+    const mcpServers = result.harnessConfig["mcp-servers"]!;
+    expect(mcpServers.postgres).toBeDefined();
+  });
+
+  it("does not import harness-kit's own marker-block content as opaque user text", async () => {
+    const fs = loadFixtureProject(resolve(FIXTURES_DIR, "already-compiled"));
+    const result = await importProject({ fs, name: "acme", description: "d" });
+
+    const operational = result.harnessConfig.instructions?.operational ?? "";
+    expect(operational).not.toContain("This text was generated by a previous harness-kit compile");
+    expect(operational).toContain("Some hand-written preamble");
+    expect(operational).toContain("A trailing note the user appended");
+  });
+});
+
+describe("importProject: determinism", () => {
+  it("running import twice on unchanged inputs yields byte-identical harnessYaml", async () => {
+    const fs1 = loadFixtureProject(resolve(FIXTURES_DIR, "mixed-project"));
+    const fs2 = loadFixtureProject(resolve(FIXTURES_DIR, "mixed-project"));
+
+    const result1 = await importProject({ fs: fs1, name: "acme", description: "d" });
+    const result2 = await importProject({ fs: fs2, name: "acme", description: "d" });
+
+    expect(result1.harnessYaml).toBe(result2.harnessYaml);
+  });
+
+  it("running import twice on the SAME fs instance (no mutation) is also byte-identical", async () => {
+    const fs = loadFixtureProject(resolve(FIXTURES_DIR, "mixed-project"));
+    const result1 = await importProject({ fs, name: "acme", description: "d" });
+    const result2 = await importProject({ fs, name: "acme", description: "d" });
+    expect(result1.harnessYaml).toBe(result2.harnessYaml);
+  });
+});
+
+describe("importProject: opaque preservation (byte-for-byte)", () => {
+  it("a CLAUDE.md paragraph that maps to no structured field appears verbatim in the output", async () => {
+    const fs = loadFixtureProject(resolve(FIXTURES_DIR, "mixed-project"));
+    const result = await importProject({ fs, name: "acme", description: "d" });
+
+    const claudeMdRaw = await fs.readFile("/project/CLAUDE.md");
+    // Every line of the original CLAUDE.md (there are no marker blocks in this
+    // fixture, so the whole file is "opaque user content") must appear
+    // verbatim, byte-for-byte, in the synthesized operational instructions.
+    const operational = result.harnessConfig.instructions?.operational ?? "";
+    for (const line of claudeMdRaw.split("\n")) {
+      if (line.trim().length === 0) continue;
+      expect(operational).toContain(line);
+    }
+  });
+
+  it("AGENT.md behavioral content and AGENTS.md operational content are both preserved verbatim", async () => {
+    const fs = loadFixtureProject(resolve(FIXTURES_DIR, "mixed-project"));
+    const result = await importProject({ fs, name: "acme", description: "d" });
+
+    const agentMdRaw = await fs.readFile("/project/AGENT.md");
+    expect(result.harnessConfig.instructions?.behavioral ?? "").toContain(agentMdRaw.trim());
+
+    const agentsMdRaw = await fs.readFile("/project/AGENTS.md");
+    const operational = result.harnessConfig.instructions?.operational ?? "";
+    // AGENTS.md content should be present in the combined operational text
+    // alongside CLAUDE.md's (multiple adapters contribute to the same slot).
+    expect(operational).toContain(agentsMdRaw.trim().split("\n")[0]);
+  });
+
+  it("cursor's behavioral.mdc maps to the behavioral slot, not operational (filename-aware, not blanket 'all .mdc = operational')", async () => {
+    const fs = loadFixtureProject(resolve(FIXTURES_DIR, "mixed-project"));
+    const result = await importProject({ fs, name: "acme", description: "d" });
+
+    const behavioral = result.harnessConfig.instructions?.behavioral ?? "";
+    const operational = result.harnessConfig.instructions?.operational ?? "";
+
+    expect(behavioral).toContain("Ask before deleting any file the user didn't explicitly name");
+    expect(operational).not.toContain("Ask before deleting any file the user didn't explicitly name");
+  });
+});
+
+describe("importProject: round-trip fixpoint (import -> compile -> re-import)", () => {
+  const ALL_TARGETS: TargetPlatform[] = [
+    "claude-code",
+    "cursor",
+    "copilot",
+    "codex",
+    "opencode",
+    "windsurf",
+    "gemini",
+    "junie",
+  ];
+
+  it("converges by the 2nd cycle with no content loss", async () => {
+    // Cycle 0: import the raw, hand-authored fixture project.
+    const fs = loadFixtureProject(resolve(FIXTURES_DIR, "mixed-project"));
+    const cycle1 = await importProjectValidated({ fs, name: "acme", description: "Imported from Acme" });
+
+    // Compile the synthesized harness.yaml back onto the SAME fs — this is
+    // what makes it a round trip: the compiled marker blocks land alongside
+    // the pre-existing hand-authored content already on disk.
+    await compile(cycle1.harnessYaml, ALL_TARGETS, fs, { force: true });
+
+    // Cycle 1 -> Cycle 2: re-import from the now-compiled tree.
+    const cycle2 = await importProjectValidated({ fs, name: "acme", description: "Imported from Acme" });
+
+    // Cycle 2 -> Cycle 3: compile again and re-import once more to prove
+    // stability continues (fixpoint, not a fluke of the first re-import).
+    await compile(cycle2.harnessYaml, ALL_TARGETS, fs, { force: true });
+    const cycle3 = await importProjectValidated({ fs, name: "acme", description: "Imported from Acme" });
+
+    // Convergence: cycle 2 and cycle 3 must be byte-identical — reaching a
+    // fixpoint by (at latest) the 2nd re-import cycle.
+    expect(cycle3.harnessYaml).toBe(cycle2.harnessYaml);
+
+    // No content loss: every domain present in cycle 1 is still present in
+    // the converged state (nothing silently dropped across the round trip).
+    expect(cycle2.harnessConfig.instructions?.operational).toBeTruthy();
+    expect(cycle2.harnessConfig.instructions?.behavioral).toBeTruthy();
+    expect(cycle2.harnessConfig["mcp-servers"]).toBeTruthy();
+    expect(cycle2.harnessConfig.permissions).toBeTruthy();
+
+    // Specifically: the original hand-authored prose is still traceable
+    // verbatim after a full compile+reimport round trip.
+    const operational = cycle2.harnessConfig.instructions?.operational ?? "";
+    expect(operational).toContain("Always run");
+    expect(operational).toContain("the full test suite before opening a pull request");
+    expect(operational).toContain("Prefer small, reviewable diffs");
+    expect(operational).toContain("This repository uses pnpm workspaces");
+
+    // And harness-kit's own generated marker-block text was never re-absorbed
+    // as opaque user content (it would show up duplicated/growing otherwise).
+    expect(operational).not.toMatch(/BEGIN harness:/);
+  });
+
+  it("mcp-servers and permissions survive the round trip unchanged", async () => {
+    const fs = loadFixtureProject(resolve(FIXTURES_DIR, "mixed-project"));
+    const cycle1 = await importProjectValidated({ fs, name: "acme", description: "d" });
+    await compile(cycle1.harnessYaml, ALL_TARGETS, fs, { force: true });
+    const cycle2 = await importProjectValidated({ fs, name: "acme", description: "d" });
+
+    expect(cycle2.harnessConfig["mcp-servers"]?.["acme-api"]).toBeDefined();
+    expect(cycle2.harnessConfig["mcp-servers"]?.postgres).toBeDefined();
+    expect(cycle2.harnessConfig.permissions?.tools?.allow).toContain("Read");
+    expect(cycle2.harnessConfig.permissions?.paths?.writable).toEqual(
+      expect.arrayContaining(["sql/", "migrations/"]),
+    );
+  });
+});
+
+describe("synthesize: dedupe and merge semantics (unit-level, no fs)", () => {
+  it("dedupes byte-identical mcp-server values contributed by two adapters (no conflict recorded)", () => {
+    const results = [
+      {
+        adapter: "claude-code" as const,
+        detected: true,
+        warnings: [],
+        fragments: [
+          {
+            domain: "mcp" as const,
+            config: {},
+            warnings: [],
+            mcpServers: {
+              servers: {
+                shared: {
+                  value: { transport: "stdio" as const, command: "shared-cmd" },
+                  source: { adapter: "claude-code" as const, file: ".mcp.json" },
+                },
+              },
+            },
+          },
+        ],
+      },
+      {
+        adapter: "cursor" as const,
+        detected: true,
+        warnings: [],
+        fragments: [
+          {
+            domain: "mcp" as const,
+            config: {},
+            warnings: [],
+            mcpServers: {
+              servers: {
+                shared: {
+                  value: { transport: "stdio" as const, command: "shared-cmd" },
+                  source: { adapter: "cursor" as const, file: ".cursor/mcp.json" },
+                },
+              },
+            },
+          },
+        ],
+      },
+    ];
+
+    const { config, provenance } = synthesize(results, { name: "x", description: "y" });
+    expect(config["mcp-servers"]?.shared).toEqual({ transport: "stdio", command: "shared-cmd" });
+    expect(provenance.conflicts).toEqual([]);
+  });
+});
+
+describe("importProject: schema validity across a from-scratch fixture set", () => {
+  it("an empty project (no tool configs at all) still synthesizes a schema-valid minimal profile", async () => {
+    const fs = new MockFsProvider({}, "/empty", "/home/user");
+    const result = await importProjectValidated({ fs, name: "blank", description: "Nothing found" });
+    expect(result.harnessConfig.version).toBe("1");
+    expect(result.findings.adapters.every((a) => a.detected === false)).toBe(true);
+  });
+});

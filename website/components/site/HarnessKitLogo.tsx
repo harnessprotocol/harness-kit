@@ -19,7 +19,9 @@ interface HarnessKitLogoProps {
  *       • website/app/opengraph-image.tsx (social share card)
  *     Update all three together, plus the desktop app brand + Tauri PNG/.icns
  *     icons under apps/desktop/src-tauri/icons (those need an SVG→raster export).
- *   - Keep it legible at 16px, periwinkle (#7a8bff) on a dark tile (#11151f),
+ *   - Keep it legible at 16px, azure (#2E9BE6) on a warm-graphite tile (#131215),
+ *     retinted 2026-07-03 to Direction A "Instrument" as a stopgap (geometry
+ *     unchanged) — the full mark redesign is still the planned future session,
  *     and tied to the product idea (compile one harness.yaml → many AI tools).
  *   - Consider whether a tile is even wanted, or a standalone glyph.
  * See memory: project_design_system_initiative (logo is marked provisional).
@@ -33,14 +35,14 @@ export function HarnessKitLogo({ glow = false, className = 'size-6' }: HarnessKi
       style={glow ? { filter: 'drop-shadow(0 0 6px var(--accent-glow))' } : undefined}
       aria-hidden="true"
     >
-      <rect width="32" height="32" rx="7" fill="#11151f" />
-      <g stroke="#7a8bff" strokeWidth="2.8" strokeLinecap="round" fill="none">
+      <rect width="32" height="32" rx="7" fill="#131215" />
+      <g stroke="#2E9BE6" strokeWidth="2.8" strokeLinecap="round" fill="none">
         <path d="M9 9.5 C 15 11, 17.5 13.5, 19.4 14.9" />
         <path d="M9 22.5 C 15 21, 17.5 18.5, 19.4 17.1" />
       </g>
-      <circle cx="9" cy="9.5" r="1.9" fill="#7a8bff" />
-      <circle cx="9" cy="22.5" r="1.9" fill="#7a8bff" />
-      <circle cx="22" cy="16" r="3.3" fill="#7a8bff" />
+      <circle cx="9" cy="9.5" r="1.9" fill="#2E9BE6" />
+      <circle cx="9" cy="22.5" r="1.9" fill="#2E9BE6" />
+      <circle cx="22" cy="16" r="3.3" fill="#2E9BE6" />
     </svg>
   );
 }

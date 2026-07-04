@@ -1,8 +1,10 @@
 import { writeFile, access, mkdir } from "node:fs/promises";
 import { resolve, basename, join } from "node:path";
 import chalk from "chalk";
-import { confirm, input, checkbox, Separator } from "@inquirer/prompts";
-import { validateSkillName } from "@harness-kit/core";
+import { confirm, input, checkbox, select, Separator } from "@inquirer/prompts";
+import { validateSkillName, detectPlatforms } from "@harness-kit/core";
+import { NodeFsProvider } from "@harness-kit/core/node";
+import { importCommand } from "./import.js";
 
 interface PluginChoice {
   name: string;
@@ -308,6 +310,38 @@ export async function initCommand(outputPath: string): Promise<void> {
     });
     if (!overwrite) {
       console.log(chalk.dim("Aborted."));
+      return;
+    }
+  }
+
+  // Import-first: if this directory already has existing tool configs
+  // (Claude Code, Cursor, Copilot, etc.), offer importing from them as the
+  // primary path before falling through to the blank-template scaffold.
+  // Detection reuses core's detectPlatforms() — a cheap existence check,
+  // not a full scan — so we don't pay import's cost just to decide whether
+  // to offer it. Only offered for the default output path: importCommand()
+  // always writes to ./harness.yaml, so a custom [path] argument (rare —
+  // used for scaffolding into a non-default location) falls straight
+  // through to the blank template rather than silently ignoring it.
+  const isDefaultOutputPath = resolved === resolve("harness.yaml");
+  const fs = new NodeFsProvider(resolve("."));
+  const detected = isDefaultOutputPath ? await detectPlatforms(fs) : [];
+
+  if (detected.length > 0) {
+    const platformNames = detected.map((d) => d.platform).join(", ");
+    const choice = await select<"import" | "blank">({
+      message: `Found existing config for: ${platformNames}. How do you want to start?`,
+      choices: [
+        {
+          value: "import",
+          name: `Import from existing configs (${platformNames})`,
+        },
+        { value: "blank", name: "Start from a blank template" },
+      ],
+    });
+
+    if (choice === "import") {
+      await importCommand({ force: exists });
       return;
     }
   }

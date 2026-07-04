@@ -1,5 +1,7 @@
 import { Suspense, lazy, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { Webhook } from "lucide-react";
+import { Button, Card, EmptyState } from "@harness-kit/ui";
 import { useFileEditor } from "../../hooks/useFileEditor";
 import EditorToolbar from "../../components/file-explorer/EditorToolbar";
 
@@ -215,20 +217,12 @@ function HookEventSection({ event, matchers }: { event: string; matchers: HookMa
   const totalHooks = matchers.reduce((n, m) => n + m.hooks.length, 0);
 
   return (
-    <div style={{
-      background: "var(--bg-surface)",
-      border: "1px solid var(--border-base)",
-      borderRadius: "10px",
-      padding: "14px 16px",
-      display: "flex",
-      flexDirection: "column",
-      gap: "10px",
-    }}>
+    <Card style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
       {/* Section header */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
         <div style={{
           width: "28px", height: "28px", borderRadius: "7px",
-          background: "var(--bg-elevated)", border: "1px solid var(--border-base)",
+          background: "var(--bg-elevated)",
           display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
         }}>
           {meta?.icon ?? (
@@ -261,7 +255,7 @@ function HookEventSection({ event, matchers }: { event: string; matchers: HookMa
       <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
         {matchers.map((m, i) => <HookMatcherBlock key={i} matcher={m} />)}
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -281,12 +275,9 @@ function HooksFormattedView({ content }: { content: string }) {
   if (parseError) {
     return (
       <div style={{ padding: "20px 24px" }}>
-        <div style={{
-          background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-          borderRadius: "8px", padding: "12px 16px", color: "var(--danger)", fontSize: "12px",
-        }}>
+        <Card padding="sm" style={{ color: "var(--danger)", fontSize: "12px" }}>
           {parseError}
-        </div>
+        </Card>
       </div>
     );
   }
@@ -300,22 +291,12 @@ function HooksFormattedView({ content }: { content: string }) {
 
   if (entries.length === 0) {
     return (
-      <div style={{ padding: "32px 24px", textAlign: "center" }}>
-        <div style={{
-          background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-          borderRadius: "10px", padding: "32px 24px", maxWidth: "480px", margin: "0 auto",
-        }}>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
-            style={{ color: "var(--fg-subtle)", margin: "0 auto 12px", display: "block" }}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M14.25 9.75L16.5 12l-2.25 2.25m-4.5 0L7.5 12l2.25-2.25M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z" />
-          </svg>
-          <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--fg-base)", margin: "0 0 6px" }}>
-            No hooks configured
-          </p>
-          <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: 0, lineHeight: "1.5" }}>
-            Add a <code style={{ fontFamily: "ui-monospace, monospace" }}>hooks</code> key to <code style={{ fontFamily: "ui-monospace, monospace" }}>~/.claude/settings.json</code> to run scripts at key points in Claude's lifecycle.
-          </p>
-        </div>
+      <div style={{ padding: "32px 24px" }}>
+        <EmptyState
+          icon={<Webhook size={28} strokeWidth={1.5} />}
+          title="No hooks configured"
+          description="Add a hooks key to ~/.claude/settings.json to run scripts at key points in Claude's lifecycle."
+        />
       </div>
     );
   }
@@ -343,23 +324,17 @@ export default function HooksPage() {
   const [viewMode, setViewMode] = useState<"formatted" | "editor">("formatted");
 
   const toolbarActions = (
-    <button
+    <Button
+      variant="ghost"
+      size="sm"
       onClick={() => navigate(`/harness/config/${encodeURIComponent("settings.json")}`)}
-      style={{
-        display: "flex", alignItems: "center", gap: "4px",
-        padding: "3px 8px", borderRadius: "5px",
-        border: "1px solid var(--border-base)",
-        background: "var(--bg-elevated)",
-        color: "var(--fg-subtle)", fontSize: "11px",
-        cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit",
-      }}
       title="Open settings.json in the editor"
     >
-      <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor">
+      <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style={{ marginRight: 4 }}>
         <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
       </svg>
       settings.json
-    </button>
+    </Button>
   );
 
   return (
@@ -395,12 +370,9 @@ export default function HooksPage() {
           )}
           {editor.error && (
             <div style={{ padding: "20px 24px" }}>
-              <div style={{
-                background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-                borderRadius: "8px", padding: "12px 16px", color: "var(--danger)", fontSize: "12px",
-              }}>
+              <Card padding="sm" style={{ color: "var(--danger)", fontSize: "12px" }}>
                 {editor.error}
-              </div>
+              </Card>
             </div>
           )}
           {!editor.loading && !editor.error && editor.content !== null && (

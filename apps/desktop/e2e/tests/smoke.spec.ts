@@ -58,8 +58,16 @@ test.describe("Navigation smoke tests", () => {
     expect(text).not.toContain("command not found");
   });
 
-  test("Parity dashboard renders without error", async ({ appPage }) => {
-    await appPage.goto("/parity");
+  test("Fleet page renders without error", async ({ appPage }) => {
+    await appPage.goto("/fleet");
+    await appPage.waitForLoadState("networkidle");
+    const text = await appPage.locator("body").textContent();
+    expect(text).not.toContain("command not found");
+    expect(text).not.toContain("Mock: no response");
+  });
+
+  test("Drift page renders without error", async ({ appPage }) => {
+    await appPage.goto("/drift");
     await appPage.waitForLoadState("networkidle");
     const text = await appPage.locator("body").textContent();
     expect(text).not.toContain("command not found");
@@ -89,48 +97,20 @@ test.describe("Harness File page — content validation", () => {
   });
 });
 
-test.describe("Parity dashboard — content validation", () => {
-  test("shows Claude Code version from mock snapshot", async ({ appPage }) => {
-    await appPage.goto("/parity");
+test.describe("Fleet page — content validation", () => {
+  test("shows page title and Recompile all action", async ({ appPage }) => {
+    await appPage.goto("/fleet");
     await appPage.waitForLoadState("networkidle");
-    await expect(appPage.getByText("1.2.3")).toBeVisible();
+    await expect(appPage.getByRole("heading", { name: "Fleet" })).toBeVisible();
+    await expect(appPage.getByRole("button", { name: /recompile all/i })).toBeVisible();
   });
+});
 
-  test("shows Scan Now button", async ({ appPage }) => {
-    await appPage.goto("/parity");
+test.describe("Drift page — content validation", () => {
+  test("shows page title", async ({ appPage }) => {
+    await appPage.goto("/drift");
     await appPage.waitForLoadState("networkidle");
-    await expect(appPage.getByRole("button", { name: /scan now/i })).toBeVisible();
-  });
-
-  test("feature matrix section headers visible", async ({ appPage }) => {
-    await appPage.goto("/parity");
-    await appPage.waitForLoadState("networkidle");
-    // Use first() — these labels also appear in the drift breakdown sub-text
-    await expect(appPage.getByText("CLI Flags").first()).toBeVisible();
-    await expect(appPage.getByText("Settings Keys").first()).toBeVisible();
-  });
-
-  test("drift items visible in Drift Alerts section", async ({ appPage }) => {
-    await appPage.goto("/parity");
-    await appPage.waitForLoadState("networkidle");
-    // Items appear in both feature matrix and drift list — last() targets the drift row
-    await expect(appPage.getByText("someNewKey").last()).toBeVisible();
-    await expect(appPage.getByText("AGENT.md").last()).toBeVisible();
-  });
-
-  test("expanding a drift item reveals Mark as Known button", async ({ appPage }) => {
-    await appPage.goto("/parity");
-    await appPage.waitForLoadState("networkidle");
-    // Click the drift row (last occurrence is in drift alerts, not feature matrix table)
-    await appPage.getByText("someNewKey").last().click();
-    await expect(appPage.getByRole("button", { name: /mark as known/i })).toBeVisible();
-  });
-
-  test("expanding a missing_file drift item reveals Create button", async ({ appPage }) => {
-    await appPage.goto("/parity");
-    await appPage.waitForLoadState("networkidle");
-    await appPage.getByText("AGENT.md").last().click();
-    await expect(appPage.getByRole("button", { name: /create agent\.md/i })).toBeVisible();
+    await expect(appPage.getByRole("heading", { name: "Drift" })).toBeVisible();
   });
 });
 

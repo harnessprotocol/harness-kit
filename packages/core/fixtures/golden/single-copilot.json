@@ -1,0 +1,37 @@
+{
+  "fixture": "valid-harness.yaml",
+  "targets": [
+    "copilot"
+  ],
+  "harnessName": "my-harness",
+  "warnings": [
+    "permissions.tools.deny is not machine-enforceable for target 'copilot'.\n  Denied tools: mcp__postgres__drop_table\n  Instructions have been updated to describe the intended permissions,\n  but manual tool configuration is required."
+  ],
+  "skippedPlugins": [
+    "explain: skipped (no SKILL.md found — checked inline declaration, source dir, and legacy paths)",
+    "research: skipped (no SKILL.md found — checked inline declaration, source dir, and legacy paths)"
+  ],
+  "files": [
+    {
+      "path": ".github/copilot-instructions.md",
+      "platform": "copilot",
+      "slot": "operational",
+      "action": "create",
+      "content": "---\napplyTo: \"**\"\n---\n\n<!-- BEGIN harness:my-harness:operational -->\n## Commands\n- Build: `pnpm build`\n- Test: `pnpm test`\n\n\n## Tool Permissions\n\nThis harness specifies the following tool permissions:\n- **Allowed**: Read, Glob, Grep, Write, Edit\n- **Denied**: mcp__postgres__drop_table\n\nPlease configure your tool's permission settings to match these constraints.\n<!-- END harness:my-harness:operational -->\n"
+    },
+    {
+      "path": ".github/instructions/behavioral.instructions.md",
+      "platform": "copilot",
+      "slot": "behavioral",
+      "action": "create",
+      "content": "---\napplyTo: \"**\"\n---\n\n<!-- BEGIN harness:my-harness:behavioral -->\nBe concise. Prefer short answers.\n\n<!-- END harness:my-harness:behavioral -->\n"
+    },
+    {
+      "path": ".vscode/mcp.json",
+      "platform": "copilot",
+      "slot": "mcp-servers",
+      "action": "create",
+      "content": "{\n  \"mcpServers\": {\n    \"postgres\": {\n      \"type\": \"stdio\",\n      \"command\": \"uvx\",\n      \"args\": [\n        \"mcp-server-postgres\",\n        \"${DB_CONNECTION_STRING}\"\n      ]\n    }\n  }\n}\n"
+    }
+  ]
+}

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
+import { Blocks } from "lucide-react";
+import { Button, Card, EmptyState } from "@harness-kit/ui";
 import {
   listInstalledPlugins, checkPluginUpdates, uninstallPlugin,
   importPluginFromPath, importPluginFromZip,
@@ -14,8 +16,6 @@ import PluginRow from "./plugins/PluginRow";
 import ImportOverlay from "./plugins/ImportOverlay";
 import ImportBanner, { type ImportStatus } from "./plugins/ImportBanner";
 import UninstallDialog from "./plugins/UninstallDialog";
-import { useChat } from "../../contexts/ChatContext";
-import { emitChatShare } from "../../lib/chat-events";
 
 const PREVIEW_PLUGINS: InstalledPlugin[] = [
   {
@@ -27,16 +27,6 @@ const PREVIEW_PLUGINS: InstalledPlugin[] = [
     category: "Knowledge",
     tags: ["research", "memory"],
     component_counts: { skills: 1, agents: 0, scripts: 2 },
-  },
-  {
-    name: "board",
-    version: "0.2.0",
-    description: "Manage project tasks through a lightweight local Kanban board.",
-    marketplace: "harness-kit",
-    source: "browser-preview://plugins/board",
-    category: "Operate",
-    tags: ["workflow", "tasks"],
-    component_counts: { skills: 1, agents: 0, scripts: 1 },
   },
   {
     name: "harness-share",
@@ -54,7 +44,6 @@ const DESKTOP_RUNTIME_MESSAGE = "Browser preview mode: plugin filesystem actions
 
 export default function PluginsPage() {
   const navigate = useNavigate();
-  const { state: chatState } = useChat();
   const [plugins, setPlugins] = useState<InstalledPlugin[]>([]);
   const [updates, setUpdates] = useState<Record<string, PluginUpdateInfo>>({});
   const [loading, setLoading] = useState(true);
@@ -181,9 +170,6 @@ export default function PluginsPage() {
       }
       setImportStatus({ state: "success", name });
       loadPlugins();
-      if (chatState.status === "in_room") {
-        emitChatShare({ action: "plugin_installed", target: name, detail: null, diff: null, pullable: false });
-      }
     } catch (err) {
       setImportStatus({ state: "error", message: String(err) });
     }
@@ -210,9 +196,6 @@ export default function PluginsPage() {
         await importPluginFromPath(path);
         setImportStatus({ state: "success", name });
         loadPlugins();
-        if (chatState.status === "in_room") {
-          emitChatShare({ action: "plugin_installed", target: name, detail: null, diff: null, pullable: false });
-        }
       } catch (err) {
         setImportStatus({ state: "error", message: String(err) });
       }
@@ -236,9 +219,6 @@ export default function PluginsPage() {
       await uninstallPlugin(pluginName);
       setUninstallTarget(null);
       loadPlugins();
-      if (chatState.status === "in_room") {
-        emitChatShare({ action: "plugin_uninstalled", target: pluginName, detail: null, diff: null, pullable: false });
-      }
     } catch (err) {
       setError(String(err));
       setUninstallTarget(null);
@@ -302,50 +282,34 @@ export default function PluginsPage() {
 
   return (
     <div
-      style={{ padding: "20px 24px", height: "100%", display: "flex", flexDirection: "column" }}
+      className="hk-page"
+      style={{ height: "100%", display: "flex", flexDirection: "column" }}
       onDragEnter={handleDragEnter}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
       {/* Page header */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "16px" }}>
+      <div className="hk-page-head">
         <div>
-          <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
-            Installed Plugins
-          </h1>
-          <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>
+          <h1 className="hk-page-title">Installed Plugins</h1>
+          <p className="hk-page-subtitle">
             Plugins in your <code style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>~/.claude/</code> environment.
           </p>
         </div>
         <div style={{ display: "flex", gap: "8px" }}>
-          <button
+          <Button
+            variant="ghost"
             onClick={handleImportFolder}
             disabled={!tauriAvailable}
             title={tauriAvailable ? "Import a plugin folder" : DESKTOP_RUNTIME_MESSAGE}
-            style={{
-              fontSize: "12px", fontWeight: 500, padding: "5px 12px",
-              borderRadius: "6px", border: "1px solid var(--accent)",
-              background: "rgba(91,80,232,0.08)", color: "var(--accent-text)",
-              cursor: tauriAvailable ? "pointer" : "not-allowed",
-              opacity: tauriAvailable ? 1 : 0.65,
-            }}
           >
             Import Plugin
-          </button>
+          </Button>
           {hasUpdates && (
-            <button
-              disabled
-              title="Run /plugin update in Claude Code to apply updates"
-              style={{
-                fontSize: "12px", fontWeight: 500, padding: "5px 12px",
-                borderRadius: "6px", border: "1px solid var(--border-base)",
-                background: "var(--bg-elevated)", color: "var(--fg-muted)",
-                cursor: "not-allowed", opacity: 0.7,
-              }}
-            >
+            <Button variant="ghost" disabled title="Run /plugin update in Claude Code to apply updates">
               Update All ({Object.keys(updates).length})
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -354,13 +318,9 @@ export default function PluginsPage() {
       <ImportBanner status={importStatus} onDismiss={() => setImportStatus(null)} />
 
       {runtimeNotice && (
-        <div style={{
-          background: "rgba(91,80,232,0.08)", border: "1px solid rgba(139,92,246,0.35)",
-          borderRadius: "8px", padding: "10px 14px", fontSize: "12px", color: "var(--fg-muted)",
-          marginBottom: "12px",
-        }}>
+        <Card padding="sm" style={{ background: "var(--accent-light)", fontSize: "12px", color: "var(--fg-muted)", marginBottom: "12px" }}>
           {runtimeNotice}
-        </div>
+        </Card>
       )}
 
       {loading && (
@@ -368,40 +328,22 @@ export default function PluginsPage() {
       )}
 
       {error && (
-        <div style={{
-          background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-          borderRadius: "8px", padding: "10px 14px", fontSize: "13px", color: "var(--danger)",
-          marginBottom: "12px",
-        }}>
+        <Card padding="sm" style={{ fontSize: "13px", color: "var(--danger)", marginBottom: "12px" }}>
           {error}
-        </div>
+        </Card>
       )}
 
       {!loading && !error && plugins.length === 0 && (
-        <div style={{
-          background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-          borderRadius: "8px", padding: "40px 16px", textAlign: "center",
-        }}>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" style={{ color: "var(--fg-subtle)", marginBottom: "10px" }}>
-            <rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
-            <rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
-            <rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.5"/>
-            <path d="M17.5 14v7M14 17.5h7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-          </svg>
-          <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: "0 0 4px" }}>No plugins installed.</p>
-          <p style={{ fontSize: "11px", color: "var(--fg-subtle)", margin: "0 0 12px" }}>
-            Install via <code style={{ fontFamily: "ui-monospace, monospace" }}>/plugin install</code> in Claude Code, or drag a plugin folder here.
-          </p>
-          <button
-            onClick={() => navigate("/marketplace")}
-            style={{
-              fontSize: "11px", color: "var(--accent-text)", background: "none",
-              border: "none", cursor: "pointer", fontWeight: 500, padding: 0,
-            }}
-          >
-            Browse Marketplace →
-          </button>
-        </div>
+        <EmptyState
+          icon={<Blocks size={28} strokeWidth={1.5} />}
+          title="No plugins installed"
+          description="Install via /plugin install in Claude Code, or drag a plugin folder here."
+          action={
+            <Button variant="primary" onClick={() => navigate("/marketplace")}>
+              Browse Marketplace
+            </Button>
+          }
+        />
       )}
 
       {!loading && !error && plugins.length > 0 && (
@@ -416,10 +358,7 @@ export default function PluginsPage() {
             filtered={filtered.length}
           />
 
-          <div style={{
-            background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-            borderRadius: "8px", overflow: "hidden", flex: 1,
-          }}>
+          <Card padding="none" style={{ overflow: "hidden", flex: 1 }}>
             <AnimatePresence mode="popLayout">
               {filtered.map((plugin, i) => (
                 <PluginRow
@@ -450,7 +389,7 @@ export default function PluginsPage() {
                 No plugins match your filter.
               </div>
             )}
-          </div>
+          </Card>
         </>
       )}
 

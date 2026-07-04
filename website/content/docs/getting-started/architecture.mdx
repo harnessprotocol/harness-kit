@@ -98,10 +98,15 @@ The `harness` CLI is a standalone terminal tool. You run it from your shell; it 
 ```bash
 harness validate          # check harness.yaml against the schema
 harness compile           # compile harness.yaml into native per-tool configs
+harness compile --watch   # recompile automatically whenever harness.yaml changes
 harness sync              # fetch plugins into local cache, write harness.lock
 harness check             # detect drift between compiled output and harness.yaml
 harness detect            # show which AI platforms are present in the working directory
 harness scan              # security audit of installed plugin skill files
+harness import            # scan existing AI tool configs and synthesize a harness.yaml
+harness status            # show the fleet: which harnesses are installed, where, and how drifted
+harness diff              # show drift between harness.yaml and deployed tool configs
+harness fix               # preview (default) or --apply repairs for detected drift
 ```
 
 **`compile` output** — `harness compile` writes native configuration files for each detected AI tool: `.claude/settings.json` for Claude Code, `.cursor/rules` for Cursor, and so on. Each AI tool then loads those files at session start. This is how harness.yaml becomes active in your AI tools — it is compiled, not interpreted at runtime.

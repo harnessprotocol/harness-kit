@@ -6,13 +6,10 @@ import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
 import { useArrowNavigation } from "../hooks/useArrowNavigation";
 import { useSidebarResize } from "../hooks/useSidebarResize";
 import { initTheme } from "../lib/theme";
-import { initPreferences, getHiddenSections, getMembrainEnabled, getTerminalsEnabled } from "../lib/preferences";
+import { initPreferences, getHiddenSections } from "../lib/preferences";
 import { CommandPalette } from "../components/CommandPalette";
-import { useChat } from "../contexts/ChatContext";
-import ChatPanel from "../components/chat/ChatPanel";
 import FeedbackModal from "../components/FeedbackModal";
 import { useClaudeFileList } from "../hooks/useClaudeFileList";
-import { useServiceHealth } from "../contexts/ServiceHealthContext";
 import { PageBoundary } from "../components/PageBoundary";
 
 type NavSection = {
@@ -22,15 +19,24 @@ type NavSection = {
   icon?: React.ReactNode;
   group?: string;
   children?: { label: string; path: string }[];
-  /** When set, the nav item triggers an action instead of navigating. */
-  action?: "command-palette";
 };
 
 export const NAV_SECTIONS: NavSection[] = [
   {
+    id: "fleet",
+    label: "Fleet",
+    group: "WORKSPACE",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
+        <path d="M4 4a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V4zM4 14a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 4a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V4zM14 14a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+      </svg>
+    ),
+    path: "/fleet",
+  },
+  {
     id: "harness",
     label: "Configure",
-    group: "CONFIGURE",
+    group: "WORKSPACE",
     icon: (
       <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
         <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
@@ -46,32 +52,33 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    id: "parity",
-    label: "Harness Parity",
+    id: "drift",
+    label: "Drift",
+    group: "WORKSPACE",
     icon: (
       <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
         <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
         <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
       </svg>
     ),
-    path: "/parity",
-    children: [
-      { label: "Dashboard", path: "/parity" },
-    ],
+    path: "/drift",
   },
   {
-    id: "marketplace",
-    label: "Marketplace",
+    id: "comparator",
+    label: "Comparator",
+    group: "WORKSPACE",
     icon: (
       <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
-        <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
+        <path d="M3 4a1 1 0 000 2h11.586l-2.293 2.293a1 1 0 001.414 1.414l4-4a1 1 0 000-1.414l-4-4a1 1 0 10-1.414 1.414L14.586 4H3zM17 16a1 1 0 000-2H5.414l2.293-2.293a1 1 0 00-1.414-1.414l-4 4a1 1 0 000 1.414l4 4a1 1 0 001.414-1.414L5.414 16H17z" />
       </svg>
     ),
-    path: "/marketplace",
+    path: "/comparator",
+    children: [],
   },
   {
     id: "observatory",
     label: "Observatory",
+    group: "WORKSPACE",
     icon: (
       <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
         <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
@@ -84,114 +91,30 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
+    id: "marketplace",
+    label: "Marketplace",
+    group: "WORKSPACE",
+    icon: (
+      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
+        <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
+      </svg>
+    ),
+    path: "/marketplace",
+  },
+];
+
+// Demoted from top-level nav (harness-detection overlaps Fleet — DESIGN.md §5).
+// Route stays reachable at /agents; not rendered in the sidebar or shortcuts.
+export const DEMOTED_SECTIONS: NavSection[] = [
+  {
     id: "agents",
     label: "Agents",
-    group: "OPERATE",
     icon: (
       <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
         <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
       </svg>
     ),
     path: "/agents",
-  },
-  {
-    id: "terminals",
-    label: "Terminals",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
-        <path fillRule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 2.293a1 1 0 011.414 0L9 9.586a1 1 0 010 1.414l-2.293 2.293a1 1 0 01-1.414-1.414L6.586 10 5.293 8.707a1 1 0 010-1.414zM10 13a1 1 0 100 2h4a1 1 0 100-2h-4z" clipRule="evenodd" />
-      </svg>
-    ),
-    path: "/terminals",
-  },
-  {
-    id: "comparator",
-    label: "Comparator",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
-        <path d="M3 4a1 1 0 000 2h11.586l-2.293 2.293a1 1 0 001.414 1.414l4-4a1 1 0 000-1.414l-4-4a1 1 0 10-1.414 1.414L14.586 4H3zM17 16a1 1 0 000-2H5.414l2.293-2.293a1 1 0 00-1.414-1.414l-4 4a1 1 0 000 1.414l4 4a1 1 0 001.414-1.414L5.414 16H17z" />
-      </svg>
-    ),
-    path: "/comparator",
-    children: [],
-  },
-  {
-    id: "security",
-    label: "Security",
-    group: "GOVERN",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
-        <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-      </svg>
-    ),
-    path: "/security/permissions",
-    children: [
-      { label: "Permissions", path: "/security/permissions" },
-      { label: "Secrets", path: "/security/secrets" },
-      { label: "Audit Log", path: "/security/audit" },
-    ],
-  },
-  {
-    id: "board",
-    label: "Board",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
-        <path d="M2 4a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H3a1 1 0 01-1-1V4zM3 9a1 1 0 000 2h6a1 1 0 000-2H3zM3 14a1 1 0 000 2h6a1 1 0 000-2H3zM14 9a1 1 0 000 2h3a1 1 0 000-2h-3zM14 14a1 1 0 000 2h3a1 1 0 000-2h-3z" />
-      </svg>
-    ),
-    path: "/board",
-  },
-  {
-    id: "roadmap",
-    label: "Roadmap",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
-        <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-      </svg>
-    ),
-    path: "/roadmap",
-  },
-  {
-    id: "ai-chat",
-    label: "Command Palette",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7, flexShrink: 0 }}>
-        <rect x="2.5" y="3.5" width="15" height="13" rx="2.5" />
-        <path d="M6 8.5l2.5 1.5L6 11.5M10.5 11.5h3.5" />
-      </svg>
-    ),
-    path: "/ai-chat",
-    action: "command-palette",
-  },
-  {
-    id: "memory",
-    label: "Memory",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
-        <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
-      </svg>
-    ),
-    path: "/memory",
-    children: [
-      { label: "Dashboard", path: "/memory" },
-      { label: "Graph", path: "/memory/graph" },
-      { label: "Explore", path: "/memory/explore" },
-      { label: "Entities", path: "/memory/entities" },
-      { label: "Knowledge", path: "/memory/knowledge" },
-      { label: "Context", path: "/memory/context" },
-      { label: "Trace", path: "/memory/trace" },
-      { label: "Settings", path: "/memory/settings" },
-    ],
-  },
-  {
-    id: "services",
-    label: "Services",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
-        <path fillRule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm14 1a1 1 0 11-2 0 1 1 0 012 0zM2 13a2 2 0 012-2h12a2 2 0 012 2v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2zm14 1a1 1 0 11-2 0 1 1 0 012 0z" clipRule="evenodd" />
-      </svg>
-    ),
-    path: "/services",
   },
 ];
 
@@ -333,77 +256,9 @@ function SidebarSubnav({ children }: { children: { label: string; path: string }
   );
 }
 
-function HealthBadge() {
-  const { services, aggregate } = useServiceHealth();
-  const navigate = useNavigate();
-  const [hovered, setHovered] = useState(false);
-
-  const started = services.filter((s) => s.status !== "unknown");
-  if (started.length === 0) return null;
-
-  const color =
-    aggregate === "all-up" ? "var(--success)" :
-    aggregate === "degraded" ? "var(--warning)" :
-    "var(--danger)";
-
-  return (
-    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-      <div
-        style={{
-          width: 8,
-          height: 8,
-          borderRadius: "50%",
-          background: color,
-          cursor: "pointer",
-          transition: "transform 150ms ease",
-          transform: hovered ? "scale(1.3)" : "scale(1)",
-        }}
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
-        onClick={() => navigate("/services")}
-        title="Service health"
-      />
-      {hovered && (
-        <div style={{
-          position: "absolute",
-          top: "calc(100% + 8px)",
-          right: 0,
-          background: "var(--bg-elevated)",
-          border: "1px solid var(--border-base)",
-          borderRadius: 8,
-          padding: "8px 12px",
-          minWidth: 160,
-          boxShadow: "var(--shadow-sm)",
-          zIndex: 100,
-          display: "flex",
-          flexDirection: "column",
-          gap: 6,
-        }}>
-          {services.map((s) => (
-            <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{
-                width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
-                background:
-                  s.status === "up" ? "var(--success)" :
-                  s.status === "starting" ? "var(--warning)" :
-                  s.status === "down" ? "var(--danger)" :
-                  "var(--border-base)",
-              }} />
-              <span style={{ fontSize: 11, color: "var(--fg-muted)", fontFamily: "inherit" }}>
-                {s.label}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { isOpen: chatOpen, setOpen: setChatOpen, unreadCount } = useChat();
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try { return localStorage.getItem("sidebar-collapsed") === "true"; } catch { return false; }
@@ -434,8 +289,6 @@ export default function AppLayout() {
   const { files: configFiles } = useClaudeFileList();
 
   const [hiddenSections, setHiddenSectionsState] = useState(getHiddenSections);
-  const [membrainEnabled, setMembrainEnabledState] = useState(getMembrainEnabled);
-  const [terminalsEnabled, setTerminalsEnabledState] = useState(getTerminalsEnabled);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   useEffect(() => {
@@ -446,23 +299,10 @@ export default function AppLayout() {
   useEffect(() => {
     function onPrefsChanged() {
       setHiddenSectionsState(getHiddenSections());
-      setMembrainEnabledState(getMembrainEnabled());
-      setTerminalsEnabledState(getTerminalsEnabled());
     }
     window.addEventListener("harness-kit-prefs-changed", onPrefsChanged);
     return () => window.removeEventListener("harness-kit-prefs-changed", onPrefsChanged);
   }, []);
-
-  useEffect(() => {
-    function handler(e: KeyboardEvent) {
-      if (e.metaKey && e.shiftKey && e.key === "\\") {
-        e.preventDefault();
-        setChatOpen(!chatOpen);
-      }
-    }
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [setChatOpen, chatOpen]);
 
   // Cmd+K opens the command palette from anywhere.
   useEffect(() => {
@@ -476,15 +316,9 @@ export default function AppLayout() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  // Memory and Terminals are Labs features — only shown when opted in via Preferences
-  const visibleSections = NAV_SECTIONS.filter(
-    (s) =>
-      !hiddenSections.has(s.id) &&
-      (s.id !== "memory" || membrainEnabled) &&
-      (s.id !== "terminals" || terminalsEnabled)
-  );
+  const visibleSections = NAV_SECTIONS.filter((s) => !hiddenSections.has(s.id));
 
-  const prefsActive = location.pathname === "/preferences";
+  const prefsActive = location.pathname.startsWith("/preferences");
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   function isActive(section: NavSection) {
@@ -545,26 +379,6 @@ export default function AppLayout() {
             <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
           </svg>
         </button>
-        <button
-          className="titlebar-btn"
-          onClick={() => setChatOpen(!chatOpen)}
-          title="Team Chat (⌘⇧\)"
-          aria-label="Team Chat (⌘⇧\)"
-          style={{ marginLeft: "auto", marginRight: 8, position: "relative" }}
-        >
-          {/* Speech bubble icon — communicates team chat */}
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <path d="M14 7C14 10.3137 11.3137 13 8 13C7.0401 13 6.1327 12.773 5.327 12.373L2 13.5L3.1 10.4C2.41 9.49 2 8.29 2 7C2 3.6863 4.6863 1 8 1C11.3137 1 14 3.6863 14 7Z" strokeLinejoin="round" />
-          </svg>
-          {unreadCount > 0 && (
-            <span style={{
-              position: "absolute", top: "2px", right: "2px",
-              width: "6px", height: "6px",
-              background: "var(--danger)", borderRadius: "50%",
-            }} />
-          )}
-        </button>
-        <HealthBadge />
       </div>
 
       {/* Content area: sidebar + main */}
@@ -603,14 +417,14 @@ export default function AppLayout() {
                   viewBox="0 0 32 32"
                   style={{ width: 22, height: 22, filter: "drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 50%, transparent))", flexShrink: 0 }}
                 >
-                  <rect width="32" height="32" rx="7" fill="#11151f" />
-                  <g stroke="#7a8bff" strokeWidth="2.8" strokeLinecap="round" fill="none">
+                  <rect width="32" height="32" rx="7" fill="#131215" />
+                  <g stroke="#6BC0F5" strokeWidth="2.8" strokeLinecap="round" fill="none">
                     <path d="M9 9.5 C 15 11, 17.5 13.5, 19.4 14.9" />
                     <path d="M9 22.5 C 15 21, 17.5 18.5, 19.4 17.1" />
                   </g>
-                  <circle cx="9" cy="9.5" r="1.9" fill="#7a8bff" />
-                  <circle cx="9" cy="22.5" r="1.9" fill="#7a8bff" />
-                  <circle cx="22" cy="16" r="3.3" fill="#7a8bff" />
+                  <circle cx="9" cy="9.5" r="1.9" fill="#6BC0F5" />
+                  <circle cx="9" cy="22.5" r="1.9" fill="#6BC0F5" />
+                  <circle cx="22" cy="16" r="3.3" fill="#6BC0F5" />
                 </svg>
                 <span style={{ fontSize: "13px", fontWeight: 600, letterSpacing: "-0.1px", color: "var(--fg-base)" }}>
                   harness-kit
@@ -633,21 +447,7 @@ export default function AppLayout() {
                       <div className="sidebar-group-header">{section.group}</div>
                     )}
                     <div className="mb-0.5">
-                      {section.action === "command-palette" ? (
-                        <button
-                          onClick={() => setPaletteOpen(true)}
-                          className="sidebar-item"
-                          style={{ display: "flex", alignItems: "center", justifyContent: "space-between", width: "100%", cursor: "pointer", border: "none", background: "transparent", textAlign: "left" }}
-                        >
-                          {section.icon}
-                          <span style={{ flex: 1 }}>{section.label}</span>
-                          {!sidebarCollapsed && (
-                            <span style={{ fontSize: 10, fontFamily: "ui-monospace, monospace", color: "var(--fg-subtle)", flexShrink: 0 }}>
-                              {"⌘"}K
-                            </span>
-                          )}
-                        </button>
-                      ) : section.id === "harness" ? (
+                      {section.id === "harness" ? (
                         <button
                           onClick={() => {
                             if (!active) {
@@ -781,7 +581,7 @@ export default function AppLayout() {
                 <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
                 </svg>
-                Preferences
+                Settings
               </button>
             </div>
           </aside>
@@ -809,16 +609,6 @@ export default function AppLayout() {
             <Outlet />
           </PageBoundary>
         </main>
-
-        {/* Right sidebar: chat panel */}
-        <div style={{
-          width: chatOpen ? "340px" : 0,
-          flexShrink: 0,
-          overflow: "hidden",
-          transition: "width 0.15s ease",
-        }}>
-          <ChatPanel />
-        </div>
       </div>
 
       <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />

@@ -106,3 +106,119 @@ export {
   ALL_RULES,
 } from "./security/rules.js";
 export { formatSecurityReport } from "./security/report.js";
+
+// ── Adapters (WP-2.1 + WP-2.2) ─────────────────────────────────
+//
+// The bidirectional adapter abstraction. `exportConfig` bodies are real and
+// refactored from the pre-existing compile pipeline (byte-identical output).
+// `importConfig` bodies are now real too (WP-2.2) for all four registered
+// adapters — see each adapter's index.ts and ../import/. `diff` remains
+// typed but unimplemented — lands in a future WP.
+export type {
+  AdapterId,
+  HarnessDomain,
+  FeatureSupport,
+  AdapterCapabilities,
+  AdapterContext,
+  HarnessAdapter,
+  FilePlan,
+  DetectResult,
+  ImportedFragment,
+} from "./adapters/adapter.js";
+export { domainSkippedWarning } from "./adapters/adapter.js";
+export { domainHasContent } from "./adapters/domain-content.js";
+export {
+  ADAPTERS,
+  getAdapter,
+  getAllAdapters,
+  adapterIdForTarget,
+  groupTargetsByAdapter,
+} from "./adapters/registry.js";
+export { claudeCodeAdapter } from "./adapters/claude-code/index.js";
+export { cursorAdapter } from "./adapters/cursor/index.js";
+export { copilotAdapter } from "./adapters/copilot/index.js";
+export { agentsMdAdapter } from "./adapters/agents-md/index.js";
+export { opencodeAdapter } from "./adapters/opencode/index.js";
+export { piAdapter } from "./adapters/pi/index.js";
+
+// ── Import (WP-2.2): reverse-import engine ────────────────────
+//
+// Scans a machine's existing native tool configs and synthesizes one
+// schema-valid harness.yaml. Node-agnostic — only touches disk through the
+// supplied FsProvider.
+export type {
+  ImportSource,
+  Provenance,
+  OpaqueInstructionBlock,
+  ImportedInstructions,
+  ImportedMcpServers,
+  ImportedPermissions,
+  ImportedSkillRef,
+  ImportedSkills,
+  AdapterImportResult,
+  AdapterFindingsSummary,
+  ImportFindings,
+  ImportConflict,
+  ImportProvenanceMap,
+  ImportProjectResult,
+} from "./import/types.js";
+export type { ImportContext } from "./import/import-project.js";
+export type { SynthesizeResult } from "./import/synthesize.js";
+export { importProject, importMachine, importProjectValidated } from "./import/import-project.js";
+export { synthesize } from "./import/synthesize.js";
+export {
+  stripHarnessMarkerBlocks,
+  isEntirelyMarkerGenerated,
+  readInstructionFileAsOpaqueBlock,
+} from "./import/read-instructions.js";
+export { readMcpConfigFile } from "./import/read-mcp.js";
+export { readClaudeSettingsPermissions } from "./import/read-permissions.js";
+
+// ── Fix (WP-2.3): drift diff + repair engine ──────────────────
+//
+// Detects when a tool's deployed config has diverged from harness.yaml,
+// classifies why (missing / modified-inside-markers / user-modified-outside
+// / orphaned), and builds a dry-run FixPlan that repairs everything except
+// user-authored content outside harness marker blocks — that is NEVER
+// auto-touched. Node-agnostic — only touches disk through FsProvider;
+// applyFix's caller supplies the backup timestamp (core never calls
+// Date.now()).
+export type {
+  DriftClass,
+  DriftItem,
+  DriftReport,
+  FixPlan,
+  FixFileChange,
+  FixOperation,
+  ApplyFixResult,
+} from "./fix/types.js";
+export type { ApplyFixContext } from "./fix/apply.js";
+export { detectDrift } from "./fix/index.js";
+export { buildFixPlan } from "./fix/plan.js";
+export { applyFix } from "./fix/apply.js";
+export {
+  detectInstructionDrift,
+  classifyInstructionFile,
+  stripAllMarkerBlocks,
+  toDriftReport,
+} from "./fix/detect.js";
+
+// ── Fleet (WP-2.4): cross-scope status aggregation ────────────
+//
+// Composes existing detect() + detectDrift() across every registered
+// adapter and every caller-supplied scope (project root, or the user's
+// global config root) into one serializable FleetReport. No new detection
+// or drift-classification logic — pure aggregation. This is the stable
+// contract the CLI's `status` command and the desktop Fleet page consume.
+export type {
+  FleetScopeKind,
+  FleetScope,
+  FleetStatus,
+  FleetCell,
+  FleetRow,
+  FleetSummaryCounts,
+  FleetReport,
+  FleetScopeInput,
+  BuildFleetReportContext,
+} from "./fleet/index.js";
+export { buildFleetReport } from "./fleet/index.js";

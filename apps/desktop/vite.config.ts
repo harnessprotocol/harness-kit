@@ -52,6 +52,15 @@ export default defineConfig(async () => ({
   build: {
     target: "es2022",
   },
+  // Same reasoning applies to dev-server dependency pre-bundling: esbuild's
+  // dep-scan step uses its own default target (independent of build.target)
+  // and chokes on modern syntax in some deps (e.g. lucide-react's array
+  // destructuring in Icon.mjs, pulled in transitively via @harness-kit/ui).
+  optimizeDeps: {
+    esbuildOptions: {
+      target: "es2022",
+    },
+  },
 
   test: {
     globals: true,

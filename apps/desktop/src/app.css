@@ -4,24 +4,24 @@
 :root {
   /* design-tokens:light:start */
   /* generated — edit packages/design-tokens/src/tokens.ts, then run generate */
-  --bg-base: #f7f8f8;
-  --bg-surface: #ffffff;
-  --bg-elevated: #f0f1f2;
-  --bg-sidebar: rgba(247, 248, 248, 0.85);
-  --bg-sidebar-solid: #ffffff;
-  --fg-base: #08090a;
-  --fg-muted: #2c2e33;
-  --fg-subtle: #5a5f6b;
-  --fg-placeholder: #8a8f98;
-  --border-base: rgba(0, 0, 0, 0.06);
-  --border-strong: rgba(0, 0, 0, 0.10);
-  --border-subtle: rgba(0, 0, 0, 0.03);
-  --separator: rgba(0, 0, 0, 0.06);
-  --accent: #5e6ad2;
-  --accent-light: rgba(94, 106, 210, 0.12);
-  --accent-fg: #4b57c8;
-  --accent-text: #4b57c8;
-  --accent-glow: rgba(94, 106, 210, 0.35);
+  --bg-base: #F4F2EF;
+  --bg-surface: #FFFFFF;
+  --bg-elevated: #ECEAE5;
+  --bg-sidebar: rgba(244, 242, 239, 0.85);
+  --bg-sidebar-solid: #FFFFFF;
+  --fg-base: #1A1714;
+  --fg-muted: #57514A;
+  --fg-subtle: #8B8479;
+  --fg-placeholder: #A8A199;
+  --border-base: rgba(20, 15, 10, 0.06);
+  --border-strong: rgba(20, 15, 10, 0.10);
+  --border-subtle: rgba(20, 15, 10, 0.03);
+  --separator: rgba(20, 15, 10, 0.06);
+  --accent: #2E9BE6;
+  --accent-light: rgba(46, 155, 230, 0.10);
+  --accent-fg: #1668A6;
+  --accent-text: #1668A6;
+  --accent-glow: rgba(46, 155, 230, 0.25);
   /* design-tokens:light:end */
 
   /* Category accents */
@@ -62,34 +62,34 @@
   /* Glassmorphic card surface — theme-aware */
   --card-glass: rgba(255, 255, 255, 0.70);
 
-  /* Shadows */
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.10), 0 1px 2px rgba(0,0,0,0.06);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.06);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,0.14), 0 4px 8px rgba(0,0,0,0.08);
-  --shadow-popover: 0 8px 24px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10);
+  /* Shadows — warm-tinted (Direction A, DESIGN.md §2) */
+  --shadow-sm: 0 1px 2px rgba(20,15,10,.08);
+  --shadow-md: 0 8px 24px -8px rgba(20,15,10,.14);
+  --shadow-lg: 0 18px 48px -16px rgba(20,15,10,.18);
+  --shadow-popover: 0 8px 24px -8px rgba(20,15,10,.14);
 }
 
 .dark {
   /* design-tokens:dark:start */
   /* generated — edit packages/design-tokens/src/tokens.ts, then run generate */
-  --bg-base: #08090a;
-  --bg-surface: #0f1011;
-  --bg-elevated: #191a1b;
-  --bg-sidebar: rgba(8, 9, 10, 0.85);
-  --bg-sidebar-solid: #0f1011;
-  --fg-base: #f7f8f8;
-  --fg-muted: #d0d6e0;
-  --fg-subtle: #8a8f98;
-  --fg-placeholder: #62666d;
+  --bg-base: #131215;
+  --bg-surface: #1B191E;
+  --bg-elevated: #242128;
+  --bg-sidebar: rgba(27, 25, 30, 0.85);
+  --bg-sidebar-solid: #1B191E;
+  --fg-base: #EDEAE6;
+  --fg-muted: #A29C95;
+  --fg-subtle: #6C665F;
+  --fg-placeholder: #514C46;
   --border-base: rgba(255, 255, 255, 0.05);
-  --border-strong: rgba(255, 255, 255, 0.08);
-  --border-subtle: rgba(255, 255, 255, 0.02);
+  --border-strong: rgba(255, 255, 255, 0.09);
+  --border-subtle: rgba(255, 255, 255, 0.03);
   --separator: rgba(255, 255, 255, 0.05);
-  --accent: #5e6ad2;
-  --accent-light: rgba(94, 106, 210, 0.15);
-  --accent-fg: #828fff;
-  --accent-text: #828fff;
-  --accent-glow: rgba(94, 106, 210, 0.40);
+  --accent: #2E9BE6;
+  --accent-light: rgba(46, 155, 230, 0.14);
+  --accent-fg: #6BC0F5;
+  --accent-text: #6BC0F5;
+  --accent-glow: rgba(46, 155, 230, 0.35);
   /* design-tokens:dark:end */
 
   /* Category accents */
@@ -114,11 +114,11 @@
   /* Glassmorphic card surface — dark mode */
   --card-glass: rgba(26, 30, 39, 0.70);
 
-  /* Shadows — stronger in dark mode */
-  --shadow-sm: 0 1px 3px rgba(0,0,0,0.30), 0 1px 2px rgba(0,0,0,0.20);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.40), 0 2px 4px rgba(0,0,0,0.20);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,0.50), 0 4px 8px rgba(0,0,0,0.30);
-  --shadow-popover: 0 8px 24px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.35);
+  /* Shadows — warm-tinted, stronger in dark mode (Direction A, DESIGN.md §2) */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+  --shadow-md: 0 6px 20px -6px rgba(0,0,0,.55);
+  --shadow-lg: 0 16px 40px -12px rgba(0,0,0,.6);
+  --shadow-popover: 0 6px 20px -6px rgba(0,0,0,.55);
 }
 
 /* ── Density: compact ── */

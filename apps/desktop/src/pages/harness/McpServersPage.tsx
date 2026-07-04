@@ -1,5 +1,7 @@
 import { Suspense, lazy, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import { PlugZap } from "lucide-react";
+import { Button, Card, EmptyState } from "@harness-kit/ui";
 import { useFileEditor } from "../../hooks/useFileEditor";
 import EditorToolbar from "../../components/file-explorer/EditorToolbar";
 import { type ClaudeMcpConfig, type ClaudeMcpServer, isNetworkServer, inferTransport } from "../../lib/mcp-types";
@@ -54,8 +56,8 @@ function ServerIcon({ meta, name }: { meta: McpServerMeta | null; name: string }
 function TransportBadge({ transport }: { transport: "stdio" | "sse" | "http" }) {
   const colors: Record<string, { bg: string; text: string }> = {
     stdio: { bg: "var(--bg-elevated)", text: "var(--fg-subtle)" },
-    sse:   { bg: "#7C3AED22", text: "#A78BFA" },
-    http:  { bg: "#2563EB22", text: "#60A5FA" },
+    sse:   { bg: "var(--accent-light)", text: "var(--accent-text)" },
+    http:  { bg: "var(--accent-light)", text: "var(--accent-text)" },
   };
   const c = colors[transport] ?? colors.stdio;
   return (
@@ -81,7 +83,6 @@ function ExternalLink({ href, children }: { href: string; children: React.ReactN
         display: "inline-flex", alignItems: "center", gap: "3px",
         fontSize: "11px", color: "var(--accent)", textDecoration: "none",
         padding: "2px 6px", borderRadius: "4px",
-        border: "1px solid var(--border-base)",
         background: "var(--bg-elevated)",
         transition: "opacity 0.1s",
       }}
@@ -144,15 +145,7 @@ function ServerCard({ name, config }: { name: string; config: ClaudeMcpServer })
   const env = !isNetwork && config.env ? Object.entries(config.env) : [];
 
   return (
-    <div style={{
-      background: "var(--bg-surface)",
-      border: "1px solid var(--border-base)",
-      borderRadius: "10px",
-      padding: "14px 16px",
-      display: "flex",
-      flexDirection: "column",
-      gap: "10px",
-    }}>
+    <Card style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
       {/* Header row */}
       <div style={{ display: "flex", alignItems: "flex-start", gap: "12px" }}>
         <ServerIcon meta={meta} name={name} />
@@ -231,7 +224,7 @@ function ServerCard({ name, config }: { name: string; config: ClaudeMcpServer })
           {env.map(([k, v]) => <EnvRow key={k} name={k} value={v} />)}
         </div>
       )}
-    </div>
+    </Card>
   );
 }
 
@@ -250,12 +243,9 @@ function McpFormattedView({ content }: { content: string }) {
   if (parseError) {
     return (
       <div style={{ padding: "20px 24px" }}>
-        <div style={{
-          background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-          borderRadius: "8px", padding: "12px 16px", color: "var(--danger)", fontSize: "12px",
-        }}>
+        <Card padding="sm" style={{ color: "var(--danger)", fontSize: "12px" }}>
           {parseError}
-        </div>
+        </Card>
       </div>
     );
   }
@@ -264,22 +254,12 @@ function McpFormattedView({ content }: { content: string }) {
 
   if (entries.length === 0) {
     return (
-      <div style={{ padding: "32px 24px", textAlign: "center" }}>
-        <div style={{
-          background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-          borderRadius: "10px", padding: "32px 24px", maxWidth: "480px", margin: "0 auto",
-        }}>
-          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"
-            style={{ color: "var(--fg-subtle)", margin: "0 auto 12px", display: "block" }}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z" />
-          </svg>
-          <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--fg-base)", margin: "0 0 6px" }}>
-            No MCP servers configured
-          </p>
-          <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: 0, lineHeight: "1.5" }}>
-            Add servers to <code style={{ fontFamily: "ui-monospace, monospace" }}>~/.claude/mcp.json</code> under the <code style={{ fontFamily: "ui-monospace, monospace" }}>mcpServers</code> key.
-          </p>
-        </div>
+      <div style={{ padding: "32px 24px" }}>
+        <EmptyState
+          icon={<PlugZap size={28} strokeWidth={1.5} />}
+          title="No MCP servers configured"
+          description="Add servers to ~/.claude/mcp.json under the mcpServers key."
+        />
       </div>
     );
   }
@@ -304,23 +284,17 @@ export default function McpServersPage() {
   const [viewMode, setViewMode] = useState<"formatted" | "editor">("formatted");
 
   const toolbarActions = (
-    <button
+    <Button
+      variant="ghost"
+      size="sm"
       onClick={() => navigate(`/harness/config/${encodeURIComponent("mcp.json")}`)}
-      style={{
-        display: "flex", alignItems: "center", gap: "4px",
-        padding: "3px 8px", borderRadius: "5px",
-        border: "1px solid var(--border-base)",
-        background: "var(--bg-elevated)",
-        color: "var(--fg-subtle)", fontSize: "11px",
-        cursor: "pointer", whiteSpace: "nowrap", fontFamily: "inherit",
-      }}
       title="Open mcp.json in the editor"
     >
-      <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor">
+      <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style={{ marginRight: 4 }}>
         <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
       </svg>
       mcp.json
-    </button>
+    </Button>
   );
 
   return (
@@ -356,12 +330,9 @@ export default function McpServersPage() {
           )}
           {editor.error && (
             <div style={{ padding: "20px 24px" }}>
-              <div style={{
-                background: "var(--bg-surface)", border: "1px solid var(--border-base)",
-                borderRadius: "8px", padding: "12px 16px", color: "var(--danger)", fontSize: "12px",
-              }}>
+              <Card padding="sm" style={{ color: "var(--danger)", fontSize: "12px" }}>
                 {editor.error}
-              </div>
+              </Card>
             </div>
           )}
           {!editor.loading && !editor.error && editor.content !== null && (

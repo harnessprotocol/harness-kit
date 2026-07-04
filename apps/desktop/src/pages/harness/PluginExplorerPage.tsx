@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { Button } from "@harness-kit/ui";
 import { listInstalledPlugins } from "../../lib/tauri";
 import type { InstalledPlugin } from "@harness-kit/shared";
 import { usePluginExplorer } from "../../hooks/usePluginExplorer";
@@ -98,7 +99,7 @@ export default function PluginExplorerPage() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            style={{ fontSize: "11px", color: "var(--success, #22c55e)", fontWeight: 500 }}
+            style={{ fontSize: "11px", color: "var(--success)", fontWeight: 500 }}
           >
             Saved
           </motion.span>
@@ -193,15 +194,9 @@ export default function PluginExplorerPage() {
         <p style={{ fontSize: "13px", color: "var(--fg-muted)" }}>
           Plugin "{pluginName}" not found.
         </p>
-        <button
-          onClick={() => navigate("/harness/plugins")}
-          style={{
-            fontSize: "12px", color: "var(--accent-text)", background: "none",
-            border: "none", cursor: "pointer", textDecoration: "underline",
-          }}
-        >
+        <Button variant="ghost" size="sm" onClick={() => navigate("/harness/plugins")}>
           Back to Installed Plugins
-        </button>
+        </Button>
       </div>
     );
   }

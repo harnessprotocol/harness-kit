@@ -1,6 +1,7 @@
 import { test, expect } from "../fixtures";
 
 const ALL_ROUTES = [
+  "/fleet",
   "/harness/file",
   "/harness/plugins",
   "/harness/hooks",
@@ -16,8 +17,7 @@ const ALL_ROUTES = [
   "/security/permissions",
   "/security/secrets",
   "/security/audit",
-  "/parity",
-  "/board",
+  "/drift",
 ];
 
 for (const route of ALL_ROUTES) {

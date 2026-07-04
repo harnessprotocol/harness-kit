@@ -99,8 +99,8 @@ describe("getDensity / setDensity", () => {
 // ── Default Section ──────────────────────────────────────────
 
 describe("getDefaultSection / setDefaultSection", () => {
-  it("returns '/harness/plugins' when unset", () => {
-    expect(getDefaultSection()).toBe("/harness/plugins");
+  it("returns '/fleet' when unset", () => {
+    expect(getDefaultSection()).toBe("/fleet");
   });
 
   it("stores and retrieves a value", () => {

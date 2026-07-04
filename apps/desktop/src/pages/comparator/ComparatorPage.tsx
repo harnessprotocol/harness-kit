@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Rows3 } from "lucide-react";
 import type { ComparisonPhase, ComparisonSummary, HarnessRecommendation, TaskType } from "@harness-kit/shared";
 import { invoke } from "@tauri-apps/api/core";
+import { Button, EmptyState } from "@harness-kit/ui";
 import { useComparator } from "../../hooks/useComparator";
 import SetupPhase from "./SetupPhase";
 import ExecutionPhase from "./ExecutionPhase";
@@ -440,9 +442,9 @@ function SessionCard({
             style={{
               ...styles.deleteBtn,
               ...(confirmDelete
-                ? { background: "rgba(220, 38, 38, 0.1)", color: tokens.danger, width: "auto", padding: "0 4px" }
+                ? { background: "var(--danger-light)", color: tokens.danger, width: "auto", padding: "0 4px" }
                 : deleteHovered
-                  ? { background: "rgba(220, 38, 38, 0.1)", color: tokens.danger }
+                  ? { background: "var(--danger-light)", color: tokens.danger }
                   : {}),
             }}
             title="Delete session"
@@ -506,7 +508,7 @@ function PhasePlaceholder({ phase }: { phase: ComparisonPhase }) {
         padding: "0 40px",
       }}
     >
-      <span style={{ fontSize: 32, opacity: 0.4 }}>◎</span>
+      <Rows3 size={32} strokeWidth={1.4} style={{ opacity: 0.4 }} aria-hidden="true" />
       <span>{labels[phase] ?? "Select or start a comparison to continue."}</span>
     </div>
   );
@@ -583,12 +585,8 @@ export default function ComparatorPage() {
     startComparison,
     loadComparison,
     deleteSession,
-    sendToPanel,
-    broadcastToAll,
     endSession,
     updateTitle,
-    getRawChunks,
-    outputTick,
   } = useComparator();
 
   // ── Resizable rail ───────────────────────────────────────────
@@ -721,12 +719,8 @@ export default function ComparatorPage() {
         return active ? (
           <ExecutionPhase
             active={active}
-            getRawChunks={getRawChunks}
-            outputTick={outputTick}
             onEndSession={endSession}
             onUpdateTitle={updateTitle}
-            onSendToPanel={sendToPanel}
-            onBroadcast={broadcastToAll}
           />
         ) : (
           <PhasePlaceholder phase="execution" />
@@ -754,22 +748,10 @@ export default function ComparatorPage() {
       <div style={{ ...styles.rail, width: railWidth, minWidth: 0 }}>
         {/* New Comparison button */}
         <div style={styles.railTop}>
-          <button
-            className="comparator-focusable"
-            style={styles.newBtn}
-            onClick={handleNewComparison}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = tokens.accentFg;
-              e.currentTarget.style.transform = "scale(0.98)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = tokens.accent;
-              e.currentTarget.style.transform = "scale(1)";
-            }}
-          >
+          <Button variant="primary" onClick={handleNewComparison} style={{ width: "100%" }}>
             <PlusIcon />
-            New Comparison
-          </button>
+            <span style={{ marginLeft: 6 }}>New Comparison</span>
+          </Button>
         </div>
 
         {/* Phase stepper */}
@@ -788,37 +770,16 @@ export default function ComparatorPage() {
         {/* Session list */}
         <div style={styles.sessionsList} className="comparator-rail">
           {sessions.length === 0 ? (
-            <div style={{
-              padding: "24px 12px",
-              textAlign: "center",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 8,
-            }}>
-              <div style={{
-                width: 36,
-                height: 36,
-                borderRadius: 8,
-                background: tokens.bgElevated,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: tokens.fgPlaceholder,
-              }}>
-                {/* Split comparison icon */}
+            <EmptyState
+              icon={
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="2" y="3" width="20" height="18" rx="2" />
                   <path d="M12 3v18" />
                 </svg>
-              </div>
-              <span style={{ fontSize: 11, color: tokens.fgPlaceholder, fontFamily: fontStack }}>
-                No sessions yet
-              </span>
-              <span style={{ fontSize: 10, color: tokens.fgPlaceholder, opacity: 0.7, fontFamily: fontStack }}>
-                Click <strong>New Comparison</strong> to start
-              </span>
-            </div>
+              }
+              title="No sessions yet"
+              description="Click New Comparison to start."
+            />
           ) : (
             sessions.map((session) => (
               <SessionCard

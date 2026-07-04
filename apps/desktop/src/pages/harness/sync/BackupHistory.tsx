@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { ChevronDown } from "lucide-react";
+import { Button, Card } from "@harness-kit/ui";
 import type { BackupManifest } from "../../../lib/tauri";
 import { syncRestoreBackup } from "../../../lib/tauri";
 
@@ -31,7 +33,7 @@ function BackupRow({
   const fileCount = backup.files.length;
 
   return (
-    <tr style={{ borderBottom: "1px solid var(--border-base)" }}>
+    <tr style={{ borderBottom: "1px solid var(--border-subtle)" }}>
       <td style={{ padding: "7px 10px", fontSize: "11px", color: "var(--fg-muted)" }}>
         {formatTimestamp(backup.timestamp)}
       </td>
@@ -45,20 +47,9 @@ function BackupRow({
         {fileCount} file{fileCount !== 1 ? "s" : ""}
       </td>
       <td style={{ padding: "7px 10px", textAlign: "right" }}>
-        <button
-          onClick={() => onRestore(backup.id)}
-          style={{
-            padding: "3px 10px",
-            borderRadius: "5px",
-            border: "1px solid var(--border-base)",
-            background: "var(--bg-elevated)",
-            color: "var(--fg-base)",
-            fontSize: "11px",
-            cursor: "pointer",
-          }}
-        >
+        <Button variant="ghost" size="sm" onClick={() => onRestore(backup.id)}>
           Restore
-        </button>
+        </Button>
       </td>
     </tr>
   );
@@ -94,14 +85,10 @@ export default function BackupHistory({ backups, projectDir, onRestored }: Backu
   if (filtered.length === 0 && !expanded) return null;
 
   return (
-    <div style={{
-      background: "var(--bg-surface)",
-      border: "1px solid var(--border-base)",
-      borderRadius: "8px",
-      overflow: "hidden",
-    }}>
+    <Card padding="none" style={{ overflow: "hidden" }}>
       {/* Header */}
       <button
+        className="hk-reset-btn"
         onClick={() => setExpanded((v) => !v)}
         style={{
           display: "flex",
@@ -109,8 +96,6 @@ export default function BackupHistory({ backups, projectDir, onRestored }: Backu
           justifyContent: "space-between",
           width: "100%",
           padding: "10px 14px",
-          border: "none",
-          background: "transparent",
           cursor: "pointer",
           color: "var(--fg-base)",
           fontSize: "12px",
@@ -119,19 +104,15 @@ export default function BackupHistory({ backups, projectDir, onRestored }: Backu
         }}
       >
         <span>Backup History{filtered.length > 0 ? ` (${filtered.length})` : ""}</span>
-        <svg
-          width="12"
-          height="12"
-          viewBox="0 0 20 20"
-          fill="currentColor"
+        <ChevronDown
+          size={12}
+          strokeWidth={1.7}
           style={{
             transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
-            transition: "transform 0.15s",
+            transition: "transform 0.15s ease-out",
             color: "var(--fg-subtle)",
           }}
-        >
-          <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-        </svg>
+        />
       </button>
 
       {expanded && (
@@ -147,7 +128,7 @@ export default function BackupHistory({ backups, projectDir, onRestored }: Backu
               No backups for this project yet.
             </p>
           ) : (
-            <table style={{ width: "100%", borderCollapse: "collapse", borderTop: "1px solid var(--border-base)" }}>
+            <table style={{ width: "100%", borderCollapse: "collapse", borderTop: "1px solid var(--border-subtle)" }}>
               <thead>
                 <tr style={{ background: "var(--bg-elevated)" }}>
                   <th style={{ padding: "5px 10px", textAlign: "left", fontSize: "10px", fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.3px" }}>When</th>
@@ -175,7 +156,7 @@ export default function BackupHistory({ backups, projectDir, onRestored }: Backu
       {confirmId && (
         <div style={{
           padding: "12px 14px",
-          borderTop: "1px solid var(--border-base)",
+          borderTop: "1px solid var(--border-subtle)",
           background: "var(--bg-elevated)",
           display: "flex",
           alignItems: "center",
@@ -185,21 +166,14 @@ export default function BackupHistory({ backups, projectDir, onRestored }: Backu
           <span style={{ fontSize: "12px", color: "var(--fg-base)", flex: 1 }}>
             Restore this backup? A safety backup of current files will be created first.
           </span>
-          <button
-            onClick={() => setConfirmId(null)}
-            style={{ padding: "4px 10px", borderRadius: "5px", border: "1px solid var(--border-base)", background: "var(--bg-surface)", color: "var(--fg-base)", fontSize: "11px", cursor: "pointer" }}
-          >
+          <Button variant="ghost" size="sm" onClick={() => setConfirmId(null)}>
             Cancel
-          </button>
-          <button
-            onClick={confirmRestore}
-            disabled={!!restoring}
-            style={{ padding: "4px 10px", borderRadius: "5px", border: "none", background: "var(--accent)", color: "var(--accent-text, #fff)", fontSize: "11px", fontWeight: 600, cursor: "pointer" }}
-          >
+          </Button>
+          <Button variant="primary" size="sm" onClick={confirmRestore} disabled={!!restoring}>
             {restoring ? "Restoring…" : "Confirm Restore"}
-          </button>
+          </Button>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

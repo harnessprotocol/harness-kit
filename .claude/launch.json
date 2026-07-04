@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "ui-gallery",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@harness-kit/ui-gallery", "dev"],
+      "port": 4900
+    },
+    {
+      "name": "desktop",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "harness-kit-desktop", "dev"],
+      "port": 1422
+    },
+    {
+      "name": "website",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "harness-kit-docs", "dev"],
+      "port": 3000
+    }
+  ]
+}
