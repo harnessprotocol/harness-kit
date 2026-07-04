@@ -40,6 +40,10 @@
 - **Desktop: Observatory typography** — stat and chart card headers use `font-variant-caps: all-small-caps` instead of `text-transform: uppercase`, matching the sidebar and other labels. Area chart fill gradients are subtler (top stop halved); grid lines use `--separator` instead of `--border-base` so data pops more.
 - **Desktop: Permissions layout** — Tools, Paths, and Network sections merged into a single unified card with inset section dividers. Allow/Deny/Ask tool rows are stacked vertically with color-coded labels. Preset cards display a colored left border (green for Strict, blue for Standard, amber for Permissive) for at-a-glance identity.
 
+### Fixed
+
+- **Desktop: Monaco editor stuck on "Loading editor..."** — the MCP Servers, Hooks, CLAUDE.md, and harness.yaml Editor tab pages all embed Monaco via `@monaco-editor/react`, whose default loader fetches its AMD bootstrap script from a CDN at runtime. The app's CSP (`script-src 'self'`) has always blocked that cross-origin script, so the editor never mounted in the packaged app. It now loads the already-bundled `monaco-editor` package directly instead of reaching for the CDN.
+
 ### Security
 
 - **Dependencies** — Resolved 8 Dependabot medium-severity alerts: Next.js upgraded to 16.1.7 (fixes HTTP request smuggling in rewrites and unbounded `next/image` disk cache growth), DOMPurify upgraded to 3.3.3 in the desktop app (fixes XSS bypass). Website fumadocs stack updated to core/ui v16.6.17 and mdx v14.2.10 to satisfy Next 16 peer deps.
