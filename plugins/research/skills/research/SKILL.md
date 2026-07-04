@@ -335,6 +335,8 @@ Tags were determined in Step 4. `date` is the extraction date. `source` is the o
 
 When **updating** an existing synthesis, ensure its frontmatter is present and tags are current — add any new tags the new source warrants.
 
+**Wiki-links:** when prose in a synthesis mentions another synthesis subject or a graph entity by name, mark it inline as `[[name]]` — the target is the other synthesis's filename stem or the exact graph entity name. A link whose target doesn't exist yet is fine; it marks a wanted-but-unwritten page. Don't force links — 2–5 per synthesis is typical.
+
 ---
 
 ### Step 8: Rebuild INDEX.md
