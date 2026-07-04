@@ -15,7 +15,6 @@ export type {
   MarketplaceManifest,
   MarketplacePlugin,
   MarketplaceCategory,
-  ProfileYaml,
   SecurityScanStatus,
   SecurityFindingSeverity,
   SecurityFindingCategory,

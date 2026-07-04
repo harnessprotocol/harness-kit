@@ -7,6 +7,7 @@ import { buildHarnessYaml } from "../src/profiles.js";
 import { trustFromStatus } from "../src/trust.js";
 import { StaticSource } from "../src/source.js";
 import { validateHarnessYaml } from "@harness-kit/core";
+import type { HarnessConfig } from "@harness-kit/core";
 import type { MarketplaceData } from "../src/types.js";
 
 const repoRoot = findRepoRoot(dirname(fileURLToPath(import.meta.url)));
@@ -193,9 +194,13 @@ describe("profiles", () => {
       for (const ref of resolved) {
         expect(profile.harnessYaml).toContain(`name: ${ref.name}`);
         expect(profile.harnessYaml).toContain(`source: harnessprotocol/harness-kit`);
-        // Uses live version, not profile-pinned version
+        // Uses live version, not profile-pinned version. yaml.stringify quotes a
+        // version string only when needed to disambiguate from a YAML number
+        // (e.g. "1" but not "0.3.0"), so tolerate either form.
         if (ref.liveVersion) {
-          expect(profile.harnessYaml).toContain(`version: "${ref.liveVersion}"`);
+          expect(profile.harnessYaml).toMatch(
+            new RegExp(`version: "?${ref.liveVersion.replace(/\./g, "\\.")}"?\\b`),
+          );
         }
       }
     }
@@ -209,16 +214,25 @@ describe("profiles", () => {
     expect(byName["research-knowledge"]).toBe("Research Knowledge");
   });
 
-  it("preserves knowledge and rules from profile YAML", async () => {
+  it("derives rules from instructions.operational; knowledge is always null", async () => {
+    // Spec-conformant kind:profile documents have no `knowledge` key (the
+    // Harness Protocol v1 schema doesn't define one) — memory/knowledge behavior
+    // is conveyed via the `membrain` plugin + instructions text instead. `rules`
+    // is a display-only view derived from each bullet in instructions.operational.
     const data = await getData();
+    for (const profile of data.profiles) {
+      expect(profile.knowledge).toBeNull();
+    }
+
     const fullStack = data.profiles.find((p) => p.name === "full-stack-engineer");
-    expect(fullStack?.knowledge?.backend).toBe("memory-md");
-    expect(fullStack?.rules.length).toBeGreaterThan(0);
+    expect(fullStack?.rules).toContain(
+      "Keep changes small and reviewable — one logical change per PR.",
+    );
 
     const dataEngineer = data.profiles.find((p) => p.name === "data-engineer");
-    expect(dataEngineer?.knowledge?.backend).toBe("memory-md");
-    expect(dataEngineer?.knowledge?.seedDocs.length).toBeGreaterThan(0);
-    expect(dataEngineer?.rules.length).toBeGreaterThan(0);
+    expect(dataEngineer?.rules).toContain(
+      "Always trace lineage impact before modifying shared tables.",
+    );
   });
 
   it("profiles are sorted by name", async () => {
@@ -270,40 +284,58 @@ describe("readProfiles — unresolved component handling", () => {
 });
 
 describe("buildHarnessYaml (unit)", () => {
-  const PROFILE_YAML = {
-    name: "test-profile",
-    description: "A minimal test profile for unit testing the YAML builder.",
-    author: { name: "testauthor" },
-    components: [],
-    rules: ["Always write tests first", "Review before merging"],
+  const PROFILE: HarnessConfig = {
+    version: "1",
+    kind: "profile",
+    metadata: {
+      name: "test-profile",
+      description: "A minimal test profile for unit testing the YAML builder.",
+      author: { name: "testauthor" },
+    },
+    plugins: [
+      { name: "review", source: "harnessprotocol/harness-kit", version: "0.1.0" },
+    ],
+    instructions: {
+      operational: "- Always write tests first\n- Review before merging",
+    },
   };
 
   it("produces YAML that validates against the v1 schema", () => {
-    const yaml = buildHarnessYaml(PROFILE_YAML, [
-      { name: "review", version: "0.3.0" },
-    ]);
+    const yaml = buildHarnessYaml(PROFILE, [{ name: "review", version: "0.3.0" }]);
     const result = validateHarnessYaml(yaml);
     expect(result.valid, result.errors.map((e) => e.message).join("; ")).toBe(true);
   });
 
-  it("includes rules in instructions.behavioral", () => {
-    const yaml = buildHarnessYaml(PROFILE_YAML, []);
+  it("substitutes the live version, not the profile-pinned version", () => {
+    const yaml = buildHarnessYaml(PROFILE, [{ name: "review", version: "0.3.0" }]);
+    expect(yaml).toMatch(/version:\s*"?0\.3\.0"?/);
+    expect(yaml).not.toMatch(/version:\s*"?0\.1\.0"?/);
+  });
+
+  it("carries instructions and mcp-servers through unchanged", () => {
+    const withMcp: HarnessConfig = {
+      ...PROFILE,
+      "mcp-servers": { fetch: { transport: "stdio", command: "uvx", args: ["mcp-server-fetch"] } },
+    };
+    const yaml = buildHarnessYaml(withMcp, [{ name: "review", version: "0.3.0" }]);
     expect(yaml).toContain("instructions:");
-    expect(yaml).toContain("behavioral:");
-    expect(yaml).toContain("- Always write tests first");
-    expect(yaml).toContain("- Review before merging");
+    expect(yaml).toContain("Always write tests first");
+    expect(yaml).toContain("mcp-servers:");
+    expect(yaml).toContain("mcp-server-fetch");
   });
 
   it("truncates description to 256 chars max", () => {
     const longDesc = "x".repeat(300);
-    const yaml = buildHarnessYaml({ ...PROFILE_YAML, description: longDesc }, []);
+    const yaml = buildHarnessYaml(
+      { ...PROFILE, metadata: { ...PROFILE.metadata!, description: longDesc } },
+      [{ name: "review", version: "0.3.0" }],
+    );
     const result = validateHarnessYaml(yaml);
     expect(result.valid, result.errors.map((e) => e.message).join("; ")).toBe(true);
   });
 
-  it("omits plugins block when no resolved plugins passed", () => {
-    const yaml = buildHarnessYaml({ ...PROFILE_YAML, rules: [] }, []);
+  it("omits the plugins key when no resolved plugins are passed", () => {
+    const yaml = buildHarnessYaml(PROFILE, []);
     expect(yaml).not.toContain("plugins:");
-    expect(yaml).not.toContain("instructions:");
   });
 });
