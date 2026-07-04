@@ -1,12 +1,11 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { parse as parseYaml } from "yaml";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { validateHarnessYaml } from "@harness-kit/core";
-import type { ProfileYaml } from "@harness-kit/shared";
+import type { HarnessConfig } from "@harness-kit/core";
 import type {
   MarketplacePlugin,
   MarketplaceProfile,
-  ProfileKnowledge,
   ProfilePluginRef,
   TrustTier,
 } from "./types.js";
@@ -45,51 +44,59 @@ function normaliseDescription(raw: string, max = 256): string {
   return s.slice(0, max - 1).trimEnd() + "…";
 }
 
+/**
+ * Derives a flat "workflow rules" list from a profile's `instructions.operational`
+ * block, for the website's rules display. Reads bullet lines ("- ...") and folds
+ * wrapped continuation lines back into the bullet they belong to. This is a
+ * read-only view for display — the instructions text itself is the source of truth.
+ */
+function extractRules(operational: string | null | undefined): string[] {
+  if (!operational) return [];
+  const rules: string[] = [];
+  for (const rawLine of operational.split("\n")) {
+    const line = rawLine.trim();
+    if (!line) continue;
+    if (line.startsWith("- ")) {
+      rules.push(line.slice(2).trim());
+    } else if (rules.length > 0) {
+      rules[rules.length - 1] += ` ${line}`;
+    }
+  }
+  return rules;
+}
+
 // ── Valid v1 harness.yaml builder ────────────────────────────
 
 /**
- * Builds a valid Harness Protocol v1 `harness.yaml` string from a legacy
- * profile YAML (the `components`/`knowledge`/`rules` shape used in profiles/).
- * Uses resolved plugins so the emitted version strings are always the live
- * marketplace version, not a potentially stale pinned version.
+ * Re-serializes a profile's `plugins` list, substituting each resolved plugin's
+ * LIVE marketplace version for whatever version the profile pins, so a
+ * downloaded harness.yaml always installs current plugin versions rather than a
+ * potentially stale pin. Every other section (metadata, instructions,
+ * mcp-servers, permissions, env, extends) is carried through unchanged.
  */
 export function buildHarnessYaml(
-  profile: ProfileYaml,
+  profile: HarnessConfig,
   resolvedPlugins: Array<{ name: string; version: string }>,
 ): string {
-  const desc = normaliseDescription(profile.description);
-  const authorName = profile.author?.name ?? "harnessprotocol";
+  const liveVersion = new Map(resolvedPlugins.map((p) => [p.name, p.version]));
+  const plugins = (profile.plugins ?? [])
+    .filter((p) => liveVersion.has(p.name))
+    .map((p) => ({ ...p, version: liveVersion.get(p.name)! }));
 
-  const lines: string[] = [
-    `version: "1"`,
-    `kind: profile`,
-    `metadata:`,
-    `  name: ${profile.name}`,
-    `  description: >-`,
-    `    ${desc}`,
-    `  author:`,
-    `    name: ${authorName}`,
-  ];
-
-  if (resolvedPlugins.length > 0) {
-    lines.push("plugins:");
-    for (const ref of resolvedPlugins) {
-      lines.push(`  - name: ${ref.name}`);
-      lines.push(`    source: harnessprotocol/harness-kit`);
-      lines.push(`    version: "${ref.version}"`);
-    }
+  const output: HarnessConfig = { ...profile };
+  if (output.metadata) {
+    output.metadata = {
+      ...output.metadata,
+      description: normaliseDescription(output.metadata.description),
+    };
+  }
+  if (plugins.length > 0) {
+    output.plugins = plugins;
+  } else {
+    delete output.plugins;
   }
 
-  const rules = (profile.rules ?? []).filter((r) => r.trim());
-  if (rules.length > 0) {
-    lines.push("instructions:");
-    lines.push("  behavioral: |");
-    for (const rule of rules) {
-      lines.push(`    - ${rule}`);
-    }
-  }
-
-  return lines.join("\n") + "\n";
+  return stringifyYaml(output, { lineWidth: 0 });
 }
 
 // ── GitHub stars fetch ────────────────────────────────────────
@@ -132,12 +139,12 @@ export async function fetchRepoStars(ownerRepo: string): Promise<number | undefi
 // ── Profile reader ────────────────────────────────────────────
 
 /**
- * Reads all profile YAML files from `<repoRoot>/profiles/`, resolves each
- * component against the live plugin set, and emits a validated
- * `MarketplaceProfile[]` sorted by name.
+ * Reads all profile YAML files from `<repoRoot>/profiles/` — real `kind: profile`
+ * Harness Protocol v1 documents — resolves each plugin against the live plugin
+ * set, and emits a validated `MarketplaceProfile[]` sorted by name.
  *
- * @param strict - When true, throws on unresolved components or invalid YAML.
- *                 When false (default), emits console warnings and continues.
+ * @param strict - When true, throws on invalid source YAML or an unresolved
+ *                 plugin. When false (default), emits console warnings and continues.
  */
 export async function readProfiles(
   repoRoot: string,
@@ -162,20 +169,32 @@ export async function readProfiles(
 
   for (const file of files) {
     const content = await readFile(join(profilesDir, file), "utf-8");
-    const raw = parseYaml(content) as ProfileYaml;
 
-    // ── Resolve components against live plugin set ───────────
-    const refs: ProfilePluginRef[] = (raw.components ?? []).map((c) => {
-      const plugin = pluginMap.get(c.name);
+    const sourceValidation = validateHarnessYaml(content);
+    if (!sourceValidation.valid) {
+      const errors = sourceValidation.errors.map((e) => `${e.path}: ${e.message}`).join("; ");
+      const msg = `Profile "${file}": source YAML is invalid: ${errors}`;
+      if (strict) throw new Error(msg);
+      console.warn(`[marketplace-data] Warning: ${msg}`);
+    }
+
+    const raw = parseYaml(content) as HarnessConfig;
+    const name = raw.metadata?.name ?? file.replace(/\.ya?ml$/, "");
+    const description = normaliseDescription(raw.metadata?.description ?? "");
+    const author = raw.metadata?.author?.name ?? "harnessprotocol";
+
+    // ── Resolve plugins against live plugin set ───────────
+    const refs: ProfilePluginRef[] = (raw.plugins ?? []).map((p) => {
+      const plugin = pluginMap.get(p.name);
       if (!plugin) {
-        const msg = `Profile "${raw.name}": component "${c.name}" not found in marketplace.json`;
+        const msg = `Profile "${name}": plugin "${p.name}" not found in marketplace.json`;
         if (strict) throw new Error(msg);
         console.warn(`[marketplace-data] Warning: ${msg}`);
-        return { name: c.name, version: c.version, resolved: false };
+        return { name: p.name, version: p.version ?? "0.0.0", resolved: false };
       }
       return {
-        name: c.name,
-        version: c.version,
+        name: p.name,
+        version: p.version ?? plugin.version,
         liveVersion: plugin.version,
         resolved: true,
         slug: plugin.slug,
@@ -203,22 +222,12 @@ export async function readProfiles(
     const validation = validateHarnessYaml(harnessYaml);
     if (!validation.valid) {
       const errors = validation.errors.map((e) => `${e.path}: ${e.message}`).join("; ");
-      const msg = `Profile "${raw.name}": generated harness.yaml is invalid: ${errors}`;
+      const msg = `Profile "${name}": generated harness.yaml is invalid: ${errors}`;
       if (strict) throw new Error(msg);
       console.warn(`[marketplace-data] Warning: ${msg}`);
     }
 
-    // ── Build knowledge and security rollup ──────────────────
-    const knowledge: ProfileKnowledge | null = raw.knowledge
-      ? {
-          backend: raw.knowledge.backend,
-          seedDocs: (raw.knowledge.seed_docs ?? []).map((d) => ({
-            topic: d.topic,
-            description: d.description,
-          })),
-        }
-      : null;
-
+    // ── Security rollup ───────────────────────────────────────
     const security = {
       trust: aggregateTrust,
       pluginCount: refs.length,
@@ -231,14 +240,17 @@ export async function readProfiles(
     };
 
     profiles.push({
-      name: raw.name,
-      slug: raw.name,
-      description: normaliseDescription(raw.description),
-      author: raw.author?.name ?? "harnessprotocol",
-      persona: toPersona(raw.name),
+      name,
+      slug: name,
+      description,
+      author,
+      persona: toPersona(name),
       plugins: refs,
-      knowledge,
-      rules: raw.rules ?? [],
+      // Retired: spec-conformant profiles convey memory/knowledge behavior via
+      // the `membrain` plugin + `instructions`, not a bespoke knowledge block
+      // (the Harness Protocol v1 schema has no `knowledge` key).
+      knowledge: null,
+      rules: extractRules(raw.instructions?.operational),
       harnessYaml,
       aggregateTrust,
       security,

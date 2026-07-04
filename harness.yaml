@@ -1,27 +1,104 @@
-$schema: https://harnessprotocol.io/schema/v1/harness.schema.json
+# harness-kit's own harness.yaml — the config used to develop harness-kit, and
+# the showcase for what a real Harness Protocol v1 profile looks like: it extends
+# a shared role profile and exercises plugins, MCP servers, instructions,
+# permissions, and env in one document.
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
 version: "1"
+kind: profile
 
 metadata:
   name: harness-kit
-  description: Dogfooding config — plugins used to develop harness-kit itself.
+  description: >-
+    Dogfooding config for developing harness-kit — extends the full-stack
+    profile and adds the review/PR/deps tooling this repo runs on.
+  author:
+    name: harnessprotocol
+    url: https://harnesskit.ai
+  version: 2.0.0
+  tags: [monorepo, tauri, typescript, dogfood]
+
+# Inherit the full-stack role (review, PR, docs, memory, harness-share) and
+# layer this repo's specifics on top. Plugins/instructions merge; local wins.
+extends:
+  - source: ./profiles/full-stack-engineer.yaml
 
 plugins:
-  - name: review
+  - name: rubber-ducky
     source: harnessprotocol/harness-kit
-    description: Code review for branches and PRs
+    version: 0.1.0
+    description: Independent second opinion on plans and diffs before building
+  - name: research
+    source: harnessprotocol/harness-kit
+    version: 0.5.0
+    description: Process any source into a compounding knowledge base
+  - name: dependabot-sweep
+    source: harnessprotocol/harness-kit
+    version: 0.1.0
+    description: End-to-end Dependabot alert remediation
+  - name: stats
+    source: harnessprotocol/harness-kit
+    version: 0.2.0
+    description: Interactive dashboard for Claude Code usage
 
-  - name: open-pr
-    source: harnessprotocol/harness-kit
-    description: Pre-flight checks and PR creation workflow
+# GitHub access for PR/issue workflows (review, open-pr, merge-pr, pr-sweep).
+# The token comes from the environment (see env below); no secret in this file.
+mcp-servers:
+  github:
+    transport: stdio
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-github"]
 
-  - name: merge-pr
-    source: harnessprotocol/harness-kit
-    description: Verify CI, sync base, squash merge, and clean up
+env:
+  - name: GITHUB_PERSONAL_ACCESS_TOKEN
+    description: GitHub token for the github MCP server (repo scope).
+    required: true
+    sensitive: true
+  - name: GH_TOKEN
+    description: >-
+      GitHub token for the gh CLI (repo scope) — read by review, open-pr,
+      merge-pr, pr-sweep, and dependabot-sweep. A separate variable from
+      GITHUB_PERSONAL_ACCESS_TOKEN because gh doesn't read that name.
+    required: true
+    sensitive: true
+  - name: NODE_ENV
+    description: Build mode for the desktop app and packages.
+    sensitive: false
+    default: development
 
-  - name: docgen
-    source: harnessprotocol/harness-kit
-    description: Generate or update documentation
+instructions:
+  operational: |
+    - Build with pnpm from the repo root: `pnpm build && pnpm test`; the desktop
+      also needs `pnpm --filter harness-kit-desktop exec tsc --noEmit`.
+    - Plugin versions in plugin.json and marketplace.json must always match.
+    - Never bump the schema without sign-off; run `pnpm generate:validator` after
+      any change to harness.schema.json (CI enforces the committed validator).
+    - Verify the desktop app against the built binary, never a browser tab.
+  behavioral: |
+    - Feature branch → PR → review → merge; never commit directly to main.
+    - Conventional commits; end AI-authored commits with a Co-Authored-By trailer.
 
-  - name: explain
-    source: harnessprotocol/harness-kit
-    description: Structured code explanations
+permissions:
+  tools:
+    allow:
+      - Bash(pnpm:*)
+      - Bash(git:*)
+      - Bash(gh:*)
+      - Bash(cargo:*)
+    ask:
+      - Bash(git push:*)
+    deny:
+      - Bash(rm -rf:*)
+  paths:
+    writable:
+      - packages/**
+      - apps/**
+      - website/**
+      - profiles/**
+    readonly:
+      - pnpm-lock.yaml
+      - .github/**
+  network:
+    allowed-hosts:
+      - github.com
+      - registry.npmjs.org
+      - harnesskit.ai

@@ -1,44 +1,68 @@
-# Data Engineer Profile
-# Pre-configured harness-kit setup for data engineering workflows
-#
-# Install: /plugin marketplace add harnessprotocol/harness-kit
-#          then install this profile's components
+# Data Engineer profile — a kind:profile harness.yaml (Harness Protocol v1).
+# Extend it from a project harness.yaml:
+#   extends:
+#     - source: ./profiles/data-engineer.yaml
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
+version: "1"
+kind: profile
 
-name: data-engineer
-description: >
-  Harness configuration for data engineers working with SQL pipelines,
-  data lineage, and knowledge management. Includes lineage tracing,
-  research tooling for documentation, and session capture for
-  compounding institutional knowledge.
+metadata:
+  name: data-engineer
+  description: >-
+    SQL pipelines, data lineage, and knowledge management — lineage tracing,
+    research tooling for documentation, and session capture for compounding
+    institutional knowledge.
+  author:
+    name: harnessprotocol
+  version: 0.2.0
+  tags: [data, sql, lineage, knowledge]
 
-author:
-  name: harnessprotocol
-
-components:
+plugins:
   - name: lineage
-    version: "0.3.0"
+    source: harnessprotocol/harness-kit
+    version: 0.3.0
+    description: Trace column-level data lineage through SQL / Kafka / Spark
   - name: research
-    version: "0.4.0"
+    source: harnessprotocol/harness-kit
+    version: 0.5.0
+    description: Process any source into a compounding knowledge base
   - name: orient
-    version: "0.2.0"
+    source: harnessprotocol/harness-kit
+    version: 0.2.0
+    description: Topic-focused session orientation
   - name: capture
-    version: "0.4.0"
+    source: harnessprotocol/harness-kit
+    version: 0.4.0
+    description: Capture session insights for later reflection
   - name: explain
-    version: "0.2.0"
+    source: harnessprotocol/harness-kit
+    version: 0.2.0
+    description: Layered code explanations
   - name: docgen
-    version: "0.2.0"
+    source: harnessprotocol/harness-kit
+    version: 0.2.0
+    description: Generate or update documentation
   - name: review
-    version: "0.3.0"
+    source: harnessprotocol/harness-kit
+    version: 0.3.0
+    description: Structured code review
+  # Memory backend for the sql-patterns / data-quality knowledge this role
+  # accrues (replaces the old out-of-spec `knowledge: memory-md` block).
+  - name: membrain
+    source: harnessprotocol/harness-kit
+    version: 0.1.0
+    description: Graph-based agent memory
 
-knowledge:
-  backend: memory-md
-  seed_docs:
-    - topic: sql-patterns
-      description: Common SQL patterns and anti-patterns for data pipelines
-    - topic: data-quality
-      description: Data quality checks and validation strategies
+# Read-only inspection of local datasets for lineage/quality work.
+mcp-servers:
+  datasets:
+    transport: stdio
+    command: npx
+    args: ["-y", "@modelcontextprotocol/server-filesystem", "./data"]
 
-rules:
-  - Always trace lineage impact before modifying shared tables
-  - Prefer CTEs over nested subqueries for readability
-  - Document column-level transformations in commit messages
+instructions:
+  operational: |
+    - Always trace lineage impact before modifying shared tables.
+    - Prefer CTEs over nested subqueries for readability.
+    - Document column-level transformations in commit messages.
+    - Keep sql-patterns and data-quality notes in memory; cite them in review.

@@ -155,26 +155,6 @@ export interface OrgComponentTag {
   tag_id: string;
 }
 
-// ── Profile YAML (harness profile definitions) ─────────────
-
-export interface ProfileYaml {
-  name: string;
-  description: string;
-  author: Author;
-  components: Array<{
-    name: string;
-    version: string;
-  }>;
-  knowledge?: {
-    backend: string;
-    seed_docs?: Array<{
-      topic: string;
-      description: string;
-    }>;
-  };
-  rules?: string[];
-}
-
 // ── Security scanning types ─────────────────────────────────
 
 export type SecurityScanStatus = "passed" | "warnings" | "failed" | "not_scanned";

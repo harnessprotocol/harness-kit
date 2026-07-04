@@ -1,43 +1,64 @@
-# Full-Stack Engineer Profile
-# Pre-configured harness-kit setup for full-stack development workflows
-#
-# Install: /plugin marketplace add harnessprotocol/harness-kit
-#          then install this profile's components
+# Full-Stack Engineer profile — a kind:profile harness.yaml (Harness Protocol v1).
+# Extend it from a project harness.yaml:
+#   extends:
+#     - source: ./profiles/full-stack-engineer.yaml
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
+version: "1"
+kind: profile
 
-name: full-stack-engineer
-description: >
-  Harness configuration for full-stack engineers shipping features
-  end-to-end. Includes code review, PR workflows, documentation
-  generation, and code explanation tools.
+metadata:
+  name: full-stack-engineer
+  description: >-
+    Ship features end-to-end — code review, PR workflows, docs, and code
+    explanation, with a bias toward small, reviewed, well-tested changes.
+  author:
+    name: harnessprotocol
+  version: 0.2.0
+  tags: [full-stack, review, workflow, docs]
 
-author:
-  name: harnessprotocol
-
-components:
+plugins:
   - name: review
-    version: "0.3.0"
+    source: harnessprotocol/harness-kit
+    version: 0.3.0
+    description: Structured code review for a branch, PR, or path
   - name: open-pr
-    version: "0.1.0"
+    source: harnessprotocol/harness-kit
+    version: 0.1.0
+    description: Pre-flight checks and PR creation
   - name: merge-pr
-    version: "0.1.0"
+    source: harnessprotocol/harness-kit
+    version: 0.1.0
+    description: Verify CI + review, sync base, squash-merge, clean up
   - name: pr-sweep
-    version: "0.2.0"
+    source: harnessprotocol/harness-kit
+    version: 0.2.0
+    description: Cross-repo PR triage, review, and merge
   - name: explain
-    version: "0.2.0"
+    source: harnessprotocol/harness-kit
+    version: 0.2.0
+    description: Layered code explanations
   - name: docgen
-    version: "0.2.0"
+    source: harnessprotocol/harness-kit
+    version: 0.2.0
+    description: Generate or update README / API / architecture docs
   - name: harness-share
-    version: "0.3.0"
+    source: harnessprotocol/harness-kit
+    version: 0.3.0
+    description: Compile, export, import, and sync harness configs
+  # Memory backend for the architecture/testing knowledge this role accrues
+  # (replaces the old out-of-spec `knowledge: memory-md` block).
+  - name: membrain
+    source: harnessprotocol/harness-kit
+    version: 0.1.0
+    description: Graph-based agent memory
 
-knowledge:
-  backend: memory-md
-  seed_docs:
-    - topic: architecture
-      description: Project architecture decisions and conventions
-    - topic: testing
-      description: Testing strategies and patterns
-
-rules:
-  - Run tests before opening PRs
-  - Write descriptive commit messages with conventional commit prefixes
-  - Review your own diff before requesting review from others
+instructions:
+  operational: |
+    - Read existing code before writing; prefer editing over new files.
+    - Keep changes small and reviewable — one logical change per PR.
+    - Run the test suite before opening a PR; review your own diff first.
+    - Keep an architecture and a testing note in memory; update them as
+      decisions and patterns settle.
+  behavioral: |
+    - Conventional commits (feat / fix / chore / docs / refactor / test).
+    - Never force-push shared branches; never commit secrets.

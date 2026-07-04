@@ -12,7 +12,6 @@ import type {
   ProfileComponent,
   ProfileCategory,
   ProfileTag,
-  ProfileYaml,
   ComponentCounts,
   InstalledPlugin,
   FileTreeNode,
@@ -228,41 +227,6 @@ describe("Join tables", () => {
       tag_id: "tag-1",
     };
     expect(pt.tag_id).toBe("tag-1");
-  });
-});
-
-describe("Profile YAML", () => {
-  it("validates ProfileYaml interface with all fields", () => {
-    const yaml: ProfileYaml = {
-      name: "Test Profile",
-      description: "A test profile",
-      author: { name: "test" },
-      components: [
-        { name: "skill-1", version: "1.0.0" },
-        { name: "plugin-1", version: "2.0.0" },
-      ],
-      knowledge: {
-        backend: "vector-db",
-        seed_docs: [
-          { topic: "API", description: "API docs" },
-        ],
-      },
-      rules: ["rule1", "rule2"],
-    };
-    expect(yaml.components).toHaveLength(2);
-    expect(yaml.knowledge?.backend).toBe("vector-db");
-    expect(yaml.rules).toHaveLength(2);
-  });
-
-  it("validates ProfileYaml with optional fields omitted", () => {
-    const yaml: ProfileYaml = {
-      name: "Minimal Profile",
-      description: "Minimal",
-      author: { name: "test" },
-      components: [],
-    };
-    expect(yaml.knowledge).toBeUndefined();
-    expect(yaml.rules).toBeUndefined();
   });
 });
 

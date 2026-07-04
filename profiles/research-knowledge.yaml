@@ -1,39 +1,60 @@
-# Research & Knowledge Profile
-# Pre-configured harness-kit setup for research-heavy workflows
-#
-# Install: /plugin marketplace add harnessprotocol/harness-kit
-#          then install this profile's components
+# Research & Knowledge profile — a kind:profile harness.yaml (Harness Protocol v1).
+# Extend it from a project harness.yaml:
+#   extends:
+#     - source: ./profiles/research-knowledge.yaml
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
+version: "1"
+kind: profile
 
-name: research-knowledge
-description: >
-  Harness configuration for roles focused on research, learning, and
-  knowledge management. Ideal for technical writers, analysts, and
-  anyone building a compounding knowledge base from diverse sources.
+metadata:
+  name: research-knowledge
+  description: >-
+    Research, learning, and knowledge management — for technical writers,
+    analysts, and anyone building a compounding knowledge base from diverse
+    sources.
+  author:
+    name: harnessprotocol
+  version: 0.2.0
+  tags: [research, knowledge, writing]
 
-author:
-  name: harnessprotocol
-
-components:
+plugins:
   - name: research
-    version: "0.4.0"
+    source: harnessprotocol/harness-kit
+    version: 0.5.0
+    description: Process any source into a compounding knowledge base
   - name: orient
-    version: "0.2.0"
+    source: harnessprotocol/harness-kit
+    version: 0.2.0
+    description: Topic-focused session orientation
   - name: capture
-    version: "0.4.0"
+    source: harnessprotocol/harness-kit
+    version: 0.4.0
+    description: Capture session insights for later reflection
   - name: explain
-    version: "0.2.0"
+    source: harnessprotocol/harness-kit
+    version: 0.2.0
+    description: Layered code explanations
   - name: docgen
-    version: "0.2.0"
+    source: harnessprotocol/harness-kit
+    version: 0.2.0
+    description: Generate or update documentation
+  # Memory backend for the research-methodology / knowledge-taxonomy notes
+  # this role accrues (replaces the old out-of-spec `knowledge: memory-md`).
+  - name: membrain
+    source: harnessprotocol/harness-kit
+    version: 0.1.0
+    description: Graph-based agent memory
 
-knowledge:
-  backend: memory-md
-  seed_docs:
-    - topic: research-methodology
-      description: Research workflows and source evaluation criteria
-    - topic: knowledge-taxonomy
-      description: How topics and concepts are organized in the knowledge graph
+# Web fetching for source-gathering during research.
+mcp-servers:
+  fetch:
+    transport: stdio
+    command: uvx
+    args: ["mcp-server-fetch"]
 
-rules:
-  - Always cite sources when adding to the knowledge base
-  - Capture session insights before ending long research sessions
-  - Orient at the start of each session to build on prior work
+instructions:
+  operational: |
+    - Always cite sources when adding to the knowledge base.
+    - Capture session insights before ending long research sessions.
+    - Orient at the start of each session to build on prior work.
+    - Keep research-methodology and knowledge-taxonomy notes in memory.
