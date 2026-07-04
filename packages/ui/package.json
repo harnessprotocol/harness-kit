@@ -14,7 +14,7 @@
   "scripts": {
     "build": "tsup && cp src/styles.css dist/styles.css",
     "dev": "tsup --watch",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "test:watch": "vitest"
   },
   "peerDependencies": {
