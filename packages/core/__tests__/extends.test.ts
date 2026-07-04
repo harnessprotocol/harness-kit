@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest"
+import { fileURLToPath } from "node:url"
+import { resolve as resolvePath } from "node:path"
 import { resolveExtends } from "../src/compile/extends.js"
 import { compile } from "../src/compile/compile.js"
+import { parseHarness } from "../src/parser/parse-harness.js"
+import { validateHarness } from "../src/schema/validate.js"
+import { NodeFsProvider } from "../src/fs-node.js"
 import { MockFsProvider } from "./helpers/mock-fs.js"
 import type { HarnessConfig } from "../src/types.js"
 
@@ -488,5 +493,71 @@ instructions:
     const parsed = JSON.parse(mcpFile!.content)
     expect(parsed.mcpServers.postgres).toBeDefined()
     expect(parsed.mcpServers.postgres.command).toBe("uvx")
+  })
+})
+
+// ── Repo showcase integration test ──────────────────────────────
+//
+// The repo-root harness.yaml extends ./profiles/full-stack-engineer.yaml and
+// is the showcase for what a real Harness Protocol v1 profile looks like.
+// This reads both real files off disk (NodeFsProvider) so a future edit to
+// either file, or to the merge logic above, fails CI instead of silently
+// shipping a broken showcase.
+
+const REPO_ROOT = resolvePath(fileURLToPath(import.meta.url), "../../../..")
+
+describe("resolveExtends — repo showcase (root harness.yaml)", () => {
+  it("resolves harness.yaml's extends of profiles/full-stack-engineer.yaml into a schema-valid, correctly merged config", async () => {
+    const fs = new NodeFsProvider(REPO_ROOT)
+    const raw = await fs.readFile(fs.joinPath(REPO_ROOT, "harness.yaml"))
+    const { config } = parseHarness(raw)
+
+    const result = await resolveExtends(config, fs, REPO_ROOT)
+
+    const validation = validateHarness(result)
+    expect(validation.errors).toEqual([])
+    expect(validation.valid).toBe(true)
+
+    // Plugins declared directly on the root harness.yaml.
+    const localPluginNames = [
+      "rubber-ducky",
+      "research",
+      "dependabot-sweep",
+      "stats",
+    ]
+    // Plugins inherited from profiles/full-stack-engineer.yaml.
+    const inheritedPluginNames = [
+      "review",
+      "open-pr",
+      "merge-pr",
+      "pr-sweep",
+      "explain",
+      "docgen",
+      "harness-share",
+      "membrain",
+    ]
+
+    const pluginNames = (result.plugins ?? []).map((p) => p.name)
+    expect(pluginNames.sort()).toEqual(
+      [...localPluginNames, ...inheritedPluginNames].sort(),
+    )
+    // Deduped: no plugin name appears more than once in the merged list.
+    expect(new Set(pluginNames).size).toBe(pluginNames.length)
+
+    // The root harness.yaml's own local-only mcp-servers entry must survive
+    // the merge (the profile declares none).
+    expect(result["mcp-servers"]?.github).toBeDefined()
+
+    // Instructions merge (default import-mode): profile text precedes the
+    // root's own text in both slots.
+    const operational = result.instructions!.operational as string
+    const profileIdx = operational.indexOf("Read existing code before writing")
+    const localIdx = operational.indexOf("Build with pnpm from the repo root")
+    expect(profileIdx).toBeGreaterThanOrEqual(0)
+    expect(localIdx).toBeGreaterThan(profileIdx)
+
+    // Permissions declared only on the root harness.yaml must survive the
+    // merge (the profile declares no permissions block).
+    expect(result.permissions!.tools!.allow).toContain("Bash(pnpm:*)")
   })
 })
