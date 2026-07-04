@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useLocation } from "react-router-dom";
 import AppLayout, { NAV_SECTIONS } from "../AppLayout";
 import { NAV_PATHS } from "../../hooks/useGlobalShortcuts";
 
@@ -85,6 +85,29 @@ describe("sidebar renders all nav sections", () => {
     for (const section of NAV_SECTIONS) {
       expect(screen.getByText(section.label)).toBeInTheDocument();
     }
+  });
+});
+
+describe("keyboard navigation", () => {
+  // Guards against the packages/ui NavItem migration regressing keyboard activation:
+  // NavItem is a role="link" div, which has no native Enter/Space behavior, so the
+  // component must forward those keys to its click handler.
+  function LocationSpy() {
+    const loc = useLocation();
+    return <div data-testid="loc">{loc.pathname}</div>;
+  }
+
+  it("activates a top-level nav item with Enter", () => {
+    render(
+      <MemoryRouter initialEntries={["/fleet"]}>
+        <AppLayout />
+        <LocationSpy />
+      </MemoryRouter>,
+    );
+    const drift = screen.getByText("Drift").closest('[role="link"]');
+    expect(drift).not.toBeNull();
+    fireEvent.keyDown(drift!, { key: "Enter" });
+    expect(screen.getByTestId("loc").textContent).toBe("/drift");
   });
 });
 
