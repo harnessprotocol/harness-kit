@@ -21,19 +21,22 @@
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
+    "generate:validator": "tsx scripts/generate-validator.ts",
     "fetch-schema": "npx tsx scripts/fetch-schema.ts"
   },
   "dependencies": {
     "@harness-kit/shared": "workspace:*",
     "@noble/hashes": "^1.8.0",
-    "ajv": "^8",
-    "ajv-formats": "^3",
     "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@types/node": "^22.20.0",
     "@vitest/coverage-v8": "^4",
+    "ajv": "^8",
+    "ajv-formats": "^3",
+    "esbuild": "^0.28.0",
     "tsup": "^8",
+    "tsx": "^4",
     "typescript": "^5",
     "vitest": "^4.1.9"
   }
