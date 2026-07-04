@@ -109,6 +109,19 @@ describe("keyboard navigation", () => {
     fireEvent.keyDown(drift!, { key: "Enter" });
     expect(screen.getByTestId("loc").textContent).toBe("/drift");
   });
+
+  it("activates a top-level nav item with Space", () => {
+    render(
+      <MemoryRouter initialEntries={["/fleet"]}>
+        <AppLayout />
+        <LocationSpy />
+      </MemoryRouter>,
+    );
+    const observatory = screen.getByText("Observatory").closest('[role="link"]');
+    expect(observatory).not.toBeNull();
+    fireEvent.keyDown(observatory!, { key: " " });
+    expect(screen.getByTestId("loc").textContent).toBe("/observatory");
+  });
 });
 
 describe("titlebar drag", () => {

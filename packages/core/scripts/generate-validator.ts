@@ -8,8 +8,10 @@
  * shipped bundle contains no `eval`/`new Function` and the prod CSP can forbid it.
  *
  * The generated file is committed so `pnpm test` (vitest, no build step) and a
- * fresh checkout work without running this first; `prebuild` regenerates it and
- * CI asserts the committed copy is in sync (see .github/workflows/validate.yml).
+ * fresh checkout work without running this first. Regeneration is NOT automatic
+ * on `pnpm build` — after editing harness.schema.json, run this script by hand
+ * (`pnpm generate:validator`); CI's drift-guard step asserts the committed copy
+ * is in sync (see .github/workflows/validate.yml) and fails the build otherwise.
  *
  * Usage:
  *   npx tsx packages/core/scripts/generate-validator.ts
@@ -29,9 +31,11 @@ const PACKAGE_ROOT = resolve(__dirname, "..");
 const OUTPUT = resolve(PACKAGE_ROOT, "src/schema/validate.generated.js");
 
 // Options MUST match the runtime consumer in src/schema/validate.ts:
-// allErrors so every error surfaces, plus source/esm codegen for standalone output.
+// allErrors so every error surfaces, verbose to keep schema/parentSchema/data
+// on error objects, plus source/esm codegen for standalone output.
 const ajv = new Ajv2020({
   allErrors: true,
+  verbose: true,
   code: { source: true, esm: true },
 });
 addFormats(ajv);

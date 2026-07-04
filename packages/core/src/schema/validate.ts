@@ -3,7 +3,8 @@ import type { ValidationError, ValidationResult } from "../types.js";
 import { isLegacyFormat } from "../utils/legacy.js";
 // Precompiled standalone validator (no `eval`/`new Function`), so the desktop
 // prod CSP can forbid `unsafe-eval`. Regenerate with `pnpm generate:validator`
-// after any change to harness.schema.json; `prebuild` does this automatically.
+// after any change to harness.schema.json — this is a manual step; CI's
+// drift-guard step (validate.yml) fails the build if you forget.
 import validate from "./validate.generated.js";
 
 const COMMON_FIXES: Record<string, string> = {
