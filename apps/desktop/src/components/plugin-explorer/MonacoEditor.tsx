@@ -1,5 +1,12 @@
 import { useRef, useEffect, useCallback } from "react";
-import Editor, { type OnMount, type Monaco } from "@monaco-editor/react";
+import Editor, { loader, type OnMount, type Monaco } from "@monaco-editor/react";
+import * as monacoEditor from "monaco-editor";
+
+// @monaco-editor/react defaults to fetching its AMD loader from the jsdelivr CDN
+// at runtime. Tauri's CSP (script-src 'self') blocks that cross-origin <script>
+// tag, so the editor would hang forever on "Loading editor...". Pointing the
+// loader at the already-bundled monaco-editor package avoids the CDN entirely.
+loader.config({ monaco: monacoEditor });
 
 // Monaco loads language workers via `new Worker(new URL(..., import.meta.url), { type: 'module' })`.
 // Tauri's WKWebView rejects these module worker imports with "Importing a module script failed."
