@@ -15,10 +15,13 @@ import { test, expect } from "../fixtures";
  */
 const ROUTES = [
   "/fleet",
+  "/harness/file",
+  "/harness/sync",
   "/harness/plugins",
   "/harness/hooks",
   "/harness/claude-md",
   "/harness/settings",
+  "/comparator",
   "/marketplace",
   "/observatory",
   "/observatory/sessions",
@@ -27,13 +30,10 @@ const ROUTES = [
   "/drift",
 ];
 
-// Known-broken in the production bundle (NOT in dev mode, which is why daily use hides it):
-// these chunks pull in @harness-kit/core's compile/check, which statically
-// `import { createHash } from "node:crypto"`. That bare specifier is unresolvable in a
-// non-Node bundle, so the route trips the error boundary. Quarantined here so the guard
-// still protects every other route; remove from this list once the crypto import is
-// browser-safe (tracked separately).
-const KNOWN_BROKEN_ROUTES = ["/harness/file", "/harness/sync", "/comparator"];
+// Formerly quarantined: /harness/file, /harness/sync, /comparator tripped the error
+// boundary in the production bundle because their chunks pulled in @harness-kit/core's
+// compile/check, which statically imported `node:crypto`. Core is now browser-safe
+// (crypto → @noble/hashes), so these routes are guarded like every other route.
 
 const ERROR_BOUNDARY_TEXT = "Something went wrong loading this page.";
 
@@ -58,14 +58,6 @@ async function expectRouteHealthy(appPage: import("@playwright/test").Page, rout
 
 for (const route of ROUTES) {
   test(`route renders without error boundary: ${route}`, async ({ appPage }) => {
-    await expectRouteHealthy(appPage, route);
-  });
-}
-
-// Quarantined: documents the node:crypto production-bundle bug. Marked fixme so the
-// suite stays green while the failure remains visible in reports. Drop the fixme once fixed.
-for (const route of KNOWN_BROKEN_ROUTES) {
-  test.fixme(`route renders without error boundary (known broken): ${route}`, async ({ appPage }) => {
     await expectRouteHealthy(appPage, route);
   });
 }
