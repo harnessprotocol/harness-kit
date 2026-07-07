@@ -29,6 +29,6 @@
     "@vitest/coverage-v8": "^4",
     "tsup": "^8",
     "typescript": "^5",
-    "vitest": "^4.1.9"
+    "vitest": "^4.1.10"
   }
 }
