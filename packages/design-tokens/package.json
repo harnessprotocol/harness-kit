@@ -18,7 +18,7 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
-    "@types/node": "^22.20.0",
+    "@types/node": "^22.20.1",
     "@vitest/coverage-v8": "^4",
     "tsx": "^4.23.0",
     "typescript": "^5",
