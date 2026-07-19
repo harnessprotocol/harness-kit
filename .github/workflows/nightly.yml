@@ -32,6 +32,7 @@ jobs:
         run: |
           pnpm --filter @harness-kit/shared build
           pnpm --filter @harness-kit/core build
+          pnpm --filter @harness-kit/exchange build
 
       - name: Build standalone bundle
         working-directory: apps/cli
@@ -104,6 +105,8 @@ jobs:
         run: |
           pnpm --filter @harness-kit/shared build
           pnpm --filter @harness-kit/core build
+          pnpm --filter @harness-kit/design-tokens build
+          pnpm --filter @harness-kit/ui build
 
       - name: Build desktop app
         run: |
