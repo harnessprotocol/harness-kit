@@ -1,15 +1,15 @@
 {
-  "$comment": "VENDORED from harness-protocol. Source: https://harnessprotocol.io/schema/v2/exchange.schema.json — last synced 2026-06-06. Re-diff against the harness-protocol repo before each release.",
+  "$comment": "VENDORED from harness-protocol. Source: https://harnessprotocol.ai/schema/v2/exchange.schema.json — last synced 2026-06-06. Re-diff against the harness-protocol repo before each release.",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://harnessprotocol.io/schema/v2/exchange.schema.json",
+  "$id": "https://harnessprotocol.ai/schema/v2/exchange.schema.json",
   "title": "Harness Protocol v2 — Exchange Offer Envelope",
-  "description": "Schema for Exchange-layer offer envelopes: a signed wrapper that carries a harness fragment from a sender to a receiver through the consent-first exchange flow. The wrapped fragment is opaque to this schema; it MUST independently validate against the harness schema (https://harnessprotocol.io/schema/v1/harness.schema.json) with kind: fragment semantics.",
+  "description": "Schema for Exchange-layer offer envelopes: a signed wrapper that carries a harness fragment from a sender to a receiver through the consent-first exchange flow. The wrapped fragment is opaque to this schema; it MUST independently validate against the harness schema (https://harnessprotocol.ai/schema/v1/harness.schema.json) with kind: fragment semantics.",
   "type": "object",
   "required": ["version", "type", "sender", "expires", "signature"],
   "properties": {
     "$schema": {
       "type": "string",
-      "description": "JSON Schema URI for editor tooling. Recommended value: 'https://harnessprotocol.io/schema/v2/exchange.schema.json'."
+      "description": "JSON Schema URI for editor tooling. Recommended value: 'https://harnessprotocol.ai/schema/v2/exchange.schema.json'."
     },
     "version": {
       "type": "string",

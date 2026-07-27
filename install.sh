@@ -56,7 +56,7 @@ print('\n'.join(p['name'] for p in data['plugins']))
 import json, sys, os
 data = json.loads(sys.stdin.read())
 skills = data.get('skills', [])
-print('\n'.join(s['name'] for s in skills) if skills else os.environ['PLUGIN_NAME'])
+print('\n'.join(skills) if skills else os.environ['PLUGIN_NAME'])
 " <<< "$plugin_json")
 
     while IFS= read -r skill; do

@@ -20,7 +20,7 @@ The skill:
 ## Output Format
 
 ```yaml
-$schema: https://harnessprotocol.io/schema/v1/harness.schema.json
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
 version: "1"
 
 metadata:

@@ -5,7 +5,7 @@ title: Harness Protocol
 
 # Harness Protocol
 
-The [Harness Protocol](https://harnessprotocol.io) is an open specification for portable AI coding harness configuration. It defines a vendor-neutral `harness.yaml` format, validated by [JSON Schema](https://harnessprotocol.io), that captures the complete operational context for an AI coding agent: plugins, MCP servers, environment requirements, instructions, and permissions.
+The [Harness Protocol](https://harnessprotocol.ai) is an open specification for portable AI coding harness configuration. It defines a vendor-neutral `harness.yaml` format, validated by [JSON Schema](https://harnessprotocol.ai), that captures the complete operational context for an AI coding agent: plugins, MCP servers, environment requirements, instructions, and permissions.
 
 ## How harness-kit relates to it
 
@@ -19,6 +19,6 @@ The harness-kit desktop app treats `harness.yaml` as a first-class element. The 
 
 ## Links
 
-- [Harness Protocol spec](https://harnessprotocol.io) — full specification, including architecture, field reference, security model, and plugin manifest format
-- [JSON Schema](https://harnessprotocol.io/schema/v1/harness.schema.json) — machine-readable validation schema
+- [Harness Protocol spec](https://harnessprotocol.ai) — full specification, including architecture, field reference, security model, and plugin manifest format
+- [JSON Schema](https://harnessprotocol.ai/schema/v1/harness.schema.json) — machine-readable validation schema
 - [harness-kit](https://github.com/harnessprotocol/harness-kit) — reference implementation

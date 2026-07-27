@@ -255,11 +255,16 @@ jobs:
           git clone "https://x-access-token:${{ secrets.TAP_PAT }}@github.com/harnessprotocol/homebrew-tap.git" tap
           cd tap
 
-          # Update Formula
+          # Update Formula — copy this repo's tracked formula in first (single
+          # source of truth for the recipe itself), then stamp version/sha256.
+          # Mirrors nightly.yml's pattern; previously this stanza only sed'd
+          # the tap's own drifted copy and never synced from ../homebrew/.
+          cp ../homebrew/Formula/harness-kit.rb Formula/harness-kit.rb
           sed -i "s/version \"[^\"]*\"/version \"${VERSION}\"/" Formula/harness-kit.rb
           sed -i "s/sha256 \"[^\"]*\"/sha256 \"${CLI_SHA}\"/" Formula/harness-kit.rb
 
           # Update Cask
+          cp ../homebrew/Casks/harness-kit.rb Casks/harness-kit.rb
           sed -i "s/version \"[^\"]*\"/version \"${VERSION}\"/" Casks/harness-kit.rb
           # Only replace the sha256 line (not URL which also has quotes)
           awk -v sha="$DMG_SHA" '

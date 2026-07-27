@@ -50,6 +50,38 @@ else:
     print('All versions aligned.')
 "
 
+echo "== Check description alignment =="
+python3 -c "
+import json, sys
+
+marketplace = json.load(open('.claude-plugin/marketplace.json'))
+errors = []
+
+for plugin in marketplace['plugins']:
+    name = plugin['name']
+    mp_description = plugin['description']
+    manifest_path = f'plugins/{name}/.claude-plugin/plugin.json'
+
+    try:
+        manifest = json.load(open(manifest_path))
+    except FileNotFoundError:
+        continue  # already reported by the version-alignment check above
+
+    pj_description = manifest.get('description', '(missing)')
+    if mp_description != pj_description:
+        errors.append(f'{name}: marketplace.json and plugin.json descriptions differ')
+        errors.append(f'  marketplace.json: {mp_description!r}')
+        errors.append(f'  plugin.json:      {pj_description!r}')
+
+if errors:
+    print('Description mismatch:')
+    for e in errors:
+        print(f'  {e}')
+    sys.exit(1)
+else:
+    print('All descriptions aligned.')
+"
+
 echo "== Check all plugins registered =="
 python3 -c "
 import json, sys, os, glob
