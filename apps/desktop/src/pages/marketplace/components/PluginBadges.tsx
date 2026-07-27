@@ -1,13 +1,14 @@
 import { StatusChip, type StatusChipVariant } from "@harness-kit/ui";
-import type { Component, ComponentType } from "@harness-kit/shared";
+import type { TrustTier } from "@harness-kit/marketplace-data";
 
-const TRUST_VARIANT: Record<Component["trust_tier"], StatusChipVariant> = {
-  official: "subtle",
+const TRUST_VARIANT: Record<TrustTier, StatusChipVariant> = {
   verified: "success",
-  community: "subtle",
+  caution: "warning",
+  warning: "danger",
+  unscanned: "subtle",
 };
 
-export function TrustBadge({ tier }: { tier: Component["trust_tier"] }) {
+export function TrustBadge({ tier }: { tier: TrustTier }) {
   return (
     <StatusChip variant={TRUST_VARIANT[tier]} hideDot>
       {tier}
@@ -15,10 +16,10 @@ export function TrustBadge({ tier }: { tier: Component["trust_tier"] }) {
   );
 }
 
-export function TypeBadge({ type }: { type: ComponentType }) {
+export function CategoryBadge({ name }: { name: string }) {
   return (
     <StatusChip variant="subtle" hideDot>
-      {type}
+      {name}
     </StatusChip>
   );
 }

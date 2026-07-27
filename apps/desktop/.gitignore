@@ -1,2 +1,6 @@
 playwright-report/
 test-results/
+
+# Build output from @harness-kit/marketplace-data (regenerated in CI) — same
+# pattern as website/.gitignore's marketplace.generated.json
+src/lib/marketplace/marketplace.generated.json

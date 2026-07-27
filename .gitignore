@@ -32,9 +32,6 @@ website/.source/
 
 *.tsbuildinfo
 
-# Supabase local
-apps/marketplace/supabase/.temp/
-
 # Shared package build output
 packages/shared/dist/
 

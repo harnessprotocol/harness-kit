@@ -199,6 +199,12 @@ jobs:
           pnpm --filter @harness-kit/design-tokens build
           pnpm --filter @harness-kit/ui build
 
+      # The desktop Marketplace page imports a static marketplace JSON generated
+      # from git (gitignored build output) — same pattern as the website. Generate
+      # it before anything that touches the desktop frontend runs below.
+      - name: Generate marketplace data
+        run: pnpm --filter @harness-kit/marketplace-data generate -- --out ../../apps/desktop/src/lib/marketplace/marketplace.generated.json
+
       - name: TypeScript check (desktop)
         run: pnpm --filter harness-kit-desktop exec tsc --noEmit
 

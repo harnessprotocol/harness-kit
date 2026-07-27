@@ -3,18 +3,6 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { execSync } from "node:child_process";
 
-// node:crypto is used by @harness-kit/core's Node.js-only compile/check utilities.
-// The desktop never calls these functions; externalize so Vite doesn't try to bundle
-// it for the browser and fail with __vite-browser-external.
-const externalNodeModules = {
-  name: "external-node-builtins",
-  enforce: "pre" as const,
-  resolveId(id: string) {
-    // TypeScript may emit "node:crypto" or "crypto" depending on target/module settings.
-    if (id === "node:crypto" || id === "crypto") return { id, external: true };
-  },
-};
-
 const BUILD_GIT_SHA = (() => {
   try { return execSync("git rev-parse HEAD").toString().trim(); }
   catch { return "unknown"; }
@@ -27,7 +15,7 @@ const BUILD_REPO_PATH = (() => {
 
 // https://vitejs.dev/config/
 export default defineConfig(async () => ({
-  plugins: [externalNodeModules, react(), tailwindcss()],
+  plugins: [react(), tailwindcss()],
   define: {
     "import.meta.env.VITE_GIT_SHA": JSON.stringify(BUILD_GIT_SHA),
     "import.meta.env.VITE_REPO_PATH": JSON.stringify(BUILD_REPO_PATH),
