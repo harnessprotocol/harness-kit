@@ -1,20 +1,21 @@
 # harness-sync
 
-Syncs AI tool configurations bidirectionally across Claude Code, Cursor, and GitHub Copilot. Inventories installed skills, instruction blocks, and MCP server configs on each detected platform, reports what's out of sync, and lets you push or pull changes.
+Syncs AI tool configurations bidirectionally across all 8 supported targets: Claude Code, Cursor, GitHub Copilot, Codex, OpenCode, Windsurf, Gemini CLI, and Junie. Inventories installed skills, instruction blocks, and MCP server configs on each detected platform, reports what's out of sync, and lets you push or pull changes.
 
 ## Usage
 
 ```
 /harness-sync
 /harness-sync --target cursor
+/harness-sync --target windsurf
 ```
 
 Without a flag, detects all platforms present in the project and compares them.
 
 ## What It Does
 
-1. Detects which AI tools are configured in the project (Claude Code, Cursor, Copilot)
-2. Inventories skills, MCP configs, and harness instruction blocks on each platform
+1. Detects which AI tools are configured in the project (any of the 8 supported targets)
+2. Inventories skills, MCP configs, and harness instruction blocks on each platform — Codex, OpenCode, Windsurf, Gemini CLI, and Junie share one `AGENTS.md`, inventoried once
 3. Reports divergence — what's missing, what differs, what's in sync
 4. Asks which sync direction you want (push or pull)
 5. Detects and surfaces conflicts — shows both versions side by side, never overwrites silently
@@ -25,7 +26,7 @@ Without a flag, detects all platforms present in the project and compares them.
 
 | Flag | Description |
 |------|-------------|
-| `--target <tool>` | Restrict scope to one platform: `claude-code`, `cursor`, or `copilot`. Useful when you only want to push from one platform to another specific one, ignoring unrelated platforms. All platforms are still inventoried for the divergence report. |
+| `--target <tool>` | Restrict scope to one platform: `claude-code`, `cursor`, `copilot`, `codex`, `opencode`, `windsurf`, `gemini`, or `junie`. Useful when you only want to push from one platform to another specific one, ignoring unrelated platforms. All platforms are still inventoried for the divergence report. |
 
 ## Divergence Report
 
@@ -49,9 +50,9 @@ Instructions:
 
 ## Sync Directions
 
-**Push** — pick one platform as the source of truth, write its content to the others. Uses harness-compile logic for consistent output (marker blocks, frontmatter, MCP merging).
+**Push** — pick any detected platform as the source of truth, write its content to the others. Uses harness-compile logic for consistent output (marker blocks, frontmatter, MCP merging).
 
-**Pull** — read native changes from Cursor or Copilot config files, merge them back into `harness.yaml`, then recompile everything. This modifies your `harness.yaml` source of truth — you'll be asked to confirm before any changes are written.
+**Pull** — read native changes from any non-Claude-Code platform's config files (Cursor, Copilot, or the shared `AGENTS.md` for Codex/OpenCode/Windsurf/Gemini CLI/Junie), merge them back into `harness.yaml`, then recompile everything. This modifies your `harness.yaml` source of truth — you'll be asked to confirm before any changes are written.
 
 ## Conflict Handling
 
@@ -85,7 +86,11 @@ Skills are tracked by install location and labelled accordingly:
 | `.cursor/skills/` | `(local)` | Cursor project-local skill file |
 | `~/.cursor/skills/` | `(global)` | Cursor global skills (if directory exists) |
 | `.github/skills/` | `(local)` | Copilot project-local skill file |
-| `.agents/skills/` | `(shared)` | agentskills.io shared location (Cursor + Copilot) |
+| `.agents/skills/` | `(shared)` | Codex's skill directory, also the agentskills.io shared location |
+| `.opencode/skills/` | `(local)` | OpenCode project-local skill file |
+| `.windsurf/skills/` | `(local)` | Windsurf project-local skill file |
+| `.gemini/skills/` | `(local)` | Gemini CLI project-local skill file |
+| `.junie/skills/` | `(local)` | Junie project-local skill file |
 
 Global and project-local installs are not interchangeable — the sync report distinguishes them.
 

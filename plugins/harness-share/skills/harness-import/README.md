@@ -17,7 +17,7 @@ Without an argument, looks for `harness.yaml` in the current directory.
 2. Asks how you want to proceed — all, pick individually, or get more details first
 3. Generates the complete Claude Code install command sequence for your selection
 
-If Cursor or GitHub Copilot are detected in the project, it also offers to set them up: copying skill files, writing MCP server configs, and compiling instructions to each tool's native format — all from the same `harness.yaml`.
+If any other supported tool is detected in the project — Cursor, GitHub Copilot, Codex, OpenCode, Windsurf, Gemini CLI, or Junie — it also offers to set them up: copying skill files, writing MCP server configs, and compiling instructions to each tool's native format — all from the same `harness.yaml`.
 
 ## Example Output
 
