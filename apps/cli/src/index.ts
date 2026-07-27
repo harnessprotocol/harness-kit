@@ -32,7 +32,7 @@ if (process.env.NO_COLOR !== undefined || process.env.TERM === "dumb") {
 const program = new Command();
 
 program
-  .name("harness")
+  .name("harness-kit")
   .description("Compile and validate harness.yaml configurations")
   .version(__CLI_VERSION__)
   .option("--no-color", "Disable colored output")
@@ -64,7 +64,7 @@ program
   .argument("[path]", "Path to harness.yaml", "harness.yaml")
   .option(
     "--target <targets>",
-    "Target platforms: claude-code, cursor, copilot (comma-separated), or all",
+    "Target platforms: claude-code, cursor, copilot, codex, opencode, windsurf, gemini, junie (comma-separated), or all",
   )
   .option("--dry-run", "Preview output without writing files")
   .option("--clean", "Remove orphaned marker blocks from previous compilations")

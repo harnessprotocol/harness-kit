@@ -38,7 +38,7 @@ const fontStack = '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-ser
 // ── Install docs URLs per agent id ──────────────────────────
 
 const INSTALL_DOCS: Record<string, string> = {
-  claude: "https://docs.anthropic.com/claude-code",
+  claude: "https://code.claude.com/docs",
   codex: "https://github.com/openai/codex",
   copilot: "https://docs.github.com/copilot/using-github-copilot/using-github-copilot-in-the-command-line",
   "cursor-agent": "https://www.cursor.com/downloads",

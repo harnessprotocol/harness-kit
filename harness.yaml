@@ -42,11 +42,14 @@ plugins:
 
 # GitHub access for PR/issue workflows (review, open-pr, merge-pr, pr-sweep).
 # The token comes from the environment (see env below); no secret in this file.
+# Uses GitHub's official server (github/github-mcp-server) via its published
+# Docker image — the @modelcontextprotocol/server-github npx package this used
+# to run is archived (modelcontextprotocol/servers-archived); requires Docker.
 mcp-servers:
   github:
     transport: stdio
-    command: npx
-    args: ["-y", "@modelcontextprotocol/server-github"]
+    command: docker
+    args: ["run", "-i", "--rm", "-e", "GITHUB_PERSONAL_ACCESS_TOKEN", "ghcr.io/github/github-mcp-server"]
 
 env:
   - name: GITHUB_PERSONAL_ACCESS_TOKEN
