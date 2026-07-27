@@ -6,6 +6,16 @@ pub struct ClaudeAccountInfo {
     pub auto_mode_available: bool,
 }
 
+// Auto mode is available on all subscription plans (Pro, Max, Team,
+// Enterprise, API) per https://code.claude.com/docs/en/permission-modes —
+// the only additional gate is a Team/Enterprise org Owner explicitly
+// enabling it, which `claude auth status` does not expose. We can't detect
+// that flag client-side; the CLI itself rejects `--permission-mode auto` at
+// startup if an admin has disabled it, so the failure surfaces there rather
+// than being predicted here. Previously this gated on subscriptionType ==
+// team/enterprise/business or authMethod == apiKey, which wrongly hid Auto
+// mode from every Pro/Max user.
+
 /// Common install locations for the `claude` CLI.
 /// macOS GUI apps (Tauri) launch with a minimal PATH that often omits
 /// Homebrew, npm global, and nvm directories — so we probe known paths first.
@@ -64,13 +74,9 @@ pub async fn detect_claude_account() -> ClaudeAccountInfo {
     let sub_type = json.get("subscriptionType")
         .and_then(|v| v.as_str())
         .map(String::from);
-    let auth_method = json.get("authMethod").and_then(|v| v.as_str()).unwrap_or("");
 
-    // Auto mode requires team, enterprise, or API key — not available on pro/max.
-    let auto_available = logged_in && (
-        auth_method == "apiKey" ||
-        matches!(sub_type.as_deref(), Some("team") | Some("enterprise") | Some("business"))
-    );
+    // Available on all plans when logged in — see the module doc comment above.
+    let auto_available = logged_in;
 
     ClaudeAccountInfo { logged_in, subscription_type: sub_type, auto_mode_available: auto_available }
 }
