@@ -113,31 +113,42 @@ After generating the Claude Code install commands, scan the current directory fo
 
 **Cursor** is present if any of these exist: `.cursor/`, `.cursor/rules/`, `.cursor/mcp.json`, `.cursor/skills/`
 **GitHub Copilot** is present if any of these exist: `.github/`, `.github/skills/`, `.vscode/mcp.json`
+**Codex** is present if `.codex/` exists
+**OpenCode** is present if `opencode.json` or `.opencode/` exists
+**Windsurf** is present if `.windsurf/` exists
+**Gemini CLI** is present if `.gemini/` exists
+**Junie** is present if `.junie/` exists
 
 If `.github/` is the only Copilot indicator present, ask the user: "I found a `.github/` directory but no other Copilot indicators. Are you using GitHub Copilot in this project?" Only include Copilot in the multi-select menu if the user confirms.
 
-If neither platform is detected, skip this step silently — do not ask.
+A bare `AGENTS.md` with none of the tool-specific directories above is an ambiguous signal, not a confident match for any one of Codex/OpenCode/Windsurf/Gemini CLI/Junie — if that's all you find, ask which of those five the user actually uses rather than offering all of them.
+
+If no platforms are detected, skip this step silently — do not ask.
 
 If one or more platforms are detected, show them and ask which to include:
 
-> "I detected the following other AI tools in this project: Cursor, GitHub Copilot. Which would you like to set up?
-> 1. Both
-> 2. Cursor only
-> 3. Copilot only
-> 4. Neither (skip)"
+> "I detected the following other AI tools in this project: Cursor, GitHub Copilot, Windsurf. Which would you like to set up?
+> 1. All detected
+> 2. Pick a subset
+> 3. Neither (skip)"
 
 For each confirmed platform, copy installed skill SKILL.md files:
 - Only copy skills that have an installed SKILL.md at `~/.claude/skills/<name>/SKILL.md`
 - Only copy skill files for the plugins the user selected in Steps 3–4. Do not copy all installed skills — only the selected subset.
 - Cursor: copy to `.cursor/skills/<name>/SKILL.md`
 - Copilot: copy to `.github/skills/<name>/SKILL.md`
+- Codex: copy to `.agents/skills/<name>/SKILL.md`
+- OpenCode: copy to `.opencode/skills/<name>/SKILL.md`
+- Windsurf: copy to `.windsurf/skills/<name>/SKILL.md`
+- Gemini CLI: copy to `.gemini/skills/<name>/SKILL.md`
+- Junie: copy to `.junie/skills/<name>/SKILL.md`
 
 **Frontmatter adaptation when copying:**
 - If the source SKILL.md frontmatter has a `dependencies` field, rename it to `compatibility`
 - Enforce that the `name` field is lowercase letters and hyphens only, max 64 characters. Truncate and slugify if needed.
 - If `description` exceeds 1024 characters, truncate at the last word boundary before 1024 characters and append `…`
 
-Create parent directories before writing (`.cursor/skills/<name>/`, `.github/skills/<name>/`, `.github/instructions/`).
+Create parent directories before writing (each confirmed platform's skill directory, plus `.github/instructions/` if Copilot behavioral instructions are also being applied).
 
 Record which platforms were confirmed — Steps 6 and 8 will use this.
 
@@ -154,8 +165,12 @@ If yes, write or update `.mcp.json` in the current directory with the server def
 If platforms were confirmed in Step 5.5, also write to platform-specific MCP configs:
 - Cursor confirmed: also write `.cursor/mcp.json`
 - Copilot confirmed: also write `.vscode/mcp.json`
+- OpenCode confirmed: also write `opencode.json`
+- Gemini CLI confirmed: also write `.gemini/settings.json`
+- Junie confirmed: also write `.junie/mcp/mcp.json`
+- Codex or Windsurf confirmed: **skip** — neither has a project-level MCP file (Codex uses `~/.codex/config.toml`, Windsurf uses a global `~/.codeium/windsurf/mcp_config.json`). Print the same warning the compiler uses rather than writing anything: `Warning: <Tool>: MCP config is global-only, skipping project-level write`
 
-All three files use the same `mcpServers` JSON structure:
+All project-level files use the same `mcpServers` JSON structure:
 
 ```json
 {
@@ -178,7 +193,7 @@ Warning: <target-config-file> already defines server '<server-name>'. Existing c
 ```
 For example: `Warning: .cursor/mcp.json already defines server 'postgres'. Existing config kept.`
 
-Create parent directories before writing (`.cursor/`, `.vscode/`).
+Create parent directories before writing (`.cursor/`, `.vscode/`, `.gemini/`, `.junie/mcp/` — `opencode.json` has no subdirectory to create).
 
 If the server command contains `${VAR}` references, note which env vars are needed (the `env:` section will cover them in Step 7).
 
@@ -211,7 +226,7 @@ If the config has an `instructions:` section and `import-mode: merge` (or if imp
 If yes, append to the file the user specifies. If `import-mode: replace` is set, warn:
 > "This config requests full replacement of existing instructions. That will overwrite your current CLAUDE.md/AGENT.md. Are you sure?"
 
-If Cursor or Copilot was confirmed in Step 5.5, also compile instructions to those platforms using the same `import-mode` from `harness.yaml`. Use `metadata.name` from the harness.yaml as `{name}` (or `default` if absent). Wrap all generated content in section markers (exact format — do not deviate):
+If any platform was confirmed in Step 5.5, also compile instructions to those platforms using the same `import-mode` from `harness.yaml`. Use `metadata.name` from the harness.yaml as `{name}` (or `default` if absent). Wrap all generated content in section markers (exact format — do not deviate):
 
 ```
 <!-- BEGIN harness:{name}:{slot} -->
@@ -259,16 +274,18 @@ applyTo: "**"
 
 Then content from `instructions.behavioral` in section markers `<!-- BEGIN harness:{name}:behavioral -->` / `<!-- END harness:{name}:behavioral -->`.
 
-**Identity slot:** Omit for both Cursor and Copilot — the `identity` slot is Claude Code-only.
+**Codex / OpenCode / Windsurf / Gemini CLI / Junie operational** — these five all read from one shared `AGENTS.md` at the project root. Write it **once**, no matter how many of the five were confirmed — do not write it multiple times or produce per-tool variants. Unlike Cursor and Copilot, `AGENTS.md` gets **no frontmatter** — the marker block goes straight into the file. This family has no `behavioral` or `identity` equivalent file at all; omit both slots for all five, the same as you would omit `identity` for Cursor and Copilot.
 
-Apply the same import-mode behavior for all Cursor and Copilot files:
+**Identity slot:** Omit for every non-Claude-Code target — `identity` is Claude Code-only.
+
+Apply the same import-mode behavior for every non-Claude-Code file:
 - **`merge`** (default): If the file exists and contains matching markers, update the content between them. If no markers exist yet, append the marker block at the end (creating the file if it does not exist).
-- **`replace`**: Before overwriting any Cursor or Copilot instruction file, warn the user and require confirmation, the same as for CLAUDE.md:
+- **`replace`**: Before overwriting any non-Claude-Code instruction file, warn the user and require confirmation, the same as for CLAUDE.md:
   > "This config requests full replacement of existing [file]. That will overwrite your current [file] content. Are you sure?"
   Never apply `replace` without confirmation.
 - **`skip`**: Do not write or modify the file.
 
-Create parent directories before writing (`.cursor/rules/`, `.github/`, `.github/instructions/`).
+Create parent directories before writing (`.cursor/rules/`, `.github/`, `.github/instructions/` — `AGENTS.md` lives at the project root, so it needs no directory creation).
 
 ---
 
@@ -300,9 +317,19 @@ Cross-platform setup complete:
     Skills:  explain, research  (.github/skills/)
     MCP:     (none declared in harness.yaml)
     Instructions:  copilot-instructions.md (operational), behavioral.instructions.md (behavioral)
+
+  Windsurf:
+    Skills:  explain, research  (.windsurf/skills/)
+    MCP:     global-only, skipped (see warning above)
+    Instructions:  AGENTS.md (operational, shared with Gemini CLI below)
+
+  Gemini CLI:
+    Skills:  explain, research  (.gemini/skills/)
+    MCP:     postgres  (.gemini/settings.json)
+    Instructions:  AGENTS.md (operational, shared with Windsurf above)
 ```
 
-Omit any row where nothing was written for that category (e.g., omit `MCP:` if the harness has no `mcp-servers:` section). Omit a platform block entirely if that platform was not confirmed or nothing was written for it. If cross-platform setup was skipped (Step 5.5 produced no confirmations), do not print this report.
+Omit any row where nothing was written for that category (e.g., omit `MCP:` if the harness has no `mcp-servers:` section). Omit a platform block entirely if that platform was not confirmed or nothing was written for it. When two or more confirmed platforms share `AGENTS.md`, note the sharing explicitly in each one's `Instructions:` line rather than implying five separate files were written. If cross-platform setup was skipped (Step 5.5 produced no confirmations), do not print this report.
 
 ---
 
@@ -315,12 +342,16 @@ Omit any row where nothing was written for that category (e.g., omit `MCP:` if t
 | Skipping the marketplace add commands | They must come before the plugin installs, or the installs will fail |
 | Ignoring `mcp-servers`, `env`, `instructions` sections | Always check for these sections and handle them in the appropriate steps |
 | Prompting the user for sensitive env var values | Never ask for secret values — just tell the user which vars to set and where |
-| Asking about cross-platform setup when no other platforms are detected | Only prompt for cross-platform setup if Cursor or Copilot indicators are found; skip silently otherwise |
+| Asking about cross-platform setup when no other platforms are detected | Only prompt for cross-platform setup if at least one indicator is found; skip silently otherwise |
 | Copying skill SKILL.md files that aren't installed | Only copy skills that have a SKILL.md at `~/.claude/skills/<name>/SKILL.md` |
 | Using `mcp_servers` or `mcp-servers` in MCP JSON files | JSON key must be `mcpServers` (camelCase) in all target files |
-| Silently skipping MCP server key collisions in Cursor/Copilot configs | Always warn when a server name already exists in the target file — never skip silently |
+| Silently skipping MCP server key collisions | Always warn when a server name already exists in the target file — never skip silently |
+| Writing a project-level MCP file for Codex or Windsurf | Both are global-only for MCP — warn instead of inventing a file |
 | Omitting Cursor `.mdc` frontmatter | Always add `description`, `globs`, `alwaysApply` frontmatter — it is mandatory for Cursor to recognize the file |
 | Omitting Copilot `copilot-instructions.md` frontmatter | Always add `applyTo: "**"` frontmatter to Copilot instructions files |
+| Adding frontmatter to `AGENTS.md` | It's plain markdown — never prepend YAML frontmatter to it |
+| Writing `AGENTS.md` multiple times when several of its family are confirmed | It's one shared file — write it once even with all five confirmed |
 | Using wrong section marker format | Markers must be exact: `<!-- BEGIN harness:{name}:{slot} -->` — any deviation breaks merge logic |
-| Skipping parent directory creation | Always create parent dirs (`.cursor/skills/<name>/`, `.github/skills/<name>/`, `.cursor/rules/`, `.vscode/`) before writing |
+| Treating a bare `AGENTS.md` match as confident | It's ambiguous across 5 tools — ask which one before assuming |
+| Skipping parent directory creation | Always create parent dirs (`.cursor/skills/<name>/`, `.github/skills/<name>/`, `.cursor/rules/`, `.vscode/`, `.gemini/`, `.junie/mcp/`) before writing |
 | Printing the cross-platform report when nothing was set up | Only print Step 9.5 report if at least one platform was confirmed in Step 5.5 |

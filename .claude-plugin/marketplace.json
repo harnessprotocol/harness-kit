@@ -110,8 +110,8 @@
     {
       "name": "harness-share",
       "source": "./plugins/harness-share",
-      "description": "Compile, export, import, and sync harness configurations across Claude Code, Cursor, and GitHub Copilot",
-      "version": "0.3.1",
+      "description": "Compile, export, import, and sync harness configurations across Claude Code, Cursor, GitHub Copilot, Codex, OpenCode, Windsurf, Gemini CLI, and Junie",
+      "version": "0.4.0",
       "author": { "name": "harnessprotocol" },
       "license": "Apache-2.0",
       "category": "productivity",
