@@ -52,12 +52,15 @@ jobs:
         # tracked via Dependabot rather than blocking the release train.
         run: pnpm audit --audit-level=high
 
-      # The website build (part of the turbo graph) consumes a static marketplace
-      # JSON generated from git; generate it before build+test runs.
+      # The website AND the desktop app each import their own static marketplace
+      # JSON generated from git (gitignored build output). This job's turbo graph
+      # builds both, so generate both before "Build and test all packages" runs.
+      # Mirrors validate.yml's test-all job.
       - name: Generate marketplace data
         run: |
           pnpm --filter @harness-kit/shared --filter @harness-kit/core build
           pnpm --filter @harness-kit/marketplace-data generate --strict
+          pnpm --filter @harness-kit/marketplace-data generate --strict -- --out ../../apps/desktop/src/lib/marketplace/marketplace.generated.json
 
       # The website also imports a static capability matrix generated straight
       # from @harness-kit/core's adapter registry (gitignored build output).
