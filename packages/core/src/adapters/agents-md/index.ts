@@ -148,10 +148,16 @@ async function exportConfig(
 async function detect(ctx: AdapterContext) {
   const { detectPlatforms } = await import("../../detect/detect-platforms.js");
   const detections = await detectPlatforms(ctx.fs);
-  // First match among the family wins — detect() returns a single result per
-  // adapter; per-tool disambiguation within the family is future work.
-  const match = detections.find((d) => LEGACY_TARGETS.includes(d.platform));
-  return match ?? null;
+  const familyMatches = detections.filter((d) => LEGACY_TARGETS.includes(d.platform));
+  // A confirmed match (a tool-specific directory, not just the shared
+  // AGENTS.md file) always wins over an ambiguous one, regardless of which
+  // comes first in TARGETS order — otherwise e.g. codex's ambiguous-only
+  // AGENTS.md hit could shadow opencode's confirmed opencode.json/.opencode
+  // match just because codex is listed earlier. detect() returns a single
+  // result per adapter; per-tool disambiguation within the family beyond
+  // this is future work.
+  const confirmed = familyMatches.find((d) => !d.needsConfirmation);
+  return confirmed ?? familyMatches[0] ?? null;
 }
 
 /**

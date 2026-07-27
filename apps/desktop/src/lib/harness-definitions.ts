@@ -59,8 +59,9 @@ export const BUILTIN_HARNESSES: HarnessDefinition[] = [
     id: "claude",
     name: "Claude Code",
     command: "claude",
-    protocol: "acp" as const,
-    acpVersion: "1",
+    // Claude Code does not speak ACP natively — it requires the separate
+    // @zed-industries/claude-code-acp adapter package. Don't badge it as
+    // ACP-compatible here; that would overstate what works out of the box.
     buildCommand: (prompt, model, config = DEFAULT_PERMISSION_CONFIG) => {
       const permFlags = buildClaudePermissionFlags(config);
       const parts = ["claude", shellQuote(prompt), ...permFlags];
@@ -123,6 +124,10 @@ export const BUILTIN_HARNESSES: HarnessDefinition[] = [
     id: "gemini",
     name: "Gemini CLI",
     command: "gemini",
+    // Gemini CLI implements the Agent Client Protocol natively (unlike
+    // Claude Code, which needs a separate third-party adapter package).
+    protocol: "acp" as const,
+    acpVersion: "1",
     buildCommand: (prompt, model) => {
       const parts = ["gemini", shellQuote(prompt)];
       if (model) parts.push("--model", shellQuote(model));

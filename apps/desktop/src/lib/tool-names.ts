@@ -8,8 +8,9 @@ export const TOOL_NAMES: { name: string; hint: string; scopeHint?: string; scope
   { name: "Bash",         hint: "Execute shell commands",    scopeHint: "git *",                     scopeLabel: "cmd" },
   { name: "Agent",        hint: "Launch subagent processes" },
   { name: "WebFetch",     hint: "Fetch URLs",                scopeHint: "https://api.github.com/*",  scopeLabel: "url" },
-  { name: "WebSearch",    hint: "Search the web",            scopeHint: "site:docs.anthropic.com *", scopeLabel: "query" },
+  { name: "WebSearch",    hint: "Search the web",            scopeHint: "site:docs.claude.com *",    scopeLabel: "query" },
   { name: "Skill",        hint: "Invoke skills" },
   { name: "NotebookEdit", hint: "Edit Jupyter notebooks",    scopeHint: "~/notebooks/**",            scopeLabel: "path" },
   { name: "LSP",          hint: "Language Server Protocol" },
+  { name: "AskUserQuestion", hint: "Ask multiple-choice questions" },
 ];
