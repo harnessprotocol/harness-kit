@@ -2,7 +2,7 @@
 title: merge-pr
 ---
 
-> **[View in Marketplace →](#)** for install tracking, related plugins, and profiles.
+> **[View in Marketplace →](/marketplace/merge-pr)** for install tracking, related plugins, and profiles.
 
 # merge-pr
 
@@ -47,13 +47,13 @@ Merge it.
 ## Pipeline
 
 ```
-Development ─→ /open-pr ─→ /merge-pr ─→ /deploy-preview ─→ /go-live
+Development ─→ /open-pr ─→ /merge-pr ─→ your deploy pipeline
                               ▲ you are here
 ```
 
 ## Notes
 
 - Works on any open PR — does not require `/open-pr` to have created it
-- Does NOT deploy to any environment — use `/deploy-preview` or `/go-live` after merging
+- Does NOT deploy to any environment — merging is the last step this plugin takes; hand off to your own CI/CD or deploy tooling after
 - Pairs naturally with [open-pr](open-pr) — use `/open-pr` first, then `/merge-pr` when it's ready to land
 

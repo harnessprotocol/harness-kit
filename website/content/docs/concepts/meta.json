@@ -3,7 +3,6 @@
   "pages": [
     "plugins-vs-skills",
     "agents",
-    "agentic-task-execution",
     "memory",
     "secrets-management",
     "cross-harness-portability",

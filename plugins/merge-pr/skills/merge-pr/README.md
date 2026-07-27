@@ -30,7 +30,7 @@ Or tell Claude:
 ## Pipeline
 
 ```
-Development ─→ /open-pr ─→ /merge-pr ─→ /deploy-preview ─→ /go-live
+Development ─→ /open-pr ─→ /merge-pr ─→ your deploy pipeline
                               ▲ you are here
 ```
 
@@ -38,4 +38,4 @@ Development ─→ /open-pr ─→ /merge-pr ─→ /deploy-preview ─→ /go-l
 
 - Requires the `gh` CLI (`brew install gh`, then `gh auth login`)
 - Works on any open PR — does not require `/open-pr` to have created it
-- Does NOT deploy to any environment — use `/deploy-preview` or `/go-live` after merging
+- Does NOT deploy to any environment — merging is the last step this plugin takes; hand off to your own CI/CD or deploy tooling after

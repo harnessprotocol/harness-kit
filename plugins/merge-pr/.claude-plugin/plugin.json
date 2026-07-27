@@ -1,7 +1,7 @@
 {
   "name": "merge-pr",
   "description": "PR merge workflow: verify CI and review status, sync with base branch, confirm, squash merge, and clean up",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "category": "devops",
   "tags": ["pull-request", "ci-cd", "merge", "workflow"],
   "requires": {

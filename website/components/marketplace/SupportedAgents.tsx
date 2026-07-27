@@ -3,7 +3,10 @@ const AGENTS = [
   { name: 'Cursor', abbr: 'CUR' },
   { name: 'GitHub Copilot', abbr: 'COP' },
   { name: 'Codex CLI', abbr: 'CDX' },
+  { name: 'OpenCode', abbr: 'OC' },
+  { name: 'Windsurf', abbr: 'WS' },
   { name: 'Gemini CLI', abbr: 'GEM' },
+  { name: 'JetBrains Junie', abbr: 'JUN' },
 ] as const;
 
 /**

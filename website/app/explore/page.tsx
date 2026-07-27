@@ -55,7 +55,7 @@ const NAV_GROUPS: Group[] = [
         id: 'observatory',
         title: 'Observatory',
         description: 'Every session, every tool call, every minute. See what your AI actually did.',
-        href: '/docs/getting-started/architecture',
+        href: '/docs/apps/observatory',
         accent: 'var(--cat-blue)',
         icon: (
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -123,33 +123,9 @@ const NAV_GROUPS: Group[] = [
     label: 'WORKFLOWS',
     tiles: [
       {
-        id: 'board',
-        title: 'Board',
-        description: 'Agents pick up cards, draft commits, open PRs. You review. Kanban built for AI-first teams.',
-        href: '/docs/plugins/productivity/board',
-        accent: 'var(--cat-purple)',
-        icon: (
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path d="M2 4a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H3a1 1 0 01-1-1V4zM3 9a1 1 0 000 2h6a1 1 0 000-2H3zM3 14a1 1 0 000 2h6a1 1 0 000-2H3zM14 9a1 1 0 000 2h3a1 1 0 000-2h-3zM14 14a1 1 0 000 2h3a1 1 0 000-2h-3z" />
-          </svg>
-        ),
-      },
-      {
-        id: 'roadmap',
-        title: 'Roadmap',
-        description: 'AI-generated quarterly roadmaps and competitor analysis, tied to your board and harness.',
-        href: '/docs/apps/roadmap',
-        accent: 'var(--cat-purple)',
-        icon: (
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-          </svg>
-        ),
-      },
-      {
-        id: 'ai-chat',
+        id: 'command-palette',
         title: 'Command Palette',
-        description: 'Press Cmd+K to navigate anywhere and run actions — or Ask AI to reach the local Ollama chat.',
+        description: 'Press Cmd+K to navigate anywhere and run actions, keyboard-first.',
         href: '/docs/apps/command-palette',
         accent: 'var(--cat-blue)',
         icon: (
@@ -188,7 +164,7 @@ export default function ExplorePage() {
             Explore Harness Kit
           </h1>
           <p className="mx-auto max-w-xl text-base leading-relaxed text-fd-muted-foreground">
-            Eleven surfaces. One keyboard. Everything your AI coding tool forgot to give you.
+            Nine surfaces. One keyboard. Everything your AI coding tool forgot to give you.
           </p>
         </div>
       </section>

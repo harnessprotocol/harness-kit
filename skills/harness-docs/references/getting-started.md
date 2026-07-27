@@ -78,13 +78,14 @@ harness validate
 | orient | None (optional: MCP Memory Server) |
 | capture | None |
 | review | `gh` CLI (PR review only) |
+| rubber-ducky | None |
 | docgen | None |
 | open-pr | `gh` CLI |
 | merge-pr | `gh` CLI |
 | pr-sweep | `gh` CLI, review plugin |
+| dependabot-sweep | `gh` CLI, `GH_TOKEN` |
 | harness-share | None |
 | stats | Python 3.10+ |
-| board | Node.js (board server) |
 | iterm-notify | macOS, iTerm2, terminal-notifier, jq |
 | membrain | Go 1.25+, membrain MCP server |
 | frontend-design | None |
@@ -126,11 +127,6 @@ A SKILL.md specifies: mandatory step ordering, input parsing rules, tool usage p
 
 ## Using with Other Tools
 
-SKILL.md files are plain markdown — copy them into any tool's instruction system:
+SKILL.md files are plain markdown — copy them into any tool's instruction system, or run `/harness-compile` to generate native config automatically for all 8 supported targets (Claude Code, Cursor, Copilot, Codex, OpenCode, Windsurf, Gemini CLI, JetBrains Junie) from one `harness.yaml`.
 
-- **GitHub Copilot** — Copy to `.github/copilot-instructions.md` or install via `copilot plugin install harnessprotocol/harness-kit`
-- **Cursor** — Copy to `.cursor/rules/<name>.mdc`
-- **Windsurf** — Paste into `.windsurfrules`
-- **VS Code Copilot** — Reads `CLAUDE.md` natively via `chat.useClaudeMdFile` setting
-
-See `cross-harness.md` in this references directory for full details.
+See `cross-harness.md` in this references directory for full per-tool details, including manual fallback steps.

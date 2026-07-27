@@ -9,7 +9,7 @@ const MOCK_PLUGINS = getAllPlugins()
   .slice(0, 6)
   .map((p) => ({ name: p.name, desc: p.description }));
 
-type SectionId = 'harness' | 'marketplace' | 'observatory' | 'agents' | 'comparator' | 'security' | 'parity' | 'board' | 'roadmap' | 'ai-chat' | 'memory';
+type SectionId = 'harness' | 'marketplace' | 'observatory' | 'agents' | 'comparator' | 'security' | 'parity';
 
 interface DesktopMockProps {
   interactive?: boolean;
@@ -99,52 +99,6 @@ const SECTIONS = [
           <svg viewBox="0 0 20 20" fill="currentColor">
             <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
             <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-          </svg>
-        ),
-      },
-    ],
-  },
-  {
-    group: 'WORKFLOWS',
-    items: [
-      {
-        id: 'board',
-        label: 'Board',
-        title: 'Board',
-        icon: (
-          <svg viewBox="0 0 20 20" fill="currentColor">
-            <path d="M2 4a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H3a1 1 0 01-1-1V4zM3 9a1 1 0 000 2h6a1 1 0 000-2H3zM3 14a1 1 0 000 2h6a1 1 0 000-2H3zM14 9a1 1 0 000 2h3a1 1 0 000-2h-3zM14 14a1 1 0 000 2h3a1 1 0 000-2h-3z" />
-          </svg>
-        ),
-      },
-      {
-        id: 'roadmap',
-        label: 'Roadmap',
-        title: 'Roadmap',
-        icon: (
-          <svg viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
-          </svg>
-        ),
-      },
-      {
-        id: 'ai-chat',
-        label: 'AI Chat',
-        title: 'AI Chat',
-        icon: (
-          <svg viewBox="0 0 20 20" fill="currentColor">
-            <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z" />
-            <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z" />
-          </svg>
-        ),
-      },
-      {
-        id: 'memory',
-        label: 'Memory',
-        title: 'Memory — Graph',
-        icon: (
-          <svg viewBox="0 0 20 20" fill="currentColor">
-            <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
           </svg>
         ),
       },
@@ -475,106 +429,6 @@ export function DesktopMock({
             </table>
           </div>
 
-          {/* Board */}
-          <div className={`${styles.pane} ${activeSection === 'board' ? styles.paneActive : ''}`}>
-            <div className={styles.paneTitle}>Board</div>
-            <div className={styles.paneSubtitle}>harness-kit · feat/docs-revamp</div>
-            <div className={styles.boardCols}>
-              <div className={styles.boardCol}>
-                <div className={styles.boardColTitle}>
-                  Backlog <span className={styles.boardColCount}>4</span>
-                </div>
-                <div className={styles.boardCard}><span className={`${styles.boardTag} ${styles.boardTagFeat}`}>feat</span><div>Memory v2 — edge weights</div></div>
-                <div className={styles.boardCard}><span className={`${styles.boardTag} ${styles.boardTagFix}`}>fix</span><div>YAML colon-space escape</div></div>
-                <div className={styles.boardCard}><span className={`${styles.boardTag} ${styles.boardTagDocs}`}>docs</span><div>Add Windsurf setup guide</div></div>
-                <div className={styles.boardCard}><span className={`${styles.boardTag} ${styles.boardTagChore}`}>chore</span><div>Bump Tauri to 2.4</div></div>
-              </div>
-              <div className={styles.boardCol}>
-                <div className={styles.boardColTitle}>
-                  In progress <span className={styles.boardColCount}>2</span>
-                </div>
-                <div className={styles.boardCard}><span className={`${styles.boardTag} ${styles.boardTagFeat}`}>feat</span><div>Docs revamp — hero + explainer</div></div>
-                <div className={styles.boardCard}><span className={`${styles.boardTag} ${styles.boardTagFix}`}>fix</span><div>Auth token refresh race</div></div>
-              </div>
-              <div className={styles.boardCol}>
-                <div className={styles.boardColTitle}>
-                  Done <span className={styles.boardColCount}>3</span>
-                </div>
-                <div className={styles.boardCard}><span className={`${styles.boardTag} ${styles.boardTagFeat}`}>feat</span><div>Explore hub · 11 surfaces</div></div>
-                <div className={styles.boardCard}><span className={`${styles.boardTag} ${styles.boardTagFeat}`}>feat</span><div>Cyan-blue palette rollout</div></div>
-                <div className={styles.boardCard}><span className={`${styles.boardTag} ${styles.boardTagDocs}`}>docs</span><div>FAQ rewrite</div></div>
-              </div>
-            </div>
-          </div>
-
-          {/* Roadmap */}
-          <div className={`${styles.pane} ${activeSection === 'roadmap' ? styles.paneActive : ''}`}>
-            <div className={styles.paneTitle}>Roadmap</div>
-            <div className={styles.paneSubtitle}>harness-kit · 2026</div>
-            {[
-              { label: "Q1 '26", pct: 100, planned: false, status: 'shipped',     cls: styles.roadmapStatusLive },
-              { label: "Q2 '26", pct: 62,  planned: false, status: 'in progress', cls: styles.roadmapStatusBuilding },
-              { label: "Q3 '26", pct: 18,  planned: true,  status: 'planned',     cls: '' },
-              { label: "Q4 '26", pct: 5,   planned: true,  status: 'ideas',       cls: '' },
-            ].map((row) => (
-              <div key={row.label} className={styles.roadmapRow}>
-                <div className={styles.roadmapLabel}>{row.label}</div>
-                <div className={styles.roadmapBar}>
-                  <div
-                    className={`${styles.roadmapFill} ${row.planned ? styles.roadmapFillPlanned : ''}`}
-                    style={{ width: `${row.pct}%` }}
-                  />
-                </div>
-                <div className={`${styles.roadmapStatus} ${row.cls}`}>{row.status}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* AI Chat */}
-          <div className={`${styles.pane} ${activeSection === 'ai-chat' ? styles.paneActive : ''}`}>
-            <div className={`${styles.chatMsg} ${styles.chatMsgUser}`}>what&apos;s in my harness right now?</div>
-            <div className={`${styles.chatMsg} ${styles.chatMsgBot}`}>4 plugins, 3 MCP servers, 2 hooks, 3 skills — want me to list them?</div>
-            <div className={`${styles.chatMsg} ${styles.chatMsgUser}`}>yeah. also add review plugin</div>
-            <div className={`${styles.chatMsg} ${styles.chatMsgBot}`}>
-              installed <code style={{ fontSize: 11, padding: '1px 5px' }}>review@harness-kit</code>. harness.yaml updated. here&apos;s the full list:<br /><br />
-              plugins: research, orient, explain, review<br />
-              mcp: filesystem, memory, grafana<br />
-              hooks: pre-commit, pre-push
-            </div>
-            <div className={`${styles.chatMsg} ${styles.chatMsgUser}`}>commit it</div>
-            <div className={`${styles.chatMsg} ${styles.chatMsgBot}`}>drafting commit message…</div>
-          </div>
-
-          {/* Memory */}
-          <div className={`${styles.pane} ${activeSection === 'memory' ? styles.paneActive : ''}`} style={{ position: 'relative' }}>
-            <div className={styles.memoryGraphBg} />
-            <div className={styles.memoryNodes}>
-              {/* SVG edges — rendered before nodes so they appear behind */}
-              <svg
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none' }}
-                aria-hidden="true"
-              >
-                {/* harness → plugin */}
-                <line x1="18%" y1="15%" x2="58%" y2="12%" stroke="rgba(148,163,184,0.35)" strokeWidth="1" />
-                {/* harness → skill */}
-                <line x1="18%" y1="15%" x2="36%" y2="42%" stroke="rgba(148,163,184,0.35)" strokeWidth="1" />
-                {/* plugin → skill */}
-                <line x1="58%" y1="12%" x2="36%" y2="42%" stroke="rgba(148,163,184,0.35)" strokeWidth="1" />
-                {/* skill → MCP */}
-                <line x1="36%" y1="42%" x2="72%" y2="48%" stroke="rgba(122,139,255,0.40)" strokeWidth="1" />
-                {/* skill → hook */}
-                <line x1="36%" y1="42%" x2="12%" y2="68%" stroke="rgba(168,85,247,0.35)" strokeWidth="1" />
-                {/* skill → CLAUDE.md */}
-                <line x1="36%" y1="42%" x2="50%" y2="72%" stroke="rgba(16,185,129,0.35)" strokeWidth="1" />
-              </svg>
-              <div className={styles.memoryNode} style={{ left: '18%', top: '15%' }}>harness</div>
-              <div className={`${styles.memoryNode} ${styles.memoryNodeAltC}`} style={{ left: '58%', top: '12%' }}>plugin</div>
-              <div className={styles.memoryNode} style={{ left: '36%', top: '42%' }}>skill</div>
-              <div className={`${styles.memoryNode} ${styles.memoryNodeAltA}`} style={{ left: '72%', top: '48%' }}>MCP</div>
-              <div className={`${styles.memoryNode} ${styles.memoryNodeAltB}`} style={{ left: '12%', top: '68%' }}>hook</div>
-              <div className={`${styles.memoryNode} ${styles.memoryNodeAltC}`} style={{ left: '50%', top: '72%' }}>CLAUDE.md</div>
-            </div>
-          </div>
         </div>
       </div>
     </div>

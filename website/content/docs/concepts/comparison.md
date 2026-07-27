@@ -38,7 +38,7 @@ harness-kit doesn't do runtime communication. It defines the agent's environment
 
 ## Claude Agent SDK
 
-The [Claude Agent SDK](https://docs.anthropic.com/en/docs/agents) is Anthropic's toolkit for building applications powered by Claude: tool use, multi-turn conversation, agent orchestration. It's a developer API. You write code against it.
+The [Claude Agent SDK](https://docs.claude.com/en/api/agent-sdk/overview) is Anthropic's toolkit for building applications powered by Claude: tool use, multi-turn conversation, agent orchestration. It's a developer API. You write code against it.
 
 harness-kit doesn't help you build agent applications. It helps you configure the AI coding tools you already use. You don't write code to use harness-kit. You write a YAML file and install plugins.
 
