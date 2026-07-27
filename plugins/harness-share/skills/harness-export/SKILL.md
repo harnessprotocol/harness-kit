@@ -18,18 +18,26 @@ This file follows the **Harness Protocol v1 format** — the open spec at harnes
 
 ### Step 1: Detect installed skills
 
-Scan all four skill directories. Each subdirectory inside these directories is an installed skill:
+Scan every skill directory across all 8 supported targets. Each subdirectory inside these directories is an installed skill:
 
 - `~/.claude/skills/` — Claude Code global skills
 - `.cursor/skills/` — Cursor project-local skills
 - `.github/skills/` — Copilot project-local skills
-- `.agents/skills/` — agentskills.io standard shared location
+- `.agents/skills/` — Codex, and the agentskills.io standard shared location
+- `.opencode/skills/` — OpenCode project-local skills
+- `.windsurf/skills/` — Windsurf project-local skills
+- `.gemini/skills/` — Gemini CLI project-local skills
+- `.junie/skills/` — Junie project-local skills
 
 ```bash
 ls ~/.claude/skills/ 2>/dev/null
 ls .cursor/skills/ 2>/dev/null
 ls .github/skills/ 2>/dev/null
 ls .agents/skills/ 2>/dev/null
+ls .opencode/skills/ 2>/dev/null
+ls .windsurf/skills/ 2>/dev/null
+ls .gemini/skills/ 2>/dev/null
+ls .junie/skills/ 2>/dev/null
 ```
 
 Collect the directory names from each location. Deduplicate by skill name across locations — if the same skill name appears in multiple directories, count it once. Track which platforms each skill was found in.
@@ -42,14 +50,18 @@ Found skills across AI tools:
   Claude Code (~/.claude/skills/):  research, explain, orient
   Cursor (.cursor/skills/):         research, explain
   Copilot (.github/skills/):        research
-  Shared (.agents/skills/):         (none)
+  Codex (.agents/skills/):          (none)
+  OpenCode (.opencode/skills/):     (none)
+  Windsurf (.windsurf/skills/):     research
+  Gemini CLI (.gemini/skills/):     (none)
+  Junie (.junie/skills/):           (none)
 
   Unique skills: research, explain, orient
 ```
 
 Use this deduplicated list as your list of installed plugin names for the steps that follow.
 
-If all four directories are empty or missing, tell the user: "No installed skills found in any supported location. Nothing to export." and stop.
+If all eight directories are empty or missing, tell the user: "No installed skills found in any supported location. Nothing to export." and stop.
 
 ---
 
@@ -63,7 +75,7 @@ Tell the user what skills you found, then ask:
 > 2. What name and description should I give this harness profile? (optional — press enter to skip)
 > 3. Do you have any MCP servers, env variables, or CLAUDE.md instructions you'd like to include? (optional)
 >
->    Note: MCP server detection is automatic — Step 2.6 will scan `.mcp.json`, `.cursor/mcp.json`, and `.vscode/mcp.json` and ask you separately. You only need to answer about MCP here if you have MCP servers in a non-standard location not covered by those files.
+>    Note: MCP server detection is automatic — Step 2.6 will scan every project-level MCP config file and ask you separately. You only need to answer about MCP here if you have MCP servers in a non-standard location not covered by those files.
 >
 > If you've only added harness-kit plugins, just say so."
 
@@ -76,16 +88,17 @@ Wait for the user's response before proceeding.
 Check whether any cross-platform instruction files exist and contain harness-generated marker blocks:
 
 ```bash
-grep -l "<!-- BEGIN harness:" .cursor/rules/harness.mdc .github/copilot-instructions.md 2>/dev/null
+grep -l "<!-- BEGIN harness:" .cursor/rules/harness.mdc .github/copilot-instructions.md AGENTS.md 2>/dev/null
 ```
 
-Claude Code instruction files (CLAUDE.md, AGENT.md, SOUL.md) are intentionally excluded — they are managed by the user directly and are not cross-platform sources for export.
+Claude Code instruction files (CLAUDE.md, AGENT.md, SOUL.md) are intentionally excluded — they are managed by the user directly and are not cross-platform sources for export. `AGENTS.md` is the shared operational-instructions file for Codex, OpenCode, Windsurf, Gemini CLI, and Junie — one file covers all five, so a single match there represents that whole family, not five separate sources.
 
 If any matching files are found, tell the user what was found and ask. List all slots found in each file — a file may contain multiple harness marker blocks:
 
 > "I also found harness-generated instruction content in these files:
 >   - `.cursor/rules/harness.mdc` (contains `my-harness:operational` and `my-harness:behavioral` blocks)
 >   - `.github/copilot-instructions.md` (contains `my-harness:operational` block)
+>   - `AGENTS.md` (contains `my-harness:operational` block)
 >
 > Would you like me to include the `operational` and `behavioral` instruction content in the export?"
 
@@ -105,13 +118,18 @@ If no harness marker blocks are found in any cross-platform file, skip this step
 
 ### Step 2.6: Detect cross-platform MCP servers
 
-Scan these three files for MCP server definitions:
+Scan these project-level MCP config files:
 
 ```bash
 cat .mcp.json 2>/dev/null
 cat .cursor/mcp.json 2>/dev/null
 cat .vscode/mcp.json 2>/dev/null
+cat opencode.json 2>/dev/null
+cat .gemini/settings.json 2>/dev/null
+cat .junie/mcp/mcp.json 2>/dev/null
 ```
+
+Codex and Windsurf are intentionally excluded — neither has a project-level MCP config file (Codex uses `~/.codex/config.toml`, Windsurf uses a global `~/.codeium/windsurf/mcp_config.json`), so there's nothing project-local to scan for either.
 
 Each file uses the same JSON structure with a top-level `mcpServers` key. Merge all `mcpServers` entries across all files found. Deduplicate by server name:
 
@@ -152,8 +170,8 @@ For each installed skill, determine its source repo:
 | harness-export | Export your installed plugins to a shareable harness.yaml |
 | harness-import | Import a harness.yaml and interactively select plugins to install |
 | harness-validate | Validate a harness.yaml file against the Harness Protocol v1 JSON Schema |
-| harness-compile | Compile harness.yaml to native config files for Claude Code, Cursor, and Copilot |
-| harness-sync | Sync AI tool configuration across Claude Code, Cursor, and Copilot |
+| harness-compile | Compile harness.yaml to native config files for Claude Code, Cursor, Copilot, Codex, OpenCode, Windsurf, Gemini CLI, and Junie |
+| harness-sync | Sync AI tool configuration across all 8 supported targets |
 | open-pr | Pre-flight checks and PR creation: run tests, open a PR, code review, and check CI |
 | merge-pr | PR merge workflow: verify CI and review status, sync with base, confirm, squash merge, and clean up |
 | pr-sweep | Cross-repo PR sweep: triage all open PRs, run code reviews, merge what's ready, fix quick CI blockers, and report |
@@ -226,7 +244,7 @@ Rules:
 
 Tell the user where the file was written:
 
-> "Saved to `harness.yaml`. To compile it to Cursor and Copilot config files, run `/harness-compile`.
+> "Saved to `harness.yaml`. To compile it to your other tools' config files, run `/harness-compile --target <tools>` (or `--target all` for every supported tool: Claude Code, Cursor, Copilot, Codex, OpenCode, Windsurf, Gemini CLI, Junie).
 >
 > To share with teammates: commit it to your dotfiles repo. They can import it with `/harness-import` inside Claude Code, or with the shell fallback:
 >
@@ -245,3 +263,5 @@ Tell the user where the file was written:
 | Including `harness-export` and `harness-import` in the output | Only include plugins the user actually uses |
 | Writing to a path without confirming | Write to `./harness.yaml` by default. If user specified a path in the invocation, use that |
 | Adding `mcp-servers:` / `env:` / `instructions:` as empty sections | Only include these sections when the user has actual content to put in them |
+| Treating one `AGENTS.md` match as five separate instruction sources | It's one shared file for the Codex/OpenCode/Windsurf/Gemini/Junie family — extract it once |
+| Scanning `opencode.json`/`.gemini/settings.json`/`.junie/mcp/mcp.json` for Codex or Windsurf | Neither has a project-level MCP file at all — don't invent one to scan |
