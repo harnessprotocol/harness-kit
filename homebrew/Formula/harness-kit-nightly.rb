@@ -3,6 +3,7 @@ class HarnessKitNightly < Formula
   homepage "https://github.com/harnessprotocol/harness-kit"
   url "https://github.com/harnessprotocol/harness-kit/releases/download/nightly/harness-kit-nightly-darwin-arm64.tar.gz"
   sha256 "0000000000000000000000000000000000000000000000000000000000000000"
+  license "Apache-2.0"
   version "00000000"
 
   depends_on arch: :arm64

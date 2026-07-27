@@ -11,7 +11,7 @@ harness-kit has three main components and a plugin system. `harness.yaml` is the
 
 ## harness.yaml
 
-`harness.yaml` is the single declaration of your entire AI coding setup. It follows the [Harness Protocol](https://harnessprotocol.io) — an open, vendor-neutral specification.
+`harness.yaml` is the single declaration of your entire AI coding setup. It follows the [Harness Protocol](https://harnessprotocol.ai) — an open, vendor-neutral specification.
 
 ```yaml
 plugins:
@@ -41,7 +41,7 @@ extends:
   - profiles/backend-engineer.yaml
 ```
 
-The full schema supports `version`, `kind`, `metadata`, `plugins`, `mcp-servers`, `instructions`, `permissions`, `env`, and `extends`. [Harness Protocol spec →](https://harnessprotocol.io)
+The full schema supports `version`, `kind`, `metadata`, `plugins`, `mcp-servers`, `instructions`, `permissions`, `env`, and `extends`. [Harness Protocol spec →](https://harnessprotocol.ai)
 
 ---
 
@@ -206,4 +206,4 @@ harness-kit is a framework without a runtime. No SDK, no build step, no executio
 
 The `SKILL.md` is the portable unit. Plugins add distribution, versioning, and automation on top — but the workflow itself is plain text that any AI tool can read. Uninstall a plugin and nothing breaks, because nothing was ever coupled to it.
 
-The spec is [open](https://harnessprotocol.io). The format travels.
+The spec is [open](https://harnessprotocol.ai). The format travels.
