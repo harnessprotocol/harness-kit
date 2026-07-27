@@ -10,7 +10,7 @@ interface Organization {
   updated_at: string;
 }
 
-const API_BASE_URL = process.env.HARNESS_API_URL || "https://harnessprotocol.io";
+const API_BASE_URL = process.env.HARNESS_API_URL || "https://harnessprotocol.ai";
 
 async function apiRequest<T>(
   path: string,

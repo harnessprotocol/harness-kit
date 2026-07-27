@@ -8,7 +8,7 @@ disable-model-invocation: true
 
 You are compiling a `harness.yaml` file into native configuration files for one or more AI coding tools. Each target tool gets its own idiomatic output: instruction files, MCP server configs, skill files, and permission settings.
 
-This skill implements the Harness Protocol compiler mapping defined at harnessprotocol.io. The output is deterministic — the same `harness.yaml` always produces the same files.
+This skill implements the Harness Protocol compiler mapping defined at harnessprotocol.ai. The output is deterministic — the same `harness.yaml` always produces the same files.
 
 ## Workflow Order (MANDATORY)
 

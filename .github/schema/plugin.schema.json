@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://harnessprotocol.io/schema/v1/plugin.schema.json",
+  "$id": "https://harnessprotocol.ai/schema/v1/plugin.schema.json",
   "title": "Harness Protocol v1 — Plugin Manifest",
   "description": "Schema for plugin.json manifests. Plugin authors use this to declare their plugin's identity, capabilities, and requirements.",
   "type": "object",
