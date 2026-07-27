@@ -464,8 +464,12 @@ export default function MarketplacePage() {
                 ))}
               </div>
 
-              {/* Sidebar */}
-              <aside style={{ width: "200px", flexShrink: 0 }}>
+              {/* Sidebar — plain div, not <aside>: the app shell already has one
+                  top-level <aside> (the nav sidebar), and Playwright's prod-smoke
+                  guard queries locator("aside") expecting exactly one match. A
+                  second <aside> landmark here is also arguably an a11y anti-pattern
+                  without a distinguishing aria-label, not just a test-satisfying fix. */}
+              <div style={{ width: "200px", flexShrink: 0 }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                   {/* Author */}
                   <Card padding="sm">
@@ -544,7 +548,7 @@ export default function MarketplacePage() {
                     </Card>
                   )}
                 </div>
-              </aside>
+              </div>
             </div>
           </div>
         )}
