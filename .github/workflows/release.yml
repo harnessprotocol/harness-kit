@@ -59,6 +59,13 @@ jobs:
           pnpm --filter @harness-kit/shared --filter @harness-kit/core build
           pnpm --filter @harness-kit/marketplace-data generate --strict
 
+      # The website also imports a static capability matrix generated straight
+      # from @harness-kit/core's adapter registry (gitignored build output).
+      # Mirrors validate.yml's test-all job — without this the website build
+      # fails on a missing module.
+      - name: Generate capability matrix data
+        run: pnpm --filter @harness-kit/website-data generate
+
       - name: Build and test all packages
         run: pnpm turbo run build test
 
