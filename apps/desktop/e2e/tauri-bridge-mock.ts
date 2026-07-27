@@ -35,8 +35,8 @@ export const MOCK_RESPONSES: Record<string, unknown> = {
   list_active_sessions: [],
   // Shape must match HarnessInfo (@harness-kit/shared): models[] + authenticated required.
   detect_harnesses: [
-    { id: "claude", name: "Claude Code", command: "claude", available: true, authenticated: true, version: "1.5.0", mode: "supported", models: ["claude-sonnet-4-6", "claude-opus-4-6"], defaultModel: "claude-sonnet-4-6" },
-    { id: "gh-copilot", name: "GitHub Copilot", command: "copilot", available: true, authenticated: true, version: "1.0.0", mode: "supported", models: ["gpt-4o"], defaultModel: "gpt-4o" },
+    { id: "claude", name: "Claude Code", command: "claude", available: true, authenticated: true, version: "1.5.0", mode: "supported", models: ["claude-sonnet-5", "claude-opus-5"], defaultModel: "claude-sonnet-5" },
+    { id: "gh-copilot", name: "GitHub Copilot", command: "copilot", available: true, authenticated: true, version: "1.0.0", mode: "supported", models: ["gpt-5.6"], defaultModel: "gpt-5.6" },
     { id: "cursor", name: "Cursor", command: "cursor", available: false, authenticated: false, models: [] },
   ],
   get_harness_recommendations: [],

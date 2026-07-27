@@ -68,10 +68,10 @@ const DEFAULT_PROMPT =
   "Evaluate the code quality, correctness, and completeness of each submission. Score each dimension 0-10.";
 
 const JUDGE_MODELS = [
-  "claude-sonnet-4-6",
-  "claude-opus-4-6",
-  "gpt-5",
-  "o4-mini",
+  "claude-sonnet-5",
+  "claude-opus-5",
+  "gpt-5.6",
+  "gpt-5.6-terra",
 ];
 
 // ── Styles ──────────────────────────────────────────────────
@@ -560,7 +560,7 @@ export default function JudgePhase({ active }: JudgePhaseProps) {
   const [enabledDimensions, setEnabledDimensions] = useState<Set<string>>(
     new Set(DEFAULT_DIMENSIONS.slice(0, 3)),
   );
-  const [judgeModel, setJudgeModel] = useState("claude-sonnet-4-6");
+  const [judgeModel, setJudgeModel] = useState("claude-sonnet-5");
   const [customRubric, setCustomRubric] = useState("");
   const [results, setResults] = useState<JudgeResult | null>(null);
   const [mounted, setMounted] = useState(false);

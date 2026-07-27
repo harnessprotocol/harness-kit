@@ -27,19 +27,24 @@ pub async fn detect_harnesses(app: AppHandle) -> Result<Vec<HarnessInfo>, String
     use tauri_plugin_shell::ShellExt;
 
     // (id, display name, binary name, default models)
+    // Model lists reflect the Claude 5 / GPT-5.6 generation, current as of
+    // July 2026. These pickers age fast by nature — re-verify against each
+    // provider's current model lineup rather than assuming these stay current.
     let definitions: Vec<(&str, &str, &str, Vec<&str>)> = vec![
         ("claude", "Claude Code", "claude", vec![
-            "claude-sonnet-4-6", "claude-opus-4-6", "claude-haiku-4-5",
+            "claude-sonnet-5", "claude-opus-5", "claude-fable-5", "claude-haiku-4-5-20251001",
         ]),
         ("cursor-agent", "Cursor Agent", "cursor-agent", vec![]),
         ("copilot", "GitHub Copilot", "copilot", vec![
-            "claude-sonnet-4", "gpt-5",
+            "claude-sonnet-5", "gpt-5.6",
         ]),
         ("codex", "Codex CLI", "codex", vec![
-            "o4-mini", "gpt-4.1",
+            // gpt-5.6-terra is Codex CLI's own default tier; sol/luna are the
+            // higher/lower tiers of the same GPT-5.6 family.
+            "gpt-5.6-terra", "gpt-5.6-sol",
         ]),
         ("opencode", "OpenCode", "opencode", vec![
-            "anthropic/claude-sonnet-4-5", "openai/gpt-4o", "ollama/qwen2.5-coder",
+            "anthropic/claude-sonnet-5", "openai/gpt-5.6", "ollama/qwen3-coder",
         ]),
     ];
 

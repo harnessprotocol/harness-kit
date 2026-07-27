@@ -39,6 +39,14 @@ This mode:
 - No API costs
 - Fast validation for CI/development
 
+Note: the committed golden responses were generated against Claude 4-era
+models. They're sample text for exercising the grading pipeline offline, not
+a claim about current model output — `config.py`'s `MODELS` dict (used by
+live, non-offline runs) is what tracks the actual current model lineup, and
+staying in sync with that is unaffected by the golden corpus being dated.
+Re-generating the golden corpus against current models is tracked as
+separate follow-up work, not required for this to keep working.
+
 ### Running with API key
 
 Set your Anthropic API key and run full evaluations:

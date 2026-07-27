@@ -15,7 +15,7 @@ describe("shellQuote", () => {
 
   it("passes through simple strings", () => {
     expect(shellQuote("hello")).toBe("hello");
-    expect(shellQuote("claude-sonnet-4-6")).toBe("claude-sonnet-4-6");
+    expect(shellQuote("claude-sonnet-5")).toBe("claude-sonnet-5");
   });
 
   it("quotes strings with spaces", () => {
@@ -83,8 +83,8 @@ describe("buildInvokeCommand — default (no config)", () => {
   });
 
   it("includes model when provided", () => {
-    const cmd = buildInvokeCommand("claude", "fix it", "claude-sonnet-4-6");
-    expect(cmd).toBe("claude 'fix it' --dangerously-skip-permissions --model claude-sonnet-4-6");
+    const cmd = buildInvokeCommand("claude", "fix it", "claude-sonnet-5");
+    expect(cmd).toBe("claude 'fix it' --dangerously-skip-permissions --model claude-sonnet-5");
   });
 
   it("quotes prompts with special characters", () => {
@@ -104,8 +104,8 @@ describe("buildInvokeCommand — { mode: 'skip' }", () => {
   });
 
   it("includes model", () => {
-    expect(buildInvokeCommand("claude", "do it", "claude-opus-4-6", cfg))
-      .toBe("claude 'do it' --dangerously-skip-permissions --model claude-opus-4-6");
+    expect(buildInvokeCommand("claude", "do it", "claude-opus-5", cfg))
+      .toBe("claude 'do it' --dangerously-skip-permissions --model claude-opus-5");
   });
 });
 
@@ -120,8 +120,8 @@ describe("buildInvokeCommand — { mode: 'auto' }", () => {
   });
 
   it("includes model", () => {
-    expect(buildInvokeCommand("claude", "task", "claude-sonnet-4-6", cfg))
-      .toBe("claude task --permission-mode auto --model claude-sonnet-4-6");
+    expect(buildInvokeCommand("claude", "task", "claude-sonnet-5", cfg))
+      .toBe("claude task --permission-mode auto --model claude-sonnet-5");
   });
 
   it("never contains --dangerously-skip-permissions", () => {
@@ -147,8 +147,8 @@ describe("buildInvokeCommand — { mode: 'allowed-tools' }", () => {
 
   it("includes model after the tools flag", () => {
     const cfg: PermissionConfig = { mode: "allowed-tools", tools: ["Read", "Write"] };
-    expect(buildInvokeCommand("claude", "task", "claude-opus-4-6", cfg))
-      .toBe("claude task --allowedTools Read,Write --model claude-opus-4-6");
+    expect(buildInvokeCommand("claude", "task", "claude-opus-5", cfg))
+      .toBe("claude task --allowedTools Read,Write --model claude-opus-5");
   });
 
   it("never contains --dangerously-skip-permissions when tools are specified", () => {
@@ -191,7 +191,7 @@ describe("buildInvokeCommand — non-Claude harnesses ignore permission config",
 
 describe("buildInvokeCommand — other harnesses", () => {
   it("builds cursor-agent command with model", () => {
-    expect(buildInvokeCommand("cursor-agent", "test", "gpt-5.2")).toBe("agent test --model gpt-5.2");
+    expect(buildInvokeCommand("cursor-agent", "test", "gpt-5.6")).toBe("agent test --model gpt-5.6");
   });
 
   it("builds copilot command with -i flag", () => {
@@ -199,8 +199,8 @@ describe("buildInvokeCommand — other harnesses", () => {
   });
 
   it("builds copilot command with model", () => {
-    expect(buildInvokeCommand("copilot", "explain", "claude-sonnet-4"))
-      .toBe("copilot -i explain --model claude-sonnet-4");
+    expect(buildInvokeCommand("copilot", "explain", "claude-sonnet-5"))
+      .toBe("copilot -i explain --model claude-sonnet-5");
   });
 
   it("builds codex command with positional prompt", () => {
@@ -208,7 +208,7 @@ describe("buildInvokeCommand — other harnesses", () => {
   });
 
   it("builds codex command with model", () => {
-    expect(buildInvokeCommand("codex", "refactor", "o4-mini")).toBe("codex refactor --model o4-mini");
+    expect(buildInvokeCommand("codex", "refactor", "gpt-5.6-terra")).toBe("codex refactor --model gpt-5.6-terra");
   });
 
   it("builds opencode command with positional prompt", () => {

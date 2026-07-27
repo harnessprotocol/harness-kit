@@ -153,6 +153,12 @@ nohup bash -c '
     TEMP_ERR=$(mktemp)
     trap "rm -f $TEMP_ERR" EXIT
 
+    # claude-haiku-4-5-20251001 below is still the current small model as of
+    # 2026-07 -- dated IDs like this are a maintenance hazard once Anthropic
+    # ships the next Haiku generation; revisit then (an alias such as "haiku"
+    # may exist for the latest small model, matching the confirmed
+    # "fable", "opus", and "sonnet" aliases, but was not independently
+    # verified for this pin).
     EXIT_CODE=0
     {
         echo "Today'\''s date: $CURRENT_DATE"

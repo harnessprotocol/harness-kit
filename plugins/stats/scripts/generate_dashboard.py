@@ -34,8 +34,9 @@ def shorten_model(name: str) -> str:
     """Strip 'claude-' prefix and date suffixes from model identifiers.
 
     Examples:
-        claude-opus-4-6             → opus-4-6
-        claude-sonnet-4-5-20250929  → sonnet-4-5
+        claude-sonnet-5             → sonnet-5
+        claude-opus-5               → opus-5
+        claude-fable-5              → fable-5
         claude-haiku-4-5-20251001   → haiku-4-5
         qwen2.5:7b                  → qwen2.5:7b
     """

@@ -3,12 +3,23 @@ export interface ModelPricing {
   outputPer1M: number;  // USD per 1M output tokens
 }
 
+// Source: https://platform.claude.com/docs/en/about-claude/pricing (checked
+// 2026-07-27). Historical (retired) model rows are kept even after a model
+// is no longer current so that past Observatory sessions still price
+// correctly — a session that ran on claude-3-opus really did cost that rate.
 export const MODEL_PRICING: Record<string, ModelPricing> = {
+  // Claude 5 family (current)
+  "claude-fable-5":                 { inputPer1M: 10.00, outputPer1M: 50.00 },
+  "claude-opus-5":                  { inputPer1M: 5.00,  outputPer1M: 25.00 },
+  // Sonnet 5 has introductory pricing of $2/$10 through 2026-08-31, reverting
+  // to $3/$15 standard on 2026-09-01 — using the standard rate here so this
+  // table doesn't need a second update in five weeks.
+  "claude-sonnet-5":                { inputPer1M: 3.00,  outputPer1M: 15.00 },
+  "claude-haiku-4-5":               { inputPer1M: 1.00,  outputPer1M: 5.00  },
+  "claude-haiku-4-5-20251001":      { inputPer1M: 1.00,  outputPer1M: 5.00  },
   // Claude 4.x
   "claude-sonnet-4-6":              { inputPer1M: 3.00,  outputPer1M: 15.00 },
-  "claude-opus-4-6":                { inputPer1M: 15.00, outputPer1M: 75.00 },
-  "claude-haiku-4-5":               { inputPer1M: 0.80,  outputPer1M: 4.00  },
-  "claude-haiku-4-5-20251001":      { inputPer1M: 0.80,  outputPer1M: 4.00  },
+  "claude-opus-4-6":                { inputPer1M: 5.00,  outputPer1M: 25.00 },
   // Claude 3.x
   "claude-3-5-sonnet-20241022":     { inputPer1M: 3.00,  outputPer1M: 15.00 },
   "claude-3-5-haiku-20241022":      { inputPer1M: 0.80,  outputPer1M: 4.00  },

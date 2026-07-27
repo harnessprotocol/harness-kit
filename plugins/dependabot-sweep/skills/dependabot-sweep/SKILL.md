@@ -85,8 +85,10 @@ fix(deps): resolve Dependabot security alerts
 Body: per-manifest list of what changed with the alert numbers, plus any alert **deliberately left unfixed and why**. End with:
 
 ```
-Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>
+Co-Authored-By: Claude <current model name> <noreply@anthropic.com>
 ```
+
+Use the name of whichever model is actually running this session (e.g. "Claude Fable 5") — never hardcode a specific model name here, since it will go stale as new models ship.
 
 ## Step 6 — Push + open PR
 

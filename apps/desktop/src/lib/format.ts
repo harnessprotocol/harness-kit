@@ -45,13 +45,16 @@ export function formatHour(hour: number): string {
  * "claude-sonnet-4-6" → "Sonnet 4.6"
  * "claude-opus-4-6" → "Opus 4.6"
  * "claude-haiku-4-5-20251001" → "Haiku 4.5"
+ * "claude-sonnet-5" → "Sonnet 5" (Claude 5 family ships single-segment
+ * versions, unlike the two-segment 4.x generation)
+ * "claude-fable-5" → "Fable 5"
  * Passes through unknown model names unchanged.
  */
 export function shortModelName(model: string): string {
-  const match = model.match(/^claude-(opus|sonnet|haiku)-(\d+)-(\d+)/i);
+  const match = model.match(/^claude-(opus|sonnet|haiku|fable)-(\d+)(?:-(\d+))?/i);
   if (match) {
     const name = match[1].charAt(0).toUpperCase() + match[1].slice(1);
-    return `${name} ${match[2]}.${match[3]}`;
+    return match[3] ? `${name} ${match[2]}.${match[3]}` : `${name} ${match[2]}`;
   }
   return model;
 }
