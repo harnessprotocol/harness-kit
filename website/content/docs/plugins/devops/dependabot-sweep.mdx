@@ -1,0 +1,53 @@
+---
+title: dependabot-sweep
+---
+
+> **[View in Marketplace →](/marketplace/dependabot-sweep)** for install tracking, related plugins, and profiles.
+
+# dependabot-sweep
+
+End-to-end Dependabot remediation — fetch open alerts, fix per ecosystem, verify, and open/merge a PR.
+
+## Requirements
+
+- **Claude Code** — required
+- **`gh` CLI** ([GitHub CLI](https://cli.github.com/)), authenticated — required to read Dependabot alerts, open PRs, watch CI, and merge. `GH_TOKEN` declared as required in `plugin.json` — see [Secrets Management](/docs/guides/secrets-management) for setup.
+- The repo's package manager(s) installed (`pnpm`, `cargo`, etc., matching whichever ecosystems have open alerts)
+
+## Install
+
+```
+/plugin marketplace add harnessprotocol/harness-kit
+/plugin install dependabot-sweep@harness-kit
+```
+
+## What It Does
+
+When you invoke `/dependabot-sweep`:
+
+1. Fetches every open Dependabot alert via the `gh` CLI, grouped by manifest
+2. Fixes each one with the smallest change that lands a patched version — direct dependencies get a version bump, transitive dependencies get an ecosystem override/pin, then the lockfile is regenerated
+3. Verifies with the ecosystem's audit tool (moderate severity and above) and a frozen-lockfile install
+4. Branches, commits, pushes, opens a PR, and squash-merges once CI is green
+
+## Ecosystems
+
+pnpm/npm (including workspaces and standalone `--ignore-workspace` lockfiles), cargo (runtime vs. build-only triage), pip, go, bundler. Other ecosystems follow the same direct-vs-transitive → regenerate → audit pattern.
+
+## Usage
+
+```
+/dependabot-sweep
+```
+
+Or use natural language:
+
+```
+Address the dependabot alerts.
+Fix the security vulnerabilities.
+Clear the dependabot alerts.
+```
+
+## Autonomy
+
+Running the skill is consent for the full workflow — it does not prompt before pushing, opening a PR, or merging. It escalates only for genuine judgment calls: a major-version bump of a direct dependency, an alert with no reachable patch (recommends dismissal), an audit that won't clear, or CI that still fails after one quick-fix attempt.

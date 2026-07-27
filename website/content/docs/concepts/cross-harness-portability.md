@@ -23,41 +23,37 @@ Portable configuration eliminates this variable. Same workflow definition, diffe
 
 **SKILL.md files are plain markdown.** They're not API calls, not SDK integrations, not compiled code. A SKILL.md is a prompt template with numbered steps, scope controls, output format specs, and common mistake guards.
 
-Any AI coding tool that reads prompt templates can use them:
+The `harness-share` plugin's `/harness-compile` skill is the compatibility layer: it takes a single `harness.yaml` and generates native config for **8 targets** — Claude Code, Cursor, GitHub Copilot, Codex, OpenCode, Windsurf, Gemini CLI, and JetBrains Junie. The last five all read a single shared `AGENTS.md` file, so compiling for any combination of them writes it once. Manual copy-paste still works too, for one-off setups or tools `/harness-compile` doesn't cover:
 
 - **Cursor:** Copy SKILL.md content into `.cursor/rules/`
 - **Copilot:** Add to workspace instructions in `.github/copilot-instructions.md`
-- **Windsurf:** Include in `.windsurfrules` or project rules
+- **Codex / OpenCode / Windsurf / Gemini CLI / Junie:** Append to `AGENTS.md`
 - **Any tool with custom instructions:** Paste the markdown
 
 The workflows themselves — research indexing, layered explanations, data lineage tracing — work regardless of which LLM reads them. The steps are model-agnostic.
 
 ## What's not portable yet
 
-Some parts of the plugin system are tied to Claude Code's infrastructure:
+Some parts of the plugin system are still tied to Claude Code's infrastructure:
 
 | Capability | Status | Why |
 |------------|--------|-----|
 | SKILL.md prompts | Portable now | Plain markdown, works anywhere |
-| Distribution (marketplace install) | Claude Code + Copilot CLI | Both use compatible plugin formats; Copilot CLI reads `.claude-plugin/` natively |
+| Compiled instructions, MCP configs, skill copies | Portable now via `/harness-compile` | Generates native config for all 8 targets from one `harness.yaml` |
+| Distribution (marketplace install) | Claude Code + Copilot CLI native | Both read `.claude-plugin/` directly; other targets install via `/harness-compile` or manual copy |
 | Stop hooks | Claude Code only | Hook system is Claude Code-specific |
-| MCP server references (orient, capture) | Partially portable | MCP is an open protocol, but wiring varies by tool |
+| MCP server references (orient, capture, membrain) | Portable, wiring varies | MCP is an open protocol; Codex and Windsurf configure it globally rather than per-project |
+| Agent definitions (`.claude/agents/*.md`) | Claude Code only | No equivalent primitive exists yet in the other 7 targets |
 | Bundled scripts | Portable | Shell scripts, but auto-execution depends on the harness |
-
-## The vision
-
-A compatibility layer that translates plugin definitions between harness formats. Same plugin directory structure, different distribution adapters. You'd write a plugin once and a build step would generate the right config files for each target harness.
-
-This isn't built yet. The current priority is getting the plugin workflows right — the prompts, the step sequences, the scope controls. Those are the hard part and they're already portable. Distribution adapters are a packaging problem, solvable once the content stabilizes.
 
 ## Current status
 
-Prompts are portable. Infrastructure is next.
+Prompts, compiled instructions, and MCP wiring are portable across all 8 targets today via `/harness-compile`. Hooks and agent definitions remain Claude Code-specific — there's no equivalent primitive to compile them to yet.
 
-If you're using a non-Claude Code tool today, you can still use harness-kit's workflows. See [Installation — Using with other tools](/docs/getting-started/installation) for specifics.
+If you're using a non-Claude Code tool today, run `/harness-compile` or see [Installation — Using with other tools](/docs/getting-started/installation) for manual specifics.
 
 ## See Also
 
-- [Using with Other Tools](/docs/cross-harness/setup-guide) — Step-by-step for Copilot, Cursor, and Windsurf
+- [Using with Other Tools](/docs/cross-harness/setup-guide) — Step-by-step for all 8 targets
 - [Configuration Primitives](/docs/cross-harness/concept-mapping) — How concepts map across Claude Code, Copilot, and Cursor
 - [IDE Support Matrix](/docs/cross-harness/ide-support) — Feature support by editor

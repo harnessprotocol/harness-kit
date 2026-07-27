@@ -13,13 +13,13 @@ const BORDER_MID = 'rgba(255,255,255,0.14)';
 const MUTED = '#8b919e';
 const SUBTLE = '#4a5060';
 
-// Groups sourced from NAV_SECTIONS in AppLayout.tsx
+// Groups sourced from NAV_SECTIONS + DEMOTED_SECTIONS in AppLayout.tsx.
+// The app has a single sidebar group today ("WORKSPACE"); Agents and Security
+// have real routes but no sidebar entry (Agents is demoted per DESIGN.md §5;
+// Security is reached via Preferences).
 const desktopGroups = [
-  { label: 'CORE',      items: ['Harness', 'Marketplace'] },
-  { label: 'INSIGHTS',  items: ['Observatory'] },
-  { label: 'SYSTEM',    items: ['Security'] },
-  { label: 'WORKFLOWS', items: ['Board', 'Roadmap'] },
-  { label: 'OTHER',     items: ['Agents', 'Comparator', 'Harness Parity', 'Command Palette', 'Memory'] },
+  { label: 'WORKSPACE',      items: ['Fleet', 'Configure', 'Drift', 'Comparator', 'Observatory', 'Marketplace'] },
+  { label: 'ALSO REACHABLE', items: ['Agents', 'Security'] },
 ];
 
 // Commands sourced from apps/cli/src/index.ts
@@ -33,11 +33,11 @@ const pluginParts = [
 ];
 
 // Harnesses sourced from cross-harness/ide-support.md support matrix
-const harnesses = ['Claude Code', 'Copilot', 'Cursor', 'Codex'];
+const harnesses = ['Claude Code', 'Copilot', 'Cursor', 'Codex', 'OpenCode', 'Windsurf', 'Gemini CLI', 'Junie'];
 
 // 3 rows × 2 columns; values shortened to fit 286px value column
 const yamlFields = [
-  { key: 'plugins:',      val: 'research  board  explain' },
+  { key: 'plugins:',      val: 'research  review  explain' },
   { key: 'mcp-servers:',  val: 'memory  filesystem' },
   { key: 'instructions:', val: '{ operational, behavioral }' },
   { key: 'permissions:',  val: '{ tools, paths, network }' },
@@ -60,10 +60,12 @@ export function ArchitectureDiagram() {
   const CC = { x: 420, y: 342, w: 340, h: 86  };  // Native Configs
 
   // Bottom row  (PS.y = DA.y + DA.h + 20 = 500; AT aligns with PS)
-  const PS = { x: 20,  y: 500, w: 340, h: 124 };  // Plugin System
-  const AT = { x: 420, y: 500, w: 340, h: 124 };  // AI Tools
+  // AT.h grown from 124 to 160 to fit 4 rows of 2 harnesses (8 total, was 2 rows of 2 = 4);
+  // PS.h grown to match so the bottom-row pair keeps aligned bottom edges.
+  const PS = { x: 20,  y: 500, w: 340, h: 160 };  // Plugin System
+  const AT = { x: 420, y: 500, w: 340, h: 160 };  // AI Tools
 
-  const totalH = 644;
+  const totalH = 680;
 
   // ── Derived midpoints used by arrows ────────────────────────────────────────
   // Feedback path runs at x=390 — in the 60 px gap between DA/PS (right=360) and CL/AT (left=420)
@@ -164,8 +166,8 @@ export function ArchitectureDiagram() {
         {(() => {
           let gy = DA.y + 26;
           return desktopGroups.map((g) => {
-            const maxPerRow = g.label === 'OTHER' ? 3 : 2;
-            const chipW     = maxPerRow === 3 ? 100 : 152;
+            const maxPerRow = 2;
+            const chipW     = 152;
             const chipH     = 18;
             const gap       = 6;
             const rows      = Math.ceil(g.items.length / maxPerRow);

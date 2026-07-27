@@ -67,14 +67,14 @@ const showcaseCards = [
     desc: 'A knowledge graph your AI can orient itself in. Teammates, decisions, conventions — persistent across every tool.',
   },
   {
-    section: 'board' as const,
-    title: 'Board',
-    desc: "Agents pick up cards, draft commits, open PRs. You review. The kanban is built for AI-first teams.",
+    section: 'comparator' as const,
+    title: 'Comparator',
+    desc: 'Run the same prompt across Claude Code, Cursor, and Copilot side by side. Find what works.',
   },
   {
-    section: 'ai-chat' as const,
-    title: 'Command Palette',
-    desc: 'Cmd+K to navigate anywhere and operate the app — with Ask AI wired to a local Ollama chat.',
+    section: 'parity' as const,
+    title: 'Harness Parity',
+    desc: 'After you compile, confirm every connected AI tool ended up with the same plugins, MCP servers, and skills — and catch drift.',
   },
 ];
 
@@ -83,10 +83,7 @@ export default function HomePage() {
     <main className="min-h-screen">
       <SiteNav />
 
-      {/* ── Hero ──
-          DRAFT COPY — not locked. See report for 3 headline/subhead options;
-          this is option 2 ("import-first"), the strongest of the three by
-          our read, but John approves the final wording before this ships. */}
+      {/* ── Hero ── */}
       <section className="relative overflow-hidden border-b border-fd-border/30">
         {/* Copy block */}
         <div className="mx-auto max-w-3xl px-5 pb-8 pt-14 text-center sm:px-6 sm:pb-10 sm:pt-20">
@@ -219,7 +216,7 @@ export default function HomePage() {
 
       {/* ── Architecture link ── */}
       <section className="py-12 text-center">
-        <a href="/docs/architecture" className="text-sm text-muted-foreground underline">Read the architecture →</a>
+        <a href="/docs/getting-started/architecture" className="text-sm text-muted-foreground underline">Read the architecture →</a>
       </section>
 
       <SiteFooter />

@@ -1,7 +1,7 @@
 {
   "name": "open-pr",
   "description": "Pre-flight checks and PR creation workflow: run tests, open a PR, code review, and check CI",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "category": "devops",
   "tags": ["pull-request", "ci-cd", "testing", "workflow"],
   "requires": {

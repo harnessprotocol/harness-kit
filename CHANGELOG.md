@@ -1,52 +1,96 @@
 # Changelog
 
-## 0.2.1 — Unreleased
+## 0.11.0 — 2026-07-27
+
+### Breaking
+
+- **v2 rewrite** — removed the `board-server`, `agent-server`, and `chat-relay` backend processes and the Board, Roadmap, AI Chat, Memory, Terminals, and Services desktop app pages they powered. Comparator and Observatory remain, alongside a new harness-agnostic adapter registry with golden snapshot tests. Memory is still available — as the `membrain` plugin over MCP, not a standalone desktop app section.
 
 ### Added
 
-- **Desktop: AI Chat** — local LLM conversations via Ollama with multi-session support, model selection, session management (create/load/delete/rename), and `Cmd+N` to create a new session. Models can be downloaded inline.
-- **Desktop: Roadmap** — AI-driven product roadmap with kanban views, phase cards, feature cards, and competitor analysis. Roadmaps are generated via Claude using OAuth authentication. Features can be promoted to board epics and tasks.
-- **Desktop: Parity dashboard** — cross-platform feature parity tracking across AI coding tools. Covers config files, settings keys, CLI flags, CLI subcommands, MCP transports, MCP servers, and plugin types with drift detection and baseline comparison.
-- **Desktop: Security section** — three sub-pages: Permissions (visual editor for tool allow/deny/ask lists, path write restrictions, and network allowlists with security presets), Secrets (keychain secret management), and Audit Log (security event trail with timestamps).
-- **Desktop: Board** — kanban project board with projects, epics, and tasks backed by the board-server. Execution engine with harness-agnostic task runners.
-- **Desktop: Embedded marketplace browser** — browse and install plugins from the marketplace without leaving the desktop app.
-- **Desktop: Preferences page** — dedicated `/preferences` route replaces the old popover. Settings: font size (11–18px), density (comfortable/compact), default landing section, hidden sidebar sections, observatory auto-refresh interval, markdown font (sans/mono). All persisted in localStorage with `harness-kit-` prefix.
-- **Desktop: Keyboard shortcut** — `Cmd+,` navigates to preferences (standard macOS convention).
-- **Desktop: Docs link** — sidebar footer now includes a persistent link to harnesskit.ai/docs (opens in external browser).
-- **Desktop: Draggable sidebar resize** — sidebar width is adjustable by dragging and persists across sessions (160–320px range).
-- **Desktop: Muted accent colors** — 5 new accent presets: Slate, Sage, Stone, Mauve, Steel.
-- **Desktop: Custom title bar** — macOS overlay title bar with collapsible sidebar toggle and back/forward navigation. Traffic lights overlay the web content; the entire bar is a drag region. Keyboard shortcuts: `Cmd+\` toggles the sidebar, `Cmd+[` navigates back, `Cmd+]` navigates forward. Sidebar collapsed state persists across sessions.
-- **Desktop: Comparator two-column layout** — setup form now fills available width in a responsive two-column grid (harness selector + directory on the left, prompt on the right). Maximum concurrent harnesses raised from 3 to 4.
-- **Desktop: Inline config file editor** — the Settings page now opens `~/.claude/` files in an inline split-pane editor instead of navigating away. File list is filterable by detail level (Essentials / Text Files / All), controlled from Preferences. Unsaved-changes are detected on file switch with an inline discard prompt. Files with a `.md` extension default to preview mode; toggle to editor is per-file. Draggable panel resize persists across sessions.
-- **Desktop: MCP Servers page** — dedicated page in the Harness menu for managing `~/.claude/mcp.json` entries. Add, edit, and remove stdio and network (HTTP/SSE) servers. Source toggle switches between editing `mcp.json` directly and the `harness.yaml` `mcp-servers` section. Servers present in both sources show an "in harness" indicator.
-- **Desktop: Comparator v4** — Rebuilt from terminal multiplexer to structured evaluation workbench with 4-phase workflow (Setup → Execution → Results → Judge), session history rail, SQLite persistence, and shared Comparator types
-- **Marketplace: Ratings and reviews** — install counts, trust tiers, and user ratings on plugin detail pages.
-- **CLI: `detect` and `init` commands** — `harness-kit detect` shows which AI coding platforms are active in the current directory; `harness-kit init` scaffolds a new `harness.yaml` interactively.
-- **Desktop: Board agent execution** — per-card autonomous coding runs via a new `packages/agent-server` LangGraph StateGraph (spec → planning → coding → qa_review → qa_fixing). Live phase/progress streaming over WebSocket, structured log view with color-coded tool blocks, phase-grouped subtask list, steering input, handoff/pause/stop controls. SQLite checkpointing at `~/.harness/board/agent-checkpoints.sqlite` — agent state survives app restarts. Board-aware context via MCP at port 4800.
-- **Desktop: Agent server service** — Tauri launchd service management for `packages/agent-server` (mirrors board-server). `Install`, `Start`, and `Restart` commands registered as Tauri IPC.
-- **Security: Agent server auth** — shared-secret token at `~/.harness-kit/agent-server.token` (mode 0600). All HTTP endpoints require `Authorization: Bearer <token>`; WebSocket upgrade requires `?token=<secret>`. Bash tool uses an explicit allowlist of known-safe dev commands (replaces denylist) with additional blocks for pipe-to-interpreter and absolute-path `rm` patterns.
-- **Desktop: Permission mode selector** — Security → Permissions now has a Task Execution Mode section with three selectable modes: **Skip All** (`--dangerously-skip-permissions`, default), **Auto** (`--permission-mode auto`, requires Claude team/enterprise/API), and **Allowed Tools** (`--allowedTools <list>`, user-curated checklist). Mode and tool list persist in localStorage and apply globally or per-harness via an expandable overrides section. A one-time first-run modal explains the active mode before the first task runs and links to the settings page. A slide-in Tool Approval panel lets users manage the allowed tools list mid-session from within the terminals view.
-- **Desktop: Security → Permissions redesign** — Permission mode cards with icons, flag badges, and clear selected state. Chip remove buttons now use SVG icons. Improved section hierarchy with a clean divider between execution mode and Claude settings.json controls.
-- **research: wiki-links in syntheses** — synthesis prose can mark a cross-reference to another synthesis subject or graph entity as `[[name]]`. A link whose target doesn't exist yet is allowed and flags a wanted-but-unwritten page.
+- **8-target compilation** — `packages/core`'s adapter registry and the `harness-share` plugin's `/harness-compile` (plus `/harness-sync`, `/harness-export`, `/harness-import`) now cover all 8 targets: Claude Code, Cursor, GitHub Copilot, Codex, OpenCode, Windsurf, Gemini CLI, and JetBrains Junie. The last five share a single `AGENTS.md` file, written once regardless of how many are active. `harness-kit detect` and the CLI's `--target` help now report all 8 (was 3).
+- **Claude 5 model family** — Sonnet 5, Opus 5, Fable 5, and Haiku 4.5 across the desktop Comparator picker, Judge phase, and Observatory pricing.
+- **Desktop: static marketplace catalog** — the Marketplace page now reads the real, generated 17-plugin catalog from `packages/marketplace-data`, replacing the retired Supabase-backed browser and its permanent "not configured" banner.
+- **`dependabot-sweep` and `rubber-ducky` plugins** — end-to-end Dependabot remediation, and a cross-model second opinion on plans, designs, and diffs before you commit.
+- **`harness.yaml` `extends`** — profiles can now extend a base harness configuration instead of duplicating it.
+- **Precompiled schema validator** — the JSON Schema validator ships precompiled, dropping `unsafe-eval` from the desktop app's CSP.
 
 ### Changed
 
-- **Plugin renamed: `capture-session` → `capture`** — the slash command is now `/capture`. Staging file (`session-staging.md`) unchanged.
-- **Plugin renamed: `data-lineage` → `lineage`** — the slash command is now `/lineage`. SVG output filename pattern unchanged.
-- **Plugin renamed: `pull-request-sweep` → `pr-sweep`** — the slash command is now `/pr-sweep`.
-- **Plugin versions** — research bumped to 0.5.0, lineage to 0.3.0, capture to 0.4.0, review to 0.3.0, harness-share to 0.3.0, pr-sweep to 0.2.0.
-- **Desktop: MCP Servers, Hooks, and CLAUDE.md pages** — all three pages are now full-page Monaco editors that load their respective config files (`~/.claude/mcp.json`, `~/.claude/settings.json`, `~/.claude/CLAUDE.md`) directly. The previous card-based MCP UI (add/edit/remove servers, source toggle) and the read-only Hooks list are replaced by inline editing. CLAUDE.md gains an Editor/Preview toggle with Preview as the default.
-- **Desktop: Comparator terminals** — each output panel is now a real xterm.js terminal instance, replacing the previous ansi-to-html + `dangerouslySetInnerHTML` approach. Output writes incrementally, auto-resizes with the panel, and renders ANSI color codes natively. Spawned harness processes now receive `FORCE_COLOR=1` and `CLICOLOR_FORCE=1` so CLIs emit color output over pipes. OSC hyperlink handling is disabled (`linkHandler: null`) to eliminate the terminal escape injection surface.
-- **Desktop: Observatory typography** — stat and chart card headers use `font-variant-caps: all-small-caps` instead of `text-transform: uppercase`, matching the sidebar and other labels. Area chart fill gradients are subtler (top stop halved); grid lines use `--separator` instead of `--border-base` so data pops more.
-- **Desktop: Permissions layout** — Tools, Paths, and Network sections merged into a single unified card with inset section dividers. Allow/Deny/Ask tool rows are stacked vertically with color-coded labels. Preset cards display a colored left border (green for Strict, blue for Standard, amber for Permissive) for at-a-glance identity.
+- **Desktop: Judge phase results** — labeled "Preview — simulated scores" until real model-graded judging ships.
+- **install.sh** — populated the `skills` array in `plugin.json` per the Protocol schema, so remote install actually discovers skills (previously silently installed 0 of 5 for harness-share and 0 of 1 for membrain).
+- **CLI binary** — standardized on `harness-kit` as the `.name()` (was `harness`, which mismatched every help example); `harness` added as a second install alias.
+- **Domain normalization** — schema URLs, skill docs, and cross-references consolidated on `harnessprotocol.ai` (`.io` remains a passive alias).
+- **Docs** — the `harness-docs` skill re-synced to the current 17-plugin roster (removed the deleted `board` plugin, added `rubber-ducky` and `dependabot-sweep`, corrected membrain's command to `/memory` and review's severity labels to BLOCKER/WARNING/NIT); manifest validation now checks this roster against `marketplace.json` so it can't silently drift again. Website docs purged of dead pages describing v2-removed features (Board, Roadmap, AI Chat, Memory, Terminals app pages, and the Board plugin), 16 dead marketplace links fixed, and the Claude Code integration landscape (permission modes, ACP support, tool names) corrected to match the real CLI.
 
 ### Fixed
 
-- **Desktop: Monaco editor stuck on "Loading editor..."** — the MCP Servers, Hooks, CLAUDE.md, and harness.yaml Editor tab pages all embed Monaco via `@monaco-editor/react`, whose default loader fetches its AMD bootstrap script from a CDN at runtime. The app's CSP (`script-src 'self'`) has always blocked that cross-origin script, so the editor never mounted in the packaged app. It now loads the already-bundled `monaco-editor` package directly instead of reaching for the CDN.
+- **Desktop: `--permission-mode auto`** — replaced with the real Claude Code permission modes (default, acceptEdits, plan, bypassPermissions); the invented plan-tier gate is gone.
+- **Desktop: ACP protocol badge** — corrected (Gemini CLI ships native ACP; Claude Code's is via the Zed adapter, not native).
+- **Pricing** — corrected Opus 4.6 (was priced at Opus 4.1's old rate) and Haiku 4.5 (was underpriced) alongside the Claude 5 rows.
+- **Homebrew** — fixed a version-interpolation-order bug in the Formula (the URL degraded before `version` was set), and wired `release.yml` to sync the in-repo Formula/Cask into the tap (it previously only edited the tap's own drifted copy).
+- **`node:crypto` bare import** — crash in production desktop builds quarantined and fixed by moving to `@noble/hashes`.
+- **`harness.yaml`** — swapped the archived `@modelcontextprotocol/server-github` reference for the official `github/github-mcp-server` Docker image.
 
-### Security
+---
 
-- **Dependencies** — Resolved 8 Dependabot medium-severity alerts: Next.js upgraded to 16.1.7 (fixes HTTP request smuggling in rewrites and unbounded `next/image` disk cache growth), DOMPurify upgraded to 3.3.3 in the desktop app (fixes XSS bypass). Website fumadocs stack updated to core/ui v16.6.17 and mdx v14.2.10 to satisfy Next 16 peer deps.
+## 0.10.0 — 2026-06-06
+
+Marketplace profiles-first UX with honest trust signals. Exchange layer Phase 1 (`harness exchange` keygen/offer/accept). Routine dependency updates and release pipeline fixes.
+
+---
+
+## 0.9.0 — 2026-06-06
+
+Marketplace profiles-first redesign with harness profile support. Linear design system applied across the site and desktop app. Added `dependabot-sweep` and `rubber-ducky` plugins. Resolved open Dependabot security alerts.
+
+---
+
+## 0.8.1 — 2026-05-27
+
+Marketplace rebuilt as a static, git-sourced browser in the docs site (Supabase retired). Unified visual identity (Iris palette + design tokens). Test suite hardened and releases gated on green CI. Security patches (fast-uri) and release pipeline fixes.
+
+---
+
+## 0.8.0 — 2026-05-13
+
+Parity dashboard redesigned as a capability matrix grid. In-app update checker. ACP protocol integration for Comparator. AI chat revamp. Service health monitoring with backoff and a blank-screen fix. Nightly Homebrew build channel. Mobile-first landing page.
+
+---
+
+## 0.7.1 – 0.7.3 — 2026-03-17 – 2026-04-17
+
+Large batch of desktop features: persistent board-server as a macOS launchd service, preferences page redesign, design polish (title bar, Comparator, Observatory, Permissions), Harness File page, marketplace split-panel layout, Sync page and harness editor, parity tracker with drift alerts and baselines, self-hosted team chat, membrain integration (plugin, desktop Memory section, Tauri sidecar), Comparator rebuilt twice (PTY terminal workspace, then v4 phased evaluation workbench), Kanban board redesigned twice, board execution engine, marketplace ratings/reviews and advanced search, plugin security scanner, permission mode selector, CLI Agent Discovery Grid, Observatory cost analytics and budget guards, per-card agent execution via LangGraph, distribution pipeline (Homebrew, GitHub Releases, npm, standalone binary), docs site revamp. Security fix: closed stored XSS, anonymous RPC, and rate-limiting gaps in the marketplace (v0.7.1).
+
+---
+
+## 0.7.0 — 2026-03-17
+
+Tauri desktop app (Harness Manager + Marketplace browser). `@harness-kit/core` library and CLI. Harness Board (Kanban with MCP + web UI sync). Observatory usage dashboard. Comparator Phase 2 (persistence, diffs, evaluation, history). Security page (permissions, secrets vault, audit log). **Breaking:** plugins renamed for consistency (`pr-sweep`, `capture`, `lineage`, `stats`). macOS HIG polish. `ship-pr` split into `open-pr` + `merge-pr`.
+
+---
+
+## 0.6.0 — 2026-03-14
+
+Added `stats` plugin (Claude Code usage dashboard). Cross-platform support for Claude Code, Cursor, and Copilot. Agents documentation and starter agent definitions. Docs visual polish and warm neutral theme.
+
+---
+
+## 0.5.0 — 2026-03-13
+
+Docs visual upgrade: Inter/Space Grotesk typography, blue-tinted dark theme, homepage redesign, wider docs layout, MDX components (Tabs, Callout, Steps, Accordion), accessibility improvements.
+
+---
+
+## 0.4.0 — 2026-03-12
+
+Docs site migrated from Docusaurus to Fumadocs. Custom landing page. Domain migration to harnessprotocol.io. CI updated to pnpm.
+
+---
+
+## 0.3.0 — 2026-03-11
+
+Added `ship-pr` and `pull-request-sweep` plugins. `harness-share` aligned to Harness Protocol v1 (`harness-export`/`harness-import`/`harness-validate`). Skill eval framework. New comparison and harness-protocol docs pages. Org migrated from `siracusa5` to `harnessprotocol`.
 
 ---
 

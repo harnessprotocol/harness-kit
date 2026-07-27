@@ -106,6 +106,46 @@ else:
     print(f'All {len(on_disk)} plugins registered: {sorted(on_disk)}')
 "
 
+echo "== Check harness-docs skill roster matches marketplace.json =="
+python3 -c "
+import json, sys, re
+
+marketplace = json.load(open('.claude-plugin/marketplace.json'))
+registered = {p['name'] for p in marketplace['plugins']}
+
+skill_md = open('skills/harness-docs/SKILL.md').read()
+catalog_md = open('skills/harness-docs/references/plugin-catalog.md').read()
+
+errors = []
+
+# Every registered plugin name must appear in both reference files — catches a
+# stale roster even when the total COUNT happens to still match (e.g. one
+# plugin removed and another added without updating either file's rows).
+for name in sorted(registered):
+    pattern = r'(?<![a-zA-Z0-9_-])' + re.escape(name) + r'(?![a-zA-Z0-9_-])'
+    if not re.search(pattern, skill_md):
+        errors.append(f'{name}: missing from skills/harness-docs/SKILL.md')
+    if not re.search(pattern, catalog_md):
+        errors.append(f'{name}: missing from skills/harness-docs/references/plugin-catalog.md')
+
+# The hardcoded plugin count in each file's headline must match the real count.
+count = len(registered)
+skill_count_match = re.search(r'Quick Reference:\s*(\d+)\s*Plugins', skill_md)
+if skill_count_match and int(skill_count_match.group(1)) != count:
+    errors.append(f'SKILL.md says {skill_count_match.group(1)} plugins, actual is {count}')
+catalog_count_match = re.search(r'ships\s*(\d+)\s*plugins', catalog_md)
+if catalog_count_match and int(catalog_count_match.group(1)) != count:
+    errors.append(f'plugin-catalog.md says {catalog_count_match.group(1)} plugins, actual is {count}')
+
+if errors:
+    print('harness-docs skill drifted from marketplace.json:')
+    for e in errors:
+        print(f'  {e}')
+    sys.exit(1)
+else:
+    print(f'harness-docs skill roster matches all {count} registered plugins.')
+"
+
 echo "== Validate x-developed-with field =="
 python3 -c "
 import json, sys, glob

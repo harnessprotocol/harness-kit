@@ -30,7 +30,7 @@ Or tell Claude you're ready:
 ## Pipeline
 
 ```
-Development ─→ /open-pr ─→ /merge-pr ─→ /deploy-preview ─→ /go-live
+Development ─→ /open-pr ─→ /merge-pr ─→ your deploy pipeline
                  ▲ you are here
 ```
 

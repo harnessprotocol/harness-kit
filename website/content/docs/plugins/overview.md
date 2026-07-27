@@ -22,10 +22,10 @@ harness-kit ships 17 plugins across 7 categories. Each packages a proven workflo
 | [open-pr](devops/open-pr) | Pre-flight checks and PR creation: tests, PR, review, CI | `gh` CLI |
 | [merge-pr](devops/merge-pr) | Merge a ready PR: verify CI, sync base, squash merge, clean up | `gh` CLI |
 | [pr-sweep](devops/pr-sweep) | Cross-repo PR sweep: triage, review, merge, fix CI | `gh` CLI |
-| [harness-share](productivity/harness-share) | Compile, export, import, and sync harness configs across AI tools | None |
+| [dependabot-sweep](devops/dependabot-sweep) | End-to-end Dependabot remediation: fetch alerts, fix per ecosystem, verify, open/merge a PR | `gh` CLI, `GH_TOKEN` |
+| [harness-share](productivity/harness-share) | Compile, export, import, and sync harness configs across 8 AI coding tools | None |
 | [stats](productivity/stats) | Interactive HTML dashboard for Claude Code token and session usage | Python 3.10+ |
 | [iterm-notify](productivity/iterm-notify) | macOS desktop notifications and iTerm2 badge management for Claude Code events | macOS, iTerm2, terminal-notifier, jq |
-| [board](productivity/board) | Kanban project board with real-time Claude-to-web sync via MCP | Node.js (board server) |
 | [frontend-design](design/frontend-design) | Production-grade frontend design rules: OKLCH color, typography, motion, accessibility | None |
 | [membrain](research-knowledge/membrain) | Graph-based agent memory — search, trace, and manage a persistent knowledge graph | Go 1.25+, membrain MCP server |
 
@@ -65,8 +65,8 @@ Profiles are pre-configured collections of plugins for specific roles. Each prof
 
 | Profile | Who it's for | Plugins included |
 |---------|-------------|-----------------|
-| [research-knowledge](#) | Research-focused roles | research, orient, capture, explain, docgen |
-| [data-engineer](#) | Data engineers with SQL pipelines | lineage, research, orient, capture, explain, docgen, review |
-| [full-stack-engineer](#) | Full-stack feature shipping | review, open-pr, merge-pr, pr-sweep, explain, docgen, harness-share |
+| [research-knowledge](/marketplace/profiles/research-knowledge) | Research-focused roles | research, orient, capture, explain, docgen, membrain |
+| [data-engineer](/marketplace/profiles/data-engineer) | Data engineers with SQL pipelines | lineage, research, orient, capture, explain, docgen, review, membrain |
+| [full-stack-engineer](/marketplace/profiles/full-stack-engineer) | Full-stack feature shipping | review, open-pr, merge-pr, pr-sweep, explain, docgen, harness-share, membrain |
 
 Install a profile's plugins individually, or use `/harness-import` with the profile's YAML to install them all at once.

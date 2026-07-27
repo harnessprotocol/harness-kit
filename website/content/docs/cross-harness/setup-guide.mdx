@@ -11,6 +11,10 @@ harness-kit plugins are plain markdown — no binaries, no runtimes, nothing to 
 
 The skill format used by harness-kit follows the [Agent Skills specification](https://agentskills.io) — an open standard for cross-platform skill portability. Skills built to this spec work in Claude Code, GitHub Copilot, and any other compliant platform without modification. The sections below show how to wire harness-kit skills into each tool.
 
+<Callout type="info">
+The `harness-share` plugin's `/harness-compile` skill automates everything below for **8 targets** — Claude Code, Cursor, Copilot, Codex, OpenCode, Windsurf, Gemini CLI, and JetBrains Junie — from a single `harness.yaml`. The manual steps in this guide are the fallback for one-off setups or tools it doesn't cover.
+</Callout>
+
 ## GitHub Copilot
 
 **Native plugin install (Copilot CLI):** GitHub Copilot has its own plugin system with a compatible structure. It discovers `plugin.json` in `.claude-plugin/` — the same location harness-kit uses — and follows the same `skills/NAME/SKILL.md` path. Install directly from the repo:
@@ -63,40 +67,43 @@ globs: "src/**/*.ts"
 [SKILL.md content here]
 ```
 
-## Codex
+## Codex, OpenCode, Windsurf, Gemini CLI, and Junie
 
-Copy a plugin's `SKILL.md` into your `AGENTS.md` file, or place it in a project-level `AGENTS.md` at the repo root. Codex reads `AGENTS.md` as its persistent instruction context — the same role `CLAUDE.md` plays for Claude Code.
+These five tools all read a single shared `AGENTS.md` file at the repo root as their persistent instruction context — the same role `CLAUDE.md` plays for Claude Code. Copy a plugin's `SKILL.md` in once (or let `/harness-compile` do it for all five in one pass, since the content is identical across them):
 
 ```bash
 cat plugins/research/skills/research/SKILL.md >> AGENTS.md
 ```
 
-**MCP servers:** Codex supports MCP via the `--mcp` flag. Pass your `.mcp.json` at startup:
+Presence indicators, if you're detecting which of the five is actually in use: Codex (`.codex/`), OpenCode (`opencode.json` or `.opencode/`), Windsurf (`.windsurf/`), Gemini CLI (`.gemini/`), Junie (`.junie/`). A bare `AGENTS.md` alone is ambiguous across all five — ask rather than assume.
 
-```bash
-codex --mcp .mcp.json
-```
+**MCP servers:** Codex supports MCP via the `--mcp` flag (`codex --mcp .mcp.json`) or a global `~/.codex/config.toml`; OpenCode via `opencode.json`; Gemini CLI via `.gemini/settings.json`; Junie via `.junie/mcp/mcp.json`. Windsurf's MCP config is global only (`~/.codeium/windsurf/mcp_config.json`).
 
-Plugins that depend on MCP (`orient`, `capture`, `membrain`) work with Codex once the server is wired up this way.
+Plugins that depend on MCP (`orient`, `capture`, `membrain`) work with any of these five once the server is wired up.
 
 ## MCP Servers
 
-MCP has 100% cross-platform support — it's the only harness-kit feature that works identically everywhere. The wiring location varies by tool:
+MCP has the broadest cross-platform support of any harness-kit feature. The wiring location varies by tool:
 
 | Tool | MCP config file |
 |------|----------------|
 | Claude Code | `.mcp.json` |
 | Copilot (VS Code) | `.vscode/mcp.json` |
 | Cursor | `.cursor/mcp.json` |
+| OpenCode | `opencode.json` |
+| Gemini CLI | `.gemini/settings.json` |
+| Junie | `.junie/mcp/mcp.json` |
+| Codex | Global only (`~/.codex/config.toml`) |
+| Windsurf | Global only (`~/.codeium/windsurf/mcp_config.json`) |
 
 Plugins that depend on MCP (like `orient` and `capture`) work in any of these tools as long as the server is wired up.
 
 ## What You Lose
 
-| Feature | Claude Code | Copilot CLI | Cursor | Codex |
+| Feature | Claude Code | Copilot CLI | Cursor | Codex / OpenCode / Windsurf / Gemini CLI / Junie |
 |---------|-------------|-------------|--------|-------|
-| Marketplace install/update | ✅ One command | ✅ One command | ❌ Manual | ❌ Manual |
+| Marketplace install/update | ✅ One command | ✅ One command | ❌ Manual | ❌ Manual (or via `/harness-compile`) |
 | Hooks | ✅ Auto-triggered | ❌ | ❌ | ❌ |
 | Auto-execution scripts | ✅ Bundled | ❌ Run manually | ❌ Run manually | ❌ Run manually |
 | SKILL.md workflows | ✅ | ✅ | ✅ | ✅ |
-| MCP server support | ✅ | ✅ | ✅ | ✅ |
+| MCP server support | ✅ | ✅ | ✅ | ✅ (Codex/Windsurf: global config only) |

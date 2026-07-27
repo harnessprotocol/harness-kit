@@ -25,7 +25,7 @@ This is a background knowledge skill. When the user asks about harness-kit, load
 
 Load with: `Read ${CLAUDE_SKILL_DIR}/references/<filename>.md`
 
-## Quick Reference: 16 Plugins
+## Quick Reference: 17 Plugins
 
 | Plugin | Slash command | What it does |
 |--------|---------------|-------------|
@@ -33,18 +33,19 @@ Load with: `Read ${CLAUDE_SKILL_DIR}/references/<filename>.md`
 | orient | `/orient` | Topic-focused session orientation across knowledge graph and research |
 | capture | `/capture` | Capture session info into a staging file for later reflection |
 | review | `/review` | Structured code review for branches, PRs, or file paths with severity labels |
+| rubber-ducky | `/rubber-ducky` | Second opinion on a plan, design, or diff — independent critics on different Claude models |
 | explain | `/explain` | Layered explanations of files, functions, directories, or concepts |
 | lineage | `/lineage` | Column-level lineage tracing through SQL, Kafka, Spark, JDBC |
 | docgen | `/docgen` | Generate or update README, API docs, architecture overview, or changelog |
 | open-pr | `/open-pr` | Pre-flight checks and PR creation: tests, review, CI |
 | merge-pr | `/merge-pr` | Merge a ready PR: verify CI, sync base, squash merge, clean up |
 | pr-sweep | `/pr-sweep` | Cross-repo PR sweep: triage, review, merge, fix CI |
-| harness-share | `/harness-export`, `/harness-import` | Compile, export, import, and sync harness configs across AI tools |
+| dependabot-sweep | `/dependabot-sweep` | End-to-end Dependabot remediation: fetch alerts, fix per ecosystem, verify, open/merge a PR |
+| harness-share | `/harness-export`, `/harness-import` | Compile, export, import, and sync harness configs across 8 AI coding tools |
 | stats | `/stats` | Interactive HTML dashboard for Claude Code token and session usage |
 | iterm-notify | — | macOS desktop notifications and iTerm2 badge management for Claude Code events |
-| board | `/board` | Kanban project board with real-time Claude-to-web sync via MCP |
 | frontend-design | `/frontend-design` | Production-grade frontend design rules: OKLCH color, typography, motion, accessibility |
-| membrain | `/membrain` | Graph-based agent memory — search, trace, and manage a persistent knowledge graph |
+| membrain | `/memory` | Graph-based agent memory — search, trace, and manage a persistent knowledge graph |
 
 ## Key Concepts
 
