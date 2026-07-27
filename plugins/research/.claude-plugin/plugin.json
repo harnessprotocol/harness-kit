@@ -1,9 +1,10 @@
 {
   "name": "research",
   "description": "Process any source into a structured, compounding knowledge base with refresh capability",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "category": "research-knowledge",
   "tags": ["research", "knowledge-base", "web-scraping", "pdf", "github", "sources"],
+  "skills": ["research", "refresh-research"],
   "requires": {
     "env": [
       {

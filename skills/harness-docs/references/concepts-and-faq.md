@@ -91,7 +91,7 @@ Good prompts tend to disappear — scattered across projects, left behind on new
 
 ## Harness Protocol
 
-The [Harness Protocol](https://harnessprotocol.io) is an open specification for portable AI coding harness configuration. It defines a vendor-neutral `harness.yaml` format validated by JSON Schema. harness-kit is the reference implementation. Any tool that correctly validates and applies `harness.yaml` per the spec is a conformant implementation.
+The [Harness Protocol](https://harnessprotocol.ai) is an open specification for portable AI coding harness configuration. It defines a vendor-neutral `harness.yaml` format validated by JSON Schema. harness-kit is the reference implementation. Any tool that correctly validates and applies `harness.yaml` per the spec is a conformant implementation.
 
 ## FAQ
 
