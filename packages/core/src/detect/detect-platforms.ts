@@ -7,15 +7,23 @@ interface DetectionPaths {
   ambiguous: string[];
 }
 
+// AGENTS.md is a shared open convention (read natively by Cursor, Copilot,
+// Codex, OpenCode, Windsurf, Gemini CLI, and Junie) — its presence alone
+// doesn't tell you which of those tools is actually in use, so it's listed
+// as an *ambiguous* indicator for each rather than a confident one. A
+// project with AGENTS.md but no tool-specific directory surfaces as
+// needsConfirmation instead of a silent miss.
+const AGENTS_MD = "AGENTS.md";
+
 const DETECTION_PATHS: Partial<Record<TargetPlatform, DetectionPaths>> = {
   "claude-code": { paths: ["CLAUDE.md", ".claude", ".mcp.json"], ambiguous: [] },
-  "cursor":      { paths: [".cursor", ".cursor/rules", ".cursor/mcp.json", ".cursor/skills"], ambiguous: [] },
-  "copilot":     { paths: [".github/copilot-instructions.md", ".vscode/mcp.json", ".github/skills"], ambiguous: [".github"] },
-  "codex":       { paths: [".codex"], ambiguous: [] },
-  "opencode":    { paths: ["opencode.json", ".opencode"], ambiguous: [] },
-  "windsurf":    { paths: [".windsurf"], ambiguous: [] },
-  "gemini":      { paths: [".gemini"], ambiguous: [] },
-  "junie":       { paths: [".junie"], ambiguous: [] },
+  "cursor":      { paths: [".cursor", ".cursor/rules", ".cursor/mcp.json", ".cursor/skills"], ambiguous: [AGENTS_MD] },
+  "copilot":     { paths: [".github/copilot-instructions.md", ".vscode/mcp.json", ".github/skills"], ambiguous: [".github", AGENTS_MD] },
+  "codex":       { paths: [".codex"], ambiguous: [AGENTS_MD] },
+  "opencode":    { paths: ["opencode.json", ".opencode"], ambiguous: [AGENTS_MD] },
+  "windsurf":    { paths: [".windsurf"], ambiguous: [AGENTS_MD] },
+  "gemini":      { paths: [".gemini"], ambiguous: [AGENTS_MD] },
+  "junie":       { paths: [".junie"], ambiguous: [AGENTS_MD] },
 };
 
 export async function detectPlatforms(

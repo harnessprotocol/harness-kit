@@ -64,7 +64,7 @@ program
   .argument("[path]", "Path to harness.yaml", "harness.yaml")
   .option(
     "--target <targets>",
-    "Target platforms: claude-code, cursor, copilot (comma-separated), or all",
+    "Target platforms: claude-code, cursor, copilot, codex, opencode, windsurf, gemini, junie (comma-separated), or all",
   )
   .option("--dry-run", "Preview output without writing files")
   .option("--clean", "Remove orphaned marker blocks from previous compilations")

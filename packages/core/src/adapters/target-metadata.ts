@@ -55,7 +55,10 @@ export const TARGETS: IntegrationTarget[] = [
   {
     id: "copilot",
     label: "GitHub Copilot",
-    requiredBinary: "code",
+    // The Copilot CLI binary itself, not the VS Code binary — this field is
+    // unused today (no "harness doctor" binary probe consumes it yet), but
+    // "code" was the wrong proxy: it's the editor, not the CLI.
+    requiredBinary: "copilot",
     skillsDir: ".github/skills",
     layout: "flat",
     instructionFile: ".github/copilot-instructions.md",
