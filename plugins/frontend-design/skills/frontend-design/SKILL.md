@@ -16,7 +16,7 @@ Design without project context produces generic output. Before designing anythin
 
 Before shipping: "If someone saw this and said 'AI made this,' would they believe it immediately?"
 
-If yes — fix it. The fingerprints of AI-generated work from 2024–2025:
+If yes — fix it. The recurring fingerprints of AI-generated work:
 - Inter font, Roboto, Open Sans, Arial, or system defaults
 - Purple-to-blue gradients; cyan-on-dark; neon accents on dark backgrounds
 - Gray text on colored backgrounds

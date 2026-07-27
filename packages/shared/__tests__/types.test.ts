@@ -419,8 +419,8 @@ describe("Observatory types", () => {
     const tokens: DailyModelTokens = {
       date: "2024-01-01",
       tokensByModel: {
-        "claude-3-5-sonnet": 1000,
-        "claude-3-opus": 500,
+        "claude-sonnet-5": 1000,
+        "claude-opus-5": 500,
       },
     };
     expect(tokens.tokensByModel).toBeDefined();
@@ -441,7 +441,7 @@ describe("Observatory types", () => {
       lastComputedDate: "2024-01-01",
       dailyActivity: [{ date: "2024-01-01", messageCount: 10 }],
       dailyModelTokens: [{ date: "2024-01-01" }],
-      modelUsage: { "claude-3-5-sonnet": { inputTokens: 1000 } },
+      modelUsage: { "claude-sonnet-5": { inputTokens: 1000 } },
       totalSessions: 5,
       totalMessages: 50,
       hourCounts: { "12": 10, "13": 15 },
@@ -505,7 +505,7 @@ describe("Observatory types", () => {
       totalInputTokens: 1000,
       totalOutputTokens: 500,
       totalToolCalls: 10,
-      modelsUsed: ["claude-3-5-sonnet"],
+      modelsUsed: ["claude-sonnet-5"],
       subagentCount: 2,
       truncated: false,
     };
@@ -516,7 +516,7 @@ describe("Observatory types", () => {
     const entry: TranscriptEntry = {
       timestamp: "2024-01-01T00:00:00Z",
       role: "user",
-      model: "claude-3-5-sonnet",
+      model: "claude-sonnet-5",
       toolNames: ["Read", "Write"],
       inputTokens: 100,
       outputTokens: 50,
@@ -537,8 +537,8 @@ describe("Comparator types", () => {
       version: "1.0.0",
       mode: "supported",
       authenticated: true,
-      models: ["claude-3-5-sonnet"],
-      defaultModel: "claude-3-5-sonnet",
+      models: ["claude-sonnet-5"],
+      defaultModel: "claude-sonnet-5",
     };
     expect(info.available).toBe(true);
   });
@@ -547,7 +547,7 @@ describe("Comparator types", () => {
     const config: PanelConfig = {
       panelId: "panel-1",
       harnessId: "harness-1",
-      model: "claude-3-5-sonnet",
+      model: "claude-sonnet-5",
       workingDir: "/path/to/dir",
     };
     expect(config.panelId).toBe("panel-1");
@@ -634,7 +634,7 @@ describe("Persistence types", () => {
       id: "panel-1",
       harnessId: "harness-1",
       harnessName: "Test",
-      model: "claude-3-5-sonnet",
+      model: "claude-sonnet-5",
       exitCode: 0,
       durationMs: 1000,
       status: "complete",
@@ -688,7 +688,7 @@ describe("Persistence types", () => {
       workingDir: "/path",
       pinnedCommit: "abc123",
       panels: [
-        { harnessId: "harness-1", harnessName: "Test", model: "claude-3-5-sonnet" },
+        { harnessId: "harness-1", harnessName: "Test", model: "claude-sonnet-5" },
       ],
     };
     expect(setup.panels).toHaveLength(1);

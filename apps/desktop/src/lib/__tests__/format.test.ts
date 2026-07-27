@@ -128,6 +128,12 @@ describe("shortModelName", () => {
     expect(shortModelName("claude-haiku-4-5-20251001")).toBe("Haiku 4.5");
   });
 
+  it("converts single-segment Claude 5 family IDs (no minor version)", () => {
+    expect(shortModelName("claude-sonnet-5")).toBe("Sonnet 5");
+    expect(shortModelName("claude-opus-5")).toBe("Opus 5");
+    expect(shortModelName("claude-fable-5")).toBe("Fable 5");
+  });
+
   it("passes through unknown model names unchanged", () => {
     expect(shortModelName("unknown-model")).toBe("unknown-model");
   });

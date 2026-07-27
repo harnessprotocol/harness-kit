@@ -1,7 +1,7 @@
 {
   "name": "dependabot-sweep",
   "description": "End-to-end Dependabot remediation: fetch open alerts, fix per ecosystem, verify, and open/merge a PR",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "category": "devops",
   "tags": ["security", "dependabot", "dependencies", "ci-cd", "automation"],
   "requires": {

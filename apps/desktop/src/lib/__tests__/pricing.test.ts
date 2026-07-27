@@ -8,9 +8,9 @@ describe("pricing", () => {
       expect(cost).toBeCloseTo(18.00, 5);
     });
 
-    it("calculates correct cost for haiku (1M input + 1M output = $4.80)", () => {
+    it("calculates correct cost for haiku (1M input + 1M output = $6.00)", () => {
       const cost = estimateCost("claude-haiku-4-5", 1_000_000, 1_000_000);
-      expect(cost).toBeCloseTo(4.80, 5);
+      expect(cost).toBeCloseTo(6.00, 5);
     });
 
     it("falls back to default pricing for an unknown model", () => {
@@ -36,8 +36,8 @@ describe("pricing", () => {
         "claude-sonnet-4-6": { inputTokens: 1_000_000, outputTokens: 0 },
         "claude-haiku-4-5":  { inputTokens: 0, outputTokens: 1_000_000 },
       };
-      // sonnet: $3.00 input, haiku: $4.00 output → $7.00
-      expect(estimateTotalCost(usage)).toBeCloseTo(7.00, 5);
+      // sonnet: $3.00 input, haiku: $5.00 output → $8.00
+      expect(estimateTotalCost(usage)).toBeCloseTo(8.00, 5);
     });
 
     it("returns $0.00 for empty usage map", () => {
