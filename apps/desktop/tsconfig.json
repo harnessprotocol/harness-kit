@@ -11,6 +11,7 @@
     "allowImportingTsExtensions": true,
     "isolatedModules": true,
     "moduleDetection": "force",
+    "resolveJsonModule": true,
     "noEmit": true,
     "jsx": "react-jsx",
 
@@ -21,7 +22,8 @@
     "noFallthroughCasesInSwitch": true,
     "paths": {
       "@harness-kit/core": ["../../packages/core/src/index.ts"],
-      "@harness-kit/shared": ["../../packages/shared/src/index.ts"]
+      "@harness-kit/shared": ["../../packages/shared/src/index.ts"],
+      "@harness-kit/marketplace-data": ["../../packages/marketplace-data/src/index.ts"]
     }
   },
   "include": ["src"]

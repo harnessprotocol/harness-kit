@@ -1,210 +1,97 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi } from "vitest";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
-import type { Component, Category } from "@harness-kit/shared";
+import type { MarketplacePlugin } from "@harness-kit/marketplace-data";
 import MarketplacePage from "../MarketplacePage";
 
 // ── Fixtures ─────────────────────────────────────────────────
+//
+// vi.mock factories are hoisted above the rest of the module, so they can't
+// close over ordinary top-level consts (TDZ at the time the factory runs).
+// vi.hoisted() lifts this fixture data alongside the mock so both run first.
 
-const mockComponents: Component[] = [
-  {
-    id: "comp-1",
-    slug: "research",
-    name: "Research",
-    type: "skill",
-    description: "Process any source into a knowledge base",
-    trust_tier: "official",
-    version: "0.3.0",
-    author: { name: "harnessprotocol", url: "https://github.com/harnessprotocol" },
-    license: "Apache-2.0",
-    skill_md: "# Research Skill\n\nUse this to research any topic.",
-    readme_md: "## Usage\n\nInstall and invoke with `/research`.",
-    repo_url: "https://github.com/harnessprotocol/harness-kit",
-    install_count: 500,
-    created_at: "2024-01-01T00:00:00Z",
-    updated_at: "2024-06-01T00:00:00Z",
-  },
-  {
-    id: "comp-2",
-    slug: "explain",
-    name: "Explain",
-    type: "skill",
-    description: "Structured code explainer",
-    trust_tier: "verified",
-    version: "0.2.0",
-    author: { name: "harnessprotocol" },
-    license: "Apache-2.0",
-    skill_md: null,
-    readme_md: null,
-    repo_url: null,
-    install_count: 200,
-    created_at: "2024-02-01T00:00:00Z",
-    updated_at: "2024-03-01T00:00:00Z",
-  },
-  {
-    id: "comp-3",
-    slug: "data-lineage",
-    name: "Data Lineage",
-    type: "agent",
-    description: "Trace column-level data lineage",
-    trust_tier: "community",
-    version: "0.2.0",
-    author: { name: "harnessprotocol" },
-    license: "Apache-2.0",
-    skill_md: null,
-    readme_md: null,
-    repo_url: null,
-    install_count: 100,
-    created_at: "2024-03-01T00:00:00Z",
-    updated_at: "2024-01-01T00:00:00Z",
-  },
-];
+const { mockPlugins, mockCategories } = vi.hoisted(() => {
+  function plugin(overrides: Partial<import("@harness-kit/marketplace-data").MarketplacePlugin> = {}) {
+    return {
+      name: "Research",
+      slug: "research",
+      description: "Process any source into a knowledge base",
+      version: "0.3.0",
+      author: "harnessprotocol",
+      license: "Apache-2.0",
+      category: "research-knowledge",
+      tags: ["research", "knowledge-base"],
+      repoPath: "./plugins/research",
+      sourceId: "first-party",
+      installCommand: "/plugin install research@harness-kit",
+      requiresEnv: [],
+      mcp: null,
+      skills: [
+        { dir: "research", name: "Research Skill", description: "", body: "# Research Skill\n\nUse this to research any topic." },
+      ],
+      security: {
+        status: "passed",
+        trust: "verified",
+        summary: "No issues found.",
+        scanDate: "2026-07-01T00:00:00Z",
+        criticalCount: 0,
+        warningCount: 0,
+        infoCount: 0,
+        permissions: { networkAccess: false, fileWrites: false, envVarReads: [], externalUrls: [], filesystemPatterns: [] },
+        findings: [],
+      },
+      ...overrides,
+    };
+  }
 
-const mockCategories: Category[] = [
-  { id: "cat-1", slug: "research-knowledge", name: "Research & Knowledge", display_order: 1 },
-  { id: "cat-2", slug: "code-quality", name: "Code Quality", display_order: 2 },
-];
+  const mockPlugins = [
+    plugin(),
+    plugin({
+      name: "Explain",
+      slug: "explain",
+      description: "Structured code explainer",
+      version: "0.2.0",
+      category: "code-quality",
+      tags: [],
+      skills: [],
+      security: {
+        status: "not_scanned", trust: "unscanned", summary: "", scanDate: "",
+        criticalCount: 0, warningCount: 0, infoCount: 0,
+        permissions: { networkAccess: false, fileWrites: false, envVarReads: [], externalUrls: [], filesystemPatterns: [] },
+        findings: [],
+      },
+    }),
+    plugin({
+      name: "Data Lineage",
+      slug: "data-lineage",
+      description: "Trace column-level data lineage",
+      version: "0.2.0",
+      category: "research-knowledge",
+      tags: [],
+      skills: [],
+    }),
+  ];
 
-const mockComponentCategories = [
-  { component_id: "comp-1", category_id: "cat-1" },
-  { component_id: "comp-2", category_id: "cat-2" },
-  { component_id: "comp-3", category_id: "cat-1" },
-];
+  const mockCategories = [
+    { slug: "research-knowledge", name: "Research & Knowledge", displayOrder: 1 },
+    { slug: "code-quality", name: "Code Quality", displayOrder: 2 },
+  ];
 
-const mockTags = [
-  { id: "tag-1", slug: "research" },
-  { id: "tag-2", slug: "knowledge-base" },
-];
+  return { mockPlugins, mockCategories };
+});
 
-const mockComponentTags = [
-  { component_id: "comp-1", tag_id: "tag-1" },
-  { component_id: "comp-1", tag_id: "tag-2" },
-];
-
-const mockDetailTags = ["research", "knowledge-base"];
-
-const mockRelated: Pick<Component, "id" | "slug" | "name" | "install_count">[] = [
-  { id: "comp-4", slug: "orient", name: "Orient", install_count: 150 },
-];
-
-// ── Supabase mock ─────────────────────────────────────────────
-
-let mockSupabase: Record<string, unknown> | null;
-
-vi.mock("../../../lib/supabase", () => ({
-  get supabase() {
-    return mockSupabase;
-  },
+vi.mock("../../../lib/marketplace/data", () => ({
+  getAllPlugins: () => mockPlugins,
+  getCategories: () => mockCategories,
+  getCategoryName: (slug: string) => mockCategories.find((c) => c.slug === slug)?.name ?? slug,
+  getAllTags: () => [...new Set(mockPlugins.flatMap((p) => p.tags))].sort(),
+  getPlugin: (slug: string) => mockPlugins.find((p) => p.slug === slug),
+  pluginRepoUrl: (p: MarketplacePlugin) => `https://github.com/harnessprotocol/harness-kit/tree/main/${p.repoPath.replace(/^\.\//, "")}`,
+  relatedPlugins: (p: MarketplacePlugin, limit = 5) =>
+    mockPlugins.filter((c) => c.slug !== p.slug && c.category === p.category).slice(0, limit),
 }));
 
-function createBuilder(data: unknown, error: unknown = null) {
-  const promise = Promise.resolve({ data, error });
-  const builder: Record<string, unknown> = {};
-  builder.select = () => builder;
-  builder.order = () => builder;
-  builder.eq = () => builder;
-  builder.neq = () => builder;
-  builder.limit = () => builder;
-  builder.single = vi.fn().mockResolvedValue({
-    data: Array.isArray(data) ? (data[0] ?? null) : data,
-    error,
-  });
-  builder.then = (
-    ful: Parameters<Promise<unknown>["then"]>[0],
-    rej?: Parameters<Promise<unknown>["then"]>[1],
-  ) => promise.then(ful, rej);
-  builder.catch = (rej: Parameters<Promise<unknown>["catch"]>[0]) => promise.catch(rej);
-  builder.finally = (fin: Parameters<Promise<unknown>["finally"]>[0]) =>
-    promise.finally(fin);
-  return builder;
-}
-
-/** List-only mock: returns list data, detail calls return empty. */
-function makeListMockClient() {
-  const tableData: Record<string, unknown> = {
-    components: mockComponents,
-    categories: mockCategories,
-    component_categories: mockComponentCategories,
-    component_tags: mockComponentTags,
-    tags: mockTags,
-  };
-  return {
-    from: vi.fn().mockImplementation((table: string) =>
-      createBuilder(tableData[table] ?? []),
-    ),
-  };
-}
-
-/** Detail-aware mock: returns realistic data for both list and detail queries.
- *
- * Query shape detection:
- *   - list:    .select(...).then(...)           → returns mockComponents array
- *   - detail:  .select("*").eq(...).single()    → returns component (single item)
- *   - related: .select(...).eq(...).neq(...).then(...)  → returns related array
- *
- * Each `from("components")` call creates a fresh builder with its own `calledNeq`
- * closure so the three query shapes can be told apart reliably.
- */
-function makeDetailMockClient(overrides: {
-  component?: Component | null;
-  detailTags?: string[];
-  related?: typeof mockRelated;
-  componentError?: { message: string } | null;
-} = {}) {
-  const {
-    component = mockComponents[0],
-    detailTags: tagSlugs = mockDetailTags,
-    related = mockRelated,
-    componentError = null,
-  } = overrides;
-
-  const tagRows = tagSlugs.map((slug, i) => ({
-    tag_id: `tag-${i}`,
-    tags: { slug },
-  }));
-
-  const listTableData: Record<string, unknown> = {
-    categories: mockCategories,
-    component_categories: mockComponentCategories,
-    tags: mockTags,
-  };
-
-  return {
-    from: vi.fn().mockImplementation((table: string) => {
-      if (table === "components") {
-        let calledNeq = false;
-        const builder: Record<string, unknown> = {};
-        builder.select = () => builder;
-        builder.order = () => builder;
-        builder.eq = () => builder;
-        builder.neq = () => { calledNeq = true; return builder; };
-        builder.limit = () => builder;
-        builder.single = vi
-          .fn()
-          .mockResolvedValue({ data: component, error: componentError });
-        // list or related — differentiated by whether .neq() was called
-        builder.then = (
-          ful: Parameters<Promise<unknown>["then"]>[0],
-          rej?: Parameters<Promise<unknown>["then"]>[1],
-        ) => {
-          const data = calledNeq ? related : mockComponents;
-          return Promise.resolve({ data, error: null }).then(ful, rej);
-        };
-        builder.catch = (rej: Parameters<Promise<unknown>["catch"]>[0]) =>
-          Promise.resolve({ data: mockComponents, error: null }).catch(rej);
-        builder.finally = (fin: Parameters<Promise<unknown>["finally"]>[0]) =>
-          Promise.resolve({ data: mockComponents, error: null }).finally(fin);
-        return builder;
-      }
-      if (table === "component_tags") {
-        return createBuilder(tagRows);
-      }
-      return createBuilder(listTableData[table] ?? []);
-    }),
-  };
-}
-
-// ── Render helpers ────────────────────────────────────────────
+// ── Render helper ────────────────────────────────────────────
 
 function renderMarketplace(initialPath = "/marketplace") {
   return render(
@@ -216,323 +103,133 @@ function renderMarketplace(initialPath = "/marketplace") {
   );
 }
 
-// ── Tests: not configured ─────────────────────────────────────
+// ── Tests: list panel ─────────────────────────────────────────
 
-describe("MarketplacePage — not configured", () => {
-  beforeEach(() => {
-    mockSupabase = null;
-  });
-
-  it("shows not-configured message when supabase is null", () => {
-    renderMarketplace();
-    expect(screen.getByText(/Supabase not configured/i)).toBeInTheDocument();
-  });
-
-  it("shows env var instructions", () => {
-    renderMarketplace();
-    expect(screen.getByText("VITE_SUPABASE_URL")).toBeInTheDocument();
-    expect(screen.getByText("VITE_SUPABASE_ANON_KEY")).toBeInTheDocument();
-  });
-
+describe("MarketplacePage — list panel", () => {
   it("renders the page header", () => {
     renderMarketplace();
     expect(screen.getByText("Browse Plugins")).toBeInTheDocument();
   });
 
-  it("shows the empty detail state", () => {
+  it("renders all plugins immediately — no loading state (data is bundled, not fetched)", () => {
+    renderMarketplace();
+    expect(screen.getByText("Research")).toBeInTheDocument();
+    expect(screen.getByText("Explain")).toBeInTheDocument();
+    expect(screen.getByText("Data Lineage")).toBeInTheDocument();
+    expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
+  });
+
+  it("shows plugin description", () => {
+    renderMarketplace();
+    expect(screen.getByText("Process any source into a knowledge base")).toBeInTheDocument();
+  });
+
+  it("shows version", () => {
+    renderMarketplace();
+    expect(screen.getByText("v0.3.0")).toBeInTheDocument();
+  });
+
+  it("shows trust badges reflecting the real security scan status", () => {
+    renderMarketplace();
+    expect(screen.getAllByText("verified").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("unscanned").length).toBeGreaterThan(0);
+  });
+
+  it("shows category badges", () => {
+    renderMarketplace();
+    expect(screen.getAllByText("Research & Knowledge").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Code Quality").length).toBeGreaterThan(0);
+  });
+
+  it("shows the empty-detail state when no plugin is selected", () => {
     renderMarketplace();
     expect(screen.getByText("Select a plugin to view details")).toBeInTheDocument();
   });
 
-  it("does not show Loading spinner", () => {
-    renderMarketplace();
-    expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
-  });
-});
-
-// ── Tests: list panel ─────────────────────────────────────────
-
-describe("MarketplacePage — list panel", () => {
-  beforeEach(() => {
-    mockSupabase = makeListMockClient();
-  });
-
-  describe("loading state", () => {
-    it("shows loading indicator before data arrives", () => {
-      renderMarketplace();
-      expect(screen.getByText("Loading…")).toBeInTheDocument();
-    });
-
-    it("hides loading indicator after data loads", async () => {
-      renderMarketplace();
-      await waitFor(() =>
-        expect(screen.queryByText("Loading…")).not.toBeInTheDocument(),
-      );
-    });
-  });
-
-  describe("plugin list", () => {
-    it("renders all plugins after loading", async () => {
-      renderMarketplace();
-      expect(await screen.findByText("Research")).toBeInTheDocument();
-      expect(screen.getByText("Explain")).toBeInTheDocument();
-      expect(screen.getByText("Data Lineage")).toBeInTheDocument();
-    });
-
-    it("shows plugin description", async () => {
-      renderMarketplace();
-      expect(
-        await screen.findByText("Process any source into a knowledge base"),
-      ).toBeInTheDocument();
-    });
-
-    it("shows version", async () => {
-      renderMarketplace();
-      expect(await screen.findByText("v0.3.0")).toBeInTheDocument();
-    });
-
-    it("shows install count", async () => {
-      renderMarketplace();
-      expect(await screen.findByText("500 installs")).toBeInTheDocument();
-    });
-
-    it("shows trust badge for official plugins", async () => {
-      renderMarketplace();
-      expect(await screen.findByText("official")).toBeInTheDocument();
-    });
-
-    it("shows trust badge for verified plugins", async () => {
-      renderMarketplace();
-      expect(await screen.findByText("verified")).toBeInTheDocument();
-    });
-
-    it("shows type badges", async () => {
-      renderMarketplace();
-      await screen.findByText("Research");
-      expect(screen.getAllByText("skill").length).toBeGreaterThan(0);
-      expect(screen.getAllByText("agent").length).toBeGreaterThan(0);
-    });
-  });
-
-  describe("empty state", () => {
-    it("shows empty-state message when no plugin is selected", async () => {
-      renderMarketplace();
-      expect(screen.getByText("Select a plugin to view details")).toBeInTheDocument();
-    });
-  });
-
   describe("search", () => {
-    it("filters plugins by search query", async () => {
+    it("filters plugins by search query", () => {
       renderMarketplace();
-      await screen.findByText("Research");
-
-      fireEvent.change(screen.getByPlaceholderText("Search plugins…"), {
-        target: { value: "lineage" },
-      });
-
+      fireEvent.change(screen.getByPlaceholderText("Search plugins…"), { target: { value: "lineage" } });
       expect(screen.queryByText("Research")).not.toBeInTheDocument();
       expect(screen.queryByText("Explain")).not.toBeInTheDocument();
       expect(screen.getByText("Data Lineage")).toBeInTheDocument();
     });
 
-    it("shows no-plugins-found when search matches nothing", async () => {
+    it("shows no-plugins-found when search matches nothing", () => {
       renderMarketplace();
-      await screen.findByText("Research");
-
-      fireEvent.change(screen.getByPlaceholderText("Search plugins…"), {
-        target: { value: "xyznotreal" },
-      });
-
+      fireEvent.change(screen.getByPlaceholderText("Search plugins…"), { target: { value: "xyznotreal" } });
       expect(screen.getByText("No plugins found")).toBeInTheDocument();
     });
 
-    it("filters case-insensitively", async () => {
+    it("filters case-insensitively", () => {
       renderMarketplace();
-      await screen.findByText("Research");
-
-      fireEvent.change(screen.getByPlaceholderText("Search plugins…"), {
-        target: { value: "RESEARCH" },
-      });
-
+      fireEvent.change(screen.getByPlaceholderText("Search plugins…"), { target: { value: "RESEARCH" } });
       expect(screen.getByText("Research")).toBeInTheDocument();
     });
 
-    it("matches on description text", async () => {
+    it("matches on description text", () => {
       renderMarketplace();
-      await screen.findByText("Research");
-
-      fireEvent.change(screen.getByPlaceholderText("Search plugins…"), {
-        target: { value: "column-level" },
-      });
-
+      fireEvent.change(screen.getByPlaceholderText("Search plugins…"), { target: { value: "column-level" } });
       expect(screen.getByText("Data Lineage")).toBeInTheDocument();
       expect(screen.queryByText("Research")).not.toBeInTheDocument();
     });
   });
 
   describe("category filter", () => {
-    it("renders category pills from the database", async () => {
+    // "Code Quality" / "Research & Knowledge" text also appears as a
+    // per-row CategoryBadge, so queries target the filter pill specifically
+    // by role (the badges are <span>s with role="status", not buttons).
+    it("renders category pills", () => {
       renderMarketplace();
-      expect(await screen.findByText("Research & Knowledge")).toBeInTheDocument();
-      expect(screen.getByText("Code Quality")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Research & Knowledge" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Code Quality" })).toBeInTheDocument();
     });
 
-    it("filters plugins when a category pill is clicked", async () => {
+    it("filters plugins when a category pill is clicked", () => {
       renderMarketplace();
-      fireEvent.click(await screen.findByText("Code Quality"));
-
-      await waitFor(() => {
-        expect(screen.queryByText("Research")).not.toBeInTheDocument();
-        expect(screen.queryByText("Data Lineage")).not.toBeInTheDocument();
-      });
+      fireEvent.click(screen.getByRole("button", { name: "Code Quality" }));
+      expect(screen.queryByText("Research")).not.toBeInTheDocument();
+      expect(screen.queryByText("Data Lineage")).not.toBeInTheDocument();
       expect(screen.getByText("Explain")).toBeInTheDocument();
     });
 
-    it("clears category filter when the active pill is clicked again", async () => {
+    it("clears category filter when the active pill is clicked again", () => {
       renderMarketplace();
-      const pill = await screen.findByText("Code Quality");
-
+      const pill = screen.getByRole("button", { name: "Code Quality" });
       fireEvent.click(pill);
-      await waitFor(() => expect(screen.queryByText("Research")).not.toBeInTheDocument());
-
+      expect(screen.queryByText("Research")).not.toBeInTheDocument();
       fireEvent.click(pill);
-      await waitFor(() => expect(screen.getByText("Research")).toBeInTheDocument());
+      expect(screen.getByText("Research")).toBeInTheDocument();
     });
 
-    it("sets aria-pressed=true on the active category pill", async () => {
+    it("sets aria-pressed correctly", () => {
       renderMarketplace();
-      const pill = await screen.findByText("Code Quality");
+      const pill = screen.getByRole("button", { name: "Code Quality" });
+      expect(pill).toHaveAttribute("aria-pressed", "false");
       fireEvent.click(pill);
       expect(pill).toHaveAttribute("aria-pressed", "true");
-    });
-
-    it("sets aria-pressed=false on inactive pills", async () => {
-      renderMarketplace();
-      const pill = await screen.findByText("Code Quality");
-      expect(pill).toHaveAttribute("aria-pressed", "false");
-    });
-  });
-
-  describe("type filter", () => {
-    it("renders type filter pills", async () => {
-      renderMarketplace();
-      await screen.findByText("Research");
-      expect(screen.getByRole("button", { name: "hook" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "script" })).toBeInTheDocument();
-    });
-
-    it("filters by component type", async () => {
-      renderMarketplace();
-      await screen.findByText("Research");
-
-      fireEvent.click(screen.getByRole("button", { name: "agent" }));
-
-      await waitFor(() => {
-        expect(screen.queryByText("Research")).not.toBeInTheDocument();
-        expect(screen.queryByText("Explain")).not.toBeInTheDocument();
-      });
-      expect(screen.getByText("Data Lineage")).toBeInTheDocument();
-    });
-
-    it("clears type filter on second click", async () => {
-      renderMarketplace();
-      await screen.findByText("Research");
-
-      const agentPill = screen.getByRole("button", { name: "agent" });
-      fireEvent.click(agentPill);
-      await waitFor(() => expect(screen.queryByText("Research")).not.toBeInTheDocument());
-
-      fireEvent.click(agentPill);
-      await waitFor(() => expect(screen.getByText("Research")).toBeInTheDocument());
-    });
-
-    it("sets aria-pressed=true on active type pill", async () => {
-      renderMarketplace();
-      await screen.findByText("Research");
-
-      const agentPill = screen.getByRole("button", { name: "agent" });
-      fireEvent.click(agentPill);
-      expect(agentPill).toHaveAttribute("aria-pressed", "true");
     });
   });
 
   describe("sorting", () => {
-    it("defaults to sorting by install count — highest first", async () => {
+    it("sorts alphabetically by name (no fake install-count or recency data to sort by)", () => {
       renderMarketplace();
-      await screen.findByText("Research");
-
-      const items = screen.getAllByText(/installs$/);
-      const counts = items.map((el) =>
-        parseInt(el.textContent!.replace(/[^0-9]/g, ""), 10),
-      );
-      for (let i = 0; i < counts.length - 1; i++) {
-        expect(counts[i]).toBeGreaterThanOrEqual(counts[i + 1]);
-      }
-    });
-
-    it("switches to sorting by most recently updated when Recent is clicked", async () => {
-      renderMarketplace();
-      await screen.findByText("Research");
-
-      fireEvent.click(screen.getByText("Recent"));
-
-      await waitFor(() => {
-        const all = document.querySelectorAll(".row-list-item");
-        let researchIdx = -1;
-        let dataLineageIdx = -1;
-        all.forEach((el, i) => {
-          if (el.textContent?.includes("Research") && !el.textContent?.includes("Data")) {
-            researchIdx = i;
-          }
-          if (el.textContent?.includes("Data Lineage")) {
-            dataLineageIdx = i;
-          }
-        });
-        expect(researchIdx).toBeLessThan(dataLineageIdx);
-      });
+      const rows = document.querySelectorAll(".row-list-item");
+      const names = Array.from(rows).map((r) => r.querySelector("span")?.textContent);
+      expect(names).toEqual(["Data Lineage", "Explain", "Research"]);
     });
   });
 
   describe("plugin count", () => {
-    it("shows total plugin count", async () => {
+    it("shows total plugin count", () => {
       renderMarketplace();
-      expect(await screen.findByText("3 plugins")).toBeInTheDocument();
+      expect(screen.getByText("3 plugins")).toBeInTheDocument();
     });
 
-    it("shows '1 plugin' (singular) when only one plugin matches", async () => {
+    it("shows '1 plugin' (singular) when only one plugin matches", () => {
       renderMarketplace();
-      await screen.findByText("Research");
-
-      fireEvent.change(screen.getByPlaceholderText("Search plugins…"), {
-        target: { value: "research" },
-      });
-
+      fireEvent.change(screen.getByPlaceholderText("Search plugins…"), { target: { value: "research" } });
       expect(screen.getByText("1 plugin")).toBeInTheDocument();
-    });
-  });
-
-  describe("error state", () => {
-    it("shows error message when Supabase returns an error", async () => {
-      mockSupabase = {
-        from: vi.fn().mockReturnValue(
-          createBuilder(null, { message: "Connection refused" }),
-        ),
-      };
-
-      renderMarketplace();
-      expect(await screen.findByText("Connection refused")).toBeInTheDocument();
-    });
-
-    it("does not show plugin list on error", async () => {
-      mockSupabase = {
-        from: vi.fn().mockReturnValue(
-          createBuilder(null, { message: "Error" }),
-        ),
-      };
-
-      renderMarketplace();
-      await screen.findByText("Error");
-      expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
     });
   });
 });
@@ -540,257 +237,114 @@ describe("MarketplacePage — list panel", () => {
 // ── Tests: detail panel ───────────────────────────────────────
 
 describe("MarketplacePage — detail panel", () => {
-  beforeEach(() => {
-    mockSupabase = makeDetailMockClient();
-  });
-
   describe("plugin selection", () => {
-    it("shows detail panel when a plugin is clicked", async () => {
+    it("shows detail panel when a plugin is clicked", () => {
       renderMarketplace();
-      const row = await screen.findByText("Research");
-      fireEvent.click(row.closest("button")!);
-
-      expect(await screen.findByText("Process any source into a knowledge base")).toBeInTheDocument();
+      fireEvent.click(screen.getByText("Research").closest("button")!);
+      expect(screen.getAllByText("Process any source into a knowledge base").length).toBeGreaterThan(0);
     });
 
-    it("highlights the selected plugin row", async () => {
+    it("highlights the selected plugin row", () => {
       renderMarketplace();
-      const row = await screen.findByText("Research");
-      fireEvent.click(row.closest("button")!);
-
-      await waitFor(() => {
-        expect(row.closest("button")).toHaveClass("selected");
-      });
+      const row = screen.getByText("Research").closest("button")!;
+      fireEvent.click(row);
+      expect(row).toHaveClass("selected");
     });
 
-    it("shows close button when plugin is selected", async () => {
+    it("returns to empty state when close button is clicked", () => {
       renderMarketplace();
-      const row = await screen.findByText("Research");
-      fireEvent.click(row.closest("button")!);
-
-      expect(await screen.findByLabelText("Close detail panel")).toBeInTheDocument();
-    });
-
-    it("returns to empty state when close button is clicked", async () => {
-      renderMarketplace();
-      const row = await screen.findByText("Research");
-      fireEvent.click(row.closest("button")!);
-
-      const closeBtn = await screen.findByLabelText("Close detail panel");
-      fireEvent.click(closeBtn);
-
-      await waitFor(() =>
-        expect(screen.getByText("Select a plugin to view details")).toBeInTheDocument(),
-      );
+      fireEvent.click(screen.getByText("Research").closest("button")!);
+      fireEvent.click(screen.getByLabelText("Close detail panel"));
+      expect(screen.getByText("Select a plugin to view details")).toBeInTheDocument();
     });
   });
 
   describe("deep-link — direct navigation to /marketplace/research", () => {
-    it("renders both panels when navigating directly to a plugin URL", async () => {
+    it("renders both panels when navigating directly to a plugin URL", () => {
       renderMarketplace("/marketplace/research");
       expect(screen.getByText("Browse Plugins")).toBeInTheDocument();
-      expect(await screen.findByText("/plugin install research@harness-kit")).toBeInTheDocument();
-    });
-
-    it("shows the detail content for the deep-linked plugin", async () => {
-      renderMarketplace("/marketplace/research");
-      const descEls = await screen.findAllByText("Process any source into a knowledge base");
-      expect(descEls.length).toBeGreaterThan(0);
+      expect(screen.getByText("/plugin install research@harness-kit")).toBeInTheDocument();
     });
   });
 
   describe("detail content", () => {
-    it("renders plugin name in detail panel", async () => {
+    it("renders version, license, and install command", () => {
       renderMarketplace("/marketplace/research");
-      const nameEls = await screen.findAllByText("Research");
-      expect(nameEls.length).toBeGreaterThan(0);
+      expect(screen.getAllByText("v0.3.0").length).toBeGreaterThan(0);
+      expect(screen.getByText("Apache-2.0")).toBeInTheDocument();
+      expect(screen.getByText("/plugin install research@harness-kit")).toBeInTheDocument();
     });
 
-    it("renders install count in detail panel", async () => {
+    it("renders the real security scan summary", () => {
       renderMarketplace("/marketplace/research");
-      const countEls = await screen.findAllByText("500 installs");
-      expect(countEls.length).toBeGreaterThan(0);
+      expect(screen.getByText("No issues found.")).toBeInTheDocument();
     });
 
-    it("renders version in detail panel", async () => {
+    it("renders author name", () => {
       renderMarketplace("/marketplace/research");
-      const verEls = await screen.findAllByText("v0.3.0");
-      expect(verEls.length).toBeGreaterThan(0);
+      expect(screen.getByText("harnessprotocol")).toBeInTheDocument();
     });
 
-    it("renders license in detail panel", async () => {
+    it("renders GitHub link built from repoPath", () => {
       renderMarketplace("/marketplace/research");
-      expect(await screen.findByText("Apache-2.0")).toBeInTheDocument();
-    });
-
-    it("renders updated date in detail panel", async () => {
-      renderMarketplace("/marketplace/research");
-      expect(await screen.findByText(/^Updated .+, 2024$/)).toBeInTheDocument();
-    });
-
-    it("renders install command", async () => {
-      renderMarketplace("/marketplace/research");
-      expect(
-        await screen.findByText("/plugin install research@harness-kit"),
-      ).toBeInTheDocument();
-    });
-
-    it("renders author name", async () => {
-      renderMarketplace("/marketplace/research");
-      expect(await screen.findByText("harnessprotocol")).toBeInTheDocument();
-    });
-
-    it("renders GitHub link when repo_url is present", async () => {
-      renderMarketplace("/marketplace/research");
-      const link = await screen.findByText("View on GitHub");
+      const link = screen.getByText("View on GitHub");
       expect(link.closest("a")).toHaveAttribute(
         "href",
-        "https://github.com/harnessprotocol/harness-kit",
+        "https://github.com/harnessprotocol/harness-kit/tree/main/plugins/research",
       );
     });
   });
 
-  describe("badges in detail panel", () => {
-    it("renders trust badge in detail panel", async () => {
+  describe("skills", () => {
+    it("renders a markdown panel per skill using the skill name as title", () => {
       renderMarketplace("/marketplace/research");
-      const officialEls = await screen.findAllByText("official");
-      expect(officialEls.length).toBeGreaterThan(0);
+      // Appears twice: once as MarkdownPanel's title label, once as the
+      // rendered "# Research Skill" heading inside the skill body itself.
+      expect(screen.getAllByText("Research Skill").length).toBeGreaterThan(0);
     });
 
-    it("renders type badge in detail panel", async () => {
-      renderMarketplace("/marketplace/research");
-      const skillBadges = await screen.findAllByText("skill");
-      expect(skillBadges.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe("markdown content", () => {
-    it("renders Skill Definition section heading", async () => {
-      renderMarketplace("/marketplace/research");
-      expect(await screen.findByText("Skill Definition")).toBeInTheDocument();
-    });
-
-    it("renders skill_md content", async () => {
-      renderMarketplace("/marketplace/research");
-      expect(await screen.findByText("Research Skill")).toBeInTheDocument();
-    });
-
-    it("renders Documentation section heading", async () => {
-      renderMarketplace("/marketplace/research");
-      expect(await screen.findByText("Documentation")).toBeInTheDocument();
-    });
-
-    it("renders readme_md content", async () => {
-      renderMarketplace("/marketplace/research");
-      expect(await screen.findByText("Usage")).toBeInTheDocument();
-    });
-
-    it("does not render Skill Definition when skill_md is null", async () => {
-      mockSupabase = makeDetailMockClient({
-        component: { ...mockComponents[0], skill_md: null },
-      });
-      renderMarketplace("/marketplace/research");
-      await screen.findByText("/plugin install research@harness-kit");
-      expect(screen.queryByText("Skill Definition")).not.toBeInTheDocument();
-    });
-
-    it("does not render Documentation when readme_md is null", async () => {
-      mockSupabase = makeDetailMockClient({
-        component: { ...mockComponents[0], readme_md: null },
-      });
-      renderMarketplace("/marketplace/research");
-      await screen.findByText("/plugin install research@harness-kit");
-      expect(screen.queryByText("Documentation")).not.toBeInTheDocument();
+    it("renders no skill panels for a plugin with no skills", () => {
+      renderMarketplace("/marketplace/explain");
+      expect(screen.queryByText("Research Skill")).not.toBeInTheDocument();
     });
   });
 
   describe("tags in detail panel", () => {
-    it("renders tags from the database", async () => {
+    it("renders tags", () => {
       renderMarketplace("/marketplace/research");
-      expect(await screen.findByText("knowledge-base")).toBeInTheDocument();
+      expect(screen.getByText("knowledge-base")).toBeInTheDocument();
     });
 
-    it("clicking a tag in the detail panel filters the list inline", async () => {
+    it("clicking a tag filters the list inline", () => {
       renderMarketplace("/marketplace/research");
-      await screen.findByText("knowledge-base");
       fireEvent.click(screen.getByText("knowledge-base"));
-
-      expect(await screen.findByText("Filtered by tag:")).toBeInTheDocument();
+      expect(screen.getByText("Filtered by tag:")).toBeInTheDocument();
     });
 
-    it("does not render tags section when plugin has no tags", async () => {
-      mockSupabase = makeDetailMockClient({ detailTags: [] });
-      renderMarketplace("/marketplace/research");
-      await screen.findByText("/plugin install research@harness-kit");
+    it("does not render a tags row when the plugin has no tags", () => {
+      renderMarketplace("/marketplace/explain");
       expect(screen.queryByText("knowledge-base")).not.toBeInTheDocument();
     });
   });
 
   describe("related plugins", () => {
-    it("shows related plugins", async () => {
+    it("shows other plugins in the same category", () => {
       renderMarketplace("/marketplace/research");
-      expect(await screen.findByText("Orient")).toBeInTheDocument();
+      // Appears twice: once in the still-visible master list, once in the
+      // detail panel's "Related" sidebar.
+      expect(screen.getAllByText("Data Lineage").length).toBeGreaterThan(0);
     });
 
-    it("does not show Related section when no related plugins exist", async () => {
-      mockSupabase = makeDetailMockClient({ related: [] });
-      renderMarketplace("/marketplace/research");
-      await screen.findByText("/plugin install research@harness-kit");
+    it("does not show a Related section when no other plugin shares the category", () => {
+      renderMarketplace("/marketplace/explain");
       expect(screen.queryByText("Related")).not.toBeInTheDocument();
-    });
-
-    it("clicking a related plugin updates the detail view", async () => {
-      renderMarketplace("/marketplace/research");
-      await screen.findByText("Orient");
-      fireEvent.click(screen.getByText("Orient").closest("button")!);
-
-      // Detail panel should start loading the new plugin
-      await waitFor(() => {
-        // Either loading or not-found (since our mock returns research data for all slugs)
-        const hasLoading = screen.queryByText("Loading…") !== null;
-        const hasNotFound = screen.queryByText("Plugin not found.") !== null;
-        const hasDetail = screen.queryByText("Research") !== null;
-        expect(hasLoading || hasNotFound || hasDetail).toBe(true);
-      });
     });
   });
 
   describe("not found state", () => {
-    it("shows not-found message when plugin does not exist", async () => {
-      mockSupabase = makeDetailMockClient({ component: null });
+    it("shows not-found message when the plugin does not exist", () => {
       renderMarketplace("/marketplace/nonexistent");
-      expect(await screen.findByText("Plugin not found.")).toBeInTheDocument();
+      expect(screen.getByText("Plugin not found.")).toBeInTheDocument();
     });
-  });
-
-  describe("GitHub link", () => {
-    it("does not show GitHub link when repo_url is null", async () => {
-      mockSupabase = makeDetailMockClient({
-        component: { ...mockComponents[0], repo_url: null },
-      });
-      renderMarketplace("/marketplace/research");
-      await screen.findByText("/plugin install research@harness-kit");
-      expect(screen.queryByText("View on GitHub")).not.toBeInTheDocument();
-    });
-  });
-});
-
-// ── Tests: tag filter from list URL ──────────────────────────
-
-describe("MarketplacePage — tag filter (inline)", () => {
-  beforeEach(() => {
-    mockSupabase = makeListMockClient();
-  });
-
-  it("clears inline tag filter when the clear button is clicked", async () => {
-    renderMarketplace();
-    await screen.findByText("Research");
-
-    // Simulate a tag being set (we can't easily set it via URL in the new design,
-    // but we can verify the clear button works once the banner appears)
-    // Instead, trigger via the detail panel tag click after loading detail data
-    // For this test, we verify the tag filter state mechanism works via list filtering
-    // The tag filter banner shows only when selectedTag is set
-    expect(screen.queryByText("Filtered by tag:")).not.toBeInTheDocument();
   });
 });

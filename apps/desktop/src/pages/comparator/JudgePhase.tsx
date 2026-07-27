@@ -819,6 +819,38 @@ export default function JudgePhase({ active }: JudgePhaseProps) {
         {/* ── Results View ──────────────────────────────────── */}
         {tab === "results" && results && (
           <>
+            {/* Preview disclaimer — scores below are simulated (derived from
+                harness/dimension name lengths), not a real model judging the
+                actual submissions. Keep this visible whenever results show;
+                see generateMockResults(). */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                marginBottom: 12,
+                padding: "6px 10px",
+                borderRadius: 6,
+                background: "var(--warning-light)",
+                fontSize: 11,
+                color: tokens.fgMuted,
+                fontFamily: fontStack,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 9,
+                  fontWeight: 700,
+                  letterSpacing: "0.04em",
+                  textTransform: "uppercase" as const,
+                  color: tokens.warning,
+                }}
+              >
+                Preview
+              </span>
+              <span>Scores are simulated, not a real model judging these submissions.</span>
+            </div>
+
             {/* Verdict Grid */}
             <div style={styles.verdictGrid}>
               {results.verdicts.map((verdict) => (

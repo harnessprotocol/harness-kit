@@ -229,9 +229,10 @@ function ConvergenceMap({
             <span>
               <strong>{destination.mcpServerCount}</strong> mcp servers
             </span>
-            <span>
-              <strong>{destination.skillCount}</strong> skills
-            </span>
+            {/* Skill count omitted: no adapter's reverse-import populates
+                skills yet (see onboarding-data.ts), so this would always
+                read "0 skills" — a permanent zero reads as broken, not
+                honest, so it's left out until skill import ships. */}
           </div>
         </Card>
       </div>

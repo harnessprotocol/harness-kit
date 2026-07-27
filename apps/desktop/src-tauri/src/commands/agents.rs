@@ -95,7 +95,10 @@ const KNOWN_AGENTS: &[AgentDef] = &[
         id: "warp",
         name: "Warp",
         binary: "warp",
-        protocol: "http",
+        // Warp's agent CLI (Oz) is a standard stdio-invoked CLI like every
+        // other agent here, not an HTTP service — "http" was the one outlier
+        // in this list with no other entry using that value.
+        protocol: "stdio",
         description: "AI-native terminal with agent capabilities",
     },
     AgentDef {

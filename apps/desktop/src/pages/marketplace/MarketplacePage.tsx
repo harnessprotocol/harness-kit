@@ -2,84 +2,20 @@ import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { X } from "lucide-react";
 import { Card, EmptyState, Input } from "@harness-kit/ui";
-import { supabase } from "../../lib/supabase";
+import type { MarketplaceCategory, MarketplacePlugin } from "@harness-kit/marketplace-data";
+import {
+  getAllPlugins,
+  getCategories,
+  getCategoryName,
+  getPlugin,
+  pluginRepoUrl,
+  relatedPlugins,
+} from "../../lib/marketplace/data";
 import MarkdownPanel from "../../components/MarkdownPanel";
-import { TrustBadge, TypeBadge } from "./components/PluginBadges";
-import type {
-  Component,
-  Category,
-  ComponentType,
-  ComponentCategory,
-} from "@harness-kit/shared";
+import { TrustBadge, CategoryBadge } from "./components/PluginBadges";
 
-type ComponentTag = { component_id: string; tag_id: string };
-type TagRow = { id: string; slug: string };
-type SortBy = "installs" | "recent";
-type RelatedComponent = Pick<Component, "id" | "slug" | "name" | "install_count">;
-
-const COMPONENT_TYPES: ComponentType[] = [
-  "skill",
-  "plugin",
-  "agent",
-  "hook",
-  "script",
-  "knowledge",
-  "rules",
-];
-
-const LOCAL_COMPONENTS: Component[] = [
-  {
-    id: "local-explain",
-    slug: "explain",
-    name: "Explain",
-    type: "skill",
-    description: "Layered code explanations for files, directories, and concepts.",
-    trust_tier: "official",
-    version: "0.2.0",
-    author: { name: "harnessprotocol" },
-    license: "Apache-2.0",
-    skill_md: null,
-    readme_md: "## Usage\n\nInstall with `/plugin install explain@harness-kit`, then run `/explain src/auth/`.",
-    repo_url: "https://github.com/harnessprotocol/harness-kit",
-    install_count: 0,
-    created_at: "2026-01-01T00:00:00Z",
-    updated_at: "2026-01-01T00:00:00Z",
-  },
-  {
-    id: "local-research",
-    slug: "research",
-    name: "Research",
-    type: "skill",
-    description: "Process sources into a structured, compounding knowledge base.",
-    trust_tier: "official",
-    version: "0.3.0",
-    author: { name: "harnessprotocol" },
-    license: "Apache-2.0",
-    skill_md: null,
-    readme_md: "## Usage\n\nInstall with `/plugin install research@harness-kit`, then run `/research https://...`.",
-    repo_url: "https://github.com/harnessprotocol/harness-kit",
-    install_count: 0,
-    created_at: "2026-01-01T00:00:00Z",
-    updated_at: "2026-01-01T00:00:00Z",
-  },
-  {
-    id: "local-review",
-    slug: "review",
-    name: "Review",
-    type: "skill",
-    description: "Comprehensive code review with severity labels and cross-file analysis.",
-    trust_tier: "official",
-    version: "0.2.0",
-    author: { name: "harnessprotocol" },
-    license: "Apache-2.0",
-    skill_md: null,
-    readme_md: "## Usage\n\nInstall with `/plugin install review@harness-kit`, then run `/review`.",
-    repo_url: "https://github.com/harnessprotocol/harness-kit",
-    install_count: 0,
-    created_at: "2026-01-01T00:00:00Z",
-    updated_at: "2026-01-01T00:00:00Z",
-  },
-];
+const ALL_PLUGINS = getAllPlugins();
+const ALL_CATEGORIES = getCategories();
 
 export default function MarketplacePage() {
   const navigate = useNavigate();
@@ -116,191 +52,43 @@ export default function MarketplacePage() {
   // ── Master panel state ──────────────────────────────────────
   const [query, setQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [selectedType, setSelectedType] = useState("");
   const [selectedTag, setSelectedTag] = useState("");
-  const [sortBy, setSortBy] = useState<SortBy>("installs");
 
-  const [components, setComponents] = useState<Component[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [componentCategories, setComponentCategories] = useState<ComponentCategory[]>([]);
-  const [componentTags, setComponentTags] = useState<ComponentTag[]>([]);
-  const [tags, setTags] = useState<TagRow[]>([]);
-  const [listLoading, setListLoading] = useState(() => Boolean(supabase));
-  const [listError, setListError] = useState<string | null>(null);
+  // Catalog is a build-time generated JSON (see ../../lib/marketplace/data.ts)
+  // bundled into the app, not fetched — no loading/error state needed.
+  const [categories] = useState<MarketplaceCategory[]>(ALL_CATEGORIES);
 
   // ── Detail panel state ──────────────────────────────────────
-  const [detail, setDetail] = useState<Component | null>(null);
-  const [detailTags, setDetailTags] = useState<string[]>([]);
-  const [related, setRelated] = useState<RelatedComponent[]>([]);
-  const [detailLoading, setDetailLoading] = useState(false);
-  const [notFound, setNotFound] = useState(false);
-
-  // ── Load list data ──────────────────────────────────────────
-  useEffect(() => {
-    if (!supabase) {
-      setComponents(LOCAL_COMPONENTS);
-      setListLoading(false);
-      return;
-    }
-
-    Promise.all([
-      supabase.from("components").select("id, slug, name, type, description, trust_tier, version, author, license, install_count, updated_at"),
-      supabase.from("categories").select("*").order("display_order"),
-      supabase.from("component_categories").select("component_id, category_id"),
-      supabase.from("component_tags").select("component_id, tag_id"),
-      supabase.from("tags").select("id, slug"),
-    ])
-      .then(([compRes, catRes, ccRes, ctRes, tagRes]) => {
-        if (compRes.error) throw compRes.error;
-        if (catRes.error) throw catRes.error;
-        if (ccRes.error) throw ccRes.error;
-        if (ctRes.error) throw ctRes.error;
-        if (tagRes.error) throw tagRes.error;
-        setComponents((compRes.data ?? []) as Component[]);
-        setCategories((catRes.data ?? []) as Category[]);
-        setComponentCategories((ccRes.data ?? []) as ComponentCategory[]);
-        setComponentTags((ctRes.data ?? []) as ComponentTag[]);
-        setTags((tagRes.data ?? []) as TagRow[]);
-      })
-      .catch((e) => setListError(String(e?.message ?? e)))
-      .finally(() => setListLoading(false));
-  }, []);
-
-  // ── Load detail data ────────────────────────────────────────
-  useEffect(() => {
-    if (!selectedSlug) {
-      setDetail(null);
-      setDetailTags([]);
-      setRelated([]);
-      setNotFound(false);
-      return;
-    }
-
-    if (!supabase) {
-      const local = LOCAL_COMPONENTS.find((c) => c.slug === selectedSlug);
-      setDetail(local ?? null);
-      setDetailTags([]);
-      setRelated(LOCAL_COMPONENTS.filter((c) => c.slug !== selectedSlug).slice(0, 5));
-      setNotFound(!local);
-      setDetailLoading(false);
-      return;
-    }
-
-    const client = supabase;
-
-    setDetailLoading(true);
-    setNotFound(false);
-    setDetail(null);
-    setDetailTags([]);
-    setRelated([]);
-
-    async function load() {
-      try {
-        const { data, error } = await client
-          .from("components")
-          .select("*")
-          .eq("slug", selectedSlug!)
-          .single();
-
-        if (error || !data) {
-          setNotFound(true);
-          return;
-        }
-
-        const comp = data as Component;
-        setDetail(comp);
-
-        const { data: tagRows } = await client
-          .from("component_tags")
-          .select("tag_id, tags(slug)")
-          .eq("component_id", comp.id);
-
-        if (tagRows) {
-          setDetailTags(
-            tagRows
-              .map((row: Record<string, unknown>) => (row.tags as { slug: string })?.slug ?? "")
-              .filter(Boolean),
-          );
-        }
-
-        const { data: relatedData } = await client
-          .from("components")
-          .select("id, slug, name, install_count")
-          .eq("type", comp.type)
-          .neq("id", comp.id)
-          .order("install_count", { ascending: false })
-          .limit(5);
-
-        setRelated((relatedData ?? []) as RelatedComponent[]);
-      } catch {
-        setNotFound(true);
-      } finally {
-        setDetailLoading(false);
-      }
-    }
-
-    void load();
-  }, [selectedSlug]);
+  const detail: MarketplacePlugin | undefined = selectedSlug ? getPlugin(selectedSlug) : undefined;
+  const notFound = Boolean(selectedSlug) && !detail;
+  const related = detail ? relatedPlugins(detail) : [];
 
   // ── Filter + sort list ──────────────────────────────────────
   const filtered = useMemo(() => {
-    let results = [...components];
+    let results = [...ALL_PLUGINS];
 
     if (query.trim()) {
       const q = query.toLowerCase();
       results = results.filter(
-        (c) =>
-          c.name.toLowerCase().includes(q) ||
-          c.description.toLowerCase().includes(q),
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          p.description.toLowerCase().includes(q),
       );
     }
 
     if (selectedCategory) {
-      const catObj = categories.find((c) => c.slug === selectedCategory);
-      if (catObj) {
-        const ids = new Set(
-          componentCategories
-            .filter((cc) => cc.category_id === catObj.id)
-            .map((cc) => cc.component_id),
-        );
-        results = results.filter((c) => ids.has(c.id));
-      }
+      results = results.filter((p) => p.category === selectedCategory);
     }
 
     if (selectedTag) {
-      const tagObj = tags.find((t) => t.slug === selectedTag);
-      if (tagObj) {
-        const ids = new Set(
-          componentTags
-            .filter((ct) => ct.tag_id === tagObj.id)
-            .map((ct) => ct.component_id),
-        );
-        results = results.filter((c) => ids.has(c.id));
-      }
+      results = results.filter((p) => p.tags.includes(selectedTag));
     }
 
-    if (selectedType) {
-      results = results.filter((c) => c.type === selectedType);
-    }
-
-    if (sortBy === "recent") {
-      results.sort(
-        (a, b) =>
-          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime(),
-      );
-    } else {
-      results.sort((a, b) => b.install_count - a.install_count);
-    }
-
-    return results;
-  }, [components, categories, componentCategories, componentTags, tags, query, selectedCategory, selectedTag, selectedType, sortBy]);
+    return results.sort((a, b) => a.name.localeCompare(b.name));
+  }, [query, selectedCategory, selectedTag]);
 
   function toggleCategory(slug: string) {
     setSelectedCategory((prev) => (prev === slug ? "" : slug));
-  }
-
-  function toggleType(type: string) {
-    setSelectedType((prev) => (prev === type ? "" : type));
   }
 
   function pillStyle(active: boolean) {
@@ -319,27 +107,6 @@ export default function MarketplacePage() {
     };
   }
 
-  function sortTabStyle(active: boolean) {
-    return {
-      fontSize: "11px",
-      fontWeight: active ? 500 : 400,
-      padding: "3px 10px",
-      borderRadius: "6px",
-      border: "none",
-      background: active ? "var(--active-bg)" : "transparent",
-      color: active ? "var(--fg-base)" : "var(--fg-subtle)",
-      cursor: "pointer",
-    };
-  }
-
-  const updatedDate = detail?.updated_at
-    ? new Date(detail.updated_at).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      })
-    : null;
-
   return (
     <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
       {/* ── Master panel ── */}
@@ -354,24 +121,6 @@ export default function MarketplacePage() {
         {/* Fixed header + filters */}
         <div style={{ padding: "20px 20px 0", flexShrink: 0 }}>
           <PageHeader />
-
-          {!supabase && (
-            <Card
-              padding="sm"
-              style={{
-                background: "var(--warning-light)",
-                marginBottom: "12px",
-                fontSize: "11px",
-                lineHeight: 1.45,
-                color: "var(--fg-muted)",
-              }}
-            >
-              <strong style={{ color: "var(--fg-base)" }}>Supabase not configured.</strong>{" "}
-              Showing a local demo catalog. Add{" "}
-              <code style={{ fontFamily: "ui-monospace, monospace" }}>VITE_SUPABASE_URL</code> and{" "}
-              <code style={{ fontFamily: "ui-monospace, monospace" }}>VITE_SUPABASE_ANON_KEY</code> to use the live marketplace.
-            </Card>
-          )}
 
           {/* Active tag filter banner */}
           {selectedTag && (
@@ -426,21 +175,7 @@ export default function MarketplacePage() {
             </div>
           )}
 
-          {/* Type pills */}
-          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "14px" }}>
-            {COMPONENT_TYPES.map((t) => (
-              <button
-                key={t}
-                onClick={() => toggleType(t)}
-                aria-pressed={selectedType === t}
-                style={pillStyle(selectedType === t)}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-
-          {/* Sort + count */}
+          {/* Count */}
           <div style={{
             display: "flex",
             alignItems: "center",
@@ -448,32 +183,14 @@ export default function MarketplacePage() {
             marginBottom: "10px",
           }}>
             <span style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>
-              {listLoading ? "" : `${filtered.length} plugin${filtered.length === 1 ? "" : "s"}`}
+              {filtered.length} plugin{filtered.length === 1 ? "" : "s"}
             </span>
-            <div style={{ display: "flex", gap: "2px" }}>
-              <button onClick={() => setSortBy("installs")} style={sortTabStyle(sortBy === "installs")}>
-                Installs
-              </button>
-              <button onClick={() => setSortBy("recent")} style={sortTabStyle(sortBy === "recent")}>
-                Recent
-              </button>
-            </div>
           </div>
         </div>
 
         {/* Scrollable list */}
         <div style={{ flex: 1, overflowY: "auto", padding: "0 20px 20px" }}>
-          {listLoading && (
-            <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</p>
-          )}
-
-          {listError && (
-            <Card padding="sm" style={{ fontSize: "13px", color: "var(--danger)" }}>
-              {listError}
-            </Card>
-          )}
-
-          {!listLoading && !listError && filtered.length === 0 && (
+          {filtered.length === 0 && (
             <EmptyState
               icon={
                 <svg width="28" height="28" viewBox="0 0 24 24" fill="none" strokeWidth="1.5">
@@ -485,11 +202,11 @@ export default function MarketplacePage() {
             />
           )}
 
-          {!listLoading && !listError && filtered.length > 0 && (
+          {filtered.length > 0 && (
             <div className="row-list">
               {filtered.map((plugin) => (
                 <button
-                  key={plugin.id}
+                  key={plugin.slug}
                   className={`row-list-item${selectedSlug === plugin.slug ? " selected" : ""}`}
                   onClick={() => navigate(`/marketplace/${plugin.slug}`, { replace: true })}
                   style={{
@@ -506,8 +223,8 @@ export default function MarketplacePage() {
                       <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--fg-base)" }}>
                         {plugin.name}
                       </span>
-                      <TrustBadge tier={plugin.trust_tier} />
-                      <TypeBadge type={plugin.type} />
+                      <TrustBadge tier={plugin.security.trust} />
+                      <CategoryBadge name={getCategoryName(plugin.category)} />
                     </div>
                     {plugin.description && (
                       <p style={{
@@ -526,9 +243,6 @@ export default function MarketplacePage() {
                   <div style={{ flexShrink: 0, marginLeft: "12px", textAlign: "right" }}>
                     <div style={{ fontSize: "11px", fontFamily: "ui-monospace, monospace", color: "var(--fg-subtle)", fontVariantNumeric: "tabular-nums" }}>
                       v{plugin.version}
-                    </div>
-                    <div style={{ fontSize: "10px", color: "var(--fg-subtle)", marginTop: "1px", fontVariantNumeric: "tabular-nums" }}>
-                      {plugin.install_count.toLocaleString()} installs
                     </div>
                   </div>
                 </button>
@@ -558,10 +272,6 @@ export default function MarketplacePage() {
             <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>
               Select a plugin to view details
             </p>
-          </div>
-        ) : detailLoading ? (
-          <div style={{ padding: "20px 24px" }}>
-            <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</p>
           </div>
         ) : notFound || !detail ? (
           <div style={{ padding: "20px 24px" }}>
@@ -603,8 +313,8 @@ export default function MarketplacePage() {
                 }}>
                   {detail.name}
                 </h1>
-                <TrustBadge tier={detail.trust_tier} />
-                <TypeBadge type={detail.type} />
+                <TrustBadge tier={detail.security.trust} />
+                <CategoryBadge name={getCategoryName(detail.category)} />
               </div>
               {/* Description hero */}
               <Card padding="sm" style={{ marginTop: "10px" }}>
@@ -623,16 +333,33 @@ export default function MarketplacePage() {
               color: "var(--fg-subtle)",
               marginBottom: "14px",
             }}>
-              <span>{detail.install_count.toLocaleString()} installs</span>
               <span style={{ fontFamily: "ui-monospace, monospace" }}>v{detail.version}</span>
               {detail.license && <span>{detail.license}</span>}
-              {updatedDate && <span>Updated {updatedDate}</span>}
             </div>
 
+            {/* Security scan summary */}
+            {detail.security.summary && (
+              <Card padding="sm" style={{ marginBottom: "14px" }}>
+                <p style={{
+                  fontSize: "10px",
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                  color: "var(--fg-subtle)",
+                  margin: "0 0 6px",
+                }}>
+                  Security scan
+                </p>
+                <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: 0 }}>
+                  {detail.security.summary}
+                </p>
+              </Card>
+            )}
+
             {/* Tags */}
-            {detailTags.length > 0 && (
+            {detail.tags.length > 0 && (
               <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "20px" }}>
-                {detailTags.map((tag) => (
+                {detail.tags.map((tag) => (
                   <button
                     key={tag}
                     className="hk-reset-btn"
@@ -677,71 +404,107 @@ export default function MarketplacePage() {
                     color: "var(--accent-text)",
                     wordBreak: "break-all",
                   }}>
-                    /plugin install {detail.slug}@harness-kit
+                    {detail.installCommand}
                   </code>
                 </Card>
 
-                {detail.skill_md && (
-                  <MarkdownPanel content={detail.skill_md} title="Skill Definition" />
+                {/* Required environment variables */}
+                {detail.requiresEnv.length > 0 && (
+                  <Card padding="sm" style={{ marginBottom: "16px" }}>
+                    <p style={{
+                      fontSize: "10px",
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      color: "var(--fg-subtle)",
+                      margin: "0 0 8px",
+                    }}>
+                      Requires
+                    </p>
+                    <ul style={{ margin: 0, padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: "6px" }}>
+                      {detail.requiresEnv.map((env) => (
+                        <li key={env.name}>
+                          <code style={{ fontSize: "11px", fontFamily: "ui-monospace, monospace", color: "var(--fg-base)" }}>
+                            {env.name}
+                          </code>
+                          {!env.required && (
+                            <span style={{ fontSize: "10px", color: "var(--fg-subtle)" }}> (optional)</span>
+                          )}
+                          <p style={{ fontSize: "11px", color: "var(--fg-muted)", margin: "2px 0 0" }}>
+                            {env.description}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  </Card>
                 )}
 
-                {detail.readme_md && (
-                  <MarkdownPanel content={detail.readme_md} title="Documentation" />
+                {/* Bundled MCP server */}
+                {detail.mcp && (
+                  <Card padding="sm" style={{ marginBottom: "16px" }}>
+                    <p style={{
+                      fontSize: "10px",
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      color: "var(--fg-subtle)",
+                      margin: "0 0 6px",
+                    }}>
+                      Bundled MCP server
+                    </p>
+                    <code style={{ fontSize: "11px", fontFamily: "ui-monospace, monospace", color: "var(--fg-base)" }}>
+                      {detail.mcp.command}{detail.mcp.args.length > 0 ? ` ${detail.mcp.args.join(" ")}` : ""}
+                    </code>
+                  </Card>
                 )}
+
+                {/* Skills */}
+                {detail.skills.map((skill) => (
+                  <MarkdownPanel key={skill.dir} content={skill.body} title={skill.name} />
+                ))}
               </div>
 
-              {/* Sidebar */}
-              <aside style={{ width: "200px", flexShrink: 0 }}>
+              {/* Sidebar — plain div, not <aside>: the app shell already has one
+                  top-level <aside> (the nav sidebar), and Playwright's prod-smoke
+                  guard queries locator("aside") expecting exactly one match. A
+                  second <aside> landmark here is also arguably an a11y anti-pattern
+                  without a distinguishing aria-label, not just a test-satisfying fix. */}
+              <div style={{ width: "200px", flexShrink: 0 }}>
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                   {/* Author */}
-                  {detail.author?.name && (
-                    <Card padding="sm">
-                      <p style={{
-                        fontSize: "10px",
-                        fontWeight: 600,
-                        textTransform: "uppercase",
-                        letterSpacing: "0.05em",
-                        color: "var(--fg-subtle)",
-                        margin: "0 0 6px",
-                      }}>Author</p>
-                      {detail.author.url ? (
-                        <a
-                          href={detail.author.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          style={{ fontSize: "12px", color: "var(--accent-text)", textDecoration: "none" }}
-                        >
-                          {detail.author.name}
-                        </a>
-                      ) : (
-                        <span style={{ fontSize: "12px", color: "var(--fg-base)" }}>
-                          {detail.author.name}
-                        </span>
-                      )}
-                    </Card>
-                  )}
+                  <Card padding="sm">
+                    <p style={{
+                      fontSize: "10px",
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      color: "var(--fg-subtle)",
+                      margin: "0 0 6px",
+                    }}>Author</p>
+                    <span style={{ fontSize: "12px", color: "var(--fg-base)" }}>
+                      {detail.author}
+                    </span>
+                  </Card>
 
                   {/* GitHub link */}
-                  {detail.repo_url && (
-                    <Card padding="sm">
-                      <a
-                        href={detail.repo_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "6px",
-                          fontSize: "12px",
-                          color: "var(--fg-muted)",
-                          textDecoration: "none",
-                        }}
-                      >
-                        <GitHubIcon />
-                        View on GitHub
-                      </a>
-                    </Card>
-                  )}
+                  <Card padding="sm">
+                    <a
+                      href={pluginRepoUrl(detail)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        fontSize: "12px",
+                        color: "var(--fg-muted)",
+                        textDecoration: "none",
+                      }}
+                    >
+                      <GitHubIcon />
+                      View on GitHub
+                    </a>
+                  </Card>
 
                   {/* Related plugins */}
                   {related.length > 0 && (
@@ -756,7 +519,7 @@ export default function MarketplacePage() {
                       }}>Related</p>
                       <ul style={{ margin: 0, padding: 0, listStyle: "none" }}>
                         {related.map((r) => (
-                          <li key={r.id} style={{ marginBottom: "6px" }}>
+                          <li key={r.slug} style={{ marginBottom: "6px" }}>
                             <button
                               className="hk-reset-btn"
                               onClick={() => navigate(`/marketplace/${r.slug}`, { replace: true })}
@@ -778,9 +541,6 @@ export default function MarketplacePage() {
                               }}>
                                 {r.name}
                               </span>
-                              <span style={{ fontSize: "10px", color: "var(--fg-subtle)", flexShrink: 0 }}>
-                                {r.install_count.toLocaleString()}
-                              </span>
                             </button>
                           </li>
                         ))}
@@ -788,7 +548,7 @@ export default function MarketplacePage() {
                     </Card>
                   )}
                 </div>
-              </aside>
+              </div>
             </div>
           </div>
         )}

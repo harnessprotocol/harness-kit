@@ -76,7 +76,6 @@ const TOASTS: ToastItem[] = [
 ];
 
 const COMMANDS: Command[] = [
-  { id: "ask-ai", label: "Ask AI", group: "Actions", hint: "Ollama chat", run: () => {} },
   { id: "toggle-theme", label: "Toggle light / dark theme", group: "Actions", run: () => {} },
   { id: "nav-fleet", label: "Go to Fleet", group: "Navigate", run: () => {} },
   { id: "nav-drift", label: "Go to Drift", group: "Navigate", run: () => {} },
