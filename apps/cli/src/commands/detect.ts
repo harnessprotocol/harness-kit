@@ -1,10 +1,7 @@
 import { resolve } from "node:path";
 import chalk from "chalk";
-import { detectPlatforms } from "@harness-kit/core";
+import { detectPlatforms, getCheckableTargets } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
-
-const ALL_PLATFORMS = ["claude-code", "cursor", "copilot"] as const;
-type Platform = (typeof ALL_PLATFORMS)[number];
 
 interface DetectFlags {
   json?: boolean;
@@ -13,6 +10,13 @@ interface DetectFlags {
 export async function detectCommand(flags: DetectFlags = {}): Promise<void> {
   const fs = new NodeFsProvider();
   const cwd = resolve(".");
+
+  // Derived from core's target registry rather than hardcoded, so this list
+  // can't silently fall behind as new compile targets are added (it used to
+  // be pinned to just claude-code/cursor/copilot while core already
+  // supported 8 platforms — Windsurf, Junie, Gemini, OpenCode, and Codex
+  // configs were detected internally but never shown here).
+  const ALL_PLATFORMS = getCheckableTargets();
 
   const detected = await detectPlatforms(fs);
 
@@ -54,5 +58,5 @@ export async function detectCommand(flags: DetectFlags = {}): Promise<void> {
   }
 
   console.log("");
-  console.log(chalk.dim(`${confirmedCount} of 3 platforms detected`));
+  console.log(chalk.dim(`${confirmedCount} of ${ALL_PLATFORMS.length} platforms detected`));
 }

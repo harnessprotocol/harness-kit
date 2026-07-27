@@ -38,7 +38,15 @@ async function collectAdapterResults(ctx: AdapterContext): Promise<AdapterImport
 
     results.push({
       adapter: adapter.id,
-      detected: detectResult !== null,
+      // A needsConfirmation-only match (an ambiguous indicator like AGENTS.md
+      // or .github with nothing more specific alongside it) isn't a confident
+      // detection — every adapter delegates to the shared detectPlatforms(),
+      // whose ambiguous/needsConfirmation signal exists precisely so callers
+      // don't collapse "maybe" into "yes". Without this check, any adapter
+      // whose ambiguous list matches something shared (e.g. AGENTS.md across
+      // copilot/opencode/windsurf/gemini/junie) would misreport detected:true
+      // for projects that merely have another tool's shared marker file.
+      detected: detectResult !== null && !detectResult.needsConfirmation,
       fragments,
       warnings,
     });
