@@ -6,8 +6,12 @@
   "publishConfig": {
     "access": "public"
   },
+  "engines": {
+    "node": ">=22"
+  },
   "bin": {
-    "harness-kit": "./dist/index.js"
+    "harness-kit": "./dist/index.js",
+    "harness": "./dist/index.js"
   },
   "scripts": {
     "build": "tsup",

@@ -116,7 +116,7 @@ Export your plugin setup to a `harness.yaml`, commit it to your dotfiles, and re
 | `/harness-import harness.yaml` | Interactive wizard — pick what to install |
 | `/harness-compile` | Compile to native configs for Claude Code, Cursor, and Copilot |
 | `/harness-sync` | Keep all three tools' configs aligned |
-| `/harness-validate` | Validate against the [Harness Protocol v1](https://harnessprotocol.io) schema |
+| `/harness-validate` | Validate against the [Harness Protocol v1](https://harnessprotocol.ai) schema |
 
 <details>
 <summary>Shell fallback (no Claude Code required)</summary>
@@ -125,7 +125,7 @@ Export your plugin setup to a `harness.yaml`, commit it to your dotfiles, and re
 curl -fsSL https://raw.githubusercontent.com/harnessprotocol/harness-kit/main/harness-restore.sh | bash -s -- harness.yaml
 ```
 
-See [`harness.yaml.example`](harness.yaml.example) for the config format. `harness.yaml` follows the [Harness Protocol v1](https://harnessprotocol.io) open spec — a vendor-neutral format for portable AI coding harnesses.
+See [`harness.yaml.example`](harness.yaml.example) for the config format. `harness.yaml` follows the [Harness Protocol v1](https://harnessprotocol.ai) open spec — a vendor-neutral format for portable AI coding harnesses.
 </details>
 
 ## 🔒 Security & Privacy
@@ -160,14 +160,14 @@ See [`apps/desktop/`](apps/desktop/) for build instructions. The desktop app is 
 - **Cursor** — SKILL.md files work as prompt instructions; `/harness-compile` generates native config
 - **GitHub Copilot** — reads `CLAUDE.md` natively via `chat.useClaudeMdFile`
 
-See the [Harness Protocol spec](https://harnessprotocol.io) for the full cross-platform target mapping.
+See the [Harness Protocol spec](https://harnessprotocol.ai) for the full cross-platform target mapping.
 
 ## 📚 Docs
 
 - **[FAQ](docs/FAQ.md)** — What is this, why do I need it, how does it work
 - **[Plugins vs. Skills](docs/plugins-vs-skills.md)** — Why everything ships as a plugin, even when it's just a prompt
 - **[Claude Conventions](docs/claude-md-conventions.md)** — Organizing `CLAUDE.md`, `AGENT.md`, and `SOUL.md` with separation of concerns
-- **[Understanding Agents](https://harnessprotocol.io/docs/concepts/agents)** — AGENT.md, custom subagents, and "AI agent" disambiguation
+- **[Understanding Agents](https://harnessprotocol.ai/docs/concepts/agents)** — AGENT.md, custom subagents, and "AI agent" disambiguation
 
 ## 🤝 Contributing
 

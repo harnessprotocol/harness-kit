@@ -12,7 +12,7 @@ import type { HarnessConfig } from "../src/types.js"
 // ── YAML helpers ──────────────────────────────────────────────
 
 const BASE_FRAGMENT_YAML = `\
-$schema: https://harnessprotocol.io/schema/v1/harness.schema.json
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
 version: "1"
 kind: fragment
 metadata:
@@ -26,7 +26,7 @@ mcp-servers:
 `
 
 const BASE_PROFILE_YAML = `\
-$schema: https://harnessprotocol.io/schema/v1/harness.schema.json
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
 version: "1"
 kind: profile
 metadata:
@@ -81,7 +81,7 @@ describe("resolveExtends — mcp-servers merge", () => {
 
   it("child mcp-servers entry wins on conflict", async () => {
     const fragmentYaml = `\
-$schema: https://harnessprotocol.io/schema/v1/harness.schema.json
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
 version: "1"
 kind: fragment
 metadata:
@@ -118,7 +118,7 @@ mcp-servers:
 describe("resolveExtends — env union", () => {
   it("unions env entries from fragment and profile", async () => {
     const fragmentYaml = `\
-$schema: https://harnessprotocol.io/schema/v1/harness.schema.json
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
 version: "1"
 kind: fragment
 metadata:
@@ -145,7 +145,7 @@ env:
 
   it("child env entry wins on name conflict", async () => {
     const fragmentYaml = `\
-$schema: https://harnessprotocol.io/schema/v1/harness.schema.json
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
 version: "1"
 kind: fragment
 metadata:
@@ -175,7 +175,7 @@ env:
 describe("resolveExtends — instructions merge", () => {
   it("import-mode merge: fragment operational instructions appear before profile's", async () => {
     const fragmentYaml = `\
-$schema: https://harnessprotocol.io/schema/v1/harness.schema.json
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
 version: "1"
 kind: fragment
 metadata:
@@ -206,7 +206,7 @@ instructions:
 
   it("import-mode replace: profile instructions completely replace fragment instructions", async () => {
     const fragmentYaml = `\
-$schema: https://harnessprotocol.io/schema/v1/harness.schema.json
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
 version: "1"
 kind: fragment
 metadata:
@@ -235,7 +235,7 @@ instructions:
 
   it("import-mode skip: fragment instructions pass through unchanged, profile contributes nothing", async () => {
     const fragmentYaml = `\
-$schema: https://harnessprotocol.io/schema/v1/harness.schema.json
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
 version: "1"
 kind: fragment
 metadata:
@@ -268,7 +268,7 @@ instructions:
 describe("resolveExtends — permissions", () => {
   it("tools.allow intersection: resolved allow is subset common to both", async () => {
     const fragmentYaml = `\
-$schema: https://harnessprotocol.io/schema/v1/harness.schema.json
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
 version: "1"
 kind: fragment
 metadata:
@@ -300,7 +300,7 @@ permissions:
 
   it("tools.allow: child inherits parent allow unchanged when child has none", async () => {
     const fragmentYaml = `\
-$schema: https://harnessprotocol.io/schema/v1/harness.schema.json
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
 version: "1"
 kind: fragment
 metadata:
@@ -329,7 +329,7 @@ permissions:
 
   it("tools.deny union: resolved deny includes entries from both parent and child", async () => {
     const fragmentYaml = `\
-$schema: https://harnessprotocol.io/schema/v1/harness.schema.json
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
 version: "1"
 kind: fragment
 metadata:
@@ -358,7 +358,7 @@ permissions:
 
   it("paths.writable union: resolved writable includes paths from both parent and child", async () => {
     const fragmentYaml = `\
-$schema: https://harnessprotocol.io/schema/v1/harness.schema.json
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
 version: "1"
 kind: fragment
 metadata:
@@ -413,7 +413,7 @@ describe("resolveExtends — error handling", () => {
 
   it("throws on circular extends", async () => {
     const fragmentA = `\
-$schema: https://harnessprotocol.io/schema/v1/harness.schema.json
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
 version: "1"
 kind: fragment
 metadata:
@@ -423,7 +423,7 @@ extends:
   - source: ./harness.yaml
 `
     const profileYaml = `\
-$schema: https://harnessprotocol.io/schema/v1/harness.schema.json
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
 version: "1"
 kind: profile
 metadata:
@@ -453,7 +453,7 @@ extends:
 describe("compile reflects accepted fragment", () => {
   it("compiled output mcp-servers FileAction includes the postgres server from fragment", async () => {
     const fragmentYaml = `\
-$schema: https://harnessprotocol.io/schema/v1/harness.schema.json
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
 version: "1"
 kind: fragment
 metadata:
@@ -467,7 +467,7 @@ mcp-servers:
 `
 
     const profileYaml = `\
-$schema: https://harnessprotocol.io/schema/v1/harness.schema.json
+$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
 version: "1"
 kind: profile
 metadata:
