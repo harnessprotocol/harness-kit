@@ -101,12 +101,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build workspace dependencies
-        run: |
-          pnpm --filter @harness-kit/shared build
-          pnpm --filter @harness-kit/core build
-          pnpm --filter @harness-kit/design-tokens build
-          pnpm --filter @harness-kit/ui build
+      - uses: ./.github/actions/prepare-desktop-frontend
 
       - name: Build desktop app
         run: |
@@ -208,4 +203,42 @@ jobs:
           git commit -m "chore: nightly build $(date +%Y-%m-%d) (${GITHUB_SHA:0:7})"
           git push
         env:
+          GITHUB_SHA: ${{ github.sha }}
+
+  # A scheduled workflow fails where nobody is looking — this one was red for
+  # four nights before anyone noticed. Surface it as an issue instead.
+  report-failure:
+    needs: [build-cli-standalone, build-desktop, publish]
+    if: failure() && github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Open or update the nightly failure issue
+        run: |
+          # --label fails hard if the label doesn't exist yet.
+          gh label create nightly-failure \
+            --color B60205 \
+            --description "Automated: the nightly build is red" 2>/dev/null || true
+
+          RUN_URL="https://github.com/${GH_REPO}/actions/runs/${GH_RUN_ID}"
+          BODY="Nightly build failed on \`main\` (commit \`${GITHUB_SHA:0:7}\`).
+
+          Run: $RUN_URL"
+
+          EXISTING=$(gh issue list --state open --label nightly-failure \
+            --json number --jq '.[0].number')
+
+          if [[ -n "$EXISTING" ]]; then
+            gh issue comment "$EXISTING" --body "$BODY"
+          else
+            gh issue create \
+              --title "Nightly build failing" \
+              --label nightly-failure \
+              --body "$BODY"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          GH_RUN_ID: ${{ github.run_id }}
           GITHUB_SHA: ${{ github.sha }}
