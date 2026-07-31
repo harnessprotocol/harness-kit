@@ -1,0 +1,38 @@
+name: Prepare desktop frontend
+description: >-
+  Builds the workspace packages the desktop frontend imports and generates its
+  gitignored marketplace JSON. Every job that runs tsc, vite, or `tauri build`
+  against apps/desktop must call this first — keeping it in one place is what
+  stops validate/release/nightly from drifting apart.
+
+inputs:
+  strict:
+    description: Pass --strict to the marketplace generator (fail on plugin data errors).
+    required: false
+    default: 'true'
+
+runs:
+  using: composite
+  steps:
+    # The desktop frontend imports @harness-kit/design-tokens and
+    # @harness-kit/ui directly, which in turn need shared + core built.
+    - name: Build workspace dependencies
+      shell: bash
+      run: |
+        pnpm --filter @harness-kit/shared build
+        pnpm --filter @harness-kit/core build
+        pnpm --filter @harness-kit/design-tokens build
+        pnpm --filter @harness-kit/ui build
+
+    # The desktop Marketplace page imports a static marketplace JSON generated
+    # from git (gitignored build output) — same pattern as the website. Without
+    # this, `tsc` fails with TS2307 on ./marketplace.generated.json.
+    - name: Generate marketplace data
+      shell: bash
+      run: |
+        STRICT=""
+        if [[ "${{ inputs.strict }}" == "true" ]]; then
+          STRICT="--strict"
+        fi
+        pnpm --filter @harness-kit/marketplace-data generate $STRICT -- \
+          --out ../../apps/desktop/src/lib/marketplace/marketplace.generated.json
