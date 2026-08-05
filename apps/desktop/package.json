@@ -32,7 +32,7 @@
     "@tauri-apps/plugin-shell": "^2",
     "dompurify": "^3.4.12",
     "framer-motion": "^12.43.0",
-    "lucide-react": "^1.27.0",
+    "lucide-react": "^1.28.0",
     "monaco-editor": "^0.56.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
@@ -43,7 +43,7 @@
     "yaml": "^2.9.0"
   },
   "devDependencies": {
-    "@playwright/test": "^1.62.0",
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/cli": "^2",
     "@testing-library/jest-dom": "^6.9.1",
@@ -51,8 +51,8 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/dompurify": "^3",
     "@types/node": "^22.20.1",
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.0.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^4.3.4",
     "@vitest/coverage-v8": "^4.1.10",
     "autoprefixer": "^10.5.4",
