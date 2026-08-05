@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.20.1",
-    "tsx": "^4.23.1",
+    "tsx": "^4.23.5",
     "typescript": "^5",
     "vitest": "^4.1.10"
   }
