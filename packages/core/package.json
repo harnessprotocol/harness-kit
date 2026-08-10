@@ -34,7 +34,7 @@
     "@vitest/coverage-v8": "^4",
     "ajv": "^8",
     "ajv-formats": "^3",
-    "esbuild": "^0.28.0",
+    "esbuild": "^0.28.2",
     "tsup": "^8",
     "tsx": "^4",
     "typescript": "^5",
