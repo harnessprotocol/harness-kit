@@ -32,7 +32,7 @@
     "@tauri-apps/plugin-shell": "^2",
     "dompurify": "^3.4.13",
     "framer-motion": "^12.43.0",
-    "lucide-react": "^1.28.0",
+    "lucide-react": "^1.30.0",
     "monaco-editor": "^0.56.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
