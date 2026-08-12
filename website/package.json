@@ -9,9 +9,9 @@
     "start": "next start"
   },
   "dependencies": {
-    "fumadocs-core": "^16.14.2",
+    "fumadocs-core": "^16.14.3",
     "fumadocs-mdx": "^14.3.2",
-    "fumadocs-ui": "^16.14.2",
+    "fumadocs-ui": "^16.14.3",
     "mdast-util-from-markdown": "^2.0.3",
     "next": "^16.3.0",
     "react": "^19.2.8",
