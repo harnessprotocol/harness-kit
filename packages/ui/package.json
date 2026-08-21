@@ -23,7 +23,7 @@
   },
   "dependencies": {
     "@harness-kit/design-tokens": "workspace:*",
-    "lucide-react": "^1.30.0"
+    "lucide-react": "^1.32.0"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",
@@ -32,6 +32,6 @@
     "@vitest/coverage-v8": "^4",
     "tsup": "^8",
     "typescript": "^5",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   }
 }
