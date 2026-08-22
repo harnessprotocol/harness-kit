@@ -247,7 +247,9 @@ echo "All SKILL.md files have YAML frontmatter."
 
 echo "== Check README plugin badge count =="
 mp_count=$(jq '.plugins | length' .claude-plugin/marketplace.json)
-badge_count=$(grep -oP 'Browse all \K[0-9]+(?= plugins)' README.md)
+# POSIX sed, not `grep -oP`: -P is a GNU extension, so the macOS BSD grep that
+# contributors run locally rejected it and the gate could only pass in CI.
+badge_count=$(sed -n 's/.*Browse all \([0-9][0-9]*\) plugins.*/\1/p' README.md | head -1)
 if [ "$badge_count" != "$mp_count" ]; then
   echo "::error::README badge says $badge_count plugins but marketplace.json has $mp_count"
   exit 1
