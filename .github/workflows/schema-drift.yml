@@ -1,0 +1,108 @@
+name: Schema Drift
+
+# The v1 harness schema is vendored at packages/core/src/schema/harness.schema.json
+# (fetched from harnessprotocol.ai, not authored here). Validate's drift guard only
+# checks schema -> validate.generated.js; nothing compared the vendored copy to
+# upstream, so it silently went three sections stale (skills,
+# architectural-constraints, policy) and harness-kit rejected harness.yaml files
+# that are valid per the published spec.
+#
+# Deliberately a scheduled issue-opener rather than a PR-blocking check: upstream
+# is an external site, and a publish there should not be able to red every PR in
+# this repo.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: schema-drift
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Compare vendored schema against upstream
+        id: diff
+        run: |
+          set -uo pipefail
+          VENDORED=packages/core/src/schema/harness.schema.json
+
+          if ! curl -sSf --max-time 30 \
+              https://harnessprotocol.ai/schema/v1/harness.schema.json \
+              -o /tmp/upstream.json; then
+            echo "::warning::Could not reach harnessprotocol.ai — skipping drift check."
+            echo "status=unreachable" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Compare semantically, so key order and whitespace don't register as drift.
+          norm() { jq -S . "$1"; }
+          if norm /tmp/upstream.json > /tmp/a.json && norm "$VENDORED" > /tmp/b.json \
+             && diff -q /tmp/a.json /tmp/b.json >/dev/null; then
+            echo "Vendored schema matches upstream."
+            echo "status=clean" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "status=drift" >> "$GITHUB_OUTPUT"
+          {
+            echo 'sections<<EOF'
+            jq -r '.properties | keys[]' /tmp/a.json > /tmp/up.txt
+            jq -r '.properties | keys[]' /tmp/b.json > /tmp/vend.txt
+            echo "Only upstream: $(comm -23 /tmp/up.txt /tmp/vend.txt | paste -sd, - || true)"
+            echo "Only vendored: $(comm -13 /tmp/up.txt /tmp/vend.txt | paste -sd, - || true)"
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Open or update the drift issue
+        if: steps.diff.outputs.status == 'drift'
+        run: |
+          gh label create schema-drift \
+            --color 1D76DB \
+            --description "Automated: vendored v1 schema differs from upstream" 2>/dev/null || true
+
+          BODY="The vendored \`packages/core/src/schema/harness.schema.json\` differs from https://harnessprotocol.ai/schema/v1/harness.schema.json.
+
+          Top-level section differences:
+          \`\`\`
+          ${SECTIONS}
+          \`\`\`
+
+          A vendored schema missing a section makes harness-kit reject documents that are valid per the published spec.
+
+          To refresh:
+          \`\`\`bash
+          pnpm --filter @harness-kit/core fetch-schema
+          pnpm --filter @harness-kit/core generate:validator
+          \`\`\`
+          Then add any new sections to \`HarnessConfig\` in \`packages/core/src/types.ts\` and cover them in \`packages/core/__tests__/schema-conformance.test.ts\`.
+
+          Run: https://github.com/${GH_REPO}/actions/runs/${GH_RUN_ID}"
+
+          EXISTING=$(gh issue list --state open --label schema-drift \
+            --json number --jq '.[0].number')
+
+          if [[ -n "$EXISTING" ]]; then
+            gh issue comment "$EXISTING" --body "$BODY"
+          else
+            gh issue create \
+              --title "Vendored v1 schema has drifted from upstream" \
+              --label schema-drift \
+              --body "$BODY"
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          GH_RUN_ID: ${{ github.run_id }}
+          SECTIONS: ${{ steps.diff.outputs.sections }}
