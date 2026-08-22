@@ -5,6 +5,7 @@ import type { HarnessConfig, TargetPlatform } from "../types.js";
 import { findMarkerBlock } from "./markers.js";
 import { compileSkills } from "./skills.js";
 import { getSlotMappings } from "./instructions.js";
+import { renderArchitecturalConstraints } from "./architectural-constraints.js";
 import { TARGETS } from "./targets.js";
 
 // ── Low-level utilities ──────────────────────────────────────
@@ -173,6 +174,42 @@ export async function checkCompiled(
       path: file.path,
       status,
     });
+  }
+
+  // ── Architectural constraints check ──────────────────────
+  // Compiled into its own marker block in the operational FILE (see
+  // compile/architectural-constraints.ts), so it needs its own drift pass —
+  // the loop below reads slot content out of `instructions`, where a
+  // constraints block has no entry and would be skipped silently.
+  const constraintsContent = renderArchitecturalConstraints(
+    config["architectural-constraints"],
+  );
+  if (constraintsContent) {
+    const operationalFiles = getSlotMappings().find((m) => m.slot === "operational")!.file;
+    const seenPaths = new Set<string>();
+
+    for (const target of targets) {
+      const filePath = operationalFiles[target];
+      if (!filePath) continue;
+      if (seenPaths.has(filePath)) continue;
+      seenPaths.add(filePath);
+
+      const status = await instructionDrift(
+        constraintsContent,
+        fs.joinPath(cwd, filePath),
+        harnessName,
+        "constraints",
+        fs,
+      );
+
+      entries.push({
+        kind: "instruction",
+        name: "constraints",
+        target,
+        path: filePath,
+        status,
+      });
+    }
   }
 
   // ── Instruction checks ───────────────────────────────────
