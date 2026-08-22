@@ -175,12 +175,31 @@ jobs:
           GH_TOKEN: ${{ github.token }}
 
       - name: Update Homebrew tap
+        env:
+          # Kept out of the run: script. Interpolating a secret straight into the
+          # command embeds it in the cloned tap's .git/config and in process args.
+          TAP_PAT: ${{ secrets.TAP_PAT }}
+          DATE: ${{ steps.sha.outputs.date }}
+          CLI_SHA: ${{ steps.sha.outputs.cli_sha }}
+          DMG_SHA: ${{ steps.sha.outputs.dmg_sha }}
+          GITHUB_SHA: ${{ github.sha }}
         run: |
-          DATE=${{ steps.sha.outputs.date }}
-          CLI_SHA=${{ steps.sha.outputs.cli_sha }}
-          DMG_SHA=${{ steps.sha.outputs.dmg_sha }}
+          set -euo pipefail
 
-          git clone "https://x-access-token:${{ secrets.TAP_PAT }}@github.com/harnessprotocol/homebrew-tap.git" tap
+          TAP_URL="https://x-access-token:${TAP_PAT}@github.com/harnessprotocol/homebrew-tap.git"
+
+          # Preflight so an expired PAT reports itself. Without this the job dies
+          # on a bare "fatal: Authentication failed", which is what happened when
+          # TAP_PAT lapsed on 2026-08-15 and every nightly since went red.
+          if ! git ls-remote --exit-code "$TAP_URL" HEAD >/dev/null 2>&1; then
+            echo "::error::Cannot authenticate to harnessprotocol/homebrew-tap."
+            echo "::error::TAP_PAT is expired, revoked, or missing contents:write."
+            echo "::error::Rotate it at Settings > Secrets and variables > Actions > TAP_PAT."
+            echo "::error::The nightly release itself already published; only the tap is stale."
+            exit 1
+          fi
+
+          git clone "$TAP_URL" tap
           cd tap
 
           # Formula: harness-kit-nightly (no @ -- Homebrew only supports @ with numeric versions)
@@ -202,8 +221,6 @@ jobs:
           git add Formula/harness-kit-nightly.rb "Casks/harness-kit@nightly.rb"
           git commit -m "chore: nightly build $(date +%Y-%m-%d) (${GITHUB_SHA:0:7})"
           git push
-        env:
-          GITHUB_SHA: ${{ github.sha }}
 
   # A scheduled workflow fails where nobody is looking — this one was red for
   # four nights before anyone noticed. Surface it as an issue instead.

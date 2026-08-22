@@ -8,3 +8,8 @@ lib/marketplace/marketplace.generated.json
 
 # Build output from @harness-kit/website-data (regenerated in CI)
 lib/capability-matrix.generated.json
+
+# website resolves against the ROOT pnpm-lock.yaml (it is a pnpm-workspace member).
+# A lockfile here is never installed from, drifts silently, and re-arms phantom
+# Dependabot alerts against versions the build never uses. See .github/dependabot.yml.
+pnpm-lock.yaml

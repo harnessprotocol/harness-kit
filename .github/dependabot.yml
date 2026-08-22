@@ -14,9 +14,11 @@ updates:
 
   # Root pnpm workspace — covers ALL workspace packages via the shared root lockfile,
   # including website/ (a member of pnpm-workspace.yaml: apps/*, packages/*, website).
-  # website/pnpm-lock.yaml is vestigial — pnpm resolves website against the root
-  # lockfile — so website is intentionally NOT a separate npm ecosystem. Adding one
-  # produces broken PRs that touch website/package.json without updating the root lock.
+  # website has NO lockfile of its own — pnpm resolves it against the root lockfile —
+  # so website is intentionally NOT a separate npm ecosystem. Adding one produces
+  # broken PRs that touch website/package.json without updating the root lock. A
+  # stray website/pnpm-lock.yaml also silently re-arms ~18 phantom security alerts
+  # against versions the build never installs; don't reintroduce it.
   - package-ecosystem: "npm"
     directory: "/"
     schedule:

@@ -233,9 +233,7 @@ jobs:
         with:
           node-version: 24
           cache: pnpm
-          cache-dependency-path: |
-            pnpm-lock.yaml
-            website/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       # Generate the static marketplace JSON the website consumes. Runs from the
       # repo root with a filtered install so we pull only the generator and its
