@@ -84,16 +84,98 @@ export interface HarnessPermissions {
   };
 }
 
+/** Top-level skill reference (HEP-4). Distinct from HarnessPlugin.skills, which
+ *  declares skill locations *inside* a plugin source directory. */
+export interface HarnessSkillRef {
+  name: string;
+  source?: string;
+  version?: string;
+  description?: string;
+  enabled?: boolean;
+  loading?: "eager" | "deferred";
+  integrity?: { sha256: string };
+}
+
+/** One deterministic enforcement rule — a linter or a structural test (HEP-3). */
+export interface ArchitecturalCheck {
+  name: string;
+  description: string;
+  /** 'block' = violations prevent merge. 'warn' = logged only. Defaults to 'block'. */
+  enforcement?: "block" | "warn";
+  /** Where the check is defined: 'custom', or a GitHub path. */
+  source?: string;
+}
+
+export interface ArchitecturalLinter extends ArchitecturalCheck {
+  /** Tool-specific configuration; keys are tool-dependent. */
+  config?: Record<string, unknown>;
+}
+
+export interface ArchitecturalStructuralTest extends ArchitecturalCheck {
+  /** Command that runs the test, e.g. 'pnpm test:architecture'. */
+  entrypoint?: string;
+}
+
+/** A prose guideline the review agent applies before completing a task. */
+export interface ArchitecturalReviewPattern {
+  name: string;
+  rule: string;
+  severity?: "error" | "warning" | "info";
+}
+
+export interface ArchitecturalReviewPolicy {
+  enabled?: boolean;
+  model?: string;
+  patterns?: ArchitecturalReviewPattern[];
+  guidance?: string;
+}
+
+/**
+ * Declarative architectural constraints (HEP-3). Three enforcement levels:
+ * `linters` and `structural-tests` are deterministic, `review-policy` is
+ * LLM-applied. Accepted into the v1 schema; harness-kit parses and preserves
+ * this section but does not yet act on it — see the compile pipeline.
+ */
+export interface ArchitecturalConstraints {
+  linters?: ArchitecturalLinter[];
+  "structural-tests"?: ArchitecturalStructuralTest[];
+  "review-policy"?: ArchitecturalReviewPolicy;
+}
+
+/** An allow/deny pair constraining where a section's entries may come from. */
+export interface PolicySourceConstraint {
+  "allowed-sources"?: string[];
+  "denied-sources"?: string[];
+}
+
+/**
+ * Organization/team governance constraints. A policy is a ceiling: extending or
+ * consuming profiles may narrow it but never widen it. Absent means unconstrained.
+ */
+export interface HarnessPolicy {
+  "mcp-servers"?: PolicySourceConstraint;
+  plugins?: PolicySourceConstraint & { "allowed-marketplaces"?: string[] };
+  skills?: PolicySourceConstraint;
+  permissions?: {
+    tools?: { allow?: string[]; deny?: string[] };
+    network?: { "allowed-hosts"?: string[] };
+  };
+  "require-integrity"?: boolean;
+}
+
 export interface HarnessConfig {
   $schema?: string;
   version: string;
   kind?: "profile" | "fragment";
   metadata?: HarnessMetadata;
   plugins?: HarnessPlugin[];
+  skills?: HarnessSkillRef[];
+  "architectural-constraints"?: ArchitecturalConstraints;
   "mcp-servers"?: Record<string, McpServer>;
   env?: EnvDeclaration[];
   instructions?: HarnessInstructions;
   permissions?: HarnessPermissions;
+  policy?: HarnessPolicy;
   extends?: Array<{ source: string; version?: string }>;
 }
 
