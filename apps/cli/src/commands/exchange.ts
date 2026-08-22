@@ -395,11 +395,13 @@ async function editFragment(
  * or falls back to a content-hash-based name so nameless fragments work.
  */
 function getFragmentFilename(fragment: Record<string, unknown>): string {
+  // 2026-08-22T04:15:30.123Z -> 20260822T0415. The separator strip must include
+  // "-"; without it slice(0, 16) left a stray seconds digit ("2026-08-22T04153")
+  // rather than the documented YYYYMMDDTHHmm.
   const utcStamp = new Date()
     .toISOString()
-    .replace(/[:.]/g, "")
-    .replace("T", "T")
-    .slice(0, 16); // YYYYMMDDTHHmm
+    .replace(/[-:.]/g, "")
+    .slice(0, 13); // YYYYMMDDTHHmm
 
   const meta = fragment.metadata as Record<string, unknown> | undefined;
   const name = meta?.name ? String(meta.name) : `fragment-${fragmentContentId(fragment)}`;

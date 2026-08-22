@@ -14,10 +14,76 @@ import type { OpaqueInstructionBlock } from "./types.js";
  * block, to avoid opaque text ballooning with blank-line noise on repeated
  * import/compile/import cycles.
  */
-const MARKER_BLOCK_RE = /<!-- BEGIN harness:([^:]+):([^ ]+) -->\n[\s\S]*?<!-- END harness:\1:\2 -->\n?/g;
+const BEGIN_MARKER_RE = /^<!-- BEGIN harness:([^:]+):([^ ]+) -->$/;
+const END_MARKER_RE = /^<!-- END harness:([^:]+):([^ ]+) -->$/;
 
+/**
+ * Line-based rather than one BEGIN...END regex on purpose. A regex pairing the
+ * two tags has to lazily scan ahead for its END from every BEGIN it finds, so a
+ * file of N unterminated BEGIN lines costs O(N^2) (CodeQL js/polynomial-redos)
+ * — and instruction files are attacker-adjacent input during `harness import`.
+ * Indexing the END lines up front makes each tag consumed at most once, so the
+ * whole strip is linear. Matches the line-anchored convention already used by
+ * compile/markers.ts and fix/detect.ts.
+ */
 export function stripHarnessMarkerBlocks(content: string): string {
-  return content.replace(MARKER_BLOCK_RE, "");
+  if (!content.includes("<!-- BEGIN harness:")) return content;
+
+  const lines = content.split("\n");
+
+  // tag -> ascending line indices where that END tag appears.
+  const endLines = new Map<string, number[]>();
+  for (let i = 0; i < lines.length; i++) {
+    const end = END_MARKER_RE.exec(lines[i].trim());
+    if (end) {
+      const tag = `${end[1]}:${end[2]}`;
+      const slots = endLines.get(tag);
+      if (slots) slots.push(i);
+      else endLines.set(tag, [i]);
+    }
+  }
+
+  // Per-tag cursor into the arrays above. Cursors only advance, and every END
+  // index is stepped over at most once across the whole loop, so this stays O(N).
+  const cursors = new Map<string, number>();
+  const kept: string[] = [];
+  let droppedFinalLine = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const begin = BEGIN_MARKER_RE.exec(lines[i].trim());
+    if (!begin) {
+      kept.push(lines[i]);
+      continue;
+    }
+
+    const tag = `${begin[1]}:${begin[2]}`;
+    const candidates = endLines.get(tag);
+    if (!candidates) {
+      kept.push(lines[i]); // unterminated BEGIN — leave the line untouched
+      continue;
+    }
+
+    let cursor = cursors.get(tag) ?? 0;
+    while (cursor < candidates.length && candidates[cursor] <= i) cursor++;
+    cursors.set(tag, cursor);
+
+    if (cursor >= candidates.length) {
+      kept.push(lines[i]); // no END left for this tag
+      continue;
+    }
+
+    // Drop BEGIN..END inclusive; the END line's own newline goes with it.
+    i = candidates[cursor];
+    if (i === lines.length - 1) droppedFinalLine = true;
+    cursors.set(tag, cursor + 1);
+  }
+
+  // A block running to EOF with no trailing newline still had a newline in front
+  // of its BEGIN, which the old regex left behind. join() would swallow it, so
+  // put the separator back rather than silently un-terminating the last line.
+  if (droppedFinalLine && kept.length > 0) kept.push("");
+
+  return kept.join("\n");
 }
 
 /**

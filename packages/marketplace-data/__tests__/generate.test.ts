@@ -196,11 +196,18 @@ describe("profiles", () => {
         expect(profile.harnessYaml).toContain(`source: harnessprotocol/harness-kit`);
         // Uses live version, not profile-pinned version. yaml.stringify quotes a
         // version string only when needed to disambiguate from a YAML number
-        // (e.g. "1" but not "0.3.0"), so tolerate either form.
+        // (e.g. "1" but not "0.3.0"), so tolerate either form. Matched as whole
+        // trimmed lines rather than a regex built from the version: escaping only
+        // "." left backslashes and other metacharacters live (CodeQL
+        // js/incomplete-sanitization), and a full-line compare is a stricter
+        // check than the \b boundary it replaces ("1" no longer matches "10").
         if (ref.liveVersion) {
-          expect(profile.harnessYaml).toMatch(
-            new RegExp(`version: "?${ref.liveVersion.replace(/\./g, "\\.")}"?\\b`),
-          );
+          const lines = profile.harnessYaml.split("\n").map((line) => line.trim());
+          expect(
+            lines.includes(`version: ${ref.liveVersion}`) ||
+              lines.includes(`version: "${ref.liveVersion}"`),
+            `Profile "${profile.name}": expected version ${ref.liveVersion} for ${ref.name}`,
+          ).toBe(true);
         }
       }
     }
