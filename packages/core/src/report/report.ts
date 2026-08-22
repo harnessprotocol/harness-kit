@@ -9,6 +9,7 @@ const PLATFORM_ORDER: TargetPlatform[] = ["claude-code", "cursor", "copilot"];
 
 const SLOT_ORDER = [
   "operational",
+  "constraints",
   "behavioral",
   "identity",
   "mcp-servers",
