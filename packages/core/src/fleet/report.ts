@@ -22,6 +22,8 @@ export interface FleetScopeInput {
   kind: FleetScope["kind"];
   label: string;
   fs: FsProvider;
+  /** Optional profile path relative to the scope root. Defaults to harness.yaml. */
+  profilePath?: string;
 }
 
 export interface BuildFleetReportContext {
@@ -37,8 +39,10 @@ export interface BuildFleetReportContext {
  * report's point of view; the caller doesn't need to distinguish them here
  * (a per-scope `not-configured` status covers all three).
  */
-async function readScopeConfig(fs: FsProvider): Promise<HarnessConfig | null> {
-  const path = fs.joinPath(fs.cwd(), "harness.yaml");
+async function readScopeConfig(scope: FleetScopeInput): Promise<HarnessConfig | null> {
+  const { fs } = scope;
+  const configuredPath = scope.profilePath ?? "harness.yaml";
+  const path = configuredPath.startsWith("/") ? configuredPath : fs.joinPath(fs.cwd(), configuredPath);
   let yamlString: string;
   try {
     yamlString = await fs.readFile(path);
@@ -130,7 +134,7 @@ async function buildCell(
     };
   }
 
-  const config = await readScopeConfig(fs);
+  const config = await readScopeConfig(scopeInput);
   if (!config) {
     return {
       adapter: adapterId,

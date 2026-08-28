@@ -112,6 +112,22 @@ export function validateCapsule(
       detail: "a skill capsule entrypoint must be SKILL.md",
     });
   }
+  if (manifest.identity.kind === "skill") {
+    const entrypoint = byPath.get(manifest.entrypoint)?.content ?? "";
+    const frontmatter = entrypoint.match(/^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/)?.[1];
+    if (
+      !frontmatter ||
+      !/^name:\s*[^\s].*$/m.test(frontmatter) ||
+      !/^description:\s*[^\s].*$/m.test(frontmatter)
+    ) {
+      findings.push({
+        severity: "block",
+        code: "invalid-frontmatter",
+        path: manifest.entrypoint,
+        detail: "a skill capsule requires name and description fields in YAML frontmatter",
+      });
+    }
+  }
 
   const declared = new Set(manifest.files.map((file) => file.path));
   for (const file of files) {
@@ -147,7 +163,7 @@ async function collectDirectory(
   output: CapsuleFile[],
 ): Promise<void> {
   const fullPath = relative ? fs.joinPath(root, relative) : root;
-  const entries = (await fs.readDir(fullPath)).sort();
+  const entries = (await (fs.readDirAll ? fs.readDirAll(fullPath) : fs.readDir(fullPath))).sort();
   for (const entry of entries) {
     const childRelative = relative ? `${relative}/${entry}` : entry;
     const childFull = fs.joinPath(root, childRelative);

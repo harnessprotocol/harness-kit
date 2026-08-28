@@ -38,6 +38,10 @@ export class NodeFsProvider implements FsProvider {
     return entries.filter((e) => !e.isSymbolicLink()).map((e) => e.name);
   }
 
+  async readDirAll(path: string): Promise<string[]> {
+    return readdir(path);
+  }
+
   async renameFile(from: string, to: string): Promise<void> {
     await rename(from, to);
   }

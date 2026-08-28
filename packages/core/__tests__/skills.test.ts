@@ -15,6 +15,7 @@ describe("compileSkills", () => {
   it("compiles direct v2 skills to Claude Code and Codex project directories", async () => {
     const fs = new MockFsProvider({
       "/project/skills/review/SKILL.md": "---\nname: review\n---\n\n# Review",
+      "/project/skills/review/scripts/check.sh": "#!/bin/sh\necho ok\n",
     });
     const config: HarnessConfig = {
       version: "2",
@@ -25,7 +26,9 @@ describe("compileSkills", () => {
     expect(skippedPlugins).toEqual([]);
     expect(files.map((file) => file.path)).toEqual([
       ".claude/skills/review/SKILL.md",
+      ".claude/skills/review/scripts/check.sh",
       ".agents/skills/review/SKILL.md",
+      ".agents/skills/review/scripts/check.sh",
     ]);
   });
 

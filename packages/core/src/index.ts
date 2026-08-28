@@ -55,6 +55,10 @@ export { validateHarness, validateHarnessYaml, validateSkillName } from "./schem
 // Platform detection
 export { detectPlatforms } from "./detect/detect-platforms.js";
 
+// Target metadata
+export type { IntegrationTarget } from "./adapters/target-metadata.js";
+export { TARGETS, getTarget, AGENTS_MD_TARGETS } from "./adapters/target-metadata.js";
+
 // Compile
 export { compile, computeSourceFingerprint } from "./compile/compile.js";
 export { compileInstructions, getAllInstructionFilePaths, getSlotMappings } from "./compile/instructions.js";
@@ -263,6 +267,7 @@ export type {
   InventorySnapshot,
   TransactionFileChange,
   TransactionResult,
+  TransactionManifest,
   CapsuleDependency,
   CapsuleManifest,
   CapsuleValidationFinding,
@@ -289,7 +294,7 @@ export {
   assertCapabilityMatrixComplete,
 } from "./portability/capabilities.js";
 export { reconcileResources, resolveReconciliationPlan } from "./portability/reconcile.js";
-export { applyFileTransaction } from "./portability/transaction.js";
+export { applyFileTransaction, rollbackFileTransaction } from "./portability/transaction.js";
 export {
   EMPTY_PORTABILITY_STATE,
   readPortabilityState,
@@ -297,8 +302,14 @@ export {
   nextPortabilityState,
 } from "./portability/state.js";
 export { redactInventoryConfig, buildInventorySnapshot } from "./portability/inventory.js";
+export type {
+  SecretSanitizationFinding,
+  SecretSanitizationResult,
+} from "./portability/secrets.js";
+export { sanitizeCapturedSecrets } from "./portability/secrets.js";
 export {
   createCapsuleManifest,
   validateCapsule,
   collectCapsuleFiles,
 } from "./portability/capsule.js";
+export type { CapsuleFile } from "./portability/capsule.js";

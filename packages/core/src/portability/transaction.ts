@@ -1,5 +1,9 @@
 import type { FsProvider } from "../fs-provider.js";
-import type { TransactionFileChange, TransactionResult } from "./types.js";
+import type {
+  TransactionFileChange,
+  TransactionManifest,
+  TransactionResult,
+} from "./types.js";
 
 export interface TransactionContext {
   fs: FsProvider;
@@ -31,6 +35,15 @@ async function remove(fs: FsProvider, path: string): Promise<void> {
   await fs.removeFile(path);
 }
 
+async function writeManifest(
+  fs: FsProvider,
+  root: string,
+  manifestPath: string,
+  manifest: TransactionManifest,
+): Promise<void> {
+  await atomicWrite(fs, fs.joinPath(root, manifestPath), `${JSON.stringify(manifest, null, 2)}\n`, `${manifest.timestamp}-manifest`);
+}
+
 /**
  * Apply a complete file transaction. Every preimage is verified and backed up
  * before mutation; any failure restores all already-mutated paths in reverse.
@@ -42,6 +55,7 @@ export async function applyFileTransaction(
   const { fs, timestamp } = context;
   const root = fs.cwd();
   const backupDir = fs.joinPath(context.backupRoot ?? ".harness/backups", timestamp);
+  const manifestPath = fs.joinPath(backupDir, "transaction.json");
 
   for (const change of changes) assertRelativeSafePath(change.path);
   const unique = new Set(changes.map((change) => change.path));
@@ -70,6 +84,14 @@ export async function applyFileTransaction(
     await atomicWrite(fs, backupPath, change.before, `${timestamp}-backup`);
   }
 
+  const manifest: TransactionManifest = {
+    version: 1,
+    timestamp,
+    status: "prepared",
+    changes,
+  };
+  await writeManifest(fs, root, manifestPath, manifest);
+
   const mutated: TransactionFileChange[] = [];
   const written: string[] = [];
   const removed: string[] = [];
@@ -86,7 +108,9 @@ export async function applyFileTransaction(
       }
       mutated.push(change);
     }
-    return { committed: true, written, removed, rolledBack: [], backupDir };
+    manifest.status = "committed";
+    await writeManifest(fs, root, manifestPath, manifest);
+    return { committed: true, written, removed, rolledBack: [], backupDir, manifestPath };
   } catch (error) {
     const rolledBack: string[] = [];
     const rollbackErrors: string[] = [];
@@ -106,13 +130,40 @@ export async function applyFileTransaction(
       }
     }
     const message = error instanceof Error ? error.message : String(error);
+    manifest.status = rollbackErrors.length === 0 ? "rolled-back" : "rollback-failed";
+    manifest.error = rollbackErrors.length ? `${message}; rollback failures: ${rollbackErrors.join("; ")}` : message;
+    try {
+      await writeManifest(fs, root, manifestPath, manifest);
+    } catch (manifestError) {
+      rollbackErrors.push(
+        `manifest: ${manifestError instanceof Error ? manifestError.message : String(manifestError)}`,
+      );
+    }
     return {
       committed: false,
       written,
       removed,
       rolledBack,
       backupDir,
+      manifestPath,
       error: rollbackErrors.length ? `${message}; rollback failures: ${rollbackErrors.join("; ")}` : message,
     };
   }
+}
+
+/** Restore a previously committed transaction without overwriting later edits. */
+export async function rollbackFileTransaction(
+  manifest: TransactionManifest,
+  context: TransactionContext,
+): Promise<TransactionResult> {
+  if (manifest.version !== 1 || manifest.status !== "committed") {
+    throw new Error("only committed transaction manifests can be rolled back");
+  }
+
+  const reverseChanges = manifest.changes.map((change) => ({
+    path: change.path,
+    before: change.after,
+    after: change.before,
+  }));
+  return applyFileTransaction(reverseChanges, context);
 }

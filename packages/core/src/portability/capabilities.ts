@@ -43,7 +43,7 @@ function scopeRecord(project: CapabilityLevel, personal: CapabilityLevel = "tran
     organization: personal,
     personal,
     project,
-    session: project === "unsupported" ? "unsupported" : "translated",
+    session: project === "unsupported" ? "unsupported" : "source-only",
   };
 }
 
@@ -133,7 +133,16 @@ export function capabilityForResource(
   if (resource.identity.kind === "native-extension") {
     return resource.nativeTarget === target ? "native" : "source-only";
   }
-  return getTargetCapability(target, resource.identity.kind).operations[operation];
+  const capability = getTargetCapability(target, resource.identity.kind);
+  const operationLevel = capability.operations[operation];
+  const scopeLevel = capability.scopes[resource.scope];
+  const rank: Record<CapabilityLevel, number> = {
+    native: 0,
+    translated: 1,
+    "source-only": 2,
+    unsupported: 3,
+  };
+  return rank[operationLevel] >= rank[scopeLevel] ? operationLevel : scopeLevel;
 }
 
 export function buildLossReport(

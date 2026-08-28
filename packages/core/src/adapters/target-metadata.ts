@@ -17,6 +17,8 @@ export interface IntegrationTarget {
   requiredBinary?: string;
   /** Project-relative skills directory. null = uses plugin install system (claude-code). */
   skillsDir: string | null;
+  /** Home-relative native skills directory used for personal catalog deployment. */
+  globalSkillsDir: string;
   /** flat = skills/name/  nested = skills/owner/repo/name/ */
   layout: "flat" | "nested";
   /** Primary instruction file for this tool. */
@@ -37,6 +39,7 @@ export const TARGETS: IntegrationTarget[] = [
     label: "Claude Code",
     requiredBinary: "claude",
     skillsDir: null,
+    globalSkillsDir: ".claude/skills",
     layout: "flat",
     instructionFile: "CLAUDE.md",
     mcpConfigFile: ".mcp.json",
@@ -47,6 +50,7 @@ export const TARGETS: IntegrationTarget[] = [
     label: "Cursor",
     requiredBinary: "cursor-agent",
     skillsDir: ".cursor/skills",
+    globalSkillsDir: ".cursor/skills",
     layout: "nested",
     instructionFile: ".cursor/rules/harness.mdc",
     mcpConfigFile: ".cursor/mcp.json",
@@ -60,6 +64,7 @@ export const TARGETS: IntegrationTarget[] = [
     // "code" was the wrong proxy: it's the editor, not the CLI.
     requiredBinary: "copilot",
     skillsDir: ".github/skills",
+    globalSkillsDir: ".copilot/skills",
     layout: "flat",
     instructionFile: ".github/copilot-instructions.md",
     mcpConfigFile: ".vscode/mcp.json",
@@ -70,6 +75,7 @@ export const TARGETS: IntegrationTarget[] = [
     label: "OpenAI Codex",
     requiredBinary: "codex",
     skillsDir: ".agents/skills",
+    globalSkillsDir: ".codex/skills",
     layout: "flat",
     instructionFile: "AGENTS.md",
     // Codex uses TOML config format which the compiler does not yet support.
@@ -82,6 +88,7 @@ export const TARGETS: IntegrationTarget[] = [
     id: "opencode",
     label: "OpenCode",
     skillsDir: ".opencode/skills",
+    globalSkillsDir: ".config/opencode/skills",
     layout: "flat",
     instructionFile: "AGENTS.md",
     mcpConfigFile: "opencode.json",
@@ -91,6 +98,7 @@ export const TARGETS: IntegrationTarget[] = [
     id: "windsurf",
     label: "Windsurf",
     skillsDir: ".windsurf/skills",
+    globalSkillsDir: ".windsurf/skills",
     layout: "flat",
     instructionFile: "AGENTS.md",
     // Windsurf MCP config is global (~/.codeium/windsurf/mcp_config.json).
@@ -103,6 +111,7 @@ export const TARGETS: IntegrationTarget[] = [
     label: "Gemini CLI",
     requiredBinary: "gemini",
     skillsDir: ".gemini/skills",
+    globalSkillsDir: ".gemini/skills",
     layout: "flat",
     instructionFile: "AGENTS.md",
     mcpConfigFile: ".gemini/settings.json",
@@ -113,6 +122,7 @@ export const TARGETS: IntegrationTarget[] = [
     label: "Junie",
     requiredBinary: "junie",
     skillsDir: ".junie/skills",
+    globalSkillsDir: ".junie/skills",
     layout: "flat",
     instructionFile: "AGENTS.md",
     mcpConfigFile: ".junie/mcp/mcp.json",

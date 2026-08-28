@@ -196,6 +196,15 @@ export interface TransactionResult {
   removed: string[];
   rolledBack: string[];
   backupDir: string;
+  manifestPath: string;
+  error?: string;
+}
+
+export interface TransactionManifest {
+  version: 1;
+  timestamp: string;
+  status: "prepared" | "committed" | "rolled-back" | "rollback-failed";
+  changes: TransactionFileChange[];
   error?: string;
 }
 
@@ -217,6 +226,7 @@ export interface CapsuleValidationFinding {
   severity: "block" | "warn";
   code:
     | "invalid-entrypoint"
+    | "invalid-frontmatter"
     | "path-escape"
     | "symlink"
     | "digest-mismatch"

@@ -114,48 +114,90 @@ export async function compileSkills(
   }
 
   for (const skill of skills) {
-    const skillContent = await resolveDirectSkillContent(skill, fs, cwd, home);
-    if (!skillContent) {
+    const skillFiles = await resolveDirectSkillFiles(skill, fs, cwd, home);
+    if (!skillFiles) {
       skippedPlugins.push(
         `${skill.name}: skipped (direct skill source '${skill.source ?? "(missing)"}' did not contain SKILL.md)`,
       );
       continue;
     }
-    const adapted = adaptFrontmatter(skillContent);
     for (const target of targets) {
       // Direct skills are native files for Claude Code too; only plugin-backed
       // skills retain the legacy plugin-install-system behavior above.
       const targetDir = target === "claude-code" ? ".claude/skills" : SKILL_TARGET_DIR[target];
       if (!targetDir) continue;
-      files.push({
-        path: fs.joinPath(targetDir, skill.name, "SKILL.md"),
-        content: adapted,
-        action: "create",
-        platform: target,
-        slot: "skills",
-      });
+      for (const sourceFile of skillFiles) {
+        files.push({
+          path: fs.joinPath(targetDir, skill.name, sourceFile.path),
+          content: sourceFile.path === "SKILL.md" ? adaptFrontmatter(sourceFile.content) : sourceFile.content,
+          action: "create",
+          platform: target,
+          slot: "skills",
+        });
+      }
     }
   }
 
   return { files, skippedPlugins };
 }
 
-async function resolveDirectSkillContent(
+interface DirectSkillFile {
+  path: string;
+  content: string;
+}
+
+async function collectDirectSkillDirectory(
+  root: string,
+  current: string,
+  fs: FsProvider,
+  output: DirectSkillFile[],
+  depth = 0,
+): Promise<void> {
+  if (depth > 12) throw new Error(`skill directory is nested too deeply: ${root}`);
+  for (const entry of (await fs.readDir(current)).sort()) {
+    if (entry === ".git" || entry === "capsule.json") continue;
+    const fullPath = fs.joinPath(current, entry);
+    const relative = fullPath.startsWith(`${root}/`) ? fullPath.slice(root.length + 1) : entry;
+    if (await fs.isDirectory(fullPath)) {
+      await collectDirectSkillDirectory(root, fullPath, fs, output, depth + 1);
+    } else {
+      output.push({ path: relative, content: await fs.readFile(fullPath) });
+    }
+  }
+}
+
+async function resolveDirectSkillFiles(
   skill: HarnessSkillRef,
   fs: FsProvider,
   cwd: string,
   home: string,
-): Promise<string | null> {
+): Promise<DirectSkillFile[] | null> {
   if (!skill.source) return null;
-  const sourcePath = computeSourceDir(skill.source, cwd, home, fs.joinPath.bind(fs));
+  let sourcePath = computeSourceDir(skill.source, cwd, home, fs.joinPath.bind(fs));
+  if (
+    (!sourcePath || !(await fs.exists(sourcePath))) &&
+    skill.integrity?.sha256
+  ) {
+    sourcePath = fs.joinPath(home, ".harness", "cache", "resources", skill.integrity.sha256, "content");
+  }
   if (!sourcePath || !(await fs.exists(sourcePath))) return null;
   if (!(await fs.isDirectory(sourcePath))) {
-    return sourcePath.endsWith("SKILL.md") ? fs.readFile(sourcePath) : null;
+    return sourcePath.endsWith("SKILL.md")
+      ? [{ path: "SKILL.md", content: await fs.readFile(sourcePath) }]
+      : null;
   }
   const entrypoint = fs.joinPath(sourcePath, "SKILL.md");
-  if (await fs.exists(entrypoint)) return fs.readFile(entrypoint);
+  if (await fs.exists(entrypoint)) {
+    const output: DirectSkillFile[] = [];
+    await collectDirectSkillDirectory(sourcePath, sourcePath, fs, output);
+    return output;
+  }
   const found = await findSkillFiles(sourcePath, fs);
-  return found.length ? fs.readFile(found[0]) : null;
+  if (found.length === 0) return null;
+  const nestedRoot = fs.dirname(found[0]);
+  const output: DirectSkillFile[] = [];
+  await collectDirectSkillDirectory(nestedRoot, nestedRoot, fs, output);
+  return output;
 }
 
 /**

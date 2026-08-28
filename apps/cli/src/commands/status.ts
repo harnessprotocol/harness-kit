@@ -1,11 +1,13 @@
 import { resolve, basename } from "node:path";
 import chalk from "chalk";
 import { buildFleetReport } from "@harness-kit/core";
-import type { FleetReport, FleetStatus } from "@harness-kit/core";
+import type { FleetReport, FleetScopeInput, FleetStatus } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
+import { buildReconciliationContext, summarizePlan } from "./portability-common.js";
 
 interface StatusFlags {
   json?: boolean;
+  global?: boolean;
 }
 
 function statusColor(status: FleetStatus): string {
@@ -65,21 +67,43 @@ export async function statusCommand(flags: StatusFlags): Promise<void> {
   const cwd = resolve(".");
   const projectFs = new NodeFsProvider(cwd);
   const projectLabel = basename(cwd);
+  const scopes: FleetScopeInput[] = [{ kind: "project", label: projectLabel, fs: projectFs }];
+  if (flags.global) {
+    const home = await projectFs.homedir();
+    scopes.push({
+      kind: "global" as const,
+      label: "personal",
+      fs: new NodeFsProvider(home),
+      profilePath: ".harness/harness.yaml",
+    });
+  }
 
   const report = await buildFleetReport({
-    scopes: [{ kind: "project", label: projectLabel, fs: projectFs }],
+    scopes,
   });
+  let reconciliation: Record<string, unknown> | undefined;
+  if (await projectFs.exists(projectFs.joinPath(cwd, "harness.yaml"))) {
+    try {
+      reconciliation = summarizePlan((await buildReconciliationContext("harness.yaml", {})).plan);
+    } catch {
+      // Fleet status remains available for legacy or partially configured profiles.
+    }
+  }
 
   if (flags.json) {
-    console.log(JSON.stringify(report));
+    console.log(JSON.stringify({ ...report, ...(reconciliation ? { reconciliation } : {}) }));
     return;
   }
 
   console.log(chalk.bold(`Fleet status for ${cwd}`));
   console.log("");
   console.log(formatTable(report));
+  if ((reconciliation as { blocked?: boolean } | undefined)?.blocked) {
+    console.log("");
+    console.log(chalk.yellow("Whole-harness reconciliation has unresolved conflicts."));
+  }
 
-  if (report.summary.drift > 0) {
+  if (report.summary.drift > 0 || (reconciliation as { blocked?: boolean } | undefined)?.blocked) {
     process.exit(1);
   }
 }

@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   TARGET_CAPABILITY_MATRIX,
   applyFileTransaction,
+  rollbackFileTransaction,
+  sanitizeCapturedSecrets,
   assertCapabilityMatrixComplete,
   buildInventorySnapshot,
   createCapsuleManifest,
@@ -194,5 +196,52 @@ describe("file transactions", () => {
     expect(result.committed).toBe(false);
     expect(fs.getFile("/project/a.txt")).toBe("a0");
     expect(fs.getFile("/project/b.txt")).toBe("b0");
+    expect(JSON.parse(fs.getFile("/project/.harness/backups/test/transaction.json")!).status).toBe("rolled-back");
+  });
+
+  it("rolls back a committed transaction but refuses to overwrite later edits", async () => {
+    const fs = new MockFsProvider({ "/project/a.txt": "a0" });
+    const applied = await applyFileTransaction(
+      [{ path: "a.txt", before: "a0", after: "a1" }],
+      { fs, timestamp: "apply" },
+    );
+    const manifest = JSON.parse(
+      fs.getFile("/project/.harness/backups/apply/transaction.json")!,
+    );
+    const rolledBack = await rollbackFileTransaction(manifest, { fs, timestamp: "rollback" });
+    expect(applied.committed).toBe(true);
+    expect(rolledBack.committed).toBe(true);
+    expect(fs.getFile("/project/a.txt")).toBe("a0");
+
+    await fs.writeFile("/project/a.txt", "local-edit");
+    await expect(
+      rollbackFileTransaction(manifest, { fs, timestamp: "rollback-again" }),
+    ).rejects.toThrow("changed after preview");
+  });
+});
+
+describe("capture secret sanitization", () => {
+  it("replaces literal headers and environment secrets with declarations", () => {
+    const result = sanitizeCapturedSecrets({
+      version: "2",
+      metadata: { name: "captured", description: "Captured" },
+      "mcp-servers": {
+        remote: {
+          transport: "http",
+          url: "https://example.com",
+          headers: { Authorization: "Bearer literal-token" },
+        },
+        local: {
+          transport: "stdio",
+          command: "server",
+          env: { API_KEY: "literal-key", SAFE_MODE: "true" },
+        },
+      },
+    });
+    expect(JSON.stringify(result.config)).not.toContain("literal-token");
+    expect(JSON.stringify(result.config)).not.toContain("literal-key");
+    expect(JSON.stringify(result.config)).toContain("SAFE_MODE");
+    expect(result.config.env).toHaveLength(2);
+    expect(result.config.env?.every((entry) => entry.sensitive)).toBe(true);
   });
 });

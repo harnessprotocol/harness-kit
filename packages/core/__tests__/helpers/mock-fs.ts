@@ -79,6 +79,10 @@ export class MockFsProvider implements FsProvider {
     return [...entries];
   }
 
+  async readDirAll(path: string): Promise<string[]> {
+    return this.readDir(path);
+  }
+
   joinPath(...segments: string[]): string {
     return posixJoin(...segments);
   }
