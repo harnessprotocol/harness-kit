@@ -445,6 +445,15 @@ describe("registry HTTP contract", () => {
       body: { slug: "media", name: "Media" },
       headers: { "content-type": "text/plain" },
     })).body).toMatchObject({ error: "unsupported_media_type" });
+
+    const allowed = await invoke(handler, {
+      method: "POST",
+      path: "/v1/organizations",
+      body: { slug: "allowed", name: "Allowed" },
+      headers: { cookie: `hk_session=${token}`, origin: "https://console.test" },
+    });
+    expect(allowed.status).toBe(201);
+    expect(allowed.headers["access-control-allow-origin"]).toBe("https://console.test");
   });
 
   it("serves mutable public labels revalidated and digest-addressed blobs immutably", async () => {

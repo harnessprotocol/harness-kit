@@ -48,6 +48,24 @@ function containsLiteralCredentialAssignment(content: string): boolean {
   return false;
 }
 
+function containsDangerousShellCommand(content: string): boolean {
+  const tokens = content.toLowerCase().split(/\s+/);
+  for (let index = 0; index < tokens.length; index += 1) {
+    if (tokens[index] === "rm" && tokens[index + 1] === "-rf") {
+      const target = tokens[index + 2] ?? "";
+      if (target.startsWith("/") || target.startsWith("~")) return true;
+    }
+    if (tokens[index] === "chmod" && tokens[index + 1] === "777") return true;
+  }
+  return content.split("\n").some((line) => {
+    const pipe = line.indexOf("|");
+    if (pipe < 0) return false;
+    const producer = line.slice(0, pipe).toLowerCase().trim().split(/\s+/);
+    const consumer = line.slice(pipe + 1).toLowerCase().trim().split(/\s+/)[0];
+    return producer.includes("curl") && (consumer === "sh" || consumer === "bash");
+  });
+}
+
 export function createCapsuleManifest(
   identity: ResourceIdentity,
   version: string,
@@ -71,7 +89,7 @@ export function scanPortableContent(path: string, content: string): CapsuleValid
   const findings: CapsuleValidationFinding[] = [];
   if (
     /(?:ignore|override|disregard)\s+(?:all\s+)?(?:previous(?:\s+(?:system|developer))?|system|developer)\s+instructions/i.test(content) ||
-    /(?:rm\s+-rf\s+[~/]|curl\s+[^\n|]+\|\s*(?:sh|bash)|chmod\s+777)/i.test(content)
+    containsDangerousShellCommand(content)
   ) {
     findings.push({
       severity: "block",

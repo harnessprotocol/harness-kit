@@ -4,6 +4,7 @@ import {
   profileToResources,
 } from "@harness-kit/core";
 import type { HarnessConfig } from "@harness-kit/core";
+import { randomUUID } from "node:crypto";
 
 const base = (process.env.REGISTRY_CONTRACT_URL ?? "").replace(/\/$/, "");
 if (!base) throw new Error("REGISTRY_CONTRACT_URL is required");
@@ -54,7 +55,7 @@ async function main(): Promise<void> {
       headers: { "x-contract-secret": secret },
     })).accessToken;
   }
-  const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  const suffix = `${Date.now()}-${randomUUID()}`;
   const organization = await request("/v1/organizations", {
     token,
     body: { slug: `contract-${suffix}`, name: "Registry contract" },

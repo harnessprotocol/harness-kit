@@ -89,11 +89,11 @@ function orgRoute(path: string): { organizationId: string; resource: string; res
 
 export function createRegistryHttpHandler(service: RegistryService, options: RegistryHttpOptions = {}) {
   const maxBodyBytes = options.maxBodyBytes ?? 10 * 1024 * 1024;
-  const allowedOrigins = new Set([
+  const allowedOrigins = [
     new URL(service.config.publicBaseUrl).origin,
     ...(options.allowedOrigin ? [options.allowedOrigin] : []),
     ...(options.allowedOrigins ?? []),
-  ].map((origin) => origin.replace(/\/$/, "")));
+  ].map((origin) => origin.replace(/\/$/, ""));
   const authRequests = new Map<string, { count: number; resetAt: number }>();
   const enforceAuthRateLimit = (request: IncomingMessage, path: string): void => {
     const now = Date.now();
@@ -120,11 +120,14 @@ export function createRegistryHttpHandler(service: RegistryService, options: Reg
       const url = new URL(request.url ?? "/", service.config.publicBaseUrl);
       const path = url.pathname.replace(/\/$/, "") || "/";
       const requestOrigin = typeof request.headers.origin === "string" ? request.headers.origin.replace(/\/$/, "") : undefined;
-      if (requestOrigin && !allowedOrigins.has(requestOrigin)) {
+      const responseOrigin = requestOrigin
+        ? allowedOrigins.find((configuredOrigin) => configuredOrigin === requestOrigin)
+        : undefined;
+      if (requestOrigin && !responseOrigin) {
         throw new RegistryError(403, "request origin is not allowed", "origin_forbidden");
       }
-      if (requestOrigin) {
-        response.setHeader?.("Access-Control-Allow-Origin", requestOrigin);
+      if (responseOrigin) {
+        response.setHeader?.("Access-Control-Allow-Origin", responseOrigin);
         response.setHeader?.("Access-Control-Allow-Credentials", "true");
         response.setHeader?.("Vary", "Origin");
       }
@@ -236,7 +239,7 @@ export function createRegistryHttpHandler(service: RegistryService, options: Reg
       }
 
       const auth = credential(request);
-      if (auth.viaCookie && ["POST", "PUT", "PATCH"].includes(method) && (!requestOrigin || !allowedOrigins.has(requestOrigin))) {
+      if (auth.viaCookie && ["POST", "PUT", "PATCH"].includes(method) && !responseOrigin) {
         throw new RegistryError(403, "cookie-authenticated mutations require an allowed origin", "csrf_forbidden");
       }
       const principal = await service.authenticate(auth.token);
