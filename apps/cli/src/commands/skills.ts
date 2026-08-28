@@ -23,6 +23,7 @@ import type {
 import { NodeFsProvider } from "@harness-kit/core/node";
 import { applyCommand } from "./apply.js";
 import { rollbackCommand } from "./rollback.js";
+import { registryRequest } from "../registry-client.js";
 import {
   buildReconciliationContext,
   readOptional,
@@ -51,7 +52,8 @@ interface DiscoverFlags {
 
 interface PromoteFlags {
   mode?: "reference" | "capsule";
-  scope?: Extract<HarnessScope, "personal" | "project">;
+  scope?: Extract<HarnessScope, "organization" | "personal" | "project">;
+  organization?: string;
   profile?: string;
   source?: string;
   revision?: string;
@@ -200,11 +202,42 @@ export async function skillsPromoteCommand(directory: string, flags: PromoteFlag
   const host = new NodeFsProvider();
   const home = await host.homedir();
   const digest = manifest.digest.slice("sha256:".length);
-  const cacheRoot = resolve(home, ".harness/cache/resources", digest);
   const scope = flags.scope ?? "personal";
-  if (scope !== "personal" && scope !== "project") {
-    throw new Error(`unsupported catalog scope '${scope}'; expected personal or project`);
+  if (!["organization", "personal", "project"].includes(scope)) {
+    throw new Error(`unsupported catalog scope '${scope}'; expected organization, personal, or project`);
   }
+  if (scope === "organization") {
+    if (!flags.organization) throw new Error("organization promotion requires --organization <id>");
+    const preview = {
+      mode,
+      scope,
+      organizationId: flags.organization,
+      identity: manifest.identity,
+      version: manifest.version,
+      revision,
+      digest: manifest.digest,
+      files: files.map((file) => file.path),
+      findings: validation.findings,
+      approvalRequired: !flags.yes,
+    };
+    if (!flags.yes) {
+      if (flags.json) console.log(JSON.stringify(preview, null, 2));
+      else console.log(`Organization promotion preview: ${name}, ${files.length} declared file(s), ${manifest.digest}. Re-run with --yes to submit.`);
+      return;
+    }
+    const artifact = await registryRequest<{ id: string }>(`/v1/organizations/${flags.organization}/artifacts`, {
+      method: "POST",
+      body: JSON.stringify({ manifest, files }),
+    });
+    const submission = await registryRequest<{ id: string }>(`/v1/organizations/${flags.organization}/submissions`, {
+      method: "POST",
+      body: JSON.stringify({ artifactId: artifact.id, note: `${mode} promotion from Harness Kit CLI` }),
+    });
+    if (flags.json) console.log(JSON.stringify({ ...preview, approvalRequired: false, artifactId: artifact.id, submissionId: submission.id }, null, 2));
+    else console.log(`Submitted ${name} for organization publication (submission ${submission.id}).`);
+    return;
+  }
+  const cacheRoot = resolve(home, ".harness/cache/resources", digest);
   const profilePath = resolve(flags.profile ?? (scope === "personal" ? resolve(home, ".harness/harness.yaml") : "harness.yaml"));
   const profile = await loadPromotionProfile(profilePath, scope);
   const skill: HarnessSkillRef = {

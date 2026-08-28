@@ -28,6 +28,7 @@ import {
   createOrganization,
   joinOrganization,
 } from "./commands/org.js";
+import { authLoginCommand, authLogoutCommand, authStatusCommand } from "./commands/auth.js";
 import {
   keygenCommand,
   offerCommand,
@@ -274,7 +275,8 @@ skillsCommand
   .description("Pin an in-place skill or package it as a validated content-addressed capsule")
   .argument("<directory>", "Skill directory containing SKILL.md")
   .option("--mode <mode>", "Promotion mode: reference or capsule", "reference")
-  .option("--scope <scope>", "Catalog scope: personal or project", "personal")
+  .option("--scope <scope>", "Catalog scope: organization, personal, or project", "personal")
+  .option("--organization <id>", "Organization id for organization-scope submission")
   .option("--profile <path>", "Profile to update")
   .option("--source <owner/repo/path>", "Explicit source identity")
   .option("--revision <commit>", "Pinned source revision")
@@ -430,6 +432,11 @@ orgCommand
   .action(async (slug: string) => {
     await joinOrganization(slug);
   });
+
+const authCommand = program.command("auth").description("Authenticate with the Harness Kit registry");
+authCommand.command("login").description("Authorize this device with a short-lived session").action(authLoginCommand);
+authCommand.command("status").description("Show registry authentication status").action(authStatusCommand);
+authCommand.command("logout").description("Remove the local registry session").action(authLogoutCommand);
 
 // ─── exchange command group ───────────────────────────────────────────────────
 
