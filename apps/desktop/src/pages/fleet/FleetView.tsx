@@ -12,6 +12,8 @@ import { FolderSearch } from "lucide-react";
 import type { FleetReport, FleetStatus } from "@harness-kit/core";
 import type { HarnessInfo } from "@harness-kit/shared";
 import { ADAPTER_META, versionForAdapter } from "./adapter-meta";
+import { PortabilityPanel } from "./PortabilityPanel";
+import type { DesktopPortabilitySnapshot } from "./portability-data";
 
 function relativeTime(iso: string | null): string {
   if (!iso) return "never";
@@ -59,6 +61,7 @@ export interface FleetViewProps {
   onScan: () => void;
   onNavigateToConfigure: (scopeRoot: string) => void;
   onNavigateToDrift: (adapterId: string) => void;
+  portability?: DesktopPortabilitySnapshot | null;
 }
 
 /**
@@ -78,6 +81,7 @@ export function FleetView({
   onScan,
   onNavigateToConfigure,
   onNavigateToDrift,
+  portability = null,
 }: FleetViewProps) {
   if (loading && !report) {
     return (
@@ -246,6 +250,8 @@ export function FleetView({
       {error && <div className="hk-page-error">{error}</div>}
 
       <SummaryStrip cells={summaryCells} />
+
+      <PortabilityPanel snapshot={portability} />
 
       <div style={{ marginTop: 20, overflowX: "auto" }}>
         <Table

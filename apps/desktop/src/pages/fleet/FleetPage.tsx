@@ -8,6 +8,7 @@ import { TauriFsProvider } from "../../lib/harness-fs";
 import { detectHarnesses, grantProjectScope } from "../../lib/tauri";
 import { getCurrentProjectDir, projectDirLabel } from "../../lib/project-dir";
 import { FleetView } from "./FleetView";
+import { buildDesktopPortabilitySnapshot, type DesktopPortabilitySnapshot } from "./portability-data";
 
 const LAST_COMPILED_KEY = "harness-kit-last-compiled-at";
 
@@ -22,6 +23,7 @@ export default function FleetPage() {
     () => localStorage.getItem(LAST_COMPILED_KEY),
   );
   const [projectScopeReady, setProjectScopeReady] = useState(false);
+  const [portability, setPortability] = useState<DesktopPortabilitySnapshot | null>(null);
   const projectDir = getCurrentProjectDir();
 
   const load = useCallback(async () => {
@@ -46,8 +48,17 @@ export default function FleetPage() {
           ? [{ kind: "project" as const, label: projectDirLabel(projectDir), fs: new TauriFsProvider(projectDir) }]
           : []),
       ];
-      const fleetReport = await buildFleetReport({ scopes });
+      const [fleetReport, portabilitySnapshot] = await Promise.all([
+        buildFleetReport({
+          scopes: scopes.map((scope) => ({
+            ...scope,
+            ...(scope.kind === "global" ? { profilePath: ".harness/harness.yaml" } : {}),
+          })),
+        }),
+        buildDesktopPortabilitySnapshot(home, projectDir && scopeReady ? projectDir : null).catch(() => null),
+      ]);
       setReport(fleetReport);
+      setPortability(portabilitySnapshot);
       setHarnesses(harnessData);
     } catch (err) {
       setError(String(err));
@@ -88,6 +99,7 @@ export default function FleetPage() {
       onScan={load}
       onNavigateToConfigure={(scopeRoot) => navigate(`/harness/file?scope=${encodeURIComponent(scopeRoot)}`)}
       onNavigateToDrift={(adapterId) => navigate(`/drift?harness=${encodeURIComponent(adapterId)}`)}
+      portability={portability}
     />
   );
 }

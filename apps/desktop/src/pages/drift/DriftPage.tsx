@@ -10,6 +10,7 @@ import {
   unacknowledgeDriftItem,
   getAcknowledgedDriftItems,
 } from "../../lib/tauri";
+import { buildDesktopPortabilitySnapshot, type DesktopPortabilitySnapshot } from "../fleet/portability-data";
 
 export default function DriftPage() {
   const [searchParams] = useSearchParams();
@@ -22,6 +23,7 @@ export default function DriftPage() {
   const [fixTarget, setFixTarget] = useState<ScopedDriftItem[] | null>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [showAcknowledged, setShowAcknowledged] = useState(false);
+  const [portability, setPortability] = useState<DesktopPortabilitySnapshot | null>(null);
 
   const pushToast = useCallback((toast: Omit<ToastItem, "id">) => {
     const id = `${Date.now()}-${Math.random()}`;
@@ -34,11 +36,15 @@ export default function DriftPage() {
     setError(null);
     try {
       const scopes = await buildDriftScopes();
-      const [collected, ackRows] = await Promise.all([
+      const home = scopes.find((scope) => scope.kind === "global")?.root;
+      const project = scopes.find((scope) => scope.kind === "project")?.root;
+      const [collected, ackRows, portabilitySnapshot] = await Promise.all([
         collectDrift(scopes),
         getAcknowledgedDriftItems().catch(() => []),
+        home ? buildDesktopPortabilitySnapshot(home, project).catch(() => null) : Promise.resolve(null),
       ]);
       setEntries(collected);
+      setPortability(portabilitySnapshot);
       setAcknowledged(
         new Set(ackRows.map((a) => [a.scopeRoot, a.adapter, a.path, a.harnessName, a.slot].join("::"))),
       );
@@ -118,6 +124,7 @@ export default function DriftPage() {
         onUnacknowledge={handleUnacknowledge}
         onRescan={load}
         onDismissToast={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))}
+        portability={portability}
       />
 
       <FixPreviewModal

@@ -2,7 +2,6 @@ import type { HarnessPolicy, PolicySourceConstraint, TargetPlatform } from "../t
 import {
   HARNESS_SCOPE_ORDER,
   type HarnessResource,
-  type HarnessScope,
   type LayeredHarnessProfile,
   type LayerResolutionResult,
   type PolicyViolation,

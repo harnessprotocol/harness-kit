@@ -4,6 +4,8 @@ import { ADAPTER_META } from "../fleet/adapter-meta";
 import { driftItemKey, type ScopedDriftItem } from "./drift-data";
 import { CLASS_LABEL, CLASS_VARIANT, isRepairable } from "./classification";
 import { lineDiff, collapseToHunks } from "./line-diff";
+import { ConflictLedger } from "./ConflictLedger";
+import type { DesktopPortabilitySnapshot } from "../fleet/portability-data";
 
 function groupKey(entry: ScopedDriftItem): string {
   return `${entry.scope.root}::${entry.item.adapter}`;
@@ -25,6 +27,7 @@ export interface DriftViewProps {
   onUnacknowledge: (entry: ScopedDriftItem) => void;
   onRescan: () => void;
   onDismissToast: (id: string) => void;
+  portability?: DesktopPortabilitySnapshot | null;
 }
 
 /**
@@ -49,6 +52,7 @@ export function DriftView({
   onUnacknowledge,
   onRescan,
   onDismissToast,
+  portability = null,
 }: DriftViewProps) {
   const visible = filteredEntries.filter((e) => showAcknowledged || !acknowledged.has(driftItemKey(e.scope, e.item)));
 
@@ -83,7 +87,7 @@ export function DriftView({
     );
   }
 
-  if (!loading && filteredEntries.length === 0) {
+  if (!loading && filteredEntries.length === 0 && !portability?.conflicts.length) {
     return (
       <div className="hk-page">
         <div className="hk-page-head">
@@ -130,6 +134,8 @@ export function DriftView({
       </div>
 
       {error && <div className="hk-page-error">{error}</div>}
+
+      <ConflictLedger conflicts={portability?.conflicts ?? []} />
 
       {groups.map(([key, groupEntries]) => {
         const first = groupEntries[0];

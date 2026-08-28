@@ -69,6 +69,209 @@
   --shadow-popover: 0 8px 24px -8px rgba(20,15,10,.14);
 }
 
+/* Whole-harness portability ledger: dense, operational, and intentionally
+   distinct from the summary-card language used elsewhere in Fleet. */
+.hk-portability {
+  margin-top: 24px;
+  padding: 18px 0 0;
+  border-top: 1px solid var(--border-base);
+  container-type: inline-size;
+}
+
+.hk-portability-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.hk-portability-kicker {
+  margin: 0 0 4px;
+  color: var(--accent-text);
+  font: 650 10px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.hk-portability h2 {
+  margin: 0;
+  color: var(--fg-base);
+  font-size: 16px;
+  font-weight: 620;
+  letter-spacing: -0.015em;
+}
+
+.hk-portability-tabs {
+  display: flex;
+  gap: 2px;
+  padding-bottom: 1px;
+  border-bottom: 1px solid var(--border-base);
+}
+
+.hk-portability-tabs button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--fg-subtle);
+  font: 560 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-transform: capitalize;
+  cursor: pointer;
+}
+
+.hk-portability-tabs button:hover,
+.hk-portability-tabs button.is-active {
+  color: var(--fg-base);
+  border-bottom-color: var(--accent);
+}
+
+.hk-portability-tabs button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.hk-portability-ledger {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 18px;
+  border-block: 1px solid var(--border-subtle);
+}
+
+.hk-portability-ledger > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding: 11px 14px 12px 0;
+}
+
+.hk-portability-ledger span,
+.hk-portability-body span {
+  color: var(--fg-subtle);
+  font-size: 11px;
+}
+
+.hk-portability-ledger strong {
+  overflow: hidden;
+  color: var(--fg-base);
+  font: 570 12px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.hk-portability-ledger strong[data-tone="danger"] { color: var(--danger); }
+
+.hk-portability-body {
+  display: flex;
+  align-items: center;
+  min-height: 76px;
+  gap: 18px;
+  padding-top: 14px;
+  color: var(--fg-muted);
+}
+
+.hk-portability-body p {
+  max-width: 68ch;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.hk-portability-body code {
+  color: var(--fg-subtle);
+  font-size: 10.5px;
+}
+
+.hk-portability-measure {
+  display: grid;
+  min-width: 116px;
+  padding-right: 18px;
+  border-right: 1px solid var(--border-subtle);
+}
+
+.hk-portability-measure strong {
+  color: var(--fg-base);
+  font: 650 28px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.hk-capability-line { gap: 24px; }
+.hk-capability-line > div { display: flex; align-items: center; gap: 7px; }
+.hk-capability-line strong { color: var(--fg-base); font: 600 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+@container (max-width: 620px) {
+  .hk-portability-head { align-items: start; flex-direction: column; }
+  .hk-portability-ledger { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hk-portability-body { align-items: start; flex-direction: column; }
+  .hk-portability-measure { border-right: 0; }
+}
+
+.hk-conflict-ledger {
+  margin: 4px 0 28px;
+  border-top: 2px solid var(--danger);
+}
+
+.hk-conflict-ledger-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-base);
+}
+
+.hk-conflict-ledger-title p {
+  margin: 0 0 3px;
+  color: var(--danger);
+  font: 650 10px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.hk-conflict-ledger-title h2 {
+  margin: 0;
+  color: var(--fg-base);
+  font-size: 15px;
+  font-weight: 620;
+}
+
+.hk-conflict-ledger article {
+  display: grid;
+  grid-template-columns: minmax(180px, 0.8fr) minmax(360px, 1.6fr) auto;
+  gap: 18px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.hk-conflict-main code {
+  color: var(--fg-base);
+  font-size: 12px;
+}
+
+.hk-conflict-main p {
+  margin: 5px 0 0;
+  color: var(--fg-muted);
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.hk-conflict-ledger dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 14px;
+  margin: 0;
+}
+
+.hk-conflict-ledger dl div { min-width: 0; }
+.hk-conflict-ledger dt { color: var(--fg-subtle); font-size: 9.5px; text-transform: uppercase; letter-spacing: 0.08em; }
+.hk-conflict-ledger dd { overflow: hidden; margin: 2px 0 0; color: var(--fg-muted); font: 500 10.5px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; text-overflow: ellipsis; white-space: nowrap; }
+.hk-conflict-choices { display: flex; align-content: start; flex-wrap: wrap; justify-content: end; gap: 4px; }
+.hk-conflict-choices span { padding: 3px 6px; background: var(--bg-elevated); color: var(--fg-subtle); font: 520 9.5px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+@media (max-width: 900px) {
+  .hk-conflict-ledger article { grid-template-columns: 1fr; }
+  .hk-conflict-choices { justify-content: start; }
+}
+
 .dark {
   /* design-tokens:dark:start */
   /* generated — edit packages/design-tokens/src/tokens.ts, then run generate */
