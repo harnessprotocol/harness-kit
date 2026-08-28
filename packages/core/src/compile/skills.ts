@@ -3,6 +3,7 @@ import type {
   FileAction,
   HarnessConfig,
   HarnessPlugin,
+  HarnessSkillRef,
   TargetPlatform,
 } from "../types.js";
 import { findSkillFiles, computeSourceDir } from "./discovery.js";
@@ -75,8 +76,9 @@ export async function compileSkills(
   targets: TargetPlatform[],
   fs: FsProvider,
 ): Promise<{ files: FileAction[]; skippedPlugins: string[] }> {
-  const plugins = config.plugins;
-  if (!plugins || plugins.length === 0) {
+  const plugins = config.plugins ?? [];
+  const skills = (config.skills ?? []).filter((skill) => skill.enabled !== false);
+  if (plugins.length === 0 && skills.length === 0) {
     return { files: [], skippedPlugins: [] };
   }
 
@@ -111,7 +113,49 @@ export async function compileSkills(
     }
   }
 
+  for (const skill of skills) {
+    const skillContent = await resolveDirectSkillContent(skill, fs, cwd, home);
+    if (!skillContent) {
+      skippedPlugins.push(
+        `${skill.name}: skipped (direct skill source '${skill.source ?? "(missing)"}' did not contain SKILL.md)`,
+      );
+      continue;
+    }
+    const adapted = adaptFrontmatter(skillContent);
+    for (const target of targets) {
+      // Direct skills are native files for Claude Code too; only plugin-backed
+      // skills retain the legacy plugin-install-system behavior above.
+      const targetDir = target === "claude-code" ? ".claude/skills" : SKILL_TARGET_DIR[target];
+      if (!targetDir) continue;
+      files.push({
+        path: fs.joinPath(targetDir, skill.name, "SKILL.md"),
+        content: adapted,
+        action: "create",
+        platform: target,
+        slot: "skills",
+      });
+    }
+  }
+
   return { files, skippedPlugins };
+}
+
+async function resolveDirectSkillContent(
+  skill: HarnessSkillRef,
+  fs: FsProvider,
+  cwd: string,
+  home: string,
+): Promise<string | null> {
+  if (!skill.source) return null;
+  const sourcePath = computeSourceDir(skill.source, cwd, home, fs.joinPath.bind(fs));
+  if (!sourcePath || !(await fs.exists(sourcePath))) return null;
+  if (!(await fs.isDirectory(sourcePath))) {
+    return sourcePath.endsWith("SKILL.md") ? fs.readFile(sourcePath) : null;
+  }
+  const entrypoint = fs.joinPath(sourcePath, "SKILL.md");
+  if (await fs.exists(entrypoint)) return fs.readFile(entrypoint);
+  const found = await findSkillFiles(sourcePath, fs);
+  return found.length ? fs.readFile(found[0]) : null;
 }
 
 /**

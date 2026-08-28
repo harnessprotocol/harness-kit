@@ -12,6 +12,23 @@ function makeConfig(plugins: HarnessConfig["plugins"] = []): HarnessConfig {
 }
 
 describe("compileSkills", () => {
+  it("compiles direct v2 skills to Claude Code and Codex project directories", async () => {
+    const fs = new MockFsProvider({
+      "/project/skills/review/SKILL.md": "---\nname: review\n---\n\n# Review",
+    });
+    const config: HarnessConfig = {
+      version: "2",
+      metadata: { name: "direct", description: "direct" },
+      skills: [{ name: "review", source: "./skills/review" }],
+    };
+    const { files, skippedPlugins } = await compileSkills(config, ["claude-code", "codex"], fs);
+    expect(skippedPlugins).toEqual([]);
+    expect(files.map((file) => file.path)).toEqual([
+      ".claude/skills/review/SKILL.md",
+      ".agents/skills/review/SKILL.md",
+    ]);
+  });
+
   it("copies SKILL.md to target directories", async () => {
     const fs = new MockFsProvider({
       "/home/user/.claude/skills/explain/SKILL.md":

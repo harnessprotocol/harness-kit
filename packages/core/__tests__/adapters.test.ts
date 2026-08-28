@@ -64,10 +64,10 @@ describe("adapter registry", () => {
 });
 
 describe("adapter capabilities are honestly declared", () => {
-  it("claude-code: full instructions/mcp/permissions, none for skills/subagents/hooks/model", () => {
+  it("claude-code: full instructions/skills/mcp/permissions, none for subagents/hooks/model", () => {
     expect(claudeCodeAdapter.capabilities.export).toEqual({
       instructions: "full",
-      skills: "none",
+      skills: "full",
       subagents: "none",
       mcp: "full",
       permissions: "full",
@@ -123,7 +123,7 @@ describe("adapter capabilities are honestly declared", () => {
     // claude-code: CLAUDE.md/AGENT.md/SOUL.md (opaque), .claude/settings.json, .mcp.json — all full.
     expect(claudeCodeAdapter.capabilities.import).toEqual({
       instructions: "full",
-      skills: "none",
+      skills: "full",
       subagents: "none",
       mcp: "full",
       permissions: "full",
@@ -133,7 +133,7 @@ describe("adapter capabilities are honestly declared", () => {
     // cursor: *.mdc rules (opaque) + .cursor/mcp.json — full; permissions is prose-only, not machine-readable.
     expect(cursorAdapter.capabilities.import).toEqual({
       instructions: "full",
-      skills: "none",
+      skills: "full",
       subagents: "none",
       mcp: "full",
       permissions: "none",
@@ -143,7 +143,7 @@ describe("adapter capabilities are honestly declared", () => {
     // copilot: copilot-instructions.md (opaque) + .vscode/mcp.json — full.
     expect(copilotAdapter.capabilities.import).toEqual({
       instructions: "full",
-      skills: "none",
+      skills: "full",
       subagents: "none",
       mcp: "full",
       permissions: "none",
@@ -153,7 +153,7 @@ describe("adapter capabilities are honestly declared", () => {
     // agents-md: AGENTS.md only, single opaque operational bucket — instructions-only.
     expect(agentsMdAdapter.capabilities.import).toEqual({
       instructions: "full",
-      skills: "none",
+      skills: "full",
       subagents: "none",
       mcp: "none",
       permissions: "none",
@@ -163,7 +163,7 @@ describe("adapter capabilities are honestly declared", () => {
     // opencode (WP-2.5): AGENTS.md (opaque) + opencode.json mcp — full; permission.bash reverses partially.
     expect(opencodeAdapter.capabilities.import).toEqual({
       instructions: "full",
-      skills: "none",
+      skills: "full",
       subagents: "none",
       mcp: "full",
       permissions: "partial",
@@ -173,7 +173,7 @@ describe("adapter capabilities are honestly declared", () => {
     // pi (WP-2.5): .pi/APPEND_SYSTEM.md (opaque) only — everything else has no importable artifact.
     expect(piAdapter.capabilities.import).toEqual({
       instructions: "full",
-      skills: "none",
+      skills: "full",
       subagents: "none",
       mcp: "none",
       permissions: "none",
@@ -248,7 +248,7 @@ describe("domainSkippedWarning", () => {
 });
 
 describe("compile() emits domain-skip warnings without throwing", () => {
-  it("warns when claude-code is asked to compile with plugins present (skills export = none)", async () => {
+  it("does not emit a skipped-domain warning when Claude Code receives skills", async () => {
     const fs = new MockFsProvider();
     const yaml = `
 version: "1"
@@ -260,11 +260,7 @@ plugins:
     source: bar/baz
 `;
     const result = await compile(yaml, ["claude-code"], fs, { dryRun: true });
-    expect(
-      result.warnings.some(
-        (w) => w.includes("[claude-code]") && w.includes("'skills'") && w.includes('"none"'),
-      ),
-    ).toBe(true);
+    expect(result.warnings.some((w) => w.includes("'skills'"))).toBe(false);
     // Must continue, not throw — files for other domains still present or empty, no exception.
     expect(result.harnessName).toBe("test");
   });

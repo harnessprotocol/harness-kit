@@ -33,6 +33,7 @@ export interface HarnessPlugin {
   version?: string;
   description?: string;
   config?: Record<string, unknown>;
+  loading?: "eager" | "deferred";
   integrity?: { sha256: string };
   /** Manifest-declared skill locations within the plugin source directory. */
   skills?: Array<{ name: string; path: string }>;
@@ -43,12 +44,17 @@ export interface McpServerStdio {
   command: string;
   args?: string[];
   env?: Record<string, string>;
+  source?: string;
+  version?: string;
+  integrity?: { sha256: string };
 }
 
 export interface McpServerNetwork {
   transport: "http" | "sse" | "ws";
   url: string;
   headers?: Record<string, string>;
+  source?: string;
+  version?: string;
 }
 
 export type McpServer = McpServerStdio | McpServerNetwork;
@@ -163,6 +169,13 @@ export interface HarnessPolicy {
   "require-integrity"?: boolean;
 }
 
+/**
+ * Lossless native configuration captured for one target when no portable
+ * Harness Protocol field exists. Values are opaque to other targets and are
+ * only written back by the matching adapter.
+ */
+export type HarnessVendorConfig = Partial<Record<TargetPlatform, Record<string, unknown>>>;
+
 export interface HarnessConfig {
   $schema?: string;
   version: string;
@@ -177,6 +190,10 @@ export interface HarnessConfig {
   permissions?: HarnessPermissions;
   policy?: HarnessPolicy;
   extends?: Array<{ source: string; version?: string }>;
+  /** Profile layer. Omitted v1 profiles default to project. */
+  scope?: "organization" | "personal" | "project" | "session";
+  /** Harness Protocol v2 lossless native extension blocks. */
+  vendor?: HarnessVendorConfig;
 }
 
 // ── Compile types ────────────────────────────────────────────

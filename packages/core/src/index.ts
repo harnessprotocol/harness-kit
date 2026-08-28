@@ -21,6 +21,7 @@ export type {
   HarnessPlugin,
   HarnessPolicy,
   HarnessSkillRef,
+  HarnessVendorConfig,
   PolicySourceConstraint,
   McpServer,
   McpServerNetwork,
@@ -67,7 +68,7 @@ export { resolveExtends } from "./compile/extends.js";
 export { findSkillFiles, computeSourceDir } from "./compile/discovery.js";
 
 // Lockfile
-export type { LockedPlugin, LockFile } from "./compile/lockfile.js";
+export type { LockedPlugin, LockedResource, LockFile } from "./compile/lockfile.js";
 export {
   readLockFile,
   writeLockFile,
@@ -232,3 +233,72 @@ export type {
   BuildFleetReportContext,
 } from "./fleet/index.js";
 export { buildFleetReport } from "./fleet/index.js";
+
+// ── Whole-harness portability (Protocol v2) ──────────────────
+export type {
+  HarnessScope,
+  HarnessResourceKind,
+  ReleaseDigest,
+  ResourceIdentity,
+  SourceRevision,
+  ResourceProvenance,
+  HarnessResource,
+  LayeredHarnessProfile,
+  PolicyViolation,
+  LayerResolutionResult,
+  CapabilityLevel,
+  LifecycleOperation,
+  TargetResourceCapability,
+  LossItem,
+  LossReport,
+  ConflictResolution,
+  ReconciliationConflict,
+  ReconciliationDirection,
+  ReconciliationOperation,
+  ReconciliationPlan,
+  ReconciliationResolution,
+  OwnershipFingerprint,
+  PortabilityState,
+  RedactionFinding,
+  InventorySnapshot,
+  TransactionFileChange,
+  TransactionResult,
+  CapsuleDependency,
+  CapsuleManifest,
+  CapsuleValidationFinding,
+  CapsuleValidationResult,
+} from "./portability/types.js";
+export { HARNESS_SCOPE_ORDER } from "./portability/types.js";
+export {
+  stableSerialize,
+  digestValue,
+  resourceIdentityKey,
+  resourceAliasKey,
+  resourcesEqual,
+  profileToResources,
+  resourcesToProfile,
+  migrateHarnessV1ToV2,
+} from "./portability/resource-model.js";
+export { mergePolicyCeilings, evaluatePolicy, resolveProfileLayers, layerFingerprint } from "./portability/layers.js";
+export {
+  PORTABLE_RESOURCE_KINDS,
+  TARGET_CAPABILITY_MATRIX,
+  getTargetCapability,
+  capabilityForResource,
+  buildLossReport,
+  assertCapabilityMatrixComplete,
+} from "./portability/capabilities.js";
+export { reconcileResources, resolveReconciliationPlan } from "./portability/reconcile.js";
+export { applyFileTransaction } from "./portability/transaction.js";
+export {
+  EMPTY_PORTABILITY_STATE,
+  readPortabilityState,
+  writePortabilityState,
+  nextPortabilityState,
+} from "./portability/state.js";
+export { redactInventoryConfig, buildInventorySnapshot } from "./portability/inventory.js";
+export {
+  createCapsuleManifest,
+  validateCapsule,
+  collectCapsuleFiles,
+} from "./portability/capsule.js";

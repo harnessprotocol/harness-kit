@@ -80,9 +80,25 @@ describe("writeLockFile / readLockFile", () => {
   });
 
   it("throws on unsupported version", () => {
-    expect(() => readLockFile("version: 2\nplugins: []")).toThrow(
+    expect(() => readLockFile("version: 3\nplugins: []")).toThrow(
       "unsupported version",
     );
+  });
+
+  it("round-trips v2 resource locks without discarding legacy plugin entries", () => {
+    const lock: LockFile = {
+      version: 2,
+      plugins: [],
+      resources: [{
+        kind: "skill",
+        name: "review",
+        source: "owner/repo/skills/review",
+        revision: "abc123",
+        digest: `sha256:${"a".repeat(64)}`,
+        alias: "review",
+      }],
+    };
+    expect(readLockFile(writeLockFile(lock))).toEqual(lock);
   });
 });
 

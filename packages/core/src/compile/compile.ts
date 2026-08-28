@@ -40,6 +40,16 @@ export function computeSourceFingerprint(
       ),
     );
   }
+  for (const skill of config.skills ?? []) {
+    hash.update(
+      new TextEncoder().encode(
+        skill.name + (skill.source ?? "") + (skill.version ?? "") + (skill.integrity?.sha256 ?? ""),
+      ),
+    );
+  }
+  if (config.vendor) {
+    hash.update(new TextEncoder().encode(JSON.stringify(config.vendor)));
+  }
   return bytesToHex(hash.digest());
 }
 

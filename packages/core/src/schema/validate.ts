@@ -6,6 +6,7 @@ import { isLegacyFormat } from "../utils/legacy.js";
 // after any change to harness.schema.json — this is a manual step; CI's
 // drift-guard step (validate.yml) fails the build if you forget.
 import validate from "./validate.generated.js";
+import validateV2 from "./validate-v2.generated.js";
 
 const COMMON_FIXES: Record<string, string> = {
   "/version": 'Change version: 1 to version: "1" (add quotes).',
@@ -24,7 +25,7 @@ function getFix(schemaPath: string, keyword: string, params: Record<string, unkn
     return `Remove unknown property '${prop}', or check for typos.`;
   }
   if (keyword === "const" && schemaPath.includes("version")) {
-    return 'version must be the string "1". Change version: 1 to version: "1".';
+    return 'version must be the string "1" or "2".';
   }
   if (keyword === "required") {
     const missing = params.missingProperty as string;
@@ -62,11 +63,22 @@ export function validateHarness(config: unknown): ValidationResult {
   const doc = config as Record<string, unknown>;
   const legacy = isLegacyFormat(doc);
 
-  const schemaValid = validate(config);
+  const protocolV2 = doc?.version === "2";
+  let schemaErrors = [] as NonNullable<typeof validate.errors>;
+  if (protocolV2) {
+    validateV2(config);
+    schemaErrors.push(...(validateV2.errors ?? []));
+    const compatible: Record<string, unknown> = { ...doc, version: "1" };
+    delete compatible.scope;
+    delete compatible.vendor;
+    validate(compatible);
+    schemaErrors.push(...(validate.errors ?? []));
+  } else {
+    validate(config);
+    schemaErrors = [...(validate.errors ?? [])];
+  }
 
-  const errors: ValidationError[] = schemaValid
-    ? []
-    : (validate.errors ?? []).map((err) => ({
+  const errors: ValidationError[] = schemaErrors.map((err) => ({
         path: formatPath(err.instancePath),
         message: err.message ?? "Unknown validation error",
         fix: getFix(

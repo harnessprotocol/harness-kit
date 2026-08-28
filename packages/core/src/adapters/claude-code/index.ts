@@ -29,7 +29,7 @@ const TARGET = "claude-code" as const;
 const capabilities: AdapterCapabilities = {
   export: {
     instructions: "full",
-    skills: "none",
+    skills: "full",
     subagents: "none",
     mcp: "full",
     permissions: "full",
@@ -38,7 +38,7 @@ const capabilities: AdapterCapabilities = {
   },
   import: {
     instructions: "full",
-    skills: "none",
+    skills: "full",
     subagents: "none",
     mcp: "full",
     permissions: "full",

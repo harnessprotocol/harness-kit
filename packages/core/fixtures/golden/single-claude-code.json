@@ -4,9 +4,7 @@
     "claude-code"
   ],
   "harnessName": "my-harness",
-  "warnings": [
-    "[claude-code] domain 'skills' is not exported by this adapter (capabilities.export.skills = \"none\") — skipped. Requested targets: claude-code."
-  ],
+  "warnings": [],
   "skippedPlugins": [
     "explain: skipped (no SKILL.md found — checked inline declaration, source dir, and legacy paths)",
     "research: skipped (no SKILL.md found — checked inline declaration, source dir, and legacy paths)"

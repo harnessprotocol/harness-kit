@@ -1,4 +1,4 @@
-import { readFile, writeFile, access, mkdir, readdir, lstat, rename } from "node:fs/promises";
+import { readFile, writeFile, access, mkdir, readdir, lstat, rename, unlink } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import type { FsProvider } from "./fs-provider.js";
@@ -40,6 +40,10 @@ export class NodeFsProvider implements FsProvider {
 
   async renameFile(from: string, to: string): Promise<void> {
     await rename(from, to);
+  }
+
+  async removeFile(path: string): Promise<void> {
+    await unlink(path);
   }
 
   async isDirectory(path: string): Promise<boolean> {

@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://harnessprotocol.io/schema/v2/harness.schema.json",
+  "title": "Harness Protocol v2 extensions",
+  "description": "Validates the v2 protocol discriminator, profile scope, and lossless native vendor blocks. Implementations also validate all portable sections against the v1 structural schema for backward compatibility.",
+  "type": "object",
+  "required": ["version"],
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "2"
+    },
+    "scope": {
+      "type": "string",
+      "enum": ["organization", "personal", "project", "session"],
+      "default": "project"
+    },
+    "vendor": {
+      "type": "object",
+      "description": "Lossless target-native configuration. A block is only applied by its matching adapter.",
+      "propertyNames": {
+        "enum": ["claude-code", "cursor", "copilot", "codex", "opencode", "windsurf", "gemini", "junie"]
+      },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    }
+  },
+  "additionalProperties": true
+}
