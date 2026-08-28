@@ -5,7 +5,7 @@
   ],
   "harnessName": "my-harness",
   "warnings": [
-    "permissions.tools.deny is not machine-enforceable for target 'opencode'.\n  Denied tools: mcp__postgres__drop_table\n  Instructions have been updated to describe the intended permissions,\n  but manual tool configuration is required."
+    "opencode: permissions.paths and permissions.network have no OpenCode equivalent (no path/network allowlist support) — not exported to opencode.json. See AGENTS.md instructions for a human-readable summary instead."
   ],
   "skippedPlugins": [
     "explain: skipped (no SKILL.md found — checked inline declaration, source dir, and legacy paths)",
@@ -22,9 +22,9 @@
     {
       "path": "opencode.json",
       "platform": "opencode",
-      "slot": "mcp-servers",
+      "slot": "mcp-permissions",
       "action": "create",
-      "content": "{\n  \"mcpServers\": {\n    \"postgres\": {\n      \"type\": \"stdio\",\n      \"command\": \"uvx\",\n      \"args\": [\n        \"mcp-server-postgres\",\n        \"${DB_CONNECTION_STRING}\"\n      ]\n    }\n  }\n}\n"
+      "content": "{\n  \"$schema\": \"https://opencode.ai/config.json\",\n  \"mcp\": {\n    \"postgres\": {\n      \"type\": \"local\",\n      \"command\": [\n        \"uvx\",\n        \"mcp-server-postgres\",\n        \"${DB_CONNECTION_STRING}\"\n      ]\n    }\n  },\n  \"permission\": {\n    \"bash\": {\n      \"Read\": \"allow\",\n      \"Glob\": \"allow\",\n      \"Grep\": \"allow\",\n      \"Write\": \"allow\",\n      \"Edit\": \"allow\",\n      \"mcp__postgres__drop_table\": \"deny\"\n    }\n  }\n}\n"
     }
   ]
 }

@@ -29,9 +29,9 @@ function translateServer(server: McpServer): OpenCodeMcpEntry {
  * both domains into a single FileAction rather than two competing writes to
  * the same path.
  *
- * Non-destructive: existing top-level keys, existing mcp server names, and
- * existing permission.bash globs are all preserved as-is; harness-kit only
- * adds entries not already present, warning when it skips a name collision.
+ * Existing unrelated top-level keys are preserved. Reconciled MCP names and
+ * permission globs replace their owned counterparts after conflicts have
+ * been resolved by the portability engine.
  */
 export async function compileOpenCodeConfigFile(
   config: HarnessConfig,
@@ -66,9 +66,8 @@ export async function compileOpenCodeConfigFile(
     for (const [name, server] of Object.entries(mcpServers)) {
       if (name in existingMcp) {
         warnings.push(
-          `${OPENCODE_CONFIG_FILE} already defines mcp server '${name}'. Existing config kept.\n  To update it, edit ${OPENCODE_CONFIG_FILE} directly or remove the entry and re-run.`,
+          `${OPENCODE_CONFIG_FILE} already defines mcp server '${name}'. The reconciled harness definition will replace it.`,
         );
-        continue;
       }
       mergedMcp[name] = translateServer(server);
       mcpCount++;
@@ -83,7 +82,9 @@ export async function compileOpenCodeConfigFile(
       typeof existingPermission.bash === "object" ? existingPermission.bash : {};
     const mergedBash = { ...existingBash };
     for (const [glob, verdict] of Object.entries(permission.bash)) {
-      if (glob in existingBash) continue;
+      if (glob in existingBash) {
+        warnings.push(`${OPENCODE_CONFIG_FILE} already defines permission '${glob}'. The reconciled harness verdict will replace it.`);
+      }
       mergedBash[glob] = verdict;
       bashCount++;
     }

@@ -47,7 +47,7 @@ describe("adapter registry", () => {
     expect(adapterIdForTarget("cursor")).toBe("cursor");
     expect(adapterIdForTarget("copilot")).toBe("copilot");
     expect(adapterIdForTarget("codex")).toBe("agents-md");
-    expect(adapterIdForTarget("opencode")).toBe("agents-md");
+    expect(adapterIdForTarget("opencode")).toBe("opencode");
     expect(adapterIdForTarget("windsurf")).toBe("agents-md");
     expect(adapterIdForTarget("gemini")).toBe("agents-md");
     expect(adapterIdForTarget("junie")).toBe("agents-md");

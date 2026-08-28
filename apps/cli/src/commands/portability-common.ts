@@ -2,12 +2,15 @@ import { access, readFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 import {
   EMPTY_PORTABILITY_STATE,
+  capabilityForResource,
+  computeFileHash,
   parseHarness,
   profileToResources,
   readPortabilityState,
   reconcileResources,
   resolveProfileLayers,
   resolveReconciliationPlan,
+  skillDirectoryDigest,
   stableSerialize,
   validateHarness,
 } from "@harness-kit/core";
@@ -148,6 +151,115 @@ function normalizeCapturedIdentity(
   });
 }
 
+async function retainManagedSourceOnlyResources(
+  root: string,
+  current: HarnessResource[],
+  state: PortabilityState,
+  targets: TargetPlatform[],
+): Promise<HarnessResource[]> {
+  const result = [...current];
+  const keyFor = (resource: HarnessResource) => `${resource.identity.kind}\0${resource.alias}`;
+  const indexByKey = new Map(result.map((resource, index) => [keyFor(resource), index]));
+  const ownershipIntact = async (owned: PortabilityState["ownership"]): Promise<boolean> =>
+    owned.length > 0 && (await Promise.all(owned.map(async (entry) => {
+      const content = await readOptional(resolve(root, entry.path));
+      return content !== null && `sha256:${computeFileHash(content)}` === entry.digest;
+    }))).every(Boolean);
+
+  for (const base of state.lastApplied) {
+    const key = keyFor(base);
+    const managedSkill = base.identity.kind === "skill"
+      ? state.ownership.filter((owned) =>
+          owned.slot === "skills" && owned.path.split(/[\\/]+/).includes(base.alias))
+      : [];
+    const managedInstructions = base.identity.kind === "instructions"
+      ? state.ownership.filter((owned) => ["operational", "behavioral", "identity"].includes(owned.slot))
+      : [];
+    const managedBytesIntact = await ownershipIntact(
+      managedSkill.length > 0 ? managedSkill : managedInstructions,
+    );
+    const currentIndex = indexByKey.get(key);
+    if (currentIndex !== undefined) {
+      const currentResource = result[currentIndex];
+      const currentSkillDigest = base.identity.kind === "skill"
+        ? (currentResource.value as { integrity?: { sha256?: string } }).integrity?.sha256
+        : undefined;
+      const deployedSkillDigest = managedSkill.length > 0
+        ? skillDirectoryDigest(managedSkill.map((owned) => {
+            const segments = owned.path.split(/[\\/]+/);
+            const aliasIndex = segments.lastIndexOf(base.alias);
+            return {
+              path: segments.slice(aliasIndex + 1).join("/"),
+              digest: owned.digest.slice("sha256:".length),
+            };
+          }))
+        : undefined;
+      if (
+        managedBytesIntact &&
+        (base.identity.kind !== "skill" || currentSkillDigest === deployedSkillDigest)
+      ) {
+        result[currentIndex] = base;
+      }
+      continue;
+    }
+    const sourceOnly = targets.every((target) => capabilityForResource(target, base, "capture") !== "native");
+    if (sourceOnly || managedBytesIntact) {
+      result.push(base);
+      indexByKey.set(key, result.length - 1);
+    }
+  }
+  return result;
+}
+
+function managedMarkerContent(content: string, slot: string): string | null {
+  const lines = content.split("\n");
+  let start = -1;
+  let endMarker = "";
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index].trim();
+    if (start < 0 && line.startsWith("<!-- BEGIN harness:") && line.endsWith(`:${slot} -->`)) {
+      start = index;
+      endMarker = line.replace("<!-- BEGIN ", "<!-- END ");
+      continue;
+    }
+    if (start >= 0 && line === endMarker) return lines.slice(start + 1, index).join("\n");
+  }
+  return null;
+}
+
+async function captureModifiedManagedInstructions(
+  root: string,
+  current: HarnessResource[],
+  state: PortabilityState,
+  targets: TargetPlatform[],
+): Promise<HarnessResource[]> {
+  const result = new Map(current.map((resource) => [`${resource.identity.kind}\0${resource.alias}`, resource]));
+  const selectedTargets = new Set(targets);
+  for (const base of state.lastApplied.filter((resource) => resource.identity.kind === "instructions")) {
+    const resourceKey = `${base.identity.kind}\0${base.alias}`;
+    const existing = result.get(resourceKey);
+    const value = { ...(base.value as Record<string, unknown>), ...(existing?.value as Record<string, unknown> | undefined) };
+    let modified = false;
+    for (const owned of state.ownership.filter((entry) =>
+      selectedTargets.has(entry.target) && ["operational", "behavioral", "identity"].includes(entry.slot))) {
+      const content = await readOptional(resolve(root, owned.path));
+      if (content === null || `sha256:${computeFileHash(content)}` === owned.digest) continue;
+      const marker = managedMarkerContent(content, owned.slot);
+      if (marker === null || value[owned.slot] === marker) continue;
+      value[owned.slot] = marker;
+      modified = true;
+    }
+    if (modified) {
+      result.set(resourceKey, {
+        ...base,
+        value,
+        provenance: { ...base.provenance, file: "native-peer", adapter: "managed-marker" },
+      });
+    }
+  }
+  return [...result.values()];
+}
+
 export async function buildReconciliationContext(
   projectPath: string,
   flags: LayerFlags,
@@ -166,10 +278,12 @@ export async function buildReconciliationContext(
     name: basename(root),
     description: "Current native harness peer state captured for reconciliation.",
   });
-  const current = normalizeCapturedIdentity(
+  const capturedCurrent = normalizeCapturedIdentity(
     profileToResources({ scope: "project", config: capture.harnessConfig, source: "native-peer" }),
     state.lastApplied,
   );
+  const retainedCurrent = await retainManagedSourceOnlyResources(root, capturedCurrent, state, targets);
+  const current = await captureModifiedManagedInstructions(root, retainedCurrent, state, targets);
   const initial = reconcileResources({
     base: state.lastApplied,
     current,

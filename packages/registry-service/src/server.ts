@@ -23,7 +23,10 @@ export async function startRegistryServer(): Promise<ReturnType<typeof createSer
     accessKeyId: process.env.S3_ACCESS_KEY_ID,
     secretAccessKey: process.env.S3_SECRET_ACCESS_KEY,
   });
-  const service = new RegistryService(repository, blobs, { publicBaseUrl });
+  const service = new RegistryService(repository, blobs, {
+    publicBaseUrl,
+    ...(process.env.WEB_ORIGIN ? { webBaseUrl: process.env.WEB_ORIGIN } : {}),
+  });
   const github = process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET
     ? new LiveGitHubOAuthProvider(
         process.env.GITHUB_CLIENT_ID,
@@ -35,6 +38,7 @@ export async function startRegistryServer(): Promise<ReturnType<typeof createSer
     github,
     contractBootstrapSecret: process.env.CONTRACT_BOOTSTRAP_SECRET,
     allowedOrigin: process.env.WEB_ORIGIN,
+    allowedOrigins: process.env.CLIENT_ORIGINS?.split(",").map((origin) => origin.trim()).filter(Boolean),
   }));
   const port = Number(process.env.PORT ?? 4810);
   await new Promise<void>((resolve, reject) => {

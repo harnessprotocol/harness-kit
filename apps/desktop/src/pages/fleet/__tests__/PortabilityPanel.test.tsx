@@ -1,5 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { PortabilityPanel } from "../PortabilityPanel";
 import type { DesktopPortabilitySnapshot } from "../portability-data";
 
@@ -17,10 +17,22 @@ const snapshot: DesktopPortabilitySnapshot = {
   applyPreview: { createsOrUpdates: 5, captures: 1, deletions: 0 },
   rollbackHistory: ["2026-08-28T11-55-00Z"],
   lastAppliedAt: "2026-08-28T11:55:00.000Z",
+  inventory: {
+    version: 1,
+    installationId: "desktop-1",
+    capturedAt: "2026-08-28T12:00:00.000Z",
+    targets: ["claude-code", "codex"],
+    effectiveConfig: {},
+    assignments: [],
+    drift: [],
+    redactions: [],
+  },
   rollout: { status: "not-enrolled", detail: "Enroll this device to receive assignments." },
 };
 
 describe("PortabilityPanel", () => {
+  beforeEach(() => sessionStorage.clear());
+
   it("shows layered apply and capture previews without mutating state", () => {
     render(<PortabilityPanel snapshot={snapshot} />);
     expect(screen.getByText("personal → project")).toBeInTheDocument();
@@ -37,5 +49,12 @@ describe("PortabilityPanel", () => {
     expect(screen.getByText("translated")).toBeInTheDocument();
     expect(screen.getByText("source-only")).toBeInTheDocument();
     expect(screen.getByText("unsupported")).toBeInTheDocument();
+  });
+
+  it("offers desktop enrollment from the rollout preview", () => {
+    render(<PortabilityPanel snapshot={snapshot} />);
+    fireEvent.click(screen.getByRole("tab", { name: "rollout" }));
+    expect(screen.getByRole("button", { name: "Enroll this device" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Registry URL")).toHaveValue("http://localhost:4810");
   });
 });

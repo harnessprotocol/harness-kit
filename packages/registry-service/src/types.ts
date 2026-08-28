@@ -13,6 +13,7 @@ export type RecordKind =
   | "session"
   | "oauth-state"
   | "device-code"
+  | "device-user-code"
   | "organization"
   | "membership"
   | "artifact"
@@ -22,7 +23,9 @@ export type RecordKind =
   | "policy"
   | "security-exception"
   | "rollout"
+  | "rollout-report"
   | "audit"
+  | "installation"
   | "inventory";
 
 export interface RegistryRecord<T = Record<string, unknown>> {
@@ -113,6 +116,8 @@ export interface OrganizationPolicy {
 export interface Rollout {
   id: string;
   releaseId: string;
+  /** Immutable artifact selected when the rollout is created. */
+  artifactId: string;
   releaseDigest: string;
   lastKnownGoodDigest?: string;
   status: "scheduled" | "active" | "paused" | "completed" | "rolled-back";
@@ -140,6 +145,7 @@ export interface DeviceAuthorization {
 
 export interface RegistryServiceConfig {
   publicBaseUrl: string;
+  webBaseUrl?: string;
   sessionTtlSeconds?: number;
   deviceCodeTtlSeconds?: number;
   now?: () => Date;

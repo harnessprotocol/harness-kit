@@ -41,7 +41,7 @@ export default function DriftPage() {
       const [collected, ackRows, portabilitySnapshot] = await Promise.all([
         collectDrift(scopes),
         getAcknowledgedDriftItems().catch(() => []),
-        home ? buildDesktopPortabilitySnapshot(home, project).catch(() => null) : Promise.resolve(null),
+        home ? buildDesktopPortabilitySnapshot(home, project) : Promise.resolve(null),
       ]);
       setEntries(collected);
       setPortability(portabilitySnapshot);

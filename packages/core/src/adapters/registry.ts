@@ -12,16 +12,9 @@ import { AGENTS_MD_TARGETS } from "./target-metadata.js";
  * The adapter registry. `compile.ts` looks adapters up here instead of
  * hand-rolling per-target dispatch.
  *
- * WP-2.5 adds `opencodeAdapter` and `piAdapter` — both are STANDALONE
- * adapters (detect/importConfig/diff/exportConfig all real), but neither is
- * wired into `LEGACY_TARGET_TO_ADAPTER` below. The legacy `TargetPlatform`
- * "opencode" continues to route through `agentsMdAdapter` exactly as before
- * (unchanged golden compile output) — `opencodeAdapter` is a richer,
- * additional surface reachable via `getAdapter("opencode")` directly, not
- * through `compile()`'s legacy target dispatch. `pi` was never a legacy
- * `TargetPlatform` at all (see types.ts) — `piAdapter` is reachable the same
- * standalone way. Both are picked up automatically by
- * `importProject()`/`getAllAdapters()`.
+ * OpenCode routes through its dedicated adapter so capability declarations
+ * and emitted native configuration stay aligned. Pi remains standalone
+ * because it is not a legacy TargetPlatform.
  */
 export const ADAPTERS: HarnessAdapter[] = [
   claudeCodeAdapter,
@@ -57,14 +50,14 @@ const LEGACY_TARGET_TO_ADAPTER: Record<TargetPlatform, AdapterId> = {
   cursor: "cursor",
   copilot: "copilot",
   codex: "agents-md",
-  opencode: "agents-md",
+  opencode: "opencode",
   windsurf: "agents-md",
   gemini: "agents-md",
   junie: "agents-md",
 };
 
 // Sanity check the derived map agrees with AGENTS_MD_TARGETS at module load.
-for (const t of AGENTS_MD_TARGETS) {
+for (const t of AGENTS_MD_TARGETS.filter((target) => target !== "opencode")) {
   if (LEGACY_TARGET_TO_ADAPTER[t] !== "agents-md") {
     throw new Error(
       `adapter registry: AGENTS_MD_TARGETS includes '${t}' but LEGACY_TARGET_TO_ADAPTER maps it elsewhere`,

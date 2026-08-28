@@ -29,17 +29,19 @@ export function githubLoginUrl(returnTo = window.location.href): string {
   return `${API_BASE}/v1/auth/github/start?returnTo=${encodeURIComponent(returnTo)}`;
 }
 
-export async function loadAdminData(organizationId: string): Promise<AdminData> {
+export async function loadAdminData(organizationId: string, userId: string): Promise<AdminData> {
   const root = `/v1/organizations/${organizationId}`;
-  const [members, artifacts, submissions, releases, policy, rollouts, inventory, audit] = await Promise.all([
-    api(`${root}/members`),
+  const members = await api<AdminData["members"]>(`${root}/members`);
+  const role = members.find((member) => member.userId === userId)?.role ?? "member";
+  const canPublish = role === "publisher" || role === "administrator";
+  const [artifacts, submissions, releases, policy, rollouts, inventory, audit] = await Promise.all([
     api(`${root}/artifacts`),
-    api(`${root}/submissions`),
+    canPublish ? api(`${root}/submissions`) : Promise.resolve([]),
     api(`${root}/releases`),
     api(`${root}/policy`),
     api(`${root}/rollouts`),
-    api(`${root}/inventory`),
-    api(`${root}/audit`),
+    canPublish ? api(`${root}/inventory`) : Promise.resolve([]),
+    role === "administrator" ? api(`${root}/audit`) : Promise.resolve([]),
   ]);
   return { members, artifacts, submissions, releases, policy, rollouts, inventory, audit } as AdminData;
 }

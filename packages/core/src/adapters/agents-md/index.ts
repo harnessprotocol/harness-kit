@@ -4,15 +4,16 @@ import { compileMcpServers } from "../../compile/mcp-servers.js";
 import { compileSkills } from "../../compile/skills.js";
 import { compilePermissions, buildPermissionsText } from "../../compile/permissions.js";
 import { appendMarkerBlock, findMarkerBlock, replaceMarkerBlock } from "../../compile/markers.js";
-import { AGENTS_MD_TARGETS } from "../target-metadata.js";
+import { AGENTS_MD_TARGETS, TARGETS } from "../target-metadata.js";
 import type { AdapterContext, AdapterCapabilities, FilePlan, HarnessAdapter, DriftReport } from "../adapter.js";
 import type { ImportedFragment } from "../../import/types.js";
 import { readInstructionFileAsOpaqueBlock } from "../../import/read-instructions.js";
+import { readMcpConfigFile } from "../../import/read-mcp.js";
 import { detectInstructionDrift, toDriftReport } from "../../fix/detect.js";
 
 /**
- * The AGENTS.md family. Today the compiler treats codex, opencode, windsurf,
- * gemini, and junie identically: they all read operational instructions from
+ * The shared AGENTS.md family for Codex, Windsurf, Gemini, and Junie. They
+ * read operational instructions from
  * a shared AGENTS.md, none support the behavioral/identity slots, and each
  * has its own MCP config path/format (or none) and skills directory — see
  * ../../compile/targets.ts (TARGETS) for the per-tool variant map this
@@ -23,7 +24,7 @@ import { detectInstructionDrift, toDriftReport } from "../../fix/detect.js";
  * adapter covers — kept derived rather than hardcoded so it can't drift from
  * targets.ts.
  */
-const LEGACY_TARGETS: TargetPlatform[] = AGENTS_MD_TARGETS;
+const LEGACY_TARGETS: TargetPlatform[] = AGENTS_MD_TARGETS.filter((target) => target !== "opencode");
 
 // Declared honestly from exportConfig below: instructions (AGENTS.md,
 // operational slot only — behavioral/identity are not supported by any tool
@@ -40,7 +41,7 @@ const LEGACY_TARGETS: TargetPlatform[] = AGENTS_MD_TARGETS;
 // single adapter covers a mix, and the current compiler silently no-ops the
 // unsupported ones (see mcp-servers.ts's per-target `mcpConfigFile` check),
 // the honest declaration for the adapter AS A WHOLE is "partial". Skills are
-// copied to each tool's own directory for all five — full.
+// copied to each tool's own directory for all four — full.
 const capabilities: AdapterCapabilities = {
   export: {
     instructions: "full",
@@ -52,7 +53,7 @@ const capabilities: AdapterCapabilities = {
     model: "none",
   },
   // Reverse-import for this family is instructions-only (per spec):
-  // AGENTS.md is the one artifact all five tools in this family share and
+  // AGENTS.md is the one artifact all four tools in this family share and
   // that this adapter reads back reliably, as a single opaque operational
   // bucket — never parsed into structured fields. mcp/skills/permissions
   // vary too much per-tool within the family (or are prose-only) to import
@@ -168,6 +169,7 @@ async function detect(ctx: AdapterContext) {
  * null for this family).
  */
 async function importConfig(ctx: AdapterContext): Promise<ImportedFragment[]> {
+  const fragments: ImportedFragment[] = [];
   const block = await readInstructionFileAsOpaqueBlock(
     ctx.fs,
     "AGENTS.md",
@@ -183,26 +185,36 @@ async function importConfig(ctx: AdapterContext): Promise<ImportedFragment[]> {
         reason: "file exists but contains only harness-kit-generated marker blocks — nothing new to import.",
       });
     }
-    if (skipped.length === 0) return [];
-    return [
-      {
+    if (skipped.length > 0) fragments.push({
         domain: "instructions",
         config: {},
         warnings: [],
         skipped,
-      },
-    ];
-  }
-
-  return [
-    {
+      });
+  } else {
+    fragments.push({
       domain: "instructions",
       config: {},
       warnings: [],
       instructions: { blocks: [block] },
       skipped: [],
-    },
-  ];
+    });
+  }
+
+  for (const target of ["gemini", "junie"] as const) {
+    const metadata = TARGETS.find((entry) => entry.id === target)!;
+    const { imported, skipped } = await readMcpConfigFile(ctx.fs, metadata.mcpConfigFile!, "agents-md");
+    if (imported || skipped.length > 0) {
+      fragments.push({
+        domain: "mcp",
+        config: {},
+        warnings: [],
+        ...(imported ? { mcpServers: imported } : {}),
+        skipped,
+      });
+    }
+  }
+  return fragments;
 }
 
 /**

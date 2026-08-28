@@ -107,6 +107,17 @@ export { buildReport } from "./report/report.js";
 
 // Utilities
 export { posixJoin, posixDirname } from "./utils/posix-path.js";
+export type {
+  NativeExtensionBlock,
+  NativeExtensionFile,
+  NativeExtensionSetting,
+} from "./portability/native-extensions.js";
+export {
+  captureNativeExtensions,
+  parseNativeExtensionBlock,
+} from "./portability/native-extensions.js";
+export { scanPortableContent } from "./portability/capsule.js";
+export { scanHarnessArtifact } from "./portability/artifact-security.js";
 export { isLegacyFormat } from "./utils/legacy.js";
 
 // Security scanner
@@ -180,6 +191,7 @@ export type {
 export type { ImportContext } from "./import/import-project.js";
 export type { SynthesizeResult } from "./import/synthesize.js";
 export { importProject, importMachine, importProjectValidated } from "./import/import-project.js";
+export { skillDirectoryDigest } from "./import/read-skills.js";
 export { synthesize } from "./import/synthesize.js";
 export {
   stripHarnessMarkerBlocks,

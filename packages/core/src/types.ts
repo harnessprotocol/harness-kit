@@ -139,8 +139,9 @@ export interface ArchitecturalReviewPolicy {
 /**
  * Declarative architectural constraints (HEP-3). Three enforcement levels:
  * `linters` and `structural-tests` are deterministic, `review-policy` is
- * LLM-applied. Accepted into the v1 schema; harness-kit parses and preserves
- * this section but does not yet act on it — see the compile pipeline.
+ * LLM-applied. Harness Kit preserves the structure and compiles it into a
+ * dedicated instruction marker; deterministic commands still run outside the
+ * portability engine.
  */
 export interface ArchitecturalConstraints {
   linters?: ArchitecturalLinter[];

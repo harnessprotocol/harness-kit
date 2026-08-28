@@ -14,12 +14,12 @@
   "warnings": [
     "OpenAI Codex: MCP config is global-only, skipping project-level write",
     "Windsurf: MCP config is global-only, skipping project-level write",
+    "opencode: permissions.paths and permissions.network have no OpenCode equivalent (no path/network allowlist support) — not exported to opencode.json. See AGENTS.md instructions for a human-readable summary instead.",
     "permissions.tools.deny is not machine-enforceable for target 'codex'.\n  Denied tools: mcp__postgres__drop_table\n  Instructions have been updated to describe the intended permissions,\n  but manual tool configuration is required.",
     "permissions.tools.deny is not machine-enforceable for target 'copilot'.\n  Denied tools: mcp__postgres__drop_table\n  Instructions have been updated to describe the intended permissions,\n  but manual tool configuration is required.",
     "permissions.tools.deny is not machine-enforceable for target 'cursor'.\n  Denied tools: mcp__postgres__drop_table\n  Instructions have been updated to describe the intended permissions,\n  but manual tool configuration is required.",
     "permissions.tools.deny is not machine-enforceable for target 'gemini'.\n  Denied tools: mcp__postgres__drop_table\n  Instructions have been updated to describe the intended permissions,\n  but manual tool configuration is required.",
     "permissions.tools.deny is not machine-enforceable for target 'junie'.\n  Denied tools: mcp__postgres__drop_table\n  Instructions have been updated to describe the intended permissions,\n  but manual tool configuration is required.",
-    "permissions.tools.deny is not machine-enforceable for target 'opencode'.\n  Denied tools: mcp__postgres__drop_table\n  Instructions have been updated to describe the intended permissions,\n  but manual tool configuration is required.",
     "permissions.tools.deny is not machine-enforceable for target 'windsurf'.\n  Denied tools: mcp__postgres__drop_table\n  Instructions have been updated to describe the intended permissions,\n  but manual tool configuration is required."
   ],
   "skippedPlugins": [
@@ -112,6 +112,13 @@
       "content": "<!-- BEGIN harness:my-harness:operational -->\n## Commands\n- Build: `pnpm build`\n- Test: `pnpm test`\n\n\n## Tool Permissions\n\nThis harness specifies the following tool permissions:\n- **Allowed**: Read, Glob, Grep, Write, Edit\n- **Denied**: mcp__postgres__drop_table\n\nPlease configure your tool's permission settings to match these constraints.\n<!-- END harness:my-harness:operational -->\n"
     },
     {
+      "path": "AGENTS.md",
+      "platform": "opencode",
+      "slot": "operational",
+      "action": "create",
+      "content": "<!-- BEGIN harness:my-harness:operational -->\n## Commands\n- Build: `pnpm build`\n- Test: `pnpm test`\n\n\n## Tool Permissions\n\nThis harness specifies the following tool permissions:\n- **Allowed**: Read, Glob, Grep, Write, Edit\n- **Denied**: mcp__postgres__drop_table\n\nPlease configure your tool's permission settings to match these constraints.\n<!-- END harness:my-harness:operational -->\n"
+    },
+    {
       "path": "CLAUDE.md",
       "platform": "claude-code",
       "slot": "operational",
@@ -121,9 +128,9 @@
     {
       "path": "opencode.json",
       "platform": "opencode",
-      "slot": "mcp-servers",
+      "slot": "mcp-permissions",
       "action": "create",
-      "content": "{\n  \"mcpServers\": {\n    \"postgres\": {\n      \"type\": \"stdio\",\n      \"command\": \"uvx\",\n      \"args\": [\n        \"mcp-server-postgres\",\n        \"${DB_CONNECTION_STRING}\"\n      ]\n    }\n  }\n}\n"
+      "content": "{\n  \"$schema\": \"https://opencode.ai/config.json\",\n  \"mcp\": {\n    \"postgres\": {\n      \"type\": \"local\",\n      \"command\": [\n        \"uvx\",\n        \"mcp-server-postgres\",\n        \"${DB_CONNECTION_STRING}\"\n      ]\n    }\n  },\n  \"permission\": {\n    \"bash\": {\n      \"Read\": \"allow\",\n      \"Glob\": \"allow\",\n      \"Grep\": \"allow\",\n      \"Write\": \"allow\",\n      \"Edit\": \"allow\",\n      \"mcp__postgres__drop_table\": \"deny\"\n    }\n  }\n}\n"
     }
   ]
 }

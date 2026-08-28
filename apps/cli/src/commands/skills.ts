@@ -10,6 +10,7 @@ import {
   createCapsuleManifest,
   findSkillFiles,
   parseHarness,
+  skillDirectoryDigest,
   validateCapsule,
   validateHarness,
 } from "@harness-kit/core";
@@ -62,6 +63,7 @@ interface PromoteFlags {
   version?: string;
   include?: string[];
   replace?: boolean;
+  exception?: string;
   yes?: boolean;
   json?: boolean;
 }
@@ -123,14 +125,19 @@ export async function skillsDiscoverCommand(flags: DiscoverFlags): Promise<void>
 async function inferReference(directory: string): Promise<{ source: string; revision: string }> {
   const { stdout: rootOut } = await execFile("git", ["-C", directory, "rev-parse", "--show-toplevel"]);
   const repoRoot = rootOut.trim();
+  const relativeDirectory = relative(repoRoot, directory) || ".";
+  const { stdout: statusOut } = await execFile("git", ["-C", repoRoot, "status", "--porcelain", "--", relativeDirectory]);
+  if (statusOut.trim()) {
+    throw new Error("reference promotion requires the selected directory to be committed");
+  }
   const { stdout: revisionOut } = await execFile("git", ["-C", repoRoot, "rev-parse", "HEAD"]);
   const { stdout: remoteOut } = await execFile("git", ["-C", repoRoot, "remote", "get-url", "origin"]);
   const remote = remoteOut.trim().replace(/\.git$/, "");
   const match = remote.match(/github\.com[/:]([^/]+\/[^/]+)$/);
   if (!match) throw new Error("cannot infer owner/repo from the origin remote; pass --source owner/repo/path");
-  const child = relative(repoRoot, directory).replaceAll("\\", "/");
+  const child = relativeDirectory.replaceAll("\\", "/");
   return {
-    source: child && child !== "." ? `${match[1]}/${child}` : match[1],
+    source: child !== "." ? `${match[1]}/${child}` : match[1],
     revision: revisionOut.trim(),
   };
 }
@@ -182,9 +189,10 @@ export async function skillsPromoteCommand(directory: string, flags: PromoteFlag
   if (mode !== "reference" && mode !== "capsule") {
     throw new Error(`unsupported promotion mode '${mode}'; expected reference or capsule`);
   }
-  const inferred = mode === "reference" && (!flags.source || !flags.revision)
-    ? await inferReference(absolute)
-    : null;
+  const inferred = mode === "reference" ? await inferReference(absolute) : null;
+  if (flags.revision && flags.revision !== inferred?.revision) {
+    throw new Error(`reference revision ${flags.revision} does not match the selected directory at ${inferred?.revision}`);
+  }
   const source = flags.source ?? inferred?.source ?? `capsule:${flags.publisher ?? "personal"}/${name}`;
   const revision = flags.revision ?? inferred?.revision;
   if (mode === "reference" && !revision) throw new Error("reference promotion requires a pinned --revision");
@@ -199,9 +207,14 @@ export async function skillsPromoteCommand(directory: string, flags: PromoteFlag
     throw new Error(`capsule validation failed:\n${validation.findings.map((finding) => `  ${finding.code}: ${finding.detail}`).join("\n")}`);
   }
 
+  const contentDigest = skillDirectoryDigest(files.map((file) => ({
+    path: file.path,
+    digest: computeFileHash(file.content),
+  })));
+
   const host = new NodeFsProvider();
   const home = await host.homedir();
-  const digest = manifest.digest.slice("sha256:".length);
+  const digest = contentDigest;
   const scope = flags.scope ?? "personal";
   if (!["organization", "personal", "project"].includes(scope)) {
     throw new Error(`unsupported catalog scope '${scope}'; expected organization, personal, or project`);
@@ -227,7 +240,7 @@ export async function skillsPromoteCommand(directory: string, flags: PromoteFlag
     }
     const artifact = await registryRequest<{ id: string }>(`/v1/organizations/${flags.organization}/artifacts`, {
       method: "POST",
-      body: JSON.stringify({ manifest, files }),
+      body: JSON.stringify({ manifest, files, ...(flags.exception ? { exceptionId: flags.exception } : {}) }),
     });
     const submission = await registryRequest<{ id: string }>(`/v1/organizations/${flags.organization}/submissions`, {
       method: "POST",
@@ -246,7 +259,7 @@ export async function skillsPromoteCommand(directory: string, flags: PromoteFlag
     version: mode === "reference" ? revision : manifest.version,
     enabled: true,
     loading: "deferred",
-    integrity: { sha256: digest },
+    integrity: { sha256: contentDigest },
   };
   const current = profile.skills ?? [];
   const collision = current.find((candidate) => candidate.name === name);
@@ -272,6 +285,24 @@ export async function skillsPromoteCommand(directory: string, flags: PromoteFlag
     before: await readOptional(profilePath),
     after: stringify(profile, { lineWidth: 0 }),
   });
+  if (scope === "personal") {
+    const destinations = new Set<string>();
+    for (const target of TARGETS) {
+      for (const file of files) {
+        if (file.symlink) continue;
+        const destination = resolve(home, target.globalSkillsDir, name, file.path);
+        if (destinations.has(destination)) continue;
+        destinations.add(destination);
+        const before = await readOptional(destination);
+        if (before !== null && before !== file.content && !flags.replace) {
+          throw new Error(`global ${target.label} skill '${name}' differs at ${destination}; choose an explicit winner with --replace`);
+        }
+        if (before !== file.content) {
+          changes.push({ path: relativeInside(home, destination), before, after: file.content });
+        }
+      }
+    }
+  }
 
   const preview = {
     mode,
@@ -282,6 +313,7 @@ export async function skillsPromoteCommand(directory: string, flags: PromoteFlag
     digest: manifest.digest,
     profile: profilePath,
     files: files.map((file) => file.path),
+    deployedTargets: scope === "personal" ? TARGETS.map((target) => target.id) : [],
     findings: validation.findings,
     approvalRequired: !flags.yes,
   };

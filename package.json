@@ -4,7 +4,10 @@
   "packageManager": "pnpm@10.29.1",
   "scripts": {
     "dev:website": "pnpm --filter harness-kit-docs dev",
+    "dev:admin": "pnpm --filter @harness-kit/admin-console dev",
+    "dev:registry": "pnpm --filter @harness-kit/registry-service dev",
     "build:website": "pnpm --filter harness-kit-docs build",
+    "build:admin": "pnpm --filter @harness-kit/admin-console build",
     "generate:marketplace": "pnpm --filter @harness-kit/core build && pnpm --filter @harness-kit/marketplace-data generate",
     "generate:marketplace:desktop": "pnpm --filter @harness-kit/core build && pnpm --filter @harness-kit/marketplace-data generate -- --out ../../apps/desktop/src/lib/marketplace/marketplace.generated.json",
     "generate:capability-matrix": "pnpm --filter @harness-kit/core build && pnpm --filter @harness-kit/website-data generate",

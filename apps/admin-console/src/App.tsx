@@ -168,25 +168,48 @@ function Security({ organizationId, data, refresh }: PanelProps) {
   const findings = data.artifacts.flatMap((artifact) => artifact.findings.map((finding) => ({ artifact, finding })));
   const [reason, setReason] = useState("");
   const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
+  const [artifactDigest, setArtifactDigest] = useState("");
+  const [exceptionId, setExceptionId] = useState("");
   const [error, setError] = useState("");
   async function grant(event: FormEvent) {
     event.preventDefault(); setError("");
     try {
-      await api(`/v1/organizations/${organizationId}/security-exceptions`, { method: "POST", body: JSON.stringify({ findingCodes: selectedCodes, reason }) });
-      setReason(""); setSelectedCodes([]); await refresh();
+      const created = await api<{ id: string }>(`/v1/organizations/${organizationId}/security-exceptions`, {
+        method: "POST",
+        body: JSON.stringify({ artifactDigest, findingCodes: selectedCodes, reason }),
+      });
+      setExceptionId(created.id); setReason(""); setSelectedCodes([]); await refresh();
     } catch (cause) { setError(cause instanceof Error ? cause.message : "Exception failed"); }
   }
   return <>
     <PageHeader eyebrow="Policy gate" title="Security findings" description="Blocking findings stop publication unless an administrator records a scoped, audited exception." />
     <section className="ledger-section security-ledger">
       {findings.length === 0 ? <Empty>No artifact security findings are open.</Empty> : findings.map(({ artifact, finding }, index) => <label className="finding-row" key={`${artifact.id}-${finding.code}-${index}`}>
-        <input type="checkbox" checked={selectedCodes.includes(finding.code)} onChange={(event) => setSelectedCodes(event.target.checked ? [...new Set([...selectedCodes, finding.code])] : selectedCodes.filter((code) => code !== finding.code))} />
+        <input type="checkbox" checked={artifactDigest === artifact.digest && selectedCodes.includes(finding.code)} onChange={(event) => {
+          if (event.target.checked) {
+            if (artifactDigest && artifactDigest !== artifact.digest) setSelectedCodes([finding.code]);
+            else setSelectedCodes([...new Set([...selectedCodes, finding.code])]);
+            setArtifactDigest(artifact.digest);
+          } else {
+            const next = selectedCodes.filter((code) => code !== finding.code);
+            setSelectedCodes(next);
+            if (next.length === 0) setArtifactDigest("");
+          }
+        }} />
         <AlertTriangle size={17} aria-hidden="true" />
         <span><strong>{finding.code}</strong><small>{artifact.identity.name} · {finding.path ?? "manifest"}</small></span>
         <p>{finding.detail}</p><Status tone={finding.severity === "block" ? "bad" : "warn"}>{finding.severity}</Status>
       </label>)}
     </section>
-    {findings.length > 0 && <form className="exception-bar" onSubmit={grant}><KeyRound aria-hidden="true" /><label>Administrator exception<input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Why is this safe?" required /></label><button disabled={selectedCodes.length === 0}>Record exception</button>{error && <p className="form-error">{error}</p>}</form>}
+    <form className="exception-bar" onSubmit={grant}>
+      <KeyRound aria-hidden="true" />
+      <label>Artifact digest<input value={artifactDigest} onChange={(event) => setArtifactDigest(event.target.value)} placeholder="sha256:…" pattern="sha256:[a-f0-9]{64}" required /></label>
+      <label>Finding codes<input value={selectedCodes.join(", ")} onChange={(event) => setSelectedCodes(event.target.value.split(",").map((code) => code.trim()).filter(Boolean))} placeholder="dangerous-instruction" required /></label>
+      <label>Administrator exception<input value={reason} onChange={(event) => setReason(event.target.value)} placeholder="Why is this safe?" required /></label>
+      <button disabled={selectedCodes.length === 0 || !artifactDigest}>Record exception</button>
+      {error && <p className="form-error">{error}</p>}
+      {exceptionId && <p className="save-note">Exception ID: <code>{exceptionId}</code>. Give this scoped ID to the submitter.</p>}
+    </form>
   </>;
 }
 
@@ -273,6 +296,41 @@ function Audit({ data }: { data: AdminData }) {
   </>;
 }
 
+function DeviceAuthorization({ principal }: { principal: string }) {
+  const initialCode = new URLSearchParams(window.location.search).get("userCode") ?? "";
+  const [userCode, setUserCode] = useState(initialCode.toUpperCase());
+  const [state, setState] = useState<"ready" | "approving" | "approved" | "error">("ready");
+  const [message, setMessage] = useState("");
+  async function approve(event: FormEvent) {
+    event.preventDefault(); setState("approving"); setMessage("");
+    try {
+      await api("/v1/auth/device/authorize", { method: "POST", body: JSON.stringify({ userCode }) });
+      setState("approved");
+    } catch (cause) {
+      setMessage(cause instanceof Error ? cause.message : "Authorization failed");
+      setState("error");
+    }
+  }
+  return <main className="device-auth">
+    <div className="brand-mark" aria-hidden="true"><span /><span /><span /></div>
+    <p>Harness Kit Registry</p>
+    {state === "approved" ? <>
+      <ShieldCheck className="approval-icon" aria-hidden="true" />
+      <h1>Device authorized</h1>
+      <span>You can return to Harness Kit. The short-lived client session will complete there.</span>
+    </> : <>
+      <h1>Authorize a device</h1>
+      <span>Signed in as <strong>{principal}</strong>. Confirm the code shown by Harness Kit before allowing this short-lived session.</span>
+      <form onSubmit={approve}>
+        <label>Device code<input value={userCode} onChange={(event) => setUserCode(event.target.value.toUpperCase())} autoComplete="one-time-code" maxLength={10} pattern="[A-Fa-f0-9]{10}" placeholder="A1B2C3D4E5" required autoFocus /></label>
+        <button className="primary" disabled={state === "approving" || userCode.length !== 10}>{state === "approving" ? "Authorizing…" : "Authorize device"}</button>
+      </form>
+      {state === "error" && <p className="form-error">{message}</p>}
+      <small>Only approve a code you initiated. Device sessions expire automatically.</small>
+    </>}
+  </main>;
+}
+
 interface PanelProps { organizationId: string; data: AdminData; refresh: () => Promise<void> }
 
 export function App() {
@@ -285,9 +343,9 @@ export function App() {
   const [error, setError] = useState("");
 
   const refresh = useCallback(async () => {
-    if (!organizationId) return;
-    setData(await loadAdminData(organizationId));
-  }, [organizationId]);
+    if (!organizationId || !principal) return;
+    setData(await loadAdminData(organizationId, principal));
+  }, [organizationId, principal]);
 
   useEffect(() => {
     void (async () => {
@@ -313,17 +371,26 @@ export function App() {
   }, [organizationId, refresh]);
 
   const selectedOrganization = useMemo(() => orgs.find((org) => org.id === organizationId), [orgs, organizationId]);
+  const role = data?.members.find((member) => member.userId === principal)?.role ?? "member";
+  const visibleNavigation = useMemo(() => role === "administrator"
+    ? navigation
+    : navigation.filter((item) => ["overview", "submissions", "releases", "inventory"].includes(item.id)), [role]);
+
+  useEffect(() => {
+    if (data && !visibleNavigation.some((item) => item.id === view)) setView("overview");
+  }, [data, view, visibleNavigation]);
 
   if (status === "loading") return <main className="center-state"><LoaderCircle className="spin" aria-hidden="true" /><h1>Reading the control plane</h1><p>Authenticating and loading organization state…</p></main>;
   if (status === "anonymous") return <main className="sign-in"><div className="brand-mark" aria-hidden="true"><span /><span /><span /></div><p>Harness Kit Registry</p><h1>Your harness estate,<br />under explicit control.</h1><span>Review what developers propose, publish immutable releases, and stage safe updates without collecting their source material.</span><a className="primary" href={githubLoginUrl()}><LogIn aria-hidden="true" />Continue with GitHub</a><small>Short-lived session · organization artifacts private by default</small></main>;
   if (status === "error") return <main className="center-state"><AlertTriangle aria-hidden="true" /><h1>Control plane unavailable</h1><p>{error}</p><button onClick={() => window.location.reload()}>Retry</button></main>;
+  if (window.location.pathname === "/device" && principal) return <DeviceAuthorization principal={principal} />;
   if (orgs.length === 0) return <main className="center-state"><Boxes aria-hidden="true" /><h1>No organization yet</h1><p>Create one with <code>harness-kit org create</code>, then return here.</p></main>;
 
   return <div className="shell">
     <aside>
       <a className="brand" href="/" aria-label="Harness Kit administration"><span className="brand-mark" aria-hidden="true"><i /><i /><i /></span><span>Harness Kit<small>Registry control plane</small></span></a>
       <label className="org-switcher"><span>Organization</span><select value={organizationId} onChange={(event) => setOrganizationId(event.target.value)}>{orgs.map((org) => <option value={org.id} key={org.id}>{org.name}</option>)}</select><ChevronDown aria-hidden="true" /></label>
-      <nav aria-label="Administration">{navigation.map((item) => { const Icon = item.icon; return <button type="button" data-active={view === item.id} onClick={() => setView(item.id)} key={item.id}><Icon aria-hidden="true" />{item.label}{item.id === "submissions" && data && data.submissions.some((entry) => entry.status === "pending") && <span className="nav-count">{data.submissions.filter((entry) => entry.status === "pending").length}</span>}</button>; })}</nav>
+      <nav aria-label="Administration">{visibleNavigation.map((item) => { const Icon = item.icon; return <button type="button" data-active={view === item.id} onClick={() => setView(item.id)} key={item.id}><Icon aria-hidden="true" />{item.label}{item.id === "submissions" && data && data.submissions.some((entry) => entry.status === "pending") && <span className="nav-count">{data.submissions.filter((entry) => entry.status === "pending").length}</span>}</button>; })}</nav>
       <footer><span className="avatar">{principal?.slice(0, 2).toUpperCase()}</span><span><strong>{principal}</strong><small>{selectedOrganization?.slug}</small></span></footer>
     </aside>
     <main className="workspace">

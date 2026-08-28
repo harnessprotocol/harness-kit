@@ -198,11 +198,64 @@
 .hk-capability-line > div { display: flex; align-items: center; gap: 7px; }
 .hk-capability-line strong { color: var(--fg-base); font: 600 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace; }
 
+.hk-registry-enrollment {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 10px;
+  width: 100%;
+}
+
+.hk-registry-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: min(100%, 360px);
+  margin-right: auto;
+}
+
+.hk-registry-enrollment label {
+  display: grid;
+  gap: 4px;
+  color: var(--fg-subtle);
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.hk-registry-enrollment input,
+.hk-registry-enrollment select {
+  min-width: 220px;
+  height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--border-base);
+  border-radius: 5px;
+  background: var(--bg-elevated);
+  color: var(--fg-base);
+  font: 500 10.5px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.hk-registry-enrollment input:focus-visible,
+.hk-registry-enrollment select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.hk-device-code {
+  padding: 7px 9px;
+  border: 1px solid var(--border-base);
+  background: var(--bg-elevated);
+  color: var(--accent-text) !important;
+  font-weight: 650;
+  letter-spacing: 0.1em;
+}
+
 @container (max-width: 620px) {
   .hk-portability-head { align-items: start; flex-direction: column; }
   .hk-portability-ledger { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .hk-portability-body { align-items: start; flex-direction: column; }
   .hk-portability-measure { border-right: 0; }
+  .hk-registry-status { align-items: start; flex-direction: column; }
 }
 
 .hk-conflict-ledger {

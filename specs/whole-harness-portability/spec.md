@@ -20,24 +20,24 @@ Harness Kit must provide one portable reconciliation workflow for individuals an
 
 ## Acceptance Criteria
 
-- [ ] Harness Kit captures and reconciles plugins, skills, MCP servers, instructions, environment declarations, permissions, architectural constraints, policy, inheritance, and supported native extensions.
-- [ ] Claude Code, Cursor, GitHub Copilot, Codex, OpenCode, Windsurf, Gemini, and Junie expose the same capture, preview, reconciliation, apply, drift, and rollback lifecycle, with unsupported behavior reported explicitly.
-- [ ] Organization, personal, project, and session layers resolve deterministically, with the closest layer winning unless organization policy prohibits the result.
-- [ ] Reconciliation uses the previous applied state, current native state, and desired layered state; divergent changes require explicit resolution instead of last-writer-wins behavior.
-- [ ] Applying a change preserves unowned or independently modified content, creates recoverable backups, and restores the previous complete state when a multi-file or multi-target operation fails.
-- [ ] Native-only configuration round-trips to its originating tool and produces an actionable portability report when another tool cannot represent it.
-- [ ] Resource identity includes its kind, source or publisher, and name; ambiguous flat deployment aliases require an explicit selection.
-- [ ] Direct repository references and packaged catalog artifacts are both integrity-pinned and supported as first-class promotion sources.
-- [ ] Published content is addressable by immutable digest. Administrators may repoint a version label without making any previous digest unavailable.
-- [ ] Credentials and secret values are never captured. Only declarations and approved provider references are portable.
-- [ ] Organization members can submit resources, publishers can release them, and administrators can manage policy, roles, exceptions, mutations, and staged rollouts.
-- [ ] Blocking security-policy findings prevent publication unless an administrator records an auditable exception.
-- [ ] Organization updates can use channels, rollout rings, effective dates, pause controls, and automatic last-known-good restoration.
+- [x] Harness Kit captures and reconciles plugins, skills, MCP servers, instructions, environment declarations, permissions, architectural constraints, policy, inheritance, and supported native extensions.
+- [x] Claude Code, Cursor, GitHub Copilot, Codex, OpenCode, Windsurf, Gemini, and Junie expose the same capture, preview, reconciliation, apply, drift, and rollback lifecycle, with unsupported behavior reported explicitly.
+- [x] Organization, personal, project, and session layers resolve deterministically, with the closest layer winning unless organization policy prohibits the result.
+- [x] Reconciliation uses the previous applied state, current native state, and desired layered state; divergent changes require explicit resolution instead of last-writer-wins behavior.
+- [x] Applying a change preserves unowned or independently modified content, creates recoverable backups, and restores the previous complete state when a multi-file or multi-target operation fails.
+- [x] Native-only configuration round-trips to its originating tool and produces an actionable portability report when another tool cannot represent it.
+- [x] Resource identity includes its kind, source or publisher, and name; ambiguous flat deployment aliases require an explicit selection.
+- [x] Direct repository references and packaged catalog artifacts are both integrity-pinned and supported as first-class promotion sources.
+- [x] Published content is addressable by immutable digest. Administrators may repoint a version label without making any previous digest unavailable.
+- [x] Credentials and secret values are never captured. Only declarations and approved provider references are portable.
+- [x] Organization members can submit resources, publishers can release them, and administrators can manage policy, roles, exceptions, mutations, and staged rollouts.
+- [x] Blocking security-policy findings prevent publication unless an administrator records an auditable exception.
+- [x] Organization updates can use channels, rollout rings, effective dates, pause controls, and automatic last-known-good restoration.
 - [ ] The managed and self-hosted registry editions pass the same public API contract suite.
-- [ ] Organization inventory contains only client-redacted parsed configuration and operational metadata; it excludes raw files, skill bodies, prompts, secret values, and environment contents.
-- [ ] CLI, desktop, and web administration surfaces expose the same underlying lifecycle, provenance, capability, conflict, rollout, and rollback state.
-- [ ] Existing Harness Protocol v1 profiles and existing `import`, `status`, `diff`, and `fix` workflows continue to work.
-- [ ] New captures use Harness Protocol v2 and can be previewed without mutating native or portable configuration.
+- [x] Organization inventory contains only client-redacted parsed configuration and operational metadata; it excludes raw files, skill bodies, prompts, secret values, and environment contents.
+- [x] CLI, desktop, and web administration surfaces expose the same underlying lifecycle, provenance, capability, conflict, rollout, and rollback state.
+- [x] Existing Harness Protocol v1 profiles and existing `import`, `status`, `diff`, and `fix` workflows continue to work.
+- [x] New captures use Harness Protocol v2 and can be previewed without mutating native or portable configuration.
 
 ## Out of Scope
 

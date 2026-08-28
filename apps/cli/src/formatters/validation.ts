@@ -9,12 +9,12 @@ export function formatValidationResult(
 
   if (result.valid) {
     lines.push(
-      chalk.green(`PASS`) + ` ${filePath} is valid — passes Harness Protocol v1 schema validation.`,
+      chalk.green(`PASS`) + ` ${filePath} is valid — passes Harness Protocol schema validation.`,
     );
     if (result.isLegacyFormat) {
       lines.push(
         chalk.yellow("Note:") +
-          ' This is in the legacy format (version: 1 integer). Run /harness-export to regenerate in Harness Protocol v1 format (version: "1" string).',
+          ' This is in the legacy format (version: 1 integer). Run harness-kit capture to preview migration to Harness Protocol v2.',
       );
     }
   } else {

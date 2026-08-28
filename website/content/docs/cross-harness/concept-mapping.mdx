@@ -59,17 +59,18 @@ All route handlers must validate request bodies with zod. Return 422 on validati
 
 Claude Code does not have a direct equivalent — repo-wide instructions in `CLAUDE.md` cover this, or you can structure the file with headings that address specific subsystems.
 
-## Three-Tier Scoping
+## Four-Layer Scoping
 
-All three tools use the same three-tier model: personal preferences, project config shared with the team, and organization-level policy that overrides both.
+Harness Protocol resolves four ordered layers: organization → personal → project → session. The nearest resource definition wins, while organization policy remains a ceiling that lower layers cannot widen. Native tools expose different subsets of these scopes, so unsupported scope operations remain source-only or blocked rather than being presented as native.
 
 | Tier | Claude Code | Copilot | Cursor |
 |------|-------------|---------|--------|
 | **Personal** | `~/.claude/CLAUDE.md` | VS Code user settings | `~/.cursor/rules/` |
 | **Project** | `CLAUDE.md` / `.claude/` | `.github/` | `.cursor/` |
 | **Organization** | Enterprise policy | GitHub Copilot policies | Cursor Business |
+| **Session** | Ephemeral session overlay | Ephemeral session overlay | Ephemeral session overlay |
 
-The project tier is what harness-kit targets. Personal and organization config live outside the repo and outside harness-kit's scope.
+Harness Kit reconciles all four layers. Session overlays remain ephemeral unless explicitly captured or promoted. Personal and device reconciliation state stays local; organization profiles and policy can be distributed through the optional registry service.
 
 ## Agent Files
 
@@ -110,5 +111,5 @@ Review the diff and produce structured feedback...
 <Callout title="The walls are thinner than they appear">
 VS Code already reads `CLAUDE.md` natively via `chat.useClaudeMdFile`. Configuration written for Claude Code works in VS Code Copilot without modification for the parts that matter most — instruction context.
 
-harness-kit leans into this: rather than abstracting over differences, it generates idiomatic files for each harness from a single source, covering the gaps where native compatibility ends.
+Harness Kit leans into this: it reconciles portable intent with native peer files and writes idiomatic output for each harness, while reporting the gaps where native compatibility ends.
 </Callout>

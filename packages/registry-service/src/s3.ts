@@ -48,8 +48,12 @@ export class S3BlobStore implements BlobStore {
     try {
       const result = await this.client.send(new GetObjectCommand({ Bucket: this.options.bucket, Key: key }));
       return result.Body ? result.Body.transformToByteArray() : null;
-    } catch {
-      return null;
+    } catch (error) {
+      const failure = error as { name?: string; $metadata?: { httpStatusCode?: number } };
+      if (failure.name === "NoSuchKey" || failure.name === "NotFound" || failure.$metadata?.httpStatusCode === 404) {
+        return null;
+      }
+      throw error;
     }
   }
 }

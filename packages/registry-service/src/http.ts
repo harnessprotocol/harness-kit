@@ -8,6 +8,7 @@ export interface RegistryHttpOptions {
   /** Test-only bootstrap, unavailable unless an explicit deployment secret is configured. */
   contractBootstrapSecret?: string;
   allowedOrigin?: string;
+  allowedOrigins?: string[];
 }
 
 function json(response: ServerResponse, status: number, value: unknown): void {
@@ -47,11 +48,11 @@ async function readJson(request: IncomingMessage, maxBytes: number): Promise<Rec
   }
 }
 
-function bearer(request: IncomingMessage): string | undefined {
+function credential(request: IncomingMessage): { token?: string; viaCookie: boolean } {
   const authorization = request.headers.authorization;
-  if (authorization?.startsWith("Bearer ")) return authorization.slice("Bearer ".length);
+  if (authorization?.startsWith("Bearer ")) return { token: authorization.slice("Bearer ".length), viaCookie: false };
   const cookie = request.headers.cookie?.split(";").map((part) => part.trim()).find((part) => part.startsWith("hk_session="));
-  return cookie?.slice("hk_session=".length);
+  return { token: cookie?.slice("hk_session=".length), viaCookie: Boolean(cookie) };
 }
 
 function safeOAuthReturnTo(value: string | null, publicBaseUrl: string, allowedOrigin?: string): string {
@@ -88,13 +89,42 @@ function orgRoute(path: string): { organizationId: string; resource: string; res
 
 export function createRegistryHttpHandler(service: RegistryService, options: RegistryHttpOptions = {}) {
   const maxBodyBytes = options.maxBodyBytes ?? 10 * 1024 * 1024;
+  const allowedOrigins = new Set([
+    new URL(service.config.publicBaseUrl).origin,
+    ...(options.allowedOrigin ? [options.allowedOrigin] : []),
+    ...(options.allowedOrigins ?? []),
+  ].map((origin) => origin.replace(/\/$/, "")));
+  const authRequests = new Map<string, { count: number; resetAt: number }>();
+  const enforceAuthRateLimit = (request: IncomingMessage, path: string): void => {
+    const now = Date.now();
+    const address = request.socket?.remoteAddress ?? "unknown";
+    const key = `${address}:${path}`;
+    const globalKey = `global:${path}`;
+    const global = authRequests.get(globalKey);
+    if (!global || global.resetAt <= now) authRequests.set(globalKey, { count: 1, resetAt: now + 60_000 });
+    else {
+      global.count += 1;
+      if (global.count > 300) throw new RegistryError(429, "authorization service is busy", "rate_limited");
+    }
+    const current = authRequests.get(key);
+    if (!current || current.resetAt <= now) {
+      authRequests.set(key, { count: 1, resetAt: now + 60_000 });
+      return;
+    }
+    current.count += 1;
+    if (current.count > 30) throw new RegistryError(429, "too many authorization requests", "rate_limited");
+  };
   return async (request: IncomingMessage, response: ServerResponse): Promise<void> => {
     try {
       const method = request.method ?? "GET";
       const url = new URL(request.url ?? "/", service.config.publicBaseUrl);
       const path = url.pathname.replace(/\/$/, "") || "/";
-      if (options.allowedOrigin) {
-        response.setHeader?.("Access-Control-Allow-Origin", options.allowedOrigin);
+      const requestOrigin = typeof request.headers.origin === "string" ? request.headers.origin.replace(/\/$/, "") : undefined;
+      if (requestOrigin && !allowedOrigins.has(requestOrigin)) {
+        throw new RegistryError(403, "request origin is not allowed", "origin_forbidden");
+      }
+      if (requestOrigin) {
+        response.setHeader?.("Access-Control-Allow-Origin", requestOrigin);
         response.setHeader?.("Access-Control-Allow-Credentials", "true");
         response.setHeader?.("Vary", "Origin");
       }
@@ -111,6 +141,9 @@ export function createRegistryHttpHandler(service: RegistryService, options: Reg
         json(response, 200, { status: "ok", apiVersion: "v1" });
         return;
       }
+      if (["POST", "PUT", "PATCH"].includes(method) && !String(request.headers["content-type"] ?? "").toLowerCase().startsWith("application/json")) {
+        throw new RegistryError(415, "request body must use application/json", "unsupported_media_type");
+      }
       if (method === "POST" && path === "/v1/testing/session" && options.contractBootstrapSecret) {
         if (request.headers["x-contract-secret"] !== options.contractBootstrapSecret) {
           throw new RegistryError(403, "invalid contract bootstrap secret", "forbidden");
@@ -120,16 +153,19 @@ export function createRegistryHttpHandler(service: RegistryService, options: Reg
         return;
       }
       if (method === "POST" && path === "/v1/auth/device") {
-        const body = await readJson(request, maxBodyBytes);
+        enforceAuthRateLimit(request, path);
+        const body = await readJson(request, Math.min(maxBodyBytes, 16 * 1024));
         json(response, 201, await service.startDeviceAuthorization(String(body.clientName ?? "Harness Kit client")));
         return;
       }
       if (method === "POST" && path === "/v1/auth/device/token") {
-        const body = await readJson(request, maxBodyBytes);
+        enforceAuthRateLimit(request, path);
+        const body = await readJson(request, Math.min(maxBodyBytes, 16 * 1024));
         json(response, 200, await service.pollDeviceAuthorization(String(body.deviceCode ?? "")));
         return;
       }
       if (method === "GET" && path === "/v1/auth/github/start") {
+        enforceAuthRateLimit(request, path);
         if (!options.github) throw new RegistryError(503, "GitHub OAuth is not configured", "oauth_unavailable");
         const state = await service.createOAuthState(safeOAuthReturnTo(
           url.searchParams.get("returnTo"),
@@ -154,15 +190,56 @@ export function createRegistryHttpHandler(service: RegistryService, options: Reg
         );
         return;
       }
-      if (method === "GET" && path.startsWith("/v1/public/releases/")) {
+      if (method === "GET" && path.startsWith("/v1/public/organizations/")) {
         const parts = path.split("/").filter(Boolean);
-        const release = await service.getPublicRelease(decodeURIComponent(parts[3] ?? ""), decodeURIComponent(parts[4] ?? ""));
+        if (parts[4] === "artifacts" && parts[3] && parts[5] && parts[6] === "blob" && parts.length === 7) {
+          const artifact = await service.getPublicArtifactByDigest(
+            decodeURIComponent(parts[3]),
+            decodeURIComponent(parts[5]),
+          );
+          if (!artifact) throw new RegistryError(404, "public artifact not found", "not_found");
+          const blob = await service.readArtifactBlob(artifact.id);
+          response.writeHead(200, {
+            "Content-Type": "application/json",
+            "Content-Length": blob.byteLength,
+            "Cache-Control": "public, max-age=31536000, immutable",
+            "X-Content-Type-Options": "nosniff",
+          });
+          response.end(blob);
+          return;
+        }
+        if (parts[4] !== "releases" || !parts[3] || !parts[5] || !parts[6]) {
+          throw new RegistryError(404, "public release route not found", "not_found");
+        }
+        const release = await service.getPublicRelease(
+          decodeURIComponent(parts[3]),
+          decodeURIComponent(parts[5]),
+          decodeURIComponent(parts[6]),
+        );
         if (!release) throw new RegistryError(404, "public release not found", "not_found");
-        json(response, 200, release);
+        if (parts[7] === "blob") {
+          const blob = await service.readArtifactBlob(release.artifactId);
+          response.writeHead(200, {
+            "Content-Type": "application/json",
+            "Content-Length": blob.byteLength,
+            "Cache-Control": "public, max-age=0, must-revalidate",
+            "Content-Location": `/v1/public/organizations/${encodeURIComponent(parts[3])}/artifacts/${encodeURIComponent(release.digest)}/blob`,
+            "X-Content-Type-Options": "nosniff",
+          });
+          response.end(blob);
+        } else if (parts.length === 7) {
+          json(response, 200, release);
+        } else {
+          throw new RegistryError(404, "public release route not found", "not_found");
+        }
         return;
       }
 
-      const principal = await service.authenticate(bearer(request));
+      const auth = credential(request);
+      if (auth.viaCookie && ["POST", "PUT", "PATCH"].includes(method) && (!requestOrigin || !allowedOrigins.has(requestOrigin))) {
+        throw new RegistryError(403, "cookie-authenticated mutations require an allowed origin", "csrf_forbidden");
+      }
+      const principal = await service.authenticate(auth.token);
       if (method === "GET" && path === "/v1/auth/me") {
         json(response, 200, principal);
         return;
@@ -204,7 +281,12 @@ export function createRegistryHttpHandler(service: RegistryService, options: Reg
         else if (method === "POST" && !resourceId) json(response, 201, await service.createArtifact(organizationId, principal.userId, await readJson(request, maxBodyBytes) as any));
         else if (method === "GET" && resourceId && action === "blob") {
           const blob = await service.readArtifactBlob(resourceId, principal.userId);
-          response.writeHead(200, { "Content-Type": "application/json", "Content-Length": blob.byteLength });
+          response.writeHead(200, {
+            "Content-Type": "application/json",
+            "Content-Length": blob.byteLength,
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+          });
           response.end(blob);
         } else throw new RegistryError(405, "method not allowed", "method_not_allowed");
         return;

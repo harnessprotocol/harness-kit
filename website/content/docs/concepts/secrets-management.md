@@ -17,7 +17,7 @@ harness-kit uses environment variables as the universal contract for secrets:
 
 - **Plugins declare** what they need (name, description, whether it's required)
 - **Users provide** the value however they prefer — shell profile, `.envrc`, a secrets manager
-- **harness-kit validates** that required variables exist before running (it never reads or logs the value)
+- **harness-kit validates** that required variables exist before running without persisting, transmitting, or logging the value
 
 One-liner: **Plugins declare, users provide, harness-kit validates.**
 
@@ -89,7 +89,7 @@ Five rules for handling secrets in plugins:
 1. **Never store secrets in SKILL.md or plugin.json** — declare the variable name, not the value
 2. **Never commit `.env` files** — add them to `.gitignore` and document this in your plugin's README
 3. **Least privilege** — declare only the scopes your plugin actually needs. If you only read PRs, don't request write access.
-4. **harness-kit never logs values** — validation checks for existence only; the value is never read by the framework
+4. **harness-kit never persists, transmits, or logs values** — local apply resolves declared variables only when native configuration requires them
 5. **`sensitive: true` suppresses diagnostics** — sensitive vars are excluded from any debug output or status displays
 
 ## Future: Dependency Graph

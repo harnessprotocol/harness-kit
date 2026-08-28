@@ -11,6 +11,10 @@ vi.mock("@harness-kit/core", () => ({
   buildFleetReport: (...args: unknown[]) => mockBuildFleetReport(...args),
 }));
 
+vi.mock("../portability-data", () => ({
+  buildDesktopPortabilitySnapshot: vi.fn(() => Promise.resolve(null)),
+}));
+
 vi.mock("@tauri-apps/api/path", () => ({
   homeDir: vi.fn(() => Promise.resolve("/home/user")),
 }));

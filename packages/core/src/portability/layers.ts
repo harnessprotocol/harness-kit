@@ -21,7 +21,7 @@ function wildcardMatch(pattern: string, value: string): boolean {
 }
 
 function matchesAny(patterns: string[] | undefined, value: string): boolean {
-  return !patterns || patterns.length === 0 || patterns.some((pattern) => wildcardMatch(pattern, value));
+  return patterns === undefined || patterns.some((pattern) => wildcardMatch(pattern, value));
 }
 
 function deniedBy(patterns: string[] | undefined, value: string): boolean {

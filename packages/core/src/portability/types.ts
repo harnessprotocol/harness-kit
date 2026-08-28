@@ -226,14 +226,18 @@ export interface CapsuleValidationFinding {
   severity: "block" | "warn";
   code:
     | "invalid-entrypoint"
+    | "invalid-manifest"
     | "invalid-frontmatter"
     | "path-escape"
     | "symlink"
     | "digest-mismatch"
     | "undeclared-file"
     | "duplicate-alias"
+    | "size-limit"
     | "dangerous-instruction"
-    | "secret-access";
+    | "secret-access"
+    | "executable-resource"
+    | "invalid-native-extension";
   path?: string;
   detail: string;
 }

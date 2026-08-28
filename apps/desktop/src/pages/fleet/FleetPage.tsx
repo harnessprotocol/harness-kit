@@ -11,6 +11,17 @@ import { FleetView } from "./FleetView";
 import { buildDesktopPortabilitySnapshot, type DesktopPortabilitySnapshot } from "./portability-data";
 
 const LAST_COMPILED_KEY = "harness-kit-last-compiled-at";
+const INSTALLATION_ID_KEY = "harness-kit-installation-id";
+
+function installationId(): string {
+  const existing = localStorage.getItem(INSTALLATION_ID_KEY);
+  if (existing) return existing;
+  const created = typeof crypto.randomUUID === "function"
+    ? crypto.randomUUID()
+    : `desktop-${Date.now().toString(36)}`;
+  localStorage.setItem(INSTALLATION_ID_KEY, created);
+  return created;
+}
 
 export default function FleetPage() {
   const navigate = useNavigate();
@@ -55,7 +66,11 @@ export default function FleetPage() {
             ...(scope.kind === "global" ? { profilePath: ".harness/harness.yaml" } : {}),
           })),
         }),
-        buildDesktopPortabilitySnapshot(home, projectDir && scopeReady ? projectDir : null).catch(() => null),
+        buildDesktopPortabilitySnapshot(
+          home,
+          projectDir && scopeReady ? projectDir : null,
+          installationId(),
+        ),
       ]);
       setReport(fleetReport);
       setPortability(portabilitySnapshot);

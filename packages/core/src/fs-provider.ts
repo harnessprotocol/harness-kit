@@ -12,6 +12,9 @@ export interface FsProvider {
   removeFile?(path: string): Promise<void>;
   /** Optional lstat-based safety signal used by capsule validation. */
   isSymlink?(path: string): Promise<boolean>;
+  /** Optional POSIX mode support used to preserve sensitive config permissions. */
+  getFileMode?(path: string): Promise<number | null>;
+  setFileMode?(path: string, mode: number): Promise<void>;
   joinPath(...segments: string[]): string;
   dirname(path: string): string;
   homedir(): Promise<string>;

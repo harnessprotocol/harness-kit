@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { StatusChip } from "@harness-kit/ui";
 import type { DesktopPortabilitySnapshot } from "./portability-data";
+import { RegistryEnrollment } from "./RegistryEnrollment";
 
 export function PortabilityPanel({ snapshot }: { snapshot: DesktopPortabilitySnapshot | null }) {
   const [view, setView] = useState<"apply" | "capture" | "capabilities" | "rollout">("apply");
@@ -64,8 +65,7 @@ export function PortabilityPanel({ snapshot }: { snapshot: DesktopPortabilitySna
       )}
       {view === "rollout" && (
         <div className="hk-portability-body">
-          <StatusChip variant="subtle">{snapshot.rollout.status}</StatusChip>
-          <p>{snapshot.rollout.detail}</p>
+          <RegistryEnrollment inventory={snapshot.inventory} />
           {snapshot.rollbackHistory[0] && <code>latest local rollback: {snapshot.rollbackHistory[0]}</code>}
         </div>
       )}

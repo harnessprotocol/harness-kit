@@ -22,11 +22,23 @@ function assertRelativeSafePath(path: string): void {
   }
 }
 
-async function atomicWrite(fs: FsProvider, path: string, content: string, suffix: string): Promise<void> {
+async function assertNoSymlinkBoundary(fs: FsProvider, root: string, path: string): Promise<void> {
+  if (!fs.isSymlink) return;
+  const parts = path.split(/[\\/]+/).filter(Boolean);
+  for (let index = 1; index <= parts.length; index += 1) {
+    const candidate = fs.joinPath(root, ...parts.slice(0, index));
+    if (await fs.isSymlink(candidate)) {
+      throw new Error(`transaction path crosses a symbolic link: ${parts.slice(0, index).join("/")}`);
+    }
+  }
+}
+
+async function atomicWrite(fs: FsProvider, path: string, content: string, suffix: string, mode?: number): Promise<void> {
   const parent = fs.dirname(path);
   await fs.mkdir(parent, { recursive: true });
   const temporary = `${path}.harness-tmp-${suffix}`;
   await fs.writeFile(temporary, content);
+  if (mode !== undefined && fs.setFileMode) await fs.setFileMode(temporary, mode);
   await fs.renameFile(temporary, path);
 }
 
@@ -41,7 +53,7 @@ async function writeManifest(
   manifestPath: string,
   manifest: TransactionManifest,
 ): Promise<void> {
-  await atomicWrite(fs, fs.joinPath(root, manifestPath), `${JSON.stringify(manifest, null, 2)}\n`, `${manifest.timestamp}-manifest`);
+  await atomicWrite(fs, fs.joinPath(root, manifestPath), `${JSON.stringify(manifest, null, 2)}\n`, `${manifest.timestamp}-manifest`, 0o600);
 }
 
 /**
@@ -58,10 +70,15 @@ export async function applyFileTransaction(
   const manifestPath = fs.joinPath(backupDir, "transaction.json");
 
   for (const change of changes) assertRelativeSafePath(change.path);
+  assertRelativeSafePath(backupDir);
   const unique = new Set(changes.map((change) => change.path));
   if (unique.size !== changes.length) throw new Error("transaction contains duplicate file paths");
 
+  await assertNoSymlinkBoundary(fs, root, backupDir);
+  for (const change of changes) await assertNoSymlinkBoundary(fs, root, change.path);
+
   // Verify stale plans before creating any backups or changing files.
+  const originalModes = new Map<string, number>();
   for (const change of changes) {
     const fullPath = fs.joinPath(root, change.path);
     const exists = await fs.exists(fullPath);
@@ -74,6 +91,8 @@ export async function applyFileTransaction(
       if (actual !== change.before) {
         throw new Error(`transaction precondition failed: ${change.path} changed after preview`);
       }
+      const mode = await fs.getFileMode?.(fullPath);
+      if (mode !== null && mode !== undefined) originalModes.set(change.path, mode);
     }
   }
 
@@ -81,7 +100,7 @@ export async function applyFileTransaction(
   for (const change of changes) {
     if (change.before === null) continue;
     const backupPath = fs.joinPath(root, backupDir, change.path);
-    await atomicWrite(fs, backupPath, change.before, `${timestamp}-backup`);
+    await atomicWrite(fs, backupPath, change.before, `${timestamp}-backup`, 0o600);
   }
 
   const manifest: TransactionManifest = {
@@ -103,7 +122,7 @@ export async function applyFileTransaction(
         await remove(fs, fullPath);
         removed.push(change.path);
       } else {
-        await atomicWrite(fs, fullPath, change.after, `${timestamp}-${index}`);
+        await atomicWrite(fs, fullPath, change.after, `${timestamp}-${index}`, originalModes.get(change.path));
         written.push(change.path);
       }
       mutated.push(change);
@@ -120,7 +139,7 @@ export async function applyFileTransaction(
         if (change.before === null) {
           if (await fs.exists(fullPath)) await remove(fs, fullPath);
         } else {
-          await atomicWrite(fs, fullPath, change.before, `${timestamp}-rollback-${index}`);
+          await atomicWrite(fs, fullPath, change.before, `${timestamp}-rollback-${index}`, originalModes.get(change.path));
         }
         rolledBack.push(change.path);
       } catch (rollbackError) {

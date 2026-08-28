@@ -28,6 +28,7 @@ import {
   createOrganization,
   joinOrganization,
 } from "./commands/org.js";
+import { syncOrganizationRollout } from "./commands/org-rollout.js";
 import { authLoginCommand, authLogoutCommand, authStatusCommand } from "./commands/auth.js";
 import {
   keygenCommand,
@@ -46,7 +47,7 @@ const program = new Command();
 
 program
   .name("harness-kit")
-  .description("Compile and validate harness.yaml configurations")
+  .description("Capture, reconcile, govern, and apply portable harness configurations")
   .version(__CLI_VERSION__)
   .option("--no-color", "Disable colored output")
   .hook("preAction", (thisCommand) => {
@@ -57,7 +58,7 @@ program
 
 program
   .command("validate")
-  .description("Validate a harness.yaml against the Harness Protocol v1 schema")
+  .description("Validate a Harness Protocol v1 or v2 profile")
   .argument("[path]", "Path to harness.yaml", "harness.yaml")
   .option("--json", "Output results as JSON")
   .addHelpText(
@@ -201,6 +202,7 @@ program
   .option("--scope <scope>", "Capture scope: personal, project, or session", "project")
   .option("--output <path>", "Output profile path")
   .option("--dry-run", "Preview without writing")
+  .option("--yes", "Write the captured profile (default is preview only)")
   .option("--force", "Replace an existing profile transactionally")
   .option("--json", "Output a machine-readable capture report")
   .action(async (flags) => {
@@ -285,6 +287,7 @@ skillsCommand
   .option("--version <version>", "Capsule semantic version", "0.1.0")
   .option("--include <path>", "Explicit local dependency; may be repeated", collectResolution, [])
   .option("--replace", "Choose this skill as the explicit winner for an existing alias")
+  .option("--exception <id>", "Audited administrator exception scoped to this artifact digest")
   .option("--yes", "Commit the promotion (default is preview only)")
   .option("--json", "Output machine-readable JSON")
   .action(async (directory: string, flags) => {
@@ -431,6 +434,19 @@ orgCommand
   .argument("<slug>", "Organization slug to join")
   .action(async (slug: string) => {
     await joinOrganization(slug);
+  });
+
+orgCommand
+  .command("rollout-sync")
+  .description("Preview or apply the rollout assigned to this device")
+  .argument("<organization>", "Organization id")
+  .option("--project <path>", "Project harness profile", "harness.yaml")
+  .option("--target <targets>", "Comma-separated targets, or all", "all")
+  .option("--adopt", "Explicitly claim unowned native files shown in the preview")
+  .option("--yes", "Apply an optional rollout; organization-mandated updates apply automatically")
+  .option("--json", "Output a machine-readable rollout result")
+  .action(async (organization: string, flags) => {
+    await syncOrganizationRollout(organization, flags);
   });
 
 const authCommand = program.command("auth").description("Authenticate with the Harness Kit registry");

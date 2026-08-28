@@ -7,6 +7,7 @@ import {
   computeFileHash,
   digestValue,
   nextPortabilityState,
+  parseNativeExtensionBlock,
   profileToResources,
   resourcesToProfile,
   writeLockFile,
@@ -46,6 +47,29 @@ interface ApplyFlags {
 
 interface ApplyOptions {
   resourceKind?: HarnessResource["identity"]["kind"];
+  additionalChanges?: TransactionFileChange[];
+  quiet?: boolean;
+}
+
+export interface ApplyOutcome {
+  applied: boolean;
+  manifestPath?: string;
+  files: string[];
+}
+
+function localEnvironmentWarnings(resources: HarnessResource[]): string[] {
+  const warnings: string[] = [];
+  const missing: string[] = [];
+  for (const resource of resources.filter((entry) => entry.identity.kind === "env")) {
+    const declaration = resource.value as { name?: string; required?: boolean; default?: string };
+    if (!declaration.name || process.env[declaration.name] !== undefined || declaration.default !== undefined) continue;
+    if (declaration.required) missing.push(declaration.name);
+    else warnings.push(`optional local environment variable ${declaration.name} is not set`);
+  }
+  if (missing.length > 0) {
+    throw new Error(`required local environment variable(s) are not set: ${missing.join(", ")}; secret values remain outside Harness Kit`);
+  }
+  return warnings;
 }
 
 function key(resource: Pick<HarnessResource, "identity" | "alias">): string {
@@ -89,6 +113,23 @@ function selectFinalResources(
   return [...selected.values()];
 }
 
+function resourcesForState(
+  selected: HarnessResource[],
+  conflicts: ReconciliationConflict[],
+  resolutions: ReconciliationResolution[],
+): HarnessResource[] {
+  const result = new Map(selected.map((resource) => [key(resource), resource]));
+  const choices = new Map(resolutions.map((resolution) => [resolution.conflictId, resolution.resolution]));
+  for (const conflict of conflicts) {
+    if (choices.get(conflict.id) !== "skip") continue;
+    const identity = conflict.base ?? conflict.current ?? conflict.desired;
+    if (!identity) continue;
+    if (conflict.base) result.set(key(identity), conflict.base);
+    else result.delete(key(identity));
+  }
+  return [...result.values()];
+}
+
 function projectProfileAfterCaptures(
   projectResources: HarnessResource[],
   operations: ReconciliationOperation[],
@@ -111,7 +152,18 @@ function projectProfileAfterCaptures(
   }
   const byId = new Map(resolutions.map((resolution) => [resolution.conflictId, resolution.resolution]));
   for (const conflict of conflicts) {
-    if (byId.get(conflict.id) === "use-current") capture(conflict.current);
+    const resolution = byId.get(conflict.id);
+    if (resolution === "use-current") {
+      if (conflict.current) capture(conflict.current);
+      else if (conflict.desired?.scope === "project") {
+        selected.delete(key(conflict.desired));
+        changed = true;
+      }
+    }
+    if (resolution === "use-base" && conflict.desired?.scope === "project" && conflict.base) {
+      selected.set(key(conflict.desired), { ...conflict.base, scope: "project" });
+      changed = true;
+    }
   }
   return changed ? [...selected.values()] : null;
 }
@@ -121,6 +173,7 @@ async function planNativeFiles(
   targets: TargetPlatform[],
   resources: HarnessResource[],
   adopt: boolean,
+  priorOwnership: OwnershipFingerprint[],
 ): Promise<{ changes: TransactionFileChange[]; ownership: OwnershipFingerprint[]; warnings: string[] }> {
   const fs = new NodeFsProvider(root);
   const byPath = new Map<string, { content: string; targets: Set<TargetPlatform>; slot: string }>();
@@ -153,12 +206,57 @@ async function planNativeFiles(
       if (existing) existing.targets.add(target);
       else byPath.set(file.path, { content: file.content, targets: new Set([target]), slot: file.slot });
     }
+    for (const resource of deployable.filter((entry) =>
+      entry.identity.kind === "native-extension" && entry.nativeTarget === target)) {
+      const extension = parseNativeExtensionBlock(resource.value);
+      for (const omitted of extension.omitted ?? []) {
+        warnings.push(`${target}: ${omitted.path} was not captured: ${omitted.reason}`);
+      }
+      for (const setting of extension.settings ?? []) {
+        const planned = byPath.get(setting.path);
+        const current = planned?.content ?? await readOptional(resolve(root, setting.path));
+        let existing: Record<string, unknown> = {};
+        if (current) {
+          try {
+            existing = JSON.parse(current) as Record<string, unknown>;
+          } catch {
+            throw new Error(`cannot merge native settings into invalid JSON file ${setting.path}`);
+          }
+        }
+        const content = `${JSON.stringify({ ...existing, ...setting.value }, null, 2)}\n`;
+        if (planned) {
+          planned.content = content;
+          planned.targets.add(target);
+          planned.slot = "native-extension";
+        } else {
+          byPath.set(setting.path, { content, targets: new Set([target]), slot: "native-extension" });
+        }
+      }
+      for (const file of extension.files ?? []) {
+        const planned = byPath.get(file.path);
+        if (planned && planned.content !== file.content) {
+          throw new Error(`native extension collides with normalized output at ${file.path}`);
+        }
+        if (planned) planned.targets.add(target);
+        else byPath.set(file.path, { content: file.content, targets: new Set([target]), slot: "native-extension" });
+      }
+    }
   }
 
   const changes: TransactionFileChange[] = [];
   const ownership: OwnershipFingerprint[] = [];
   for (const [path, file] of byPath) {
     const before = await readOptional(resolve(root, path));
+    if (before !== null && before !== file.content && file.slot === "native-extension" && !adopt) {
+      const managed = [...file.targets].some((target) => priorOwnership.some((owned) =>
+        owned.managed &&
+        owned.path === path &&
+        owned.target === target &&
+        owned.digest === `sha256:${computeFileHash(before)}`));
+      if (!managed) {
+        throw new Error(`${path} is an unowned or user-modified native extension; preview it and re-run with --adopt to claim it`);
+      }
+    }
     if (before !== file.content) changes.push({ path, before, after: file.content });
     for (const target of file.targets) {
       ownership.push({
@@ -188,7 +286,7 @@ function filterPlan(plan: ReconciliationPlan, kind: HarnessResource["identity"][
   };
 }
 
-export async function applyCommand(path: string, flags: ApplyFlags, options: ApplyOptions = {}): Promise<void> {
+export async function applyCommand(path: string, flags: ApplyFlags, options: ApplyOptions = {}): Promise<ApplyOutcome> {
   const context = await buildReconciliationContext(path, flags);
   const resolutions = parseResolutions(flags.resolve);
   const plan = options.resourceKind ? filterPlan(context.plan, options.resourceKind) : context.plan;
@@ -209,11 +307,20 @@ export async function applyCommand(path: string, flags: ApplyFlags, options: App
     initialConflicts,
     resolutions,
   );
-  const native = await planNativeFiles(context.root, context.targets, resources, Boolean(flags.adopt));
+  const environmentWarnings = localEnvironmentWarnings(resources);
+  const native = await planNativeFiles(
+    context.root,
+    context.targets,
+    resources,
+    Boolean(flags.adopt),
+    context.state.ownership,
+  );
+  native.warnings.push(...environmentWarnings);
   const plannedPaths = new Set(native.ownership.map((entry) => entry.path));
-  const ownedInScope = options.resourceKind === "skill"
-    ? context.state.ownership.filter((owned) => owned.slot === "skills")
-    : context.state.ownership;
+  const selectedTargets = new Set(context.targets);
+  const ownedInScope = context.state.ownership.filter((owned) =>
+    selectedTargets.has(owned.target) &&
+    (options.resourceKind !== "skill" || owned.slot === "skills"));
   for (const owned of ownedInScope) {
     if (plannedPaths.has(owned.path)) continue;
     const before = await readOptional(resolve(context.root, owned.path));
@@ -227,15 +334,17 @@ export async function applyCommand(path: string, flags: ApplyFlags, options: App
   const applyTimestamp = timestamp();
   const manifestPath = `.harness/backups/${applyTimestamp}/transaction.json`;
   const scopedPersistentResources = resources.filter((resource) => resource.scope !== "session");
+  const stateResources = resourcesForState(scopedPersistentResources, initialConflicts, resolutions);
   const persistentResources = options.resourceKind
     ? [
         ...context.state.lastApplied.filter((resource) => resource.identity.kind !== options.resourceKind),
-        ...scopedPersistentResources,
+        ...stateResources,
       ]
-    : scopedPersistentResources;
-  const ownership = options.resourceKind === "skill"
-    ? [...context.state.ownership.filter((owned) => owned.slot !== "skills"), ...native.ownership]
-    : native.ownership;
+    : stateResources;
+  const retainedOwnership = context.state.ownership.filter((owned) =>
+    !selectedTargets.has(owned.target) ||
+    (options.resourceKind === "skill" && owned.slot !== "skills"));
+  const ownership = [...retainedOwnership, ...native.ownership];
   const nextState = nextPortabilityState(
     context.state,
     persistentResources,
@@ -248,6 +357,11 @@ export async function applyCommand(path: string, flags: ApplyFlags, options: App
     before: await readOptional(resolve(context.root, ".harness/state.json")),
     after: writePortabilityState(nextState),
   });
+  const localIgnorePath = resolve(context.root, ".harness/.gitignore");
+  const localIgnore = await readOptional(localIgnorePath);
+  if (localIgnore === null) {
+    native.changes.push({ path: ".harness/.gitignore", before: null, after: "*\n" });
+  }
   native.changes.push({
     path: "harness.lock",
     before: await readOptional(resolve(context.root, "harness.lock")),
@@ -288,6 +402,12 @@ export async function applyCommand(path: string, flags: ApplyFlags, options: App
       after: stringify(projectConfig, { lineWidth: 0 }),
     });
   }
+  for (const change of options.additionalChanges ?? []) {
+    if (native.changes.some((candidate) => candidate.path === change.path)) {
+      throw new Error(`additional transaction change collides with apply output: ${change.path}`);
+    }
+    native.changes.push(change);
+  }
 
   const preview = {
     ...summarizePlan(plan),
@@ -298,17 +418,18 @@ export async function applyCommand(path: string, flags: ApplyFlags, options: App
     warnings: native.warnings,
     approvalRequired: !flags.yes,
   };
-  if (flags.json) console.log(JSON.stringify(preview, null, 2));
-  else {
+  if (!options.quiet && flags.json) console.log(JSON.stringify(preview, null, 2));
+  else if (!options.quiet) {
     console.log(`Apply preview: ${native.changes.length} file change(s) across ${context.targets.length} target(s).`);
     for (const change of preview.files) console.log(`  ${change.action.padEnd(7)} ${change.path}`);
     for (const warning of native.warnings) console.log(`  WARNING ${warning}`);
     if (!flags.yes) console.log("Preview only. Re-run with --yes to apply transactionally.");
   }
-  if (!flags.yes) return;
+  if (!flags.yes) return { applied: false, files: native.changes.map((change) => change.path) };
 
   const fs = new NodeFsProvider(context.root);
   const result = await applyFileTransaction(native.changes, { fs, timestamp: applyTimestamp });
   if (!result.committed) throw new Error(result.error ?? "apply transaction failed");
-  if (!flags.json) console.log(`Applied successfully. Roll back with: harness-kit rollback --transaction ${result.manifestPath} --yes`);
+  if (!options.quiet && !flags.json) console.log(`Applied successfully. Roll back with: harness-kit rollback --transaction ${result.manifestPath} --yes`);
+  return { applied: true, manifestPath: result.manifestPath, files: [...result.written, ...result.removed] };
 }

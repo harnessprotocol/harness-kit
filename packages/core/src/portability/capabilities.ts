@@ -63,9 +63,11 @@ function capabilityFor(target: TargetPlatform, resource: HarnessResourceKind): T
       apply = "native";
       break;
     case "plugin":
-      capture = target === "claude-code" ? "native" : "source-only";
-      apply = target === "claude-code" ? "native" : "translated";
-      note = target === "claude-code" ? undefined : "plugin-contained portable resources are translated individually";
+      capture = "source-only";
+      apply = target === "claude-code" ? "source-only" : "translated";
+      note = target === "claude-code"
+        ? "plugin installation remains managed by the native marketplace"
+        : "plugin-contained portable resources are translated individually";
       break;
     case "mcp-server":
       capture = targetMeta.mcpConfigFile ? "native" : "source-only";

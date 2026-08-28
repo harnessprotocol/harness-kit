@@ -75,7 +75,7 @@ MCP servers give your AI new tools — database access, web search, external API
 
 ## What is the harness.yaml file?
 
-A portable snapshot of your complete AI assistant setup. It captures plugins (with sources and versions), MCP server configurations, environment variable declarations, instructions injected into `CLAUDE.md` or `AGENT.md`, and permissions. Export it with `/harness-export`, commit it to your dotfiles, and restore it anywhere with `/harness-import` or `harness-restore.sh`. See [`harness.yaml.example`](https://github.com/harnessprotocol/harness-kit/blob/main/harness.yaml.example) for the format.
+A portable, bidirectional record of your AI assistant setup. Protocol v2 captures normalized plugins, skills, MCP servers, environment declarations, instructions, permissions, architecture, policy, and namespaced native extensions without capturing credential values. Use `harness capture`, preview three-way conflicts with `harness reconcile`, then apply transactionally with `harness apply`. Existing `/harness-export` and `/harness-import` workflows remain compatible. See [`harness.yaml.example`](https://github.com/harnessprotocol/harness-kit/blob/main/harness.yaml.example) for the format.
 
 ## I already have prompts in my CLAUDE.md. Should I move them?
 

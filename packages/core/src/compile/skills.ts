@@ -7,6 +7,9 @@ import type {
   TargetPlatform,
 } from "../types.js";
 import { findSkillFiles, computeSourceDir } from "./discovery.js";
+import { computeFileHash } from "./check.js";
+import { skillDirectoryDigest } from "../import/read-skills.js";
+import { collectCapsuleFiles } from "../portability/capsule.js";
 
 // Skills directory per target. null = plugin install system handles deployment (claude-code).
 const SKILL_TARGET_DIR: Record<TargetPlatform, string | null> = {
@@ -30,6 +33,14 @@ const LEGACY_SEARCH_PATHS = [
 
 interface PluginManifest {
   skills?: Array<{ name: string; path: string }>;
+}
+
+function safeManifestPath(path: string): boolean {
+  return path.length > 0 &&
+    !path.startsWith("/") &&
+    !path.startsWith("~") &&
+    !path.includes("\\") &&
+    !path.split("/").some((part) => part === "" || part === "." || part === "..");
 }
 
 function slugify(name: string): string {
@@ -182,14 +193,17 @@ async function resolveDirectSkillFiles(
   }
   if (!sourcePath || !(await fs.exists(sourcePath))) return null;
   if (!(await fs.isDirectory(sourcePath))) {
-    return sourcePath.endsWith("SKILL.md")
+    const files = sourcePath.endsWith("SKILL.md")
       ? [{ path: "SKILL.md", content: await fs.readFile(sourcePath) }]
       : null;
+    if (files) verifyDirectSkillIntegrity(skill, files);
+    return files;
   }
   const entrypoint = fs.joinPath(sourcePath, "SKILL.md");
   if (await fs.exists(entrypoint)) {
     const output: DirectSkillFile[] = [];
     await collectDirectSkillDirectory(sourcePath, sourcePath, fs, output);
+    verifyDirectSkillIntegrity(skill, output);
     return output;
   }
   const found = await findSkillFiles(sourcePath, fs);
@@ -197,7 +211,19 @@ async function resolveDirectSkillFiles(
   const nestedRoot = fs.dirname(found[0]);
   const output: DirectSkillFile[] = [];
   await collectDirectSkillDirectory(nestedRoot, nestedRoot, fs, output);
+  verifyDirectSkillIntegrity(skill, output);
   return output;
+}
+
+function verifyDirectSkillIntegrity(skill: HarnessSkillRef, files: DirectSkillFile[]): void {
+  if (!skill.integrity?.sha256) return;
+  const actual = skillDirectoryDigest(files.map((file) => ({
+    path: file.path,
+    digest: computeFileHash(file.content),
+  })));
+  if (actual !== skill.integrity.sha256) {
+    throw new Error(`skill '${skill.name}' integrity mismatch: expected ${skill.integrity.sha256}, got ${actual}`);
+  }
 }
 
 /**
@@ -235,6 +261,16 @@ async function resolveSkillContent(
   );
 
   if (sourceDir !== null && (await fs.exists(sourceDir))) {
+    if (plugin.integrity?.sha256) {
+      const files = await collectCapsuleFiles(fs, sourceDir);
+      const actual = skillDirectoryDigest(files.map((file) => ({
+        path: file.path,
+        digest: computeFileHash(file.content),
+      })));
+      if (actual !== plugin.integrity.sha256) {
+        throw new Error(`plugin '${plugin.name}' integrity mismatch: expected ${plugin.integrity.sha256}, got ${actual}`);
+      }
+    }
     // 2. plugin.json manifest
     const manifestPath = fs.joinPath(sourceDir, "plugin.json");
     if (await fs.exists(manifestPath)) {
@@ -243,13 +279,17 @@ async function resolveSkillContent(
         const manifest: PluginManifest = JSON.parse(raw);
         if (manifest.skills && manifest.skills.length > 0) {
           for (const skill of manifest.skills) {
+            if (!safeManifestPath(skill.path)) {
+              throw new Error(`plugin '${plugin.name}' declares an unsafe skill path: ${skill.path}`);
+            }
             const skillPath = fs.joinPath(sourceDir, skill.path);
             if (await fs.exists(skillPath)) {
               return fs.readFile(skillPath);
             }
           }
         }
-      } catch {
+      } catch (error) {
+        if (error instanceof Error && error.message.includes("unsafe skill path")) throw error;
         // Malformed plugin.json — fall through to walker
       }
     }

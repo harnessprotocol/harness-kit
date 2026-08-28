@@ -14,6 +14,7 @@ import { resolveExtends } from "./extends.js";
 import { groupTargetsByAdapter } from "../adapters/registry.js";
 import { domainHasContent } from "../adapters/domain-content.js";
 import { domainSkippedWarning, type AdapterContext, type HarnessDomain } from "../adapters/adapter.js";
+import { verifyHarnessIntegrity } from "./integrity.js";
 
 const ALL_DOMAINS: HarnessDomain[] = [
   "instructions",
@@ -121,6 +122,7 @@ export async function compile(
 
   // Phase 1b: resolve extends fragments into the effective config
   const resolvedConfig = await resolveExtends(config, fs, cwd);
+  await verifyHarnessIntegrity(resolvedConfig, fs, cwd);
 
   const harnessName = resolvedConfig.metadata?.name ?? "default";
 

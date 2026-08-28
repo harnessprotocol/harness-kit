@@ -40,12 +40,9 @@ describe("WP-2.5: registry wiring", () => {
     expect(ADAPTERS).toContain(piAdapter);
   });
 
-  it("does not change the legacy TargetPlatform 'opencode' -> agents-md mapping (golden compile output untouched)", () => {
-    // registry.ts's LEGACY_TARGET_TO_ADAPTER must still route the legacy
-    // compile.ts pipeline's "opencode" TargetPlatform through agentsMdAdapter,
-    // not the new standalone opencodeAdapter.
-    expect(adapterIdForTarget("opencode")).toBe("agents-md");
-    expect(agentsMdAdapter.capabilities.export.mcp).toBe("partial"); // unchanged from WP-2.1
+  it("routes the OpenCode target through its native adapter", () => {
+    expect(adapterIdForTarget("opencode")).toBe("opencode");
+    expect(opencodeAdapter.capabilities.export.mcp).toBe("full");
   });
 });
 
@@ -153,7 +150,7 @@ permissions:
     expect(parsed.permission.bash.Read).toBe("allow");
   });
 
-  it("is non-destructive: preserves an existing opencode.json's unrelated keys and existing server/glob names", async () => {
+  it("preserves unrelated keys while applying reconciled server and permission values", async () => {
     const fs = new MockFsProvider({
       "/project/opencode.json": JSON.stringify({
         $schema: "https://opencode.ai/config.json",
@@ -180,12 +177,11 @@ permissions:
     const configFile = plan.files.find((f) => f.path === "opencode.json")!;
     const parsed = JSON.parse(configFile.content);
 
-    // Existing entries kept, not overwritten.
-    expect(parsed.mcp.railway.command).toEqual(["railway", "mcp"]);
-    expect(parsed.permission.bash["git *"]).toBe("ask");
+    expect(parsed.mcp.railway.command).toEqual(["some-other-command"]);
+    expect(parsed.permission.bash["git *"]).toBe("allow");
     // Unrelated existing key preserved.
     expect(parsed.agent).toEqual({ custom: true });
-    // Warned about the collisions rather than silently dropping the harness value.
+    // Warned about the reconciled replacements.
     expect(plan.warnings.some((w) => w.includes("already defines mcp server 'railway'"))).toBe(true);
   });
 
@@ -418,7 +414,7 @@ describe("importProject: opencode + pi are surfaced end-to-end (self-verify impo
 
     expect(byId.get("claude-code")!.detected).toBe(true);
     expect(byId.get("cursor")!.detected).toBe(true);
-    expect(byId.get("agents-md")!.detected).toBe(true);
+    expect(byId.get("agents-md")!.detected).toBe(false);
     expect(byId.get("opencode")!.detected).toBe(true);
     expect(byId.get("opencode")!.found.some((f) => f.domain === "mcp")).toBe(true);
     expect(byId.get("pi")!.detected).toBe(true);
