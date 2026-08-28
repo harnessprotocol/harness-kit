@@ -44,6 +44,7 @@ apps/desktop/dist/
 
 # Core library
 packages/core/dist/
+packages/registry-service/dist/
 
 # CLI
 apps/cli/dist/
