@@ -34,6 +34,7 @@ export async function startRegistryServer(): Promise<ReturnType<typeof createSer
   const server = createServer(createRegistryHttpHandler(service, {
     github,
     contractBootstrapSecret: process.env.CONTRACT_BOOTSTRAP_SECRET,
+    allowedOrigin: process.env.WEB_ORIGIN,
   }));
   const port = Number(process.env.PORT ?? 4810);
   await new Promise<void>((resolve, reject) => {

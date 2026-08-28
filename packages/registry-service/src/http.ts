@@ -7,6 +7,7 @@ export interface RegistryHttpOptions {
   maxBodyBytes?: number;
   /** Test-only bootstrap, unavailable unless an explicit deployment secret is configured. */
   contractBootstrapSecret?: string;
+  allowedOrigin?: string;
 }
 
 function json(response: ServerResponse, status: number, value: unknown): void {
@@ -53,6 +54,27 @@ function bearer(request: IncomingMessage): string | undefined {
   return cookie?.slice("hk_session=".length);
 }
 
+function safeOAuthReturnTo(value: string | null, publicBaseUrl: string, allowedOrigin?: string): string {
+  const serviceOrigin = new URL(publicBaseUrl).origin;
+  const consoleOrigin = allowedOrigin ? new URL(allowedOrigin).origin : serviceOrigin;
+  if (!value) return `${consoleOrigin}/`;
+  let destination: URL;
+  try {
+    destination = new URL(value, `${consoleOrigin}/`);
+  } catch {
+    throw new RegistryError(400, "OAuth return URL is invalid", "invalid_return_url");
+  }
+  if (
+    ![serviceOrigin, consoleOrigin].includes(destination.origin) ||
+    !["http:", "https:"].includes(destination.protocol) ||
+    destination.username ||
+    destination.password
+  ) {
+    throw new RegistryError(400, "OAuth return URL is not an allowed origin", "invalid_return_url");
+  }
+  return destination.toString();
+}
+
 function orgRoute(path: string): { organizationId: string; resource: string; resourceId?: string; action?: string } | null {
   const parts = path.split("/").filter(Boolean);
   if (parts[0] !== "v1" || parts[1] !== "organizations" || !parts[2]) return null;
@@ -71,6 +93,19 @@ export function createRegistryHttpHandler(service: RegistryService, options: Reg
       const method = request.method ?? "GET";
       const url = new URL(request.url ?? "/", service.config.publicBaseUrl);
       const path = url.pathname.replace(/\/$/, "") || "/";
+      if (options.allowedOrigin) {
+        response.setHeader?.("Access-Control-Allow-Origin", options.allowedOrigin);
+        response.setHeader?.("Access-Control-Allow-Credentials", "true");
+        response.setHeader?.("Vary", "Origin");
+      }
+      if (method === "OPTIONS") {
+        response.writeHead(204, {
+          "Access-Control-Allow-Methods": "GET,POST,PUT,PATCH,OPTIONS",
+          "Access-Control-Allow-Headers": "Authorization,Content-Type",
+        });
+        response.end();
+        return;
+      }
 
       if (method === "GET" && path === "/health") {
         json(response, 200, { status: "ok", apiVersion: "v1" });
@@ -96,7 +131,11 @@ export function createRegistryHttpHandler(service: RegistryService, options: Reg
       }
       if (method === "GET" && path === "/v1/auth/github/start") {
         if (!options.github) throw new RegistryError(503, "GitHub OAuth is not configured", "oauth_unavailable");
-        const state = await service.createOAuthState(url.searchParams.get("returnTo") ?? "/");
+        const state = await service.createOAuthState(safeOAuthReturnTo(
+          url.searchParams.get("returnTo"),
+          service.config.publicBaseUrl,
+          options.allowedOrigin,
+        ));
         redirect(response, options.github.authorizationUrl(state));
         return;
       }
@@ -111,7 +150,7 @@ export function createRegistryHttpHandler(service: RegistryService, options: Reg
         redirect(
           response,
           continuation.returnTo,
-          `hk_session=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${service.config.sessionTtlSeconds ?? 900}`,
+          `hk_session=${token}; Path=/; HttpOnly; ${service.config.publicBaseUrl.startsWith("https:") ? "Secure; " : ""}SameSite=Lax; Max-Age=${service.config.sessionTtlSeconds ?? 900}`,
         );
         return;
       }
@@ -124,6 +163,10 @@ export function createRegistryHttpHandler(service: RegistryService, options: Reg
       }
 
       const principal = await service.authenticate(bearer(request));
+      if (method === "GET" && path === "/v1/auth/me") {
+        json(response, 200, principal);
+        return;
+      }
       if (method === "POST" && path === "/v1/auth/device/authorize") {
         const body = await readJson(request, maxBodyBytes);
         await service.authorizeDevice(String(body.userCode ?? ""), principal.userId);

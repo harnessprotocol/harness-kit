@@ -55,8 +55,18 @@ services:
       S3_ACCESS_KEY_ID: harness
       S3_SECRET_ACCESS_KEY: harness-local-secret
       CONTRACT_BOOTSTRAP_SECRET: harness-contract-local
+      WEB_ORIGIN: http://localhost:4174
     ports:
       - "4810:4810"
+
+  admin:
+    build:
+      context: ../..
+      dockerfile: apps/admin-console/Dockerfile
+    depends_on:
+      - registry
+    ports:
+      - "4174:4174"
 
 volumes:
   registry-postgres:

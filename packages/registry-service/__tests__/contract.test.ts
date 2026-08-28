@@ -15,6 +15,7 @@ import {
   RegistryService,
   createRegistryHttpHandler,
 } from "../src/index.js";
+import type { GitHubOAuthProvider } from "../src/index.js";
 
 function capsule(name: string, body = "# Safe skill\n") {
   const files: CapsuleFile[] = [{
@@ -193,7 +194,7 @@ describe("registry HTTP contract", () => {
   async function invoke(
     handler: ReturnType<typeof createRegistryHttpHandler>,
     input: { method?: string; path: string; token?: string; body?: unknown },
-  ): Promise<{ status: number; body: any }> {
+  ): Promise<{ status: number; body: any; headers: Record<string, string> }> {
     const encoded = input.body === undefined ? [] : [Buffer.from(JSON.stringify(input.body))];
     const request = Readable.from(encoded) as IncomingMessage;
     request.method = input.method ?? "GET";
@@ -203,10 +204,16 @@ describe("registry HTTP contract", () => {
       ...(input.body === undefined ? {} : { "content-type": "application/json" }),
     };
     let status = 200;
+    const headers: Record<string, string> = {};
     const chunks: Buffer[] = [];
     const response = {
-      writeHead(code: number) {
+      setHeader(name: string, value: string | number | readonly string[]) {
+        headers[name.toLowerCase()] = Array.isArray(value) ? value.join(", ") : String(value);
+        return this;
+      },
+      writeHead(code: number, values?: Record<string, string | number>) {
         status = code;
+        for (const [name, value] of Object.entries(values ?? {})) headers[name.toLowerCase()] = String(value);
         return this;
       },
       end(chunk?: string | Uint8Array) {
@@ -216,7 +223,7 @@ describe("registry HTTP contract", () => {
     } as unknown as ServerResponse;
     await handler(request, response);
     const content = Buffer.concat(chunks).toString("utf8");
-    return { status, body: content ? JSON.parse(content) : null };
+    return { status, body: content ? JSON.parse(content) : null, headers };
   }
 
   it("exposes versioned health, auth, and organization endpoints", async () => {
@@ -233,5 +240,26 @@ describe("registry HTTP contract", () => {
     });
     expect(response.status).toBe(201);
     expect(response.body).toMatchObject({ slug: "http", privateArtifactsByDefault: true });
+    expect((await invoke(handler, { path: "/v1/auth/me", token })).body).toMatchObject({ userId: "admin" });
+  });
+
+  it("restricts OAuth continuations to the registry and configured console origins", async () => {
+    const { service } = makeService();
+    const github: GitHubOAuthProvider = {
+      authorizationUrl: (state) => `https://github.test/authorize?state=${encodeURIComponent(state)}`,
+      exchange: async () => ({ userId: "github:1", login: "octocat" }),
+    };
+    const handler = createRegistryHttpHandler(service, { github, allowedOrigin: "https://console.test" });
+    const allowed = await invoke(handler, {
+      path: "/v1/auth/github/start?returnTo=https%3A%2F%2Fconsole.test%2Frollouts",
+    });
+    expect(allowed.status).toBe(302);
+    expect(allowed.headers.location).toContain("https://github.test/authorize");
+
+    const blocked = await invoke(handler, {
+      path: "/v1/auth/github/start?returnTo=https%3A%2F%2Fevil.test%2Fsteal",
+    });
+    expect(blocked.status).toBe(400);
+    expect(blocked.body).toMatchObject({ error: "invalid_return_url" });
   });
 });
