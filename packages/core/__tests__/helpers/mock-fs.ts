@@ -50,6 +50,14 @@ export class MockFsProvider implements FsProvider {
     this.files.delete(from);
   }
 
+  async removeFile(path: string): Promise<void> {
+    if (!this.files.delete(path)) throw new Error(`ENOENT: no such file: ${path}`);
+  }
+
+  async isSymlink(_path: string): Promise<boolean> {
+    return false;
+  }
+
   async isDirectory(path: string): Promise<boolean> {
     const prefix = path.endsWith("/") ? path : path + "/";
     for (const key of this.files.keys()) {
@@ -69,6 +77,10 @@ export class MockFsProvider implements FsProvider {
       }
     }
     return [...entries];
+  }
+
+  async readDirAll(path: string): Promise<string[]> {
+    return this.readDir(path);
   }
 
   joinPath(...segments: string[]): string {

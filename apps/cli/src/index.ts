@@ -11,11 +11,25 @@ import { importCommand } from "./commands/import.js";
 import { statusCommand } from "./commands/status.js";
 import { diffCommand } from "./commands/diff.js";
 import { fixCommand } from "./commands/fix.js";
+import { captureCommand } from "./commands/capture.js";
+import { reconcileCommand } from "./commands/reconcile.js";
+import { applyCommand } from "./commands/apply.js";
+import { rollbackCommand } from "./commands/rollback.js";
+import {
+  skillsApplyCommand,
+  skillsDiscoverCommand,
+  skillsPromoteCommand,
+  skillsReconcileCommand,
+  skillsRollbackCommand,
+  skillsUpdateCommand,
+} from "./commands/skills.js";
 import {
   listOrganizations,
   createOrganization,
   joinOrganization,
 } from "./commands/org.js";
+import { syncOrganizationRollout } from "./commands/org-rollout.js";
+import { authLoginCommand, authLogoutCommand, authStatusCommand } from "./commands/auth.js";
 import {
   keygenCommand,
   offerCommand,
@@ -33,7 +47,7 @@ const program = new Command();
 
 program
   .name("harness-kit")
-  .description("Compile and validate harness.yaml configurations")
+  .description("Capture, reconcile, govern, and apply portable harness configurations")
   .version(__CLI_VERSION__)
   .option("--no-color", "Disable colored output")
   .hook("preAction", (thisCommand) => {
@@ -44,7 +58,7 @@ program
 
 program
   .command("validate")
-  .description("Validate a harness.yaml against the Harness Protocol v1 schema")
+  .description("Validate a Harness Protocol v1 or v2 profile")
   .argument("[path]", "Path to harness.yaml", "harness.yaml")
   .option("--json", "Output results as JSON")
   .addHelpText(
@@ -183,8 +197,144 @@ Examples:
   });
 
 program
+  .command("capture")
+  .description("Capture native harness state into a secret-safe Harness Protocol v2 profile")
+  .option("--scope <scope>", "Capture scope: personal, project, or session", "project")
+  .option("--output <path>", "Output profile path")
+  .option("--dry-run", "Preview without writing")
+  .option("--yes", "Write the captured profile (default is preview only)")
+  .option("--force", "Replace an existing profile transactionally")
+  .option("--json", "Output a machine-readable capture report")
+  .action(async (flags) => {
+    await captureCommand(flags);
+  });
+
+const collectResolution = (value: string, previous: string[]): string[] => [...previous, value];
+
+program
+  .command("reconcile")
+  .description("Three-way reconcile native state, the last-applied base, and layered profiles")
+  .argument("[path]", "Project harness profile", "harness.yaml")
+  .option("--organization <path>", "Organization profile")
+  .option("--personal <path>", "Personal profile (defaults to ~/.harness/harness.yaml when present)")
+  .option("--session <path>", "Ephemeral session overlay")
+  .option("--target <targets>", "Comma-separated targets, or all", "all")
+  .option("--resolve <conflict=choice>", "Resolve one conflict; may be repeated", collectResolution, [])
+  .option("--json", "Output the full reconciliation plan as JSON")
+  .action(async (path: string, flags) => {
+    await reconcileCommand(path, flags);
+  });
+
+program
+  .command("apply")
+  .description("Preview or transactionally apply a reconciled whole-harness configuration")
+  .argument("[path]", "Project harness profile", "harness.yaml")
+  .option("--organization <path>", "Organization profile")
+  .option("--personal <path>", "Personal profile (defaults to ~/.harness/harness.yaml when present)")
+  .option("--session <path>", "Ephemeral session overlay (source-only unless a target has native support)")
+  .option("--target <targets>", "Comma-separated targets, or all", "all")
+  .option("--resolve <conflict=choice>", "Resolve one conflict; may be repeated", collectResolution, [])
+  .option("--adopt", "Explicitly claim an unowned native file shown in the preview")
+  .option("--yes", "Apply the previewed transaction (default is preview only)")
+  .option("--json", "Output the apply preview as JSON")
+  .action(async (path: string, flags) => {
+    await applyCommand(path, flags);
+  });
+
+program
+  .command("rollback")
+  .description("Preview or restore a complete prior Harness Kit transaction")
+  .option("--transaction <path>", "Transaction manifest (defaults to last-known-good)")
+  .option("--yes", "Execute the rollback (default is preview only)")
+  .option("--json", "Output the rollback preview as JSON")
+  .action(async (flags) => {
+    await rollbackCommand(flags);
+  });
+
+const addSkillLayerOptions = (command: Command): Command => command
+  .option("--organization <path>", "Organization profile")
+  .option("--personal <path>", "Personal profile (defaults to ~/.harness/harness.yaml when present)")
+  .option("--session <path>", "Ephemeral session overlay")
+  .option("--target <targets>", "Comma-separated targets, or all", "all")
+  .option("--resolve <conflict=choice>", "Resolve one conflict; may be repeated", collectResolution, [])
+  .option("--json", "Output machine-readable JSON");
+
+const skillsCommand = program
+  .command("skills")
+  .description("Discover, promote, reconcile, deploy, update, and roll back skill catalogs");
+
+skillsCommand
+  .command("discover")
+  .description("Discover project and optional personal skills, grouped by content fingerprint")
+  .option("--global", "Include personal catalogs")
+  .option("--json", "Output machine-readable JSON")
+  .action(async (flags) => {
+    await skillsDiscoverCommand(flags);
+  });
+
+skillsCommand
+  .command("promote")
+  .description("Pin an in-place skill or package it as a validated content-addressed capsule")
+  .argument("<directory>", "Skill directory containing SKILL.md")
+  .option("--mode <mode>", "Promotion mode: reference or capsule", "reference")
+  .option("--scope <scope>", "Catalog scope: organization, personal, or project", "personal")
+  .option("--organization <id>", "Organization id for organization-scope submission")
+  .option("--profile <path>", "Profile to update")
+  .option("--source <owner/repo/path>", "Explicit source identity")
+  .option("--revision <commit>", "Pinned source revision")
+  .option("--publisher <name>", "Capsule publisher", "personal")
+  .option("--name <name>", "Deployment alias (defaults to skill frontmatter)")
+  .option("--version <version>", "Capsule semantic version", "0.1.0")
+  .option("--include <path>", "Explicit local dependency; may be repeated", collectResolution, [])
+  .option("--replace", "Choose this skill as the explicit winner for an existing alias")
+  .option("--exception <id>", "Audited administrator exception scoped to this artifact digest")
+  .option("--yes", "Commit the promotion (default is preview only)")
+  .option("--json", "Output machine-readable JSON")
+  .action(async (directory: string, flags) => {
+    await skillsPromoteCommand(directory, flags);
+  });
+
+const skillsReconcile = addSkillLayerOptions(
+  skillsCommand.command("reconcile").description("Three-way reconcile only skill resources"),
+).argument("[path]", "Project harness profile", "harness.yaml");
+skillsReconcile.action(async (path: string, flags) => {
+  await skillsReconcileCommand(path, flags);
+});
+
+const skillsApply = addSkillLayerOptions(
+  skillsCommand.command("apply").description("Preview or deploy only reconciled skill resources"),
+)
+  .argument("[path]", "Project harness profile", "harness.yaml")
+  .option("--adopt", "Explicitly claim an unowned native skill file")
+  .option("--yes", "Apply transactionally (default is preview only)");
+skillsApply.action(async (path: string, flags) => {
+  await skillsApplyCommand(path, flags);
+});
+
+const skillsUpdate = addSkillLayerOptions(
+  skillsCommand.command("update").description("Preview or approve pinned skill catalog updates"),
+)
+  .argument("[path]", "Project harness profile", "harness.yaml")
+  .option("--adopt", "Explicitly claim an unowned native skill file")
+  .option("--yes", "Approve and apply updates (default is preview only)");
+skillsUpdate.action(async (path: string, flags) => {
+  await skillsUpdateCommand(path, flags);
+});
+
+skillsCommand
+  .command("rollback")
+  .description("Preview or roll back a skill deployment transaction")
+  .option("--transaction <path>", "Transaction manifest (defaults to last-known-good)")
+  .option("--yes", "Execute the rollback")
+  .option("--json", "Output machine-readable JSON")
+  .action(async (flags) => {
+    await skillsRollbackCommand(flags);
+  });
+
+program
   .command("status")
   .description("Show the fleet: which harnesses are installed, where, and how drifted")
+  .option("--global", "Include the personal catalog and global native tool state")
   .option("--json", "Output the raw FleetReport as JSON")
   .addHelpText(
     "after",
@@ -285,6 +435,24 @@ orgCommand
   .action(async (slug: string) => {
     await joinOrganization(slug);
   });
+
+orgCommand
+  .command("rollout-sync")
+  .description("Preview or apply the rollout assigned to this device")
+  .argument("<organization>", "Organization id")
+  .option("--project <path>", "Project harness profile", "harness.yaml")
+  .option("--target <targets>", "Comma-separated targets, or all", "all")
+  .option("--adopt", "Explicitly claim unowned native files shown in the preview")
+  .option("--yes", "Apply an optional rollout; organization-mandated updates apply automatically")
+  .option("--json", "Output a machine-readable rollout result")
+  .action(async (organization: string, flags) => {
+    await syncOrganizationRollout(organization, flags);
+  });
+
+const authCommand = program.command("auth").description("Authenticate with the Harness Kit registry");
+authCommand.command("login").description("Authorize this device with a short-lived session").action(authLoginCommand);
+authCommand.command("status").description("Show registry authentication status").action(authStatusCommand);
+authCommand.command("logout").description("Remove the local registry session").action(authLogoutCommand);
 
 // ─── exchange command group ───────────────────────────────────────────────────
 

@@ -6,6 +6,8 @@ import type { AdapterContext } from "../adapters/adapter.js";
 import { validateHarness } from "../schema/validate.js";
 import type { AdapterImportResult, ImportProjectResult } from "./types.js";
 import { synthesize } from "./synthesize.js";
+import { readAdapterSkills } from "./read-skills.js";
+import { captureNativeExtensions } from "../portability/native-extensions.js";
 
 export interface ImportContext {
   fs: FsProvider;
@@ -30,6 +32,8 @@ async function collectAdapterResults(ctx: AdapterContext): Promise<AdapterImport
 
     const detectResult = await adapter.detect(ctx);
     const fragments = await adapter.importConfig(ctx);
+    const deployedSkills = await readAdapterSkills(ctx.fs, ctx.projectRoot, adapter.id);
+    if (deployedSkills) fragments.push(deployedSkills);
 
     const warnings: string[] = [];
     for (const fragment of fragments) {
@@ -79,7 +83,10 @@ export async function importProject(ctx: ImportContext): Promise<ImportProjectRe
   const { config, findings, provenance } = synthesize(results, {
     name: ctx.name ?? "imported",
     description: ctx.description ?? "Synthesized from existing tool configurations by harness-kit import.",
+    scope: cwd === homeRoot ? "personal" : "project",
   });
+  const vendor = await captureNativeExtensions(ctx.fs, cwd);
+  if (Object.keys(vendor).length > 0) config.vendor = vendor;
 
   const harnessYaml = serializeHarnessYaml(config);
 

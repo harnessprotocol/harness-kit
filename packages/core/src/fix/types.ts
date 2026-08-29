@@ -101,4 +101,6 @@ export interface ApplyFixResult {
   backupDir: string;
   /** Project-relative backup file paths written, one per touched file. */
   backups: string[];
+  /** Reversible manifest written by the shared portability transaction engine. */
+  manifestPath?: string;
 }

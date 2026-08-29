@@ -1,9 +1,9 @@
 ---
 title: How It Works
-description: harness-kit is three things — a config format, a desktop management console, and a CLI — plus a plugin system that delivers skills and agents to your AI coding tools.
+description: How the portable protocol, reconciliation engine, clients, registry service, and plugin system fit together.
 ---
 
-harness-kit has three main components and a plugin system. `harness.yaml` is the config format at the center of everything. The desktop app is a multi-section management console for it. The `harness` CLI is a standalone terminal tool that compiles it. Plugins — SKILL.md files, agents, hooks, scripts — run inside your AI tools.
+Harness Kit has a portable protocol and reconciliation engine at its center. The CLI and desktop app capture native peer state, preview conflicts and losses, and apply transactional changes. An optional organization registry distributes immutable artifacts and policy and receives redacted inventory; it never executes commands on developer machines. Plugins — SKILL.md files, agents, hooks, and scripts — still run inside the developer's AI tools.
 
 <ArchitectureDiagram />
 
@@ -11,17 +11,23 @@ harness-kit has three main components and a plugin system. `harness.yaml` is the
 
 ## harness.yaml
 
-`harness.yaml` is the single declaration of your entire AI coding setup. It follows the [Harness Protocol](https://harnessprotocol.ai) — an open, vendor-neutral specification.
+`harness.yaml` is the readable, portable reconciliation record for your AI coding setup. Native tool files remain bidirectional peers rather than generated files that Harness Kit silently owns. It follows the [Harness Protocol](https://harnessprotocol.ai) — an open, vendor-neutral specification.
 
 ```yaml
+$schema: https://harnessprotocol.io/schema/v2/harness.schema.json
+version: "2"
+kind: profile
+scope: project
+
 plugins:
-  - research@0.5.1
-  - review@0.3.0
-  - explain@0.2.0
+  - name: research
+    source: harnessprotocol/harness-kit
 
 mcp-servers:
-  - name: memory
-  - name: filesystem
+  memory:
+    transport: stdio
+    command: mem
+    args: [mcp]
 
 instructions:
   operational: "Always create a feature branch. Never commit to main."
@@ -35,13 +41,16 @@ permissions:
     allow: ["api.anthropic.com"]
 
 env:
-  ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+  - name: ANTHROPIC_API_KEY
+    description: Credential resolved locally when a target requires it.
+    required: true
+    sensitive: true
 
 extends:
-  - profiles/backend-engineer.yaml
+  - source: profiles/backend-engineer.yaml
 ```
 
-The full schema supports `version`, `kind`, `metadata`, `plugins`, `mcp-servers`, `instructions`, `permissions`, `env`, and `extends`. [Harness Protocol spec →](https://harnessprotocol.ai)
+The full schema also supports top-level skills, architecture constraints, policy, inheritance, and namespaced target-native vendor blocks. Four ordered layers—organization, personal, project, and session—resolve through the same three-way reconciliation engine. [Harness Protocol spec →](https://harnessprotocol.ai)
 
 ---
 
@@ -86,6 +95,12 @@ harness check             # detect drift between compiled output and harness.yam
 harness detect            # show which AI platforms are present in the working directory
 harness scan              # security audit of installed plugin skill files
 harness import            # scan existing AI tool configs and synthesize a harness.yaml
+harness capture           # create a secret-safe Protocol v2 peer snapshot
+harness reconcile         # preview a three-way layered reconciliation
+harness apply             # preview or transactionally apply resolved changes
+harness rollback          # restore a complete previous transaction
+harness skills promote    # pin or package a repository-local skill
+harness org rollout-sync  # preview or apply this device's pinned organization rollout
 harness status            # show the fleet: which harnesses are installed, where, and how drifted
 harness diff              # show drift between harness.yaml and deployed tool configs
 harness fix               # preview (default) or --apply repairs for detected drift
@@ -169,13 +184,15 @@ This structure makes skills repeatable across sessions and transferable across u
 
 ## Portability
 
-Your harness is fully reproducible. Config files live in version control; plugins reinstall from the registry with the same commands.
+`harness capture` discovers native configuration and writes a secret-safe Protocol v2 preview. `harness reconcile` compares the last-applied base, current native peer state, and layered profiles. `harness apply` blocks unresolved conflicts and unsupported operations, then writes owned files transactionally with a complete rollback manifest.
 
-Your harness.yaml serializes your whole setup. Share it, import it, or use it to bootstrap the same configuration on any machine.
+Portable fields move between tools. Unmatched native settings remain in target-namespaced vendor blocks and produce an explicit loss report on other targets.
 
 ```bash
-/harness-export                       # capture plugins, versions, sources → harness.yaml
-/harness-import harness.yaml          # interactive picker: teammate chooses what to install
+harness capture                       # preview native peer capture → harness.yaml
+harness capture --yes --force         # explicitly write the capture
+harness reconcile harness.yaml        # inspect conflicts and capability losses
+harness apply harness.yaml --yes      # transactionally apply an approved plan
 ```
 
 (Available via the [harness-share](/docs/plugins/productivity/harness-share) plugin.)
@@ -184,8 +201,8 @@ Your harness.yaml serializes your whole setup. Share it, import it, or use it to
 
 ## Design Philosophy
 
-harness-kit is a framework without a runtime. No SDK, no build step, no execution layer to depend on. The framework is the config format and the portability it creates.
+Harness Kit is a portability and governance layer, not an agent execution runtime. Local clients own capture, reconciliation, apply, health checks, and rollback. The optional organization service stores immutable artifacts, policy, audit history, rollout assignments, and redacted inventory; it cannot run commands on enrolled devices.
 
-The `SKILL.md` is the portable unit. Plugins add distribution, versioning, and automation on top — but the workflow itself is plain text that any AI tool can read. Uninstall a plugin and nothing breaks, because nothing was ever coupled to it.
+`SKILL.md` remains one portable resource, but the protocol also represents plugins, MCP servers, instructions, permissions, environment declarations, architecture constraints, policy, inheritance, and native-only extensions.
 
 The spec is [open](https://harnessprotocol.ai). The format travels.

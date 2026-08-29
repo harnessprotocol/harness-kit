@@ -59,17 +59,18 @@ export interface ImportedSkillRef {
   name: string;
   /** Path to the discovered SKILL.md, relative to project root. */
   path: string;
+  /** Portable local source directory for a captured deployed skill. */
+  sourcePath: string;
+  /** Content digest of SKILL.md at capture time. */
+  digest: string;
+  scope: "project" | "personal";
   source: ImportSource;
 }
 
 /**
- * Reserved for a future WP: no adapter currently sets capabilities.import.skills
- * to anything but "none" (see each adapter's index.ts), because a deployed
- * SKILL.md on disk cannot be reliably mapped back to the `plugins[].source`
- * harness.yaml needs (the source registry/repo isn't recoverable from the
- * deployed file alone). The shape is typed now, unused today, so a future WP
- * only needs to populate it — same load-bearing-stub pattern WP-2.1 used for
- * `DriftReport`.
+ * Deployed skills are captured as local, digest-pinned peer resources. Their
+ * original remote repository cannot be inferred from disk; promotion resolves
+ * that provenance explicitly rather than inventing it during capture.
  */
 export interface ImportedSkills {
   skills: ImportedSkillRef[];
@@ -90,7 +91,6 @@ export interface ImportedFragment {
   instructions?: ImportedInstructions;
   mcpServers?: ImportedMcpServers;
   permissions?: ImportedPermissions;
-  /** Unused by any adapter this WP — see ImportedSkills doc comment. */
   skills?: ImportedSkills;
   /** Things this adapter looked for but explicitly could not import, with why. */
   skipped?: Array<{ file: string; reason: string }>;

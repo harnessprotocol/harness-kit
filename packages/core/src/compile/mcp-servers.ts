@@ -80,12 +80,11 @@ export async function compileMcpServers(
     for (const [name, entry] of Object.entries(translated)) {
       if (name in existingServers) {
         warnings.push(
-          `${filePath} already defines server '${name}'. Existing config kept.\n  To update it, edit ${filePath} directly or remove the entry and re-run.`,
+          `${filePath} already defines server '${name}'. The reconciled harness definition will replace it.`,
         );
-      } else {
-        merged[name] = entry;
-        serverCount++;
       }
+      merged[name] = entry;
+      serverCount++;
     }
 
     const output = { ...existing, mcpServers: merged };

@@ -21,6 +21,7 @@ export type {
   HarnessPlugin,
   HarnessPolicy,
   HarnessSkillRef,
+  HarnessVendorConfig,
   PolicySourceConstraint,
   McpServer,
   McpServerNetwork,
@@ -54,6 +55,10 @@ export { validateHarness, validateHarnessYaml, validateSkillName } from "./schem
 // Platform detection
 export { detectPlatforms } from "./detect/detect-platforms.js";
 
+// Target metadata
+export type { IntegrationTarget } from "./adapters/target-metadata.js";
+export { TARGETS, getTarget, AGENTS_MD_TARGETS } from "./adapters/target-metadata.js";
+
 // Compile
 export { compile, computeSourceFingerprint } from "./compile/compile.js";
 export { compileInstructions, getAllInstructionFilePaths, getSlotMappings } from "./compile/instructions.js";
@@ -67,7 +72,7 @@ export { resolveExtends } from "./compile/extends.js";
 export { findSkillFiles, computeSourceDir } from "./compile/discovery.js";
 
 // Lockfile
-export type { LockedPlugin, LockFile } from "./compile/lockfile.js";
+export type { LockedPlugin, LockedResource, LockFile } from "./compile/lockfile.js";
 export {
   readLockFile,
   writeLockFile,
@@ -102,6 +107,17 @@ export { buildReport } from "./report/report.js";
 
 // Utilities
 export { posixJoin, posixDirname } from "./utils/posix-path.js";
+export type {
+  NativeExtensionBlock,
+  NativeExtensionFile,
+  NativeExtensionSetting,
+} from "./portability/native-extensions.js";
+export {
+  captureNativeExtensions,
+  parseNativeExtensionBlock,
+} from "./portability/native-extensions.js";
+export { scanPortableContent } from "./portability/capsule.js";
+export { scanHarnessArtifact } from "./portability/artifact-security.js";
 export { isLegacyFormat } from "./utils/legacy.js";
 
 // Security scanner
@@ -175,6 +191,7 @@ export type {
 export type { ImportContext } from "./import/import-project.js";
 export type { SynthesizeResult } from "./import/synthesize.js";
 export { importProject, importMachine, importProjectValidated } from "./import/import-project.js";
+export { skillDirectoryDigest } from "./import/read-skills.js";
 export { synthesize } from "./import/synthesize.js";
 export {
   stripHarnessMarkerBlocks,
@@ -232,3 +249,79 @@ export type {
   BuildFleetReportContext,
 } from "./fleet/index.js";
 export { buildFleetReport } from "./fleet/index.js";
+
+// ── Whole-harness portability (Protocol v2) ──────────────────
+export type {
+  HarnessScope,
+  HarnessResourceKind,
+  ReleaseDigest,
+  ResourceIdentity,
+  SourceRevision,
+  ResourceProvenance,
+  HarnessResource,
+  LayeredHarnessProfile,
+  PolicyViolation,
+  LayerResolutionResult,
+  CapabilityLevel,
+  LifecycleOperation,
+  TargetResourceCapability,
+  LossItem,
+  LossReport,
+  ConflictResolution,
+  ReconciliationConflict,
+  ReconciliationDirection,
+  ReconciliationOperation,
+  ReconciliationPlan,
+  ReconciliationResolution,
+  OwnershipFingerprint,
+  PortabilityState,
+  RedactionFinding,
+  InventorySnapshot,
+  TransactionFileChange,
+  TransactionResult,
+  TransactionManifest,
+  CapsuleDependency,
+  CapsuleManifest,
+  CapsuleValidationFinding,
+  CapsuleValidationResult,
+} from "./portability/types.js";
+export { HARNESS_SCOPE_ORDER } from "./portability/types.js";
+export {
+  stableSerialize,
+  digestValue,
+  resourceIdentityKey,
+  resourceAliasKey,
+  resourcesEqual,
+  profileToResources,
+  resourcesToProfile,
+  migrateHarnessV1ToV2,
+} from "./portability/resource-model.js";
+export { mergePolicyCeilings, evaluatePolicy, resolveProfileLayers, layerFingerprint } from "./portability/layers.js";
+export {
+  PORTABLE_RESOURCE_KINDS,
+  TARGET_CAPABILITY_MATRIX,
+  getTargetCapability,
+  capabilityForResource,
+  buildLossReport,
+  assertCapabilityMatrixComplete,
+} from "./portability/capabilities.js";
+export { reconcileResources, resolveReconciliationPlan } from "./portability/reconcile.js";
+export { applyFileTransaction, rollbackFileTransaction } from "./portability/transaction.js";
+export {
+  EMPTY_PORTABILITY_STATE,
+  readPortabilityState,
+  writePortabilityState,
+  nextPortabilityState,
+} from "./portability/state.js";
+export { redactInventoryConfig, buildInventorySnapshot } from "./portability/inventory.js";
+export type {
+  SecretSanitizationFinding,
+  SecretSanitizationResult,
+} from "./portability/secrets.js";
+export { sanitizeCapturedSecrets } from "./portability/secrets.js";
+export {
+  createCapsuleManifest,
+  validateCapsule,
+  collectCapsuleFiles,
+} from "./portability/capsule.js";
+export type { CapsuleFile } from "./portability/capsule.js";

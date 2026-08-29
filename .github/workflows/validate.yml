@@ -151,6 +151,7 @@ jobs:
         run: |
           pnpm --filter @harness-kit/core generate:validator
           git diff --exit-code packages/core/src/schema/validate.generated.js \
+            packages/core/src/schema/validate-v2.generated.js \
             || { echo "::error::validate.generated.js is stale — run 'pnpm --filter @harness-kit/core generate:validator' and commit."; exit 1; }
 
       - name: Build and test core stack

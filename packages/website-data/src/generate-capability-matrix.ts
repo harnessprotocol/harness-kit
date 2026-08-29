@@ -1,12 +1,11 @@
 /**
  * Build-time capability matrix generator.
  *
- * Reads `@harness-kit/core`'s adapter registry directly — the same
- * `capabilities` declarations the compiler and importer use at runtime — and
+ * Reads `@harness-kit/core`'s portability registry directly — the same
+ * exhaustive resource, operation, and scope declarations reconciliation uses — and
  * emits a static JSON snapshot that `website/` renders. This is the only
  * path that produces `capability-matrix.generated.json`; there is no
- * hand-authored fallback, so the marketing table can never drift from the
- * adapters' real declared capabilities.
+ * hand-authored fallback, so the public table cannot drift from runtime policy.
  *
  * Mirrors `packages/marketplace-data/src/generate.ts` (git → static JSON at
  * build time, run from the repo root before `website`'s own install/build —
@@ -21,82 +20,76 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { getAllAdapters } from "@harness-kit/core";
-import type { AdapterId, FeatureSupport, HarnessDomain } from "@harness-kit/core";
+import {
+  PORTABLE_RESOURCE_KINDS,
+  TARGETS,
+  TARGET_CAPABILITY_MATRIX,
+} from "@harness-kit/core";
+import type {
+  CapabilityLevel,
+  HarnessResourceKind,
+  HarnessScope,
+  LifecycleOperation,
+  TargetPlatform,
+} from "@harness-kit/core";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const repoRoot = join(__dirname, "..", "..", "..");
 const OUT_PATH = join(repoRoot, "website", "lib", "capability-matrix.generated.json");
 
-/** Display order + labels for the 7 domains. Order only — values come from the adapters. */
-const DOMAIN_ORDER: { id: HarnessDomain; label: string }[] = [
-  { id: "instructions", label: "Instructions" },
-  { id: "skills", label: "Skills" },
-  { id: "subagents", label: "Subagents" },
-  { id: "mcp", label: "MCP" },
-  { id: "permissions", label: "Permissions" },
-  { id: "hooks", label: "Hooks" },
-  { id: "model", label: "Model" },
-];
-
-/** Display order + labels for the 6 first-class adapter targets. */
-const TARGET_ORDER: { id: AdapterId; label: string }[] = [
-  { id: "claude-code", label: "Claude Code" },
-  { id: "cursor", label: "Cursor" },
-  { id: "copilot", label: "Copilot" },
-  { id: "opencode", label: "opencode" },
-  { id: "pi", label: "pi" },
-  { id: "agents-md", label: "AGENTS.md" },
-];
+const RESOURCE_LABELS: Record<HarnessResourceKind, string> = {
+  plugin: "Plugins",
+  skill: "Skills",
+  "mcp-server": "MCP servers",
+  env: "Environment",
+  instructions: "Instructions",
+  permissions: "Permissions",
+  "architectural-constraints": "Architecture",
+  policy: "Policy",
+  extends: "Inheritance",
+  "native-extension": "Native extensions",
+};
 
 export interface CapabilityCell {
-  domain: HarnessDomain;
-  export: FeatureSupport;
-  import: FeatureSupport;
+  resource: HarnessResourceKind;
+  operations: Record<LifecycleOperation, CapabilityLevel>;
+  scopes: Record<HarnessScope, CapabilityLevel>;
+  note?: string;
 }
 
 export interface CapabilityRow {
-  id: AdapterId;
+  id: TargetPlatform;
   label: string;
-  scopes: ("project" | "global")[];
-  diff: boolean;
   cells: CapabilityCell[];
 }
 
 export interface CapabilityMatrix {
   generatedAt: string;
-  domains: { id: HarnessDomain; label: string }[];
+  resources: { id: HarnessResourceKind; label: string }[];
   rows: CapabilityRow[];
 }
 
 function buildMatrix(): CapabilityMatrix {
-  const adapters = getAllAdapters();
-  const byId = new Map(adapters.map((a) => [a.id, a]));
-
-  const rows: CapabilityRow[] = TARGET_ORDER.map(({ id, label }) => {
-    const adapter = byId.get(id);
-    if (!adapter) {
-      throw new Error(
-        `generate-capability-matrix: no registered adapter for target '${id}' — ` +
-          `check TARGET_ORDER against @harness-kit/core's getAllAdapters()`,
-      );
-    }
+  const rows: CapabilityRow[] = TARGETS.map(({ id, label }) => {
     return {
       id,
       label,
-      scopes: adapter.capabilities.scopes,
-      diff: adapter.capabilities.diff,
-      cells: DOMAIN_ORDER.map(({ id: domainId }) => ({
-        domain: domainId,
-        export: adapter.capabilities.export[domainId],
-        import: adapter.capabilities.import[domainId],
-      })),
+      cells: PORTABLE_RESOURCE_KINDS.map((resource) => {
+        const capability = TARGET_CAPABILITY_MATRIX.find((entry) => entry.target === id && entry.resource === resource);
+        if (!capability) throw new Error(`missing capability cell for ${id}/${resource}`);
+        return {
+          resource,
+          operations: capability.operations,
+          scopes: capability.scopes,
+          ...(capability.note ? { note: capability.note } : {}),
+        };
+      }),
     };
   });
 
   return {
     generatedAt: new Date().toISOString(),
-    domains: DOMAIN_ORDER,
+    resources: PORTABLE_RESOURCE_KINDS.map((id) => ({ id, label: RESOURCE_LABELS[id] })),
     rows,
   };
 }
@@ -105,17 +98,17 @@ async function main() {
   const matrix = buildMatrix();
   await mkdir(dirname(OUT_PATH), { recursive: true });
   await writeFile(OUT_PATH, `${JSON.stringify(matrix, null, 2)}\n`, "utf-8");
-  const full = matrix.rows.reduce(
-    (n, r) => n + r.cells.filter((c) => c.export === "full").length,
+  const native = matrix.rows.reduce(
+    (n, r) => n + r.cells.filter((c) => c.operations.apply === "native").length,
     0,
   );
   const none = matrix.rows.reduce(
-    (n, r) => n + r.cells.filter((c) => c.export === "none").length,
+    (n, r) => n + r.cells.filter((c) => c.operations.apply === "unsupported").length,
     0,
   );
   console.log(
-    `Generated capability matrix: ${matrix.rows.length} targets x ${matrix.domains.length} domains ` +
-      `(${full} full, ${none} none) -> ${OUT_PATH}`,
+    `Generated capability matrix: ${matrix.rows.length} targets x ${matrix.resources.length} resources ` +
+      `(${native} native, ${none} unsupported) -> ${OUT_PATH}`,
   );
 }
 

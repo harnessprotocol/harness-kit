@@ -1,4 +1,5 @@
-import type { HarnessConfig, HarnessInstructions, HarnessPermissions, McpServer } from "../types.js";
+import type { HarnessConfig, HarnessInstructions, HarnessPermissions, HarnessSkillRef, McpServer } from "../types.js";
+import type { HarnessScope } from "../portability/types.js";
 import type { AdapterId } from "../adapters/adapter.js";
 import type {
   AdapterImportResult,
@@ -266,6 +267,72 @@ function synthesizePermissions(results: AdapterImportResult[]): {
   return { permissions: Object.keys(permissions).length > 0 ? permissions : undefined, entries, conflicts };
 }
 
+// ── Skills synthesis ─────────────────────────────────────────────
+
+function synthesizeSkills(results: AdapterImportResult[]): {
+  skills: HarnessSkillRef[] | undefined;
+  entries: ImportProvenanceMap["entries"];
+  conflicts: ImportConflict[];
+} {
+  const ordered = stableSortByAdapter(results);
+  const byName = new Map<
+    string,
+    Array<{
+      adapter: AdapterId;
+      value: HarnessSkillRef & { digest: string };
+      source: ImportSource;
+    }>
+  >();
+
+  for (const result of ordered) {
+    for (const fragment of result.fragments) {
+      for (const skill of fragment.skills?.skills ?? []) {
+        const candidate = {
+          adapter: result.adapter,
+          value: {
+            name: skill.name,
+            source: skill.sourcePath,
+            enabled: true,
+            loading: "deferred" as const,
+            integrity: { sha256: skill.digest },
+            digest: skill.digest,
+          },
+          source: skill.source,
+        };
+        if (!byName.has(skill.name)) byName.set(skill.name, []);
+        byName.get(skill.name)!.push(candidate);
+      }
+    }
+  }
+
+  if (byName.size === 0) return { skills: undefined, entries: [], conflicts: [] };
+  const skills: HarnessSkillRef[] = [];
+  const entries: ImportProvenanceMap["entries"] = [];
+  const conflicts: ImportConflict[] = [];
+
+  for (const name of [...byName.keys()].sort()) {
+    const candidates = byName.get(name)!;
+    const distinct = candidates.filter(
+      (candidate, index) => candidates.findIndex((other) => other.value.digest === candidate.value.digest) === index,
+    );
+    const chosen = distinct[0];
+    const { digest: _digest, ...skillRef } = chosen.value;
+    skills.push(skillRef);
+    entries.push({ field: `skills.${name}`, source: chosen.source });
+    if (distinct.length > 1) {
+      conflicts.push({
+        field: `skills.${name}`,
+        alternates: distinct.map((candidate) => ({
+          adapter: candidate.adapter,
+          value: candidate.value,
+          source: candidate.source,
+        })),
+      });
+    }
+  }
+  return { skills, entries, conflicts };
+}
+
 // ── Findings summary ───────────────────────────────────────────────
 
 function buildFindings(results: AdapterImportResult[]): ImportFindings {
@@ -306,7 +373,7 @@ function buildFindings(results: AdapterImportResult[]): ImportFindings {
             found.push({
               domain: "skills",
               file: skill.path,
-              detail: `skill '${skill.name}' (deployed, not imported into plugins — reference only)`,
+              detail: `skill '${skill.name}' (${skill.scope} peer, sha256:${skill.digest.slice(0, 12)}…)`,
             });
           }
         }
@@ -348,21 +415,26 @@ export interface SynthesizeResult {
  */
 export function synthesize(
   results: AdapterImportResult[],
-  meta: { name: string; description: string },
+  meta: { name: string; description: string; scope?: HarnessScope },
 ): SynthesizeResult {
   const { instructions, entries: instrEntries } = synthesizeInstructions(results);
   const { mcpServers, entries: mcpEntries, conflicts: mcpConflicts } = synthesizeMcpServers(results);
   const { permissions, entries: permEntries, conflicts: permConflicts } = synthesizePermissions(results);
+  const { skills, entries: skillEntries, conflicts: skillConflicts } = synthesizeSkills(results);
 
   const config: HarnessConfig = {
-    version: "1",
+    $schema: "https://harnessprotocol.io/schema/v2/harness.schema.json",
+    version: "2",
+    kind: "profile",
+    scope: meta.scope ?? "project",
     metadata: { name: meta.name, description: meta.description },
+    ...(skills ? { skills } : {}),
     ...(instructions ? { instructions } : {}),
     ...(mcpServers ? { "mcp-servers": mcpServers } : {}),
     ...(permissions ? { permissions } : {}),
   };
 
-  const allConflicts = [...mcpConflicts, ...permConflicts];
+  const allConflicts = [...mcpConflicts, ...permConflicts, ...skillConflicts];
   if (allConflicts.length > 0) {
     (config as unknown as Record<string, unknown>)["x-harness-import"] = {
       conflicts: allConflicts.map((c) => ({
@@ -379,7 +451,7 @@ export function synthesize(
   const findings = buildFindings(results);
 
   const provenance: ImportProvenanceMap = {
-    entries: [...instrEntries, ...mcpEntries, ...permEntries],
+    entries: [...instrEntries, ...mcpEntries, ...permEntries, ...skillEntries],
     conflicts: allConflicts,
   };
 

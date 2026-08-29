@@ -16,22 +16,13 @@ const TARGET = "opencode" as const;
 /**
  * Dedicated OpenCode adapter (WP-2.5).
  *
- * OpenCode is already handled generically by the `agents-md` family
- * (AGENTS.md operational instructions, shared with codex/windsurf/gemini/
- * junie) for the LEGACY compile.ts pipeline — that mapping is left
- * completely untouched (see registry.ts's LEGACY_TARGET_TO_ADAPTER and the
- * golden compile tests, which must still produce byte-identical output for
- * the "opencode" TargetPlatform via agents-md).
- *
- * This adapter is a separate, richer, STANDALONE surface: it targets
+ * This is the runtime adapter for OpenCode. It targets
  * OpenCode's actual native config surfaces beyond what the generic family
  * can express — `opencode.json`'s `mcp`/`permission` keys (verified against
  * the real installed config at ~/.config/opencode/opencode.json v1.3.13) and
- * `.opencode/skills`. It is invoked directly via getAdapter("opencode") and
- * is picked up automatically by importProject()'s getAllAdapters() loop; it
- * is NOT wired into groupTargetsByAdapter/compile()'s legacy TargetPlatform
- * dispatch, so it never changes what `compile()` produces for "opencode" as
- * a legacy target.
+ * `.opencode/skills`. It is invoked by both getAdapter("opencode") and
+ * compile()'s target dispatch, and importProject() discovers it through the
+ * shared adapter registry.
  *
  * Instructions still go through the shared AGENTS.md convention (reusing
  * compileInstructions exactly the way agents-md does — OpenCode reads
@@ -79,7 +70,7 @@ const capabilities: AdapterCapabilities = {
   },
   import: {
     instructions: "full",
-    skills: "none",
+    skills: "full",
     subagents: "none",
     mcp: "full",
     permissions: "partial",

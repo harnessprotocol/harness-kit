@@ -6,6 +6,7 @@ import {
   readDir,
   lstat,
   rename,
+  remove,
 } from "@tauri-apps/plugin-fs";
 import { homeDir } from "@tauri-apps/api/path";
 import type { FsProvider } from "@harness-kit/core";
@@ -52,6 +53,10 @@ export class TauriFsProvider implements FsProvider {
     return entries.map((e) => e.name).filter((n): n is string => n != null);
   }
 
+  async readDirAll(path: string): Promise<string[]> {
+    return this.readDir(path);
+  }
+
   async isDirectory(path: string): Promise<boolean> {
     try {
       const info = await lstat(path);
@@ -63,6 +68,19 @@ export class TauriFsProvider implements FsProvider {
 
   async renameFile(from: string, to: string): Promise<void> {
     await rename(from, to);
+  }
+
+  async removeFile(path: string): Promise<void> {
+    await remove(path);
+  }
+
+  async isSymlink(path: string): Promise<boolean> {
+    try {
+      const info = await lstat(path);
+      return info.isSymlink;
+    } catch {
+      return false;
+    }
   }
 
   joinPath(...segments: string[]): string {

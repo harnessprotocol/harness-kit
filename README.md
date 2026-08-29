@@ -106,17 +106,42 @@ A few highlights to get started:
 /plugin install superpowers@obra
 ```
 
-## 🔄 Share Your Setup
+## 🔄 Port Your Whole Harness
 
-Export your plugin setup to a `harness.yaml`, commit it to your dotfiles, and restore it anywhere.
+Capture the native configuration you already use, reconcile it with personal, project, session, and organization policy, then apply it to any supported harness. Preview is the default; conflicts and unsupported capabilities block writes until you make an explicit choice.
+
+```bash
+harness-kit capture --scope project
+harness-kit capture --scope project --yes --force
+harness-kit reconcile harness.yaml --target all --json
+harness-kit apply harness.yaml --target codex --yes
+harness-kit rollback --yes
+```
+
+Repository-local skills can be promoted without moving them first: either pin their existing `owner/repo/path` source or package their declared files into a content-addressed capsule.
+
+```bash
+harness-kit skills discover
+harness-kit skills promote ./skills/review --mode reference --yes
+harness-kit skills promote ./skills/review --mode capsule --scope personal --yes
+```
+
+The organization workflow is currently a release preview pending managed and self-hosted contract certification. Enrolled devices use the same engine for staged updates: optional updates stay in preview, while a policy-mandated update applies without a second consent prompt, verifies convergence, reports health, and restores the prior transaction on failure.
+
+```bash
+harness-kit auth login
+harness-kit org rollout-sync <organization-id> --target all
+```
+
+The existing plugin-oriented workflows remain available:
 
 | Command | What it does |
 |---------|-------------|
 | `/harness-export` | Write `harness.yaml` from your current setup |
 | `/harness-import harness.yaml` | Interactive wizard — pick what to install |
-| `/harness-compile` | Compile to native configs for Claude Code, Cursor, and Copilot |
-| `/harness-sync` | Keep all three tools' configs aligned |
-| `/harness-validate` | Validate against the [Harness Protocol v1](https://harnessprotocol.ai) schema |
+| `/harness-compile` | Compile to native configs for all eight supported targets |
+| `/harness-sync` | Keep supported tool configs aligned |
+| `/harness-validate` | Validate a Harness Protocol profile |
 
 <details>
 <summary>Shell fallback (no Claude Code required)</summary>
@@ -125,13 +150,14 @@ Export your plugin setup to a `harness.yaml`, commit it to your dotfiles, and re
 curl -fsSL https://raw.githubusercontent.com/harnessprotocol/harness-kit/main/harness-restore.sh | bash -s -- harness.yaml
 ```
 
-See [`harness.yaml.example`](harness.yaml.example) for the config format. `harness.yaml` follows the [Harness Protocol v1](https://harnessprotocol.ai) open spec — a vendor-neutral format for portable AI coding harnesses.
+See [`harness.yaml.example`](harness.yaml.example) for the config format. New captures use Harness Protocol v2; v1 profiles continue to parse, compile, and reconcile.
 </details>
 
 ## 🔒 Security & Privacy
 
-- **No telemetry, no data collection** — harness-kit never phones home. Optional stats are local-only.
-- **Secrets stay out of config** — plugins declare environment variables they need (`requires.env` in `plugin.json`) with `required`, `optional`, and `sensitive` flags. Values live in your shell profile, direnv, or a secrets manager — never in checked-in files. The framework validates existence but never reads or logs values.
+- **Local by default** — Harness Kit does not upload local source material. An enrolled organization may receive a client-redacted inventory of assignments, digests, target state, and drift; raw files, prompts, skill bodies, secret values, and environment contents are excluded on-device.
+- **Local state stays local** — reconciliation bases, ownership fingerprints, device assignments, backups, and rollback manifests live under a self-ignoring `.harness/` directory.
+- **Secrets stay out of config** — plugins declare environment variables they need (`requires.env` in `plugin.json`) with `required`, `optional`, and `sensitive` flags. Values live in your shell profile, direnv, or a secrets manager — never in checked-in files. Harness Kit does not persist, transmit, or log detected secret values.
 - **Plain text, fully inspectable** — plugins are markdown and JSON. No binaries, no background processes, no network calls on install. Scripts and hooks only run when you explicitly invoke a skill.
 - **Granular permissions** — tool-level allow/deny/ask, path-level write restrictions, and network host allowlists. All configurable per-project.
 - **Audit logging** — permission changes, secret access, and preset applications are logged with timestamps.
@@ -150,6 +176,7 @@ A Tauri desktop control plane for your AI coding harnesses — config console wi
 - **Comparator** — structured evaluation workbench: configure harnesses, run side-by-side comparisons, review file diffs, and judge results across a 4-phase workflow, local-only
 - **Harness editor** — inline editing with custom profiles
 - **Parity** — cross-platform feature parity tracking across AI coding tools
+- **Fleet and Drift** — layered capture/apply previews, capability losses, reconciliation conflicts, governed rollout status, and local rollback history
 - **Security** — permissions editor, secrets management, and audit logging
 
 See [`apps/desktop/`](apps/desktop/) for build instructions. The desktop app is a separate product from the plugin marketplace.

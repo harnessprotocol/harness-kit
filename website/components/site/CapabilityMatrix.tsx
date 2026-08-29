@@ -1,24 +1,23 @@
 import rawMatrix from '@/lib/capability-matrix.generated.json';
 
-type FeatureSupport = 'full' | 'partial' | 'none';
+type CapabilityLevel = 'native' | 'translated' | 'source-only' | 'unsupported';
 
 interface CapabilityCell {
-  domain: string;
-  export: FeatureSupport;
-  import: FeatureSupport;
+  resource: string;
+  operations: Record<'capture' | 'apply' | 'reconcile' | 'rollback', CapabilityLevel>;
+  scopes: Record<'organization' | 'personal' | 'project' | 'session', CapabilityLevel>;
+  note?: string;
 }
 
 interface CapabilityRow {
   id: string;
   label: string;
-  scopes: string[];
-  diff: boolean;
   cells: CapabilityCell[];
 }
 
 interface CapabilityMatrixData {
   generatedAt: string;
-  domains: { id: string; label: string }[];
+  resources: { id: string; label: string }[];
   rows: CapabilityRow[];
 }
 
@@ -27,15 +26,16 @@ interface CapabilityMatrixData {
 // (see packages/website-data/src/generate-capability-matrix.ts).
 const matrix = rawMatrix as unknown as CapabilityMatrixData;
 
-const LABEL: Record<FeatureSupport, string> = {
-  full: 'Full',
-  partial: 'Partial',
-  none: 'None',
+const LABEL: Record<CapabilityLevel, string> = {
+  native: 'Native',
+  translated: 'Translated',
+  'source-only': 'Source only',
+  unsupported: 'Unsupported',
 };
 
-function Chip({ value }: { value: FeatureSupport }) {
+function Chip({ value, title }: { value: CapabilityLevel; title: string }) {
   return (
-    <span className={`cap-chip cap-chip-${value}`}>
+    <span className={`cap-chip cap-chip-${value}`} title={title}>
       <span className="cap-chip-dot" aria-hidden="true" />
       {LABEL[value]}
     </span>
@@ -54,7 +54,7 @@ export function CapabilityMatrix() {
   return (
     <div className="w-full">
       <div className="overflow-x-auto rounded-xl" style={{ boxShadow: 'var(--shadow-sm)' }}>
-        <table className="w-full min-w-[720px] border-separate border-spacing-0 text-sm">
+        <table className="w-full min-w-[1120px] border-separate border-spacing-0 text-sm">
           <thead>
             <tr>
               <th
@@ -75,8 +75,8 @@ export function CapabilityMatrix() {
             </tr>
           </thead>
           <tbody>
-            {matrix.domains.map((domain, i) => (
-              <tr key={domain.id}>
+            {matrix.resources.map((resource, i) => (
+              <tr key={resource.id}>
                 <td
                   className="sticky left-0 z-10 px-4 py-2.5 font-medium"
                   style={{
@@ -84,17 +84,25 @@ export function CapabilityMatrix() {
                     color: 'var(--fg-base)',
                   }}
                 >
-                  {domain.label}
+                  {resource.label}
                 </td>
                 {matrix.rows.map((row) => {
-                  const cell = row.cells.find((c) => c.domain === domain.id)!;
+                  const cell = row.cells.find((c) => c.resource === resource.id)!;
+                  const title = [
+                    `Apply: ${LABEL[cell.operations.apply]}`,
+                    `Capture: ${LABEL[cell.operations.capture]}`,
+                    `Reconcile: ${LABEL[cell.operations.reconcile]}`,
+                    `Rollback: ${LABEL[cell.operations.rollback]}`,
+                    `Scopes: ${Object.entries(cell.scopes).map(([scope, level]) => `${scope}=${LABEL[level]}`).join(', ')}`,
+                    cell.note,
+                  ].filter(Boolean).join('. ');
                   return (
                     <td
                       key={row.id}
                       className="px-4 py-2.5"
                       style={{ background: i % 2 === 0 ? 'var(--bg-surface)' : 'var(--bg-base)' }}
                     >
-                      <Chip value={cell.export} />
+                      <Chip value={cell.operations.apply} title={title} />
                     </td>
                   );
                 })}
@@ -104,13 +112,13 @@ export function CapabilityMatrix() {
         </table>
       </div>
       <p className="mt-4 text-xs leading-relaxed" style={{ color: 'var(--fg-subtle)' }}>
-        Export support — what harness.yaml can currently compile into each tool&apos;s native config.
-        Generated at build time from each adapter&apos;s declared capabilities in{' '}
+        Apply support is shown; hover a cell for capture, reconciliation, rollback, scope, and loss details.
+        Generated at build time from the exhaustive portability registry in{' '}
         <code className="rounded px-1 py-0.5 font-mono" style={{ background: 'var(--bg-elevated)' }}>
           @harness-kit/core
         </code>
-        , not hand-maintained — <span style={{ color: 'var(--fg-base)' }}>partial and none are the point</span>: every
-        tool&apos;s real limits, not a marketing gloss.
+        , not hand-maintained — <span style={{ color: 'var(--fg-base)' }}>source-only and unsupported are deliberate</span>:
+        every tool&apos;s real limits, without invented native support.
       </p>
     </div>
   );

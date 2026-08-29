@@ -12,6 +12,7 @@ import {
 } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
 import type { FixOperation, TargetPlatform } from "@harness-kit/core";
+import { buildReconciliationContext, summarizePlan } from "./portability-common.js";
 
 interface FixFlags {
   target?: string;
@@ -83,11 +84,25 @@ export async function fixCommand(
   const targets = flags.target ? parseTargets(flags.target) : ALL_TARGETS;
   const adapterCtx = { fs, projectRoot: fs.cwd(), homeRoot: await fs.homedir() };
 
+  const reconciliationContext = config.version === "2"
+    ? await buildReconciliationContext(resolved, { target: targets.join(",") })
+    : undefined;
+  if (reconciliationContext?.plan.blocked) {
+    const reconciliation = summarizePlan(reconciliationContext.plan);
+    if (flags.json) console.log(JSON.stringify({ plan: { changes: [], acknowledged: [] }, applied: false, reconciliation }));
+    else console.log(chalk.yellow("Fix is blocked by whole-harness conflicts. Run harness-kit reconcile and choose explicit resolutions first."));
+    process.exit(1);
+  }
+
   const driftReport = await detectDrift(config, adapterCtx, targets);
   const plan = await buildFixPlan(driftReport.items, fs);
 
   if (flags.json) {
-    console.log(JSON.stringify({ plan, applied: false }));
+    console.log(JSON.stringify({
+      plan,
+      applied: false,
+      ...(reconciliationContext ? { reconciliation: summarizePlan(reconciliationContext.plan) } : {}),
+    }));
   }
 
   if (plan.changes.length === 0 && plan.acknowledged.length === 0) {

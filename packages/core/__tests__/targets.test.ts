@@ -26,6 +26,14 @@ describe("TARGETS registry", () => {
     expect(getTarget("claude-code").skillsDir).toBeNull();
   });
 
+  it("declares an explicit personal skill catalog path for every target", () => {
+    for (const target of TARGETS) {
+      expect(target.globalSkillsDir).toMatch(/^\./);
+    }
+    expect(getTarget("codex").globalSkillsDir).toBe(".codex/skills");
+    expect(getTarget("opencode").globalSkillsDir).toBe(".config/opencode/skills");
+  });
+
   it("cursor uses nested layout", () => {
     expect(getTarget("cursor").layout).toBe("nested");
   });

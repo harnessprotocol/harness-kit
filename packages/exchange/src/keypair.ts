@@ -24,9 +24,14 @@ import type { ExchangeKeypair } from "./types.js";
 
 export { fingerprint } from "./fingerprint.js";
 
-const KEY_DIR = path.join(os.homedir(), ".harness", "exchange");
-const PRIV_PATH = path.join(KEY_DIR, "identity.key");
-const PUB_PATH = path.join(KEY_DIR, "identity.pub");
+function keyPaths(): { directory: string; privateKey: string; publicKey: string } {
+  const directory = path.join(process.env.HOME || os.homedir(), ".harness", "exchange");
+  return {
+    directory,
+    privateKey: path.join(directory, "identity.key"),
+    publicKey: path.join(directory, "identity.pub"),
+  };
+}
 
 /** Generate a fresh ed25519 keypair. Does NOT save to disk. */
 export function generate(): ExchangeKeypair {
@@ -44,9 +49,10 @@ export function generate(): ExchangeKeypair {
  * WARNING: the key is stored unencrypted in Phase 1 MVP.
  */
 export function save(keypair: ExchangeKeypair): void {
-  fs.mkdirSync(KEY_DIR, { recursive: true, mode: 0o700 });
-  fs.writeFileSync(PUB_PATH, keypair.publicKey + "\n", { encoding: "utf-8" });
-  fs.writeFileSync(PRIV_PATH, keypair.privateKey + "\n", {
+  const paths = keyPaths();
+  fs.mkdirSync(paths.directory, { recursive: true, mode: 0o700 });
+  fs.writeFileSync(paths.publicKey, keypair.publicKey + "\n", { encoding: "utf-8" });
+  fs.writeFileSync(paths.privateKey, keypair.privateKey + "\n", {
     encoding: "utf-8",
     mode: 0o600,
   });
@@ -57,21 +63,23 @@ export function save(keypair: ExchangeKeypair): void {
  * Warns if the private key file has permissions wider than 0o600 (POSIX only).
  */
 export function load(): ExchangeKeypair {
-  if (!fs.existsSync(PRIV_PATH) || !fs.existsSync(PUB_PATH)) {
+  const paths = keyPaths();
+  if (!fs.existsSync(paths.privateKey) || !fs.existsSync(paths.publicKey)) {
     throw new Error(
       "No Exchange keypair found. Run `harness exchange keygen` first."
     );
   }
-  warnIfInsecurePerms(PRIV_PATH);
+  warnIfInsecurePerms(paths.privateKey);
   return {
-    privateKey: fs.readFileSync(PRIV_PATH, "utf-8").trim(),
-    publicKey: fs.readFileSync(PUB_PATH, "utf-8").trim(),
+    privateKey: fs.readFileSync(paths.privateKey, "utf-8").trim(),
+    publicKey: fs.readFileSync(paths.publicKey, "utf-8").trim(),
   };
 }
 
 /** Returns true if a keypair exists on disk. */
 export function exists(): boolean {
-  return fs.existsSync(PRIV_PATH) && fs.existsSync(PUB_PATH);
+  const paths = keyPaths();
+  return fs.existsSync(paths.privateKey) && fs.existsSync(paths.publicKey);
 }
 
 /**

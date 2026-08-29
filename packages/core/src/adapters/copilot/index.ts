@@ -34,7 +34,7 @@ const capabilities: AdapterCapabilities = {
   },
   import: {
     instructions: "full",
-    skills: "none",
+    skills: "full",
     subagents: "none",
     mcp: "full",
     permissions: "none",

@@ -1,6 +1,6 @@
 # harness.yaml — your personal harness configuration
 #
-# This file follows the Harness Protocol v1 format (harnessprotocol.ai).
+# This file follows the Harness Protocol v2 format (harnessprotocol.ai).
 # Commit it to your dotfiles and restore it on any new machine.
 #
 # Restore with Claude Code:
@@ -10,13 +10,14 @@
 #   curl -fsSL https://raw.githubusercontent.com/harnessprotocol/harness-kit/main/harness-restore.sh | bash -s -- harness.yaml
 #
 # ── Format note ────────────────────────────────────────────────────────────────
-# Protocol v1:  version: "1"  (string) — uses source: owner/repo per plugin
-# Legacy v1:    version: 1    (integer) — uses marketplace: key + marketplaces: section
-# harness-import handles both. New exports use protocol v1 format.
+# Protocol v2 adds an explicit layer and lossless namespaced vendor blocks.
+# Harness Kit continues to parse and migrate Protocol v1 profiles.
 # ───────────────────────────────────────────────────────────────────────────────
 
-$schema: https://harnessprotocol.ai/schema/v1/harness.schema.json
-version: "1"
+$schema: https://harnessprotocol.io/schema/v2/harness.schema.json
+version: "2"
+kind: profile
+scope: personal
 
 # Profile identity (optional — helps teammates understand what this harness is for)
 metadata:

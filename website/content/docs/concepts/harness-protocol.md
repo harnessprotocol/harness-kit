@@ -13,9 +13,17 @@ harness-kit is the **reference implementation** of the Harness Protocol. The rel
 
 Conformance does not require harness-kit. Any tool that correctly validates and applies `harness.yaml` according to the specification is a conformant implementation.
 
+## Protocol v2 and reconciliation
+
+Harness Protocol v2 treats native tool configuration and `harness.yaml` as bidirectional peers. A profile records portable intent; `harness.lock` records resolved revisions and immutable digests; gitignored local state records the last-applied reconciliation base, managed-file fingerprints, backups, and rollback history.
+
+Resources resolve through organization → personal → project → session layers. The closest definition wins, but organization policy is a ceiling lower layers cannot widen. Native-only settings stay in namespaced vendor blocks so they can round-trip to their originating harness; applying them elsewhere produces a portability warning instead of invented support.
+
+Harness Kit continues to parse and compile v1 profiles. New captures produce v2, and migration can be previewed without changing either the profile or native files.
+
 ## Desktop App
 
-The harness-kit desktop app treats `harness.yaml` as a first-class element. The **Harness File** page (the default landing page under the Harness section) reads `~/.claude/harness.yaml` or `~/harness.yaml` and displays a structured, annotated breakdown of each section — plugins, MCP servers, env declarations, instructions, permissions, and extends — with a raw YAML toggle.
+The desktop app treats `harness.yaml` and native configuration as peer state. Fleet and Drift show profile scope, provenance, capability losses, reconciliation conflicts, capture/apply previews, rollout assignment, and local rollback history. Invalid profiles and state are surfaced as blocking errors rather than silently treated as absent.
 
 ## Architectural constraints
 
@@ -64,5 +72,5 @@ instruction slots.
 ## Links
 
 - [Harness Protocol spec](https://harnessprotocol.ai) — full specification, including architecture, field reference, security model, and plugin manifest format
-- [JSON Schema](https://harnessprotocol.ai/schema/v1/harness.schema.json) — machine-readable validation schema
+- [JSON Schema](https://harnessprotocol.ai) — machine-readable v1 and v2 validation schemas
 - [harness-kit](https://github.com/harnessprotocol/harness-kit) — reference implementation

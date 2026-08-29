@@ -21,36 +21,21 @@ Portable configuration eliminates this variable. Same workflow definition, diffe
 
 ## What's portable today
 
-**SKILL.md files are plain markdown.** They're not API calls, not SDK integrations, not compiled code. A SKILL.md is a prompt template with numbered steps, scope controls, output format specs, and common mistake guards.
+Harness Protocol v2 represents plugins, skills, MCP servers, instructions, environment declarations, permissions, architectural constraints, policy, inheritance, and target-native extensions. `harness capture` discovers native peer state, `harness reconcile` performs a three-way comparison, and `harness apply` writes an approved plan transactionally.
 
-The `harness-share` plugin's `/harness-compile` skill is the compatibility layer: it takes a single `harness.yaml` and generates native config for **8 targets** — Claude Code, Cursor, GitHub Copilot, Codex, OpenCode, Windsurf, Gemini CLI, and JetBrains Junie. The last five all read a single shared `AGENTS.md` file, so compiling for any combination of them writes it once. Manual copy-paste still works too, for one-off setups or tools `/harness-compile` doesn't cover:
+The same lifecycle covers **8 targets** — Claude Code, Cursor, GitHub Copilot, Codex, OpenCode, Windsurf, Gemini CLI, and JetBrains Junie. A data-driven capability matrix classifies every resource, scope, and operation as native, translated, source-only, or unsupported. Source-only and unsupported cells produce durable loss reports; Harness Kit does not invent native support.
 
-- **Cursor:** Copy SKILL.md content into `.cursor/rules/`
-- **Copilot:** Add to workspace instructions in `.github/copilot-instructions.md`
-- **Codex / OpenCode / Windsurf / Gemini CLI / Junie:** Append to `AGENTS.md`
-- **Any tool with custom instructions:** Paste the markdown
+Repository-local skills can be promoted into personal or organization catalogs either by pinning an in-place repository path to an immutable revision and digest or by publishing a validated content-addressed capsule. Flat directory aliases are deployment details: duplicate content is grouped by fingerprint, while different resources that need the same alias require an explicit winner.
 
-The workflows themselves — research indexing, layered explanations, data lineage tracing — work regardless of which LLM reads them. The steps are model-agnostic.
+## Native-only behavior
 
-## What's not portable yet
-
-Some parts of the plugin system are still tied to Claude Code's infrastructure:
-
-| Capability | Status | Why |
-|------------|--------|-----|
-| SKILL.md prompts | Portable now | Plain markdown, works anywhere |
-| Compiled instructions, MCP configs, skill copies | Portable now via `/harness-compile` | Generates native config for all 8 targets from one `harness.yaml` |
-| Distribution (marketplace install) | Claude Code + Copilot CLI native | Both read `.claude-plugin/` directly; other targets install via `/harness-compile` or manual copy |
-| Stop hooks | Claude Code only | Hook system is Claude Code-specific |
-| MCP server references (orient, capture, membrain) | Portable, wiring varies | MCP is an open protocol; Codex and Windsurf configure it globally rather than per-project |
-| Agent definitions (`.claude/agents/*.md`) | Claude Code only | No equivalent primitive exists yet in the other 7 targets |
-| Bundled scripts | Portable | Shell scripts, but auto-execution depends on the harness |
+Agents, hooks, commands, models, and unmatched native settings that do not have a shared protocol shape are preserved in a target-namespaced vendor block. They can round-trip back to their originating harness. Applying that block elsewhere reports a portability loss instead of silently dropping or translating it.
 
 ## Current status
 
-Prompts, compiled instructions, and MCP wiring are portable across all 8 targets today via `/harness-compile`. Hooks and agent definitions remain Claude Code-specific — there's no equivalent primitive to compile them to yet.
+The local capture, preview, reconciliation, apply, drift, and rollback engine is implemented across all eight targets. Organization publication, policy, rollout, audit, and redacted-inventory workflows are a release preview until the service contract suite passes against both managed and documented self-hosted deployments.
 
-If you're using a non-Claude Code tool today, run `/harness-compile` or see [Installation — Using with other tools](/docs/getting-started/installation) for manual specifics.
+Use `harness capture` and `harness reconcile` to inspect the exact plan before writing. `/harness-compile` remains available for the existing plugin workflow.
 
 ## See Also
 

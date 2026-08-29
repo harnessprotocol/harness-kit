@@ -1,4 +1,4 @@
-import { readFile, writeFile, access, mkdir, readdir, lstat, rename } from "node:fs/promises";
+import { readFile, writeFile, access, mkdir, readdir, lstat, rename, unlink, chmod } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { homedir } from "node:os";
 import type { FsProvider } from "./fs-provider.js";
@@ -38,8 +38,16 @@ export class NodeFsProvider implements FsProvider {
     return entries.filter((e) => !e.isSymbolicLink()).map((e) => e.name);
   }
 
+  async readDirAll(path: string): Promise<string[]> {
+    return readdir(path);
+  }
+
   async renameFile(from: string, to: string): Promise<void> {
     await rename(from, to);
+  }
+
+  async removeFile(path: string): Promise<void> {
+    await unlink(path);
   }
 
   async isDirectory(path: string): Promise<boolean> {
@@ -58,6 +66,18 @@ export class NodeFsProvider implements FsProvider {
     } catch {
       return false;
     }
+  }
+
+  async getFileMode(path: string): Promise<number | null> {
+    try {
+      return (await lstat(path)).mode & 0o777;
+    } catch {
+      return null;
+    }
+  }
+
+  async setFileMode(path: string, mode: number): Promise<void> {
+    await chmod(path, mode);
   }
 
   joinPath(...segments: string[]): string {

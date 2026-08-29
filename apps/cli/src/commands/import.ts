@@ -2,7 +2,7 @@ import { access, writeFile } from "node:fs/promises";
 import { resolve, basename } from "node:path";
 import chalk from "chalk";
 import { confirm } from "@inquirer/prompts";
-import { importProjectValidated } from "@harness-kit/core";
+import { importProjectValidated, sanitizeCapturedSecrets } from "@harness-kit/core";
 import type { ImportFindings, ImportProjectResult, HarnessConfig } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
 
@@ -233,6 +233,19 @@ export async function importCommand(flags: ImportFlags): Promise<void> {
     finalConfig = mergeGlobalIntoProject(projectResult.harnessConfig, globalResult.harnessConfig);
     const { stringify } = await import("yaml");
     finalYaml = stringify(finalConfig, { lineWidth: 0 });
+  }
+
+  const sanitized = sanitizeCapturedSecrets(finalConfig);
+  finalConfig = sanitized.config;
+  const { stringify } = await import("yaml");
+  finalYaml = stringify(finalConfig, { lineWidth: 0 });
+  if (sanitized.findings.length > 0) {
+    console.log("");
+    console.log(
+      chalk.yellow(
+        `${sanitized.findings.length} credential value(s) were replaced with local environment declarations.`,
+      ),
+    );
   }
 
   const conflictsText = formatConflicts(projectResult);

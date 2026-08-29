@@ -9,6 +9,7 @@ import {
 } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
 import type { DriftItem, DriftClass, TargetPlatform } from "@harness-kit/core";
+import { buildReconciliationContext, summarizePlan } from "./portability-common.js";
 
 interface DiffFlags {
   target?: string;
@@ -111,15 +112,22 @@ export async function diffCommand(
   const targets = flags.target ? parseTargets(flags.target) : ALL_TARGETS;
   const adapterCtx = { fs, projectRoot: fs.cwd(), homeRoot: await fs.homedir() };
   const report = await detectDrift(config, adapterCtx, targets);
+  const reconciliation = config.version === "2"
+    ? summarizePlan(await buildReconciliationContext(resolved, { target: targets.join(",") }).then((context) => context.plan))
+    : undefined;
 
   if (flags.json) {
-    console.log(JSON.stringify(report));
-    if (report.hasDrift) process.exit(1);
+    console.log(JSON.stringify({ ...report, ...(reconciliation ? { reconciliation } : {}) }));
+    if (report.hasDrift || (reconciliation as { blocked?: boolean } | undefined)?.blocked) process.exit(1);
     return;
   }
 
   if (report.items.length === 0) {
     console.log(chalk.green("No drift detected.") + " Deployed config matches harness.yaml.");
+    if ((reconciliation as { blocked?: boolean } | undefined)?.blocked) {
+      console.log(chalk.yellow("Portable/native reconciliation still has unresolved conflicts; run harness-kit reconcile."));
+      process.exit(1);
+    }
     return;
   }
 

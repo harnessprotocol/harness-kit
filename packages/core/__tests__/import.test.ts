@@ -295,7 +295,8 @@ describe("importProject: schema validity across a from-scratch fixture set", () 
   it("an empty project (no tool configs at all) still synthesizes a schema-valid minimal profile", async () => {
     const fs = new MockFsProvider({}, "/empty", "/home/user");
     const result = await importProjectValidated({ fs, name: "blank", description: "Nothing found" });
-    expect(result.harnessConfig.version).toBe("1");
+    expect(result.harnessConfig.version).toBe("2");
+    expect(result.harnessConfig.scope).toBe("project");
     expect(result.findings.adapters.every((a) => a.detected === false)).toBe(true);
   });
 });

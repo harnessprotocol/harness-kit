@@ -68,7 +68,7 @@ describe("compileMcpServers", () => {
     expect(parsed.mcpServers.newserver.command).toBe("new-cmd");
   });
 
-  it("warns on name collision and keeps existing", async () => {
+  it("warns on name collision and applies the reconciled definition", async () => {
     const existing = JSON.stringify({
       mcpServers: {
         postgres: { type: "stdio", command: "old-postgres" },
@@ -85,12 +85,11 @@ describe("compileMcpServers", () => {
 
     const { files, warnings } = await compileMcpServers(config, ["claude-code"], fs);
     const parsed = JSON.parse(files[0].content);
-    // Existing config preserved
-    expect(parsed.mcpServers.postgres.command).toBe("old-postgres");
+    expect(parsed.mcpServers.postgres.command).toBe("new-postgres");
     // Warning emitted
     expect(warnings.length).toBe(1);
     expect(warnings[0]).toContain("postgres");
-    expect(warnings[0]).toContain("Existing config kept");
+    expect(warnings[0]).toContain("will replace it");
   });
 
   it("returns empty files when no mcp-servers", async () => {
