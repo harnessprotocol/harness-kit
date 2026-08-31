@@ -1,6 +1,6 @@
 ---
 name: local-skill
-description: A project-local skill.
+description: Test fixture for harness-kit observation tests — not a real skill.
 ---
 
 # Local Skill

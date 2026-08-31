@@ -1,6 +1,6 @@
 ---
 name: researcher
-description: Deep research across many sources.
+description: Test fixture for harness-kit observation tests — not a real skill.
 ---
 
 # Researcher

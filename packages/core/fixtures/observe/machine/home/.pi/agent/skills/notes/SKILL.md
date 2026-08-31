@@ -1,6 +1,6 @@
 ---
 name: notes
-description: Capture and organize working notes.
+description: Test fixture for harness-kit observation tests — not a real skill.
 ---
 
 # Notes
