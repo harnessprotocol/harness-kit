@@ -1,4 +1,4 @@
-import type { HarnessConfig, TargetPlatform } from "../types.js";
+import type { HarnessConfig, SurfaceId } from "../types.js";
 import { groupTargetsByAdapter } from "../adapters/registry.js";
 import { getCheckableTargets } from "../compile/check.js";
 import type { AdapterContext } from "../adapters/adapter.js";
@@ -46,7 +46,7 @@ function mergeReports(reports: DriftReport[]): DriftReport {
  * their DriftReports into one.
  *
  * `targets` follows the exact same convention as `compile()` / `checkCompiled()`
- * — the caller (CLI/desktop) says which legacy TargetPlatforms it cares
+ * — the caller (CLI/desktop) says which legacy SurfaceIds it cares
  * about (typically "whichever targets were actually compiled for this
  * project"), and detection is scoped to those. This mirrors compile.ts's own
  * `groupTargetsByAdapter` dispatch so a target never gets diffed by an
@@ -61,7 +61,7 @@ function mergeReports(reports: DriftReport[]): DriftReport {
 export async function detectDrift(
   config: HarnessConfig,
   ctx: AdapterContext,
-  targets: TargetPlatform[] = getCheckableTargets(),
+  targets: SurfaceId[] = getCheckableTargets(),
 ): Promise<DriftReport> {
   const reports: DriftReport[] = [];
 

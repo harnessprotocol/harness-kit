@@ -1,4 +1,4 @@
-import type { HarnessPolicy, PolicySourceConstraint, TargetPlatform } from "../types.js";
+import type { HarnessPolicy, PolicySourceConstraint, SurfaceId } from "../types.js";
 import {
   HARNESS_SCOPE_ORDER,
   type HarnessResource,
@@ -199,7 +199,7 @@ function conflictId(reason: string, resource: HarnessResource): string {
 
 export function resolveProfileLayers(
   profiles: LayeredHarnessProfile[],
-  affectedTargets: TargetPlatform[] = [],
+  affectedTargets: SurfaceId[] = [],
 ): LayerResolutionResult {
   const ordered = [...profiles].sort(
     (a, b) => HARNESS_SCOPE_ORDER.indexOf(a.scope) - HARNESS_SCOPE_ORDER.indexOf(b.scope),

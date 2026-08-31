@@ -3,7 +3,7 @@ import type {
   FileAction,
   HarnessConfig,
   McpServer,
-  TargetPlatform,
+  SurfaceId,
 } from "../types.js";
 import { readJsonOrDefault } from "../utils/read-json.js";
 import { getTarget } from "./targets.js";
@@ -38,7 +38,7 @@ function translateServer(server: McpServer): McpJsonEntry {
 
 export async function compileMcpServers(
   config: HarnessConfig,
-  targets: TargetPlatform[],
+  targets: SurfaceId[],
   fs: FsProvider,
 ): Promise<{ files: FileAction[]; warnings: string[] }> {
   const mcpServers = config["mcp-servers"];

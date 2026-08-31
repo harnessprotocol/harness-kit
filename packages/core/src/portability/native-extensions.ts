@@ -1,6 +1,6 @@
 import type { FsProvider } from "../fs-provider.js";
 import { TARGETS } from "../adapters/target-metadata.js";
-import type { HarnessVendorConfig, TargetPlatform } from "../types.js";
+import type { HarnessVendorConfig, SurfaceId } from "../types.js";
 import { computeFileHash } from "../compile/check.js";
 import { redactInventoryConfig } from "./inventory.js";
 import { digestValue } from "./resource-model.js";
@@ -25,10 +25,11 @@ export interface NativeExtensionBlock {
   omitted?: Array<{ path: string; reason: string }>;
 }
 
-const RESOURCE_DIRECTORIES: Record<TargetPlatform, string[]> = {
+// Partial over SurfaceId: surfaces without capture machinery yet have no entry.
+const RESOURCE_DIRECTORIES: Partial<Record<SurfaceId, string[]>> = {
   "claude-code": [".claude/agents", ".claude/commands", ".claude/hooks"],
   cursor: [".cursor/agents", ".cursor/commands", ".cursor/hooks"],
-  copilot: [".github/agents", ".github/prompts"],
+  "copilot-vscode": [".github/agents", ".github/prompts"],
   codex: [".codex/agents", ".codex/commands", ".codex/config.toml"],
   opencode: [".opencode/agent", ".opencode/command", ".opencode/plugin"],
   windsurf: [".windsurf/agents", ".windsurf/workflows", ".windsurf/hooks"],
@@ -36,12 +37,12 @@ const RESOURCE_DIRECTORIES: Record<TargetPlatform, string[]> = {
   junie: [".junie/agents", ".junie/commands"],
 };
 
-const EXTRA_SETTING_FILES: Partial<Record<TargetPlatform, Array<{ path: string; omit: string[] }>>> = {
+const EXTRA_SETTING_FILES: Partial<Record<SurfaceId, Array<{ path: string; omit: string[] }>>> = {
   "claude-code": [{ path: ".claude/settings.json", omit: ["permissions"] }],
   opencode: [{ path: "opencode.json", omit: ["$schema", "mcp", "permission"] }],
 };
 
-const NORMALIZED_MCP_TARGETS = new Set<TargetPlatform>(["claude-code", "cursor", "copilot", "gemini", "junie"]);
+const NORMALIZED_MCP_TARGETS = new Set<SurfaceId>(["claude-code", "cursor", "copilot-vscode", "gemini", "junie"]);
 
 const CREDENTIAL_ASSIGNMENT = /(?:^|[\s,{])["']?(?:authorization|token|auth[-_]?token|api[-_]?key|access[-_]?token|access[-_]?key|client[-_]?secret|password|passwd|private[-_]?key|secret|cookie)["']?\s*[:=]\s*([^\n,}]+)/gim;
 const SECRET_REFERENCE = /^(?:\$[A-Za-z_][A-Za-z0-9_]*|\$\{[A-Za-z_][A-Za-z0-9_]*\}|env:[A-Za-z_][A-Za-z0-9_]*|secret:\/\/[^\s]+)$/;
@@ -106,7 +107,7 @@ async function collectFiles(
   files.push({ path: relative, content, digest: `sha256:${computeFileHash(content)}` });
 }
 
-function settingsFor(target: TargetPlatform): Array<{ path: string; omit: string[] }> {
+function settingsFor(target: SurfaceId): Array<{ path: string; omit: string[] }> {
   const integration = TARGETS.find((entry) => entry.id === target)!;
   const common = integration.mcpConfigFile && integration.mcpConfigFormat === "json"
     ? [{ path: integration.mcpConfigFile, omit: NORMALIZED_MCP_TARGETS.has(target) ? ["mcpServers"] : [] }]
@@ -122,7 +123,7 @@ export async function captureNativeExtensions(fs: FsProvider, root = fs.cwd()): 
     const files: NativeExtensionFile[] = [];
     const settings: NativeExtensionSetting[] = [];
     const omitted: NonNullable<NativeExtensionBlock["omitted"]> = [];
-    for (const directory of RESOURCE_DIRECTORIES[target]) {
+    for (const directory of RESOURCE_DIRECTORIES[target] ?? []) {
       if (await fs.exists(fs.joinPath(root, directory))) await collectFiles(fs, root, directory, files, omitted);
     }
     for (const setting of settingsFor(target)) {

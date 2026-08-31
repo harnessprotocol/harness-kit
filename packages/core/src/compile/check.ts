@@ -1,7 +1,7 @@
 import { sha256 } from "@noble/hashes/sha256";
 import { bytesToHex } from "@noble/hashes/utils";
 import type { FsProvider } from "../fs-provider.js";
-import type { HarnessConfig, TargetPlatform } from "../types.js";
+import type { HarnessConfig, SurfaceId } from "../types.js";
 import { findMarkerBlock } from "./markers.js";
 import { compileSkills } from "./skills.js";
 import { getSlotMappings } from "./instructions.js";
@@ -118,7 +118,7 @@ export async function directoriesEqual(
 export interface CheckEntry {
   kind: "skill" | "instruction";
   name: string;          // plugin name for skills; slot name for instructions
-  target: TargetPlatform;
+  target: SurfaceId;
   path: string;
   status: "ok" | "drift" | "missing";
 }
@@ -136,7 +136,7 @@ export interface CheckResult {
  */
 export async function checkCompiled(
   config: HarnessConfig,
-  targets: TargetPlatform[],
+  targets: SurfaceId[],
   fs: FsProvider,
 ): Promise<CheckResult> {
   const entries: CheckEntry[] = [];
@@ -264,6 +264,6 @@ export async function checkCompiled(
 }
 
 /** All targets that have at least one instruction or skill dir to check. */
-export function getCheckableTargets(): TargetPlatform[] {
+export function getCheckableTargets(): SurfaceId[] {
   return TARGETS.map((t) => t.id);
 }

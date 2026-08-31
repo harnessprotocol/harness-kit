@@ -1,4 +1,4 @@
-import type { TargetPlatform } from "../types.js";
+import type { SurfaceId } from "../types.js";
 import { TARGETS } from "../adapters/target-metadata.js";
 import type {
   CapabilityLevel,
@@ -47,7 +47,7 @@ function scopeRecord(project: CapabilityLevel, personal: CapabilityLevel = "tran
   };
 }
 
-function capabilityFor(target: TargetPlatform, resource: HarnessResourceKind): TargetResourceCapability {
+function capabilityFor(target: SurfaceId, resource: HarnessResourceKind): TargetResourceCapability {
   const targetMeta = TARGETS.find((entry) => entry.id === target)!;
   let capture: CapabilityLevel = "source-only";
   let apply: CapabilityLevel = "source-only";
@@ -117,7 +117,7 @@ export const TARGET_CAPABILITY_MATRIX: readonly TargetResourceCapability[] = TAR
 );
 
 export function getTargetCapability(
-  target: TargetPlatform,
+  target: SurfaceId,
   resource: HarnessResourceKind,
 ): TargetResourceCapability {
   const capability = TARGET_CAPABILITY_MATRIX.find(
@@ -128,7 +128,7 @@ export function getTargetCapability(
 }
 
 export function capabilityForResource(
-  target: TargetPlatform,
+  target: SurfaceId,
   resource: HarnessResource,
   operation: LifecycleOperation,
 ): CapabilityLevel {
@@ -148,7 +148,7 @@ export function capabilityForResource(
 }
 
 export function buildLossReport(
-  target: TargetPlatform,
+  target: SurfaceId,
   resources: HarnessResource[],
   operation: LifecycleOperation,
 ): LossReport {

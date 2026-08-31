@@ -1,5 +1,5 @@
 import type { FsProvider } from "../fs-provider.js";
-import type { DetectedPlatform, TargetPlatform } from "../types.js";
+import type { DetectedPlatform, SurfaceId } from "../types.js";
 import { TARGETS } from "../compile/targets.js";
 
 interface DetectionPaths {
@@ -15,10 +15,10 @@ interface DetectionPaths {
 // needsConfirmation instead of a silent miss.
 const AGENTS_MD = "AGENTS.md";
 
-const DETECTION_PATHS: Partial<Record<TargetPlatform, DetectionPaths>> = {
+const DETECTION_PATHS: Partial<Record<SurfaceId, DetectionPaths>> = {
   "claude-code": { paths: ["CLAUDE.md", ".claude", ".mcp.json"], ambiguous: [] },
   "cursor":      { paths: [".cursor", ".cursor/rules", ".cursor/mcp.json", ".cursor/skills"], ambiguous: [AGENTS_MD] },
-  "copilot":     { paths: [".github/copilot-instructions.md", ".vscode/mcp.json", ".github/skills"], ambiguous: [".github", AGENTS_MD] },
+  "copilot-vscode": { paths: [".github/copilot-instructions.md", ".vscode/mcp.json", ".github/skills"], ambiguous: [".github", AGENTS_MD] },
   "codex":       { paths: [".codex"], ambiguous: [AGENTS_MD] },
   "opencode":    { paths: ["opencode.json", ".opencode"], ambiguous: [AGENTS_MD] },
   "windsurf":    { paths: [".windsurf"], ambiguous: [AGENTS_MD] },

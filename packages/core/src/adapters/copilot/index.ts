@@ -10,7 +10,7 @@ import { readInstructionFileAsOpaqueBlock } from "../../import/read-instructions
 import { readMcpConfigFile } from "../../import/read-mcp.js";
 import { detectInstructionDrift, toDriftReport } from "../../fix/detect.js";
 
-const TARGET = "copilot" as const;
+const TARGET = "copilot-vscode" as const;
 
 // Declared honestly from exportConfig below: instructions
 // (copilot-instructions.md + behavioral.instructions.md) and mcp

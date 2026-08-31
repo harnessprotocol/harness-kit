@@ -22,14 +22,14 @@ import type {
   PortabilityState,
   ReconciliationPlan,
   ReconciliationResolution,
-  TargetPlatform,
+  SurfaceId,
 } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
 
-export const ALL_TARGETS: TargetPlatform[] = [
+export const ALL_TARGETS: SurfaceId[] = [
   "claude-code",
   "cursor",
-  "copilot",
+  "copilot-vscode",
   "codex",
   "opencode",
   "windsurf",
@@ -47,7 +47,7 @@ export interface LayerFlags {
 
 export interface ReconciliationContext {
   root: string;
-  targets: TargetPlatform[];
+  targets: SurfaceId[];
   profiles: LayeredHarnessProfile[];
   projectProfile: LayeredHarnessProfile;
   state: PortabilityState;
@@ -61,9 +61,9 @@ export function timestamp(): string {
   return new Date().toISOString().replace(/[:.]/g, "-");
 }
 
-export function parseTargets(value?: string): TargetPlatform[] {
+export function parseTargets(value?: string): SurfaceId[] {
   if (!value || value === "all") return [...ALL_TARGETS];
-  const selected = value.split(",").map((entry) => entry.trim() as TargetPlatform);
+  const selected = value.split(",").map((entry) => entry.trim() as SurfaceId);
   const unknown = selected.filter((target) => !ALL_TARGETS.includes(target));
   if (unknown.length > 0) {
     throw new Error(`unknown target(s): ${unknown.join(", ")}; expected ${ALL_TARGETS.join(", ")} or all`);
@@ -155,7 +155,7 @@ async function retainManagedSourceOnlyResources(
   root: string,
   current: HarnessResource[],
   state: PortabilityState,
-  targets: TargetPlatform[],
+  targets: SurfaceId[],
 ): Promise<HarnessResource[]> {
   const result = [...current];
   const keyFor = (resource: HarnessResource) => `${resource.identity.kind}\0${resource.alias}`;
@@ -231,7 +231,7 @@ async function captureModifiedManagedInstructions(
   root: string,
   current: HarnessResource[],
   state: PortabilityState,
-  targets: TargetPlatform[],
+  targets: SurfaceId[],
 ): Promise<HarnessResource[]> {
   const result = new Map(current.map((resource) => [`${resource.identity.kind}\0${resource.alias}`, resource]));
   const selectedTargets = new Set(targets);

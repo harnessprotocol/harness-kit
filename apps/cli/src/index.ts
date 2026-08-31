@@ -78,7 +78,7 @@ program
   .argument("[path]", "Path to harness.yaml", "harness.yaml")
   .option(
     "--target <targets>",
-    "Target platforms: claude-code, cursor, copilot, codex, opencode, windsurf, gemini, junie (comma-separated), or all",
+    "Target platforms: claude-code, cursor, copilot-vscode, codex, opencode, windsurf, gemini, junie (comma-separated), or all",
   )
   .option("--dry-run", "Preview output without writing files")
   .option("--clean", "Remove orphaned marker blocks from previous compilations")
@@ -92,7 +92,7 @@ Examples:
   harness-kit compile                           Interactive platform detection
   harness-kit compile --target all --dry-run    Preview output for all platforms
   harness-kit compile --target claude-code      Compile for Claude Code only
-  harness-kit compile --target cursor,copilot   Compile for Cursor and Copilot
+  harness-kit compile --target cursor,copilot-vscode   Compile for Cursor and Copilot
   harness-kit compile --clean                   Compile and remove orphaned blocks
   harness-kit compile --watch                   Recompile automatically on harness.yaml changes`,
   )
@@ -134,7 +134,7 @@ program
     `
 Examples:
   harness-kit check                         Check all targets
-  harness-kit check --target cursor,copilot Check specific targets
+  harness-kit check --target cursor,copilot-vscode Check specific targets
 
 Exit code 0 if all ok. Exit code 1 if any drift or missing.`,
   )

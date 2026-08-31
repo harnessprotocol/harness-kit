@@ -6,7 +6,7 @@ import type {
   HarnessPlugin,
   HarnessSkillRef,
   McpServer,
-  TargetPlatform,
+  SurfaceId,
 } from "../types.js";
 import type {
   HarnessResource,
@@ -65,7 +65,7 @@ function makeResource<T>(
   scope: HarnessScope,
   profileSource: string,
   revision?: { requestedVersion?: string; digest?: ReleaseDigest },
-  nativeTarget?: TargetPlatform,
+  nativeTarget?: SurfaceId,
 ): HarnessResource<T> {
   return {
     identity: { kind, source, name },
@@ -194,7 +194,7 @@ export function profileToResources(profile: LayeredHarnessProfile): HarnessResou
         scope,
         profileSource,
         undefined,
-        target as TargetPlatform,
+        target as SurfaceId,
       ),
     );
   }
@@ -224,7 +224,7 @@ export function resourcesToProfile(
   const skills: HarnessSkillRef[] = [];
   const servers: Record<string, McpServer> = {};
   const env: EnvDeclaration[] = [];
-  const vendor: Partial<Record<TargetPlatform, Record<string, unknown>>> = {};
+  const vendor: Partial<Record<SurfaceId, Record<string, unknown>>> = {};
   const parents: Array<{ source: string; version?: string }> = [];
 
   for (const resource of resources) {

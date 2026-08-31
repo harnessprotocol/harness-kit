@@ -4,7 +4,7 @@ import type {
   HarnessConfig,
   HarnessPlugin,
   HarnessSkillRef,
-  TargetPlatform,
+  SurfaceId,
 } from "../types.js";
 import { findSkillFiles, computeSourceDir } from "./discovery.js";
 import { computeFileHash } from "./check.js";
@@ -12,10 +12,12 @@ import { skillDirectoryDigest } from "../import/read-skills.js";
 import { collectCapsuleFiles } from "../portability/capsule.js";
 
 // Skills directory per target. null = plugin install system handles deployment (claude-code).
-const SKILL_TARGET_DIR: Record<TargetPlatform, string | null> = {
+// Partial over SurfaceId: surfaces without compile machinery yet have no entry
+// (the lookup below skips them, same as a null entry).
+const SKILL_TARGET_DIR: Partial<Record<SurfaceId, string | null>> = {
   "claude-code": null,
   cursor: ".cursor/skills",
-  copilot: ".github/skills",
+  "copilot-vscode": ".github/skills",
   codex: ".agents/skills",
   opencode: ".opencode/skills",
   windsurf: ".windsurf/skills",
@@ -84,7 +86,7 @@ function adaptFrontmatter(content: string): string {
 
 export async function compileSkills(
   config: HarnessConfig,
-  targets: TargetPlatform[],
+  targets: SurfaceId[],
   fs: FsProvider,
 ): Promise<{ files: FileAction[]; skippedPlugins: string[] }> {
   const plugins = config.plugins ?? [];

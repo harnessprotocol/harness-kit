@@ -30,7 +30,7 @@ import type {
   HarnessResourceKind,
   HarnessScope,
   LifecycleOperation,
-  TargetPlatform,
+  SurfaceId,
 } from "@harness-kit/core";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -58,7 +58,7 @@ export interface CapabilityCell {
 }
 
 export interface CapabilityRow {
-  id: TargetPlatform;
+  id: SurfaceId;
   label: string;
   cells: CapabilityCell[];
 }

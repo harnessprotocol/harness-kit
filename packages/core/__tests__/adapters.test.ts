@@ -42,10 +42,10 @@ describe("adapter registry", () => {
     expect(getAllAdapters()).toBe(ADAPTERS);
   });
 
-  it("maps every legacy TargetPlatform to an adapter", () => {
+  it("maps every compile-target surface to an adapter", () => {
     expect(adapterIdForTarget("claude-code")).toBe("claude-code");
     expect(adapterIdForTarget("cursor")).toBe("cursor");
-    expect(adapterIdForTarget("copilot")).toBe("copilot");
+    expect(adapterIdForTarget("copilot-vscode")).toBe("copilot");
     expect(adapterIdForTarget("codex")).toBe("agents-md");
     expect(adapterIdForTarget("opencode")).toBe("opencode");
     expect(adapterIdForTarget("windsurf")).toBe("agents-md");

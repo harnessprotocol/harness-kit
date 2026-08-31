@@ -13,7 +13,7 @@ import {
   validateHarness,
 } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
-import type { OrphanedBlock, TargetPlatform } from "@harness-kit/core";
+import type { OrphanedBlock, SurfaceId } from "@harness-kit/core";
 import { formatCompileReport, formatDryRunFile } from "../formatters/report.js";
 import { formatValidationResult } from "../formatters/validation.js";
 
@@ -60,15 +60,15 @@ async function releaseLock(lockPath: string): Promise<void> {
   }
 }
 
-const ALL_TARGETS: TargetPlatform[] = [
-  "claude-code", "cursor", "copilot",
+const ALL_TARGETS: SurfaceId[] = [
+  "claude-code", "cursor", "copilot-vscode",
   "codex", "opencode", "windsurf", "gemini", "junie",
 ];
 
-function parseTargets(targetStr: string): TargetPlatform[] {
+function parseTargets(targetStr: string): SurfaceId[] {
   if (targetStr === "all") return ALL_TARGETS;
   return targetStr.split(",").map((t) => {
-    const trimmed = t.trim() as TargetPlatform;
+    const trimmed = t.trim() as SurfaceId;
     if (!ALL_TARGETS.includes(trimmed)) {
       console.error(`Unknown target: ${trimmed}. Valid targets: ${ALL_TARGETS.join(", ")}, all`);
       process.exit(1);
@@ -86,7 +86,7 @@ export async function compileCommand(
 
   // Determine targets once up front — --watch reuses the same target list
   // for every recompile rather than re-prompting on each change.
-  let targets: TargetPlatform[];
+  let targets: SurfaceId[];
   if (flags.target) {
     targets = parseTargets(flags.target);
   } else {
@@ -119,7 +119,7 @@ export async function compileCommand(
 async function runCompileOnce(
   resolved: string,
   fs: NodeFsProvider,
-  targets: TargetPlatform[],
+  targets: SurfaceId[],
   flags: CompileFlags,
 ): Promise<void> {
   // Read harness.yaml
@@ -214,7 +214,7 @@ const WATCH_DEBOUNCE_MS = 300;
 async function watchCompile(
   resolved: string,
   fs: NodeFsProvider,
-  targets: TargetPlatform[],
+  targets: SurfaceId[],
   flags: CompileFlags,
 ): Promise<void> {
   console.log(chalk.bold(`Watching ${resolved} for changes...`) + chalk.dim(" (Ctrl-C to stop)"));
@@ -331,14 +331,14 @@ function diffFileSummary(
 
 async function interactiveTargetSelection(
   fs: NodeFsProvider,
-): Promise<TargetPlatform[]> {
+): Promise<SurfaceId[]> {
   const detected = await detectPlatforms(fs);
 
   if (detected.length === 0) {
     console.log(
       "No AI tool config directories found. Which targets should I compile for?",
     );
-    const selected = await checkbox<TargetPlatform>({
+    const selected = await checkbox<SurfaceId>({
       message: "Select targets:",
       choices: ALL_TARGETS.map((t) => ({ name: t, value: t })),
     });
@@ -355,7 +355,7 @@ async function interactiveTargetSelection(
     };
   });
 
-  const selected = await checkbox<TargetPlatform>({
+  const selected = await checkbox<SurfaceId>({
     message: "Detected targets. Confirm or adjust:",
     choices,
   });
@@ -365,7 +365,7 @@ async function interactiveTargetSelection(
 
 async function handleClean(
   harnessName: string,
-  targets: TargetPlatform[],
+  targets: SurfaceId[],
   fs: NodeFsProvider,
 ): Promise<void> {
   // Derive scannable files from the canonical slot mappings

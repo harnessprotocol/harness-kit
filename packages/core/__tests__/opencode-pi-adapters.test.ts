@@ -33,7 +33,7 @@ instructions:
 `;
 
 describe("WP-2.5: registry wiring", () => {
-  it("opencode and pi are both registered, standalone from the legacy agents-md TargetPlatform mapping", () => {
+  it("opencode and pi are both registered, standalone from the legacy agents-md compile-target mapping", () => {
     expect(getAdapter("opencode")).toBe(opencodeAdapter);
     expect(getAdapter("pi")).toBe(piAdapter);
     expect(ADAPTERS).toContain(opencodeAdapter);

@@ -1,6 +1,6 @@
 import type { FsProvider } from "../fs-provider.js";
 import type { AdapterId } from "../adapters/adapter.js";
-import type { HarnessConfig, TargetPlatform } from "../types.js";
+import type { HarnessConfig, SurfaceId } from "../types.js";
 import { findMarkerBlock, findOrphanedMarkerBlocks } from "../compile/markers.js";
 import { getSlotMappings } from "../compile/instructions.js";
 import type { DriftClass, DriftItem, DriftReport } from "./types.js";
@@ -26,7 +26,7 @@ export async function classifyInstructionFile(
   slot: string,
   expectedContent: string,
   adapter: AdapterId,
-  target: TargetPlatform,
+  target: SurfaceId,
 ): Promise<DriftItem[]> {
   const cwd = fs.cwd();
   const fullPath = fs.joinPath(cwd, filePath);
@@ -164,7 +164,7 @@ export function stripAllMarkerBlocks(fileContent: string): string {
 export async function detectInstructionDrift(
   fs: FsProvider,
   config: HarnessConfig,
-  targets: TargetPlatform[],
+  targets: SurfaceId[],
   adapter: AdapterId,
 ): Promise<DriftItem[]> {
   const instructions = config.instructions;

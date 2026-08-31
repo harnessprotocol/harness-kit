@@ -20,7 +20,7 @@ import type {
   ReconciliationOperation,
   ReconciliationPlan,
   ReconciliationResolution,
-  TargetPlatform,
+  SurfaceId,
   TransactionFileChange,
 } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
@@ -170,13 +170,13 @@ function projectProfileAfterCaptures(
 
 async function planNativeFiles(
   root: string,
-  targets: TargetPlatform[],
+  targets: SurfaceId[],
   resources: HarnessResource[],
   adopt: boolean,
   priorOwnership: OwnershipFingerprint[],
 ): Promise<{ changes: TransactionFileChange[]; ownership: OwnershipFingerprint[]; warnings: string[] }> {
   const fs = new NodeFsProvider(root);
-  const byPath = new Map<string, { content: string; targets: Set<TargetPlatform>; slot: string }>();
+  const byPath = new Map<string, { content: string; targets: Set<SurfaceId>; slot: string }>();
   const warnings: string[] = [];
 
   for (const target of targets) {

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Wrench, Pencil, Check, X as XIcon } from "lucide-react";
 import { Button, Card, EmptyState, Input } from "@harness-kit/ui";
 import { compile, detectPlatforms, parseHarness } from "@harness-kit/core";
-import type { CompileResult, DetectedPlatform, TargetPlatform } from "@harness-kit/core";
+import type { CompileResult, DetectedPlatform, SurfaceId } from "@harness-kit/core";
 import {
   readHarnessFile,
   syncCreateBackup,
@@ -16,14 +16,17 @@ import { SyncFsProvider } from "../../lib/sync-fs";
 import SyncPreview from "./sync/SyncPreview";
 import BackupHistory from "./sync/BackupHistory";
 
-const ALL_PLATFORMS: TargetPlatform[] = [
-  "claude-code", "cursor", "copilot", "codex", "opencode", "windsurf", "gemini", "junie",
+const ALL_PLATFORMS: SurfaceId[] = [
+  "claude-code", "cursor", "copilot-vscode", "codex", "opencode", "windsurf", "gemini", "junie",
 ];
-const PLATFORM_LABELS: Record<TargetPlatform, string> = {
+const PLATFORM_LABELS: Record<SurfaceId, string> = {
   "claude-code": "Claude Code",
+  "claude-desktop": "Claude Desktop",
   cursor: "Cursor",
-  copilot: "Copilot",
+  "copilot-vscode": "Copilot",
+  "copilot-cli": "Copilot CLI",
   codex: "Codex",
+  pi: "Pi",
   opencode: "OpenCode",
   windsurf: "Windsurf",
   gemini: "Gemini CLI",
@@ -72,7 +75,7 @@ export default function SyncPage() {
 
   // Platforms
   const [detectedPlatforms, setDetectedPlatforms] = useState<DetectedPlatform[]>([]);
-  const [selectedTargets, setSelectedTargets] = useState<Set<TargetPlatform>>(new Set());
+  const [selectedTargets, setSelectedTargets] = useState<Set<SurfaceId>>(new Set());
 
   // Sync flow
   const [phase, setPhase] = useState<Phase>("idle");
@@ -146,7 +149,7 @@ export default function SyncPage() {
     } catch {}
   }
 
-  function toggleTarget(platform: TargetPlatform) {
+  function toggleTarget(platform: SurfaceId) {
     setSelectedTargets((prev) => {
       const next = new Set(prev);
       if (next.has(platform)) next.delete(platform); else next.add(platform);

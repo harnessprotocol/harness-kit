@@ -4,7 +4,7 @@
 // <stdin>
 var validate = validate20;
 var stdin_default = validate20;
-var schema31 = { "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "https://harnessprotocol.io/schema/v2/harness.schema.json", "title": "Harness Protocol v2 extensions", "description": "Validates the v2 protocol discriminator, profile scope, and lossless native vendor blocks. Implementations also validate all portable sections against the v1 structural schema for backward compatibility.", "type": "object", "required": ["version"], "properties": { "version": { "type": "string", "const": "2" }, "scope": { "type": "string", "enum": ["organization", "personal", "project", "session"], "default": "project" }, "vendor": { "type": "object", "description": "Lossless target-native configuration. A block is only applied by its matching adapter.", "propertyNames": { "enum": ["claude-code", "cursor", "copilot", "codex", "opencode", "windsurf", "gemini", "junie"] }, "additionalProperties": { "type": "object", "additionalProperties": true } } }, "additionalProperties": true };
+var schema31 = { "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "https://harnessprotocol.io/schema/v2/harness.schema.json", "title": "Harness Protocol v2 extensions", "description": "Validates the v2 protocol discriminator, profile scope, and lossless native vendor blocks. Implementations also validate all portable sections against the v1 structural schema for backward compatibility.", "type": "object", "required": ["version"], "properties": { "version": { "type": "string", "const": "2" }, "scope": { "type": "string", "enum": ["organization", "personal", "project", "session"], "default": "project" }, "vendor": { "type": "object", "description": "Lossless target-native configuration. A block is only applied by its matching adapter.", "propertyNames": { "enum": ["claude-code", "claude-desktop", "cursor", "copilot", "copilot-vscode", "copilot-cli", "codex", "opencode", "pi", "windsurf", "gemini", "junie"] }, "additionalProperties": { "type": "object", "additionalProperties": true } } }, "additionalProperties": true };
 function validate20(data, { instancePath = "", parentData, parentDataProperty, rootData = data, dynamicAnchors = {} } = {}) {
   ;
   let vErrors = null;
@@ -73,7 +73,7 @@ function validate20(data, { instancePath = "", parentData, parentDataProperty, r
       if (data2 && typeof data2 == "object" && !Array.isArray(data2)) {
         for (const key0 in data2) {
           const _errs8 = errors;
-          if (!(key0 === "claude-code" || key0 === "cursor" || key0 === "copilot" || key0 === "codex" || key0 === "opencode" || key0 === "windsurf" || key0 === "gemini" || key0 === "junie")) {
+          if (!(key0 === "claude-code" || key0 === "claude-desktop" || key0 === "cursor" || key0 === "copilot" || key0 === "copilot-vscode" || key0 === "copilot-cli" || key0 === "codex" || key0 === "opencode" || key0 === "pi" || key0 === "windsurf" || key0 === "gemini" || key0 === "junie")) {
             const err5 = { instancePath: instancePath + "/vendor", schemaPath: "#/properties/vendor/propertyNames/enum", keyword: "enum", params: { allowedValues: schema31.properties.vendor.propertyNames.enum }, message: "must be equal to one of the allowed values", schema: schema31.properties.vendor.propertyNames.enum, parentSchema: schema31.properties.vendor.propertyNames, data: key0, propertyName: key0 };
             if (vErrors === null) {
               vErrors = [err5];

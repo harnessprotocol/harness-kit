@@ -1,4 +1,4 @@
-import type { HarnessConfig, TargetPlatform } from "../types.js";
+import type { HarnessConfig, SurfaceId } from "../types.js";
 import type {
   HarnessResource,
   InventorySnapshot,
@@ -148,7 +148,7 @@ export interface BuildInventorySnapshotInput {
   installationId: string;
   organizationId: string;
   capturedAt: string;
-  targets: TargetPlatform[];
+  targets: SurfaceId[];
   effectiveConfig: HarnessConfig;
   resources: HarnessResource[];
   drift: InventorySnapshot["drift"];

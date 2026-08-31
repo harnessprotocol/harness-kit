@@ -15,14 +15,14 @@ const PROJECT_SKILL_DIRS: Record<AdapterId, string[]> = {
   "agents-md": [".agents/skills", ".opencode/skills", ".windsurf/skills", ".gemini/skills", ".junie/skills"],
 };
 
-function globalSkillDir(target: "claude-code" | "cursor" | "copilot" | "opencode"): string {
+function globalSkillDir(target: "claude-code" | "cursor" | "copilot-vscode" | "opencode"): string {
   return TARGETS.find((candidate) => candidate.id === target)!.globalSkillsDir;
 }
 
 const GLOBAL_SKILL_DIRS: Record<AdapterId, string[]> = {
   "claude-code": [globalSkillDir("claude-code")],
   cursor: [globalSkillDir("cursor")],
-  copilot: [globalSkillDir("copilot")],
+  copilot: [globalSkillDir("copilot-vscode")],
   opencode: [globalSkillDir("opencode")],
   pi: [".pi/skills"],
   "agents-md": TARGETS

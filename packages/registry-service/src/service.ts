@@ -30,7 +30,9 @@ const ROLE_RANK: Record<OrganizationRole, number> = {
   administrator: 2,
 };
 const INVENTORY_TARGETS = new Set([
-  "claude-code", "cursor", "copilot", "codex", "opencode", "windsurf", "gemini", "junie",
+  // "copilot" is kept alongside "copilot-vscode" for inventories captured
+  // before the SurfaceId re-key (legacy clients still report the old id).
+  "claude-code", "cursor", "copilot", "copilot-vscode", "codex", "opencode", "windsurf", "gemini", "junie",
 ]);
 
 export class RegistryError extends Error {

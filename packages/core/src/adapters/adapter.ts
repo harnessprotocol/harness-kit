@@ -3,24 +3,23 @@ import type {
   DetectedPlatform,
   FileAction,
   HarnessConfig,
-  TargetPlatform as CompileTargetPlatform,
+  SurfaceId as CompileTargetPlatform,
 } from "../types.js";
 import type { ImportedFragment as ImportedFragmentType } from "../import/types.js";
 import type { DriftReport as DriftReportType } from "../fix/types.js";
 
 // ── Adapter identity ──────────────────────────────────────────
 //
-// This is a DIFFERENT, coarser enum than `TargetPlatform` in ../types.ts.
-// `TargetPlatform` (8 values: claude-code, cursor, copilot, codex, opencode,
-// windsurf, gemini, junie) identifies a per-tool COMPILE TARGET and is left
-// completely unchanged by this refactor — it is load-bearing for the existing
-// CLI/desktop surface and the compile pipeline's file-path maps.
+// This is a DIFFERENT, coarser enum than `SurfaceId` in ../types.ts.
+// `SurfaceId` identifies a SURFACE (formerly the 8-member `TargetPlatform`
+// compile-target union, now re-keyed onto the 11-member surface model) — it
+// is load-bearing for the existing CLI/desktop surface and the compile
+// pipeline's file-path maps.
 //
-// `AdapterId` identifies a per-ADAPTER module. Several legacy `TargetPlatform`
-// values that all consume the shared AGENTS.md convention (codex, windsurf,
+// `AdapterId` identifies a per-ADAPTER module. Several compile-target
+// surfaces that all consume the shared AGENTS.md convention (codex, windsurf,
 // gemini, junie) are served by a single `agents-md` adapter with per-tool path
-// variants. `pi` is sized into the enum now for a future WP; no adapter exists
-// for it yet.
+// variants.
 export type AdapterId =
   | "claude-code"
   | "cursor"
@@ -29,7 +28,7 @@ export type AdapterId =
   | "pi"
   | "agents-md";
 
-/** Re-exported for adapter authors — the legacy per-tool target id. */
+/** Re-exported for adapter authors — the per-tool compile-target surface id (alias of `SurfaceId`). */
 export type { CompileTargetPlatform };
 
 // ── Capability model ──────────────────────────────────────────
@@ -67,7 +66,7 @@ export interface AdapterContext {
   /** Absolute path to the user's home directory (for global-scope reads/writes). */
   homeRoot: string;
   /**
-   * For adapters that internally cover more than one legacy `TargetPlatform`
+   * For adapters that internally cover more than one compile-target surface
    * (i.e. `agents-md`, which spans codex/opencode/windsurf/gemini/junie):
    * restricts exportConfig to only this subset of its covered legacy targets.
    * Omit to compile for the adapter's full covered family (the default when

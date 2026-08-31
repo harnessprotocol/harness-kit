@@ -75,7 +75,7 @@ export const DRIFT_FIXTURE_ENTRIES: ScopedDriftItem[] = [
       class: "orphaned",
       path: ".github/copilot-instructions.md",
       adapter: "copilot",
-      target: "copilot",
+      target: "copilot-vscode",
       harnessName: "old-harness-name",
       slot: "operational",
       detail: "marker block references a harness name no longer in harness.yaml",

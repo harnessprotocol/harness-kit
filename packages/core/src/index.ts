@@ -27,7 +27,6 @@ export type {
   McpServerNetwork,
   McpServerStdio,
   OrphanedBlock,
-  TargetPlatform,
   ValidationError,
   ValidationResult,
 } from "./types.js";
@@ -158,6 +157,7 @@ export {
   getAdapter,
   getAllAdapters,
   adapterIdForTarget,
+  groupSurfacesByAdapter,
   groupTargetsByAdapter,
 } from "./adapters/registry.js";
 export { claudeCodeAdapter } from "./adapters/claude-code/index.js";
@@ -253,8 +253,8 @@ export { buildFleetReport } from "./fleet/index.js";
 // ── Surfaces (cross-harness config management, D1) ───────────
 //
 // The Surface registry: pure per-surface path/binary/store metadata that
-// keys the portability engine. Additive for now — the re-key away from
-// TargetPlatform (and from adapters/target-metadata.ts) lands separately.
+// keys the portability engine. `SurfaceId` is the engine's key type
+// everywhere (the former `TargetPlatform` union was re-keyed onto it).
 export type {
   SurfaceId,
   ProductFamily,

@@ -21,14 +21,14 @@ import type {
   LayeredHarnessProfile,
   ReconciliationConflict,
   ReconciliationOperation,
-  TargetPlatform,
+  SurfaceId,
   InventorySnapshot,
   PortabilityState,
 } from "@harness-kit/core";
 import { TauriFsProvider } from "../../lib/harness-fs";
 
-const TARGETS: TargetPlatform[] = [
-  "claude-code", "cursor", "copilot", "codex", "opencode", "windsurf", "gemini", "junie",
+const TARGETS: SurfaceId[] = [
+  "claude-code", "cursor", "copilot-vscode", "codex", "opencode", "windsurf", "gemini", "junie",
 ];
 
 export interface DesktopPortabilitySnapshot {

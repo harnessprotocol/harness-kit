@@ -1,5 +1,5 @@
 import { Button, Card, StatusChip, type StatusChipVariant } from "@harness-kit/ui";
-import type { CompileResult, FileAction, TargetPlatform } from "@harness-kit/core";
+import type { CompileResult, FileAction, SurfaceId } from "@harness-kit/core";
 
 interface SyncPreviewProps {
   result: CompileResult;
@@ -14,11 +14,14 @@ const ACTION_VARIANT: Record<string, StatusChipVariant> = {
   "needs-confirmation": "warning",
 };
 
-const PLATFORM_LABELS: Record<TargetPlatform, string> = {
+const PLATFORM_LABELS: Record<SurfaceId, string> = {
   "claude-code": "Claude Code",
+  "claude-desktop": "Claude Desktop",
   cursor: "Cursor",
-  copilot: "Copilot",
+  "copilot-vscode": "Copilot",
+  "copilot-cli": "Copilot CLI",
   codex: "Codex",
+  pi: "Pi",
   opencode: "OpenCode",
   windsurf: "Windsurf",
   gemini: "Gemini CLI",
@@ -33,7 +36,7 @@ function ActionBadge({ action }: { action: string }) {
   );
 }
 
-function PlatformBadge({ platform }: { platform: TargetPlatform }) {
+function PlatformBadge({ platform }: { platform: SurfaceId }) {
   return (
     <span style={{
       display: "inline-flex",

@@ -2,7 +2,7 @@ import type { FsProvider } from "../fs-provider.js";
 import type {
   FileAction,
   HarnessConfig,
-  TargetPlatform,
+  SurfaceId,
 } from "../types.js";
 import {
   appendMarkerBlock,
@@ -27,7 +27,8 @@ const CONSTRAINTS_SLOT = "constraints";
 
 interface SlotMapping {
   slot: InstructionSlot;
-  file: Record<TargetPlatform, string | null>;
+  /** Partial over SurfaceId: surfaces without compile machinery yet have no entry. */
+  file: Partial<Record<SurfaceId, string | null>>;
 }
 
 // Codex, OpenCode, Windsurf, Gemini, and Junie all share AGENTS.md for operational
@@ -40,7 +41,7 @@ const SLOT_MAPPINGS: SlotMapping[] = [
     file: {
       "claude-code": "CLAUDE.md",
       cursor: ".cursor/rules/harness.mdc",
-      copilot: ".github/copilot-instructions.md",
+      "copilot-vscode": ".github/copilot-instructions.md",
       codex: "AGENTS.md",
       opencode: "AGENTS.md",
       windsurf: "AGENTS.md",
@@ -53,7 +54,7 @@ const SLOT_MAPPINGS: SlotMapping[] = [
     file: {
       "claude-code": "AGENT.md",
       cursor: ".cursor/rules/behavioral.mdc",
-      copilot: ".github/instructions/behavioral.instructions.md",
+      "copilot-vscode": ".github/instructions/behavioral.instructions.md",
       codex: null,
       opencode: null,
       windsurf: null,
@@ -66,7 +67,7 @@ const SLOT_MAPPINGS: SlotMapping[] = [
     file: {
       "claude-code": "SOUL.md",
       cursor: null,
-      copilot: null,
+      "copilot-vscode": null,
       codex: null,
       opencode: null,
       windsurf: null,
@@ -106,13 +107,13 @@ applyTo: "**"
 // `slot` is a plain string, not InstructionSlot: the constraints block is not an
 // instruction slot but still needs cursor frontmatter when it stands alone.
 function buildFrontmatter(
-  platform: TargetPlatform,
+  platform: SurfaceId,
   slot: string,
 ): string | null {
   if (platform === "cursor" && slot in CURSOR_FRONTMATTER) {
     return CURSOR_FRONTMATTER[slot];
   }
-  if (platform === "copilot") {
+  if (platform === "copilot-vscode") {
     return COPILOT_FRONTMATTER;
   }
   return null;
@@ -122,7 +123,7 @@ function buildFrontmatter(
 
 export async function compileInstructions(
   config: HarnessConfig,
-  targets: TargetPlatform[],
+  targets: SurfaceId[],
   fs: FsProvider,
 ): Promise<{ files: FileAction[]; warnings: string[] }> {
   const instructions = config.instructions;
@@ -267,7 +268,7 @@ export async function compileInstructions(
 }
 
 /** The slot → platform → file mapping. Used by check.ts to avoid duplication. */
-export function getSlotMappings(): Array<{ slot: string; file: Partial<Record<TargetPlatform, string | null>> }> {
+export function getSlotMappings(): Array<{ slot: string; file: Partial<Record<SurfaceId, string | null>> }> {
   return SLOT_MAPPINGS;
 }
 

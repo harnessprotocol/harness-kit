@@ -35,7 +35,7 @@ describe("compile", () => {
 
     const result = await compile(
       yaml,
-      ["claude-code", "cursor", "copilot"],
+      ["claude-code", "cursor", "copilot-vscode"],
       fs,
       { dryRun: true },
     );

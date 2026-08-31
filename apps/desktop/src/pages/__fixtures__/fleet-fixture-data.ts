@@ -30,8 +30,8 @@ export const FLEET_FIXTURE_REPORT: FleetReport = {
     {
       adapter: "copilot",
       cells: {
-        "/Users/dev": { adapter: "copilot", targets: ["copilot"], status: "not-configured", driftCount: 0, detail: "tool detected but no valid harness.yaml found for this scope" },
-        "/Users/dev/projects/harness-kit": { adapter: "copilot", targets: ["copilot"], status: "drift", driftCount: 1, detail: "1 drifted item(s)" },
+        "/Users/dev": { adapter: "copilot", targets: ["copilot-vscode"], status: "not-configured", driftCount: 0, detail: "tool detected but no valid harness.yaml found for this scope" },
+        "/Users/dev/projects/harness-kit": { adapter: "copilot", targets: ["copilot-vscode"], status: "drift", driftCount: 1, detail: "1 drifted item(s)" },
       },
     },
     {

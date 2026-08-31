@@ -1,4 +1,4 @@
-import type { HarnessConfig, HarnessPolicy, TargetPlatform } from "../types.js";
+import type { HarnessConfig, HarnessPolicy, SurfaceId } from "../types.js";
 
 export type HarnessScope = "organization" | "personal" | "project" | "session";
 
@@ -52,7 +52,7 @@ export interface HarnessResource<T = unknown> {
   revision?: SourceRevision;
   provenance: ResourceProvenance;
   /** Set only for a native-extension resource. */
-  nativeTarget?: TargetPlatform;
+  nativeTarget?: SurfaceId;
 }
 
 export interface LayeredHarnessProfile {
@@ -80,7 +80,7 @@ export type CapabilityLevel = "native" | "translated" | "source-only" | "unsuppo
 export type LifecycleOperation = "capture" | "apply" | "reconcile" | "rollback";
 
 export interface TargetResourceCapability {
-  target: TargetPlatform;
+  target: SurfaceId;
   resource: HarnessResourceKind;
   operations: Record<LifecycleOperation, CapabilityLevel>;
   scopes: Record<HarnessScope, CapabilityLevel>;
@@ -89,7 +89,7 @@ export interface TargetResourceCapability {
 
 export interface LossItem {
   resource: ResourceIdentity;
-  target: TargetPlatform;
+  target: SurfaceId;
   operation: LifecycleOperation;
   capability: CapabilityLevel;
   detail: string;
@@ -97,7 +97,7 @@ export interface LossItem {
 }
 
 export interface LossReport {
-  target: TargetPlatform;
+  target: SurfaceId;
   generatedAt?: string;
   losses: LossItem[];
   portable: boolean;
@@ -114,7 +114,7 @@ export interface ReconciliationConflict {
   base?: HarnessResource;
   current?: HarnessResource;
   desired?: HarnessResource;
-  affectedTargets: TargetPlatform[];
+  affectedTargets: SurfaceId[];
   allowedResolutions: ConflictResolution[];
   detail: string;
 }
@@ -149,7 +149,7 @@ export interface ReconciliationResolution {
 
 export interface OwnershipFingerprint {
   path: string;
-  target: TargetPlatform;
+  target: SurfaceId;
   slot: string;
   digest: ReleaseDigest;
   managed: boolean;
@@ -173,14 +173,14 @@ export interface InventorySnapshot {
   installationId: string;
   organizationId: string;
   capturedAt: string;
-  targets: TargetPlatform[];
+  targets: SurfaceId[];
   effectiveConfig: unknown;
   assignments: Array<{
     identity: ResourceIdentity;
     scope: HarnessScope;
     revision?: SourceRevision;
   }>;
-  drift: Array<{ target: TargetPlatform; path: string; classification: string }>;
+  drift: Array<{ target: SurfaceId; path: string; classification: string }>;
   redactions: RedactionFinding[];
 }
 

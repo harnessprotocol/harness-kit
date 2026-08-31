@@ -29,7 +29,7 @@ describe("detectPlatforms", () => {
     });
     const result = await detectPlatforms(fs);
     expect(result).toHaveLength(1);
-    expect(result[0].platform).toBe("copilot");
+    expect(result[0].platform).toBe("copilot-vscode");
     expect(result[0].needsConfirmation).toBe(false);
   });
 
@@ -39,7 +39,7 @@ describe("detectPlatforms", () => {
     });
     const result = await detectPlatforms(fs);
     expect(result).toHaveLength(1);
-    expect(result[0].platform).toBe("copilot");
+    expect(result[0].platform).toBe("copilot-vscode");
     expect(result[0].needsConfirmation).toBe(true);
   });
 

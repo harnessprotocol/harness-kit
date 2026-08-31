@@ -6,7 +6,7 @@ import type {
   CompileResult,
   FileAction,
   HarnessConfig,
-  TargetPlatform,
+  SurfaceId,
 } from "../types.js";
 import { parseHarness } from "../parser/parse-harness.js";
 import { validateHarness } from "../schema/validate.js";
@@ -103,7 +103,7 @@ async function writeFileAtomic(
 
 export async function compile(
   yamlString: string,
-  targets: TargetPlatform[],
+  targets: SurfaceId[],
   fs: FsProvider,
   options: CompileOptions = {},
 ): Promise<CompileResult> {

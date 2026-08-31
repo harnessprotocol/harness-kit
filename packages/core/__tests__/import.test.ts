@@ -5,7 +5,7 @@ import { synthesize } from "../src/import/synthesize.js";
 import { compile } from "../src/compile/compile.js";
 import { validateHarness } from "../src/schema/validate.js";
 import { parseHarness } from "../src/parser/parse-harness.js";
-import type { TargetPlatform } from "../src/types.js";
+import type { SurfaceId } from "../src/types.js";
 import { loadFixtureProject } from "./helpers/load-fixture-tree.js";
 import { MockFsProvider } from "./helpers/mock-fs.js";
 
@@ -172,10 +172,10 @@ describe("importProject: opaque preservation (byte-for-byte)", () => {
 });
 
 describe("importProject: round-trip fixpoint (import -> compile -> re-import)", () => {
-  const ALL_TARGETS: TargetPlatform[] = [
+  const ALL_TARGETS: SurfaceId[] = [
     "claude-code",
     "cursor",
-    "copilot",
+    "copilot-vscode",
     "codex",
     "opencode",
     "windsurf",

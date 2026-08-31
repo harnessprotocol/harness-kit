@@ -19,7 +19,7 @@
       "type": "object",
       "description": "Lossless target-native configuration. A block is only applied by its matching adapter.",
       "propertyNames": {
-        "enum": ["claude-code", "cursor", "copilot", "codex", "opencode", "windsurf", "gemini", "junie"]
+        "enum": ["claude-code", "claude-desktop", "cursor", "copilot", "copilot-vscode", "copilot-cli", "codex", "opencode", "pi", "windsurf", "gemini", "junie"]
       },
       "additionalProperties": {
         "type": "object",

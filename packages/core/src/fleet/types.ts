@@ -1,5 +1,5 @@
 import type { AdapterId } from "../adapters/adapter.js";
-import type { TargetPlatform } from "../types.js";
+import type { SurfaceId } from "../types.js";
 
 // ── Fleet report ──────────────────────────────────────────────────
 //
@@ -35,7 +35,7 @@ export type FleetStatus =
 export interface FleetCell {
   adapter: AdapterId;
   /** Legacy per-tool targets this adapter covers, restricted to what was actually checked for this scope. */
-  targets: TargetPlatform[];
+  targets: SurfaceId[];
   status: FleetStatus;
   /** Number of DriftItems, only non-zero when status === "drift". */
   driftCount: number;

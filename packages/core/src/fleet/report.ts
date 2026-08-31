@@ -1,5 +1,5 @@
 import type { FsProvider } from "../fs-provider.js";
-import type { HarnessConfig, TargetPlatform } from "../types.js";
+import type { HarnessConfig, SurfaceId } from "../types.js";
 import { parseHarness } from "../parser/parse-harness.js";
 import { validateHarness } from "../schema/validate.js";
 import { getAllAdapters, groupTargetsByAdapter } from "../adapters/registry.js";
@@ -29,7 +29,7 @@ export interface FleetScopeInput {
 export interface BuildFleetReportContext {
   scopes: FleetScopeInput[];
   /** Restrict detection/drift to these legacy targets. Defaults to all checkable targets. */
-  targets?: TargetPlatform[];
+  targets?: SurfaceId[];
 }
 
 /**
@@ -109,7 +109,7 @@ export async function buildFleetReport(ctx: BuildFleetReportContext): Promise<Fl
 async function buildCell(
   adapterId: AdapterId,
   scopeInput: FleetScopeInput,
-  requestedTargets: TargetPlatform[],
+  requestedTargets: SurfaceId[],
 ): Promise<FleetCell> {
   const { fs } = scopeInput;
   const homeRoot = await fs.homedir();

@@ -1,4 +1,4 @@
-import type { TargetPlatform } from "../types.js";
+import type { SurfaceId } from "../types.js";
 
 /**
  * Per-legacy-target path/binary/layout metadata. This is tool METADATA
@@ -11,7 +11,7 @@ import type { TargetPlatform } from "../types.js";
  * the desktop app) keep working unchanged.
  */
 export interface IntegrationTarget {
-  id: TargetPlatform;
+  id: SurfaceId;
   label: string;
   /** CLI binary to check for tool availability (used by `harness doctor`). */
   requiredBinary?: string;
@@ -57,7 +57,7 @@ export const TARGETS: IntegrationTarget[] = [
     mcpConfigFormat: "json",
   },
   {
-    id: "copilot",
+    id: "copilot-vscode",
     label: "GitHub Copilot",
     // The Copilot CLI binary itself, not the VS Code binary — this field is
     // unused today (no "harness doctor" binary probe consumes it yet), but
@@ -130,13 +130,13 @@ export const TARGETS: IntegrationTarget[] = [
   },
 ];
 
-export function getTarget(id: TargetPlatform): IntegrationTarget {
+export function getTarget(id: SurfaceId): IntegrationTarget {
   const t = TARGETS.find((t) => t.id === id);
   if (!t) throw new Error(`Unknown target: ${id}`);
   return t;
 }
 
 /** All targets that share AGENTS.md as their instruction file. */
-export const AGENTS_MD_TARGETS: TargetPlatform[] = TARGETS
+export const AGENTS_MD_TARGETS: SurfaceId[] = TARGETS
   .filter((t) => t.instructionFile === "AGENTS.md")
   .map((t) => t.id);

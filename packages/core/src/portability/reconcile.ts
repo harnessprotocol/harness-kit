@@ -1,4 +1,4 @@
-import type { TargetPlatform } from "../types.js";
+import type { SurfaceId } from "../types.js";
 import { buildLossReport } from "./capabilities.js";
 import { resourceAliasKey, resourcesEqual } from "./resource-model.js";
 import type {
@@ -13,7 +13,7 @@ export interface ReconcileResourcesInput {
   base: HarnessResource[];
   current: HarnessResource[];
   desired: HarnessResource[];
-  targets: TargetPlatform[];
+  targets: SurfaceId[];
   conflicts?: ReconciliationConflict[];
 }
 
@@ -44,7 +44,7 @@ function conflict(
   base: HarnessResource | undefined,
   current: HarnessResource | undefined,
   desired: HarnessResource | undefined,
-  targets: TargetPlatform[],
+  targets: SurfaceId[],
 ): ReconciliationConflict {
   const resource = desired ?? current ?? base;
   if (!resource) throw new Error("cannot create a reconciliation conflict without a resource");
