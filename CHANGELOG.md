@@ -1,5 +1,30 @@
 # Changelog
 
+## Unreleased
+
+### Breaking
+
+- **CLI requires Node ≥ 24** — the machine state store uses the built-in `node:sqlite` (no native dependencies).
+- **`TargetPlatform` → `SurfaceId`** — the unit of configuration is now the install *surface*; the only renamed id is `copilot` → `copilot-vscode`. v2 `harness.yaml` files auto-migrate in memory when parsed (with warnings); `harness-kit migrate --write` persists the rename; retired `--target` names error with the mapping.
+
+### Added
+
+- **Harness Protocol v2.1** — `vendor` blocks keyed by surface ids; the legacy `copilot` key stays valid on v2 documents and is rejected on v2.1 with an actionable message.
+- **Surface registry: 11 surfaces** — Claude Code, Claude Desktop, Copilot (VS Code), Copilot CLI, Codex (one surface: the ChatGPT app, Codex CLI, and IDE extension share `~/.codex/config.toml`), Cursor, pi (now a detectable first-class surface), OpenCode, plus windsurf/gemini/junie at existing fidelity.
+- **Machine observation engine** — reads native config at user *and* project scope per surface, normalizes resources into secret-sanitized canonical forms with identity digests (same logical MCP server digests identically across surfaces; secret rotation is never drift), and computes the machine inventory: an 11-surface × resource grid with gaps and structured diffs.
+- **CLI** — `harness-kit status` gains a Machine section (and records snapshot history to `~/.harness/harness.db`, degrading gracefully when unavailable); new `harness-kit diff --from <surface> --to <surface> [--only kind[:name]]`; new `harness-kit migrate [--write]`; `detect` reports non-compile surfaces.
+- **Desktop: Machine view** — the new home screen (⌘1): all 11 surfaces family-grouped with per-resource cells (present / absent / not applicable / needs-confirmation), a diff drawer, and skipped-diagnostic reporting. Read-only in this release — one-click sync arrives next.
+- **Definitions bundle format v1** — groundwork for remotely-updated surface definitions.
+
+### Changed
+
+- Capability matrix now spans 11 surfaces × 10 resource kinds with `not-applicable` cells (e.g. pi has no MCP concept); website matrix page renders all 11 grouped by product family.
+- Desktop Tauri filesystem **read** scope widened to the user-level config paths the grid observes (`~/.claude.json`, Claude Desktop and VS Code application-support paths, `~/.copilot`, `~/.agents`); write scope unchanged.
+
+### Fixed
+
+- CLI bundling preserves `node:` import prefixes (tsup's `removeNodeProtocol` default silently broke `node:sqlite` in dist while tests stayed green); a dist smoke test now runs the built artifact.
+
 ## 0.11.0 — 2026-07-27
 
 ### Breaking
