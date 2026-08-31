@@ -250,6 +250,21 @@ export type {
 } from "./fleet/index.js";
 export { buildFleetReport } from "./fleet/index.js";
 
+// ── Surfaces (cross-harness config management, D1) ───────────
+//
+// The Surface registry: pure per-surface path/binary/store metadata that
+// keys the portability engine. Additive for now — the re-key away from
+// TargetPlatform (and from adapters/target-metadata.ts) lands separately.
+export type {
+  SurfaceId,
+  ProductFamily,
+  SurfaceScope,
+  StoreFormatId,
+  ConfigStore,
+  SurfaceDescriptor,
+} from "./surfaces/types.js";
+export { SURFACES, PRIORITY_SURFACES, getSurface } from "./surfaces/registry.js";
+
 // ── Whole-harness portability (Protocol v2) ──────────────────
 export type {
   HarnessScope,
