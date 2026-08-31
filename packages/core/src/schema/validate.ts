@@ -48,11 +48,15 @@ function getFix(schemaPath: string, keyword: string, params: Record<string, unkn
   return undefined;
 }
 
-// The v2.1 legacy-key conditional (allOf/0 in harness-v2.schema.json) emits
-// companion "if"/"not" errors alongside the actionable propertyNames error —
-// keep only the one a user can act on.
+// The v2.1 legacy-key conditional in harness-v2.schema.json emits companion
+// errors alongside the actionable propertyNames error. Drop them structurally:
+// "if" errors carry no information of their own (ajv never emits one without
+// the underlying then/else failure also surfacing), and the inner "not"
+// failure of a propertyNames subschema duplicates the propertyNames error we
+// already report with a friendly message.
 function isV21ConditionalNoise(err: { keyword: string; schemaPath: string }): boolean {
-  return err.schemaPath.startsWith("#/allOf/0/") && err.keyword !== "propertyNames";
+  if (err.keyword === "if") return true;
+  return err.keyword === "not" && err.schemaPath.endsWith("/propertyNames/not");
 }
 
 function getFriendlyMessage(

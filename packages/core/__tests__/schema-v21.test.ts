@@ -37,6 +37,31 @@ describe("Harness Protocol v2.1", () => {
     expect(result.errors[0].fix).toContain("copilot-vscode");
   });
 
+  it("keeps independent vendor errors alongside the copilot rejection", () => {
+    const config = v2Profile({
+      version: "2.1",
+      vendor: { copilot: {}, "not-a-surface": {} },
+    });
+    const result = validateHarness(config);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.message.includes("copilot-vscode"))).toBe(true);
+    const others = result.errors.filter((e) => !e.message.includes("copilot-vscode"));
+    expect(others.length).toBeGreaterThan(0);
+    expect(others.some((e) => e.path.includes("vendor"))).toBe(true);
+  });
+
+  it("still reports a non-object vendor on v2.1", () => {
+    const config = v2Profile({
+      version: "2.1",
+      vendor: "not-an-object" as unknown as HarnessConfig["vendor"],
+    });
+    const result = validateHarness(config);
+    expect(result.valid).toBe(false);
+    expect(
+      result.errors.some((e) => e.path.includes("vendor") && e.message.includes("must be object")),
+    ).toBe(true);
+  });
+
   it("still accepts the legacy copilot vendor key on v2 docs", () => {
     const config = v2Profile({
       vendor: { copilot: {} },

@@ -284,6 +284,7 @@ export interface MigrationPreview {
   changes: string[];
 }
 
+/** Preview a v1 → v2 migration. A config already in the v2 family ("2" or "2.1") is returned by reference, unchanged. */
 export function migrateHarnessV1ToV2(config: HarnessConfig): MigrationPreview {
   if (isProtocolV2(config.version)) return { config, changes: [] };
   return {
