@@ -108,6 +108,26 @@ describe("gaps (AC-9)", () => {
     }
   });
 
+  it("a detected surface WITHOUT a store for the kind is never in missingOn (windsurf mcp: unmanaged locally, not a gap)", () => {
+    const inventory = computeMachineInventory([
+      obs("claude-code", [{ name: "gh", value: { command: "npx", args: ["gh-mcp"] } }]),
+      // Cursor: detected, kind-supporting, absent → the row's one real gap target.
+      obs("cursor", [], true),
+      // Windsurf: detected, mcp-server NOT in notApplicable, but zero mcp
+      // stores in its descriptor — the concept exists, the config is just
+      // not locally managed, so there is nothing the user could add here.
+      obs("windsurf", [], true),
+    ]);
+
+    const cell = row(inventory, "mcp-server:gh").cells.windsurf;
+    expect(cell.status).toBe("absent"); // not "unknown", not "not-applicable"
+
+    const gap = inventory.gaps.find((g) => g.row === "mcp-server:gh")!;
+    expect(gap).toBeDefined();
+    expect(gap.missingOn).toEqual(["cursor"]);
+    expect(gap.missingOn).not.toContain("windsurf");
+  });
+
   it("unknown cells appear in neither presentOn nor missingOn", () => {
     const inventory = computeMachineInventory([
       obs("claude-code", [{ name: "gh", value: { command: "npx", args: ["gh-mcp"] } }]),
