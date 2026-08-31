@@ -158,7 +158,6 @@ export {
   getAllAdapters,
   adapterIdForTarget,
   groupSurfacesByAdapter,
-  groupTargetsByAdapter,
 } from "./adapters/registry.js";
 export { claudeCodeAdapter } from "./adapters/claude-code/index.js";
 export { cursorAdapter } from "./adapters/cursor/index.js";
@@ -257,6 +256,7 @@ export { buildFleetReport } from "./fleet/index.js";
 // everywhere (the former `TargetPlatform` union was re-keyed onto it).
 export type {
   SurfaceId,
+  CompileSurfaceId,
   ProductFamily,
   SurfaceScope,
   StoreFormatId,
@@ -265,7 +265,7 @@ export type {
   DetectProbe,
   SurfaceDescriptor,
 } from "./surfaces/types.js";
-export { SURFACE_IDS, PRODUCT_FAMILIES } from "./surfaces/types.js";
+export { SURFACE_IDS, COMPILE_SURFACE_IDS, PRODUCT_FAMILIES, isCompileSurface } from "./surfaces/types.js";
 export { SURFACES, PRIORITY_SURFACES, getSurface } from "./surfaces/registry.js";
 
 // ── Definitions bundle (cross-harness config management, D7) ─────

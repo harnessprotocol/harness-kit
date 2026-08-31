@@ -2,7 +2,7 @@ import type { FsProvider } from "../fs-provider.js";
 import type { HarnessConfig, SurfaceId } from "../types.js";
 import { parseHarness } from "../parser/parse-harness.js";
 import { validateHarness } from "../schema/validate.js";
-import { getAllAdapters, groupTargetsByAdapter } from "../adapters/registry.js";
+import { getAllAdapters, groupSurfacesByAdapter } from "../adapters/registry.js";
 import { getCheckableTargets } from "../compile/check.js";
 import { detectDrift } from "../fix/index.js";
 import type { AdapterContext } from "../adapters/adapter.js";
@@ -116,7 +116,7 @@ async function buildCell(
   const adapterCtx: AdapterContext = { fs, projectRoot: fs.cwd(), homeRoot };
 
   // Restrict to the subset of requested targets this adapter actually covers.
-  const groups = groupTargetsByAdapter(requestedTargets).filter(
+  const groups = groupSurfacesByAdapter(requestedTargets).filter(
     (g) => g.adapter.id === adapterId,
   );
   const targets = groups.flatMap((g) => g.legacyTargets);

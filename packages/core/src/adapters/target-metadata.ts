@@ -1,4 +1,4 @@
-import type { SurfaceId } from "../types.js";
+import type { CompileSurfaceId, SurfaceId } from "../types.js";
 
 /**
  * Per-legacy-target path/binary/layout metadata. This is tool METADATA
@@ -11,7 +11,7 @@ import type { SurfaceId } from "../types.js";
  * the desktop app) keep working unchanged.
  */
 export interface IntegrationTarget {
-  id: SurfaceId;
+  id: CompileSurfaceId;
   label: string;
   /** CLI binary to check for tool availability (used by `harness doctor`). */
   requiredBinary?: string;
@@ -137,6 +137,6 @@ export function getTarget(id: SurfaceId): IntegrationTarget {
 }
 
 /** All targets that share AGENTS.md as their instruction file. */
-export const AGENTS_MD_TARGETS: SurfaceId[] = TARGETS
+export const AGENTS_MD_TARGETS: CompileSurfaceId[] = TARGETS
   .filter((t) => t.instructionFile === "AGENTS.md")
   .map((t) => t.id);

@@ -23,6 +23,8 @@ vi.mock("../../../lib/tauri", () => ({
 }));
 
 vi.mock("@harness-kit/core", () => ({
+  COMPILE_SURFACE_IDS: ["claude-code", "cursor", "copilot-vscode", "codex", "opencode", "windsurf", "gemini", "junie"],
+  getSurface: vi.fn((id: string) => ({ id, label: id })),
   compile: vi.fn(() => Promise.resolve({ outputs: {} })),
   detectPlatforms: vi.fn(() => Promise.resolve([])),
   parseHarness: vi.fn(() => ({ config: { version: "1" } })),

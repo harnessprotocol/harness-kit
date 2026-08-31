@@ -4,7 +4,7 @@ import {
   getAdapter,
   getAllAdapters,
   adapterIdForTarget,
-  groupTargetsByAdapter,
+  groupSurfacesByAdapter,
 } from "../src/adapters/registry.js";
 import { claudeCodeAdapter } from "../src/adapters/claude-code/index.js";
 import { cursorAdapter } from "../src/adapters/cursor/index.js";
@@ -54,7 +54,7 @@ describe("adapter registry", () => {
   });
 
   it("groups a mixed target list by adapter, preserving first-seen order", () => {
-    const groups = groupTargetsByAdapter(["cursor", "codex", "claude-code", "gemini"]);
+    const groups = groupSurfacesByAdapter(["cursor", "codex", "claude-code", "gemini"]);
     expect(groups.map((g) => g.adapter.id)).toEqual(["cursor", "agents-md", "claude-code"]);
     expect(groups.find((g) => g.adapter.id === "agents-md")!.legacyTargets).toEqual([
       "codex",

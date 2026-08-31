@@ -1,5 +1,5 @@
 import type { HarnessConfig, SurfaceId } from "../types.js";
-import { groupTargetsByAdapter } from "../adapters/registry.js";
+import { groupSurfacesByAdapter } from "../adapters/registry.js";
 import { getCheckableTargets } from "../compile/check.js";
 import type { AdapterContext } from "../adapters/adapter.js";
 import type { DriftClass, DriftItem, DriftReport } from "./types.js";
@@ -49,7 +49,7 @@ function mergeReports(reports: DriftReport[]): DriftReport {
  * — the caller (CLI/desktop) says which legacy SurfaceIds it cares
  * about (typically "whichever targets were actually compiled for this
  * project"), and detection is scoped to those. This mirrors compile.ts's own
- * `groupTargetsByAdapter` dispatch so a target never gets diffed by an
+ * `groupSurfacesByAdapter` dispatch so a target never gets diffed by an
  * adapter it doesn't belong to, and a project that only ever compiled for
  * claude-code doesn't get spurious "missing" drift for cursor/copilot/AGENTS.md
  * files it was never asked to produce.
@@ -65,7 +65,7 @@ export async function detectDrift(
 ): Promise<DriftReport> {
   const reports: DriftReport[] = [];
 
-  for (const { adapter, legacyTargets } of groupTargetsByAdapter(targets)) {
+  for (const { adapter, legacyTargets } of groupSurfacesByAdapter(targets)) {
     if (!adapter.diff) continue;
     const groupCtx: AdapterContext = { ...ctx, legacyTargets };
     reports.push(await adapter.diff(config, groupCtx));

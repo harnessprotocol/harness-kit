@@ -1,6 +1,7 @@
 import { access, readFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 import {
+  COMPILE_SURFACE_IDS,
   EMPTY_PORTABILITY_STATE,
   capabilityForResource,
   computeFileHash,
@@ -26,16 +27,7 @@ import type {
 } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
 
-export const ALL_TARGETS: SurfaceId[] = [
-  "claude-code",
-  "cursor",
-  "copilot-vscode",
-  "codex",
-  "opencode",
-  "windsurf",
-  "gemini",
-  "junie",
-];
+export const ALL_TARGETS: readonly SurfaceId[] = COMPILE_SURFACE_IDS;
 
 export interface LayerFlags {
   organization?: string;

@@ -1,4 +1,5 @@
-import type { SurfaceId } from "../types.js";
+import type { CompileSurfaceId, SurfaceId } from "../types.js";
+import { COMPILE_SURFACE_IDS, isCompileSurface } from "../surfaces/types.js";
 import type { AdapterId, HarnessAdapter } from "./adapter.js";
 import { claudeCodeAdapter } from "./claude-code/index.js";
 import { cursorAdapter } from "./cursor/index.js";
@@ -41,13 +42,12 @@ export function getAllAdapters(): HarnessAdapter[] {
 
 /**
  * Maps every compile-target surface (the existing per-tool compile target
- * id) to the `AdapterId` that implements it. Partial over `SurfaceId`: the
- * surfaces with no compile machinery yet (claude-desktop, copilot-cli, pi)
- * are deliberately unmapped — adapters for them land in later tasks.
- * Single source of truth for compile.ts's orchestration — derived from
- * targets.ts's AGENTS_MD_TARGETS rather than hardcoded, so it can't drift.
+ * id) to the `AdapterId` that implements it. Exhaustive over
+ * `CompileSurfaceId`: extending COMPILE_SURFACE_IDS without a mapping here
+ * fails to compile. Single source of truth for compile.ts's orchestration —
+ * checked against targets.ts's AGENTS_MD_TARGETS below, so it can't drift.
  */
-const LEGACY_TARGET_TO_ADAPTER: Partial<Record<SurfaceId, AdapterId>> = {
+const LEGACY_TARGET_TO_ADAPTER: Record<CompileSurfaceId, AdapterId> = {
   "claude-code": "claude-code",
   cursor: "cursor",
   "copilot-vscode": "copilot",
@@ -68,11 +68,12 @@ for (const t of AGENTS_MD_TARGETS.filter((target) => target !== "opencode")) {
 }
 
 export function adapterIdForTarget(target: SurfaceId): AdapterId {
-  const adapterId = LEGACY_TARGET_TO_ADAPTER[target];
-  if (!adapterId) {
-    throw new Error(`No compile adapter is registered for surface: ${target}`);
+  if (!isCompileSurface(target)) {
+    throw new Error(
+      `No compile adapter is registered for surface '${target}'. Valid targets: ${COMPILE_SURFACE_IDS.join(", ")}`,
+    );
   }
-  return adapterId;
+  return LEGACY_TARGET_TO_ADAPTER[target];
 }
 
 /**
@@ -101,6 +102,3 @@ export function groupSurfacesByAdapter(
     legacyTargets: groups.get(adapterId)!,
   }));
 }
-
-/** @deprecated Use {@link groupSurfacesByAdapter} — same function, renamed for the SurfaceId re-key. Removal tracked in Task 14. */
-export const groupTargetsByAdapter = groupSurfacesByAdapter;

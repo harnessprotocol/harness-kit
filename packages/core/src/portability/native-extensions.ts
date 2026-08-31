@@ -1,6 +1,6 @@
 import type { FsProvider } from "../fs-provider.js";
 import { TARGETS } from "../adapters/target-metadata.js";
-import type { HarnessVendorConfig, SurfaceId } from "../types.js";
+import type { CompileSurfaceId, HarnessVendorConfig, SurfaceId } from "../types.js";
 import { computeFileHash } from "../compile/check.js";
 import { redactInventoryConfig } from "./inventory.js";
 import { digestValue } from "./resource-model.js";
@@ -25,8 +25,9 @@ export interface NativeExtensionBlock {
   omitted?: Array<{ path: string; reason: string }>;
 }
 
-// Partial over SurfaceId: surfaces without capture machinery yet have no entry.
-const RESOURCE_DIRECTORIES: Partial<Record<SurfaceId, string[]>> = {
+// Exhaustive over CompileSurfaceId — extending COMPILE_SURFACE_IDS without an
+// entry here fails to compile.
+const RESOURCE_DIRECTORIES: Record<CompileSurfaceId, string[]> = {
   "claude-code": [".claude/agents", ".claude/commands", ".claude/hooks"],
   cursor: [".cursor/agents", ".cursor/commands", ".cursor/hooks"],
   "copilot-vscode": [".github/agents", ".github/prompts"],
@@ -107,8 +108,9 @@ async function collectFiles(
   files.push({ path: relative, content, digest: `sha256:${computeFileHash(content)}` });
 }
 
-function settingsFor(target: SurfaceId): Array<{ path: string; omit: string[] }> {
-  const integration = TARGETS.find((entry) => entry.id === target)!;
+function settingsFor(target: CompileSurfaceId): Array<{ path: string; omit: string[] }> {
+  const integration = TARGETS.find((entry) => entry.id === target);
+  if (!integration) throw new Error(`Unknown compile target: ${target}`);
   const common = integration.mcpConfigFile && integration.mcpConfigFormat === "json"
     ? [{ path: integration.mcpConfigFile, omit: NORMALIZED_MCP_TARGETS.has(target) ? ["mcpServers"] : [] }]
     : [];
@@ -123,7 +125,7 @@ export async function captureNativeExtensions(fs: FsProvider, root = fs.cwd()): 
     const files: NativeExtensionFile[] = [];
     const settings: NativeExtensionSetting[] = [];
     const omitted: NonNullable<NativeExtensionBlock["omitted"]> = [];
-    for (const directory of RESOURCE_DIRECTORIES[target] ?? []) {
+    for (const directory of RESOURCE_DIRECTORIES[target]) {
       if (await fs.exists(fs.joinPath(root, directory))) await collectFiles(fs, root, directory, files, omitted);
     }
     for (const setting of settingsFor(target)) {

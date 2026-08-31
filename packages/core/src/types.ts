@@ -1,7 +1,7 @@
 // ── Surfaces ─────────────────────────────────────────────────
 
 import type { SurfaceId } from "./surfaces/types.js";
-export type { SurfaceId } from "./surfaces/types.js";
+export type { SurfaceId, CompileSurfaceId } from "./surfaces/types.js";
 
 // ── Harness config (parsed harness.yaml) ─────────────────────
 

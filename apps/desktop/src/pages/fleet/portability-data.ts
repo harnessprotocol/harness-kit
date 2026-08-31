@@ -1,4 +1,5 @@
 import {
+  COMPILE_SURFACE_IDS,
   EMPTY_PORTABILITY_STATE,
   TARGET_CAPABILITY_MATRIX,
   buildInventorySnapshot,
@@ -27,9 +28,7 @@ import type {
 } from "@harness-kit/core";
 import { TauriFsProvider } from "../../lib/harness-fs";
 
-const TARGETS: SurfaceId[] = [
-  "claude-code", "cursor", "copilot-vscode", "codex", "opencode", "windsurf", "gemini", "junie",
-];
+const TARGETS: SurfaceId[] = [...COMPILE_SURFACE_IDS];
 
 export interface DesktopPortabilitySnapshot {
   generatedAt: string;

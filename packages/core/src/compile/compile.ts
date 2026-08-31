@@ -11,7 +11,7 @@ import type {
 import { parseHarness } from "../parser/parse-harness.js";
 import { validateHarness } from "../schema/validate.js";
 import { resolveExtends } from "./extends.js";
-import { groupTargetsByAdapter } from "../adapters/registry.js";
+import { groupSurfacesByAdapter } from "../adapters/registry.js";
 import { domainHasContent } from "../adapters/domain-content.js";
 import { domainSkippedWarning, type AdapterContext, type HarnessDomain } from "../adapters/adapter.js";
 import { verifyHarnessIntegrity } from "./integrity.js";
@@ -157,7 +157,7 @@ export async function compile(
   // compilePermissions) the pre-refactor pipeline made — same inputs, same
   // targets subset per call, same bytes out. See adapters/registry.ts and
   // adapters/{claude-code,cursor,copilot,agents-md}/index.ts.
-  const adapterGroups = groupTargetsByAdapter(targets);
+  const adapterGroups = groupSurfacesByAdapter(targets);
   const ctx: AdapterContext = {
     fs,
     projectRoot: cwd,

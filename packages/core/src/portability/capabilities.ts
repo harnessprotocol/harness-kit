@@ -1,4 +1,4 @@
-import type { SurfaceId } from "../types.js";
+import type { CompileSurfaceId, SurfaceId } from "../types.js";
 import { TARGETS } from "../adapters/target-metadata.js";
 import type {
   CapabilityLevel,
@@ -47,8 +47,9 @@ function scopeRecord(project: CapabilityLevel, personal: CapabilityLevel = "tran
   };
 }
 
-function capabilityFor(target: SurfaceId, resource: HarnessResourceKind): TargetResourceCapability {
-  const targetMeta = TARGETS.find((entry) => entry.id === target)!;
+function capabilityFor(target: CompileSurfaceId, resource: HarnessResourceKind): TargetResourceCapability {
+  const targetMeta = TARGETS.find((entry) => entry.id === target);
+  if (!targetMeta) throw new Error(`Unknown compile target: ${target}`);
   let capture: CapabilityLevel = "source-only";
   let apply: CapabilityLevel = "source-only";
   let note: string | undefined;

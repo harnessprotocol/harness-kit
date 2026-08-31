@@ -1,20 +1,22 @@
 import type { FsProvider } from "../fs-provider.js";
 import type {
+  CompileSurfaceId,
   FileAction,
   HarnessConfig,
   HarnessPlugin,
   HarnessSkillRef,
   SurfaceId,
 } from "../types.js";
+import { isCompileSurface } from "../surfaces/types.js";
 import { findSkillFiles, computeSourceDir } from "./discovery.js";
 import { computeFileHash } from "./check.js";
 import { skillDirectoryDigest } from "../import/read-skills.js";
 import { collectCapsuleFiles } from "../portability/capsule.js";
 
 // Skills directory per target. null = plugin install system handles deployment (claude-code).
-// Partial over SurfaceId: surfaces without compile machinery yet have no entry
-// (the lookup below skips them, same as a null entry).
-const SKILL_TARGET_DIR: Partial<Record<SurfaceId, string | null>> = {
+// Exhaustive over CompileSurfaceId — extending COMPILE_SURFACE_IDS without an
+// entry here fails to compile.
+const SKILL_TARGET_DIR: Record<CompileSurfaceId, string | null> = {
   "claude-code": null,
   cursor: ".cursor/skills",
   "copilot-vscode": ".github/skills",
@@ -112,8 +114,8 @@ export async function compileSkills(
     const adapted = adaptFrontmatter(skillContent);
 
     for (const target of targets) {
-      const targetDir = SKILL_TARGET_DIR[target];
-      if (!targetDir) continue; // claude-code skips file copy
+      const targetDir = isCompileSurface(target) ? SKILL_TARGET_DIR[target] : null;
+      if (!targetDir) continue; // claude-code skips file copy; non-compile surfaces have no dir
 
       const destPath = fs.joinPath(targetDir, plugin.name, "SKILL.md");
       files.push({
@@ -137,7 +139,9 @@ export async function compileSkills(
     for (const target of targets) {
       // Direct skills are native files for Claude Code too; only plugin-backed
       // skills retain the legacy plugin-install-system behavior above.
-      const targetDir = target === "claude-code" ? ".claude/skills" : SKILL_TARGET_DIR[target];
+      const targetDir = target === "claude-code"
+        ? ".claude/skills"
+        : isCompileSurface(target) ? SKILL_TARGET_DIR[target] : null;
       if (!targetDir) continue;
       for (const sourceFile of skillFiles) {
         files.push({

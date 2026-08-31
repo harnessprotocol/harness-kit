@@ -25,6 +25,31 @@ export const SURFACE_IDS = [
 
 export type SurfaceId = (typeof SURFACE_IDS)[number];
 
+/**
+ * Surfaces with a compile adapter today — the legacy compile-target set.
+ * Maps keyed `Record<CompileSurfaceId, ...>` regain compile-time
+ * exhaustiveness over exactly this set: adding an id here without extending
+ * every such map fails to compile. Tasks 6–8 extend it as new surfaces
+ * (claude-desktop, copilot-cli, pi) gain adapters.
+ */
+export const COMPILE_SURFACE_IDS = [
+  "claude-code",
+  "cursor",
+  "copilot-vscode",
+  "codex",
+  "opencode",
+  "windsurf",
+  "gemini",
+  "junie",
+] as const;
+
+export type CompileSurfaceId = (typeof COMPILE_SURFACE_IDS)[number];
+
+/** Narrowing guard: whether `id` has a compile adapter today. */
+export function isCompileSurface(id: SurfaceId): id is CompileSurfaceId {
+  return (COMPILE_SURFACE_IDS as readonly SurfaceId[]).includes(id);
+}
+
 /** The harness products surfaces belong to (multiple surfaces may share one). */
 export const PRODUCT_FAMILIES = [
   "claude", "copilot", "codex", "cursor", "pi", "opencode",

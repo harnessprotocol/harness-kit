@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Wrench, Pencil, Check, X as XIcon } from "lucide-react";
 import { Button, Card, EmptyState, Input } from "@harness-kit/ui";
-import { compile, detectPlatforms, parseHarness } from "@harness-kit/core";
+import { COMPILE_SURFACE_IDS, compile, detectPlatforms, parseHarness } from "@harness-kit/core";
 import type { CompileResult, DetectedPlatform, SurfaceId } from "@harness-kit/core";
+import { surfaceLabel } from "../../lib/surface-labels";
 import {
   readHarnessFile,
   syncCreateBackup,
@@ -16,22 +17,7 @@ import { SyncFsProvider } from "../../lib/sync-fs";
 import SyncPreview from "./sync/SyncPreview";
 import BackupHistory from "./sync/BackupHistory";
 
-const ALL_PLATFORMS: SurfaceId[] = [
-  "claude-code", "cursor", "copilot-vscode", "codex", "opencode", "windsurf", "gemini", "junie",
-];
-const PLATFORM_LABELS: Record<SurfaceId, string> = {
-  "claude-code": "Claude Code",
-  "claude-desktop": "Claude Desktop",
-  cursor: "Cursor",
-  "copilot-vscode": "Copilot",
-  "copilot-cli": "Copilot CLI",
-  codex: "Codex",
-  pi: "Pi",
-  opencode: "OpenCode",
-  windsurf: "Windsurf",
-  gemini: "Gemini CLI",
-  junie: "Junie",
-};
+const ALL_PLATFORMS: readonly SurfaceId[] = COMPILE_SURFACE_IDS;
 const RECENT_DIRS_KEY = "harness-kit-sync-recent-dirs";
 const MAX_RECENT = 10;
 
@@ -339,7 +325,7 @@ export default function SyncPage() {
                         background: checked ? "var(--accent)" : "var(--border-strong)",
                         flexShrink: 0,
                       }} />
-                      {PLATFORM_LABELS[platform]}
+                      {surfaceLabel(platform)}
                       {detected && (
                         <span style={{ fontSize: "9px", opacity: 0.7 }}>detected</span>
                       )}

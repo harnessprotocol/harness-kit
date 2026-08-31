@@ -4,6 +4,7 @@ import chalk from "chalk";
 import { checkbox, confirm } from "@inquirer/prompts";
 import chokidar from "chokidar";
 import {
+  COMPILE_SURFACE_IDS,
   compile,
   detectPlatforms,
   findOrphanedMarkerBlocks,
@@ -60,13 +61,10 @@ async function releaseLock(lockPath: string): Promise<void> {
   }
 }
 
-const ALL_TARGETS: SurfaceId[] = [
-  "claude-code", "cursor", "copilot-vscode",
-  "codex", "opencode", "windsurf", "gemini", "junie",
-];
+const ALL_TARGETS: readonly SurfaceId[] = COMPILE_SURFACE_IDS;
 
 function parseTargets(targetStr: string): SurfaceId[] {
-  if (targetStr === "all") return ALL_TARGETS;
+  if (targetStr === "all") return [...ALL_TARGETS];
   return targetStr.split(",").map((t) => {
     const trimmed = t.trim() as SurfaceId;
     if (!ALL_TARGETS.includes(trimmed)) {

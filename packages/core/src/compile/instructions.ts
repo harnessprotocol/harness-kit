@@ -1,9 +1,11 @@
 import type { FsProvider } from "../fs-provider.js";
 import type {
+  CompileSurfaceId,
   FileAction,
   HarnessConfig,
   SurfaceId,
 } from "../types.js";
+import { isCompileSurface } from "../surfaces/types.js";
 import {
   appendMarkerBlock,
   buildMarkerBlock,
@@ -27,8 +29,8 @@ const CONSTRAINTS_SLOT = "constraints";
 
 interface SlotMapping {
   slot: InstructionSlot;
-  /** Partial over SurfaceId: surfaces without compile machinery yet have no entry. */
-  file: Partial<Record<SurfaceId, string | null>>;
+  /** Exhaustive over CompileSurfaceId — a surface without a file for this slot carries an explicit null. */
+  file: Record<CompileSurfaceId, string | null>;
 }
 
 // Codex, OpenCode, Windsurf, Gemini, and Junie all share AGENTS.md for operational
@@ -184,7 +186,7 @@ export async function compileInstructions(
     const seenPaths = new Set<string>();
 
     for (const target of targets) {
-      const filePath = block.file[target];
+      const filePath = isCompileSurface(target) ? block.file[target] : null;
       if (!filePath) continue; // slot not supported on this platform
       if (seenPaths.has(filePath)) continue;
       seenPaths.add(filePath);
