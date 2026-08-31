@@ -25,10 +25,14 @@ export const SURFACE_IDS = [
 
 export type SurfaceId = (typeof SURFACE_IDS)[number];
 
+/** The harness products surfaces belong to (multiple surfaces may share one). */
+export const PRODUCT_FAMILIES = [
+  "claude", "copilot", "codex", "cursor", "pi", "opencode",
+  "windsurf", "gemini", "junie",
+] as const;
+
 /** The harness product a surface belongs to (multiple surfaces may share one). */
-export type ProductFamily =
-  | "claude" | "copilot" | "codex" | "cursor" | "pi" | "opencode"
-  | "windsurf" | "gemini" | "junie";
+export type ProductFamily = (typeof PRODUCT_FAMILIES)[number];
 
 /** Note: "user" corresponds to "personal" in the portability layer vocabulary (HarnessScope). */
 export type SurfaceScope = "user" | "project";

@@ -265,7 +265,7 @@ export type {
   DetectProbe,
   SurfaceDescriptor,
 } from "./surfaces/types.js";
-export { SURFACE_IDS } from "./surfaces/types.js";
+export { SURFACE_IDS, PRODUCT_FAMILIES } from "./surfaces/types.js";
 export { SURFACES, PRIORITY_SURFACES, getSurface } from "./surfaces/registry.js";
 
 // ── Definitions bundle (cross-harness config management, D7) ─────
@@ -275,7 +275,7 @@ export { SURFACES, PRIORITY_SURFACES, getSurface } from "./surfaces/registry.js"
 // signing/verification, and monotonic bundleNumber enforcement are M4;
 // M1 loads the bundle from disk or memory.
 export type { DefinitionsBundle } from "./definitions/bundle.js";
-export { BUNDLE_FORMAT_VERSION, toBundle, fromBundle } from "./definitions/bundle.js";
+export { BUNDLE_FORMAT_VERSION, BundleError, toBundle, fromBundle } from "./definitions/bundle.js";
 
 // ── Whole-harness portability (Protocol v2) ──────────────────
 export type {

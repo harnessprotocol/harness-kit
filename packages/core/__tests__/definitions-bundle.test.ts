@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { SURFACES, getSurface } from "../src/surfaces/registry.js";
 import {
   BUNDLE_FORMAT_VERSION,
+  BundleError,
   toBundle,
   fromBundle,
 } from "../src/definitions/bundle.js";
@@ -136,4 +137,83 @@ describe("definitions bundle format", () => {
     value.surfaces[1].id = "mystery-harness";
     expect(() => fromBundle(value)).toThrow(/mystery-harness/);
   });
+
+  it("rejects a bundle missing the capabilityMatrix key", () => {
+    const value = validBundleValue() as Record<string, unknown>;
+    delete value.capabilityMatrix;
+    expect(() => fromBundle(value)).toThrow(/capabilityMatrix/);
+  });
+
+  it("rejects a generatedAt that does not parse as a date", () => {
+    const value = validBundleValue() as Record<string, unknown>;
+    value.generatedAt = "yesterday-ish";
+    expect(() => fromBundle(value)).toThrow(/generatedAt/);
+  });
+
+  it("rejects a non-boolean priority", () => {
+    const value = validBundleValue() as { surfaces: Record<string, unknown>[] };
+    value.surfaces[0].priority = "yes";
+    expect(() => fromBundle(value)).toThrow(/priority/);
+  });
+
+  it("rejects a family outside the ProductFamily union, naming it", () => {
+    const value = validBundleValue() as { surfaces: Record<string, unknown>[] };
+    value.surfaces[0].family = "acme";
+    expect(() => fromBundle(value)).toThrow(/acme/);
+    expect(() => fromBundle(value)).toThrow(/family/);
+  });
+
+  it("rejects non-array detect and notApplicable", () => {
+    const badDetect = validBundleValue() as { surfaces: Record<string, unknown>[] };
+    badDetect.surfaces[0].detect = {};
+    expect(() => fromBundle(badDetect)).toThrow(/detect/);
+
+    const badNotApplicable = validBundleValue() as { surfaces: Record<string, unknown>[] };
+    badNotApplicable.surfaces[0].notApplicable = "plugin";
+    expect(() => fromBundle(badNotApplicable)).toThrow(/notApplicable/);
+  });
+
+  it("rejects a malformed detect probe", () => {
+    const badScope = validBundleValue() as {
+      surfaces: { detect: Record<string, unknown>[] }[];
+    };
+    badScope.surfaces[0].detect[0].scope = "machine";
+    expect(() => fromBundle(badScope)).toThrow(/detect\[0\]\.scope/);
+
+    const badPath = validBundleValue() as {
+      surfaces: { detect: Record<string, unknown>[] }[];
+    };
+    badPath.surfaces[0].detect[0].path = 3;
+    expect(() => fromBundle(badPath)).toThrow(/detect\[0\]\.path/);
+  });
+
+  it("tags errors with a stable code", () => {
+    const versioned = validBundleValue() as Record<string, unknown>;
+    versioned.formatVersion = 2;
+    expect(catchBundleError(() => fromBundle(versioned)).code).toBe("unsupported-version");
+    expect(catchBundleError(() => fromBundle(null)).code).toBe("malformed");
+
+    const badNumber = validBundleValue() as Record<string, unknown>;
+    badNumber.bundleNumber = -3;
+    expect(catchBundleError(() => fromBundle(badNumber)).code).toBe("malformed");
+  });
+
+  it("toBundle rejects a bundleNumber that is not a non-negative integer", () => {
+    for (const bad of [-1, 1.5, Number.NaN]) {
+      expect(
+        () => toBundle({ surfaces: SURFACES, capabilityMatrix: null, bundleNumber: bad }),
+        `bundleNumber=${String(bad)}`,
+      ).toThrow(/bundleNumber/);
+    }
+  });
 });
+
+function catchBundleError(fn: () => unknown): BundleError {
+  try {
+    fn();
+  } catch (err) {
+    expect(err).toBeInstanceOf(BundleError);
+    return err as BundleError;
+  }
+  throw new Error("expected a BundleError to be thrown");
+}
