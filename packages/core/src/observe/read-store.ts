@@ -88,6 +88,14 @@ function basename(path: string): string {
 
 const UNREADABLE = "exists but could not be read";
 
+/**
+ * DoS hardening: cap on how large a config file readText will accept. A
+ * config store is JSON/TOML/markdown measured in KB; anything past this cap
+ * is not a config file we should slurp into memory and hash — it degrades
+ * to a skipped "file too large" diagnostic instead.
+ */
+export const MAX_STORE_FILE_BYTES = 5 * 1024 * 1024;
+
 type ReadTextResult =
   | { status: "ok"; content: string }
   | { status: "missing" }
@@ -100,11 +108,19 @@ type ReadTextResult =
  */
 async function readText(fs: FsProvider, path: string): Promise<ReadTextResult> {
   if (!(await fs.exists(path))) return { status: "missing" };
+  let content: string;
   try {
-    return { status: "ok", content: await fs.readFile(path) };
+    content = await fs.readFile(path);
   } catch (error) {
     return { status: "unreadable", reason: `${UNREADABLE}: ${errorMessage(error)}` };
   }
+  if (content.length > MAX_STORE_FILE_BYTES) {
+    return {
+      status: "unreadable",
+      reason: `file too large (${content.length} bytes > ${MAX_STORE_FILE_BYTES} byte cap) — skipped.`,
+    };
+  }
+  return { status: "ok", content };
 }
 
 type StoreExecutor = (
@@ -338,13 +354,13 @@ async function readSkillsDirStore(
     const skillPath = fs.joinPath(skillDir, "SKILL.md");
     if (!(await fs.exists(skillPath))) continue;
 
-    let content: string;
-    try {
-      content = await fs.readFile(skillPath);
-    } catch (error) {
-      skipped.push({ file: skillPath, reason: `${UNREADABLE}: ${errorMessage(error)}` });
+    const read = await readText(fs, skillPath);
+    if (read.status === "missing") continue;
+    if (read.status === "unreadable") {
+      skipped.push({ file: skillPath, reason: read.reason });
       continue;
     }
+    const content = read.content;
     const name = frontmatterName(content, dirEntry);
     const description = frontmatterDescription(content);
     const value: SkillStoreValue = {
@@ -390,14 +406,13 @@ async function readMarkdownInstructionsStore(
       if (!INSTRUCTION_FILE_PATTERN.test(dirEntry)) continue;
       const filePath = fs.joinPath(absolutePath, dirEntry);
       if (await fs.isDirectory(filePath)) continue;
-      let content: string;
-      try {
-        content = await fs.readFile(filePath);
-      } catch (error) {
-        skipped.push({ file: filePath, reason: `${UNREADABLE}: ${errorMessage(error)}` });
+      const read = await readText(fs, filePath);
+      if (read.status === "missing") continue;
+      if (read.status === "unreadable") {
+        skipped.push({ file: filePath, reason: read.reason });
         continue;
       }
-      const value: InstructionsStoreValue = { content };
+      const value: InstructionsStoreValue = { content: read.content };
       entries.push({
         kind: store.kind,
         name: dirEntry,

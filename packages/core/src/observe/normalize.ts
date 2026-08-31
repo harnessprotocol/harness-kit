@@ -93,29 +93,89 @@ function deepCanonical(value: unknown, key = ""): unknown {
   return value;
 }
 
-/** Sort a string map's keys and placeholder secret-looking values. */
+/**
+ * Sort a string map's keys and placeholder secret-looking values. Non-string
+ * values (nested objects/arrays smuggled into env/headers) are routed
+ * through deepCanonical so secret strings inside them still get the
+ * placeholder pass instead of passing through verbatim.
+ */
 function canonicalStringMap(map: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const key of Object.keys(map).sort()) {
     const value = map[key];
     if (value === undefined) continue;
     result[key] =
-      typeof value === "string" && looksLikeSecret(key, value) ? SECRET_PLACEHOLDER : value;
+      typeof value === "string"
+        ? looksLikeSecret(key, value)
+          ? SECRET_PLACEHOLDER
+          : value
+        : deepCanonical(value, key);
   }
   return result;
 }
 
 /**
- * Placeholder ONLY the userinfo portion of a URL (`scheme://user[:pass]@host`
- * → `scheme://<secret>@host`). Deliberately narrower than looksLikeSecret
- * over the whole URL — host/path/query changes must remain real diffs.
+ * Sensitive query-parameter name tokens: a param name is sensitive when,
+ * split on non-alphanumerics (`_`, `-`, `.` all act as separators), any
+ * token is in this set. Token matching keeps `keyspace`, `region`,
+ * `author` etc. non-sensitive while catching `api_key`, `access-token`,
+ * `apiKey`, `X-Signature`, …
  */
-function sanitizeUrlUserinfo(url: string): string {
-  // `?`/`#` excluded (userinfo cannot legally contain them, so a `@` inside a
-  // query/fragment never matches); `@` allowed inside with greedy matching so
-  // an invalid unencoded `@` in the password fails safe (whole userinfo
-  // placeholdered, nothing leaks past the last `@` before host).
-  return url.replace(/(:\/\/)[^/\s?#]*@/, `$1${SECRET_PLACEHOLDER}@`);
+const SENSITIVE_QUERY_TOKENS = new Set([
+  "key",
+  "apikey",
+  "token",
+  "accesstoken",
+  "secret",
+  "signature",
+  "sig",
+  "password",
+  "auth",
+  "bearer",
+]);
+
+function isSensitiveQueryParam(name: string): boolean {
+  return name
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .some((token) => SENSITIVE_QUERY_TOKENS.has(token));
+}
+
+/**
+ * Sanitize a URL's embedded secrets while keeping everything semantic:
+ * - userinfo (`scheme://user[:pass]@host`) → `scheme://<secret>@host`;
+ * - query values whose param NAME is sensitive, or whose value matches the
+ *   credential-shape heuristics, → `<secret>`.
+ * Param names stay verbatim (a param rename must still diff), and host +
+ * path stay verbatim — deliberately narrower than running looksLikeSecret
+ * over the whole URL, which would hide host/path changes.
+ */
+function sanitizeUrl(url: string): string {
+  // Userinfo: `?`/`#` excluded (userinfo cannot legally contain them, so a
+  // `@` inside a query/fragment never matches); `@` allowed inside with
+  // greedy matching so an invalid unencoded `@` in the password fails safe
+  // (whole userinfo placeholdered, nothing leaks past the last `@` before
+  // host).
+  const withUserinfo = url.replace(/(:\/\/)[^/\s?#]*@/, `$1${SECRET_PLACEHOLDER}@`);
+  const queryIndex = withUserinfo.indexOf("?");
+  if (queryIndex === -1) return withUserinfo;
+  const base = withUserinfo.slice(0, queryIndex);
+  const query = withUserinfo
+    .slice(queryIndex + 1)
+    .split("&")
+    .map((pair) => {
+      const eq = pair.indexOf("=");
+      if (eq === -1) return pair;
+      const name = pair.slice(0, eq);
+      const value = pair.slice(eq + 1);
+      if (value.length === 0) return pair;
+      if (isSensitiveQueryParam(name) || looksLikeSecret(name, value)) {
+        return `${name}=${SECRET_PLACEHOLDER}`;
+      }
+      return pair;
+    })
+    .join("&");
+  return `${base}?${query}`;
 }
 
 // ── kind-specific canonicalizers ────────────────────────────────
@@ -131,7 +191,9 @@ type Canonicalizer = (value: unknown) => unknown;
  *   identically.
  * - `args` kept IN ORDER — argument order is semantic for commands — with
  *   inline secrets sanitized per element (see sanitizeCommandArgs), and
- *   `url` has only its userinfo placeholdered.
+ *   `url` has its userinfo and sensitive/credential-shaped query values
+ *   placeholdered (see sanitizeUrl) — host, path, and param names stay
+ *   verbatim.
  * - `env`/`headers` keys sorted; values that look like secrets become the
  *   fixed placeholder (rotation is not a diff), everything else kept
  *   verbatim (a PORT=5432 change IS a real diff).
@@ -164,7 +226,7 @@ function canonicalizeMcpServer(value: unknown): unknown {
     );
   }
   if (isRecord(value.env)) result.env = canonicalStringMap(value.env);
-  if (typeof value.url === "string") result.url = sanitizeUrlUserinfo(value.url);
+  if (typeof value.url === "string") result.url = sanitizeUrl(value.url);
   if (isRecord(value.headers)) result.headers = canonicalStringMap(value.headers);
   if (typeof value.bearerTokenEnvVar === "string") result.bearerTokenEnvVar = value.bearerTokenEnvVar;
   if (value.enabled === false) result.enabled = false;

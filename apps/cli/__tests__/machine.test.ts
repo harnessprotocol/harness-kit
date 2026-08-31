@@ -104,7 +104,7 @@ describe.sequential("machine inventory CLI", () => {
       expect(env.exitCode).toBeNull();
 
       // The observation snapshot was persisted to the (temp-HOME) state db.
-      const store = new SqliteStateStore(join(home, ".harness", "harness.db"));
+      const store = await SqliteStateStore.open(join(home, ".harness", "harness.db"));
       try {
         const snapshot = await store.latestObservation();
         expect(snapshot).not.toBeNull();

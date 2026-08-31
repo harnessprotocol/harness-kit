@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
@@ -55,7 +55,7 @@ describe("SqliteStateStore", () => {
   beforeEach(async () => {
     dir = await mkdtemp(join(tmpdir(), "harness-sqlite-store-"));
     dbPath = join(dir, "harness.db");
-    store = new SqliteStateStore(dbPath);
+    store = await SqliteStateStore.open(dbPath);
   });
 
   afterEach(async () => {
@@ -66,6 +66,14 @@ describe("SqliteStateStore", () => {
     }
     await rm(dir, { recursive: true, force: true });
   });
+
+  it.skipIf(process.platform === "win32")(
+    "opens the db file with owner-only (0600) permissions",
+    async () => {
+      const mode = (await stat(dbPath)).mode & 0o777;
+      expect(mode).toBe(0o600);
+    },
+  );
 
   it("migrates v0 -> v1: schema_version is 1 and all six tables exist", async () => {
     // Touch the store so migration has run.
@@ -205,7 +213,7 @@ describe("SqliteStateStore", () => {
     await store.setFingerprint("cursor", "project", "sha256:persist");
     await store.close();
 
-    const reopened = new SqliteStateStore(dbPath);
+    const reopened = await SqliteStateStore.open(dbPath);
     try {
       const latest = await reopened.latestObservation();
       expect(latest!.id).toBe(id);
@@ -234,7 +242,7 @@ describe("SqliteStateStore", () => {
 
     await expect(store.latestObservation()).rejects.toThrow();
 
-    const again = new SqliteStateStore(dbPath);
+    const again = await SqliteStateStore.open(dbPath);
     try {
       const latest = await again.latestObservation();
       expect(latest!.resources).toEqual([RESOURCES[0]]);

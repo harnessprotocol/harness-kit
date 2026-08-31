@@ -233,6 +233,88 @@ describe("normalizeResource — mcp-server inline secrets", () => {
   });
 });
 
+describe("normalizeResource — url query/path secrets", () => {
+  it("placeholders sensitive query param values, keeps names and non-secret params verbatim", () => {
+    const a = normalizeResource(
+      mcpResource({ transport: "sse", url: "https://mcp.example.com/sse?api_key=sk-live-xxxx&region=us" }),
+    );
+    expect((a.canonicalForm as { url: string }).url).toBe(
+      "https://mcp.example.com/sse?api_key=<secret>&region=us",
+    );
+    // Rotation-invariance.
+    const b = normalizeResource(
+      mcpResource({ transport: "sse", url: "https://mcp.example.com/sse?api_key=sk-live-yyyy&region=us" }),
+    );
+    expect(a.digest).toBe(b.digest);
+    // A non-secret param change is still a real diff.
+    const c = normalizeResource(
+      mcpResource({ transport: "sse", url: "https://mcp.example.com/sse?api_key=sk-live-xxxx&region=eu" }),
+    );
+    expect(a.digest).not.toBe(c.digest);
+    // A param RENAME is still a real diff (names stay verbatim).
+    const d = normalizeResource(
+      mcpResource({ transport: "sse", url: "https://mcp.example.com/sse?apikey=sk-live-xxxx&region=us" }),
+    );
+    expect(a.digest).not.toBe(d.digest);
+  });
+
+  it("placeholders credential-shaped query values under non-sensitive names; keyspace-like names stay verbatim", () => {
+    const cred = normalizeResource(
+      mcpResource({ transport: "http", url: "https://x.test/mcp?blob=ghp_abcdefghijklmnopqrstu" }),
+    );
+    expect((cred.canonicalForm as { url: string }).url).toBe("https://x.test/mcp?blob=<secret>");
+    const plain = normalizeResource(
+      mcpResource({ transport: "http", url: "https://x.test/mcp?keyspace=main&page=2" }),
+    );
+    expect((plain.canonicalForm as { url: string }).url).toBe("https://x.test/mcp?keyspace=main&page=2");
+  });
+});
+
+describe("normalizeResource — widened value shapes and key tokens", () => {
+  it("JWT and Slack token value shapes are placeholdered under neutral keys", () => {
+    const jwt = normalizeResource(
+      mcpResource({
+        command: "run",
+        env: { SOME_VAR: "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNryP4J3jVmNHl0w5N_XgL0n3I9P" },
+      }),
+    );
+    expect((jwt.canonicalForm as { env: Record<string, string> }).env.SOME_VAR).toBe("<secret>");
+    const slack = normalizeResource(
+      mcpResource({ command: "run", env: { SOME_VAR: "xoxb-123456789012-abcdefghij" } }),
+    );
+    expect((slack.canonicalForm as { env: Record<string, string> }).env.SOME_VAR).toBe("<secret>");
+  });
+
+  it("bare key/pat/credential/auth key tokens are sensitive; KEYSPACE and PATH are not", () => {
+    const make = (env: Record<string, string>) =>
+      normalizeResource(mcpResource({ command: "run", env })).canonicalForm as {
+        env: Record<string, string>;
+      };
+    expect(make({ MY_KEY: "opaque-value" }).env.MY_KEY).toBe("<secret>");
+    expect(make({ GITHUB_PAT: "opaque-value" }).env.GITHUB_PAT).toBe("<secret>");
+    expect(make({ CREDENTIALS: "opaque-value" }).env.CREDENTIALS).toBe("<secret>");
+    expect(make({ AUTH: "opaque-value" }).env.AUTH).toBe("<secret>");
+    expect(make({ KEYSPACE: "main" }).env.KEYSPACE).toBe("main");
+    expect(make({ PATH: "/usr/bin" }).env.PATH).toBe("/usr/bin");
+    expect(make({ PATTERN: "*.md" }).env.PATTERN).toBe("*.md");
+  });
+
+  it("non-string env values are deep-canonicalized so nested secret strings still get the placeholder", () => {
+    const a = normalizeResource(
+      mcpResource({
+        command: "run",
+        env: {
+          NESTED: { token: "ghp_abcdefghijklmnopqrstu", note: "hello" } as unknown as string,
+        },
+      }),
+    );
+    expect((a.canonicalForm as { env: Record<string, unknown> }).env.NESTED).toEqual({
+      note: "hello",
+      token: "<secret>",
+    });
+  });
+});
+
 describe("normalizeResource — codec agreement", () => {
   it("codex-TOML- and opencode-shaped values agree with the whitelist", () => {
     // CodexMcpValue: McpServer & { bearerTokenEnvVar?: string }

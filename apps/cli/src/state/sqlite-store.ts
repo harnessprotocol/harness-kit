@@ -1,7 +1,7 @@
-import { mkdirSync } from "node:fs";
+import { chmodSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { resolve } from "node:path";
-import { DatabaseSync } from "node:sqlite";
+import type { DatabaseSync } from "node:sqlite";
 import type {
   ObservationSnapshot,
   ObservationSnapshotMeta,
@@ -86,7 +86,17 @@ CREATE TABLE IF NOT EXISTS definitions_cache (
  */
 export function defaultStatePath(): string {
   const dir = resolve(homedir(), ".harness");
-  mkdirSync(dir, { recursive: true });
+  mkdirSync(dir, { recursive: true, mode: 0o700 });
+  // mkdir's mode only applies on creation — tighten a pre-existing dir too.
+  // Best-effort: chmod is meaningless on Windows and may fail on exotic
+  // filesystems; state must still open.
+  if (process.platform !== "win32") {
+    try {
+      chmodSync(dir, 0o700);
+    } catch {
+      // best effort
+    }
+  }
   return resolve(dir, "harness.db");
 }
 
@@ -114,13 +124,36 @@ interface ResourceRow {
 export class SqliteStateStore implements StateStore {
   private readonly db: DatabaseSync;
 
-  /** Opens (creating if absent) the db at `path` and migrates it to v1. */
-  constructor(path: string) {
-    this.db = new DatabaseSync(path);
+  private constructor(db: DatabaseSync) {
+    this.db = db;
     this.db.exec("PRAGMA journal_mode=WAL");
     this.db.exec("PRAGMA busy_timeout=5000");
     this.db.exec("PRAGMA foreign_keys=ON");
     this.migrate();
+  }
+
+  /**
+   * Opens (creating if absent) the db at `path` and migrates it to v1.
+   *
+   * node:sqlite is imported lazily HERE, not at module top level: a static
+   * import makes every CLI command (validate/compile/--help) print Node's
+   * "SQLite is an experimental feature" warning to stderr. With the dynamic
+   * import the warning appears only when the state store is actually used.
+   * The type-only import above erases at build time and does not trigger it.
+   */
+  static async open(path: string): Promise<SqliteStateStore> {
+    const { DatabaseSync: Database } = await import("node:sqlite");
+    const store = new SqliteStateStore(new Database(path));
+    // Best-effort permission tightening — the db caches observed canonical
+    // forms. POSIX only; Windows has no meaningful chmod.
+    if (process.platform !== "win32") {
+      try {
+        chmodSync(path, 0o600);
+      } catch {
+        // best effort
+      }
+    }
+    return store;
   }
 
   /** v0 -> v1, keyed off meta.schema_version. Idempotent. */

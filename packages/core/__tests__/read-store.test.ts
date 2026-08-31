@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { resolve } from "node:path";
-import { readStore } from "../src/observe/read-store.js";
+import { readStore, MAX_STORE_FILE_BYTES } from "../src/observe/read-store.js";
 import type { StoreReadResult } from "../src/observe/read-store.js";
 import type { ConfigStore } from "../src/surfaces/types.js";
 import { getSurface } from "../src/surfaces/registry.js";
@@ -438,5 +438,38 @@ describe("readStore: absence and degradation", () => {
     expect(result.entries).toEqual([]);
     expect(result.skipped).toHaveLength(1);
     expect(result.skipped[0].reason).toContain("no executor for formatId 'xml-futuristic'");
+  });
+});
+
+describe("readStore: byte cap (DoS hardening)", () => {
+  it("an over-cap file degrades to a 'file too large' skipped diagnostic, never a slurp", async () => {
+    const path = `${HOME}/.claude.json`;
+    const oversized = "x".repeat(MAX_STORE_FILE_BYTES + 1);
+    const fs = new MockFsProvider({ [path]: oversized }, "/project", HOME);
+    const mcpStore = store("claude-code", (s) => s.formatId === "json-mcpservers" && s.scope === "user");
+
+    const result = await readStore(fs, mcpStore, path);
+    expect(result.entries).toEqual([]);
+    expect(result.skipped).toHaveLength(1);
+    expect(result.skipped[0].reason).toContain("file too large");
+  });
+
+  it("an over-cap SKILL.md is skipped while sibling skills still load", async () => {
+    const dir = `${HOME}/.claude/skills`;
+    const fs = new MockFsProvider(
+      {
+        [`${dir}/big/SKILL.md`]: "y".repeat(MAX_STORE_FILE_BYTES + 1),
+        [`${dir}/ok/SKILL.md`]: "---\nname: ok\n---\nbody\n",
+      },
+      "/project",
+      HOME,
+    );
+    const skillsStore = store("claude-code", (s) => s.formatId === "skills-dir" && s.scope === "user");
+
+    const result = await readStore(fs, skillsStore, dir);
+    expect(result.entries.map((entry) => entry.name)).toEqual(["ok"]);
+    expect(result.skipped).toHaveLength(1);
+    expect(result.skipped[0].file).toBe(`${dir}/big/SKILL.md`);
+    expect(result.skipped[0].reason).toContain("file too large");
   });
 });

@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -27,9 +27,22 @@ describe("dist bundle smoke", () => {
 
   it("keeps node: builtin specifiers intact in the emitted bundle", () => {
     const bundle = readFileSync(distEntry, "utf8");
-    expect(bundle).toContain('from "node:sqlite"');
+    // node:sqlite is loaded via dynamic import (lazy, so commands that never
+    // touch state don't emit Node's ExperimentalWarning) — a static
+    // `from "node:sqlite"` would reintroduce the warning on every command.
+    expect(bundle).toMatch(/import\(\s*"node:sqlite"\s*\)/);
     // The regression's signature: the prefix stripped to a bare specifier.
     expect(bundle).not.toMatch(/from\s*"sqlite"/);
+    expect(bundle).not.toMatch(/import\(\s*"sqlite"\s*\)/);
+  });
+
+  it("--help emits no SQLite ExperimentalWarning on stderr", () => {
+    const result = spawnSync(process.execPath, [distEntry, "--help"], {
+      encoding: "utf8",
+      timeout: 60_000,
+    });
+    expect(result.status).toBe(0);
+    expect(result.stderr).not.toContain("ExperimentalWarning");
   });
 
   it("executes the built CLI: --help exits 0", () => {

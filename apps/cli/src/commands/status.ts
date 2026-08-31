@@ -132,7 +132,7 @@ async function recordSnapshot(
 ): Promise<string | null> {
   let store: SqliteStateStore | undefined;
   try {
-    store = new SqliteStateStore(defaultStatePath());
+    store = await SqliteStateStore.open(defaultStatePath());
     await store.recordObservation(
       {
         observedAt: new Date().toISOString(),
