@@ -124,8 +124,9 @@ export default function SyncPage() {
         // Detection can report surfaces that aren't compile targets (e.g. pi).
         // The chip UI only renders COMPILE_SURFACE_IDS, so an unfiltered seed
         // would put an invisible, untoggleable target into the set — and
-        // compile() routes any SurfaceId to its adapter, so it would silently
-        // compile. Seed the selection with compile surfaces only.
+        // compile() throws for non-compile surfaces (adapterIdForTarget guard),
+        // so Preview would fail with an error the user can't clear from the
+        // chips. Seed the selection with compile surfaces only.
         setSelectedTargets(new Set(detected.map((d) => d.platform).filter(isCompileSurface)));
       } catch { setDirValid(false); }
       finally { setDirChecking(false); }
