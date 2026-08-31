@@ -7,7 +7,7 @@
     "access": "public"
   },
   "engines": {
-    "node": ">=22"
+    "node": ">=24"
   },
   "bin": {
     "harness-kit": "./dist/index.js",

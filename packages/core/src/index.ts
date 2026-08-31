@@ -255,6 +255,12 @@ export type {
   MachineInventory,
 } from "./observe/machine-inventory.js";
 export { computeMachineInventory, buildMachineInventory } from "./observe/machine-inventory.js";
+export type {
+  ObservationSnapshotMeta,
+  StoredResource,
+  ObservationSnapshot,
+  StateStore,
+} from "./state/store.js";
 export type { CodexMcpValue, CodexMcpReadResult } from "./codecs/toml-codex.js";
 export { readCodexMcp } from "./codecs/toml-codex.js";
 export type { OpenCodeMcpValue, OpenCodeMcpReadResult } from "./codecs/json-opencode.js";
