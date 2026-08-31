@@ -238,6 +238,23 @@ export { observeSurface, observeAllSurfaces } from "./observe/observe-surface.js
 // shape. Task 10 (gaps/diffs) consumes this directly.
 export type { NormalizedResource } from "./observe/normalize.js";
 export { normalizeResource, normalizeObservation, SECRET_PLACEHOLDER } from "./observe/normalize.js";
+
+// ── Observe (Task 10): machine inventory (grid / gaps / diffs) ─
+//
+// Folds normalized observations into the cross-surface machine grid plus
+// derived gaps (AC-9) and structural diffs (AC-8). Pure, JSON-serializable
+// output — the single engine call the CLI and desktop Machine views render.
+export type {
+  CellStatus,
+  GridCellEntry,
+  GridCell,
+  GridRow,
+  MachineGap,
+  MachineDiff,
+  FieldDelta,
+  MachineInventory,
+} from "./observe/machine-inventory.js";
+export { computeMachineInventory, buildMachineInventory } from "./observe/machine-inventory.js";
 export type { CodexMcpValue, CodexMcpReadResult } from "./codecs/toml-codex.js";
 export { readCodexMcp } from "./codecs/toml-codex.js";
 export type { OpenCodeMcpValue, OpenCodeMcpReadResult } from "./codecs/json-opencode.js";
