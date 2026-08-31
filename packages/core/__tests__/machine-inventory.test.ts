@@ -182,6 +182,54 @@ describe("diffs (AC-8)", () => {
     expect(inventory.diffs).toEqual([]);
   });
 
+  it("root-level primitive canonicalForms diff at path '$'", () => {
+    const inventory = computeMachineInventory([
+      obs("claude-code", [{ kind: "env", name: "MODE", value: "fast" }]),
+      obs("cursor", [{ kind: "env", name: "MODE", value: "slow" }]),
+    ]);
+    expect(inventory.diffs).toEqual([
+      {
+        row: "env:mode",
+        surfaces: ["claude-code", "cursor"],
+        delta: [{ path: "$", kind: "changed", left: "fast", right: "slow" }],
+      },
+    ]);
+  });
+
+  it("array-vs-object type mismatch collapses to a single 'changed' leaf at that node", () => {
+    const inventory = computeMachineInventory([
+      obs("claude-code", [{ kind: "env", name: "cfg", value: { a: { x: 1 } } }]),
+      obs("cursor", [{ kind: "env", name: "cfg", value: { a: [1] } }]),
+    ]);
+    expect(inventory.diffs).toHaveLength(1);
+    expect(inventory.diffs[0].delta).toEqual([
+      { path: "a", kind: "changed", left: { x: 1 }, right: [1] },
+    ]);
+  });
+
+  it("shorter right-hand array yields 'removed' deltas at the trailing indices", () => {
+    const inventory = computeMachineInventory([
+      obs("claude-code", [{ name: "svc", value: { command: "npx", args: ["a", "b", "c"] } }]),
+      obs("cursor", [{ name: "svc", value: { command: "npx", args: ["a"] } }]),
+    ]);
+    expect(inventory.diffs).toHaveLength(1);
+    expect(inventory.diffs[0].delta).toEqual([
+      { path: "args[1]", kind: "removed", left: "b" },
+      { path: "args[2]", kind: "removed", left: "c" },
+    ]);
+  });
+
+  it("nested-object changes report the full dotted display path", () => {
+    const inventory = computeMachineInventory([
+      obs("claude-code", [{ kind: "env", name: "cfg", value: { a: { b: { c: 1 } } } }]),
+      obs("cursor", [{ kind: "env", name: "cfg", value: { a: { b: { c: 2 } } } }]),
+    ]);
+    expect(inventory.diffs).toHaveLength(1);
+    expect(inventory.diffs[0].delta).toEqual([
+      { path: "a.b.c", kind: "changed", left: 1, right: 2 },
+    ]);
+  });
+
   it("only present-cell pairs with differing effectiveDigests are compared", async () => {
     const inventory = await machineInventory();
     for (const diff of inventory.diffs) {
@@ -287,6 +335,21 @@ describe("determinism and serialization", () => {
     const inventory = await machineInventory();
     expect(JSON.parse(JSON.stringify(inventory))).toEqual(inventory);
     expect("options" in inventory).toBe(false);
+  });
+});
+
+describe("row display name", () => {
+  it("case-differing names join on one row; first-observed casing wins the display name", () => {
+    const inventory = computeMachineInventory([
+      obs("claude-code", [{ name: "MyServer", value: { command: "npx" } }]),
+      obs("cursor", [{ name: "myserver", value: { command: "npx" } }]),
+    ]);
+    expect(inventory.rows).toHaveLength(1);
+    const only = inventory.rows[0];
+    expect(only.key).toBe("mcp-server:myserver");
+    expect(only.name).toBe("MyServer");
+    expect(only.cells["claude-code"].status).toBe("present");
+    expect(only.cells.cursor.status).toBe("present");
   });
 });
 

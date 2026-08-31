@@ -31,6 +31,9 @@ export const SECRET_PLACEHOLDER = "<secret>";
 export interface NormalizedResource {
   surface: SurfaceId;
   kind: HarnessResourceKind;
+  /** Original, case-preserved name as observed (display form; identityKey
+   * holds the case-collapsed join key). */
+  name: string;
   /**
    * `${kind}:${name.toLowerCase().trim()}` — cross-surface identity. The
    * case-collapsing means two case-differing names in the SAME file share
@@ -228,6 +231,7 @@ export function normalizeResource(resource: ObservedResource): NormalizedResourc
   return {
     surface: resource.surface,
     kind: resource.kind,
+    name: resource.name,
     identityKey: `${resource.kind}:${resource.name.toLowerCase().trim()}`,
     scope: resource.scope,
     canonicalForm,

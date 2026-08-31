@@ -110,6 +110,11 @@ export interface MachineDiff {
 /** One structural difference between two canonicalForms. Values come from
  * canonicalForm, which is already secret-sanitized. */
 export interface FieldDelta {
+  /**
+   * DISPLAY path only (`env.PORT`, `args[2]`), not machine-parseable: keys
+   * containing dots or brackets are rendered ambiguously. Consumers must
+   * render it verbatim and never resolve it against canonicalForm.
+   */
   path: string;
   kind: "added" | "removed" | "changed";
   left?: unknown;
@@ -121,6 +126,9 @@ export interface MachineInventory {
   surfaces: Array<{
     id: SurfaceId;
     detected: boolean;
+    /** Count of RAW observed entries (scope duplicates and store collisions
+     * included), not grid rows — column-header row counts must be derived
+     * from cells, not this field. */
     resourceCount: number;
     skipped: SkippedEntry[];
   }>;
@@ -220,13 +228,10 @@ export function computeMachineInventory(observations: SurfaceObservation[]): Mac
   // Group normalized resources by identityKey × surface.
   const rowsByKey = new Map<string, RowAccumulator>();
   for (const observation of observations) {
-    const normalized = normalizeObservation(observation);
-    for (let index = 0; index < normalized.length; index++) {
-      const resource = normalized[index];
+    for (const resource of normalizeObservation(observation)) {
       let row = rowsByKey.get(resource.identityKey);
       if (!row) {
-        // Display name: first-observed original (case-preserved) name.
-        row = { kind: resource.kind, name: observation.resources[index].name, cells: new Map() };
+        row = { kind: resource.kind, name: resource.name, cells: new Map() };
         rowsByKey.set(resource.identityKey, row);
       }
       let cell = row.cells.get(resource.surface);
