@@ -59,4 +59,14 @@ export async function detectCommand(flags: DetectFlags = {}): Promise<void> {
 
   console.log("");
   console.log(chalk.dim(`${confirmedCount} of ${ALL_PLATFORMS.length} platforms detected`));
+
+  // Detection covers more than the compile targets (e.g. pi): surface any
+  // detected non-compile platforms the JSON path already reports, so the
+  // human output doesn't silently hide them.
+  const nonCompile = detected.filter(
+    (entry) => !(ALL_PLATFORMS as readonly string[]).includes(entry.platform),
+  );
+  for (const entry of nonCompile) {
+    console.log(chalk.dim(`${entry.platform} detected (not a compile target)`));
+  }
 }

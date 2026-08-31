@@ -373,6 +373,9 @@ program
     "--target <targets>",
     "Target platforms to check (comma-separated), or all",
   )
+  .option("--from <surface>", "Cross-surface mode: compare from this surface")
+  .option("--to <surface>", "Cross-surface mode: compare to this surface")
+  .option("--only <kind[:name]>", "Cross-surface mode: filter rows by kind or kind:name prefix")
   .option("--json", "Output the raw DriftReport as JSON")
   .addHelpText(
     "after",
@@ -380,6 +383,8 @@ program
 Examples:
   harness-kit diff                        Show drift for all targets
   harness-kit diff --target claude-code   Show drift for Claude Code only
+  harness-kit diff --from claude-code --to cursor   Compare two surfaces' observed state
+  harness-kit diff --from claude-code --to cursor --only mcp-server   Only MCP server rows
 
 Exit code 0 if no drift. Exit code 1 if any drift.`,
   )
