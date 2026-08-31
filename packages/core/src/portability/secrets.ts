@@ -16,6 +16,18 @@ const CREDENTIAL_VALUE = /(?:-----BEGIN [A-Z ]*PRIVATE KEY-----|\bBearer\s+[A-Za
 const SENSITIVE_FLAG = /^--?(?:authorization|token|auth[-_]?token|api[-_]?key|access[-_]?token|access[-_]?key|client[-_]?secret|password|passwd|private[-_]?key|secret)$/i;
 const INLINE_SENSITIVE_FLAG = /^(--?(?:authorization|token|auth[-_]?token|api[-_]?key|access[-_]?token|access[-_]?key|client[-_]?secret|password|passwd|private[-_]?key|secret)=)(.+)$/i;
 
+/**
+ * Value-level secret heuristic, shared with observe/normalize.ts: does this
+ * key/value pair look like credential material? Reuses the same key-name and
+ * value-shape patterns sanitizeCapturedSecrets applies during capture. A
+ * value that is already an env/secret REFERENCE contains no secret material
+ * and its identity is semantic, so it is never treated as a secret.
+ */
+export function looksLikeSecret(key: string, value: string): boolean {
+  if (value.length === 0 || REFERENCE.test(value)) return false;
+  return SENSITIVE_KEY.test(key) || CREDENTIAL_VALUE.test(value);
+}
+
 function variableName(path: string[]): string {
   const normalized = path
     .join("_")

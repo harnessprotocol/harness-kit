@@ -229,6 +229,15 @@ export type {
   SurfaceObservation,
 } from "./observe/observe-surface.js";
 export { observeSurface, observeAllSurfaces } from "./observe/observe-surface.js";
+
+// ── Observe (Task 9): cross-surface normalization + digests ───
+//
+// Turns raw ObservedResources into NormalizedResources with cross-surface
+// identity keys and secret-safe content digests: the same logical resource
+// digests identically regardless of which surface stored it and in what
+// shape. Task 10 (gaps/diffs) consumes this directly.
+export type { NormalizedResource } from "./observe/normalize.js";
+export { normalizeResource, normalizeObservation, SECRET_PLACEHOLDER } from "./observe/normalize.js";
 export type { CodexMcpValue, CodexMcpReadResult } from "./codecs/toml-codex.js";
 export { readCodexMcp } from "./codecs/toml-codex.js";
 export type { OpenCodeMcpValue, OpenCodeMcpReadResult } from "./codecs/json-opencode.js";
