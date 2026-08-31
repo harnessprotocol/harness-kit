@@ -84,10 +84,10 @@ Fixture round-trips per surface (sample native config → resources → identica
 - **VS Code profile discovery** for copilot-vscode user-scope MCP (profile-scoped `mcp.json` location varies; may need "needs confirmation" handling in inventory).
 - **SQLite contention** app↔CLI — WAL + busy timeout; all writes short transactions.
 
-## Open Questions
+## Open Questions — resolved 2026-08-31
 
-1. [NEEDS CLARIFICATION: `node:sqlite` needs Node ≥22.5 (stable later); apps/cli engines is `>=22` and CI runs Node 24. Raise the engines floor to `>=24` (recommended, matches CI), or vendor better-sqlite3 to keep `>=22`?]
-2. [NEEDS CLARIFICATION: if no comment-preserving TOML editor proves viable in TS, is a managed-section fallback acceptable for `~/.codex/config.toml` — a HarnessKit-owned `[mcp_servers.*]` block edited surgically, with all user comments outside it preserved?]
-3. [NEEDS CLARIFICATION: does the Machine grid show supported-but-not-installed surfaces by default (as install hints / extra columns), or only detected surfaces with a toggle to reveal the rest?]
+1. **Node floor**: apps/cli engines raised to `>=24`; `node:sqlite` used, no native deps (matches CI). Changelog callout on the minor bump.
+2. **TOML fallback**: managed-section editing is acceptable for `~/.codex/config.toml` — HarnessKit surgically owns only the `[mcp_servers.*]` tables it manages; user comments and unrelated tables outside that region are preserved byte-for-byte. Full comment-preserving editing remains the preferred path if a viable TS editor is found.
+3. **Grid columns**: the Machine grid shows **all supported surfaces by default**; uninstalled ones render greyed with install hints. No detected-only default.
 
-Per workflow rules, these must be resolved before invoking writing-plans.
+No `[NEEDS CLARIFICATION]` markers remain — plan-writing is unblocked.
