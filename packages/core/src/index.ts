@@ -260,9 +260,12 @@ export type {
   ProductFamily,
   SurfaceScope,
   StoreFormatId,
+  PlatformPathOverrides,
   ConfigStore,
+  DetectProbe,
   SurfaceDescriptor,
 } from "./surfaces/types.js";
+export { SURFACE_IDS } from "./surfaces/types.js";
 export { SURFACES, PRIORITY_SURFACES, getSurface } from "./surfaces/registry.js";
 
 // ── Whole-harness portability (Protocol v2) ──────────────────

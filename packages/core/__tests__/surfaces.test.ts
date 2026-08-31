@@ -1,19 +1,24 @@
 import { describe, expect, it } from "vitest";
 import { SURFACES, getSurface, PRIORITY_SURFACES } from "../src/surfaces/registry.js";
-import type { SurfaceId } from "../src/surfaces/types.js";
-
-const ALL: SurfaceId[] = [
-  "claude-code", "claude-desktop", "copilot-vscode", "copilot-cli",
-  "codex", "cursor", "pi", "opencode", "windsurf", "gemini", "junie",
-];
+import { SURFACE_IDS } from "../src/surfaces/types.js";
+import type { StoreFormatId, SurfaceId } from "../src/surfaces/types.js";
+import type { HarnessResourceKind } from "../src/portability/types.js";
 
 describe("surface registry", () => {
-  it("declares exactly the 11 supported surfaces", () => {
-    expect(SURFACES.map((s) => s.id).sort()).toEqual([...ALL].sort());
+  it("declares exactly the supported surfaces, in SURFACE_IDS order", () => {
+    expect(SURFACES.map((s) => s.id)).toEqual([...SURFACE_IDS]);
   });
-  it("flags the 8 priority surfaces", () => {
-    expect(PRIORITY_SURFACES).toHaveLength(8);
-    expect(PRIORITY_SURFACES).not.toContain("windsurf");
+  it("flags exactly the 8 priority surfaces", () => {
+    expect([...PRIORITY_SURFACES].sort()).toEqual([
+      "claude-code",
+      "claude-desktop",
+      "codex",
+      "copilot-cli",
+      "copilot-vscode",
+      "cursor",
+      "opencode",
+      "pi",
+    ]);
   });
   it("every surface has a product family and at least one config store", () => {
     for (const s of SURFACES) {
@@ -37,5 +42,50 @@ describe("surface registry", () => {
   });
   it("getSurface throws on unknown id with the valid ids in the message", () => {
     expect(() => getSurface("windsurf-x" as SurfaceId)).toThrow(/claude-code/);
+  });
+
+  it("every store pairs its resource kind with an allowed format", () => {
+    const ALLOWED: Partial<Record<HarnessResourceKind, StoreFormatId[]>> = {
+      skill: ["skills-dir"],
+      instructions: ["markdown-instructions"],
+      "mcp-server": ["json-mcpservers", "toml-codex", "json-opencode"],
+      permissions: ["json-generic"],
+    };
+    for (const s of SURFACES) {
+      for (const store of s.stores) {
+        expect(
+          ALLOWED[store.kind],
+          `${s.id}: no formats allowed for kind ${store.kind}`,
+        ).toBeDefined();
+        expect(
+          ALLOWED[store.kind],
+          `${s.id} ${store.path}: kind ${store.kind} disallows format ${store.formatId}`,
+        ).toContain(store.formatId);
+      }
+    }
+  });
+
+  it("store and detect paths are all relative (no leading / or ~)", () => {
+    for (const s of SURFACES) {
+      const paths = [
+        ...s.stores.flatMap((st) => [st.path, ...Object.values(st.pathByPlatform ?? {})]),
+        ...s.detect.flatMap((d) => [d.path, ...Object.values(d.pathByPlatform ?? {})]),
+      ];
+      for (const p of paths) {
+        expect(p, `${s.id}: absolute or home-anchored path ${p}`).not.toMatch(/^[/~]/);
+      }
+    }
+  });
+
+  it("notApplicable kinds never overlap a surface's store kinds", () => {
+    for (const s of SURFACES) {
+      const storeKinds = new Set(s.stores.map((st) => st.kind));
+      for (const kind of s.notApplicable) {
+        expect(
+          storeKinds.has(kind),
+          `${s.id}: ${kind} is both notApplicable and stored`,
+        ).toBe(false);
+      }
+    }
   });
 });

@@ -1,3 +1,4 @@
+import { SURFACE_IDS } from "./types.js";
 import type { SurfaceDescriptor, SurfaceId } from "./types.js";
 
 /**
@@ -9,10 +10,12 @@ import type { SurfaceDescriptor, SurfaceId } from "./types.js";
  * Store paths are project-relative (scope "project") or home-relative
  * (scope "user"); `pathByPlatform` overrides `path` per OS. Paths verified
  * against each product's docs as of Aug 2026.
+ *
+ * The table is keyed by SurfaceId so that adding an id to SURFACE_IDS
+ * without a registry entry fails to compile.
  */
-export const SURFACES: SurfaceDescriptor[] = [
-  {
-    id: "claude-code",
+const SURFACE_TABLE: Record<SurfaceId, Omit<SurfaceDescriptor, "id">> = {
+  "claude-code": {
     label: "Claude Code",
     family: "claude",
     priority: true,
@@ -33,13 +36,19 @@ export const SURFACES: SurfaceDescriptor[] = [
     ],
     notApplicable: [],
   },
-  {
-    id: "claude-desktop",
+  "claude-desktop": {
     label: "Claude Desktop",
     family: "claude",
     priority: true,
     detect: [
-      { scope: "user", path: "Library/Application Support/Claude/claude_desktop_config.json" },
+      {
+        scope: "user",
+        path: "Library/Application Support/Claude/claude_desktop_config.json",
+        pathByPlatform: {
+          darwin: "Library/Application Support/Claude/claude_desktop_config.json",
+          win32: "AppData/Roaming/Claude/claude_desktop_config.json",
+        },
+      },
     ],
     stores: [
       {
@@ -55,8 +64,7 @@ export const SURFACES: SurfaceDescriptor[] = [
     ],
     notApplicable: ["plugin", "permissions"],
   },
-  {
-    id: "copilot-vscode",
+  "copilot-vscode": {
     label: "GitHub Copilot (VS Code)",
     family: "copilot",
     priority: true,
@@ -64,7 +72,15 @@ export const SURFACES: SurfaceDescriptor[] = [
     detect: [
       { scope: "project", path: ".github/copilot-instructions.md" },
       { scope: "project", path: ".vscode/mcp.json" },
-      { scope: "user", path: "Library/Application Support/Code/User/mcp.json" },
+      {
+        scope: "user",
+        path: "Library/Application Support/Code/User/mcp.json",
+        pathByPlatform: {
+          darwin: "Library/Application Support/Code/User/mcp.json",
+          linux: ".config/Code/User/mcp.json",
+          win32: "AppData/Roaming/Code/User/mcp.json",
+        },
+      },
     ],
     stores: [
       {
@@ -94,8 +110,7 @@ export const SURFACES: SurfaceDescriptor[] = [
     ],
     notApplicable: [],
   },
-  {
-    id: "copilot-cli",
+  "copilot-cli": {
     label: "GitHub Copilot CLI",
     family: "copilot",
     priority: true,
@@ -112,8 +127,7 @@ export const SURFACES: SurfaceDescriptor[] = [
     ],
     notApplicable: [],
   },
-  {
-    id: "codex",
+  codex: {
     label: "OpenAI Codex",
     family: "codex",
     priority: true,
@@ -135,8 +149,7 @@ export const SURFACES: SurfaceDescriptor[] = [
     ],
     notApplicable: [],
   },
-  {
-    id: "cursor",
+  cursor: {
     label: "Cursor",
     family: "cursor",
     priority: true,
@@ -151,13 +164,19 @@ export const SURFACES: SurfaceDescriptor[] = [
       { kind: "skill", scope: "user", formatId: "skills-dir", path: ".agents/skills" },
       { kind: "permissions", scope: "user", formatId: "json-generic", path: ".cursor/cli-config.json" },
       { kind: "mcp-server", scope: "project", formatId: "json-mcpservers", path: ".cursor/mcp.json" },
-      { kind: "instructions", scope: "project", formatId: "markdown-instructions", path: ".cursor/rules" },
+      {
+        kind: "instructions",
+        scope: "project",
+        formatId: "markdown-instructions",
+        // A directory of .mdc rule files, not a single markdown file.
+        path: ".cursor/rules",
+        shape: { directory: true },
+      },
       { kind: "skill", scope: "project", formatId: "skills-dir", path: ".cursor/skills" },
     ],
     notApplicable: [],
   },
-  {
-    id: "pi",
+  pi: {
     label: "pi",
     family: "pi",
     priority: true,
@@ -177,8 +196,7 @@ export const SURFACES: SurfaceDescriptor[] = [
     ],
     notApplicable: ["mcp-server", "plugin"],
   },
-  {
-    id: "opencode",
+  opencode: {
     label: "OpenCode",
     family: "opencode",
     priority: true,
@@ -198,8 +216,7 @@ export const SURFACES: SurfaceDescriptor[] = [
   },
   // ── Legacy surfaces retained at current fidelity (data carried over ──
   // from adapters/target-metadata.ts TARGETS).
-  {
-    id: "windsurf",
+  windsurf: {
     label: "Windsurf",
     family: "windsurf",
     priority: false,
@@ -213,8 +230,7 @@ export const SURFACES: SurfaceDescriptor[] = [
     ],
     notApplicable: [],
   },
-  {
-    id: "gemini",
+  gemini: {
     label: "Gemini CLI",
     family: "gemini",
     priority: false,
@@ -228,8 +244,7 @@ export const SURFACES: SurfaceDescriptor[] = [
     ],
     notApplicable: [],
   },
-  {
-    id: "junie",
+  junie: {
     label: "Junie",
     family: "junie",
     priority: false,
@@ -243,7 +258,13 @@ export const SURFACES: SurfaceDescriptor[] = [
     ],
     notApplicable: [],
   },
-];
+};
+
+/** All supported surfaces, in SURFACE_IDS order. */
+export const SURFACES: SurfaceDescriptor[] = SURFACE_IDS.map((id) => ({
+  id,
+  ...SURFACE_TABLE[id],
+}));
 
 /** Ids of the surfaces the engine actively targets (legacy surfaces excluded). */
 export const PRIORITY_SURFACES: SurfaceId[] = SURFACES.filter((s) => s.priority).map(
