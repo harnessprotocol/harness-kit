@@ -7,11 +7,17 @@ export interface ParseResult {
   config: HarnessConfig;
   isLegacyFormat: boolean;
   /**
-   * Human-readable notes for the automatic in-memory v2 → v2.1 migration.
-   * Empty when the document is already current (or is not a `version: "2"`
-   * doc — v1 documents keep their dedicated legacy handling and are never
-   * auto-migrated here). The returned `config` is the migrated one; the
-   * document on disk is untouched.
+   * Structured record of the automatic in-memory v2 → v2.1 migration.
+   * `applied` is false (with empty `changes`) when the document is already
+   * current — or is not a `version: "2"` doc: v1 documents keep their
+   * dedicated legacy handling and are never auto-migrated here. `changes`
+   * holds the raw change descriptions for UIs to render directly. The
+   * returned `config` is the migrated one; the document on disk is untouched.
+   */
+  migration: { applied: boolean; changes: string[] };
+  /**
+   * Display-ready lines for the migration: one line per change plus a single
+   * trailing remediation line. Empty whenever `migration.applied` is false.
    */
   warnings: string[];
 }
@@ -39,13 +45,17 @@ export function parseHarness(yamlString: string): ParseResult {
   // that key is valid under v2, and by the time validateHarness sees the
   // migrated config it has already been renamed to "copilot-vscode".
   const migration = migrateHarnessV2ToV21(doc as unknown as HarnessConfig);
+  const applied = migration.changes.length > 0;
 
   return {
     config: migration.config,
     isLegacyFormat: isLegacyFormat(doc),
-    warnings: migration.changes.map(
-      (change) =>
-        `migrated to protocol v2.1 in memory: ${change} — the file on disk is unchanged (run \`harness-kit migrate --write\` to update it)`,
-    ),
+    migration: { applied, changes: migration.changes },
+    warnings: applied
+      ? [
+          ...migration.changes.map((change) => `migrated to protocol v2.1 in memory: ${change}`),
+          "the file on disk is unchanged — run `harness-kit migrate --write` to persist the migration",
+        ]
+      : [],
   };
 }

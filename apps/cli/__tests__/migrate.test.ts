@@ -2,6 +2,7 @@ import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+import { parse } from "yaml";
 import { migrateCommand } from "../src/commands/migrate.js";
 import { CliTestEnv } from "./helpers/cli-test-env.js";
 
@@ -64,6 +65,39 @@ describe("migrate command", () => {
     // Structure-preserving write: comments survive.
     expect(written).toContain("# team profile");
     expect(written).toContain("# native copilot block");
+  });
+
+  it("--write collapses both copilot spellings into one copilot-vscode block, modern values winning", async () => {
+    await writeFile(
+      harnessPath,
+      [
+        'version: "2"',
+        "kind: profile",
+        "scope: project",
+        "metadata:",
+        "  name: merge-me",
+        "  description: Merge fixture",
+        "vendor:",
+        "  copilot:",
+        "    chat.mode: ask",
+        "    legacy-only: true",
+        "  copilot-vscode:",
+        "    chat.mode: agent",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    await migrateCommand(harnessPath, { write: true });
+
+    expect(env.exitCode).toBeNull();
+    const written = await readFile(harnessPath, "utf-8");
+    expect(written).toContain('version: "2.1"');
+    expect(written).not.toMatch(/^\s*copilot:/m);
+    const parsed = parse(written) as { vendor: Record<string, unknown> };
+    expect(parsed.vendor).toEqual({
+      "copilot-vscode": { "chat.mode": "agent", "legacy-only": true },
+    });
   });
 
   it("reports already-current on a second run and leaves the file unchanged", async () => {

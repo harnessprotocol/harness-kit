@@ -28,6 +28,9 @@ export function migrateHarnessV2ToV21(config: HarnessConfig): MigrationPreview {
     if (entries.some(([key]) => key in LEGACY_SURFACE_RENAMES)) {
       const renamed: Array<[string, Record<string, unknown>]> = [];
       const position = new Map<string, number>();
+      // target id → index of its rename entry in `changes`, so a later merge
+      // for the same target can retract the rename without string matching.
+      const pendingRenameChange = new Map<string, number>();
       for (const [key, value] of entries) {
         const isLegacy = key in LEGACY_SURFACE_RENAMES;
         const target = LEGACY_SURFACE_RENAMES[key] ?? key;
@@ -35,19 +38,30 @@ export function migrateHarnessV2ToV21(config: HarnessConfig): MigrationPreview {
         if (existing === undefined) {
           position.set(target, renamed.length);
           renamed.push([target, value]);
-          if (isLegacy) changes.push(`renamed vendor key "${key}" to "${target}"`);
+          if (isLegacy) {
+            pendingRenameChange.set(target, changes.length);
+            changes.push(`renamed vendor key "${key}" to "${target}"`);
+          }
           continue;
         }
         // Both spellings present: keep one block under the current id, with
         // the current spelling's entries winning on overlapping keys.
+        // Non-null: a collision at `target` only happens because some legacy
+        // key maps to it, so the reverse lookup always finds one.
         const legacySpelling = isLegacy
           ? key
           : Object.keys(LEGACY_SURFACE_RENAMES).find((k) => LEGACY_SURFACE_RENAMES[k] === target)!;
         const [, kept] = renamed[existing];
         renamed[existing] = [target, isLegacy ? { ...value, ...kept } : { ...kept, ...value }];
         // The merge change replaces any rename change already recorded for this pair.
-        const renameIndex = changes.indexOf(`renamed vendor key "${legacySpelling}" to "${target}"`);
-        if (renameIndex >= 0) changes.splice(renameIndex, 1);
+        const renameIndex = pendingRenameChange.get(target);
+        if (renameIndex !== undefined) {
+          changes.splice(renameIndex, 1);
+          pendingRenameChange.delete(target);
+          for (const [pendingTarget, index] of pendingRenameChange) {
+            if (index > renameIndex) pendingRenameChange.set(pendingTarget, index - 1);
+          }
+        }
         changes.push(
           `merged legacy vendor key "${legacySpelling}" into "${target}" (existing "${target}" entries win)`,
         );

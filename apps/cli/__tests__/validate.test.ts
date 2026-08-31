@@ -83,6 +83,38 @@ describe("validate command", () => {
     unlinkSync(filePath);
   });
 
+  it("prints migration warnings for a valid v2 doc with a legacy copilot vendor key", async () => {
+    const { mkdtemp, writeFile } = await import("node:fs/promises");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    const dir = await mkdtemp(join(tmpdir(), "harness-validate-"));
+    const filePath = join(dir, "harness.yaml");
+    await writeFile(
+      filePath,
+      [
+        'version: "2"',
+        "kind: profile",
+        "scope: project",
+        "metadata:",
+        "  name: legacy-keyed",
+        "  description: Legacy-keyed v2 fixture",
+        "vendor:",
+        "  copilot:",
+        "    chat.mode: agent",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    await expect(validateCommand(filePath)).rejects.toThrow();
+
+    expect(env.exitCode).toBe(0);
+    const log = env.getLog();
+    expect(log).toContain("PASS");
+    expect(log).toContain('renamed vendor key "copilot" to "copilot-vscode"');
+    expect(log).toContain("migrate --write");
+  });
+
   it("reports validation errors with details", async () => {
     const filePath = resolve(FIXTURES, "invalid-harness.yaml");
 

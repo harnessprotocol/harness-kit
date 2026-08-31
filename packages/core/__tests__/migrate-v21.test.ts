@@ -113,6 +113,23 @@ describe("migrateHarnessV2ToV21", () => {
     expect(vendor["copilot-vscode"]).toEqual({ "chat.mode": "agent", legacyOnly: true });
     expect(vendor).not.toHaveProperty("copilot");
     expect(migration.changes[0]).toContain("merged");
+    expect(migration.changes.some((change) => change.startsWith("renamed"))).toBe(false);
+  });
+
+  it("merges identically when the modern key is declared before the legacy one", () => {
+    const migration = migrateHarnessV2ToV21(
+      v2Config({
+        vendor: {
+          "copilot-vscode": { "chat.mode": "agent" },
+          copilot: { "chat.mode": "ask", legacyOnly: true },
+        } as HarnessConfig["vendor"],
+      }),
+    );
+    const vendor = migration.config.vendor as Record<string, unknown>;
+    expect(vendor["copilot-vscode"]).toEqual({ "chat.mode": "agent", legacyOnly: true });
+    expect(vendor).not.toHaveProperty("copilot");
+    expect(migration.changes[0]).toContain('merged legacy vendor key "copilot" into "copilot-vscode"');
+    expect(migration.changes.some((change) => change.startsWith("renamed"))).toBe(false);
   });
 });
 
@@ -165,15 +182,24 @@ describe("parseHarness v2 → v2.1 auto-migration", () => {
     "",
   ].join("\n");
 
-  it("returns the migrated config and surfaces each change as a warning", () => {
-    const { config, warnings } = parseHarness(V2_YAML);
+  it("returns the migrated config with structured migration info and display warnings", () => {
+    const { config, migration, warnings } = parseHarness(V2_YAML);
     expect(config.version).toBe("2.1");
     const vendor = config.vendor as Record<string, unknown>;
     expect(vendor["copilot-vscode"]).toEqual({ "chat.mode": "agent" });
     expect(vendor).not.toHaveProperty("copilot");
-    expect(warnings).toHaveLength(2);
-    expect(warnings.some((w) => w.includes('renamed vendor key "copilot" to "copilot-vscode"'))).toBe(true);
-    expect(warnings.some((w) => w.includes("set protocol version to 2.1"))).toBe(true);
+    // Structured channel: raw change descriptions, no CLI boilerplate.
+    expect(migration.applied).toBe(true);
+    expect(migration.changes).toEqual([
+      'renamed vendor key "copilot" to "copilot-vscode"',
+      "set protocol version to 2.1",
+    ]);
+    // Display channel: one line per change plus a single remediation line.
+    expect(warnings).toHaveLength(3);
+    expect(warnings[0]).toContain('renamed vendor key "copilot" to "copilot-vscode"');
+    expect(warnings[1]).toContain("set protocol version to 2.1");
+    expect(warnings.filter((w) => w.includes("migrate --write"))).toHaveLength(1);
+    expect(warnings[2]).toContain("migrate --write");
   });
 
   it("validates a v2 doc with a legacy copilot vendor key, then migrates cleanly", () => {
@@ -185,19 +211,21 @@ describe("parseHarness v2 → v2.1 auto-migration", () => {
   });
 
   it("round-trips a v2.1 doc with zero warnings", () => {
-    const { config, warnings } = parseHarness(
+    const { config, migration, warnings } = parseHarness(
       V2_YAML.replace('version: "2"', 'version: "2.1"').replace("  copilot:", "  copilot-vscode:"),
     );
     expect(config.version).toBe("2.1");
+    expect(migration).toEqual({ applied: false, changes: [] });
     expect(warnings).toEqual([]);
   });
 
   it("leaves v1 documents untouched with zero warnings", () => {
-    const { config, warnings, isLegacyFormat } = parseHarness(
+    const { config, migration, warnings, isLegacyFormat } = parseHarness(
       ['version: "1"', "metadata:", "  name: legacy", "  description: Legacy", ""].join("\n"),
     );
     expect(config.version).toBe("1");
     expect(isLegacyFormat).toBe(false);
+    expect(migration).toEqual({ applied: false, changes: [] });
     expect(warnings).toEqual([]);
   });
 });

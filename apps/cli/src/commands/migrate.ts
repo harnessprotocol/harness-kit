@@ -82,7 +82,10 @@ export async function migrateCommand(filePath?: string, flags: MigrateFlags = {}
 
 /**
  * Apply the previewed migration surgically to the parsed Document so untouched
- * lines (including comments) survive the rewrite byte-for-byte.
+ * lines survive the rewrite byte-for-byte. Comments survive the plain rename
+ * path (only the key scalar changes); the merge path (both spellings present)
+ * replaces the merged vendor block wholesale, so comments INSIDE the two
+ * merged blocks may be dropped.
  */
 function applyMigrationToDocument(doc: Document, migrated: HarnessConfig): void {
   doc.set("version", migrated.version);
