@@ -21,7 +21,12 @@ import type {
   ObserveOptions,
   SurfaceId,
 } from "@harness-kit/core";
-import { buildReconciliationContext, legacyTargetHint, summarizePlan } from "./portability-common.js";
+import {
+  buildReconciliationContext,
+  currentPlatform,
+  legacyTargetHint,
+  summarizePlan,
+} from "./portability-common.js";
 
 interface DiffFlags {
   target?: string;
@@ -150,12 +155,10 @@ async function crossSurfaceDiff(flags: DiffFlags): Promise<void> {
   const to = parseSurfaceFlag(flags.to, "--to");
 
   const fs = new NodeFsProvider();
-  const platform = process.platform;
   const observeOpts: ObserveOptions = {
     projectRoot: fs.cwd(),
     homeRoot: homedir(),
-    // Anything Node reports beyond darwin/win32 uses linux-style paths.
-    platform: platform === "darwin" || platform === "win32" ? platform : "linux",
+    platform: currentPlatform(),
   };
   const inventory = await buildMachineInventory(fs, observeOpts);
 
@@ -266,6 +269,10 @@ export async function diffCommand(
   if (flags.from !== undefined || flags.to !== undefined) {
     await crossSurfaceDiff(flags);
     return;
+  }
+  if (flags.only !== undefined) {
+    console.error("--only requires --from/--to (it filters cross-surface diff rows).");
+    process.exit(1);
   }
 
   const resolved = resolve(filePath ?? "harness.yaml");

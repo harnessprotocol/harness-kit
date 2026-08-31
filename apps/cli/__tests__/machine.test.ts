@@ -211,6 +211,53 @@ describe.sequential("machine inventory CLI", () => {
       expect(env.getLog()).toContain("not applicable on pi");
     });
 
+    it("orients FieldDeltas to --from/--to in both directions without stray keys", async () => {
+      // claude-code's project server has one extra arg; the engine stores
+      // the pair in registry order (claude-code before cursor) as a
+      // "removed" delta with only `left` set.
+      await mkdir(join(project, ".claude"), { recursive: true });
+      await mkdir(join(project, ".cursor"), { recursive: true });
+      await writeFile(
+        join(project, ".mcp.json"),
+        JSON.stringify({ mcpServers: { postgres: { command: "pg-mcp", args: ["--local", "--verbose"] } } }),
+      );
+      await writeFile(
+        join(project, ".cursor", "mcp.json"),
+        JSON.stringify({ mcpServers: { postgres: { command: "pg-mcp", args: ["--local"] } } }),
+      );
+
+      type DeltaPayload = { rows: Array<{ deltas: Array<Record<string, unknown>> }> };
+
+      // Forward (matches registry order): delta passes through unchanged.
+      await expect(
+        diffCommand(undefined, { from: "claude-code", to: "cursor", json: true }),
+      ).rejects.toThrow("process.exit(1)");
+      const forward = JSON.parse(env.getLog()) as DeltaPayload;
+      expect(forward.rows[0].deltas).toEqual([
+        { path: "args[1]", kind: "removed", left: "--verbose" },
+      ]);
+      expect("right" in forward.rows[0].deltas[0]).toBe(false);
+
+      // Swapped: removed becomes added, left becomes right, no stray keys.
+      env.consoleLog = [];
+      await expect(
+        diffCommand(undefined, { from: "cursor", to: "claude-code", json: true }),
+      ).rejects.toThrow("process.exit(1)");
+      const swapped = JSON.parse(env.getLog()) as DeltaPayload;
+      expect(swapped.rows[0].deltas).toEqual([
+        { path: "args[1]", kind: "added", right: "--verbose" },
+      ]);
+      expect("left" in swapped.rows[0].deltas[0]).toBe(false);
+    });
+
+    it("rejects --only in legacy drift mode with a one-line error", async () => {
+      await expect(diffCommand(undefined, { only: "mcp-server" })).rejects.toThrow(
+        "process.exit(1)",
+      );
+      expect(env.exitCode).toBe(1);
+      expect(env.getError()).toContain("--only requires --from/--to");
+    });
+
     it("rejects an unknown surface id with the legacy hint and the valid id list", async () => {
       await expect(
         diffCommand(undefined, { from: "copilot", to: "cursor" }),

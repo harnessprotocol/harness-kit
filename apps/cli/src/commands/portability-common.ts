@@ -21,6 +21,7 @@ import type {
   HarnessResource,
   HarnessScope,
   LayeredHarnessProfile,
+  ObserveOptions,
   PortabilityState,
   ReconciliationPlan,
   ReconciliationResolution,
@@ -59,6 +60,15 @@ export function timestamp(): string {
  * spelling renamed by protocol v2.1 (e.g. `copilot` → `copilot-vscode`).
  * Includes a leading space so it can be interpolated directly after the id.
  */
+/** Map process.platform onto the three platforms core's observe layer
+ * understands. Everything Node reports beyond darwin/win32 (freebsd, aix,
+ * sunos, ...) uses linux-style config paths — the closest model core has. */
+export function currentPlatform(): ObserveOptions["platform"] {
+  const platform = process.platform;
+  if (platform === "darwin" || platform === "win32") return platform;
+  return "linux";
+}
+
 export function legacyTargetHint(target: string): string {
   const renamed = LEGACY_SURFACE_RENAMES[target];
   return renamed ? ` (did you mean ${renamed}?)` : "";

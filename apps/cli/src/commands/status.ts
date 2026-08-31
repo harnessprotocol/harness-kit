@@ -20,7 +20,7 @@ import type {
 } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
 import { defaultStatePath, SqliteStateStore } from "../state/sqlite-store.js";
-import { buildReconciliationContext, summarizePlan } from "./portability-common.js";
+import { buildReconciliationContext, currentPlatform, summarizePlan } from "./portability-common.js";
 
 interface StatusFlags {
   json?: boolean;
@@ -78,15 +78,6 @@ function formatTable(report: FleetReport): string {
   );
 
   return lines.join("\n");
-}
-
-/** Map process.platform onto the three platforms core understands. */
-function currentPlatform(): ObserveOptions["platform"] {
-  const platform = process.platform;
-  if (platform === "darwin" || platform === "win32") return platform;
-  // Everything else Node reports (freebsd, openbsd, aix, sunos, ...) uses
-  // linux-style config paths, the closest observation model core has.
-  return "linux";
 }
 
 /**
