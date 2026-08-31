@@ -12,7 +12,7 @@ const snapshot: DesktopPortabilitySnapshot = {
   conflicts: [],
   operations: [],
   lossCount: 2,
-  capabilityTotals: { native: 40, translated: 20, "source-only": 12, unsupported: 8 },
+  capabilityTotals: { native: 40, translated: 20, "source-only": 12, unsupported: 8, "not-applicable": 2 },
   capturePreview: { resources: 7, targets: 8 },
   applyPreview: { createsOrUpdates: 5, captures: 1, deletions: 0 },
   rollbackHistory: ["2026-08-28T11-55-00Z"],

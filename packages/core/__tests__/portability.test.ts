@@ -177,7 +177,7 @@ describe("resource layers and reconciliation", () => {
 describe("capability and safety contracts", () => {
   it("has an explicit cell for every target and resource kind", () => {
     expect(() => assertCapabilityMatrixComplete()).not.toThrow();
-    expect(TARGET_CAPABILITY_MATRIX).toHaveLength(80);
+    expect(TARGET_CAPABILITY_MATRIX).toHaveLength(110);
   });
 
   it("rejects escaping and dangerous capsule content", () => {

@@ -22,7 +22,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   PORTABLE_RESOURCE_KINDS,
-  TARGETS,
+  SURFACES,
   TARGET_CAPABILITY_MATRIX,
 } from "@harness-kit/core";
 import type {
@@ -30,6 +30,7 @@ import type {
   HarnessResourceKind,
   HarnessScope,
   LifecycleOperation,
+  ProductFamily,
   SurfaceId,
 } from "@harness-kit/core";
 
@@ -60,6 +61,8 @@ export interface CapabilityCell {
 export interface CapabilityRow {
   id: SurfaceId;
   label: string;
+  /** Product family the surface belongs to (groups matrix columns). */
+  family: ProductFamily;
   cells: CapabilityCell[];
 }
 
@@ -70,10 +73,11 @@ export interface CapabilityMatrix {
 }
 
 function buildMatrix(): CapabilityMatrix {
-  const rows: CapabilityRow[] = TARGETS.map(({ id, label }) => {
+  const rows: CapabilityRow[] = SURFACES.map(({ id, label, family }) => {
     return {
       id,
       label,
+      family,
       cells: PORTABLE_RESOURCE_KINDS.map((resource) => {
         const capability = TARGET_CAPABILITY_MATRIX.find((entry) => entry.target === id && entry.resource === resource);
         if (!capability) throw new Error(`missing capability cell for ${id}/${resource}`);

@@ -372,7 +372,7 @@ export type {
   CapsuleValidationFinding,
   CapsuleValidationResult,
 } from "./portability/types.js";
-export { HARNESS_SCOPE_ORDER } from "./portability/types.js";
+export { HARNESS_SCOPE_ORDER, HARNESS_RESOURCE_KINDS } from "./portability/types.js";
 export {
   stableSerialize,
   digestValue,

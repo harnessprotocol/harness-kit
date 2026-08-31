@@ -9,17 +9,21 @@ export const HARNESS_SCOPE_ORDER: readonly HarnessScope[] = [
   "session",
 ] as const;
 
-export type HarnessResourceKind =
-  | "plugin"
-  | "skill"
-  | "mcp-server"
-  | "env"
-  | "instructions"
-  | "permissions"
-  | "architectural-constraints"
-  | "policy"
-  | "extends"
-  | "native-extension";
+/** Runtime source of truth for the resource-kind vocabulary (closed set). */
+export const HARNESS_RESOURCE_KINDS = [
+  "plugin",
+  "skill",
+  "mcp-server",
+  "env",
+  "instructions",
+  "permissions",
+  "architectural-constraints",
+  "policy",
+  "extends",
+  "native-extension",
+] as const;
+
+export type HarnessResourceKind = (typeof HARNESS_RESOURCE_KINDS)[number];
 
 export type ReleaseDigest = `sha256:${string}`;
 
@@ -76,7 +80,13 @@ export interface LayerResolutionResult {
   policyViolations: PolicyViolation[];
 }
 
-export type CapabilityLevel = "native" | "translated" | "source-only" | "unsupported";
+/**
+ * Cell vocabulary of the capability matrix. `"not-applicable"` marks a
+ * resource kind the harness has no concept of at all (surface registry
+ * `notApplicable`), as distinct from `"unsupported"` (the concept exists but
+ * the operation cannot be performed).
+ */
+export type CapabilityLevel = "native" | "translated" | "source-only" | "unsupported" | "not-applicable";
 export type LifecycleOperation = "capture" | "apply" | "reconcile" | "rollback";
 
 export interface TargetResourceCapability {

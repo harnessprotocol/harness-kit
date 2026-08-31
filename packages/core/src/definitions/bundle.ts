@@ -7,6 +7,7 @@ import type {
   SurfaceDescriptor,
   SurfaceScope,
 } from "../surfaces/types.js";
+import { HARNESS_RESOURCE_KINDS } from "../portability/types.js";
 import type { HarnessResourceKind } from "../portability/types.js";
 import { isRecord } from "../utils/is-record.js";
 
@@ -64,7 +65,7 @@ export interface DefinitionsBundle {
   generatedAt: string;
   /** Surface descriptors carried by this bundle (may be a subset of SURFACE_IDS). */
   surfaces: SurfaceDescriptor[];
-  /** Capability matrix payload; carried opaquely until the matrix re-key (Task 11) types it. */
+  /** Capability matrix payload (TargetResourceCapability[] in practice); carried opaquely in v1. */
   capabilityMatrix: unknown;
 }
 
@@ -100,6 +101,17 @@ function requireString(value: unknown, path: string): string {
     fail(`${path} must be a string (got ${describe(value)})`);
   }
   return value;
+}
+
+function requireKind(value: unknown, path: string): HarnessResourceKind {
+  const kind = requireString(value, path);
+  if (!isOneOf(kind, HARNESS_RESOURCE_KINDS)) {
+    fail(
+      `${path} "${kind}" is not a known resource kind. ` +
+        `Known kinds: ${HARNESS_RESOURCE_KINDS.join(", ")}`,
+    );
+  }
+  return kind;
 }
 
 function requireScope(value: unknown, path: string): SurfaceScope {
@@ -152,14 +164,14 @@ function validateStore(value: unknown, path: string): ConfigStore {
   if (!isRecord(value)) {
     fail(`${path} must be an object (got ${describe(value)})`);
   }
-  // `kind` and `formatId` are deliberately open-set (any string) per design §3:
-  // a descriptor referencing a format this binary lacks renders the surface as
+  // `formatId` is deliberately open-set (any string) per design §3: a
+  // descriptor referencing a format this binary lacks renders the surface as
   // "needs app update" — degraded, never crashed. So an unknown value must
-  // survive validation for downstream code to degrade on.
-  // TODO(Task 11): tighten `kind` against a HARNESS_RESOURCE_KINDS const once
-  // the capability-matrix re-key introduces one.
+  // survive validation for downstream code to degrade on. `kind` is the
+  // opposite: it keys the capability matrix, so it is validated against the
+  // closed HARNESS_RESOURCE_KINDS set.
   const store: ConfigStore = {
-    kind: requireString(value.kind, `${path}.kind`) as HarnessResourceKind,
+    kind: requireKind(value.kind, `${path}.kind`),
     scope: requireScope(value.scope, `${path}.scope`),
     formatId: requireString(value.formatId, `${path}.formatId`) as StoreFormatId,
     path: requireString(value.path, `${path}.path`),
@@ -228,9 +240,9 @@ function validateSurface(value: unknown, path: string): SurfaceDescriptor {
     priority: value.priority,
     detect: value.detect.map((probe, i) => validateProbe(probe, `${path}.detect[${i}]`)),
     stores: value.stores.map((store, i) => validateStore(store, `${path}.stores[${i}]`)),
-    // Open-set like store kinds — see the note in validateStore.
+    // Closed-set like store kinds — see the note in validateStore.
     notApplicable: value.notApplicable.map(
-      (kind, i) => requireString(kind, `${path}.notApplicable[${i}]`) as HarnessResourceKind,
+      (kind, i) => requireKind(kind, `${path}.notApplicable[${i}]`),
     ),
   };
   if (value.requiredBinary !== undefined) {

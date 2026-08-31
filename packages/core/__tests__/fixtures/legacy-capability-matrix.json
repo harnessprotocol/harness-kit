@@ -1,0 +1,1339 @@
+[
+  {
+    "target": "claude-code",
+    "resource": "plugin",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "plugin installation remains managed by the native marketplace"
+  },
+  {
+    "target": "claude-code",
+    "resource": "skill",
+    "operations": {
+      "capture": "native",
+      "apply": "native",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "native",
+      "personal": "native",
+      "project": "native",
+      "session": "source-only"
+    }
+  },
+  {
+    "target": "claude-code",
+    "resource": "mcp-server",
+    "operations": {
+      "capture": "native",
+      "apply": "native",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "native",
+      "session": "source-only"
+    }
+  },
+  {
+    "target": "claude-code",
+    "resource": "env",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "only declarations and provider references are portable; values remain local"
+  },
+  {
+    "target": "claude-code",
+    "resource": "instructions",
+    "operations": {
+      "capture": "native",
+      "apply": "native",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "native",
+      "session": "source-only"
+    }
+  },
+  {
+    "target": "claude-code",
+    "resource": "permissions",
+    "operations": {
+      "capture": "native",
+      "apply": "native",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "native",
+      "session": "source-only"
+    }
+  },
+  {
+    "target": "claude-code",
+    "resource": "architectural-constraints",
+    "operations": {
+      "capture": "source-only",
+      "apply": "translated",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "translated",
+      "session": "source-only"
+    },
+    "note": "constraints compile into portable agent instructions"
+  },
+  {
+    "target": "claude-code",
+    "resource": "policy",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "Harness Kit resolves this resource before native export"
+  },
+  {
+    "target": "claude-code",
+    "resource": "extends",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "Harness Kit resolves this resource before native export"
+  },
+  {
+    "target": "claude-code",
+    "resource": "native-extension",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "native extension blocks only apply to their originating target"
+  },
+  {
+    "target": "cursor",
+    "resource": "plugin",
+    "operations": {
+      "capture": "source-only",
+      "apply": "translated",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "translated",
+      "session": "source-only"
+    },
+    "note": "plugin-contained portable resources are translated individually"
+  },
+  {
+    "target": "cursor",
+    "resource": "skill",
+    "operations": {
+      "capture": "native",
+      "apply": "native",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "native",
+      "personal": "native",
+      "project": "native",
+      "session": "source-only"
+    }
+  },
+  {
+    "target": "cursor",
+    "resource": "mcp-server",
+    "operations": {
+      "capture": "native",
+      "apply": "native",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "native",
+      "session": "source-only"
+    }
+  },
+  {
+    "target": "cursor",
+    "resource": "env",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "only declarations and provider references are portable; values remain local"
+  },
+  {
+    "target": "cursor",
+    "resource": "instructions",
+    "operations": {
+      "capture": "native",
+      "apply": "native",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "native",
+      "session": "source-only"
+    }
+  },
+  {
+    "target": "cursor",
+    "resource": "permissions",
+    "operations": {
+      "capture": "source-only",
+      "apply": "translated",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "translated",
+      "session": "source-only"
+    },
+    "note": "permission intent is preserved in instructions when native enforcement is unavailable"
+  },
+  {
+    "target": "cursor",
+    "resource": "architectural-constraints",
+    "operations": {
+      "capture": "source-only",
+      "apply": "translated",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "translated",
+      "session": "source-only"
+    },
+    "note": "constraints compile into portable agent instructions"
+  },
+  {
+    "target": "cursor",
+    "resource": "policy",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "Harness Kit resolves this resource before native export"
+  },
+  {
+    "target": "cursor",
+    "resource": "extends",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "Harness Kit resolves this resource before native export"
+  },
+  {
+    "target": "cursor",
+    "resource": "native-extension",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "native extension blocks only apply to their originating target"
+  },
+  {
+    "target": "copilot-vscode",
+    "resource": "plugin",
+    "operations": {
+      "capture": "source-only",
+      "apply": "translated",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "translated",
+      "session": "source-only"
+    },
+    "note": "plugin-contained portable resources are translated individually"
+  },
+  {
+    "target": "copilot-vscode",
+    "resource": "skill",
+    "operations": {
+      "capture": "native",
+      "apply": "native",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "native",
+      "personal": "native",
+      "project": "native",
+      "session": "source-only"
+    }
+  },
+  {
+    "target": "copilot-vscode",
+    "resource": "mcp-server",
+    "operations": {
+      "capture": "native",
+      "apply": "native",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "native",
+      "session": "source-only"
+    }
+  },
+  {
+    "target": "copilot-vscode",
+    "resource": "env",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "only declarations and provider references are portable; values remain local"
+  },
+  {
+    "target": "copilot-vscode",
+    "resource": "instructions",
+    "operations": {
+      "capture": "native",
+      "apply": "native",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "native",
+      "session": "source-only"
+    }
+  },
+  {
+    "target": "copilot-vscode",
+    "resource": "permissions",
+    "operations": {
+      "capture": "source-only",
+      "apply": "translated",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "translated",
+      "session": "source-only"
+    },
+    "note": "permission intent is preserved in instructions when native enforcement is unavailable"
+  },
+  {
+    "target": "copilot-vscode",
+    "resource": "architectural-constraints",
+    "operations": {
+      "capture": "source-only",
+      "apply": "translated",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "translated",
+      "session": "source-only"
+    },
+    "note": "constraints compile into portable agent instructions"
+  },
+  {
+    "target": "copilot-vscode",
+    "resource": "policy",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "Harness Kit resolves this resource before native export"
+  },
+  {
+    "target": "copilot-vscode",
+    "resource": "extends",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "Harness Kit resolves this resource before native export"
+  },
+  {
+    "target": "copilot-vscode",
+    "resource": "native-extension",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "native extension blocks only apply to their originating target"
+  },
+  {
+    "target": "codex",
+    "resource": "plugin",
+    "operations": {
+      "capture": "source-only",
+      "apply": "translated",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "translated",
+      "session": "source-only"
+    },
+    "note": "plugin-contained portable resources are translated individually"
+  },
+  {
+    "target": "codex",
+    "resource": "skill",
+    "operations": {
+      "capture": "native",
+      "apply": "native",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "native",
+      "personal": "native",
+      "project": "native",
+      "session": "source-only"
+    }
+  },
+  {
+    "target": "codex",
+    "resource": "mcp-server",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "no project-scoped native MCP file is managed for this target"
+  },
+  {
+    "target": "codex",
+    "resource": "env",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "only declarations and provider references are portable; values remain local"
+  },
+  {
+    "target": "codex",
+    "resource": "instructions",
+    "operations": {
+      "capture": "native",
+      "apply": "native",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "native",
+      "session": "source-only"
+    }
+  },
+  {
+    "target": "codex",
+    "resource": "permissions",
+    "operations": {
+      "capture": "source-only",
+      "apply": "translated",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "translated",
+      "session": "source-only"
+    },
+    "note": "permission intent is preserved in instructions when native enforcement is unavailable"
+  },
+  {
+    "target": "codex",
+    "resource": "architectural-constraints",
+    "operations": {
+      "capture": "source-only",
+      "apply": "translated",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "translated",
+      "session": "source-only"
+    },
+    "note": "constraints compile into portable agent instructions"
+  },
+  {
+    "target": "codex",
+    "resource": "policy",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "Harness Kit resolves this resource before native export"
+  },
+  {
+    "target": "codex",
+    "resource": "extends",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "Harness Kit resolves this resource before native export"
+  },
+  {
+    "target": "codex",
+    "resource": "native-extension",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "native extension blocks only apply to their originating target"
+  },
+  {
+    "target": "opencode",
+    "resource": "plugin",
+    "operations": {
+      "capture": "source-only",
+      "apply": "translated",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "translated",
+      "session": "source-only"
+    },
+    "note": "plugin-contained portable resources are translated individually"
+  },
+  {
+    "target": "opencode",
+    "resource": "skill",
+    "operations": {
+      "capture": "native",
+      "apply": "native",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "native",
+      "personal": "native",
+      "project": "native",
+      "session": "source-only"
+    }
+  },
+  {
+    "target": "opencode",
+    "resource": "mcp-server",
+    "operations": {
+      "capture": "native",
+      "apply": "native",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "native",
+      "session": "source-only"
+    }
+  },
+  {
+    "target": "opencode",
+    "resource": "env",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "only declarations and provider references are portable; values remain local"
+  },
+  {
+    "target": "opencode",
+    "resource": "instructions",
+    "operations": {
+      "capture": "native",
+      "apply": "native",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "native",
+      "session": "source-only"
+    }
+  },
+  {
+    "target": "opencode",
+    "resource": "permissions",
+    "operations": {
+      "capture": "source-only",
+      "apply": "translated",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "translated",
+      "session": "source-only"
+    },
+    "note": "permission intent is preserved in instructions when native enforcement is unavailable"
+  },
+  {
+    "target": "opencode",
+    "resource": "architectural-constraints",
+    "operations": {
+      "capture": "source-only",
+      "apply": "translated",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "translated",
+      "session": "source-only"
+    },
+    "note": "constraints compile into portable agent instructions"
+  },
+  {
+    "target": "opencode",
+    "resource": "policy",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "Harness Kit resolves this resource before native export"
+  },
+  {
+    "target": "opencode",
+    "resource": "extends",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "Harness Kit resolves this resource before native export"
+  },
+  {
+    "target": "opencode",
+    "resource": "native-extension",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "native extension blocks only apply to their originating target"
+  },
+  {
+    "target": "windsurf",
+    "resource": "plugin",
+    "operations": {
+      "capture": "source-only",
+      "apply": "translated",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "translated",
+      "session": "source-only"
+    },
+    "note": "plugin-contained portable resources are translated individually"
+  },
+  {
+    "target": "windsurf",
+    "resource": "skill",
+    "operations": {
+      "capture": "native",
+      "apply": "native",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "native",
+      "personal": "native",
+      "project": "native",
+      "session": "source-only"
+    }
+  },
+  {
+    "target": "windsurf",
+    "resource": "mcp-server",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "no project-scoped native MCP file is managed for this target"
+  },
+  {
+    "target": "windsurf",
+    "resource": "env",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "only declarations and provider references are portable; values remain local"
+  },
+  {
+    "target": "windsurf",
+    "resource": "instructions",
+    "operations": {
+      "capture": "native",
+      "apply": "native",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "native",
+      "session": "source-only"
+    }
+  },
+  {
+    "target": "windsurf",
+    "resource": "permissions",
+    "operations": {
+      "capture": "source-only",
+      "apply": "translated",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "translated",
+      "session": "source-only"
+    },
+    "note": "permission intent is preserved in instructions when native enforcement is unavailable"
+  },
+  {
+    "target": "windsurf",
+    "resource": "architectural-constraints",
+    "operations": {
+      "capture": "source-only",
+      "apply": "translated",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "translated",
+      "session": "source-only"
+    },
+    "note": "constraints compile into portable agent instructions"
+  },
+  {
+    "target": "windsurf",
+    "resource": "policy",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "Harness Kit resolves this resource before native export"
+  },
+  {
+    "target": "windsurf",
+    "resource": "extends",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "Harness Kit resolves this resource before native export"
+  },
+  {
+    "target": "windsurf",
+    "resource": "native-extension",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "native extension blocks only apply to their originating target"
+  },
+  {
+    "target": "gemini",
+    "resource": "plugin",
+    "operations": {
+      "capture": "source-only",
+      "apply": "translated",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "translated",
+      "session": "source-only"
+    },
+    "note": "plugin-contained portable resources are translated individually"
+  },
+  {
+    "target": "gemini",
+    "resource": "skill",
+    "operations": {
+      "capture": "native",
+      "apply": "native",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "native",
+      "personal": "native",
+      "project": "native",
+      "session": "source-only"
+    }
+  },
+  {
+    "target": "gemini",
+    "resource": "mcp-server",
+    "operations": {
+      "capture": "native",
+      "apply": "native",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "native",
+      "session": "source-only"
+    }
+  },
+  {
+    "target": "gemini",
+    "resource": "env",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "only declarations and provider references are portable; values remain local"
+  },
+  {
+    "target": "gemini",
+    "resource": "instructions",
+    "operations": {
+      "capture": "native",
+      "apply": "native",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "native",
+      "session": "source-only"
+    }
+  },
+  {
+    "target": "gemini",
+    "resource": "permissions",
+    "operations": {
+      "capture": "source-only",
+      "apply": "translated",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "translated",
+      "session": "source-only"
+    },
+    "note": "permission intent is preserved in instructions when native enforcement is unavailable"
+  },
+  {
+    "target": "gemini",
+    "resource": "architectural-constraints",
+    "operations": {
+      "capture": "source-only",
+      "apply": "translated",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "translated",
+      "session": "source-only"
+    },
+    "note": "constraints compile into portable agent instructions"
+  },
+  {
+    "target": "gemini",
+    "resource": "policy",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "Harness Kit resolves this resource before native export"
+  },
+  {
+    "target": "gemini",
+    "resource": "extends",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "Harness Kit resolves this resource before native export"
+  },
+  {
+    "target": "gemini",
+    "resource": "native-extension",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "native extension blocks only apply to their originating target"
+  },
+  {
+    "target": "junie",
+    "resource": "plugin",
+    "operations": {
+      "capture": "source-only",
+      "apply": "translated",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "translated",
+      "session": "source-only"
+    },
+    "note": "plugin-contained portable resources are translated individually"
+  },
+  {
+    "target": "junie",
+    "resource": "skill",
+    "operations": {
+      "capture": "native",
+      "apply": "native",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "native",
+      "personal": "native",
+      "project": "native",
+      "session": "source-only"
+    }
+  },
+  {
+    "target": "junie",
+    "resource": "mcp-server",
+    "operations": {
+      "capture": "native",
+      "apply": "native",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "native",
+      "session": "source-only"
+    }
+  },
+  {
+    "target": "junie",
+    "resource": "env",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "only declarations and provider references are portable; values remain local"
+  },
+  {
+    "target": "junie",
+    "resource": "instructions",
+    "operations": {
+      "capture": "native",
+      "apply": "native",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "native",
+      "session": "source-only"
+    }
+  },
+  {
+    "target": "junie",
+    "resource": "permissions",
+    "operations": {
+      "capture": "source-only",
+      "apply": "translated",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "translated",
+      "session": "source-only"
+    },
+    "note": "permission intent is preserved in instructions when native enforcement is unavailable"
+  },
+  {
+    "target": "junie",
+    "resource": "architectural-constraints",
+    "operations": {
+      "capture": "source-only",
+      "apply": "translated",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "translated",
+      "session": "source-only"
+    },
+    "note": "constraints compile into portable agent instructions"
+  },
+  {
+    "target": "junie",
+    "resource": "policy",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "Harness Kit resolves this resource before native export"
+  },
+  {
+    "target": "junie",
+    "resource": "extends",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "Harness Kit resolves this resource before native export"
+  },
+  {
+    "target": "junie",
+    "resource": "native-extension",
+    "operations": {
+      "capture": "source-only",
+      "apply": "source-only",
+      "reconcile": "native",
+      "rollback": "native"
+    },
+    "scopes": {
+      "organization": "translated",
+      "personal": "translated",
+      "project": "source-only",
+      "session": "source-only"
+    },
+    "note": "native extension blocks only apply to their originating target"
+  }
+]

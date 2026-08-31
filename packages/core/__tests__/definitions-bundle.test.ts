@@ -107,6 +107,30 @@ describe("definitions bundle format", () => {
     expect(() => fromBundle(badPath)).toThrow(/path/);
   });
 
+  it("rejects a store kind outside HARNESS_RESOURCE_KINDS, naming it and the known kinds", () => {
+    const value = validBundleValue() as {
+      surfaces: { stores: Record<string, unknown>[] }[];
+    };
+    value.surfaces[0].stores[0].kind = "widget";
+    expect(() => fromBundle(value)).toThrow(/"widget" is not a known resource kind/);
+    expect(() => fromBundle(value)).toThrow(/mcp-server/);
+    expect(() => fromBundle(value)).toThrow(/native-extension/);
+  });
+
+  it("rejects a notApplicable kind outside HARNESS_RESOURCE_KINDS", () => {
+    const value = validBundleValue() as { surfaces: Record<string, unknown>[] };
+    value.surfaces[1].notApplicable = ["widget"];
+    expect(() => fromBundle(value)).toThrow(/notApplicable\[0\] "widget" is not a known resource kind/);
+  });
+
+  it("still accepts an unknown store formatId (deliberately open-set)", () => {
+    const value = validBundleValue() as {
+      surfaces: { stores: Record<string, unknown>[] }[];
+    };
+    value.surfaces[0].stores[0].formatId = "yaml-futuristic";
+    expect(fromBundle(value).surfaces[0].stores[0].formatId).toBe("yaml-futuristic");
+  });
+
   it("rejects a bundleNumber that is not a non-negative integer", () => {
     for (const bad of [-1, 1.5, "1", null, undefined]) {
       const value = validBundleValue() as Record<string, unknown>;

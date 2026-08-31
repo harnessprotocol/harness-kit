@@ -5,8 +5,8 @@ import type { SurfaceDescriptor, SurfaceId } from "./types.js";
  * The Surface registry: pure per-surface path/binary/store metadata that keys
  * the cross-harness portability engine (design.md §2–3). This supersedes the
  * legacy compile-target metadata in adapters/target-metadata.ts (now also
- * keyed by `SurfaceId`) — the full re-key of the capability matrix to all 11
- * surfaces lands separately (Task 11).
+ * keyed by `SurfaceId`); the capability matrix in portability/capabilities.ts
+ * derives its cells for all 11 surfaces from this registry.
  *
  * Store paths are project-relative (scope "project") or home-relative
  * (scope "user"); `pathByPlatform` overrides `path` per OS. Paths verified

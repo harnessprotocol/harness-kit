@@ -1,6 +1,6 @@
 import rawMatrix from '@/lib/capability-matrix.generated.json';
 
-type CapabilityLevel = 'native' | 'translated' | 'source-only' | 'unsupported';
+type CapabilityLevel = 'native' | 'translated' | 'source-only' | 'unsupported' | 'not-applicable';
 
 interface CapabilityCell {
   resource: string;
@@ -12,6 +12,7 @@ interface CapabilityCell {
 interface CapabilityRow {
   id: string;
   label: string;
+  family: string;
   cells: CapabilityCell[];
 }
 
@@ -31,7 +32,19 @@ const LABEL: Record<CapabilityLevel, string> = {
   translated: 'Translated',
   'source-only': 'Source only',
   unsupported: 'Unsupported',
+  'not-applicable': 'Not applicable',
 };
+
+/** Contiguous product-family column groups, in row order (rows are family-sorted upstream). */
+function familyGroups(rows: CapabilityRow[]): { family: string; span: number }[] {
+  const groups: { family: string; span: number }[] = [];
+  for (const row of rows) {
+    const last = groups[groups.length - 1];
+    if (last && last.family === row.family) last.span += 1;
+    else groups.push({ family: row.family, span: 1 });
+  }
+  return groups;
+}
 
 function Chip({ value, title }: { value: CapabilityLevel; title: string }) {
   return (
@@ -54,8 +67,25 @@ export function CapabilityMatrix() {
   return (
     <div className="w-full">
       <div className="overflow-x-auto rounded-xl" style={{ boxShadow: 'var(--shadow-sm)' }}>
-        <table className="w-full min-w-[1120px] border-separate border-spacing-0 text-sm">
+        <table className="w-full min-w-[1480px] border-separate border-spacing-0 text-sm">
           <thead>
+            <tr>
+              <th
+                className="sticky left-0 z-10 px-4 pt-3 pb-1"
+                style={{ background: 'var(--bg-elevated)' }}
+                aria-hidden="true"
+              />
+              {familyGroups(matrix.rows).map((group) => (
+                <th
+                  key={group.family}
+                  colSpan={group.span}
+                  className="px-4 pt-3 pb-1 text-left text-[0.65rem] font-semibold uppercase tracking-[0.12em]"
+                  style={{ background: 'var(--bg-elevated)', color: 'var(--fg-subtle)' }}
+                >
+                  {group.family}
+                </th>
+              ))}
+            </tr>
             <tr>
               <th
                 className="sticky left-0 z-10 px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.07em]"
@@ -102,7 +132,17 @@ export function CapabilityMatrix() {
                       className="px-4 py-2.5"
                       style={{ background: i % 2 === 0 ? 'var(--bg-surface)' : 'var(--bg-base)' }}
                     >
-                      <Chip value={cell.operations.apply} title={title} />
+                      {cell.operations.apply === 'not-applicable' ? (
+                        <span
+                          title={cell.note ?? 'Not applicable: this harness has no concept of this resource kind'}
+                          style={{ color: 'var(--fg-subtle)' }}
+                          aria-label="Not applicable"
+                        >
+                          &mdash;
+                        </span>
+                      ) : (
+                        <Chip value={cell.operations.apply} title={title} />
+                      )}
                     </td>
                   );
                 })}
