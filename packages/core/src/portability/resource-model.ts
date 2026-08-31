@@ -1,4 +1,5 @@
 import { computeFileHash } from "../compile/check.js";
+import { isProtocolV2 } from "../utils/legacy.js";
 import type {
   EnvDeclaration,
   HarnessConfig,
@@ -284,7 +285,7 @@ export interface MigrationPreview {
 }
 
 export function migrateHarnessV1ToV2(config: HarnessConfig): MigrationPreview {
-  if (config.version === "2") return { config, changes: [] };
+  if (isProtocolV2(config.version)) return { config, changes: [] };
   return {
     config: {
       ...config,

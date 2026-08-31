@@ -9,6 +9,7 @@ import {
   buildFixPlan,
   applyFix,
   getCheckableTargets,
+  isProtocolV2,
 } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
 import type { FixOperation, SurfaceId } from "@harness-kit/core";
@@ -84,7 +85,7 @@ export async function fixCommand(
   const targets = flags.target ? parseTargets(flags.target) : ALL_TARGETS;
   const adapterCtx = { fs, projectRoot: fs.cwd(), homeRoot: await fs.homedir() };
 
-  const reconciliationContext = config.version === "2"
+  const reconciliationContext = isProtocolV2(config.version)
     ? await buildReconciliationContext(resolved, { target: targets.join(",") })
     : undefined;
   if (reconciliationContext?.plan.blocked) {

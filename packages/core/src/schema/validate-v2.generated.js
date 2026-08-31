@@ -4,7 +4,7 @@
 // <stdin>
 var validate = validate20;
 var stdin_default = validate20;
-var schema31 = { "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "https://harnessprotocol.io/schema/v2/harness.schema.json", "title": "Harness Protocol v2 extensions", "description": "Validates the v2 protocol discriminator, profile scope, and lossless native vendor blocks. Implementations also validate all portable sections against the v1 structural schema for backward compatibility.", "type": "object", "required": ["version"], "properties": { "version": { "type": "string", "const": "2" }, "scope": { "type": "string", "enum": ["organization", "personal", "project", "session"], "default": "project" }, "vendor": { "type": "object", "description": "Lossless target-native configuration. A block is only applied by its matching adapter.", "propertyNames": { "enum": ["claude-code", "claude-desktop", "cursor", "copilot", "copilot-vscode", "copilot-cli", "codex", "opencode", "pi", "windsurf", "gemini", "junie"] }, "additionalProperties": { "type": "object", "additionalProperties": true } } }, "additionalProperties": true };
+var schema31 = { "$schema": "https://json-schema.org/draft/2020-12/schema", "$id": "https://harnessprotocol.io/schema/v2/harness.schema.json", "title": "Harness Protocol v2 extensions", "description": "Validates the v2 protocol discriminator, profile scope, and lossless native vendor blocks. Implementations also validate all portable sections against the v1 structural schema for backward compatibility.", "type": "object", "required": ["version"], "properties": { "version": { "type": "string", "enum": ["2", "2.1"] }, "scope": { "type": "string", "enum": ["organization", "personal", "project", "session"], "default": "project" }, "vendor": { "type": "object", "description": "Lossless target-native configuration. A block is only applied by its matching adapter.", "propertyNames": { "enum": ["claude-code", "claude-desktop", "cursor", "copilot", "copilot-vscode", "copilot-cli", "codex", "opencode", "pi", "windsurf", "gemini", "junie"] }, "additionalProperties": { "type": "object", "additionalProperties": true } } }, "allOf": [{ "$comment": "v2.1 re-keys vendor blocks by surface id: the legacy 'copilot' key (kept in the base enum so v2 documents in the wild still validate) is rejected and must be spelled 'copilot-vscode'.", "if": { "properties": { "version": { "const": "2.1" } }, "required": ["version"] }, "then": { "properties": { "vendor": { "type": "object", "propertyNames": { "not": { "const": "copilot" } } } } } }], "additionalProperties": true };
 function validate20(data, { instancePath = "", parentData, parentDataProperty, rootData = data, dynamicAnchors = {} } = {}) {
   ;
   let vErrors = null;
@@ -16,98 +16,133 @@ function validate20(data, { instancePath = "", parentData, parentDataProperty, r
   if (evaluated0.dynamicItems) {
     evaluated0.items = void 0;
   }
+  const _errs3 = errors;
+  let valid1 = true;
+  const _errs4 = errors;
   if (data && typeof data == "object" && !Array.isArray(data)) {
-    if (data.version === void 0) {
-      const err0 = { instancePath, schemaPath: "#/required", keyword: "required", params: { missingProperty: "version" }, message: "must have required property 'version'", schema: schema31.required, parentSchema: schema31, data };
+    let missing0;
+    if (data.version === void 0 && (missing0 = "version")) {
+      const err0 = {};
       if (vErrors === null) {
         vErrors = [err0];
       } else {
         vErrors.push(err0);
       }
       errors++;
+    } else {
+      if (data.version !== void 0) {
+        if ("2.1" !== data.version) {
+          const err1 = {};
+          if (vErrors === null) {
+            vErrors = [err1];
+          } else {
+            vErrors.push(err1);
+          }
+          errors++;
+        }
+      }
+    }
+  }
+  var _valid0 = _errs4 === errors;
+  errors = _errs3;
+  if (vErrors !== null) {
+    if (_errs3) {
+      vErrors.length = _errs3;
+    } else {
+      vErrors = null;
+    }
+  }
+  if (_valid0) {
+    const _errs6 = errors;
+    if (data && typeof data == "object" && !Array.isArray(data)) {
+      if (data.vendor !== void 0) {
+        let data1 = data.vendor;
+        if (data1 && typeof data1 == "object" && !Array.isArray(data1)) {
+          for (const key0 in data1) {
+            const _errs9 = errors;
+            const _errs10 = errors;
+            const _errs11 = errors;
+            if ("copilot" !== key0) {
+              const err2 = {};
+              if (vErrors === null) {
+                vErrors = [err2];
+              } else {
+                vErrors.push(err2);
+              }
+              errors++;
+            }
+            var valid5 = _errs11 === errors;
+            if (valid5) {
+              const err3 = { instancePath: instancePath + "/vendor", schemaPath: "#/allOf/0/then/properties/vendor/propertyNames/not", keyword: "not", params: {}, message: "must NOT be valid", schema: schema31.allOf[0].then.properties.vendor.propertyNames.not, parentSchema: schema31.allOf[0].then.properties.vendor.propertyNames, data: key0, propertyName: key0 };
+              if (vErrors === null) {
+                vErrors = [err3];
+              } else {
+                vErrors.push(err3);
+              }
+              errors++;
+            } else {
+              errors = _errs10;
+              if (vErrors !== null) {
+                if (_errs10) {
+                  vErrors.length = _errs10;
+                } else {
+                  vErrors = null;
+                }
+              }
+            }
+            var valid4 = _errs9 === errors;
+            if (!valid4) {
+              const err4 = { instancePath: instancePath + "/vendor", schemaPath: "#/allOf/0/then/properties/vendor/propertyNames", keyword: "propertyNames", params: { propertyName: key0 }, message: "property name must be valid", schema: schema31.allOf[0].then.properties.vendor.propertyNames, parentSchema: schema31.allOf[0].then.properties.vendor, data: data1 };
+              if (vErrors === null) {
+                vErrors = [err4];
+              } else {
+                vErrors.push(err4);
+              }
+              errors++;
+            }
+          }
+        } else {
+          const err5 = { instancePath: instancePath + "/vendor", schemaPath: "#/allOf/0/then/properties/vendor/type", keyword: "type", params: { type: "object" }, message: "must be object", schema: schema31.allOf[0].then.properties.vendor.type, parentSchema: schema31.allOf[0].then.properties.vendor, data: data1 };
+          if (vErrors === null) {
+            vErrors = [err5];
+          } else {
+            vErrors.push(err5);
+          }
+          errors++;
+        }
+      }
+    }
+    var _valid0 = _errs6 === errors;
+    valid1 = _valid0;
+    if (valid1) {
+      var props0 = {};
+      props0.vendor = true;
+      props0.version = true;
+    }
+  }
+  if (!valid1) {
+    const err6 = { instancePath, schemaPath: "#/allOf/0/if", keyword: "if", params: { failingKeyword: "then" }, message: 'must match "then" schema', schema: schema31.allOf[0].if, parentSchema: schema31.allOf[0], data };
+    if (vErrors === null) {
+      vErrors = [err6];
+    } else {
+      vErrors.push(err6);
+    }
+    errors++;
+  }
+  if (data && typeof data == "object" && !Array.isArray(data)) {
+    if (data.version === void 0) {
+      const err7 = { instancePath, schemaPath: "#/required", keyword: "required", params: { missingProperty: "version" }, message: "must have required property 'version'", schema: schema31.required, parentSchema: schema31, data };
+      if (vErrors === null) {
+        vErrors = [err7];
+      } else {
+        vErrors.push(err7);
+      }
+      errors++;
     }
     if (data.version !== void 0) {
-      let data0 = data.version;
-      if (typeof data0 !== "string") {
-        const err1 = { instancePath: instancePath + "/version", schemaPath: "#/properties/version/type", keyword: "type", params: { type: "string" }, message: "must be string", schema: schema31.properties.version.type, parentSchema: schema31.properties.version, data: data0 };
-        if (vErrors === null) {
-          vErrors = [err1];
-        } else {
-          vErrors.push(err1);
-        }
-        errors++;
-      }
-      if ("2" !== data0) {
-        const err2 = { instancePath: instancePath + "/version", schemaPath: "#/properties/version/const", keyword: "const", params: { allowedValue: "2" }, message: "must be equal to constant", schema: "2", parentSchema: schema31.properties.version, data: data0 };
-        if (vErrors === null) {
-          vErrors = [err2];
-        } else {
-          vErrors.push(err2);
-        }
-        errors++;
-      }
-    }
-    if (data.scope !== void 0) {
-      let data1 = data.scope;
-      if (typeof data1 !== "string") {
-        const err3 = { instancePath: instancePath + "/scope", schemaPath: "#/properties/scope/type", keyword: "type", params: { type: "string" }, message: "must be string", schema: schema31.properties.scope.type, parentSchema: schema31.properties.scope, data: data1 };
-        if (vErrors === null) {
-          vErrors = [err3];
-        } else {
-          vErrors.push(err3);
-        }
-        errors++;
-      }
-      if (!(data1 === "organization" || data1 === "personal" || data1 === "project" || data1 === "session")) {
-        const err4 = { instancePath: instancePath + "/scope", schemaPath: "#/properties/scope/enum", keyword: "enum", params: { allowedValues: schema31.properties.scope.enum }, message: "must be equal to one of the allowed values", schema: schema31.properties.scope.enum, parentSchema: schema31.properties.scope, data: data1 };
-        if (vErrors === null) {
-          vErrors = [err4];
-        } else {
-          vErrors.push(err4);
-        }
-        errors++;
-      }
-    }
-    if (data.vendor !== void 0) {
-      let data2 = data.vendor;
-      if (data2 && typeof data2 == "object" && !Array.isArray(data2)) {
-        for (const key0 in data2) {
-          const _errs8 = errors;
-          if (!(key0 === "claude-code" || key0 === "claude-desktop" || key0 === "cursor" || key0 === "copilot" || key0 === "copilot-vscode" || key0 === "copilot-cli" || key0 === "codex" || key0 === "opencode" || key0 === "pi" || key0 === "windsurf" || key0 === "gemini" || key0 === "junie")) {
-            const err5 = { instancePath: instancePath + "/vendor", schemaPath: "#/properties/vendor/propertyNames/enum", keyword: "enum", params: { allowedValues: schema31.properties.vendor.propertyNames.enum }, message: "must be equal to one of the allowed values", schema: schema31.properties.vendor.propertyNames.enum, parentSchema: schema31.properties.vendor.propertyNames, data: key0, propertyName: key0 };
-            if (vErrors === null) {
-              vErrors = [err5];
-            } else {
-              vErrors.push(err5);
-            }
-            errors++;
-          }
-          var valid1 = _errs8 === errors;
-          if (!valid1) {
-            const err6 = { instancePath: instancePath + "/vendor", schemaPath: "#/properties/vendor/propertyNames", keyword: "propertyNames", params: { propertyName: key0 }, message: "property name must be valid", schema: schema31.properties.vendor.propertyNames, parentSchema: schema31.properties.vendor, data: data2 };
-            if (vErrors === null) {
-              vErrors = [err6];
-            } else {
-              vErrors.push(err6);
-            }
-            errors++;
-          }
-        }
-        for (const key1 in data2) {
-          let data3 = data2[key1];
-          if (data3 && typeof data3 == "object" && !Array.isArray(data3)) {
-          } else {
-            const err7 = { instancePath: instancePath + "/vendor/" + key1.replace(/~/g, "~0").replace(/\//g, "~1"), schemaPath: "#/properties/vendor/additionalProperties/type", keyword: "type", params: { type: "object" }, message: "must be object", schema: schema31.properties.vendor.additionalProperties.type, parentSchema: schema31.properties.vendor.additionalProperties, data: data3 };
-            if (vErrors === null) {
-              vErrors = [err7];
-            } else {
-              vErrors.push(err7);
-            }
-            errors++;
-          }
-        }
-      } else {
-        const err8 = { instancePath: instancePath + "/vendor", schemaPath: "#/properties/vendor/type", keyword: "type", params: { type: "object" }, message: "must be object", schema: schema31.properties.vendor.type, parentSchema: schema31.properties.vendor, data: data2 };
+      let data2 = data.version;
+      if (typeof data2 !== "string") {
+        const err8 = { instancePath: instancePath + "/version", schemaPath: "#/properties/version/type", keyword: "type", params: { type: "string" }, message: "must be string", schema: schema31.properties.version.type, parentSchema: schema31.properties.version, data: data2 };
         if (vErrors === null) {
           vErrors = [err8];
         } else {
@@ -115,13 +150,91 @@ function validate20(data, { instancePath = "", parentData, parentDataProperty, r
         }
         errors++;
       }
+      if (!(data2 === "2" || data2 === "2.1")) {
+        const err9 = { instancePath: instancePath + "/version", schemaPath: "#/properties/version/enum", keyword: "enum", params: { allowedValues: schema31.properties.version.enum }, message: "must be equal to one of the allowed values", schema: schema31.properties.version.enum, parentSchema: schema31.properties.version, data: data2 };
+        if (vErrors === null) {
+          vErrors = [err9];
+        } else {
+          vErrors.push(err9);
+        }
+        errors++;
+      }
+    }
+    if (data.scope !== void 0) {
+      let data3 = data.scope;
+      if (typeof data3 !== "string") {
+        const err10 = { instancePath: instancePath + "/scope", schemaPath: "#/properties/scope/type", keyword: "type", params: { type: "string" }, message: "must be string", schema: schema31.properties.scope.type, parentSchema: schema31.properties.scope, data: data3 };
+        if (vErrors === null) {
+          vErrors = [err10];
+        } else {
+          vErrors.push(err10);
+        }
+        errors++;
+      }
+      if (!(data3 === "organization" || data3 === "personal" || data3 === "project" || data3 === "session")) {
+        const err11 = { instancePath: instancePath + "/scope", schemaPath: "#/properties/scope/enum", keyword: "enum", params: { allowedValues: schema31.properties.scope.enum }, message: "must be equal to one of the allowed values", schema: schema31.properties.scope.enum, parentSchema: schema31.properties.scope, data: data3 };
+        if (vErrors === null) {
+          vErrors = [err11];
+        } else {
+          vErrors.push(err11);
+        }
+        errors++;
+      }
+    }
+    if (data.vendor !== void 0) {
+      let data4 = data.vendor;
+      if (data4 && typeof data4 == "object" && !Array.isArray(data4)) {
+        for (const key1 in data4) {
+          const _errs19 = errors;
+          if (!(key1 === "claude-code" || key1 === "claude-desktop" || key1 === "cursor" || key1 === "copilot" || key1 === "copilot-vscode" || key1 === "copilot-cli" || key1 === "codex" || key1 === "opencode" || key1 === "pi" || key1 === "windsurf" || key1 === "gemini" || key1 === "junie")) {
+            const err12 = { instancePath: instancePath + "/vendor", schemaPath: "#/properties/vendor/propertyNames/enum", keyword: "enum", params: { allowedValues: schema31.properties.vendor.propertyNames.enum }, message: "must be equal to one of the allowed values", schema: schema31.properties.vendor.propertyNames.enum, parentSchema: schema31.properties.vendor.propertyNames, data: key1, propertyName: key1 };
+            if (vErrors === null) {
+              vErrors = [err12];
+            } else {
+              vErrors.push(err12);
+            }
+            errors++;
+          }
+          var valid7 = _errs19 === errors;
+          if (!valid7) {
+            const err13 = { instancePath: instancePath + "/vendor", schemaPath: "#/properties/vendor/propertyNames", keyword: "propertyNames", params: { propertyName: key1 }, message: "property name must be valid", schema: schema31.properties.vendor.propertyNames, parentSchema: schema31.properties.vendor, data: data4 };
+            if (vErrors === null) {
+              vErrors = [err13];
+            } else {
+              vErrors.push(err13);
+            }
+            errors++;
+          }
+        }
+        for (const key2 in data4) {
+          let data5 = data4[key2];
+          if (data5 && typeof data5 == "object" && !Array.isArray(data5)) {
+          } else {
+            const err14 = { instancePath: instancePath + "/vendor/" + key2.replace(/~/g, "~0").replace(/\//g, "~1"), schemaPath: "#/properties/vendor/additionalProperties/type", keyword: "type", params: { type: "object" }, message: "must be object", schema: schema31.properties.vendor.additionalProperties.type, parentSchema: schema31.properties.vendor.additionalProperties, data: data5 };
+            if (vErrors === null) {
+              vErrors = [err14];
+            } else {
+              vErrors.push(err14);
+            }
+            errors++;
+          }
+        }
+      } else {
+        const err15 = { instancePath: instancePath + "/vendor", schemaPath: "#/properties/vendor/type", keyword: "type", params: { type: "object" }, message: "must be object", schema: schema31.properties.vendor.type, parentSchema: schema31.properties.vendor, data: data4 };
+        if (vErrors === null) {
+          vErrors = [err15];
+        } else {
+          vErrors.push(err15);
+        }
+        errors++;
+      }
     }
   } else {
-    const err9 = { instancePath, schemaPath: "#/type", keyword: "type", params: { type: "object" }, message: "must be object", schema: schema31.type, parentSchema: schema31, data };
+    const err16 = { instancePath, schemaPath: "#/type", keyword: "type", params: { type: "object" }, message: "must be object", schema: schema31.type, parentSchema: schema31, data };
     if (vErrors === null) {
-      vErrors = [err9];
+      vErrors = [err16];
     } else {
-      vErrors.push(err9);
+      vErrors.push(err16);
     }
     errors++;
   }

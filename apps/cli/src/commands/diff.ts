@@ -6,6 +6,7 @@ import {
   validateHarness,
   detectDrift,
   getCheckableTargets,
+  isProtocolV2,
 } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
 import type { DriftItem, DriftClass, SurfaceId } from "@harness-kit/core";
@@ -112,7 +113,7 @@ export async function diffCommand(
   const targets = flags.target ? parseTargets(flags.target) : ALL_TARGETS;
   const adapterCtx = { fs, projectRoot: fs.cwd(), homeRoot: await fs.homedir() };
   const report = await detectDrift(config, adapterCtx, targets);
-  const reconciliation = config.version === "2"
+  const reconciliation = isProtocolV2(config.version)
     ? summarizePlan(await buildReconciliationContext(resolved, { target: targets.join(",") }).then((context) => context.plan))
     : undefined;
 

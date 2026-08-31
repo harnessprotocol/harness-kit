@@ -117,7 +117,7 @@ export {
 } from "./portability/native-extensions.js";
 export { scanPortableContent } from "./portability/capsule.js";
 export { scanHarnessArtifact } from "./portability/artifact-security.js";
-export { isLegacyFormat } from "./utils/legacy.js";
+export { isLegacyFormat, isProtocolV2 } from "./utils/legacy.js";
 
 // Security scanner
 export { scanPlugin } from "./security/scanner.js";
