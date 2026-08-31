@@ -214,7 +214,16 @@ export function MachineGrid({ inventory, selectedRowKey, onRowClick }: MachineGr
                 )}
                 <tr
                   data-testid={`machine-row-${row.key}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-label={`${row.name} details`}
                   onClick={() => onRowClick(row)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onRowClick(row);
+                    }
+                  }}
                   style={{
                     cursor: "pointer",
                     background: selected ? "var(--bg-elevated)" : "transparent",

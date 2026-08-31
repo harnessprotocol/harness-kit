@@ -1,6 +1,6 @@
 {
   "identifier": "default",
-  "description": "Default capability — grants core API, read access to ~/.claude/, and shell spawn for comparator",
+  "description": "Default capability — grants core API, read access to harness config roots under $HOME (read-ONLY for the Machine-observation paths: .claude.json, Claude/Code app-support dirs, .copilot, .agents), and shell spawn for comparator",
   "windows": ["main"],
   "permissions": [
     "core:default",
@@ -41,6 +41,66 @@
         { "path": "$HOME/.pi/**" },
         { "path": "$HOME/.harness-kit" },
         { "path": "$HOME/.harness-kit/**" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-read-text-file",
+      "allow": [
+        { "path": "$HOME/.claude.json" },
+        { "path": "$HOME/Library/Application Support/Claude" },
+        { "path": "$HOME/Library/Application Support/Claude/**" },
+        { "path": "$HOME/Library/Application Support/Code/User" },
+        { "path": "$HOME/Library/Application Support/Code/User/**" },
+        { "path": "$HOME/.config/Code/User" },
+        { "path": "$HOME/.config/Code/User/**" },
+        { "path": "$HOME/AppData/Roaming/Claude" },
+        { "path": "$HOME/AppData/Roaming/Claude/**" },
+        { "path": "$HOME/AppData/Roaming/Code/User" },
+        { "path": "$HOME/AppData/Roaming/Code/User/**" },
+        { "path": "$HOME/.copilot" },
+        { "path": "$HOME/.copilot/**" },
+        { "path": "$HOME/.agents" },
+        { "path": "$HOME/.agents/**" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-read-dir",
+      "allow": [
+        { "path": "$HOME/.claude.json" },
+        { "path": "$HOME/Library/Application Support/Claude" },
+        { "path": "$HOME/Library/Application Support/Claude/**" },
+        { "path": "$HOME/Library/Application Support/Code/User" },
+        { "path": "$HOME/Library/Application Support/Code/User/**" },
+        { "path": "$HOME/.config/Code/User" },
+        { "path": "$HOME/.config/Code/User/**" },
+        { "path": "$HOME/AppData/Roaming/Claude" },
+        { "path": "$HOME/AppData/Roaming/Claude/**" },
+        { "path": "$HOME/AppData/Roaming/Code/User" },
+        { "path": "$HOME/AppData/Roaming/Code/User/**" },
+        { "path": "$HOME/.copilot" },
+        { "path": "$HOME/.copilot/**" },
+        { "path": "$HOME/.agents" },
+        { "path": "$HOME/.agents/**" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [
+        { "path": "$HOME/.claude.json" },
+        { "path": "$HOME/Library/Application Support/Claude" },
+        { "path": "$HOME/Library/Application Support/Claude/**" },
+        { "path": "$HOME/Library/Application Support/Code/User" },
+        { "path": "$HOME/Library/Application Support/Code/User/**" },
+        { "path": "$HOME/.config/Code/User" },
+        { "path": "$HOME/.config/Code/User/**" },
+        { "path": "$HOME/AppData/Roaming/Claude" },
+        { "path": "$HOME/AppData/Roaming/Claude/**" },
+        { "path": "$HOME/AppData/Roaming/Code/User" },
+        { "path": "$HOME/AppData/Roaming/Code/User/**" },
+        { "path": "$HOME/.copilot" },
+        { "path": "$HOME/.copilot/**" },
+        { "path": "$HOME/.agents" },
+        { "path": "$HOME/.agents/**" }
       ]
     },
     "dialog:default",

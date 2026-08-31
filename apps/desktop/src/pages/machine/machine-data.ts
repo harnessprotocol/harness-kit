@@ -17,6 +17,13 @@ export function detectDesktopPlatform(): "darwin" | "win32" | "linux" {
   return "linux";
 }
 
+export interface MachineScanResult {
+  inventory: MachineInventory;
+  /** True when a project directory was requested but its runtime FS scope
+   * grant failed — the inventory is machine-only and the UI should say so. */
+  projectDegraded: boolean;
+}
+
 /**
  * Run the core machine-inventory engine over this machine (mirrors
  * portability-data.ts: TauriFsProvider + Tauri homeDir resolution, engine
@@ -26,9 +33,10 @@ export function detectDesktopPlatform(): "darwin" | "win32" | "linux" {
  * observation (user-scope stores only). A project dir needs a runtime FS
  * scope grant first (the static capability only covers known $HOME config
  * roots) — mirroring Fleet, a failed grant drops the project from the scan
- * rather than failing the whole inventory.
+ * rather than failing the whole inventory, but the degradation is reported
+ * so the page can surface it instead of silently under-reporting.
  */
-export async function loadMachineInventory(scanRoot: string | null): Promise<MachineInventory> {
+export async function loadMachineInventory(scanRoot: string | null): Promise<MachineScanResult> {
   const home = await homeDir();
   let projectRoot: string | null = null;
   if (scanRoot) {
@@ -38,9 +46,10 @@ export async function loadMachineInventory(scanRoot: string | null): Promise<Mac
     );
   }
   const fs = new TauriFsProvider(home);
-  return buildMachineInventory(fs, {
+  const inventory = await buildMachineInventory(fs, {
     projectRoot,
     homeRoot: home,
     platform: detectDesktopPlatform(),
   });
+  return { inventory, projectDegraded: Boolean(scanRoot) && projectRoot === null };
 }

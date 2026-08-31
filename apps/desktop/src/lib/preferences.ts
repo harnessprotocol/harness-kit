@@ -68,7 +68,7 @@ export function setDensity(density: Density) {
 // ── Default Section ──────────────────────────────────────────
 
 export function getDefaultSection(): string {
-  return localStorage.getItem(KEY_DEFAULT_SECTION) ?? "/fleet";
+  return localStorage.getItem(KEY_DEFAULT_SECTION) ?? "/machine";
 }
 
 export function setDefaultSection(path: string) {

@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Button } from "@harness-kit/ui";
 import type { GridRow, MachineDiff } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
@@ -30,6 +31,15 @@ export function RowDrawer({ row, diffs, onClose }: RowDrawerProps) {
   const presentSurfaces = Object.entries(row.cells).filter(
     ([, cell]) => cell.status === "present",
   );
+
+  // Escape closes the drawer.
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
 
   return (
     <aside

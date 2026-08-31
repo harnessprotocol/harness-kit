@@ -86,7 +86,7 @@ export default function App() {
               </>
             )}
             <Route path="/" element={<AppLayout />}>
-            {/* Fleet — home */}
+            {/* Machine — home (default section; user-overridable in preferences) */}
             <Route index element={<DefaultRedirect />} />
             <Route path="machine" element={<MachinePage />} />
             <Route path="fleet" element={<FleetPage />} />

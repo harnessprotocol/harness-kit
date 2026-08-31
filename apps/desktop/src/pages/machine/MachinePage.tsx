@@ -19,6 +19,7 @@ export default function MachinePage() {
   const [projectDir, setProjectDir] = useState("");
   const [selectedRow, setSelectedRow] = useState<GridRow | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
+  const [projectDegraded, setProjectDegraded] = useState(false);
 
   const load = useCallback(async (dir: string) => {
     setLoading(true);
@@ -26,7 +27,8 @@ export default function MachinePage() {
     setSelectedRow(null);
     try {
       const result = await loadMachineInventory(dir.trim() ? dir.trim() : null);
-      setInventory(result);
+      setInventory(result.inventory);
+      setProjectDegraded(result.projectDegraded);
     } catch (err) {
       setError(String(err));
     } finally {
@@ -134,6 +136,22 @@ export default function MachinePage() {
       </div>
 
       {error && <div className="hk-page-error">Scan failed: {error}</div>}
+
+      {projectDegraded && (
+        <div
+          data-testid="project-degraded-notice"
+          style={{
+            marginBottom: 12,
+            padding: "6px 10px",
+            borderRadius: 6,
+            background: "var(--warning-light)",
+            color: "var(--warning)",
+            fontSize: 11.5,
+          }}
+        >
+          Project directory could not be scanned — showing machine-only results.
+        </div>
+      )}
 
       {loading && !inventory && (
         <div style={{ padding: "40px 0", textAlign: "center", color: "var(--fg-subtle)", fontSize: 12.5 }}>

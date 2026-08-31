@@ -99,8 +99,8 @@ describe("getDensity / setDensity", () => {
 // ── Default Section ──────────────────────────────────────────
 
 describe("getDefaultSection / setDefaultSection", () => {
-  it("returns '/fleet' when unset", () => {
-    expect(getDefaultSection()).toBe("/fleet");
+  it("returns '/machine' when unset", () => {
+    expect(getDefaultSection()).toBe("/machine");
   });
 
   it("stores and retrieves a value", () => {

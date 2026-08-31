@@ -1,12 +1,27 @@
 import { getSurface } from "@harness-kit/core";
-import type { MachineInventory, ProductFamily, SurfaceId } from "@harness-kit/core";
+import type {
+  HarnessResourceKind,
+  MachineInventory,
+  ProductFamily,
+  SurfaceId,
+} from "@harness-kit/core";
 
-/** Display labels for resource kinds (row-section headers, NA tooltips). */
-export const KIND_LABELS: Record<string, string> = {
-  "mcp-server": "MCP servers",
+/**
+ * Display labels for resource kinds (row-section headers, NA tooltips).
+ * Exhaustive over HARNESS_RESOURCE_KINDS — the Record type fails to compile
+ * if core adds a kind, so headers/tooltips never fall back to raw ids.
+ */
+export const KIND_LABELS: Record<HarnessResourceKind, string> = {
+  plugin: "Plugins",
   skill: "Skills",
+  "mcp-server": "MCP servers",
+  env: "Environment variables",
   instructions: "Instructions",
   permissions: "Permissions",
+  "architectural-constraints": "Architectural constraints",
+  policy: "Policies",
+  extends: "Extends",
+  "native-extension": "Native extensions",
 };
 
 /** `sha256:abcdef…` → `abcdef12` (short-hash for tooltips/drawer). */

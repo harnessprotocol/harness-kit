@@ -286,6 +286,44 @@ describe("MachinePage", () => {
     expect(within(list).getByText("/home/user/.codex/config.toml")).toBeInTheDocument();
   });
 
+  it("shows a machine-only notice when the project scope grant fails", async () => {
+    mockGrantProjectScope.mockRejectedValue(new Error("forbidden"));
+    renderPage();
+    await screen.findByTestId("machine-grid");
+    expect(screen.queryByTestId("project-degraded-notice")).not.toBeInTheDocument();
+
+    fireEvent.change(
+      screen.getByPlaceholderText(/Project directory/),
+      { target: { value: "/repo/gone" } },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+
+    await screen.findByTestId("project-degraded-notice");
+    expect(
+      screen.getByText("Project directory could not be scanned — showing machine-only results."),
+    ).toBeInTheDocument();
+    // The scan proceeded machine-only: projectRoot dropped to null.
+    const opts = vi.mocked(buildMachineInventory).mock.calls.at(-1)?.[1] as { projectRoot: string | null };
+    expect(opts.projectRoot).toBeNull();
+  });
+
+  it("supports keyboard activation of rows and Escape to close the drawer", async () => {
+    renderPage();
+    await screen.findByTestId("machine-grid");
+
+    const row = screen.getByTestId("machine-row-skill:reviewer");
+    expect(row).toHaveAttribute("role", "button");
+    expect(row).toHaveAttribute("tabindex", "0");
+    fireEvent.keyDown(row, { key: "Enter" });
+    const drawer = await screen.findByTestId("machine-row-drawer");
+    expect(within(drawer).getByText("reviewer")).toBeInTheDocument();
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() =>
+      expect(screen.queryByTestId("machine-row-drawer")).not.toBeInTheDocument(),
+    );
+  });
+
   it("waits for the scan and shows the loading state first", async () => {
     let resolve!: (value: unknown) => void;
     vi.mocked(buildMachineInventory).mockReturnValue(new Promise((r) => { resolve = r; }) as never);
