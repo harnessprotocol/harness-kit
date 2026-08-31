@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { beforeAll, describe, expect, it } from "vitest";
@@ -7,22 +7,50 @@ import { beforeAll, describe, expect, it } from "vitest";
 const cliRoot = fileURLToPath(new URL("..", import.meta.url));
 const distEntry = join(cliRoot, "dist", "index.js");
 
+function newestMtime(dir: string): number {
+  let newest = 0;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    const mtime = entry.isDirectory() ? newestMtime(path) : statSync(path).mtimeMs;
+    if (mtime > newest) newest = mtime;
+  }
+  return newest;
+}
+
+/** dist is current when it exists and is newer than every source/config input. */
+function distIsFresh(): boolean {
+  try {
+    const distMtime = statSync(distEntry).mtimeMs;
+    const inputs = Math.max(
+      newestMtime(join(cliRoot, "src")),
+      statSync(join(cliRoot, "tsup.config.ts")).mtimeMs,
+    );
+    return distMtime >= inputs;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Bundle-level smoke test. Vitest runs the suite from SOURCE, so a broken
  * dist artifact can ship while every unit test stays green — exactly what
- * happened when tsup's esbuild pass stripped the `node:` prefix off
- * `node:sqlite` (not in its builtin list), leaving the bundle importing a
- * bare `sqlite` package that doesn't exist: ERR_MODULE_NOT_FOUND on every
- * command, --help included. Same failure family as the repo's known
- * node:crypto Tauri production crash. This test rebuilds dist and executes
- * it, so that class of regression cannot land silently again.
+ * happened when tsup 8's `removeNodeProtocol` default rewrote `node:sqlite`
+ * to a bare `sqlite` specifier that only exists behind the prefix:
+ * ERR_MODULE_NOT_FOUND on every command, --help included. Same failure
+ * family as the repo's known node:crypto Tauri production crash. This test
+ * ensures dist is fresh and executes it, so that class of regression cannot
+ * land silently again.
  */
 describe("dist bundle smoke", () => {
   beforeAll(() => {
-    // Always exercise a FRESH bundle, regardless of how the suite was
-    // invoked (turbo builds before test in CI; a bare `vitest run` locally
-    // would otherwise test a stale or missing dist).
-    execFileSync("pnpm", ["build"], { cwd: cliRoot, stdio: "pipe", timeout: 120_000 });
+    // Rebuild only when dist is stale or missing. In CI, turbo's
+    // `test dependsOn build` has already produced a fresh bundle —
+    // rebuilding here just starves concurrently-running package suites on
+    // small runners (observed: admin-console findBy timeouts / fork EPIPE).
+    // A bare local `vitest run` against edited sources still rebuilds.
+    if (!distIsFresh()) {
+      execFileSync("pnpm", ["build"], { cwd: cliRoot, stdio: "pipe", timeout: 120_000 });
+    }
   }, 180_000);
 
   it("keeps node: builtin specifiers intact in the emitted bundle", () => {
