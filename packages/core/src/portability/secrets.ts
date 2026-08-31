@@ -28,6 +28,30 @@ export function looksLikeSecret(key: string, value: string): boolean {
   return SENSITIVE_KEY.test(key) || CREDENTIAL_VALUE.test(value);
 }
 
+/**
+ * Sanitize a command's argument list against the same patterns
+ * sanitizeCapturedSecrets applies to arrays, but with a caller-chosen
+ * placeholder instead of env-var references (observe/normalize.ts uses the
+ * fixed "<secret>" placeholder so secret rotations never change a digest):
+ * - inline sensitive flags (`--api-key=VALUE`) keep the flag name, replace
+ *   the value — a flag RENAME still diffs;
+ * - a bare sensitive flag (`--token`) placeholders the NEXT element;
+ * - an element matching a credential value shape is placeholdered.
+ * Order is preserved; values that are already REFERENCEs stay verbatim.
+ * Additive helper — sanitizeCapturedSecrets behavior is unchanged.
+ */
+export function sanitizeCommandArgs(args: string[], placeholder: string): string[] {
+  return args.map((arg, index) => {
+    const inline = arg.match(INLINE_SENSITIVE_FLAG);
+    if (inline && !REFERENCE.test(inline[2])) return `${inline[1]}${placeholder}`;
+    const followsSensitiveFlag = index > 0 && SENSITIVE_FLAG.test(args[index - 1]);
+    if ((followsSensitiveFlag || CREDENTIAL_VALUE.test(arg)) && arg.length > 0 && !REFERENCE.test(arg)) {
+      return placeholder;
+    }
+    return arg;
+  });
+}
+
 function variableName(path: string[]): string {
   const normalized = path
     .join("_")

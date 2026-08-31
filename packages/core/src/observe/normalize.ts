@@ -1,7 +1,7 @@
 import type { HarnessResourceKind } from "../portability/types.js";
 import type { StoreFormatId, SurfaceId, SurfaceScope } from "../surfaces/types.js";
 import { digestValue } from "../portability/resource-model.js";
-import { looksLikeSecret } from "../portability/secrets.js";
+import { looksLikeSecret, sanitizeCommandArgs } from "../portability/secrets.js";
 import { isRecord } from "../utils/is-record.js";
 import type { ObservedResource, SurfaceObservation } from "./observe-surface.js";
 import type { InstructionsStoreValue, SkillStoreValue } from "./read-store.js";
@@ -31,7 +31,12 @@ export const SECRET_PLACEHOLDER = "<secret>";
 export interface NormalizedResource {
   surface: SurfaceId;
   kind: HarnessResourceKind;
-  /** `${kind}:${name.toLowerCase().trim()}` — cross-surface identity. */
+  /**
+   * `${kind}:${name.toLowerCase().trim()}` — cross-surface identity. The
+   * case-collapsing means two case-differing names in the SAME file share
+   * an identityKey; whether that is a collision or the same resource is a
+   * Task 10 (gaps/diffs) decision, not made here.
+   */
   identityKey: string;
   scope: SurfaceScope;
   /** Kind-specific, secret-sanitized, JSON-serializable canonical shape. */
@@ -47,7 +52,9 @@ export interface NormalizedResource {
 /**
  * Normalize text content: CRLF → LF, trailing whitespace stripped per line,
  * trailing newlines trimmed. The same skill or instruction file checked out
- * with different line endings digests identically.
+ * with different line endings digests identically. Note: stripping per-line
+ * trailing whitespace deliberately erases markdown hard-breaks (two trailing
+ * spaces) — a hard-break-only difference is treated as not semantic here.
  */
 function normalizeText(content: string): string {
   return content
@@ -95,6 +102,15 @@ function canonicalStringMap(map: Record<string, unknown>): Record<string, unknow
   return result;
 }
 
+/**
+ * Placeholder ONLY the userinfo portion of a URL (`scheme://user[:pass]@host`
+ * → `scheme://<secret>@host`). Deliberately narrower than looksLikeSecret
+ * over the whole URL — host/path/query changes must remain real diffs.
+ */
+function sanitizeUrlUserinfo(url: string): string {
+  return url.replace(/(:\/\/)[^/@\s]+@/, `$1${SECRET_PLACEHOLDER}@`);
+}
+
 // ── kind-specific canonicalizers ────────────────────────────────
 
 type Canonicalizer = (value: unknown) => unknown;
@@ -106,13 +122,20 @@ type Canonicalizer = (value: unknown) => unknown;
  *   with no transport/type key) canonicalize to `transport: "stdio"`, so the
  *   same server captured from `.claude.json` and `.cursor/mcp.json` digests
  *   identically.
- * - `args` kept IN ORDER — argument order is semantic for commands.
+ * - `args` kept IN ORDER — argument order is semantic for commands — with
+ *   inline secrets sanitized per element (see sanitizeCommandArgs), and
+ *   `url` has only its userinfo placeholdered.
  * - `env`/`headers` keys sorted; values that look like secrets become the
  *   fixed placeholder (rotation is not a diff), everything else kept
  *   verbatim (a PORT=5432 change IS a real diff).
  * - provenance-only fields (source, version, integrity) and anything else
  *   unrecognized are dropped; `enabled: false` is KEPT (semantic), and
  *   `bearerTokenEnvVar` is kept — it names a variable, not a secret value.
+ *
+ * The field whitelist here is paired with reverseTranslateServer
+ * (import/read-mcp.ts) and the toml-codex/json-opencode codecs as the
+ * upstream filters: everything those readers emit semantically is either
+ * whitelisted here or provenance-only by design.
  */
 function canonicalizeMcpServer(value: unknown): unknown {
   if (!isRecord(value)) return deepCanonical(value);
@@ -127,9 +150,14 @@ function canonicalizeMcpServer(value: unknown): unknown {
 
   const result: Record<string, unknown> = { transport };
   if (typeof value.command === "string") result.command = value.command;
-  if (Array.isArray(value.args)) result.args = [...value.args];
+  if (Array.isArray(value.args)) {
+    result.args = sanitizeCommandArgs(
+      value.args.map((arg) => (typeof arg === "string" ? arg : String(arg))),
+      SECRET_PLACEHOLDER,
+    );
+  }
   if (isRecord(value.env)) result.env = canonicalStringMap(value.env);
-  if (typeof value.url === "string") result.url = value.url;
+  if (typeof value.url === "string") result.url = sanitizeUrlUserinfo(value.url);
   if (isRecord(value.headers)) result.headers = canonicalStringMap(value.headers);
   if (typeof value.bearerTokenEnvVar === "string") result.bearerTokenEnvVar = value.bearerTokenEnvVar;
   if (value.enabled === false) result.enabled = false;

@@ -145,6 +145,117 @@ describe("normalizeResource — mcp-server", () => {
   });
 });
 
+describe("normalizeResource — mcp-server inline secrets", () => {
+  it("env values are placeholdered on value shape alone, despite a neutral key", () => {
+    const a = normalizeResource(
+      mcpResource({ command: "run", env: { SOME_VAR: "Bearer xxxxxxxxxxxxxxxx" } }),
+    );
+    expect((a.canonicalForm as { env: Record<string, string> }).env.SOME_VAR).toBe("<secret>");
+  });
+
+  it("REFERENCE env values stay verbatim and their identity is semantic", () => {
+    const a = normalizeResource(mcpResource({ command: "run", env: { API_KEY: "${MY_KEY}" } }));
+    const b = normalizeResource(mcpResource({ command: "run", env: { API_KEY: "${OTHER_KEY}" } }));
+    expect((a.canonicalForm as { env: Record<string, string> }).env.API_KEY).toBe("${MY_KEY}");
+    expect(a.digest).not.toBe(b.digest);
+  });
+
+  it("inline sensitive flags keep the flag name but placeholder the value", () => {
+    const rot1 = normalizeResource(
+      mcpResource({ command: "run", args: ["--api-key=sk-FAKE-aaaaaaaaaaaaaaaa"] }),
+    );
+    const rot2 = normalizeResource(
+      mcpResource({ command: "run", args: ["--api-key=sk-FAKE-bbbbbbbbbbbbbbbb"] }),
+    );
+    expect((rot1.canonicalForm as { args: string[] }).args).toEqual(["--api-key=<secret>"]);
+    expect(rot1.digest).toBe(rot2.digest);
+
+    // A flag RENAME is still a real diff.
+    const renamed = normalizeResource(
+      mcpResource({ command: "run", args: ["--token=sk-FAKE-aaaaaaaaaaaaaaaa"] }),
+    );
+    expect(rot1.digest).not.toBe(renamed.digest);
+  });
+
+  it("a bare sensitive flag placeholders the NEXT element, order preserved", () => {
+    const a = normalizeResource(
+      mcpResource({ command: "run", args: ["--verbose", "--token", "hunter2", "--out", "x"] }),
+    );
+    expect((a.canonicalForm as { args: string[] }).args).toEqual([
+      "--verbose",
+      "--token",
+      "<secret>",
+      "--out",
+      "x",
+    ]);
+  });
+
+  it("an element matching a credential value shape is placeholdered", () => {
+    const a = normalizeResource(
+      mcpResource({ command: "run", args: ["ghp_abcdefghijklmnopqrstu", "input.txt"] }),
+    );
+    expect((a.canonicalForm as { args: string[] }).args).toEqual(["<secret>", "input.txt"]);
+  });
+
+  it("url userinfo is placeholdered; host/path changes remain real diffs", () => {
+    const rot1 = normalizeResource(
+      mcpResource({ transport: "http", url: "https://user:sk-one@x.test/mcp" }),
+    );
+    const rot2 = normalizeResource(
+      mcpResource({ transport: "http", url: "https://user:sk-two@x.test/mcp" }),
+    );
+    expect((rot1.canonicalForm as { url: string }).url).toBe("https://<secret>@x.test/mcp");
+    expect(rot1.digest).toBe(rot2.digest);
+
+    const otherPath = normalizeResource(
+      mcpResource({ transport: "http", url: "https://user:sk-one@x.test/other" }),
+    );
+    expect(rot1.digest).not.toBe(otherPath.digest);
+
+    const plain = normalizeResource(mcpResource({ transport: "http", url: "https://x.test/mcp" }));
+    expect((plain.canonicalForm as { url: string }).url).toBe("https://x.test/mcp");
+  });
+});
+
+describe("normalizeResource — codec agreement", () => {
+  it("codex-TOML- and opencode-shaped values agree with the whitelist", () => {
+    // CodexMcpValue: McpServer & { bearerTokenEnvVar?: string }
+    const codex = normalizeResource(
+      mcpResource(
+        { transport: "http", url: "https://x.test/mcp", bearerTokenEnvVar: "MCP_TOKEN" },
+        { provenance: { file: "/home/u/.codex/config.toml", formatId: "toml-codex" } },
+      ),
+    );
+    expect(codex.canonicalForm).toEqual({
+      transport: "http",
+      url: "https://x.test/mcp",
+      bearerTokenEnvVar: "MCP_TOKEN",
+    });
+
+    // OpenCodeMcpValue: McpServer & { enabled?: false }
+    const opencode = normalizeResource(
+      mcpResource(
+        { transport: "stdio", command: "npx", args: ["-y", "pg-mcp"], enabled: false },
+        { provenance: { file: "/project/opencode.json", formatId: "json-opencode" } },
+      ),
+    );
+    expect(opencode.canonicalForm).toEqual({
+      transport: "stdio",
+      command: "npx",
+      args: ["-y", "pg-mcp"],
+      enabled: false,
+    });
+
+    // The same servers minus codec-specific extras digest like plain shapes.
+    const plainHttp = normalizeResource(mcpResource({ transport: "http", url: "https://x.test/mcp" }));
+    expect(plainHttp.digest).not.toBe(codex.digest); // bearerTokenEnvVar is semantic
+    const plainStdio = normalizeResource(
+      mcpResource({ transport: "stdio", command: "npx", args: ["-y", "pg-mcp"] }),
+    );
+    expect(plainStdio.digest).not.toBe(opencode.digest); // enabled:false is semantic
+  });
+});
+
 describe("normalizeResource — skill", () => {
   const CONTENT = "---\nname: research\n---\n\n# Research\n\nDo research.\n";
 
