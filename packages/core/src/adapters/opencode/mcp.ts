@@ -11,8 +11,11 @@ export type { OpenCodeConfigFile, OpenCodeMcpEntry, OpenCodeLocalMcpEntry, OpenC
  * for entries lacking enough structure to round-trip (mirrors
  * readMcpConfigFile's reverseTranslateServer contract) — callers record
  * these as skipped-with-reason.
+ *
+ * Exported for reuse by the json-opencode codec (codecs/json-opencode.ts) so
+ * the read-side store executors translate entries identically.
  */
-function reverseTranslateServer(entry: OpenCodeMcpEntry): McpServer | null {
+export function reverseTranslateServer(entry: OpenCodeMcpEntry): McpServer | null {
   if (entry.type === "local") {
     if (!entry.command || entry.command.length === 0) return null;
     const [command, ...args] = entry.command;

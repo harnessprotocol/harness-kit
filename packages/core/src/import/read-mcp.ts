@@ -4,7 +4,7 @@ import type { McpServer } from "../types.js";
 import { readJsonOrDefault } from "../utils/read-json.js";
 import type { ImportedMcpServers, Provenance } from "./types.js";
 
-interface McpJsonEntry {
+export interface McpJsonEntry {
   type?: string;
   command?: string;
   args?: string[];
@@ -20,8 +20,11 @@ const NETWORK_TRANSPORTS = new Set(["http", "sse", "ws"]);
  * entry that doesn't have enough structure to be a valid McpServer (missing
  * command for stdio, missing url for network) — callers record these as
  * skipped-with-reason rather than silently dropping them.
+ *
+ * Exported for reuse by the read-side store executors (observe/read-store.ts)
+ * so both paths translate the common shapes identically.
  */
-function reverseTranslateServer(entry: McpJsonEntry): McpServer | null {
+export function reverseTranslateServer(entry: McpJsonEntry): McpServer | null {
   const type = entry.type ?? "stdio";
 
   if (type === "stdio") {

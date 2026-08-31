@@ -30,9 +30,19 @@ const GLOBAL_SKILL_DIRS: Record<AdapterId, string[]> = {
     .map((target) => target.globalSkillsDir),
 };
 
-function frontmatterName(content: string, fallback: string): string {
+/**
+ * Extract the frontmatter `name:` from a SKILL.md, falling back when absent.
+ * Exported for reuse by the read-side store executors (observe/read-store.ts).
+ */
+export function frontmatterName(content: string, fallback: string): string {
   const match = content.match(/^---\r?\n[\s\S]*?^name:\s*([^\r\n]+)$/m);
   return match?.[1]?.trim().replace(/^['"]|['"]$/g, "") || fallback;
+}
+
+/** Extract the frontmatter `description:` from a SKILL.md, if present. */
+export function frontmatterDescription(content: string): string | undefined {
+  const match = content.match(/^---\r?\n[\s\S]*?^description:\s*([^\r\n]+)$/m);
+  return match?.[1]?.trim().replace(/^['"]|['"]$/g, "") || undefined;
 }
 
 function relativeTo(root: string, path: string): string {

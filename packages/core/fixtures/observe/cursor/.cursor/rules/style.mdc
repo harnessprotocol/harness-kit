@@ -1,0 +1,6 @@
+---
+description: Code style rules
+alwaysApply: true
+---
+
+Use two-space indentation and trailing commas.

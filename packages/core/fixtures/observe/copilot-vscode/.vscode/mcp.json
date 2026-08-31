@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "memory": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-memory"]
+    },
+    "issues": {
+      "type": "sse",
+      "url": "https://issues.example.com/sse"
+    }
+  }
+}

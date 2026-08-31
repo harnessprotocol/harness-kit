@@ -201,6 +201,26 @@ export {
 export { readMcpConfigFile } from "./import/read-mcp.js";
 export { readClaudeSettingsPermissions } from "./import/read-permissions.js";
 
+// ── Observe (Task 7): read-side store executors + codecs ──────
+//
+// Given a Surface-registry ConfigStore and a resolved absolute path, read
+// the store's raw contents into a normalized intermediate shape. Absence is
+// "not configured" (empty result), malformed content and unknown formatIds
+// degrade to skipped[] diagnostics — never a throw. Per-surface observation
+// (Task 8) and normalization/digests (Task 9) build on this.
+export type {
+  StoreEntry,
+  SkippedEntry,
+  StoreReadResult,
+  SkillStoreValue,
+  InstructionsStoreValue,
+} from "./observe/read-store.js";
+export { readStore } from "./observe/read-store.js";
+export type { CodexMcpValue, CodexMcpReadResult } from "./codecs/toml-codex.js";
+export { readCodexMcp } from "./codecs/toml-codex.js";
+export type { OpenCodeMcpValue, OpenCodeMcpReadResult } from "./codecs/json-opencode.js";
+export { readOpenCodeMcpConfig } from "./codecs/json-opencode.js";
+
 // ── Fix (WP-2.3): drift diff + repair engine ──────────────────
 //
 // Detects when a tool's deployed config has diverged from harness.yaml,
