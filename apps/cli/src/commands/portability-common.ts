@@ -55,11 +55,6 @@ export function timestamp(): string {
   return new Date().toISOString().replace(/[:.]/g, "-");
 }
 
-/**
- * Hint appended to unknown-target errors when the id is a legacy surface
- * spelling renamed by protocol v2.1 (e.g. `copilot` → `copilot-vscode`).
- * Includes a leading space so it can be interpolated directly after the id.
- */
 /** Map process.platform onto the three platforms core's observe layer
  * understands. Everything Node reports beyond darwin/win32 (freebsd, aix,
  * sunos, ...) uses linux-style config paths — the closest model core has. */
@@ -69,6 +64,11 @@ export function currentPlatform(): ObserveOptions["platform"] {
   return "linux";
 }
 
+/**
+ * Hint appended to unknown-target errors when the id is a legacy surface
+ * spelling renamed by protocol v2.1 (e.g. `copilot` → `copilot-vscode`).
+ * Includes a leading space so it can be interpolated directly after the id.
+ */
 export function legacyTargetHint(target: string): string {
   const renamed = LEGACY_SURFACE_RENAMES[target];
   return renamed ? ` (did you mean ${renamed}?)` : "";

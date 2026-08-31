@@ -24,7 +24,7 @@
 - `Surface` id union: `claude-code`, `claude-desktop`, `copilot-vscode`, `copilot-cli`, `codex` (one surface — ChatGPT app, Codex CLI, and IDE extension share `~/.codex/config.toml`), `cursor`, `pi`, `opencode`; legacy `windsurf`, `gemini`, `junie` retained at current fidelity.
 - `TargetPlatform` is removed. Schema **v2.1**: `vendor` and `policy` blocks key by surface id.
 - Migration: the parser auto-migrates v2 documents to v2.1 in memory with warnings (the only key rename is `copilot` → `copilot-vscode`; all other v2 ids are already valid surface ids — the "Codex clients share one surface" statement above is surface-model semantics, not a migration rewrite); v1 documents are never auto-migrated at parse time (v1 behavior unchanged per AC-29) and migrate via `harness-kit migrate` instead; `harness-kit migrate --write` persists; retired `--target` names hard-error with the mapping in the message.
-- Capability matrix re-keys to surfaces × 9 resource kinds × operations × scopes, adding the cell value `not-applicable` for concepts a harness lacks (pi × mcp-server; claude-desktop × plugin).
+- Capability matrix re-keys to surfaces × the protocol's resource kinds (`HARNESS_RESOURCE_KINDS`, currently 10: plugin, skill, mcp-server, env, instructions, permissions, architectural-constraints, policy, extends, native-extension) × operations × scopes, adding the cell value `not-applicable` for concepts a harness lacks (pi × mcp-server; claude-desktop × plugin). The spec's original "nine kinds" list named hook/subagent/model-config, which are not protocol kinds yet — they enter the vocabulary when their observers land (M2+); "everything the protocol represents" is the governing intent.
 
 ## 3. Descriptor engine + codecs (D2)
 
@@ -42,8 +42,8 @@ Core takes injected effects only: existing `FsProvider`, plus new `StateStore`, 
 
 - **CLI**: `StateStore` backed by `node:sqlite`; `ProcessRunner` = child_process.
 - **Desktop**: webview runs the same core; `StateStore` bridges over Tauri commands (SQL plugin) to the same DB; `ProcessRunner` = Rust spawn command.
-- **DB**: `~/.harness/harness.db`, WAL mode + busy timeout for CLI/app concurrency. Tables: `observed_resources`, `transactions` (rollback points), `plugin_installs` (manifest digest + file list), `definitions_cache`, `acknowledgements` (migrated from the desktop's current SQLite).
-- `apps/desktop/src-tauri/src/commands/parity.rs` probe is deleted; Rust keeps fs bridge, process spawn, file watching.
+- **DB**: `~/.harness/harness.db`, WAL mode + busy timeout for CLI/app concurrency. Shipped v1 tables: `meta`, `observations`, `observed_resources`, `fingerprints`, `transactions` (rollback points, M2), `plugin_installs` (manifest digest + file list, M3), `definitions_cache` (M4). The desktop's drift `acknowledgements` stay in its own SQLite until the M2 StateStore bridge migrates them.
+- The `probe_harness_capabilities` command is deleted from `apps/desktop/src-tauri/src/commands/parity.rs` (the file's acknowledgement persistence remains until M2); Rust keeps fs bridge, process spawn, file watching.
 
 ## 5. Identity, normalization, diff
 

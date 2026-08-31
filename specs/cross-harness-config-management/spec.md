@@ -35,7 +35,7 @@ Format: EARS (`WHEN … THE SYSTEM SHALL …`). Grouped by requirement area; eve
 
 ### Comparison and drift
 
-- [ ] AC-7: WHEN the Machine view renders THE SYSTEM SHALL display a grid of surfaces (columns, grouped by product family) × all nine resource kinds (rows): mcp-server, skill, plugin, instruction, permission, hook, subagent, model-config, env.
+- [ ] AC-7: WHEN the Machine view renders THE SYSTEM SHALL display a grid of surfaces (columns, grouped by product family) × all protocol resource kinds (rows) — `HARNESS_RESOURCE_KINDS`, currently ten: mcp-server, skill, plugin, instructions, permissions, env, architectural-constraints, policy, extends, native-extension. *(Amended 2026-08-31: the original list named hook/subagent/model-config, which are not protocol kinds yet; they join the vocabulary when their observers land (M2+). The decision's intent — every kind the protocol represents — is unchanged.)*
 - [ ] AC-8: WHEN two surfaces hold the same resource with different content THE SYSTEM SHALL surface a structured diff for structured kinds (MCP JSON/TOML, permissions, settings), not only marker-delimited instruction blocks.
 - [ ] AC-9: WHEN a resource exists on at least one surface and is absent on another surface that supports the concept THE SYSTEM SHALL flag the gap and offer the sync actions of AC-11.
 - [ ] AC-10: WHEN a baseline profile is configured (a git-hosted harness.yaml the user extends) THE SYSTEM SHALL diff the machine against it and present missing-vs-baseline as recommendations alongside machine-gap recommendations. Recommendations come only from these two deterministic sources in v1.
