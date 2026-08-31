@@ -54,7 +54,7 @@ export interface SurfaceObservation {
   detected: boolean;
   resources: ObservedResource[];
   /** Aggregated readStore diagnostics, file paths as returned. */
-  skipped: Array<{ file: string; reason: string }>;
+  skipped: SkippedEntry[];
 }
 
 /**
@@ -121,8 +121,10 @@ export async function observeSurface(
 
 /**
  * Observe every surface (defaults to the full registry), in registry order,
- * with per-surface isolation — one surface's diagnostics never affect
- * another's observation.
+ * with unconditional per-surface isolation — one surface's diagnostics (or
+ * even a thrown error, e.g. an FsProvider whose probes throw) never affect
+ * another's observation. A throw degrades that surface to an undetected,
+ * empty observation carrying the error as a skipped diagnostic.
  */
 export async function observeAllSurfaces(
   fs: FsProvider,
@@ -130,8 +132,27 @@ export async function observeAllSurfaces(
   surfaces: SurfaceDescriptor[] = SURFACES,
 ): Promise<SurfaceObservation[]> {
   const observations: SurfaceObservation[] = [];
+  // Deliberately sequential: output order must be registry (input) order,
+  // never completion order. If this is ever parallelized, use
+  // Promise.all over the mapped array — its by-index results preserve
+  // input order regardless of completion timing.
   for (const descriptor of surfaces) {
-    observations.push(await observeSurface(fs, descriptor, opts));
+    try {
+      observations.push(await observeSurface(fs, descriptor, opts));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      observations.push({
+        surface: descriptor.id,
+        detected: false,
+        resources: [],
+        skipped: [
+          {
+            file: "<observation>",
+            reason: `surface '${descriptor.id}' could not be observed: ${message}`,
+          },
+        ],
+      });
+    }
   }
   return observations;
 }

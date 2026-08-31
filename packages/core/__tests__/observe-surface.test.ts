@@ -289,6 +289,43 @@ describe("observeAllSurfaces", () => {
     expect(codex.resources.map((r) => `${r.scope}:${r.name}`)).toEqual(["user:context7"]);
   });
 
+  it("pinned: a surface whose fs probes THROW degrades to an empty observation while the other surfaces still report", async () => {
+    // FsProvider's contract says exists/isDirectory are non-throwing boolean
+    // probes; the try/catch in observeAllSurfaces is the backstop for a
+    // provider that breaks it — the broken surface degrades, never the sweep.
+    class ThrowingExistsFs extends MockFsProvider {
+      override async exists(path: string): Promise<boolean> {
+        if (path.includes("/.codex")) {
+          throw new Error("EIO: probe exploded");
+        }
+        return super.exists(path);
+      }
+    }
+    const fs = new ThrowingExistsFs(machineFs().getAllFiles(), PROJECT, HOME);
+
+    const observations = await observeAllSurfaces(fs, OPTS);
+
+    expect(observations.map((o) => o.surface)).toEqual([...SURFACE_IDS]);
+
+    const codex = observations.find((o) => o.surface === "codex")!;
+    expect(codex.detected).toBe(false);
+    expect(codex.resources).toEqual([]);
+    expect(codex.skipped).toHaveLength(1);
+    expect(codex.skipped[0].file).toBe("<observation>");
+    expect(codex.skipped[0].reason).toContain("codex");
+    expect(codex.skipped[0].reason).toContain("EIO: probe exploded");
+
+    // The other 10 surfaces observe normally.
+    const claudeCode = observations.find((o) => o.surface === "claude-code")!;
+    expect(claudeCode.resources.length).toBeGreaterThan(0);
+    const cursor = observations.find((o) => o.surface === "cursor")!;
+    expect(cursor.resources.filter((r) => r.name === "postgres")).toHaveLength(2);
+    for (const o of observations) {
+      if (o.surface === "codex") continue;
+      expect(o.skipped).toEqual([]);
+    }
+  });
+
   it("resources appear in descriptor-store order, then entry order from readStore", async () => {
     const observation = await observeSurface(machineFs(), getSurface("claude-code"), OPTS);
 
