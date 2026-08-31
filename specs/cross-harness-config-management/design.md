@@ -23,7 +23,7 @@
 
 - `Surface` id union: `claude-code`, `claude-desktop`, `copilot-vscode`, `copilot-cli`, `codex` (one surface — ChatGPT app, Codex CLI, and IDE extension share `~/.codex/config.toml`), `cursor`, `pi`, `opencode`; legacy `windsurf`, `gemini`, `junie` retained at current fidelity.
 - `TargetPlatform` is removed. Schema **v2.1**: `vendor` and `policy` blocks key by surface id.
-- Migration: the parser auto-migrates v2 documents to v2.1 in memory with warnings (`copilot` → `copilot-vscode`, `claude-code` unchanged, codex clients collapse to `codex`); v1 documents are never auto-migrated at parse time (v1 behavior unchanged per AC-29) and migrate via `harness-kit migrate` instead; `harness-kit migrate --write` persists; retired `--target` names hard-error with the mapping in the message.
+- Migration: the parser auto-migrates v2 documents to v2.1 in memory with warnings (the only key rename is `copilot` → `copilot-vscode`; all other v2 ids are already valid surface ids — the "Codex clients share one surface" statement above is surface-model semantics, not a migration rewrite); v1 documents are never auto-migrated at parse time (v1 behavior unchanged per AC-29) and migrate via `harness-kit migrate` instead; `harness-kit migrate --write` persists; retired `--target` names hard-error with the mapping in the message.
 - Capability matrix re-keys to surfaces × 9 resource kinds × operations × scopes, adding the cell value `not-applicable` for concepts a harness lacks (pi × mcp-server; claude-desktop × plugin).
 
 ## 3. Descriptor engine + codecs (D2)
