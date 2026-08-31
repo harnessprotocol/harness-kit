@@ -215,6 +215,22 @@ describe("normalizeResource — mcp-server inline secrets", () => {
     const plain = normalizeResource(mcpResource({ transport: "http", url: "https://x.test/mcp" }));
     expect((plain.canonicalForm as { url: string }).url).toBe("https://x.test/mcp");
   });
+
+  it("url userinfo sanitization never matches a @ inside the query/fragment", () => {
+    const queryAt = normalizeResource(
+      mcpResource({ transport: "http", url: "https://x.test?redirect=user@host" }),
+    );
+    expect((queryAt.canonicalForm as { url: string }).url).toBe(
+      "https://x.test?redirect=user@host",
+    );
+  });
+
+  it("url userinfo with an unencoded @ in the password fails safe (nothing leaks)", () => {
+    const doubleAt = normalizeResource(
+      mcpResource({ transport: "http", url: "https://user:p@ss@x.test/mcp" }),
+    );
+    expect((doubleAt.canonicalForm as { url: string }).url).toBe("https://<secret>@x.test/mcp");
+  });
 });
 
 describe("normalizeResource — codec agreement", () => {

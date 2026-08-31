@@ -108,7 +108,11 @@ function canonicalStringMap(map: Record<string, unknown>): Record<string, unknow
  * over the whole URL — host/path/query changes must remain real diffs.
  */
 function sanitizeUrlUserinfo(url: string): string {
-  return url.replace(/(:\/\/)[^/@\s]+@/, `$1${SECRET_PLACEHOLDER}@`);
+  // `?`/`#` excluded (userinfo cannot legally contain them, so a `@` inside a
+  // query/fragment never matches); `@` allowed inside with greedy matching so
+  // an invalid unencoded `@` in the password fails safe (whole userinfo
+  // placeholdered, nothing leaks past the last `@` before host).
+  return url.replace(/(:\/\/)[^/\s?#]*@/, `$1${SECRET_PLACEHOLDER}@`);
 }
 
 // ── kind-specific canonicalizers ────────────────────────────────
