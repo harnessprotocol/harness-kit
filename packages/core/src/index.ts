@@ -216,6 +216,19 @@ export type {
   InstructionsStoreValue,
 } from "./observe/read-store.js";
 export { readStore } from "./observe/read-store.js";
+
+// ── Observe (Task 8): descriptor-driven surface observation ───
+//
+// Walks each SurfaceDescriptor's detect probes and config stores, resolves
+// paths per scope root and injected platform, and reads every store through
+// readStore into flat ObservedResources. Thin and lossless: no
+// normalization, digests, or cross-scope dedup (Tasks 9–10 stack on this).
+export type {
+  ObserveOptions,
+  ObservedResource,
+  SurfaceObservation,
+} from "./observe/observe-surface.js";
+export { observeSurface, observeAllSurfaces } from "./observe/observe-surface.js";
 export type { CodexMcpValue, CodexMcpReadResult } from "./codecs/toml-codex.js";
 export { readCodexMcp } from "./codecs/toml-codex.js";
 export type { OpenCodeMcpValue, OpenCodeMcpReadResult } from "./codecs/json-opencode.js";
