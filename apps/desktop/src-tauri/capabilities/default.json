@@ -213,7 +213,6 @@
     "allow-get-harness-health",
     "allow-detect-harnesses",
     "allow-grant-project-scope",
-    "allow-probe-harness-capabilities",
     "allow-acknowledge-drift-item",
     "allow-unacknowledge-drift-item",
     "allow-get-acknowledged-drift-items",
