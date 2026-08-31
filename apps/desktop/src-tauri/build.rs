@@ -113,8 +113,7 @@ fn main() {
                 "detect_harnesses",
                 // Runtime FS scope grants (used by Fleet/Drift's project scope)
                 "grant_project_scope",
-                // Drift (capability probing + acknowledgement persistence)
-                "probe_harness_capabilities",
+                // Drift (acknowledgement persistence)
                 "acknowledge_drift_item",
                 "unacknowledge_drift_item",
                 "get_acknowledged_drift_items",
