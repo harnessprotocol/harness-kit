@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Wrench, Pencil, Check, X as XIcon } from "lucide-react";
 import { Button, Card, EmptyState, Input } from "@harness-kit/ui";
-import { COMPILE_SURFACE_IDS, compile, detectPlatforms, parseHarness } from "@harness-kit/core";
+import { COMPILE_SURFACE_IDS, compile, detectPlatforms, isCompileSurface, parseHarness } from "@harness-kit/core";
 import type { CompileResult, DetectedPlatform, SurfaceId } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
 import {
@@ -121,7 +121,12 @@ export default function SyncPage() {
         const fs = new SyncFsProvider(dir);
         const detected = await detectPlatforms(fs);
         setDetectedPlatforms(detected);
-        setSelectedTargets(new Set(detected.map((d) => d.platform)));
+        // Detection can report surfaces that aren't compile targets (e.g. pi).
+        // The chip UI only renders COMPILE_SURFACE_IDS, so an unfiltered seed
+        // would put an invisible, untoggleable target into the set — and
+        // compile() routes any SurfaceId to its adapter, so it would silently
+        // compile. Seed the selection with compile surfaces only.
+        setSelectedTargets(new Set(detected.map((d) => d.platform).filter(isCompileSurface)));
       } catch { setDirValid(false); }
       finally { setDirChecking(false); }
     }, 300);
