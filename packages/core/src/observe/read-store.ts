@@ -1,6 +1,7 @@
 import type { FsProvider } from "../fs-provider.js";
 import type { ConfigStore, StoreFormatId } from "../surfaces/types.js";
 import type { HarnessResourceKind } from "../portability/types.js";
+import { isRecord } from "../utils/is-record.js";
 import { reverseTranslateServer, type McpJsonEntry } from "../import/read-mcp.js";
 import { frontmatterName, frontmatterDescription } from "../import/read-skills.js";
 import { readCodexMcp } from "../codecs/toml-codex.js";
@@ -15,6 +16,8 @@ import { readOpenCodeMcpConfig } from "../codecs/json-opencode.js";
  * Contract:
  * - Absence is "not configured": a missing file or directory yields
  *   `{entries: [], skipped: []}`, NEVER an error.
+ * - A file that exists but cannot be read (e.g. a macOS TCC-blocked Library
+ *   path) is NOT absence — it degrades to a skipped diagnostic.
  * - Degraded, never crashed: malformed content and unknown formatIds become
  *   skipped[] diagnostics with human-readable reasons.
  * - All IO goes through FsProvider — no direct node:fs.
@@ -28,7 +31,7 @@ export interface StoreEntry {
    * Shape per kind: mcp-server → McpServer-ish (CodexMcpValue /
    * OpenCodeMcpValue for the codec formats); skill → SkillStoreValue;
    * instructions → InstructionsStoreValue; json-generic stores → the parsed
-   * JSON document as-is.
+   * JSON object as-is.
    */
   value: unknown;
   provenance: { file: string; formatId: StoreFormatId };
@@ -45,12 +48,17 @@ export interface StoreReadResult {
   skipped: SkippedEntry[];
 }
 
-/** Value shape for `kind: "skill"` entries — deliberately light, no body. */
+/** Value shape for `kind: "skill"` entries. */
 export interface SkillStoreValue {
   name: string;
   /** Absolute path of the SKILL.md this entry was read from. */
   skillPath: string;
   description?: string;
+  /**
+   * Full SKILL.md text, verbatim (frontmatter included) — Task 9 normalizes
+   * on the body + frontmatter without re-doing IO.
+   */
+  content: string;
 }
 
 /** Value shape for `kind: "instructions"` entries. */
@@ -62,27 +70,63 @@ function empty(): StoreReadResult {
   return { entries: [], skipped: [] };
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function basename(path: string): string {
-  return path.split("/").pop() ?? path;
+/** Human-readable JSON value description for skipped[] reasons. */
+function describeValue(value: unknown): string {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "an array";
+  return `a ${typeof value}`;
 }
 
-/** Read a file's text, treating absence (or unreadability) as null. */
-async function readTextIfExists(fs: FsProvider, path: string): Promise<string | null> {
-  if (!(await fs.exists(path))) return null;
+/** Last path segment, tolerating both posix and win32 separators. */
+function basename(path: string): string {
+  return path.split(/[\\/]/).pop() ?? path;
+}
+
+const UNREADABLE = "exists but could not be read";
+
+type ReadTextResult =
+  | { status: "ok"; content: string }
+  | { status: "missing" }
+  | { status: "unreadable"; reason: string };
+
+/**
+ * Read a file's text, distinguishing absence (not configured) from
+ * exists-but-unreadable (a diagnostic — e.g. macOS TCC denying access to a
+ * Library path).
+ */
+async function readText(fs: FsProvider, path: string): Promise<ReadTextResult> {
+  if (!(await fs.exists(path))) return { status: "missing" };
   try {
-    return await fs.readFile(path);
-  } catch {
-    return null;
+    return { status: "ok", content: await fs.readFile(path) };
+  } catch (error) {
+    return { status: "unreadable", reason: `${UNREADABLE}: ${errorMessage(error)}` };
   }
 }
+
+type StoreExecutor = (
+  fs: FsProvider,
+  store: ConfigStore,
+  absolutePath: string,
+) => Promise<StoreReadResult>;
+
+/**
+ * Exhaustive executor table: adding a StoreFormatId member without an
+ * executor fails to compile. readStore looks the formatId up as a raw
+ * string, so an unknown id from a newer definitions bundle still degrades
+ * to a skipped diagnostic at runtime.
+ */
+const EXECUTORS: Record<StoreFormatId, StoreExecutor> = {
+  "json-mcpservers": readJsonMcpServersStore,
+  "json-generic": readJsonGenericStore,
+  "skills-dir": readSkillsDirStore,
+  "markdown-instructions": readMarkdownInstructionsStore,
+  "toml-codex": readTomlCodexStore,
+  "json-opencode": readJsonOpencodeStore,
+};
 
 /**
  * Read one config store at its resolved absolute path into raw entries.
@@ -94,30 +138,19 @@ export async function readStore(
   store: ConfigStore,
   absolutePath: string,
 ): Promise<StoreReadResult> {
-  switch (store.formatId as string) {
-    case "json-mcpservers":
-      return readJsonMcpServersStore(fs, store, absolutePath);
-    case "json-generic":
-      return readJsonGenericStore(fs, store, absolutePath);
-    case "skills-dir":
-      return readSkillsDirStore(fs, store, absolutePath);
-    case "markdown-instructions":
-      return readMarkdownInstructionsStore(fs, store, absolutePath);
-    case "toml-codex":
-      return readTomlCodexStore(fs, store, absolutePath);
-    case "json-opencode":
-      return readJsonOpencodeStore(fs, store, absolutePath);
-    default:
-      return {
-        entries: [],
-        skipped: [
-          {
-            file: absolutePath,
-            reason: `no executor for formatId '${store.formatId}' — this store needs a newer app version to observe.`,
-          },
-        ],
-      };
+  const executor = (EXECUTORS as Partial<Record<string, StoreExecutor>>)[store.formatId];
+  if (!executor) {
+    return {
+      entries: [],
+      skipped: [
+        {
+          file: absolutePath,
+          reason: `no executor for formatId '${store.formatId}' — this store needs a newer app version to observe.`,
+        },
+      ],
+    };
   }
+  return executor(fs, store, absolutePath);
 }
 
 // ── json-mcpservers ─────────────────────────────────────────────
@@ -125,17 +158,25 @@ export async function readStore(
 /** Root keys server maps are known to live under across surfaces. */
 const KNOWN_SERVER_ROOT_KEYS = ["mcpServers", "servers"] as const;
 
+/** Whether a value plausibly is one MCP server config. */
+function looksMcpShaped(value: unknown): boolean {
+  return isRecord(value) && ("command" in value || "url" in value || "type" in value);
+}
+
 async function readJsonMcpServersStore(
   fs: FsProvider,
   store: ConfigStore,
   absolutePath: string,
 ): Promise<StoreReadResult> {
-  const raw = await readTextIfExists(fs, absolutePath);
-  if (raw === null) return empty();
+  const read = await readText(fs, absolutePath);
+  if (read.status === "missing") return empty();
+  if (read.status === "unreadable") {
+    return { entries: [], skipped: [{ file: absolutePath, reason: read.reason }] };
+  }
 
   let doc: unknown;
   try {
-    doc = JSON.parse(raw);
+    doc = JSON.parse(read.content);
   } catch (error) {
     return {
       entries: [],
@@ -145,7 +186,12 @@ async function readJsonMcpServersStore(
   if (!isRecord(doc)) {
     return {
       entries: [],
-      skipped: [{ file: absolutePath, reason: "expected a JSON object at the top level — skipped." }],
+      skipped: [
+        {
+          file: absolutePath,
+          reason: `expected a JSON object at the top level, got ${describeValue(doc)} — skipped.`,
+        },
+      ],
     };
   }
 
@@ -155,12 +201,14 @@ async function readJsonMcpServersStore(
   if (rootValue === undefined) {
     // Pinned behavior: an absent root key normally means "no MCP servers
     // configured" (e.g. a ~/.claude.json with no mcpServers key) — empty,
-    // no skipped noise. But when the servers clearly live under the OTHER
-    // well-known root key, the store shape is wrong for this file and
-    // staying silent would hide it — report it via skipped[].
-    const sibling = KNOWN_SERVER_ROOT_KEYS.find(
-      (key) => key !== rootKey && isRecord(doc[key]) && Object.keys(doc[key] as object).length > 0,
-    );
+    // no skipped noise. But when at least one MCP-shaped server clearly
+    // lives under the OTHER well-known root key, the store shape is wrong
+    // for this file and staying silent would hide it — report via skipped[].
+    const sibling = KNOWN_SERVER_ROOT_KEYS.find((key) => {
+      if (key === rootKey) return false;
+      const candidate = doc[key];
+      return isRecord(candidate) && Object.values(candidate).some(looksMcpShaped);
+    });
     if (sibling) {
       return {
         entries: [],
@@ -179,7 +227,10 @@ async function readJsonMcpServersStore(
     return {
       entries: [],
       skipped: [
-        { file: absolutePath, reason: `root key '${rootKey}' is not an object — skipped.` },
+        {
+          file: absolutePath,
+          reason: `root key '${rootKey}' is not an object (got ${describeValue(rootValue)}) — skipped.`,
+        },
       ],
     };
   }
@@ -187,12 +238,18 @@ async function readJsonMcpServersStore(
   const entries: StoreEntry[] = [];
   const skipped: SkippedEntry[] = [];
   for (const [name, entry] of Object.entries(rootValue)) {
-    const reversed = isRecord(entry) ? reverseTranslateServer(entry as McpJsonEntry) : null;
-    if (!reversed) {
-      const type = isRecord(entry) ? ((entry as McpJsonEntry).type ?? "stdio") : typeof entry;
+    if (!isRecord(entry)) {
       skipped.push({
         file: absolutePath,
-        reason: `mcp server '${name}' has an unrecognized or incomplete shape (type: ${type}) — skipped, not observed.`,
+        reason: `mcp server '${name}' is not an object (got ${describeValue(entry)}) — skipped, not observed.`,
+      });
+      continue;
+    }
+    const reversed = reverseTranslateServer(entry as McpJsonEntry);
+    if (!reversed) {
+      skipped.push({
+        file: absolutePath,
+        reason: `mcp server '${name}' has an unrecognized or incomplete shape (type: ${(entry as McpJsonEntry).type ?? "stdio"}) — skipped, not observed.`,
       });
       continue;
     }
@@ -213,16 +270,34 @@ async function readJsonGenericStore(
   store: ConfigStore,
   absolutePath: string,
 ): Promise<StoreReadResult> {
-  const raw = await readTextIfExists(fs, absolutePath);
-  if (raw === null) return empty();
+  const read = await readText(fs, absolutePath);
+  if (read.status === "missing") return empty();
+  if (read.status === "unreadable") {
+    return { entries: [], skipped: [{ file: absolutePath, reason: read.reason }] };
+  }
 
   let doc: unknown;
   try {
-    doc = JSON.parse(raw);
+    doc = JSON.parse(read.content);
   } catch (error) {
     return {
       entries: [],
       skipped: [{ file: absolutePath, reason: `invalid JSON: ${errorMessage(error)}` }],
+    };
+  }
+
+  // Pinned behavior: json-generic stores are settings-style documents — the
+  // top level must be an object. A scalar, null, or array is reported, not
+  // wrapped into an entry that downstream code would choke on.
+  if (!isRecord(doc)) {
+    return {
+      entries: [],
+      skipped: [
+        {
+          file: absolutePath,
+          reason: `expected a JSON object at the top level, got ${describeValue(doc)} — skipped.`,
+        },
+      ],
     };
   }
 
@@ -256,19 +331,27 @@ async function readSkillsDirStore(
   }
 
   const entries: StoreEntry[] = [];
+  const skipped: SkippedEntry[] = [];
   for (const dirEntry of [...dirEntries].sort()) {
     const skillDir = fs.joinPath(absolutePath, dirEntry);
     if (!(await fs.isDirectory(skillDir))) continue;
     const skillPath = fs.joinPath(skillDir, "SKILL.md");
     if (!(await fs.exists(skillPath))) continue;
 
-    const content = await fs.readFile(skillPath);
+    let content: string;
+    try {
+      content = await fs.readFile(skillPath);
+    } catch (error) {
+      skipped.push({ file: skillPath, reason: `${UNREADABLE}: ${errorMessage(error)}` });
+      continue;
+    }
     const name = frontmatterName(content, dirEntry);
     const description = frontmatterDescription(content);
     const value: SkillStoreValue = {
       name,
       skillPath,
       ...(description ? { description } : {}),
+      content,
     };
     entries.push({
       kind: store.kind,
@@ -277,7 +360,7 @@ async function readSkillsDirStore(
       provenance: { file: skillPath, formatId: store.formatId },
     });
   }
-  return { entries, skipped: [] };
+  return { entries, skipped };
 }
 
 // ── markdown-instructions ───────────────────────────────────────
@@ -302,11 +385,18 @@ async function readMarkdownInstructionsStore(
     }
 
     const entries: StoreEntry[] = [];
+    const skipped: SkippedEntry[] = [];
     for (const dirEntry of [...dirEntries].sort()) {
       if (!INSTRUCTION_FILE_PATTERN.test(dirEntry)) continue;
       const filePath = fs.joinPath(absolutePath, dirEntry);
       if (await fs.isDirectory(filePath)) continue;
-      const content = await fs.readFile(filePath);
+      let content: string;
+      try {
+        content = await fs.readFile(filePath);
+      } catch (error) {
+        skipped.push({ file: filePath, reason: `${UNREADABLE}: ${errorMessage(error)}` });
+        continue;
+      }
       const value: InstructionsStoreValue = { content };
       entries.push({
         kind: store.kind,
@@ -315,12 +405,15 @@ async function readMarkdownInstructionsStore(
         provenance: { file: filePath, formatId: store.formatId },
       });
     }
-    return { entries, skipped: [] };
+    return { entries, skipped };
   }
 
-  const content = await readTextIfExists(fs, absolutePath);
-  if (content === null) return empty();
-  const value: InstructionsStoreValue = { content };
+  const read = await readText(fs, absolutePath);
+  if (read.status === "missing") return empty();
+  if (read.status === "unreadable") {
+    return { entries: [], skipped: [{ file: absolutePath, reason: read.reason }] };
+  }
+  const value: InstructionsStoreValue = { content: read.content };
   return {
     entries: [
       {
@@ -341,11 +434,12 @@ async function readTomlCodexStore(
   store: ConfigStore,
   absolutePath: string,
 ): Promise<StoreReadResult> {
-  const raw = await readTextIfExists(fs, absolutePath);
-  if (raw === null) return empty();
-
-  const result = readCodexMcp(raw);
-  return stampCodecResult(result, store, absolutePath);
+  const read = await readText(fs, absolutePath);
+  if (read.status === "missing") return empty();
+  if (read.status === "unreadable") {
+    return { entries: [], skipped: [{ file: absolutePath, reason: read.reason }] };
+  }
+  return stampCodecResult(readCodexMcp(read.content), store, absolutePath);
 }
 
 async function readJsonOpencodeStore(
@@ -353,11 +447,12 @@ async function readJsonOpencodeStore(
   store: ConfigStore,
   absolutePath: string,
 ): Promise<StoreReadResult> {
-  const raw = await readTextIfExists(fs, absolutePath);
-  if (raw === null) return empty();
-
-  const result = readOpenCodeMcpConfig(raw);
-  return stampCodecResult(result, store, absolutePath);
+  const read = await readText(fs, absolutePath);
+  if (read.status === "missing") return empty();
+  if (read.status === "unreadable") {
+    return { entries: [], skipped: [{ file: absolutePath, reason: read.reason }] };
+  }
+  return stampCodecResult(readOpenCodeMcpConfig(read.content), store, absolutePath);
 }
 
 /** Attach kind + provenance to a pure codec result. */

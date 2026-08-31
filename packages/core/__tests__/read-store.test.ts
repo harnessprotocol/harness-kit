@@ -26,6 +26,23 @@ function expectEmpty(result: StoreReadResult): void {
   expect(result.skipped).toEqual([]);
 }
 
+/** MockFsProvider whose readFile throws for chosen paths (TCC-style denial). */
+class FailingReadFs extends MockFsProvider {
+  constructor(
+    files: Record<string, string>,
+    private readonly failPaths: Set<string>,
+  ) {
+    super(files, "/project", HOME);
+  }
+
+  override async readFile(path: string): Promise<string> {
+    if (this.failPaths.has(path)) {
+      throw new Error(`EPERM: operation not permitted, open '${path}'`);
+    }
+    return super.readFile(path);
+  }
+}
+
 describe("readStore: json-mcpservers", () => {
   it("reads claude-desktop's claude_desktop_config.json into MCP entries with provenance", async () => {
     const fs = fixtureFs("claude-desktop");
@@ -110,6 +127,36 @@ describe("readStore: json-mcpservers", () => {
     expect(result.skipped[0].reason).toContain("'mcpServers'");
   });
 
+  it("pinned: the sibling diagnostic does not fire when the sibling holds nothing MCP-shaped", async () => {
+    const path = `${HOME}/.claude.json`;
+    const fs = new MockFsProvider(
+      { [path]: JSON.stringify({ servers: {} }) },
+      "/project",
+      HOME,
+    );
+    // Default rootKey "mcpServers" is absent; the sibling "servers" exists
+    // but is empty — plain not-configured, no skipped noise.
+    const configStore = store("claude-code", (s) => s.kind === "mcp-server" && s.scope === "user");
+
+    expectEmpty(await readStore(fs, configStore, path));
+  });
+
+  it("reports an array-valued server entry as skipped with a reason that says array", async () => {
+    const path = `${HOME}/.claude.json`;
+    const fs = new MockFsProvider(
+      { [path]: JSON.stringify({ mcpServers: { weird: ["npx", "-y"] } }) },
+      "/project",
+      HOME,
+    );
+    const configStore = store("claude-code", (s) => s.kind === "mcp-server" && s.scope === "user");
+
+    const result = await readStore(fs, configStore, path);
+    expect(result.entries).toEqual([]);
+    expect(result.skipped).toHaveLength(1);
+    expect(result.skipped[0].reason).toContain("'weird'");
+    expect(result.skipped[0].reason).toMatch(/array/);
+  });
+
   it("pinned: a plainly absent root key means not-configured — empty, no skipped noise", async () => {
     const path = `${HOME}/.claude.json`;
     const fs = new MockFsProvider(
@@ -183,6 +230,29 @@ describe("readStore: json-generic", () => {
     expect(result.skipped).toHaveLength(1);
     expect(result.skipped[0].reason).toMatch(/JSON/);
   });
+
+  it("pinned: a top-level scalar or null is skipped with a reason — a settings store must be an object", async () => {
+    const path = `${HOME}/.claude/settings.json`;
+    const configStore = store("claude-code", (s) => s.kind === "permissions" && s.scope === "user");
+
+    const scalarResult = await readStore(
+      new MockFsProvider({ [path]: "42" }, "/project", HOME),
+      configStore,
+      path,
+    );
+    expect(scalarResult.entries).toEqual([]);
+    expect(scalarResult.skipped).toHaveLength(1);
+    expect(scalarResult.skipped[0].reason).toMatch(/number/);
+
+    const nullResult = await readStore(
+      new MockFsProvider({ [path]: "null" }, "/project", HOME),
+      configStore,
+      path,
+    );
+    expect(nullResult.entries).toEqual([]);
+    expect(nullResult.skipped).toHaveLength(1);
+    expect(nullResult.skipped[0].reason).toMatch(/null/);
+  });
 });
 
 describe("readStore: skills-dir", () => {
@@ -200,12 +270,34 @@ describe("readStore: skills-dir", () => {
 
     const pdf = result.entries.find((e) => e.name === "pdf-toolkit")!;
     expect(pdf.kind).toBe("skill");
-    expect(pdf.value).toEqual({
+    expect(pdf.value).toMatchObject({
       name: "pdf-toolkit",
       skillPath: `${dir}/pdf-tools/SKILL.md`,
       description: "Extract text and tables from PDF files.",
     });
+    // The full SKILL.md text rides along so Task 9 can normalize on the body
+    // without re-doing IO.
+    const content = (pdf.value as { content: string }).content;
+    expect(content.startsWith("---\nname: pdf-toolkit")).toBe(true);
+    expect(content).toContain("# PDF Toolkit");
     expect(pdf.provenance).toEqual({ file: `${dir}/pdf-tools/SKILL.md`, formatId: "skills-dir" });
+  });
+
+  it("ignores a stray plain file at the top level of a skills dir", async () => {
+    const dir = `${HOME}/.claude/skills`;
+    const fs = new MockFsProvider(
+      {
+        [`${dir}/README.md`]: "# Not a skill\n",
+        [`${dir}/real-skill/SKILL.md`]: "---\nname: real-skill\n---\n\nBody.\n",
+      },
+      "/project",
+      HOME,
+    );
+    const configStore = store("claude-code", (s) => s.kind === "skill" && s.scope === "user");
+
+    const result = await readStore(fs, configStore, dir);
+    expect(result.entries.map((e) => e.name)).toEqual(["real-skill"]);
+    expect(result.skipped).toEqual([]);
   });
 
   it("falls back to the directory name when frontmatter has no name", async () => {
@@ -254,6 +346,69 @@ describe("readStore: markdown-instructions", () => {
     const style = result.entries.find((e) => e.name === "style.mdc")!;
     expect((style.value as { content: string }).content).toContain("two-space indentation");
     expect(style.provenance).toEqual({ file: `${dir}/style.mdc`, formatId: "markdown-instructions" });
+  });
+
+  it("names a single-file entry by its basename on win32-style paths too", async () => {
+    const path = "C:\\Users\\dev\\.claude\\CLAUDE.md";
+    const fs = new MockFsProvider({ [path]: "# Rules\n" }, "/project", HOME);
+    const configStore = store(
+      "claude-code",
+      (s) => s.kind === "instructions" && s.scope === "user",
+    );
+
+    const result = await readStore(fs, configStore, path);
+    expect(result.entries).toHaveLength(1);
+    expect(result.entries[0].name).toBe("CLAUDE.md");
+  });
+});
+
+describe("readStore: unreadable files (exists but readFile throws)", () => {
+  it("a store file that exists but cannot be read is a skipped diagnostic, never not-configured", async () => {
+    const path = `${HOME}/Library/Application Support/Claude/claude_desktop_config.json`;
+    const fs = new FailingReadFs({ [path]: "{}" }, new Set([path]));
+    const configStore = store("claude-desktop", (s) => s.kind === "mcp-server");
+
+    const result = await readStore(fs, configStore, path);
+    expect(result.entries).toEqual([]);
+    expect(result.skipped).toHaveLength(1);
+    expect(result.skipped[0].file).toBe(path);
+    expect(result.skipped[0].reason).toContain("exists but could not be read");
+    expect(result.skipped[0].reason).toContain("EPERM");
+  });
+
+  it("an unreadable SKILL.md becomes a skipped diagnostic while sibling skills are still read", async () => {
+    const dir = `${HOME}/.claude/skills`;
+    const blocked = `${dir}/blocked/SKILL.md`;
+    const fs = new FailingReadFs(
+      {
+        [blocked]: "---\nname: blocked\n---\n",
+        [`${dir}/readable/SKILL.md`]: "---\nname: readable\n---\n\nBody.\n",
+      },
+      new Set([blocked]),
+    );
+    const configStore = store("claude-code", (s) => s.kind === "skill" && s.scope === "user");
+
+    const result = await readStore(fs, configStore, dir);
+    expect(result.entries.map((e) => e.name)).toEqual(["readable"]);
+    expect(result.skipped).toHaveLength(1);
+    expect(result.skipped[0].file).toBe(blocked);
+    expect(result.skipped[0].reason).toContain("exists but could not be read");
+  });
+
+  it("an unreadable rule file becomes a skipped diagnostic while sibling rules are still read", async () => {
+    const dir = `${HOME}/.cursor/rules`;
+    const blocked = `${dir}/blocked.mdc`;
+    const fs = new FailingReadFs(
+      { [blocked]: "secret", [`${dir}/ok.mdc`]: "Rule text.\n" },
+      new Set([blocked]),
+    );
+    const configStore = store("cursor", (s) => s.kind === "instructions");
+
+    const result = await readStore(fs, configStore, dir);
+    expect(result.entries.map((e) => e.name)).toEqual(["ok.mdc"]);
+    expect(result.skipped).toHaveLength(1);
+    expect(result.skipped[0].file).toBe(blocked);
+    expect(result.skipped[0].reason).toContain("exists but could not be read");
   });
 });
 

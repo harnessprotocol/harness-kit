@@ -8,6 +8,7 @@ import type {
   SurfaceScope,
 } from "../surfaces/types.js";
 import type { HarnessResourceKind } from "../portability/types.js";
+import { isRecord } from "../utils/is-record.js";
 
 /**
  * Definitions bundle format v1 (design.md §7, D7 / ADR 0004).
@@ -88,10 +89,6 @@ export function toBundle(input: {
 
 function fail(message: string, code: "unsupported-version" | "malformed" = "malformed"): never {
   throw new BundleError(code, `Invalid definitions bundle: ${message}`);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function isOneOf<T extends string>(value: string, options: readonly T[]): value is T {

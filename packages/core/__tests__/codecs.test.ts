@@ -54,6 +54,55 @@ describe("toml-codex codec: readCodexMcp", () => {
     });
   });
 
+  it("pinned: number/boolean args entries are coerced to strings — representation, not data loss", () => {
+    const result = readCodexMcp(`[mcp_servers.web]\ncommand = "npx"\nargs = ["-p", 8080]\n`);
+    expect(result.skipped).toEqual([]);
+    expect(result.entries).toHaveLength(1);
+    expect(result.entries[0].value).toEqual({
+      transport: "stdio",
+      command: "npx",
+      args: ["-p", "8080"],
+    });
+  });
+
+  it("pinned: number/boolean env values are coerced to strings", () => {
+    const result = readCodexMcp(
+      `[mcp_servers.web]\ncommand = "npx"\nenv = { PORT = 8080, DEBUG = true }\n`,
+    );
+    expect(result.skipped).toEqual([]);
+    expect(result.entries).toHaveLength(1);
+    expect(result.entries[0].value).toEqual({
+      transport: "stdio",
+      command: "npx",
+      env: { PORT: "8080", DEBUG: "true" },
+    });
+  });
+
+  it("pinned: an args that is not an array skips the whole entry with a reason naming args", () => {
+    const result = readCodexMcp(`[mcp_servers.web]\ncommand = "npx"\nargs = "not-an-array"\n`);
+    expect(result.entries).toEqual([]);
+    expect(result.skipped).toHaveLength(1);
+    expect(result.skipped[0].reason).toContain("'web'");
+    expect(result.skipped[0].reason).toContain("'args'");
+  });
+
+  it("a structurally junk args element (nested array) skips the whole entry with a reason naming args", () => {
+    const result = readCodexMcp(`[mcp_servers.web]\ncommand = "npx"\nargs = [["nested"]]\n`);
+    expect(result.entries).toEqual([]);
+    expect(result.skipped).toHaveLength(1);
+    expect(result.skipped[0].reason).toContain("'args'");
+  });
+
+  it("an env value that is a table skips the whole entry with a reason naming the field", () => {
+    const result = readCodexMcp(
+      `[mcp_servers.web]\ncommand = "npx"\n\n[mcp_servers.web.env_vars]\nGOOD = "a"\n\n[mcp_servers.web.env_vars.BAD]\nnested = "b"\n`,
+    );
+    expect(result.entries).toEqual([]);
+    expect(result.skipped).toHaveLength(1);
+    expect(result.skipped[0].reason).toContain("'env_vars'");
+    expect(result.skipped[0].reason).toContain("'BAD'");
+  });
+
   it("skips non-table junk under mcp_servers with a reason, keeping valid siblings", () => {
     const result = readCodexMcp(
       `[mcp_servers]\njunk = "just a string"\n\n[mcp_servers.ok]\ncommand = "npx"\n`,

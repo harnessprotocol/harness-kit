@@ -1,5 +1,6 @@
 import { parse as parseToml } from "smol-toml";
 import type { McpServer } from "../types.js";
+import { isRecord } from "../utils/is-record.js";
 
 /**
  * READ-ONLY codec for Codex's `~/.codex/config.toml` MCP tables
@@ -22,22 +23,26 @@ export interface CodexMcpReadResult {
   skipped: Array<{ reason: string }>;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
-function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === "string");
-}
-
-function isStringRecord(value: unknown): value is Record<string, string> {
-  return isRecord(value) && Object.values(value).every((item) => typeof item === "string");
-}
-
 function describe(value: unknown): string {
   if (value === null) return "null";
   if (Array.isArray(value)) return "an array";
   return `a ${typeof value}`;
+}
+
+/**
+ * Coercion policy (pinned): TOML authors write `PORT = 8080` meaning the
+ * string "8080" — primitive values (string/number/boolean) are coerced to
+ * their string representation, losslessly preserving intent. Structural
+ * junk (tables, arrays, dates in a string position) is NOT guessed at —
+ * it skips the whole entry with a reason naming the field. Fields are
+ * never silently dropped.
+ */
+function coercePrimitive(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean" || typeof value === "bigint") {
+    return String(value);
+  }
+  return null;
 }
 
 /**
@@ -78,9 +83,64 @@ export function readCodexMcp(content: string): CodexMcpReadResult {
     }
 
     if (typeof raw.command === "string") {
-      const args = isStringArray(raw.args) ? raw.args : undefined;
-      const envRaw = raw.env ?? raw.env_vars;
-      const env = isStringRecord(envRaw) ? envRaw : undefined;
+      let args: string[] | undefined;
+      if (raw.args !== undefined) {
+        if (!Array.isArray(raw.args)) {
+          skipped.push({
+            reason: `mcp server '${name}' has an 'args' that is not an array (got ${describe(raw.args)}) — skipped, not observed.`,
+          });
+          continue;
+        }
+        const coerced: string[] = [];
+        let junk: unknown;
+        let hasJunk = false;
+        for (const item of raw.args) {
+          const text = coercePrimitive(item);
+          if (text === null) {
+            junk = item;
+            hasJunk = true;
+            break;
+          }
+          coerced.push(text);
+        }
+        if (hasJunk) {
+          skipped.push({
+            reason: `mcp server '${name}' has a non-primitive 'args' element (got ${describe(junk)}) — skipped, not observed.`,
+          });
+          continue;
+        }
+        args = coerced;
+      }
+
+      const envField = raw.env !== undefined ? "env" : raw.env_vars !== undefined ? "env_vars" : null;
+      let env: Record<string, string> | undefined;
+      if (envField !== null) {
+        const envRaw = raw[envField];
+        if (!isRecord(envRaw)) {
+          skipped.push({
+            reason: `mcp server '${name}' has an '${envField}' that is not a table (got ${describe(envRaw)}) — skipped, not observed.`,
+          });
+          continue;
+        }
+        const coercedEnv: Record<string, string> = {};
+        let junkKey: string | null = null;
+        for (const [key, item] of Object.entries(envRaw)) {
+          const text = coercePrimitive(item);
+          if (text === null) {
+            junkKey = key;
+            break;
+          }
+          coercedEnv[key] = text;
+        }
+        if (junkKey !== null) {
+          skipped.push({
+            reason: `mcp server '${name}' has a non-primitive '${envField}' value for '${junkKey}' — skipped, not observed.`,
+          });
+          continue;
+        }
+        env = coercedEnv;
+      }
+
       entries.push({
         name,
         value: {

@@ -1,4 +1,5 @@
 import type { McpServer } from "../types.js";
+import { isRecord } from "../utils/is-record.js";
 import { reverseTranslateServer } from "../adapters/opencode/mcp.js";
 import type { OpenCodeMcpEntry } from "../adapters/opencode/types.js";
 
@@ -23,10 +24,6 @@ export type OpenCodeMcpValue = McpServer & { enabled?: false };
 export interface OpenCodeMcpReadResult {
   entries: Array<{ name: string; value: OpenCodeMcpValue }>;
   skipped: Array<{ reason: string }>;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 /**
