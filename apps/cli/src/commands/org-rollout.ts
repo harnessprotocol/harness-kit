@@ -3,6 +3,7 @@ import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
 import { stringify } from "yaml";
 import {
+  CURRENT_PROTOCOL_VERSION,
   applyFileTransaction,
   computeFileHash,
   digestValue,
@@ -195,7 +196,7 @@ async function stageRolloutProfile(
       .filter((file) => !file.symlink)
       .map((file) => ({ path: file.path, digest: computeFileHash(file.content) })));
     profile = {
-      version: "2",
+      version: CURRENT_PROTOCOL_VERSION,
       kind: "profile",
       scope: "organization",
       metadata: {

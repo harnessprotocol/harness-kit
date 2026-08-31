@@ -1,6 +1,7 @@
 import { basename, resolve } from "node:path";
 import { stringify } from "yaml";
 import {
+  CURRENT_PROTOCOL_VERSION,
   applyFileTransaction,
   importProjectValidated,
   parseHarness,
@@ -49,7 +50,7 @@ export async function captureCommand(flags: CaptureFlags): Promise<void> {
     ? {
         ...prior,
         ...captured.harnessConfig,
-        version: "2" as const,
+        version: CURRENT_PROTOCOL_VERSION,
         scope,
         metadata: prior.metadata ?? captured.harnessConfig.metadata,
         ...(prior.plugins ? { plugins: prior.plugins } : {}),
@@ -58,7 +59,7 @@ export async function captureCommand(flags: CaptureFlags): Promise<void> {
         ...(prior.policy ? { policy: prior.policy } : {}),
         ...(prior.extends ? { extends: prior.extends } : {}),
       }
-    : { ...captured.harnessConfig, version: "2" as const, scope };
+    : { ...captured.harnessConfig, version: CURRENT_PROTOCOL_VERSION, scope };
   const sanitized = sanitizeCapturedSecrets(merged);
   const yaml = stringify(sanitized.config, { lineWidth: 0 });
 

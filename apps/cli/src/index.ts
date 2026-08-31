@@ -2,6 +2,7 @@ import { Command } from "commander";
 import chalk from "chalk";
 import { validateCommand } from "./commands/validate.js";
 import { compileCommand } from "./commands/compile.js";
+import { migrateCommand } from "./commands/migrate.js";
 import { checkCommand } from "./commands/check.js";
 import { detectCommand } from "./commands/detect.js";
 import { initCommand, initSkillCommand } from "./commands/init.js";
@@ -70,6 +71,23 @@ Examples:
   )
   .action(async (path: string, flags) => {
     await validateCommand(path, flags);
+  });
+
+program
+  .command("migrate")
+  .description("Migrate a harness profile to the current protocol version (v2.1)")
+  .argument("[path]", "Path to harness.yaml", "harness.yaml")
+  .option("--write", "Write the migrated profile back to the file (default is a dry run)")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  harness-kit migrate                 Preview the migration for ./harness.yaml (dry run)
+  harness-kit migrate --write         Migrate ./harness.yaml in place
+  harness-kit migrate ~/team.yaml     Preview the migration for a specific file`,
+  )
+  .action(async (path: string, flags) => {
+    await migrateCommand(path, flags);
   });
 
 program

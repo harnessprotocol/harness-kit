@@ -1,5 +1,6 @@
 import type { HarnessConfig, HarnessInstructions, HarnessPermissions, HarnessSkillRef, McpServer } from "../types.js";
 import type { HarnessScope } from "../portability/types.js";
+import { CURRENT_PROTOCOL_VERSION } from "../utils/protocol-version.js";
 import type { AdapterId } from "../adapters/adapter.js";
 import type {
   AdapterImportResult,
@@ -424,7 +425,7 @@ export function synthesize(
 
   const config: HarnessConfig = {
     $schema: "https://harnessprotocol.io/schema/v2/harness.schema.json",
-    version: "2",
+    version: CURRENT_PROTOCOL_VERSION,
     kind: "profile",
     scope: meta.scope ?? "project",
     metadata: { name: meta.name, description: meta.description },

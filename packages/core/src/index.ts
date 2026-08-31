@@ -118,6 +118,7 @@ export {
 export { scanPortableContent } from "./portability/capsule.js";
 export { scanHarnessArtifact } from "./portability/artifact-security.js";
 export { isLegacyFormat, isProtocolV2 } from "./utils/legacy.js";
+export { CURRENT_PROTOCOL_VERSION } from "./utils/protocol-version.js";
 
 // Security scanner
 export { scanPlugin } from "./security/scanner.js";
@@ -323,6 +324,12 @@ export {
   resourcesToProfile,
   migrateHarnessV1ToV2,
 } from "./portability/resource-model.js";
+export type { MigrationPreview } from "./portability/resource-model.js";
+export {
+  LEGACY_SURFACE_RENAMES,
+  migrateHarnessV2ToV21,
+  migrateToCurrent,
+} from "./portability/migrate-v21.js";
 export { mergePolicyCeilings, evaluatePolicy, resolveProfileLayers, layerFingerprint } from "./portability/layers.js";
 export {
   PORTABLE_RESOURCE_KINDS,

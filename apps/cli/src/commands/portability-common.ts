@@ -3,6 +3,7 @@ import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 import {
   COMPILE_SURFACE_IDS,
   EMPTY_PORTABILITY_STATE,
+  LEGACY_SURFACE_RENAMES,
   capabilityForResource,
   computeFileHash,
   parseHarness,
@@ -53,12 +54,23 @@ export function timestamp(): string {
   return new Date().toISOString().replace(/[:.]/g, "-");
 }
 
+/**
+ * Hint appended to unknown-target errors when the id is a legacy surface
+ * spelling renamed by protocol v2.1 (e.g. `copilot` → `copilot-vscode`).
+ * Includes a leading space so it can be interpolated directly after the id.
+ */
+export function legacyTargetHint(target: string): string {
+  const renamed = LEGACY_SURFACE_RENAMES[target];
+  return renamed ? ` (did you mean ${renamed}?)` : "";
+}
+
 export function parseTargets(value?: string): SurfaceId[] {
   if (!value || value === "all") return [...ALL_TARGETS];
   const selected = value.split(",").map((entry) => entry.trim() as SurfaceId);
   const unknown = selected.filter((target) => !ALL_TARGETS.includes(target));
   if (unknown.length > 0) {
-    throw new Error(`unknown target(s): ${unknown.join(", ")}; expected ${ALL_TARGETS.join(", ")} or all`);
+    const listed = unknown.map((target) => `${target}${legacyTargetHint(target)}`).join(", ");
+    throw new Error(`unknown target(s): ${listed}; expected ${ALL_TARGETS.join(", ")} or all`);
   }
   return [...new Set(selected)];
 }

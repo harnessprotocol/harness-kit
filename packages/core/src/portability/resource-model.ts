@@ -1,5 +1,6 @@
 import { computeFileHash } from "../compile/check.js";
 import { isProtocolV2 } from "../utils/legacy.js";
+import { CURRENT_PROTOCOL_VERSION } from "../utils/protocol-version.js";
 import type {
   EnvDeclaration,
   HarnessConfig,
@@ -215,7 +216,7 @@ export function resourcesToProfile(
 ): HarnessConfig {
   const config: HarnessConfig = {
     $schema: "https://harnessprotocol.io/schema/v2/harness.schema.json",
-    version: "2",
+    version: CURRENT_PROTOCOL_VERSION,
     kind: "profile",
     metadata: options.metadata,
     scope: options.scope ?? "project",

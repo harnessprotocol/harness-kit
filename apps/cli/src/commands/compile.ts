@@ -17,6 +17,7 @@ import { NodeFsProvider } from "@harness-kit/core/node";
 import type { OrphanedBlock, SurfaceId } from "@harness-kit/core";
 import { formatCompileReport, formatDryRunFile } from "../formatters/report.js";
 import { formatValidationResult } from "../formatters/validation.js";
+import { legacyTargetHint } from "./portability-common.js";
 
 interface CompileFlags {
   target?: string;
@@ -68,7 +69,7 @@ function parseTargets(targetStr: string): SurfaceId[] {
   return targetStr.split(",").map((t) => {
     const trimmed = t.trim() as SurfaceId;
     if (!ALL_TARGETS.includes(trimmed)) {
-      console.error(`Unknown target: ${trimmed}. Valid targets: ${ALL_TARGETS.join(", ")}, all`);
+      console.error(`Unknown target: ${trimmed}${legacyTargetHint(trimmed)}. Valid targets: ${ALL_TARGETS.join(", ")}, all`);
       process.exit(1);
     }
     return trimmed;

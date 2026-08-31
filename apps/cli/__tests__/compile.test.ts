@@ -152,6 +152,21 @@ describe("compile command", () => {
       expect(env.exitCode).toBe(1);
     });
 
+    it("suggests copilot-vscode for the legacy copilot target", async () => {
+      const fixturePath = resolve(FIXTURES, "valid-harness.yaml");
+
+      await expect(
+        compileCommand(fixturePath, {
+          target: "copilot",
+          dryRun: true,
+        }),
+      ).rejects.toThrow();
+
+      expect(env.getError()).toContain("Unknown target");
+      expect(env.getError()).toContain("did you mean copilot-vscode?");
+      expect(env.exitCode).toBe(1);
+    });
+
     it("handles whitespace in target list", async () => {
       const fixturePath = resolve(FIXTURES, "valid-harness.yaml");
 
