@@ -58,7 +58,7 @@ Format: EARS (`WHEN … THE SYSTEM SHALL …`). Grouped by requirement area; eve
 - [ ] AC-34: WHEN the capability matrix reports that the target surface cannot fully express the resource being copied THE SYSTEM SHALL present the loss report naming each dropped or downgraded field before mutating anything, and SHALL NOT apply without explicit confirmation (`--yes` constitutes confirmation in the CLI).
 - [ ] AC-35: WHEN the user generates an agent prompt THE SYSTEM SHALL render it inline (desktop drawer with copy affordance; CLI stdout) and SHALL additionally persist it to a caller-named path when `--out <path>` is supplied.
 - [ ] AC-36: WHEN the desktop performs a user-scope write THE SYSTEM SHALL route it through a Tauri command that accepts only the store paths the surface registry declares, and SHALL NOT widen the existing project-scoped `sync_write_files` bridge to reach the home directory.
-- [ ] AC-37: WHEN the release ships THE SYSTEM SHALL present drift within the Machine view, redirect the legacy `/drift` route to it, and migrate existing drift acknowledgements onto the shared state store.
+- [ ] AC-37: WHEN the release ships THE SYSTEM SHALL present drift within the Machine view, redirect the legacy `/drift` route to it, and migrate existing drift acknowledgements onto the shared state store. *(Deferred 2026-09-01 to M3, in full. The premise was wrong: Drift detects `harness.yaml` ↔ compiled-output drift and offers acknowledge/fix, while the Machine grid compares surfaces against each other. They are different comparisons, so Machine does not already cover it and routing `/drift` at Machine would remove the acknowledge/fix workflow rather than absorb it. Absorption needs Machine to grow that workflow, plus the StateStore bridge for the acknowledgements.)*
 - [ ] AC-38: WHEN `harness-kit sync` receives `--frozen` or `--locked` THE SYSTEM SHALL fail with an error naming `harness-kit install` as the replacement rather than a generic unknown-flag message.
 
 ### Plugins (ADR 0003)
@@ -126,7 +126,7 @@ Format: EARS (`WHEN … THE SYSTEM SHALL …`). Grouped by requirement area; eve
 ```bash
 pnpm build                      # turbo run build (all packages)
 pnpm --filter @harness-kit/core test        # core unit tests (vitest)
-pnpm --filter harness-kit-cli test          # CLI tests
+pnpm --filter @harness-kit/cli test          # CLI tests
 pnpm test:all                   # turbo run test
 pnpm test:desktop               # rust + unit (e2e separate)
 pnpm test:desktop:e2e           # playwright (requires dev server)

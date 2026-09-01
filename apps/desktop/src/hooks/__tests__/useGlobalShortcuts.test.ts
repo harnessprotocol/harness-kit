@@ -27,12 +27,6 @@ function renderShortcuts(overrides?: { navigate?: AnyMock }) {
 
 // ── Tests ─────────────────────────────────────────────────────
 
-describe("drift absorption (AC-37)", () => {
-  it("no longer numbers a drift shortcut", () => {
-    expect(NAV_PATHS).not.toContain("/drift");
-  });
-});
-
 describe("NAV_PATHS coverage", () => {
   it("covers every NAV_SECTION — lengths must match", () => {
     expect(NAV_PATHS.length).toBe(NAV_SECTIONS.length);

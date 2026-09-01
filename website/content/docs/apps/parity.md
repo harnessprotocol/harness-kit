@@ -6,7 +6,7 @@ title: Harness Parity
 
 > **Superseded:** the desktop app's **Machine** view now ships the real cross-surface
 > grid (11 surfaces × resource kinds, gaps, and structured diffs). This page describes
-> an earlier design and will be rewritten when sync actions land.
+> an earlier design and will be rewritten in M3, once cell actions cover diffs as well as gaps.
 
 Harness Parity is the other half of the cross-harness compiler: after you compile
 your `harness.yaml`, it confirms every connected AI tool actually ended up with the

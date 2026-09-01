@@ -2,13 +2,13 @@ import { useEffect } from "react";
 import type { NavigateFunction } from "react-router-dom";
 
 // Mirrors NAV_SECTIONS order in AppLayout.tsx (DESIGN.md §5): Machine, Fleet,
-// Configure, Comparator, Observatory, Marketplace. Drift folded into Machine
-// in M2 (AC-37), which shifts the ⌘4-6 slots up by one. Settings is pinned
-// bottom and reachable via ⌘, — not part of the numbered shortcuts.
+// Configure, Drift, Comparator, Observatory, Marketplace. Settings is pinned
+// bottom and reachable via ⌘, — not part of the numbered ⌘1-7 shortcuts.
 export const NAV_PATHS = [
   "/machine",
   "/fleet",
   "/harness/file",
+  "/drift",
   "/comparator",
   "/observatory",
   "/marketplace",

@@ -27,7 +27,7 @@ const SKILL_TARGET_DIR: Record<CompileSurfaceId, string | null> = {
   junie: ".junie/skills",
 };
 
-// Legacy deployed-location search paths — kept until harness sync provides a populated cache.
+// Legacy deployed-location search paths — kept until harness install provides a populated cache.
 // Searched last so they don't shadow source-resolved skills.
 const LEGACY_SEARCH_PATHS = [
   "~/.claude/skills/{name}/SKILL.md",

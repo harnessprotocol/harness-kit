@@ -19,7 +19,7 @@
 | D11 | Lossy copy | Preview the loss report, refuse to apply without explicit confirmation |
 | D12 | Desktop write path | New Tauri command allowlisted to registry stores; `sync_write_files` untouched |
 | D13 | `sync`/`install` | Repurpose `sync` immediately — no deprecation alias window |
-| D14 | Absorption | Drift folds into Machine in M2; Fleet stays until M3 |
+| D14 | Absorption | ~~Drift folds into Machine in M2~~ → both Drift and Fleet stay until M3 (Drift is a different comparison; see AC-37) |
 | D15 | Prompt delivery | Inline (drawer/stdout) with optional `--out <path>` persistence |
 
 ## 1. Overall shape
@@ -68,7 +68,7 @@ CI compiles descriptors + matrix + recommendation rules + prompt templates into 
 
 ## 8. CLI and Machine view (D6)
 
-- `harness-kit install` takes today's `sync` behavior; `sync` aliases it with a deprecation warning for one release cycle, then becomes: `harness-kit sync [--from <surface>] [--to <surface>…] [--only <kind[:name]>…] [--scope user|project] [--dry-run] [--yes]`. Bare `sync` prints the machine report with proposed actions. `status`/`diff` re-key to surfaces.
+- `harness-kit install` takes today's `sync` behavior; `sync` becomes the cross-surface verb in the same release (D13 — no alias window; the grammars are disjoint and bare `sync` is read-only): `harness-kit sync [--from <surface>] [--to <surface>…] [--only <kind[:name]>…] [--scope user|project] [--dry-run] [--yes]`. Bare `sync` prints the machine report with proposed actions. `status`/`diff` re-key to surfaces.
 - Desktop: new `/machine` route — virtualized surfaces × resources grid, cell drawer with structured diff and the three actions, absorbing Fleet, Drift, and ConflictLedger; old routes redirect. Every UI action displays its exact CLI invocation (AC-28). Website `apps/parity.md` doc rewritten to match what ships.
 
 ## 9. Testing
