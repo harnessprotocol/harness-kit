@@ -2,6 +2,7 @@ import { chmodSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
+import { STATE_SCHEMA_VERSION, stateSchemaStatements } from "@harness-kit/core";
 import type {
   ObservationSnapshot,
   ObservationSnapshotMeta,
@@ -21,84 +22,6 @@ import type {
  * open in WAL mode with a busy timeout, and every write is one short
  * transaction (WAL discipline: readers never block, writers queue briefly).
  */
-
-/**
- * Full v1 DDL. M1 only uses meta/observations/observed_resources/fingerprints;
- * transactions (M2), plugin_installs (M3), and definitions_cache (M4) are
- * placeholder shapes that land now so later milestones migrate data, not
- * schema.
- */
-/**
- * v2 replaces the v1 `transactions` placeholder with the real rollback ledger
- * (AC-32). The placeholder shipped in M1 with no readers or writers, so the
- * drop cannot lose data.
- */
-const DDL_V2 = `
-DROP TABLE IF EXISTS transactions;
-CREATE TABLE transactions (
-  id INTEGER PRIMARY KEY,
-  transaction_id TEXT NOT NULL UNIQUE,
-  applied_at TEXT NOT NULL,
-  roots TEXT NOT NULL,
-  manifest_path TEXT NOT NULL,
-  manifest_root TEXT NOT NULL,
-  backup_dir TEXT NOT NULL,
-  payload TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS transactions_applied_at ON transactions(applied_at DESC);
-`;
-
-const DDL_V1 = `
-CREATE TABLE IF NOT EXISTS observations (
-  id INTEGER PRIMARY KEY,
-  observed_at TEXT NOT NULL,
-  platform TEXT NOT NULL,
-  project_root TEXT NULL,
-  home_root TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS observed_resources (
-  id INTEGER PRIMARY KEY,
-  observation_id INTEGER NOT NULL REFERENCES observations(id) ON DELETE CASCADE,
-  surface TEXT NOT NULL,
-  kind TEXT NOT NULL,
-  identity_key TEXT NOT NULL,
-  name TEXT NOT NULL,
-  scope TEXT NOT NULL,
-  digest TEXT NOT NULL,
-  canonical_form TEXT NOT NULL, -- JSON (pre-sanitized canonicalForm)
-  provenance_file TEXT NOT NULL,
-  provenance_format TEXT NOT NULL,
-  needs_confirmation INTEGER NOT NULL DEFAULT 0
-);
-CREATE INDEX IF NOT EXISTS idx_observed_resources_observation
-  ON observed_resources(observation_id);
-CREATE TABLE IF NOT EXISTS fingerprints (
-  surface TEXT NOT NULL,
-  scope TEXT NOT NULL,
-  digest TEXT NOT NULL,
-  updated_at TEXT NOT NULL,
-  PRIMARY KEY (surface, scope)
-);
-CREATE TABLE IF NOT EXISTS transactions (
-  id INTEGER PRIMARY KEY,
-  created_at TEXT NOT NULL,
-  payload TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS plugin_installs (
-  id INTEGER PRIMARY KEY,
-  surface TEXT NOT NULL,
-  plugin TEXT NOT NULL,
-  manifest_digest TEXT NOT NULL,
-  files TEXT NOT NULL,
-  installed_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS definitions_cache (
-  id INTEGER PRIMARY KEY,
-  bundle_number INTEGER NOT NULL,
-  fetched_at TEXT NOT NULL,
-  payload TEXT NOT NULL
-);
-`;
 
 /**
  * Resolve the shared state db path, `~/.harness/harness.db`, creating its
@@ -194,7 +117,7 @@ export class SqliteStateStore implements StateStore {
     return store;
   }
 
-  /** v0 -> v2, keyed off meta.schema_version. Idempotent. */
+  /** Bring the db up to STATE_SCHEMA_VERSION, keyed off meta.schema_version. Idempotent. */
   private migrate(): void {
     this.db.exec("BEGIN IMMEDIATE");
     try {
@@ -203,13 +126,13 @@ export class SqliteStateStore implements StateStore {
         | { schema_version: number }
         | undefined;
       const version = row?.schema_version ?? 0;
-      if (version < 1) {
-        this.db.exec(DDL_V1);
-        this.db.prepare("INSERT INTO meta (schema_version) VALUES (?)").run(1);
-      }
-      if (version < 2) {
-        this.db.exec(DDL_V2);
-        this.db.prepare("UPDATE meta SET schema_version = ?").run(2);
+      // Statements come from core so the desktop's Rust implementation runs
+      // the same DDL rather than a hand-copied second version of it.
+      for (const statement of stateSchemaStatements(version)) this.db.exec(statement);
+      if (version === 0) {
+        this.db.prepare("INSERT INTO meta (schema_version) VALUES (?)").run(STATE_SCHEMA_VERSION);
+      } else if (version < STATE_SCHEMA_VERSION) {
+        this.db.prepare("UPDATE meta SET schema_version = ?").run(STATE_SCHEMA_VERSION);
       }
       this.db.exec("COMMIT");
     } catch (error) {

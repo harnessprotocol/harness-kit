@@ -262,6 +262,11 @@ export type {
   StateStore,
   TransactionRecord,
 } from "./state/store.js";
+export {
+  STATE_SCHEMA_VERSION,
+  stateSchemaMigrations,
+  stateSchemaStatements,
+} from "./state/schema.js";
 export { recordAppliedTransaction } from "./state/ledger.js";
 export type { LedgerEntryInput, LedgerOutcome } from "./state/ledger.js";
 export type { CodexMcpValue, CodexMcpReadResult, CodexMcpWrite } from "./codecs/toml-codex.js";
