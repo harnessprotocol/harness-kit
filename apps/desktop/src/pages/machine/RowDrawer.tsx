@@ -292,7 +292,7 @@ function RowActions({ row, onApplied }: { row: GridRow; onApplied?: () => void }
     if (!view) return;
     setBusy(true);
     try {
-      await applyCellActionViaTauri(view);
+      await applyCellActionViaTauri(view, confirmedLoss);
       setStatus("Applied.");
       onApplied?.();
     } catch (error) {
@@ -300,7 +300,7 @@ function RowActions({ row, onApplied }: { row: GridRow; onApplied?: () => void }
     } finally {
       setBusy(false);
     }
-  }, [view, onApplied]);
+  }, [view, onApplied, confirmedLoss]);
 
   if (targets.length === 0 || !source) {
     return (

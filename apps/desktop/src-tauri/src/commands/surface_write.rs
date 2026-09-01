@@ -43,6 +43,13 @@ fn current_platform() -> &'static str {
 /// and ".claude/skillsets/x" is not inside ".claude/skills".
 pub(crate) fn is_declared_store(relative: &str) -> bool {
     let normalized = relative.replace('\\', "/");
+    // HarnessKit's own state directory. The transaction engine writes preimage
+    // backups and its manifest here before touching any config file, so a
+    // command that refused them would make rollback impossible — which is the
+    // whole point of routing desktop writes through the engine.
+    if normalized.starts_with(".harness/") {
+        return !normalized.split('/').any(|segment| segment == "..");
+    }
     if normalized.is_empty() || normalized.starts_with('/') || normalized.starts_with('~') {
         return false;
     }
@@ -167,6 +174,13 @@ mod tests {
     #[test]
     fn accepts_a_file_beneath_a_declared_directory() {
         assert!(is_declared_store(".claude/skills/review/SKILL.md"));
+    }
+
+    #[test]
+    fn accepts_harness_own_state_directory() {
+        // Backups and manifests must be writable or nothing is rollback-able.
+        assert!(is_declared_store(".harness/backups/2026-09-01/transaction.json"));
+        assert!(!is_declared_store(".harness/../.ssh/id_rsa"));
     }
 
     #[test]

@@ -1,8 +1,14 @@
 import { homeDir } from "@tauri-apps/api/path";
-import { invoke } from "@tauri-apps/api/core";
-import { buildAgentPrompt, planCellAction, syncCliCommand } from "@harness-kit/core";
+import {
+  applyCellAction,
+  buildAgentPrompt,
+  createHomeTransactionRoot,
+  planCellAction,
+  syncCliCommand,
+} from "@harness-kit/core";
 import type { CellActionPlan, CellActionRequest, GridRow, SurfaceId } from "@harness-kit/core";
 import { TauriFsProvider } from "../../lib/harness-fs";
+import { TauriSurfaceFsProvider } from "../../lib/surface-fs";
 import { detectDesktopPlatform } from "./machine-data";
 
 /**
@@ -56,28 +62,40 @@ export async function buildCellAction(
   };
 }
 
-/** One file the Rust command should write, home-relative. */
-interface SurfaceFileWrite {
-  relativePath: string;
-  content: string | null;
-}
-
 /**
- * Apply a planned action. Paths are rebased to home-relative here because the
- * Rust command joins them onto the home directory itself — it never accepts a
- * caller-supplied root.
+ * Apply a planned action through core's transaction engine.
+ *
+ * The engine runs in the webview (design D3: one TS engine, Rust is OS
+ * plumbing), so the desktop gets what the CLI gets — preimage verification,
+ * so an edit made since the drawer opened raises `user-modified-outside`
+ * rather than being clobbered (AC-17); preimage backups; and a rollback
+ * manifest on disk.
+ *
+ * An earlier version sent `{path, content}` straight to Rust and had none of
+ * those: no stale-edit check, no backup, and nothing applied from the desktop
+ * could ever be rolled back.
+ *
+ * Known gap: no ledger row, because the desktop StateStore bridge does not
+ * exist yet. The manifest is on disk and usable via
+ * `harness-kit rollback --transaction <path>`; it just will not appear in
+ * `rollback --list` until that bridge lands.
  */
-export async function applyCellActionViaTauri(view: CellActionView): Promise<string[]> {
-  if (!view.plan.supported) {
-    throw new Error(view.plan.reason ?? "this cell cannot be written directly");
-  }
+export async function applyCellActionViaTauri(
+  view: CellActionView,
+  /** The user's explicit acknowledgement of capability loss (AC-34). */
+  confirmedLoss = false,
+): Promise<string[]> {
   const home = await homeDir();
-  const prefix = home.endsWith("/") ? home : `${home}/`;
-  const files: SurfaceFileWrite[] = view.plan.changes.map((change) => {
-    if (!change.path.startsWith(prefix)) {
-      throw new Error(`${change.path} is outside the home directory`);
-    }
-    return { relativePath: change.path.slice(prefix.length), content: change.after };
-  });
-  return invoke<string[]>("apply_surface_transaction", { files });
+  const result = await applyCellAction(
+    view.plan,
+    {
+      fs: new TauriSurfaceFsProvider(home),
+      timestamp: new Date().toISOString().replace(/[:.]/g, "-"),
+      roots: { home: createHomeTransactionRoot(home, detectDesktopPlatform()) },
+    },
+    // Not `true`: a disabled button is UX, not a boundary. The engine's own
+    // gate must see the real acknowledgement.
+    { homeRoot: home, confirmed: confirmedLoss },
+  );
+  return result.written;
 }
