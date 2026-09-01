@@ -111,7 +111,7 @@ export function writeLockFile(lock: LockFile): string {
 
 /**
  * Returns true if every plugin declared in config has a matching entry in
- * the lockfile. Does NOT validate content hashes — that's `harness sync --frozen`.
+ * the lockfile. Does NOT validate content hashes — that's `harness install --frozen`.
  */
 export function isLockFileFresh(
   lock: LockFile,

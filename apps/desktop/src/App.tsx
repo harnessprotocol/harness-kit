@@ -24,8 +24,8 @@ const PermissionsPage = lazy(() => import("./pages/security/PermissionsPage"));
 const SecretsPage = lazy(() => import("./pages/security/SecretsPage"));
 const AuditLogPage = lazy(() => import("./pages/security/AuditLogPage"));
 const MachinePage = lazy(() => import("./pages/machine/MachinePage"));
-const FleetPage = lazy(() => import("./pages/fleet/FleetPage"));
 const DriftPage = lazy(() => import("./pages/drift/DriftPage"));
+const FleetPage = lazy(() => import("./pages/fleet/FleetPage"));
 const AgentsPage = lazy(() => import("./pages/agents/AgentsPage"));
 
 // Dev-only screenshot fixtures (DESIGN.md §8 verification) — render Fleet/Drift/

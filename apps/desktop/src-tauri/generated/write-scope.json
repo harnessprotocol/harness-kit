@@ -1,0 +1,98 @@
+{
+  "darwin": {
+    "files": [
+      ".claude.json",
+      ".claude/CLAUDE.md",
+      ".claude/settings.json",
+      ".codex/AGENTS.md",
+      ".codex/config.toml",
+      ".config/opencode/AGENTS.md",
+      ".config/opencode/opencode.json",
+      ".copilot/copilot-instructions.md",
+      ".copilot/mcp-config.json",
+      ".copilot/settings.json",
+      ".cursor/cli-config.json",
+      ".cursor/mcp.json",
+      ".pi/agent/AGENTS.md",
+      ".pi/agent/APPEND_SYSTEM.md",
+      ".pi/agent/settings.json",
+      "Library/Application Support/Claude/claude_desktop_config.json",
+      "Library/Application Support/Code/User/mcp.json"
+    ],
+    "directories": [
+      ".agents/skills",
+      ".claude/skills",
+      ".config/opencode/skills",
+      ".copilot/skills",
+      ".cursor/skills",
+      ".gemini/skills",
+      ".junie/skills",
+      ".pi/agent/skills",
+      ".windsurf/skills"
+    ]
+  },
+  "linux": {
+    "files": [
+      ".claude.json",
+      ".claude/CLAUDE.md",
+      ".claude/settings.json",
+      ".codex/AGENTS.md",
+      ".codex/config.toml",
+      ".config/Code/User/mcp.json",
+      ".config/opencode/AGENTS.md",
+      ".config/opencode/opencode.json",
+      ".copilot/copilot-instructions.md",
+      ".copilot/mcp-config.json",
+      ".copilot/settings.json",
+      ".cursor/cli-config.json",
+      ".cursor/mcp.json",
+      ".pi/agent/AGENTS.md",
+      ".pi/agent/APPEND_SYSTEM.md",
+      ".pi/agent/settings.json",
+      "Library/Application Support/Claude/claude_desktop_config.json"
+    ],
+    "directories": [
+      ".agents/skills",
+      ".claude/skills",
+      ".config/opencode/skills",
+      ".copilot/skills",
+      ".cursor/skills",
+      ".gemini/skills",
+      ".junie/skills",
+      ".pi/agent/skills",
+      ".windsurf/skills"
+    ]
+  },
+  "win32": {
+    "files": [
+      ".claude.json",
+      ".claude/CLAUDE.md",
+      ".claude/settings.json",
+      ".codex/AGENTS.md",
+      ".codex/config.toml",
+      ".config/opencode/AGENTS.md",
+      ".config/opencode/opencode.json",
+      ".copilot/copilot-instructions.md",
+      ".copilot/mcp-config.json",
+      ".copilot/settings.json",
+      ".cursor/cli-config.json",
+      ".cursor/mcp.json",
+      ".pi/agent/AGENTS.md",
+      ".pi/agent/APPEND_SYSTEM.md",
+      ".pi/agent/settings.json",
+      "AppData/Roaming/Claude/claude_desktop_config.json",
+      "AppData/Roaming/Code/User/mcp.json"
+    ],
+    "directories": [
+      ".agents/skills",
+      ".claude/skills",
+      ".config/opencode/skills",
+      ".copilot/skills",
+      ".cursor/skills",
+      ".gemini/skills",
+      ".junie/skills",
+      ".pi/agent/skills",
+      ".windsurf/skills"
+    ]
+  }
+}

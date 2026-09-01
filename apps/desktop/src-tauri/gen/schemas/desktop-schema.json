@@ -2223,6 +2223,12 @@
           "markdownDescription": "Enables the apply_security_preset command without any pre-configured scope."
         },
         {
+          "description": "Enables the apply_surface_transaction command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-apply-surface-transaction",
+          "markdownDescription": "Enables the apply_surface_transaction command without any pre-configured scope."
+        },
+        {
           "description": "Enables the check_for_updates command without any pre-configured scope.",
           "type": "string",
           "const": "allow-check-for-updates",
@@ -2785,6 +2791,12 @@
           "type": "string",
           "const": "deny-apply-security-preset",
           "markdownDescription": "Denies the apply_security_preset command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the apply_surface_transaction command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-apply-surface-transaction",
+          "markdownDescription": "Denies the apply_surface_transaction command without any pre-configured scope."
         },
         {
           "description": "Denies the check_for_updates command without any pre-configured scope.",

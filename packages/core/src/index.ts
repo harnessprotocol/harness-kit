@@ -260,8 +260,20 @@ export type {
   StoredResource,
   ObservationSnapshot,
   StateStore,
+  TransactionRecord,
 } from "./state/store.js";
-export type { CodexMcpValue, CodexMcpReadResult } from "./codecs/toml-codex.js";
+export { recordAppliedTransaction } from "./state/ledger.js";
+export type { LedgerEntryInput, LedgerOutcome } from "./state/ledger.js";
+export type { CodexMcpValue, CodexMcpReadResult, CodexMcpWrite } from "./codecs/toml-codex.js";
+export { writeCodexMcp } from "./codecs/toml-codex.js";
+export { planStoreWrite } from "./write/write-store.js";
+export { planCellAction, syncCliCommand } from "./write/plan-cell-action.js";
+export { applyCellAction, CellActionError } from "./write/apply-cell-action.js";
+export { buildAgentPrompt } from "./write/agent-prompt.js";
+export type { AgentPromptOptions } from "./write/agent-prompt.js";
+export type { ApplyCellActionOptions, CellActionErrorCode } from "./write/apply-cell-action.js";
+export type { CellActionRequest, CellActionPlan } from "./write/plan-cell-action.js";
+export type { StoreEdit, StoreWritePlan, PlannedFileChange } from "./write/write-store.js";
 export { readCodexMcp } from "./codecs/toml-codex.js";
 export type { OpenCodeMcpValue, OpenCodeMcpReadResult } from "./codecs/json-opencode.js";
 export { readOpenCodeMcpConfig } from "./codecs/json-opencode.js";
@@ -373,6 +385,7 @@ export type {
   TransactionFileChange,
   TransactionResult,
   TransactionManifest,
+  TransactionRootId,
   CapsuleDependency,
   CapsuleManifest,
   CapsuleValidationFinding,
@@ -406,6 +419,13 @@ export {
 } from "./portability/capabilities.js";
 export { reconcileResources, resolveReconciliationPlan } from "./portability/reconcile.js";
 export { applyFileTransaction, rollbackFileTransaction } from "./portability/transaction.js";
+export type { TransactionContext, TransactionRoot } from "./portability/transaction.js";
+export {
+  createHomeTransactionRoot,
+  homeWriteScope,
+  isWritableHomePath,
+} from "./surfaces/write-scope.js";
+export type { HomeWriteScope } from "./surfaces/write-scope.js";
 export {
   EMPTY_PORTABILITY_STATE,
   readPortabilityState,

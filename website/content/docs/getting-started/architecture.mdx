@@ -90,7 +90,8 @@ The `harness` CLI is a standalone terminal tool. You run it from your shell; it 
 harness validate          # check harness.yaml against the schema
 harness compile           # compile harness.yaml into native per-tool configs
 harness compile --watch   # recompile automatically whenever harness.yaml changes
-harness sync              # fetch plugins into local cache, write harness.lock
+harness install           # fetch plugins into local cache, write harness.lock
+harness sync              # copy resources between surfaces to close machine gaps
 harness check             # detect drift between compiled output and harness.yaml
 harness detect            # show which AI platforms are present in the working directory
 harness scan              # security audit of installed plugin skill files
@@ -98,6 +99,7 @@ harness import            # scan existing AI tool configs and synthesize a harne
 harness capture           # create a secret-safe Protocol v2 peer snapshot
 harness reconcile         # preview a three-way layered reconciliation
 harness apply             # preview or transactionally apply resolved changes
+harness rollback --list   # list rollback points across user and project scope
 harness rollback          # restore a complete previous transaction
 harness skills promote    # pin or package a repository-local skill
 harness org rollout-sync  # preview or apply this device's pinned organization rollout

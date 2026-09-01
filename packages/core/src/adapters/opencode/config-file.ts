@@ -6,7 +6,9 @@ import { buildOpenCodePermission } from "./permissions.js";
 
 const OPENCODE_CONFIG_FILE = "opencode.json";
 
-function translateServer(server: McpServer): OpenCodeMcpEntry {
+/** Portable McpServer -> OpenCode's native entry shape. Shared with the
+ *  write path (write/write-store.ts) so both emit identical JSON. */
+export function translateServer(server: McpServer): OpenCodeMcpEntry {
   if (server.transport === "stdio") {
     return {
       type: "local",

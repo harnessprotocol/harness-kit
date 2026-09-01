@@ -190,6 +190,7 @@
     "allow-sync-file-exists",
     "allow-sync-read-dir",
     "allow-sync-write-files",
+    "allow-apply-surface-transaction",
     "allow-sync-create-backup",
     "allow-sync-list-backups",
     "allow-sync-restore-backup",

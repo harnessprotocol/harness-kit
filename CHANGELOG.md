@@ -4,6 +4,7 @@
 
 ### Breaking
 
+- **`harness-kit sync` is now cross-surface resource sync; plugin installation moved to `harness-kit install`.** The two grammars share no flags — the old verb took only `--frozen`/`--locked`, the new one takes `--from/--to/--only/--scope/--dry-run/--yes` — and bare `sync` now *reports* and writes nothing, so an existing scripted `harness-kit sync` prints a gap report instead of installing rather than doing something unexpected. `sync --frozen`/`--locked` error with the mapping to `install`. No deprecation alias: there is no silent-behavior-change path for one to protect against.
 - **CLI requires Node ≥ 24** — the machine state store uses the built-in `node:sqlite` (no native dependencies).
 - **`TargetPlatform` → `SurfaceId`** — the unit of configuration is now the install *surface*; the only renamed id is `copilot` → `copilot-vscode`. v2 `harness.yaml` files auto-migrate in memory when parsed (with warnings); `harness-kit migrate --write` persists the rename; retired `--target` names error with the mapping.
 
@@ -15,6 +16,12 @@
 - **CLI** — `harness-kit status` gains a Machine section (and records snapshot history to `~/.harness/harness.db`, degrading gracefully when unavailable); new `harness-kit diff --from <surface> --to <surface> [--only kind[:name]]`; new `harness-kit migrate [--write]`; `detect` reports non-compile surfaces.
 - **Desktop: Machine view** — the new home screen (⌘1): all 11 surfaces family-grouped with per-resource cells (present / absent / not applicable / needs-confirmation), a diff drawer, and skipped-diagnostic reporting. Read-only in this release — one-click sync arrives next.
 - **Definitions bundle format v1** — groundwork for remotely-updated surface definitions.
+- **Cross-surface sync (write milestone).** Every *gap* can be closed three ways: direct apply, the exact `harness-kit sync …` command shown verbatim, or a generated agent prompt that instructs the target harness's own agent. Tier-one kinds this release are `mcp-server`, `skill`, and `instructions`; other kinds offer the CLI command and prompt but not direct apply, and plugin cells wait for the M3 broker. Rows that exist everywhere but *differ* are reported as diffs and do not yet offer actions — that lands with the rest of AC-11 in M3.
+- **User-scope writes with rollback.** `applyFileTransaction` gained *named roots* (`project`/`home`) rather than relaxed path validation: member paths stay root-relative so the existing traversal and symlink guards apply unchanged, and the home root additionally allowlists only the config stores the surface registry declares. Every apply — CLI or desktop — verifies its preimage, backs it up, and writes a rollback manifest. `harness-kit rollback` gains `--list` (rollback points across both scopes, newest first, degrading to `.harness/state.json` when the state database is unavailable) and accepts a transaction id as well as a manifest path. Applies made from the desktop write their manifest to disk but do not yet appear in `--list`; that needs the desktop state-store bridge.
+- **Codex `~/.codex/config.toml` is now writable** via managed-region editing — HarnessKit owns only the `[mcp_servers.*]` tables it manages, and every other byte survives.
+- **Agent prompts** (`harness-kit sync --prompt [--out <path>]`) render secrets as `${HARNESS_*}` references by default; `--reveal-secrets` covers the deliberate local one-paste case and warns inside the prompt body.
+- **`HARNESS_STATE_PATH`** overrides the shared state database location (`~/.harness/harness.db` by default). It names the file, not its directory, so several machine-state databases can sit side by side — useful for CI, tests, and running two checkouts against separate state.
+- **Loss preview.** When a target cannot fully express a resource, the loss is shown before anything is written and applying requires explicit confirmation (`--yes` in the CLI). A mere shape translation into the surface's native form is reported but does not gate — gating on it would put a prompt in front of nearly every copy.
 
 ### Changed
 
@@ -23,6 +30,8 @@
 
 ### Fixed
 
+- **Desktop sync bridge could write anywhere under `$HOME`.** `commands/sync.rs` writes through `std::fs`, bypassing the Tauri fs plugin scope, and never constrained its `project_dir` — so a caller passing `~/` could reach any dotfile through the ordinary relative-path writer. Path traversal was blocked correctly; the *root* was not. All five entry points now resolve through one guard that refuses the home directory and its ancestors.
+- **CLI printed a stack trace for every command failure.** `program.parse()` had no error handling, so any async command rejection surfaced as an unhandled rejection. Failures are now one line on stderr with exit 1.
 - CLI bundling preserves `node:` import prefixes (tsup's `removeNodeProtocol` default silently broke `node:sqlite` in dist while tests stayed green); a dist smoke test now runs the built artifact.
 
 ## 0.11.0 — 2026-07-27

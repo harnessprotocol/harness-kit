@@ -1,6 +1,6 @@
 # Cross-Harness Config Management — Design
 
-**Spec:** [specs/cross-harness-config-management/spec.md](./spec.md) · **ADRs:** 0001–0004 · **Decided:** 2026-08-31 brainstorm session · **Status:** approved with open questions flagged below
+**Spec:** [specs/cross-harness-config-management/spec.md](./spec.md) · **ADRs:** 0001–0004 · **Decided:** 2026-08-31 brainstorm session; D9–D15 added 2026-09-01 (M2 grilling) · **Status:** approved with open questions flagged below
 
 ## Decision log
 
@@ -14,6 +14,13 @@
 | D6 | `sync` grammar | One verb + filters (`--from/--to/--only/--scope/--dry-run/--yes`) |
 | D7 | Definitions signing | Ed25519 detached signatures, versioned bundle, monotonic anti-rollback, cross-signed key rotation |
 | D8 | Milestones | Horizontal by capability: M1 read → M2 write → M3 plugins/recs → M4 remote definitions |
+| D9 | User-scope writes | **Named transaction roots** (`project`, `home`) + registry-declared path allowlist; guards unchanged |
+| D10 | Rollback ledger | SQLite `transactions` table is the cross-scope index; preimages stay on disk |
+| D11 | Lossy copy | Preview the loss report, refuse to apply without explicit confirmation — gate on genuine loss only, not on translation into native shape (confirmed 2026-09-01) |
+| D12 | Desktop write path | New Tauri command allowlisted to registry stores; `sync_write_files` untouched |
+| D13 | `sync`/`install` | Repurpose `sync` immediately — no deprecation alias window |
+| D14 | Absorption | ~~Drift folds into Machine in M2~~ → both Drift and Fleet stay until M3 (Drift is a different comparison; see AC-37) |
+| D15 | Prompt delivery | Inline (drawer/stdout) with optional `--out <path>` persistence |
 
 ## 1. Overall shape
 
@@ -61,20 +68,38 @@ CI compiles descriptors + matrix + recommendation rules + prompt templates into 
 
 ## 8. CLI and Machine view (D6)
 
-- `harness-kit install` takes today's `sync` behavior; `sync` aliases it with a deprecation warning for one release cycle, then becomes: `harness-kit sync [--from <surface>] [--to <surface>…] [--only <kind[:name]>…] [--scope user|project] [--dry-run] [--yes]`. Bare `sync` prints the machine report with proposed actions. `status`/`diff` re-key to surfaces.
+- `harness-kit install` takes today's `sync` behavior; `sync` becomes the cross-surface verb in the same release (D13 — no alias window; the grammars are disjoint and bare `sync` is read-only): `harness-kit sync [--from <surface>] [--to <surface>…] [--only <kind[:name]>…] [--scope user|project] [--dry-run] [--yes]`. Bare `sync` prints the machine report with proposed actions. `status`/`diff` re-key to surfaces.
 - Desktop: new `/machine` route — virtualized surfaces × resources grid, cell drawer with structured diff and the three actions, absorbing Fleet, Drift, and ConflictLedger; old routes redirect. Every UI action displays its exact CLI invocation (AC-28). Website `apps/parity.md` doc rewritten to match what ships.
 
 ## 9. Testing
 
 Fixture round-trips per surface (sample native config → resources → identical native config); capability-matrix snapshot tests (it's data); migration tests v1/v2 → v2.1; CLI grammar e2e; Playwright for the grid; secrets-sanitizer property tests extended to prompt generation. Fixtures never contain real credentials.
 
+## 10. The M2 write path (D9–D15)
+
+**The constraint.** `applyFileTransaction` expresses all of its safety as "relative, inside the project root": `assertRelativeSafePath` rejects `/` and `~`, every path is joined onto `fs.cwd()`, backups go to `.harness/backups/<ts>/<path>`, and `rollback` finds manifests via `.harness/state.json`. User-scope writes cannot simply relax that guard without dissolving the property that makes escape structurally impossible.
+
+**Named roots (D9).** `TransactionContext` gains `roots: Record<TransactionRootId, {absolutePath, allowlist?}>` with `TransactionRootId = "project" | "home"`. `TransactionFileChange` gains `root?: TransactionRootId` defaulting to `"project"`, so every existing caller and every persisted v1 manifest keeps its exact meaning (AC-39). Paths stay relative *within* their root, so `assertRelativeSafePath` and `assertNoSymlinkBoundary` run unchanged against the resolved root. The `home` root additionally carries an allowlist derived from `SURFACE_TABLE`'s declared `ConfigStore` paths: a change whose path is not a declared store for some surface is rejected before any backup is taken. The blast radius is therefore exactly the set of files M1 already knows how to read, and it moves with the descriptors rather than with code.
+
+The manifest gains `root` per change and its `version` goes to 2; `rollbackFileTransaction` accepts v1 (all-project) and v2 manifests.
+
+**Ledger (D10).** Every commit, either scope, inserts into `transactions` (id, timestamp, scope, root, manifest path, backup dir, surface/kind/identity touched). Preimages and the manifest stay on disk — recoverable by hand if the DB is lost — under `~/.harness/backups/<ts>/` for the home root and `.harness/backups/<ts>/` for the project root. `rollback --list` reads the table; with no DB it degrades to the `state.json` last-known-good path and says so (AC-33).
+
+**Lossy copies (D11).** The single-resource plan carries `buildLossReport` output. The CLI prints dropped/downgraded fields and stops without `--yes`; the drawer renders them and disables apply until acknowledged. Loss is never discovered after the write.
+
+**Desktop (D12).** A new command — `apply_surface_transaction` — takes the change set and validates each path against the same registry allowlist on the Rust side (defense in depth: the webview is not trusted to have applied it). `sync_write_files` keeps its project-only contract; nothing gains a home-wide write primitive.
+
+**CLI grammar (D13).** `install` takes today's `sync` behavior verbatim. `sync` becomes the cross-surface verb in the same release: no alias window, because the two flag sets are disjoint and the new bare `sync` only reports. `--frozen`/`--locked` on `sync` error with the `install` mapping (AC-38).
+
+**Scope (D14, D15).** M2 direct-writes `mcp-server`, `skill`, and `instructions` only; `plugin` waits for the M3 broker. Drift folds into the Machine view with its acknowledgements migrated onto the StateStore; Fleet keeps its route. Prompts render inline and persist on `--out`.
+
 ## Milestones (D8)
 
 | M | Scope | Demoable outcome |
 |---|-------|------------------|
 | M1 | Re-key + descriptors + inventory (user & project scope) + read-only grid + `status`/`diff` | See every surface's config and every gap |
-| M2 | Tier-one sync (mcp/skill/instruction/plugin cells), user-scope transactions, `install` rename, agent prompts | Close a gap three ways, roll it back |
-| M3 | PluginBroker + baseline profile diff + recommendations | Team baseline "you're missing X" with one-action fix |
+| M2 | Tier-one sync (mcp-server/skill/instructions cells), user-scope transactions via named roots, `install` rename, agent prompts, Drift absorption | Close a gap three ways, roll it back |
+| M3 | PluginBroker (incl. plugin cells + AC-4 enumeration) + baseline profile diff + recommendations + diff-case cell actions (AC-11) + Drift/Fleet absorption (AC-37) | Team baseline "you're missing X" with one-action fix |
 | M4 | Remote definitions fetch + Ed25519 verify | Definitions update without an app release |
 
 ## Risks

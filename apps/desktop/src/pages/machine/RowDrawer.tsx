@@ -1,16 +1,21 @@
-import { useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button } from "@harness-kit/ui";
-import type { GridRow, MachineDiff } from "@harness-kit/core";
+import type { GridRow, MachineDiff, SurfaceId } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
 import { KIND_LABELS, shortDigest } from "./machine-view-model";
+import {
+  applyCellActionViaTauri,
+  buildCellAction,
+  missingTargets,
+  presentSources,
+} from "./cell-actions";
+import type { CellActionView } from "./cell-actions";
 
 /**
  * Side drawer for one grid row: per-surface entries (scope + provenance),
  * cross-surface FieldDeltas rendered verbatim (paths are display-only per
- * core's contract), and the M2 sync actions rendered disabled.
+ * core's contract), and the three sync actions (AC-11).
  */
-
-const M2_TOOLTIP = "Sync arrives in M2";
 
 function renderValue(value: unknown): string {
   if (value === undefined) return "—";
@@ -25,9 +30,11 @@ export interface RowDrawerProps {
   row: GridRow;
   diffs: MachineDiff[];
   onClose: () => void;
+  /** Re-scan after a successful apply so the grid reflects the write. */
+  onApplied?: () => void;
 }
 
-export function RowDrawer({ row, diffs, onClose }: RowDrawerProps) {
+export function RowDrawer({ row, diffs, onClose, onApplied }: RowDrawerProps) {
   const presentSurfaces = Object.entries(row.cells).filter(
     ([, cell]) => cell.status === "present",
   );
@@ -235,32 +242,151 @@ export function RowDrawer({ row, diffs, onClose }: RowDrawerProps) {
         </div>
       )}
 
-      {/* M2 actions — rendered disabled */}
-      <div
-        style={{
-          marginTop: "auto",
-          padding: "14px 18px 18px",
-          display: "flex",
-          gap: 6,
-          flexWrap: "wrap",
-        }}
-      >
-        <span title={M2_TOOLTIP}>
-          <Button variant="primary" size="sm" disabled>
-            Apply
-          </Button>
-        </span>
-        <span title={M2_TOOLTIP}>
-          <Button variant="ghost" size="sm" disabled>
-            Copy CLI command
-          </Button>
-        </span>
-        <span title={M2_TOOLTIP}>
-          <Button variant="ghost" size="sm" disabled>
-            Copy prompt
-          </Button>
-        </span>
-      </div>
+      <RowActions row={row} onApplied={onApplied} />
     </aside>
+  );
+}
+
+/**
+ * The three action surfaces for one row (AC-11, AC-28). The displayed CLI
+ * string comes from core's own builder, so it is literally the string the CLI
+ * parses rather than a second hand-written formatter that could drift.
+ */
+function RowActions({ row, onApplied }: { row: GridRow; onApplied?: () => void }) {
+  const sources = presentSources(row);
+  const targets = missingTargets(row);
+  const [target, setTarget] = useState<SurfaceId | "">(targets[0] ?? "");
+  const [view, setView] = useState<CellActionView | null>(null);
+  const [status, setStatus] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [confirmedLoss, setConfirmedLoss] = useState(false);
+
+  const source = sources[0];
+
+  useEffect(() => {
+    setConfirmedLoss(false);
+    setStatus(null);
+    if (!source || !target) {
+      setView(null);
+      return;
+    }
+    let cancelled = false;
+    buildCellAction(row, source, target as SurfaceId)
+      .then((next) => {
+        if (!cancelled) setView(next);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) setStatus(error instanceof Error ? error.message : String(error));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [row, source, target]);
+
+  const copy = useCallback(async (text: string, label: string) => {
+    await navigator.clipboard.writeText(text);
+    setStatus(`${label} copied.`);
+  }, []);
+
+  const apply = useCallback(async () => {
+    if (!view) return;
+    setBusy(true);
+    try {
+      await applyCellActionViaTauri(view, confirmedLoss);
+      setStatus("Applied.");
+      onApplied?.();
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }, [view, onApplied, confirmedLoss]);
+
+  if (targets.length === 0 || !source) {
+    return (
+      <div style={{ marginTop: "auto", padding: "14px 18px 18px", fontSize: 12, opacity: 0.7 }}>
+        {targets.length === 0
+          ? "Present on every surface that supports it — nothing to sync."
+          : "Not present on any surface — nothing to copy from."}
+      </div>
+    );
+  }
+
+  const lossBlocked = view?.plan.requiresConfirmation === true && !confirmedLoss;
+
+  return (
+    <div style={{ marginTop: "auto", padding: "14px 18px 18px", display: "grid", gap: 10 }}>
+      <label style={{ fontSize: 12, display: "grid", gap: 4 }}>
+        <span style={{ opacity: 0.7 }}>Copy to</span>
+        <select
+          value={target}
+          onChange={(event) => setTarget(event.target.value as SurfaceId)}
+          aria-label="Target surface"
+        >
+          {targets.map((id) => (
+            <option key={id} value={id}>
+              {surfaceLabel(id)}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      {view?.plan.carriesSecret && (
+        <p style={{ fontSize: 12, margin: 0 }} data-testid="secret-badge">
+          Contains a secret value, copied literally to this machine only.
+        </p>
+      )}
+
+      {view?.plan.requiresConfirmation && (
+        <label style={{ fontSize: 12, display: "flex", gap: 6, alignItems: "flex-start" }}>
+          <input
+            type="checkbox"
+            checked={confirmedLoss}
+            onChange={(event) => setConfirmedLoss(event.target.checked)}
+            aria-label="Acknowledge capability loss"
+          />
+          <span>
+            {surfaceLabel(target as SurfaceId)} cannot fully express this:{" "}
+            {view.plan.loss?.losses.map((item) => item.detail).join("; ")}
+          </span>
+        </label>
+      )}
+
+      {view && !view.plan.supported && (
+        <p style={{ fontSize: 12, margin: 0 }}>{view.plan.reason}</p>
+      )}
+
+      {view && (
+        <code style={{ fontSize: 11, opacity: 0.8, wordBreak: "break-all" }}>{view.cli}</code>
+      )}
+
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+        <Button
+          variant="primary"
+          size="sm"
+          disabled={!view || !view.plan.supported || view.plan.noop || lossBlocked || busy}
+          onClick={apply}
+        >
+          {view?.plan.noop ? "Up to date" : "Apply"}
+        </Button>
+        <Button variant="ghost" size="sm" disabled={!view} onClick={() => view && copy(view.cli, "CLI command")}>
+          Copy CLI command
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          disabled={!view}
+          onClick={() => view && copy(view.prompt, "Agent prompt")}
+        >
+          Copy prompt
+        </Button>
+      </div>
+
+      {status && (
+        <p style={{ fontSize: 12, margin: 0 }} role="status">
+          {status}
+        </p>
+      )}
+    </div>
   );
 }

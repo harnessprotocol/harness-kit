@@ -8,7 +8,7 @@ import type {
 import { readJsonOrDefault } from "../utils/read-json.js";
 import { getTarget } from "./targets.js";
 
-interface McpJsonEntry {
+export interface McpJsonEntry {
   type: string;
   command?: string;
   args?: string[];
@@ -17,7 +17,14 @@ interface McpJsonEntry {
   headers?: Record<string, string>;
 }
 
-function translateServer(server: McpServer): McpJsonEntry {
+/**
+ * Portable McpServer -> the native `mcpServers` JSON entry shape, which keys
+ * transport as `type`. Shared with the M2 write path (write/write-store.ts)
+ * so a synced server is byte-identical to a compiled one — writing the
+ * portable shape verbatim would emit our internal `transport` key into the
+ * user's config.
+ */
+export function translateServer(server: McpServer): McpJsonEntry {
   if (server.transport === "stdio") {
     const entry: McpJsonEntry = {
       type: "stdio",

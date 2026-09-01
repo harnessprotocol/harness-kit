@@ -194,10 +194,19 @@ export interface InventorySnapshot {
   redactions: RedactionFinding[];
 }
 
+/**
+ * Named root a transaction path is relative to. User-scope writes enter the
+ * engine as a second root rather than as relaxed path validation, so member
+ * paths stay root-relative and every existing guard keeps applying (AC-31).
+ */
+export type TransactionRootId = "project" | "home";
+
 export interface TransactionFileChange {
   path: string;
   before: string | null;
   after: string | null;
+  /** Root `path` is relative to. Absent means "project" — the pre-M2 meaning. */
+  root?: TransactionRootId;
 }
 
 export interface TransactionResult {
@@ -211,7 +220,8 @@ export interface TransactionResult {
 }
 
 export interface TransactionManifest {
-  version: 1;
+  /** 1 = every change is project-rooted (pre-M2). 2 = changes carry `root`. */
+  version: 1 | 2;
   timestamp: string;
   status: "prepared" | "committed" | "rolled-back" | "rollback-failed";
   changes: TransactionFileChange[];

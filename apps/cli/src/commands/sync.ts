@@ -236,7 +236,7 @@ export async function syncCommand(
           ` harness.lock is out of date. Missing entries: ${missing.join(", ")}`,
       );
       console.error(
-        chalk.dim("Run harness-kit sync (without --locked) to update the lockfile."),
+        chalk.dim("Run harness-kit install (without --locked) to update the lockfile."),
       );
       process.exit(1);
     }
