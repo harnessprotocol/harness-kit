@@ -1,6 +1,39 @@
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::sync::{Mutex, OnceLock};
 use tauri::AppHandle;
 use tauri_plugin_fs::FsExt;
+
+/// Canonical project roots the user has granted this session.
+///
+/// `sync.rs`'s bridge writes with `std::fs`, bypassing the Tauri FS plugin
+/// scope entirely, so the plugin grant alone does not constrain it. Refusing
+/// only "home and its ancestors" there left every home *subdirectory* usable
+/// as a project root — `~/.ssh`, `~/Library/LaunchAgents`, `~/.claude` — which
+/// is an unguarded door beside the guarded one. The bridge now requires the
+/// root to be one the user actually picked.
+fn granted_roots() -> &'static Mutex<HashSet<PathBuf>> {
+    static ROOTS: OnceLock<Mutex<HashSet<PathBuf>>> = OnceLock::new();
+    ROOTS.get_or_init(|| Mutex::new(HashSet::new()))
+}
+
+/// Whether `candidate` is a granted root or lives inside one.
+pub(crate) fn is_granted_root(candidate: &Path) -> bool {
+    let Ok(roots) = granted_roots().lock() else {
+        return false;
+    };
+    roots
+        .iter()
+        .any(|root| candidate == root || candidate.starts_with(root))
+}
+
+/// Record a canonical root as granted. Test-visible so the sync bridge's
+/// tests can exercise the allowed path without a running Tauri app.
+pub(crate) fn remember_granted_root(canonical: PathBuf) {
+    if let Ok(mut roots) = granted_roots().lock() {
+        roots.insert(canonical);
+    }
+}
 
 /// Expand a leading `~/` to the user's home directory (mirrors sync.rs's helper —
 /// runtime-picked project dirs can arrive as either an absolute path from the
@@ -63,7 +96,9 @@ pub fn grant_project_scope(app: AppHandle, path: String) -> Result<(), String> {
 
     app.fs_scope()
         .allow_directory(&canonical, true)
-        .map_err(|e| format!("Failed to grant project scope: {}", e))
+        .map_err(|e| format!("Failed to grant project scope: {}", e))?;
+    remember_granted_root(canonical);
+    Ok(())
 }
 
 #[cfg(test)]

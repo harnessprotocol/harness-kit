@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
-use super::fs_scope::is_home_or_ancestor;
+use super::fs_scope::{is_granted_root, is_home_or_ancestor};
 
 // ── Path helpers ───────────────────────────────────────────────
 
@@ -30,8 +30,12 @@ fn expand_tilde(path: &str) -> String {
 /// `~/.zshrc`, `~/.ssh/`, or a git hooks directory: path traversal is
 /// correctly blocked, but the root itself was never constrained.
 ///
-/// Mirrors `grant_project_scope`'s rule: reject the home directory and any
-/// ancestor of it (`/`, `/Users`, `~`).
+/// Two rules, because one is not enough. Rejecting only home and its
+/// ancestors still left every home *subdirectory* usable as a "project" —
+/// `~/.ssh`, `~/Library/LaunchAgents`, `~/.claude` — which made this an
+/// unguarded door beside the registry-allowlisted one. The root must also be
+/// one the user actually picked through the folder dialog
+/// (`grant_project_scope`), which is the only thing that makes it a project.
 fn resolve_project_root(project_dir: &str) -> Result<PathBuf, String> {
     let expanded = expand_tilde(project_dir);
     let project = Path::new(&expanded);
@@ -49,6 +53,15 @@ fn resolve_project_root(project_dir: &str) -> Result<PathBuf, String> {
             return Err(
                 "Refusing to operate on the home directory or one of its ancestors".to_string(),
             );
+        }
+        // Inside home, only a granted root counts. Outside home, the dialog
+        // grant is still the thing that makes a directory a project, so the
+        // rule is uniform.
+        if !is_granted_root(&canonical_root) {
+            return Err(format!(
+                "Refusing to operate on '{}': not a project directory granted this session",
+                canonical_root.display()
+            ));
         }
     }
 
@@ -390,10 +403,41 @@ mod tests {
     }
 
     #[test]
-    fn allows_an_ordinary_project_directory() {
+    fn allows_a_granted_project_directory() {
         let dir = std::env::temp_dir().join("harness-kit-sync-guard-ok");
         fs::create_dir_all(&dir).unwrap();
+        super::super::fs_scope::remember_granted_root(dir.canonicalize().unwrap());
         assert!(resolve_project_root(dir.to_str().unwrap()).is_ok());
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn refuses_a_home_subdirectory_that_was_never_granted() {
+        // The bug this closes: rejecting only "home and its ancestors" left
+        // ~/.ssh, ~/Library/LaunchAgents and ~/.claude usable as project
+        // roots, bypassing the registry allowlist entirely.
+        let home = dirs::home_dir().unwrap();
+        for candidate in [".ssh", ".claude", "Library"] {
+            let path = home.join(candidate);
+            if !path.exists() {
+                continue;
+            }
+            let err = resolve_project_root(path.to_str().unwrap()).unwrap_err();
+            assert!(
+                err.contains("not a project directory granted"),
+                "{} should be refused, got: {}",
+                candidate,
+                err
+            );
+        }
+    }
+
+    #[test]
+    fn refuses_an_ungranted_directory_outside_home() {
+        let dir = std::env::temp_dir().join("harness-kit-sync-ungranted");
+        fs::create_dir_all(&dir).unwrap();
+        let err = resolve_project_root(dir.to_str().unwrap()).unwrap_err();
+        assert!(err.contains("not a project directory granted"));
         fs::remove_dir_all(&dir).ok();
     }
 

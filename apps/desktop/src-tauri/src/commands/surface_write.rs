@@ -4,7 +4,6 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
-use super::fs_scope::is_home_or_ancestor;
 
 /// The user-scope write allowlist, generated from the TypeScript surface
 /// registry (apps/desktop/scripts/generate-write-scope.mjs).
@@ -91,13 +90,37 @@ pub fn apply_surface_transaction(files: Vec<SurfaceFileWrite>) -> Result<Vec<Str
             ));
         }
         let dest = canonical_home.join(&file.relative_path);
-        // Belt and braces: the segment check above already rejects traversal,
-        // but a symlinked ancestor could still land outside home.
+
+        // Walk EVERY component, the final one included. Canonicalizing only
+        // the parent let a symlink at the leaf redirect the write anywhere the
+        // user can write — and skills directories are populated by
+        // third-party plugin installs, so a planted symlink is a realistic
+        // precondition. This mirrors the TS engine's assertNoSymlinkBoundary,
+        // which already walks the full path.
+        let mut walked = canonical_home.clone();
+        for segment in Path::new(&file.relative_path).components() {
+            walked = walked.join(segment);
+            match std::fs::symlink_metadata(&walked) {
+                Ok(meta) if meta.file_type().is_symlink() => {
+                    return Err(format!(
+                        "Refusing to write '{}': '{}' is a symbolic link",
+                        file.relative_path,
+                        walked.display()
+                    ));
+                }
+                // A component that does not exist yet cannot be a symlink;
+                // its parent was already checked on the previous iteration.
+                _ => {}
+            }
+        }
+
+        // The parent must resolve INSIDE home — home itself included, since
+        // ~/.claude.json's parent IS home. (An earlier version reused the
+        // home-or-ancestor predicate here, which made every top-level store
+        // permanently unwritable.)
         if let Some(parent) = dest.parent() {
             if let Ok(canonical_parent) = parent.canonicalize() {
-                if !canonical_parent.starts_with(&canonical_home)
-                    || is_home_or_ancestor(&canonical_parent, &canonical_home)
-                {
+                if !canonical_parent.starts_with(&canonical_home) {
                     return Err(format!(
                         "Refusing to write '{}': resolves outside the home directory",
                         file.relative_path
@@ -179,19 +202,75 @@ mod tests {
     }
 
     #[test]
+    fn can_write_a_top_level_home_store() {
+        // ~/.claude.json's parent IS the home directory. A guard that treats
+        // "parent is home" as an escape makes the flagship Claude Code store
+        // permanently unwritable — and the batch test below masked it by
+        // putting .claude.json first and asserting only is_err().
+        let probe = dirs::home_dir().unwrap().join(".claude.json");
+        let existed = probe.exists();
+        let previous = if existed { fs::read_to_string(&probe).ok() } else { None };
+
+        let result = apply_surface_transaction(vec![SurfaceFileWrite {
+            relative_path: ".claude.json".to_string(),
+            content: previous.clone().or_else(|| Some("{}".to_string())),
+        }]);
+
+        // Restore whatever was there before asserting.
+        match (&previous, existed) {
+            (Some(text), true) => {
+                fs::write(&probe, text).ok();
+            }
+            _ => {
+                fs::remove_file(&probe).ok();
+            }
+        }
+        assert!(result.is_ok(), "expected ok, got: {:?}", result);
+    }
+
+    #[test]
+    fn refuses_a_symlinked_leaf_inside_a_declared_directory() {
+        let home = dirs::home_dir().unwrap();
+        let skills = home.join(".claude/skills");
+        if fs::create_dir_all(&skills).is_err() {
+            return;
+        }
+        let link = skills.join("harness-kit-symlink-guard");
+        let outside = std::env::temp_dir().join("harness-kit-symlink-escape.txt");
+        fs::remove_file(&link).ok();
+        fs::remove_file(&outside).ok();
+        #[cfg(unix)]
+        if std::os::unix::fs::symlink(&outside, &link).is_ok() {
+            let result = apply_surface_transaction(vec![SurfaceFileWrite {
+                relative_path: ".claude/skills/harness-kit-symlink-guard".to_string(),
+                content: Some("should never be written".to_string()),
+            }]);
+            fs::remove_file(&link).ok();
+            let escaped = outside.exists();
+            fs::remove_file(&outside).ok();
+            assert!(result.is_err(), "symlinked leaf must be refused");
+            assert!(!escaped, "write escaped to {}", outside.display());
+        }
+    }
+
+    #[test]
     fn a_single_bad_path_blocks_the_whole_batch() {
         // Validation happens before any mutation, so a mixed batch writes
         // nothing rather than partially applying.
         let result = apply_surface_transaction(vec![
             SurfaceFileWrite {
-                relative_path: ".claude.json".to_string(),
-                content: Some("{}".to_string()),
-            },
-            SurfaceFileWrite {
                 relative_path: ".zshrc".to_string(),
                 content: Some("pwned".to_string()),
             },
+            SurfaceFileWrite {
+                relative_path: ".claude.json".to_string(),
+                content: Some("{}".to_string()),
+            },
         ]);
-        assert!(result.is_err());
+        // Assert on the reason, and put the BAD path first — the earlier
+        // version passed for the wrong reason.
+        let err = result.unwrap_err();
+        assert!(err.contains("not a config store"), "got: {}", err);
     }
 }
+
