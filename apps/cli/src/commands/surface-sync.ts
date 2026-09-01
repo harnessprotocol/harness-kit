@@ -8,6 +8,7 @@ import {
   CellActionError,
   createHomeTransactionRoot,
   planCellAction,
+  syncCliCommand,
   recordAppliedTransaction,
   SURFACE_IDS,
 } from "@harness-kit/core";
@@ -79,11 +80,6 @@ function matchesOnly(
   );
 }
 
-/** The exact invocation that reproduces one action (AC-28). */
-function cliFor(action: Omit<PlannedAction, "cli" | "plan">, scope: SurfaceScope): string {
-  return `harness-kit sync --from ${action.from} --to ${action.to} --only ${action.kind}:${action.name} --scope ${scope} --yes`;
-}
-
 /**
  * Cross-surface resource sync (AC-27, D13).
  *
@@ -141,7 +137,7 @@ export async function surfaceSyncCommand(flags: SurfaceSyncFlags): Promise<void>
       { kind: candidate.kind, name: candidate.name, from: candidate.from, to: candidate.to, scope },
       opts,
     );
-    actions.push({ ...candidate, cli: cliFor(candidate, scope), plan });
+    actions.push({ ...candidate, cli: syncCliCommand({ ...candidate, scope }), plan });
   }
 
   const actionable = actions.filter((action) => action.plan.supported && !action.plan.noop);

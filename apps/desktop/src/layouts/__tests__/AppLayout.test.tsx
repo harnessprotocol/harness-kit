@@ -104,10 +104,12 @@ describe("keyboard navigation", () => {
         <LocationSpy />
       </MemoryRouter>,
     );
-    const drift = screen.getByText("Drift").closest('[role="link"]');
-    expect(drift).not.toBeNull();
-    fireEvent.keyDown(drift!, { key: "Enter" });
-    expect(screen.getByTestId("loc").textContent).toBe("/drift");
+    // Drift folded into Machine in M2 (AC-37); Comparator is the stand-in
+    // top-level item for this keyboard-activation check.
+    const item = screen.getByText("Comparator").closest('[role="link"]');
+    expect(item).not.toBeNull();
+    fireEvent.keyDown(item!, { key: "Enter" });
+    expect(screen.getByTestId("loc").textContent).toBe("/comparator");
   });
 
   it("activates a top-level nav item with Space", () => {

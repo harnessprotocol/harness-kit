@@ -222,3 +222,21 @@ export async function planCellAction(
     target,
   };
 }
+
+/**
+ * The exact `harness-kit sync` invocation that reproduces one cell action.
+ *
+ * Shared by the CLI and the desktop drawer so the string the UI displays is
+ * literally the string the CLI parses (AC-28) — two hand-written formatters
+ * would drift the moment a flag changed.
+ */
+export function syncCliCommand(request: CellActionRequest): string {
+  return [
+    "harness-kit sync",
+    `--from ${request.from}`,
+    `--to ${request.to}`,
+    `--only ${request.kind}:${request.name}`,
+    `--scope ${request.scope}`,
+    "--yes",
+  ].join(" ");
+}

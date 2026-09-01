@@ -219,7 +219,7 @@ describe("MachinePage", () => {
     expect(badge).toHaveAttribute("title", expect.stringContaining("Needs confirmation"));
   });
 
-  it("opens the drawer on row click with verbatim delta paths and disabled M2 actions", async () => {
+  it("opens the drawer on row click with verbatim delta paths and the three actions", async () => {
     renderPage();
     await screen.findByTestId("machine-grid");
 
@@ -230,11 +230,12 @@ describe("MachinePage", () => {
     expect(within(drawer).getByText("env.PORT")).toBeInTheDocument();
     expect(within(drawer).getByText(/"5432" → "5433"/)).toBeInTheDocument();
 
+    // All three action surfaces are present (AC-11); the M1 "arrives in M2"
+    // affordance is gone.
     for (const label of ["Apply", "Copy CLI command", "Copy prompt"]) {
-      const button = within(drawer).getByRole("button", { name: label });
-      expect(button).toBeDisabled();
-      expect(button.closest("span")).toHaveAttribute("title", "Sync arrives in M2");
+      expect(within(drawer).getByRole("button", { name: new RegExp(label, "i") })).toBeInTheDocument();
     }
+    expect(drawer).not.toHaveTextContent("Sync arrives in M2");
   });
 
   it("derives totals from the inventory rows/gaps/diffs, not resourceCount", async () => {

@@ -25,7 +25,6 @@ const SecretsPage = lazy(() => import("./pages/security/SecretsPage"));
 const AuditLogPage = lazy(() => import("./pages/security/AuditLogPage"));
 const MachinePage = lazy(() => import("./pages/machine/MachinePage"));
 const FleetPage = lazy(() => import("./pages/fleet/FleetPage"));
-const DriftPage = lazy(() => import("./pages/drift/DriftPage"));
 const AgentsPage = lazy(() => import("./pages/agents/AgentsPage"));
 
 // Dev-only screenshot fixtures (DESIGN.md §8 verification) — render Fleet/Drift/
@@ -119,7 +118,9 @@ export default function App() {
             <Route path="security/audit" element={<AuditLogPage />} />
 
             {/* Drift */}
-            <Route path="drift" element={<DriftPage />} />
+            {/* Drift folded into Machine (AC-37); the route redirects so
+                bookmarks and deep links keep working. */}
+            <Route path="drift" element={<Navigate to="/machine" replace />} />
 
             {/* Preferences / Settings (Security folds in here as tabs — DESIGN.md §5) */}
             <Route path="preferences" element={<PreferencesPage />} />

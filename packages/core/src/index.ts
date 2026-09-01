@@ -267,7 +267,7 @@ export type { LedgerEntryInput, LedgerOutcome } from "./state/ledger.js";
 export type { CodexMcpValue, CodexMcpReadResult, CodexMcpWrite } from "./codecs/toml-codex.js";
 export { writeCodexMcp } from "./codecs/toml-codex.js";
 export { planStoreWrite } from "./write/write-store.js";
-export { planCellAction } from "./write/plan-cell-action.js";
+export { planCellAction, syncCliCommand } from "./write/plan-cell-action.js";
 export { applyCellAction, CellActionError } from "./write/apply-cell-action.js";
 export { buildAgentPrompt } from "./write/agent-prompt.js";
 export type { AgentPromptOptions } from "./write/agent-prompt.js";
