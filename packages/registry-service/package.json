@@ -14,7 +14,7 @@
     "test:contract": "tsx scripts/contract.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.890.0",
+    "@aws-sdk/client-s3": "^3.1121.0",
     "@harness-kit/core": "workspace:*",
     "pg": "^8.16.3"
   },
