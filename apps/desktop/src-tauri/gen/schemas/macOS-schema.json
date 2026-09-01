@@ -2499,6 +2499,12 @@
           "markdownDescription": "Enables the list_sessions_summary command without any pre-configured scope."
         },
         {
+          "description": "Enables the list_transactions command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-list-transactions",
+          "markdownDescription": "Enables the list_transactions command without any pre-configured scope."
+        },
+        {
           "description": "Enables the push_file_history command without any pre-configured scope.",
           "type": "string",
           "const": "allow-push-file-history",
@@ -2587,6 +2593,12 @@
           "type": "string",
           "const": "allow-record-harness-launch-result",
           "markdownDescription": "Enables the record_harness_launch_result command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the record_transaction command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-record-transaction",
+          "markdownDescription": "Enables the record_transaction command without any pre-configured scope."
         },
         {
           "description": "Enables the remove_worktrees command without any pre-configured scope.",
@@ -3069,6 +3081,12 @@
           "markdownDescription": "Denies the list_sessions_summary command without any pre-configured scope."
         },
         {
+          "description": "Denies the list_transactions command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-list-transactions",
+          "markdownDescription": "Denies the list_transactions command without any pre-configured scope."
+        },
+        {
           "description": "Denies the push_file_history command without any pre-configured scope.",
           "type": "string",
           "const": "deny-push-file-history",
@@ -3157,6 +3175,12 @@
           "type": "string",
           "const": "deny-record-harness-launch-result",
           "markdownDescription": "Denies the record_harness_launch_result command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the record_transaction command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-record-transaction",
+          "markdownDescription": "Denies the record_transaction command without any pre-configured scope."
         },
         {
           "description": "Denies the remove_worktrees command without any pre-configured scope.",

@@ -16,7 +16,8 @@ import type {
 /**
  * SQLite-backed StateStore (design.md §4, D3/D4, Task 12). The CLI's driver
  * for the core StateStore interface — core stays driver-free; the desktop
- * bridges to this same database via Tauri in M2.
+ * bridges the ledger half of this same database via Tauri commands backed by
+ * rusqlite.
  *
  * Concurrency: the db is SHARED between the CLI and the desktop app, so we
  * open in WAL mode with a busy timeout, and every write is one short
@@ -87,8 +88,14 @@ export class SqliteStateStore implements StateStore {
 
   private constructor(db: DatabaseSync) {
     this.db = db;
-    this.db.exec("PRAGMA journal_mode=WAL");
+    // busy_timeout FIRST: the WAL conversion needs an exclusive lock, and a
+    // timeout set afterwards cannot help the statement that establishes it.
+    // (The conversion still returns SQLITE_BUSY without honouring the timeout
+    // under real contention, which is why the desktop side skips it when the
+    // file is already in WAL — journal mode is durable, so one process
+    // succeeding is enough.)
     this.db.exec("PRAGMA busy_timeout=5000");
+    this.db.exec("PRAGMA journal_mode=WAL");
     this.db.exec("PRAGMA foreign_keys=ON");
     this.migrate();
   }

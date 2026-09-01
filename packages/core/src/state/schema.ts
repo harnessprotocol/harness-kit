@@ -104,10 +104,38 @@ const MIGRATIONS: Record<number, readonly string[]> = { 1: V1, 2: V2 };
 export function stateSchemaStatements(fromVersion: number): string[] {
   const statements: string[] = [];
   for (let version = fromVersion + 1; version <= STATE_SCHEMA_VERSION; version += 1) {
-    statements.push(...(MIGRATIONS[version] ?? []));
+    const step = MIGRATIONS[version];
+    // Bumping STATE_SCHEMA_VERSION without adding its statements would stamp
+    // meta as migrated while creating nothing, and every later open would skip
+    // the migration forever. Fail loudly at the first call instead.
+    if (!step) throw new Error(`no migration defined for state schema v${version}`);
+    statements.push(...step);
   }
   return statements;
 }
+
+/**
+ * Detects the schema version from the tables themselves, for the case where
+ * `meta` exists but carries no row.
+ *
+ * That state is ambiguous in the worst possible direction: "no version row"
+ * reads identically to "fresh database", and the v2 step opens with
+ * `DROP TABLE transactions`. Treating an empty `meta` as version 0 therefore
+ * destroys every rollback point on a database that is actually current.
+ * Both implementations run this probe before trusting a 0.
+ *
+ * Returns the version implied by what actually exists on disk.
+ */
+export const STATE_VERSION_PROBES: ReadonlyArray<{ version: number; sql: string }> = [
+  {
+    version: 2,
+    sql: "SELECT COUNT(*) FROM pragma_table_info('transactions') WHERE name = 'transaction_id'",
+  },
+  {
+    version: 1,
+    sql: "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'observations'",
+  },
+];
 
 /** Every migration step, for generating the Rust-side artifact. */
 export function stateSchemaMigrations(): Record<number, string[]> {

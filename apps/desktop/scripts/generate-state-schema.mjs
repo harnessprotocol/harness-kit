@@ -12,11 +12,19 @@
 import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { STATE_SCHEMA_VERSION, stateSchemaMigrations } from "@harness-kit/core";
+import {
+  STATE_SCHEMA_VERSION,
+  STATE_VERSION_PROBES,
+  stateSchemaMigrations,
+} from "@harness-kit/core";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = join(here, "..", "src-tauri", "generated", "state-schema.json");
 
-const payload = { version: STATE_SCHEMA_VERSION, migrations: stateSchemaMigrations() };
+const payload = {
+  version: STATE_SCHEMA_VERSION,
+  migrations: stateSchemaMigrations(),
+  versionProbes: STATE_VERSION_PROBES,
+};
 writeFileSync(out, `${JSON.stringify(payload, null, 2)}\n`);
 console.log(`wrote ${out}`);

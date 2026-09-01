@@ -265,6 +265,7 @@ export type {
 } from "./state/store.js";
 export {
   STATE_SCHEMA_VERSION,
+  STATE_VERSION_PROBES,
   stateSchemaMigrations,
   stateSchemaStatements,
 } from "./state/schema.js";

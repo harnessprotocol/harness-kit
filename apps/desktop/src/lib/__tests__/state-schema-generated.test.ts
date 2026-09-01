@@ -1,7 +1,11 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { STATE_SCHEMA_VERSION, stateSchemaMigrations } from "@harness-kit/core";
+import {
+  STATE_SCHEMA_VERSION,
+  STATE_VERSION_PROBES,
+  stateSchemaMigrations,
+} from "@harness-kit/core";
 
 /**
  * Rust embeds this file to create and migrate ~/.harness/harness.db (AC-32).
@@ -17,6 +21,7 @@ describe("generated Rust state schema", () => {
     expect(generated).toEqual({
       version: STATE_SCHEMA_VERSION,
       migrations: stateSchemaMigrations(),
+      versionProbes: STATE_VERSION_PROBES,
     });
   });
 });

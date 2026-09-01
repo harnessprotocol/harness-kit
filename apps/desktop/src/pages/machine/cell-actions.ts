@@ -89,12 +89,26 @@ export async function applyCellActionViaTauri(
 ): Promise<string[]> {
   const home = await homeDir();
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const changes = view.plan.changes.map((change) => ({
-    root: "home" as const,
-    path: change.path.startsWith(`${home}/`) ? change.path.slice(home.length + 1) : change.path,
-    before: change.before,
-    after: change.after,
-  }));
+  const prefix = home.endsWith("/") ? home : `${home}/`;
+  // The drawer only ever applies at user scope, so every change is home-rooted
+  // and the manifest anchors at home. That is an INVARIANT, not an assumption:
+  // the CLI derives both from the change set, and hardcoding them is precisely
+  // how the M2 ledger shipped with roots: [] and an unusable manifestRoot. If
+  // a project-scope apply is ever added here, this must derive them too —
+  // so it is asserted rather than assumed.
+  const changes = view.plan.changes.map((change) => {
+    if (!change.path.startsWith(prefix)) {
+      throw new Error(
+        `${change.path} is outside the home root; the ledger's root derivation needs updating`,
+      );
+    }
+    return {
+      root: "home" as const,
+      path: change.path.slice(prefix.length),
+      before: change.before,
+      after: change.after,
+    };
+  });
 
   const result = await applyCellAction(
     view.plan,
@@ -108,7 +122,12 @@ export async function applyCellActionViaTauri(
     { homeRoot: home, confirmed: confirmedLoss },
   );
 
-  await recordAppliedTransaction(
+  // A no-op apply has nothing to roll back, and applyFileTransaction anchors
+  // an empty change set at the PROJECT root — recording manifestRoot: home
+  // for it would point rollback at a path that does not exist.
+  if (changes.length === 0) return result.written;
+
+  const outcome = await recordAppliedTransaction(
     result,
     changes,
     {
@@ -121,6 +140,11 @@ export async function applyCellActionViaTauri(
     },
     new TauriTransactionLedger(),
   );
+  if (outcome.error) {
+    // Surfaced, not swallowed: the write succeeded but this apply will not
+    // appear in `rollback --list`, and the user should know that.
+    console.warn(`Applied, but the rollback point was not recorded: ${outcome.error}`);
+  }
 
   return result.written;
 }

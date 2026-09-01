@@ -15,5 +15,15 @@
       "CREATE TABLE transactions (\n  id INTEGER PRIMARY KEY,\n  transaction_id TEXT NOT NULL UNIQUE,\n  applied_at TEXT NOT NULL,\n  roots TEXT NOT NULL,\n  manifest_path TEXT NOT NULL,\n  manifest_root TEXT NOT NULL,\n  backup_dir TEXT NOT NULL,\n  payload TEXT NOT NULL\n)",
       "CREATE INDEX IF NOT EXISTS transactions_applied_at ON transactions(applied_at DESC)"
     ]
-  }
+  },
+  "versionProbes": [
+    {
+      "version": 2,
+      "sql": "SELECT COUNT(*) FROM pragma_table_info('transactions') WHERE name = 'transaction_id'"
+    },
+    {
+      "version": 1,
+      "sql": "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'observations'"
+    }
+  ]
 }
