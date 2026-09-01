@@ -1,4 +1,4 @@
-import { Command } from "commander";
+import { Command, CommanderError } from "commander";
 import chalk from "chalk";
 import { validateCommand } from "./commands/validate.js";
 import { compileCommand } from "./commands/compile.js";
@@ -16,6 +16,7 @@ import { captureCommand } from "./commands/capture.js";
 import { reconcileCommand } from "./commands/reconcile.js";
 import { applyCommand } from "./commands/apply.js";
 import { rollbackCommand } from "./commands/rollback.js";
+import { surfaceSyncCommand } from "./commands/surface-sync.js";
 import {
   skillsApplyCommand,
   skillsDiscoverCommand,
@@ -119,7 +120,7 @@ Examples:
   });
 
 program
-  .command("sync")
+  .command("install")
   .description("Fetch plugins into ~/.harness/cache/ and write harness.lock")
   .argument("[path]", "Path to harness.yaml", "harness.yaml")
   .option("--frozen", "Verify cached plugins without fetching (for CI)")
@@ -128,14 +129,48 @@ program
     "after",
     `
 Examples:
-  harness-kit sync               Fetch missing plugins, refresh harness.lock
-  harness-kit sync --frozen      Verify cache is intact (no network, for CI)
-  harness-kit sync --locked      Fail if lock is stale, then fetch
+  harness-kit install            Fetch missing plugins, refresh harness.lock
+  harness-kit install --frozen   Verify cache is intact (no network, for CI)
+  harness-kit install --locked   Fail if lock is stale, then fetch
 
-Workflow: harness-kit sync && harness-kit compile`,
+Workflow: harness-kit install && harness-kit compile
+
+Note: this was 'harness-kit sync' before v0.2. 'sync' is now cross-surface
+resource sync — see 'harness-kit sync --help'.`,
   )
   .action(async (path: string, flags) => {
     await syncCommand(path, flags);
+  });
+
+program
+  .command("sync")
+  .description("Copy resources between harness surfaces to close machine gaps")
+  .option("--from <surface>", "Only copy FROM this surface")
+  .option("--to <surface...>", "Only copy TO these surfaces")
+  .option("--only <kind[:name]...>", "Only these resource kinds, or one named resource")
+  .option("--scope <scope>", "user (default) or project", "user")
+  .option("--dry-run", "Report proposed actions without writing (the default)")
+  .option("--yes", "Apply the proposed actions")
+  .option("--json", "Output machine-readable JSON")
+  // Retired flags from the pre-v0.2 sync: accepted only so the action can
+  // fail with the mapping to `install` instead of a generic parse error.
+  .option("--frozen", "(retired — see harness-kit install)")
+  .option("--locked", "(retired — see harness-kit install)")
+  .addHelpText(
+    "after",
+    `
+Bare 'sync' reports and writes nothing. Applying requires --yes.
+
+Examples:
+  harness-kit sync                                    Show every gap and its action
+  harness-kit sync --only mcp-server                  Just MCP servers
+  harness-kit sync --from claude-code --to cursor     One direction
+  harness-kit sync --only mcp-server:postgres --yes   Apply one resource
+
+Note: plugin installation moved to 'harness-kit install' in v0.2.`,
+  )
+  .action(async (flags) => {
+    await surfaceSyncCommand(flags);
   });
 
 program
@@ -518,4 +553,21 @@ exchangeCommand
 
 program.addHelpText('after', '\nDocs: https://harnesskit.ai/docs\n');
 
-program.parse();
+/**
+ * Async command actions reject into an unhandled rejection, which Node prints
+ * as a stack trace — a CLI's failure mode should be one line on stderr and a
+ * non-zero exit. Commander's own errors (bad flags, --help) already handle
+ * themselves and exit, so they are re-thrown untouched.
+ */
+async function main(): Promise<void> {
+  try {
+    await program.parseAsync();
+  } catch (error) {
+    if (error instanceof CommanderError) throw error;
+    const message = error instanceof Error ? error.message : String(error);
+    console.error(`error: ${message}`);
+    process.exitCode = 1;
+  }
+}
+
+await main();
