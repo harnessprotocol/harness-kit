@@ -9,6 +9,14 @@ import type {
 /** Where a named root lives, and (optionally) what may be written inside it. */
 export interface TransactionRoot {
   absolutePath: string;
+  /**
+   * Optional predicate bounding what may be written in this root. The home
+   * root supplies one derived from the surface registry's declared config
+   * stores, so a user-scope apply can only touch files HarnessKit already
+   * knows how to read (AC-31). Absent means unrestricted, which is the
+   * project root's pre-existing behaviour.
+   */
+  allowPath?: (relativePath: string) => boolean;
 }
 
 export interface TransactionContext {
@@ -97,6 +105,15 @@ export async function applyFileTransaction(
     }
     return absolute;
   };
+  const assertAllowedInRoot = (change: TransactionFileChange): void => {
+    const id = change.root ?? "project";
+    const allow = context.roots?.[id]?.allowPath;
+    if (allow && !allow(change.path)) {
+      throw new Error(
+        `${change.path} is not a config store this surface registry declares for the "${id}" root`,
+      );
+    }
+  };
 
   const backupDir = fs.joinPath(context.backupRoot ?? ".harness/backups", timestamp);
   // Backups and the manifest live in the root they describe. A mixed
@@ -112,6 +129,7 @@ export async function applyFileTransaction(
   for (const change of changes) {
     assertRelativeSafePath(change.path);
     rootOf(change);
+    assertAllowedInRoot(change);
   }
   assertRelativeSafePath(backupDir);
   const unique = new Set(changes.map(changeKey));

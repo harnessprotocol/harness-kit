@@ -409,6 +409,12 @@ export { reconcileResources, resolveReconciliationPlan } from "./portability/rec
 export { applyFileTransaction, rollbackFileTransaction } from "./portability/transaction.js";
 export type { TransactionContext, TransactionRoot } from "./portability/transaction.js";
 export {
+  createHomeTransactionRoot,
+  homeWriteScope,
+  isWritableHomePath,
+} from "./surfaces/write-scope.js";
+export type { HomeWriteScope } from "./surfaces/write-scope.js";
+export {
   EMPTY_PORTABILITY_STATE,
   readPortabilityState,
   writePortabilityState,
