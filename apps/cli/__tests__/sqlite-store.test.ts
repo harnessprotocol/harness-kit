@@ -3,7 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import type { ObservationSnapshotMeta, StoredResource } from "@harness-kit/core";
+import type {
+  ObservationSnapshotMeta,
+  StoredResource,
+  TransactionRecord,
+} from "@harness-kit/core";
 import { SqliteStateStore } from "../src/state/sqlite-store.js";
 
 const META: ObservationSnapshotMeta = {
@@ -75,7 +79,7 @@ describe("SqliteStateStore", () => {
     },
   );
 
-  it("migrates v0 -> v1: schema_version is 1 and all six tables exist", async () => {
+  it("migrates v0 -> v2: schema_version is 2 and all six tables exist", async () => {
     // Touch the store so migration has run.
     expect(await store.latestObservation()).toBeNull();
 
@@ -84,7 +88,7 @@ describe("SqliteStateStore", () => {
       const version = raw.prepare("SELECT schema_version FROM meta").get() as {
         schema_version: number;
       };
-      expect(version.schema_version).toBe(1);
+      expect(version.schema_version).toBe(2);
 
       const tables = raw
         .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
@@ -225,7 +229,7 @@ describe("SqliteStateStore", () => {
         const version = raw.prepare("SELECT schema_version FROM meta").get() as {
           schema_version: number;
         };
-        expect(version.schema_version).toBe(1);
+        expect(version.schema_version).toBe(2);
         const metaRows = raw.prepare("SELECT COUNT(*) AS n FROM meta").get() as { n: number };
         expect(metaRows.n).toBe(1);
       } finally {
@@ -248,6 +252,98 @@ describe("SqliteStateStore", () => {
       expect(latest!.resources).toEqual([RESOURCES[0]]);
     } finally {
       await again.close();
+    }
+  });
+});
+
+describe("transaction ledger (AC-32)", () => {
+  let dir: string;
+  let store: SqliteStateStore;
+
+  const record = (overrides: Partial<TransactionRecord> = {}): TransactionRecord => ({
+    transactionId: "2026-09-01T10-00-00",
+    appliedAt: "2026-09-01T10:00:00.000Z",
+    roots: ["home"],
+    manifestPath: ".harness/backups/2026-09-01T10-00-00/transaction.json",
+    manifestRoot: "/Users/tester",
+    backupDir: ".harness/backups/2026-09-01T10-00-00",
+    surfaces: ["claude-code"],
+    kinds: ["mcp-server"],
+    identityKeys: ["mcp-server:github"],
+    ...overrides,
+  });
+
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), "harness-sqlite-ledger-"));
+    store = await SqliteStateStore.open(join(dir, "harness.db"));
+  });
+
+  afterEach(async () => {
+    try {
+      await store.close();
+    } catch {
+      // already closed by the test
+    }
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  it("round-trips a record", async () => {
+    const input = record();
+    await store.recordTransaction(input);
+    expect(await store.listTransactions()).toEqual([input]);
+  });
+
+  it("lists newest first across both roots", async () => {
+    await store.recordTransaction(record({ transactionId: "old", appliedAt: "2026-09-01T09:00:00.000Z" }));
+    await store.recordTransaction(
+      record({
+        transactionId: "new",
+        appliedAt: "2026-09-01T11:00:00.000Z",
+        roots: ["project", "home"],
+      }),
+    );
+    const listed = await store.listTransactions();
+    expect(listed.map((entry) => entry.transactionId)).toEqual(["new", "old"]);
+    expect(listed[0]?.roots).toEqual(["project", "home"]);
+  });
+
+  it("honours a limit", async () => {
+    for (const n of [1, 2, 3]) {
+      await store.recordTransaction(
+        record({ transactionId: `t${n}`, appliedAt: `2026-09-01T1${n}:00:00.000Z` }),
+      );
+    }
+    expect(await store.listTransactions(2)).toHaveLength(2);
+  });
+
+  it("is idempotent on the same transaction id", async () => {
+    await store.recordTransaction(record());
+    await store.recordTransaction(record({ surfaces: ["cursor"] }));
+    const listed = await store.listTransactions();
+    expect(listed).toHaveLength(1);
+    expect(listed[0]?.surfaces).toEqual(["cursor"]);
+  });
+
+  it("migrates a v1 database in place", async () => {
+    // The M1 placeholder table had (id, created_at, payload) and no readers;
+    // an existing db must gain the real ledger without being recreated.
+    const legacyDir = await mkdtemp(join(tmpdir(), "harness-sqlite-v1-"));
+    const legacyPath = join(legacyDir, "harness.db");
+    const legacy = new DatabaseSync(legacyPath);
+    legacy.exec("CREATE TABLE meta (schema_version INTEGER NOT NULL)");
+    legacy.exec("INSERT INTO meta (schema_version) VALUES (1)");
+    legacy.exec(
+      "CREATE TABLE transactions (id INTEGER PRIMARY KEY, created_at TEXT NOT NULL, payload TEXT NOT NULL)",
+    );
+    legacy.close();
+
+    const migrated = await SqliteStateStore.open(legacyPath);
+    try {
+      await migrated.recordTransaction(record());
+      expect(await migrated.listTransactions()).toHaveLength(1);
+    } finally {
+      await migrated.close();
+      await rm(legacyDir, { recursive: true, force: true });
     }
   });
 });

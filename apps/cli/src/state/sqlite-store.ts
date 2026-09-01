@@ -8,6 +8,7 @@ import type {
   StateStore,
   StoredResource,
   SurfaceId,
+  TransactionRecord,
   SurfaceScope,
 } from "@harness-kit/core";
 
@@ -27,6 +28,26 @@ import type {
  * placeholder shapes that land now so later milestones migrate data, not
  * schema.
  */
+/**
+ * v2 replaces the v1 `transactions` placeholder with the real rollback ledger
+ * (AC-32). The placeholder shipped in M1 with no readers or writers, so the
+ * drop cannot lose data.
+ */
+const DDL_V2 = `
+DROP TABLE IF EXISTS transactions;
+CREATE TABLE transactions (
+  id INTEGER PRIMARY KEY,
+  transaction_id TEXT NOT NULL UNIQUE,
+  applied_at TEXT NOT NULL,
+  roots TEXT NOT NULL,
+  manifest_path TEXT NOT NULL,
+  manifest_root TEXT NOT NULL,
+  backup_dir TEXT NOT NULL,
+  payload TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS transactions_applied_at ON transactions(applied_at DESC);
+`;
+
 const DDL_V1 = `
 CREATE TABLE IF NOT EXISTS observations (
   id INTEGER PRIMARY KEY,
@@ -156,7 +177,7 @@ export class SqliteStateStore implements StateStore {
     return store;
   }
 
-  /** v0 -> v1, keyed off meta.schema_version. Idempotent. */
+  /** v0 -> v2, keyed off meta.schema_version. Idempotent. */
   private migrate(): void {
     this.db.exec("BEGIN IMMEDIATE");
     try {
@@ -168,6 +189,10 @@ export class SqliteStateStore implements StateStore {
       if (version < 1) {
         this.db.exec(DDL_V1);
         this.db.prepare("INSERT INTO meta (schema_version) VALUES (?)").run(1);
+      }
+      if (version < 2) {
+        this.db.exec(DDL_V2);
+        this.db.prepare("UPDATE meta SET schema_version = ?").run(2);
       }
       this.db.exec("COMMIT");
     } catch (error) {
@@ -276,6 +301,71 @@ export class SqliteStateStore implements StateStore {
            updated_at = excluded.updated_at`,
       )
       .run(surface, scope, digest, new Date().toISOString());
+  }
+
+  async recordTransaction(record: TransactionRecord): Promise<void> {
+    this.db
+      .prepare(
+        `INSERT INTO transactions
+           (transaction_id, applied_at, roots, manifest_path, manifest_root, backup_dir, payload)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(transaction_id) DO UPDATE SET
+           applied_at = excluded.applied_at,
+           roots = excluded.roots,
+           manifest_path = excluded.manifest_path,
+           manifest_root = excluded.manifest_root,
+           backup_dir = excluded.backup_dir,
+           payload = excluded.payload`,
+      )
+      .run(
+        record.transactionId,
+        record.appliedAt,
+        JSON.stringify(record.roots),
+        record.manifestPath,
+        record.manifestRoot,
+        record.backupDir,
+        JSON.stringify({
+          surfaces: record.surfaces,
+          kinds: record.kinds,
+          identityKeys: record.identityKeys,
+        }),
+      );
+  }
+
+  async listTransactions(limit?: number): Promise<TransactionRecord[]> {
+    const rows = this.db
+      .prepare(
+        `SELECT transaction_id, applied_at, roots, manifest_path, manifest_root, backup_dir, payload
+           FROM transactions
+          ORDER BY applied_at DESC, id DESC
+          ${limit === undefined ? "" : "LIMIT ?"}`,
+      )
+      .all(...(limit === undefined ? [] : [limit])) as Array<{
+      transaction_id: string;
+      applied_at: string;
+      roots: string;
+      manifest_path: string;
+      manifest_root: string;
+      backup_dir: string;
+      payload: string;
+    }>;
+    return rows.map((row) => {
+      const payload = JSON.parse(row.payload) as Pick<
+        TransactionRecord,
+        "surfaces" | "kinds" | "identityKeys"
+      >;
+      return {
+        transactionId: row.transaction_id,
+        appliedAt: row.applied_at,
+        roots: JSON.parse(row.roots) as TransactionRecord["roots"],
+        manifestPath: row.manifest_path,
+        manifestRoot: row.manifest_root,
+        backupDir: row.backup_dir,
+        surfaces: payload.surfaces,
+        kinds: payload.kinds,
+        identityKeys: payload.identityKeys,
+      };
+    });
   }
 
   async close(): Promise<void> {

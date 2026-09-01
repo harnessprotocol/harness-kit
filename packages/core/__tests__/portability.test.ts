@@ -388,6 +388,51 @@ describe("file transactions", () => {
     expect(fs.getFile("/home/user/.claude.json")).toBe("{}");
   });
 
+  it("restores both roots from a committed v2 manifest", async () => {
+    const fs = new MockFsProvider({
+      "/project/a.txt": "a0",
+      "/home/user/.claude.json": "{}",
+    });
+    const roots = { home: { absolutePath: "/home/user" } };
+    await applyFileTransaction(
+      [
+        { path: "a.txt", before: "a0", after: "a1" },
+        { root: "home", path: ".claude.json", before: "{}", after: '{"a":1}' },
+      ],
+      { fs, timestamp: "v2", roots },
+    );
+    const manifest = JSON.parse(fs.getFile("/project/.harness/backups/v2/transaction.json")!);
+    expect(manifest.version).toBe(2);
+
+    const rolledBack = await rollbackFileTransaction(manifest, {
+      fs,
+      timestamp: "v2-rollback",
+      roots,
+    });
+    expect(rolledBack.committed).toBe(true);
+    expect(fs.getFile("/project/a.txt")).toBe("a0");
+    expect(fs.getFile("/home/user/.claude.json")).toBe("{}");
+  });
+
+  it("refuses to roll back a manifest naming a root the context lacks", async () => {
+    const fs = new MockFsProvider({ "/home/user/.claude.json": '{"a":1}' });
+    const manifest = {
+      version: 2 as const,
+      timestamp: "orphan",
+      status: "committed" as const,
+      changes: [
+        { root: "home" as const, path: ".claude.json", before: "{}", after: '{"a":1}' },
+      ],
+    };
+    // Rolling back a user-scope transaction from a context that never
+    // configured the home root must fail loudly, not silently resolve
+    // against the project.
+    await expect(
+      rollbackFileTransaction(manifest, { fs, timestamp: "orphan-rollback" }),
+    ).rejects.toThrow(/home/);
+    expect(fs.getFile("/home/user/.claude.json")).toBe('{"a":1}');
+  });
+
   it("round-trips a v1 (rootless) manifest as project-rooted", async () => {
     const fs = new MockFsProvider({ "/project/a.txt": "a0" });
     await applyFileTransaction([{ path: "a.txt", before: "a0", after: "a1" }], {

@@ -1,4 +1,4 @@
-import type { HarnessResourceKind } from "../portability/types.js";
+import type { HarnessResourceKind, TransactionRootId } from "../portability/types.js";
 import type { StoreFormatId, SurfaceId, SurfaceScope } from "../surfaces/types.js";
 
 /**
@@ -66,9 +66,37 @@ export interface ObservationSnapshot {
 }
 
 /**
+ * One committed apply, as the cross-scope rollback index (AC-32).
+ *
+ * The ledger records only *where* the rollback material is; preimages and the
+ * manifest stay on disk, so a corrupt or missing database costs history, never
+ * recoverability (D10).
+ */
+export interface TransactionRecord {
+  /** The transaction's timestamp id — matches its backup directory name. */
+  transactionId: string;
+  /** ISO-8601 commit time supplied by the caller — implementations never read the clock. */
+  appliedAt: string;
+  /** Roots this transaction touched; a mixed transaction lists both. */
+  roots: TransactionRootId[];
+  /** Manifest path, relative to the root that anchors it. */
+  manifestPath: string;
+  /** Backup directory, relative to each touched root. */
+  backupDir: string;
+  /** Absolute path of the root anchoring the manifest, so rollback can find it. */
+  manifestRoot: string;
+  /** Surfaces whose config this transaction changed. */
+  surfaces: SurfaceId[];
+  /** Resource kinds changed. */
+  kinds: HarnessResourceKind[];
+  /** `${kind}:${lowercased name}` identity keys changed. */
+  identityKeys: string[];
+}
+
+/**
  * Durable machine state store. M1 uses only the observation-related methods;
- * transactions / plugin installs / definitions cache land in later milestones
- * behind the same interface.
+ * plugin installs / definitions cache land in later milestones behind the
+ * same interface.
  */
 export interface StateStore {
   /**
@@ -85,6 +113,15 @@ export interface StateStore {
 
   /** Upsert the digest for a surface × scope pair. */
   setFingerprint(surface: SurfaceId, scope: SurfaceScope, digest: string): Promise<void>;
+
+  /**
+   * Record one committed transaction as a rollback point. Recording the same
+   * transactionId twice is idempotent — the later record wins.
+   */
+  recordTransaction(record: TransactionRecord): Promise<void>;
+
+  /** Recorded transactions, newest first, capped by `limit` when given. */
+  listTransactions(limit?: number): Promise<TransactionRecord[]>;
 
   /** Release the underlying store. Further calls after close are invalid. */
   close(): Promise<void>;
