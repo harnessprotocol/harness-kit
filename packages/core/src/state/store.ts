@@ -9,7 +9,7 @@ import type { StoreFormatId, SurfaceId, SurfaceScope } from "../surfaces/types.j
  * desktop webview loads core and cannot resolve node builtins (the node:crypto
  * production crash institutionalized this rule), so implementations live with
  * their hosts: the CLI backs this with `node:sqlite`
- * (apps/cli/src/state/sqlite-store.ts); the desktop bridges via Tauri in M2.
+ * (apps/cli/src/state/sqlite-store.ts); the desktop bridges the ledger half via Tauri commands backed by rusqlite.
  *
  * Implementation contract:
  * - The backing store is SHARED between the CLI and the desktop app
