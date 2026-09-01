@@ -237,10 +237,17 @@ pub struct HarnessHealthRecord {
 
 // ── Harness health helpers ───────────────────────────────────
 
+/// Path to the health file under a given home directory. The `*_at`
+/// functions below take the file path as a parameter so tests can pass a
+/// tempdir instead of mutating the process-global `HOME`.
+fn health_file_path_in(home: &std::path::Path) -> PathBuf {
+    home.join(".harness-kit").join("harness-health.json")
+}
+
 fn health_file_path() -> Result<PathBuf, String> {
     dirs::home_dir()
         .ok_or_else(|| "Could not resolve home directory".to_string())
-        .map(|h| h.join(".harness-kit").join("harness-health.json"))
+        .map(|h| health_file_path_in(&h))
 }
 
 fn read_health_map(path: &PathBuf) -> HashMap<String, HarnessHealthRecord> {
@@ -272,8 +279,15 @@ fn write_health_map(path: &PathBuf, map: &HashMap<String, HarnessHealthRecord>) 
 /// non-zero exit codes and resets to 0 on success.
 #[tauri::command]
 pub fn record_harness_launch_result(harness_id: String, exit_code: i32) -> Result<(), String> {
-    let path = health_file_path()?;
-    let mut map = read_health_map(&path);
+    record_harness_launch_result_at(&health_file_path()?, harness_id, exit_code)
+}
+
+fn record_harness_launch_result_at(
+    path: &PathBuf,
+    harness_id: String,
+    exit_code: i32,
+) -> Result<(), String> {
+    let mut map = read_health_map(path);
 
     let id = harness_id.clone();
     let record = map.entry(id).or_insert_with(|| HarnessHealthRecord {
@@ -296,18 +310,21 @@ pub fn record_harness_launch_result(harness_id: String, exit_code: i32) -> Resul
         record.consecutive_failures = 0;
     }
 
-    write_health_map(&path, &map)
+    write_health_map(path, &map)
 }
 
 /// Return health records for all known harnesses. Returns empty vec if no
 /// health file exists yet.
 #[tauri::command]
 pub fn get_harness_health() -> Result<Vec<HarnessHealthRecord>, String> {
-    let path = health_file_path()?;
+    get_harness_health_at(&health_file_path()?)
+}
+
+fn get_harness_health_at(path: &PathBuf) -> Result<Vec<HarnessHealthRecord>, String> {
     if !path.exists() {
         return Ok(vec![]);
     }
-    let map = read_health_map(&path);
+    let map = read_health_map(path);
     let mut records: Vec<HarnessHealthRecord> = map.into_values().collect();
     records.sort_by(|a, b| a.harness_id.cmp(&b.harness_id));
     Ok(records)
@@ -318,7 +335,6 @@ pub fn get_harness_health() -> Result<Vec<HarnessHealthRecord>, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::env;
 
     // ── detect_agents tests ──────────────────────────────────
 
@@ -358,70 +374,60 @@ mod tests {
 
     // ── harness health tests ─────────────────────────────────
 
-    fn with_temp_home<F: FnOnce()>(f: F) {
-        let _lock = crate::HOME_LOCK.lock().unwrap_or_else(|p| p.into_inner());
+    /// Each health test gets its own file path — no global state, so these
+    /// run safely in parallel with everything else in the crate.
+    fn temp_health_file() -> (tempfile::TempDir, PathBuf) {
         let tmp = tempfile::TempDir::new().unwrap();
-        let prev = env::var("HOME").ok();
-        env::set_var("HOME", tmp.path());
-
-        f();
-
-        match prev {
-            Some(h) => env::set_var("HOME", h),
-            None => env::remove_var("HOME"),
-        }
+        let path = health_file_path_in(tmp.path());
+        (tmp, path)
     }
 
     #[test]
     fn get_harness_health_returns_empty_when_no_file() {
-        with_temp_home(|| {
-            let result = get_harness_health().unwrap();
-            assert!(result.is_empty());
-        });
+        let (_tmp, path) = temp_health_file();
+        let result = get_harness_health_at(&path).unwrap();
+        assert!(result.is_empty());
     }
 
     #[test]
     fn record_creates_file_and_increments_on_failure() {
-        with_temp_home(|| {
-            record_harness_launch_result("claude".to_string(), 1).unwrap();
-            let health = get_harness_health().unwrap();
-            assert_eq!(health.len(), 1);
-            let rec = &health[0];
-            assert_eq!(rec.harness_id, "claude");
-            assert_eq!(rec.total_launches, 1);
-            assert_eq!(rec.consecutive_failures, 1);
-            assert_eq!(rec.last_exit_code, Some(1));
-            assert!(rec.last_failure_at.is_some());
-        });
+        let (_tmp, path) = temp_health_file();
+        record_harness_launch_result_at(&path, "claude".to_string(), 1).unwrap();
+        let health = get_harness_health_at(&path).unwrap();
+        assert_eq!(health.len(), 1);
+        let rec = &health[0];
+        assert_eq!(rec.harness_id, "claude");
+        assert_eq!(rec.total_launches, 1);
+        assert_eq!(rec.consecutive_failures, 1);
+        assert_eq!(rec.last_exit_code, Some(1));
+        assert!(rec.last_failure_at.is_some());
     }
 
     #[test]
     fn record_resets_consecutive_failures_on_success() {
-        with_temp_home(|| {
-            record_harness_launch_result("codex".to_string(), 1).unwrap();
-            record_harness_launch_result("codex".to_string(), 1).unwrap();
-            record_harness_launch_result("codex".to_string(), 0).unwrap();
+        let (_tmp, path) = temp_health_file();
+        record_harness_launch_result_at(&path, "codex".to_string(), 1).unwrap();
+        record_harness_launch_result_at(&path, "codex".to_string(), 1).unwrap();
+        record_harness_launch_result_at(&path, "codex".to_string(), 0).unwrap();
 
-            let health = get_harness_health().unwrap();
-            let rec = health.iter().find(|r| r.harness_id == "codex").unwrap();
-            assert_eq!(rec.consecutive_failures, 0);
-            assert_eq!(rec.total_launches, 3);
-            assert_eq!(rec.last_exit_code, Some(0));
-        });
+        let health = get_harness_health_at(&path).unwrap();
+        let rec = health.iter().find(|r| r.harness_id == "codex").unwrap();
+        assert_eq!(rec.consecutive_failures, 0);
+        assert_eq!(rec.total_launches, 3);
+        assert_eq!(rec.last_exit_code, Some(0));
     }
 
     #[test]
     fn record_tracks_multiple_harnesses_independently() {
-        with_temp_home(|| {
-            record_harness_launch_result("claude".to_string(), 0).unwrap();
-            record_harness_launch_result("codex".to_string(), 1).unwrap();
+        let (_tmp, path) = temp_health_file();
+        record_harness_launch_result_at(&path, "claude".to_string(), 0).unwrap();
+        record_harness_launch_result_at(&path, "codex".to_string(), 1).unwrap();
 
-            let health = get_harness_health().unwrap();
-            assert_eq!(health.len(), 2);
-            let claude = health.iter().find(|r| r.harness_id == "claude").unwrap();
-            let codex = health.iter().find(|r| r.harness_id == "codex").unwrap();
-            assert_eq!(claude.consecutive_failures, 0);
-            assert_eq!(codex.consecutive_failures, 1);
-        });
+        let health = get_harness_health_at(&path).unwrap();
+        assert_eq!(health.len(), 2);
+        let claude = health.iter().find(|r| r.harness_id == "claude").unwrap();
+        let codex = health.iter().find(|r| r.harness_id == "codex").unwrap();
+        assert_eq!(claude.consecutive_failures, 0);
+        assert_eq!(codex.consecutive_failures, 1);
     }
 }

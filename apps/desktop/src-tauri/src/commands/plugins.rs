@@ -80,8 +80,13 @@ struct RawMarketplaceManifest {
     plugins: Vec<RawMarketplacePlugin>,
 }
 
-fn claude_dir() -> Option<std::path::PathBuf> {
-    dirs::home_dir().map(|h| h.join(".claude"))
+/// Resolve `~/.claude`. The `*_in` variants below take this directory as a
+/// parameter so tests can pass a tempdir instead of mutating the
+/// process-global `HOME`.
+fn claude_dir() -> Result<std::path::PathBuf, String> {
+    dirs::home_dir()
+        .map(|h| h.join(".claude"))
+        .ok_or_else(|| "Could not resolve home directory".to_string())
 }
 
 fn count_subdirectory_entries(install_path: &str, subdir: &str) -> u32 {
@@ -117,8 +122,11 @@ fn read_plugin_manifest_fields(install_path: &str) -> PluginManifestFields {
 
 #[tauri::command]
 pub fn list_installed_plugins() -> Result<Vec<InstalledPlugin>, String> {
-    let path = claude_dir()
-        .ok_or_else(|| "Could not resolve home directory".to_string())?
+    list_installed_plugins_in(&claude_dir()?)
+}
+
+fn list_installed_plugins_in(claude_dir: &std::path::Path) -> Result<Vec<InstalledPlugin>, String> {
+    let path = claude_dir
         .join("plugins")
         .join("installed_plugins.json");
 
@@ -165,8 +173,11 @@ pub fn list_installed_plugins() -> Result<Vec<InstalledPlugin>, String> {
 
 #[tauri::command]
 pub fn list_marketplaces() -> Result<Vec<KnownMarketplace>, String> {
-    let path = claude_dir()
-        .ok_or_else(|| "Could not resolve home directory".to_string())?
+    list_marketplaces_in(&claude_dir()?)
+}
+
+fn list_marketplaces_in(claude_dir: &std::path::Path) -> Result<Vec<KnownMarketplace>, String> {
+    let path = claude_dir
         .join("plugins")
         .join("marketplaces.json");
 
@@ -183,10 +194,13 @@ pub fn list_marketplaces() -> Result<Vec<KnownMarketplace>, String> {
 
 #[tauri::command]
 pub fn check_plugin_updates() -> Result<Vec<PluginUpdateInfo>, String> {
-    let installed = list_installed_plugins()?;
+    check_plugin_updates_in(&claude_dir()?)
+}
 
-    let marketplaces_dir = claude_dir()
-        .ok_or_else(|| "Could not resolve home directory".to_string())?
+fn check_plugin_updates_in(claude_dir: &std::path::Path) -> Result<Vec<PluginUpdateInfo>, String> {
+    let installed = list_installed_plugins_in(claude_dir)?;
+
+    let marketplaces_dir = claude_dir
         .join("plugins")
         .join("marketplaces");
 
@@ -242,14 +256,16 @@ pub fn check_plugin_updates() -> Result<Vec<PluginUpdateInfo>, String> {
 
 #[tauri::command]
 pub fn uninstall_plugin(name: String) -> Result<(), String> {
+    uninstall_plugin_in(&claude_dir()?, name)
+}
+
+fn uninstall_plugin_in(claude_dir: &std::path::Path, name: String) -> Result<(), String> {
     // Validate name doesn't contain path traversal characters
     if name.contains('/') || name.contains('\\') || name.contains("..") {
         return Err("Invalid plugin name".to_string());
     }
 
-    let plugins_dir = claude_dir()
-        .ok_or_else(|| "Could not resolve home directory".to_string())?
-        .join("plugins");
+    let plugins_dir = claude_dir.join("plugins");
 
     // Remove plugin directory — canonicalize before removal to block symlink traversal
     let plugin_dir = plugins_dir.join(&name);
@@ -302,34 +318,20 @@ pub fn uninstall_plugin(name: String) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::env;
     use tempfile::TempDir;
-
-    fn with_home(dir: &TempDir, f: impl FnOnce()) {
-        // Hold the crate-level lock so parallel tests don't race on HOME.
-        let _guard = crate::HOME_LOCK.lock().unwrap();
-        let old = env::var("HOME").ok();
-        env::set_var("HOME", dir.path());
-        f();
-        match old {
-            Some(v) => env::set_var("HOME", v),
-            None => env::remove_var("HOME"),
-        }
-    }
 
     #[test]
     fn list_installed_plugins_returns_empty_when_file_absent() {
         let dir = TempDir::new().unwrap();
-        with_home(&dir, || {
-            let result = list_installed_plugins().unwrap();
-            assert_eq!(result.len(), 0);
-        });
+        let result = list_installed_plugins_in(&dir.path().join(".claude")).unwrap();
+        assert_eq!(result.len(), 0);
     }
 
     #[test]
     fn list_installed_plugins_returns_correct_count_when_file_exists() {
         let dir = TempDir::new().unwrap();
-        let plugins_dir = dir.path().join(".claude").join("plugins");
+        let claude = dir.path().join(".claude");
+        let plugins_dir = claude.join("plugins");
         std::fs::create_dir_all(&plugins_dir).unwrap();
         let json = r#"{
             "plugins": {
@@ -345,16 +347,14 @@ mod tests {
             }
         }"#;
         std::fs::write(plugins_dir.join("installed_plugins.json"), json).unwrap();
-        with_home(&dir, || {
-            let result = list_installed_plugins().unwrap();
-            assert_eq!(result.len(), 3);
-            // Results are sorted by name
-            assert_eq!(result[0].name, "explain");
-            assert_eq!(result[0].version, "0.1.0");
-            assert_eq!(result[0].marketplace.as_deref(), Some("harness-kit"));
-            assert_eq!(result[1].name, "orient");
-            assert_eq!(result[2].name, "research");
-            assert_eq!(result[2].version, "0.3.0");
-        });
+        let result = list_installed_plugins_in(&claude).unwrap();
+        assert_eq!(result.len(), 3);
+        // Results are sorted by name
+        assert_eq!(result[0].name, "explain");
+        assert_eq!(result[0].version, "0.1.0");
+        assert_eq!(result[0].marketplace.as_deref(), Some("harness-kit"));
+        assert_eq!(result[1].name, "orient");
+        assert_eq!(result[2].name, "research");
+        assert_eq!(result[2].version, "0.3.0");
     }
 }
