@@ -16,7 +16,7 @@
 | D8 | Milestones | Horizontal by capability: M1 read → M2 write → M3 plugins/recs → M4 remote definitions |
 | D9 | User-scope writes | **Named transaction roots** (`project`, `home`) + registry-declared path allowlist; guards unchanged |
 | D10 | Rollback ledger | SQLite `transactions` table is the cross-scope index; preimages stay on disk |
-| D11 | Lossy copy | Preview the loss report, refuse to apply without explicit confirmation |
+| D11 | Lossy copy | Preview the loss report, refuse to apply without explicit confirmation — gate on genuine loss only, not on translation into native shape (confirmed 2026-09-01) |
 | D12 | Desktop write path | New Tauri command allowlisted to registry stores; `sync_write_files` untouched |
 | D13 | `sync`/`install` | Repurpose `sync` immediately — no deprecation alias window |
 | D14 | Absorption | ~~Drift folds into Machine in M2~~ → both Drift and Fleet stay until M3 (Drift is a different comparison; see AC-37) |
@@ -99,7 +99,7 @@ The manifest gains `root` per change and its `version` goes to 2; `rollbackFileT
 |---|-------|------------------|
 | M1 | Re-key + descriptors + inventory (user & project scope) + read-only grid + `status`/`diff` | See every surface's config and every gap |
 | M2 | Tier-one sync (mcp-server/skill/instructions cells), user-scope transactions via named roots, `install` rename, agent prompts, Drift absorption | Close a gap three ways, roll it back |
-| M3 | PluginBroker (incl. plugin cells + AC-4 enumeration) + baseline profile diff + recommendations + Fleet absorption | Team baseline "you're missing X" with one-action fix |
+| M3 | PluginBroker (incl. plugin cells + AC-4 enumeration) + baseline profile diff + recommendations + diff-case cell actions (AC-11) + Drift/Fleet absorption (AC-37) | Team baseline "you're missing X" with one-action fix |
 | M4 | Remote definitions fetch + Ed25519 verify | Definitions update without an app release |
 
 ## Risks
