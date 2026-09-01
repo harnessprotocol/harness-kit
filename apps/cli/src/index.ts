@@ -152,6 +152,9 @@ program
   .option("--dry-run", "Report proposed actions without writing (the default)")
   .option("--yes", "Apply the proposed actions")
   .option("--json", "Output machine-readable JSON")
+  .option("--prompt", "Generate agent prompts for the selected actions instead of applying")
+  .option("--out <path>", "Also write generated prompts to this file")
+  .option("--reveal-secrets", "Include literal secret values in generated prompts")
   // Retired flags from the pre-v0.2 sync: accepted only so the action can
   // fail with the mapping to `install` instead of a generic parse error.
   .option("--frozen", "(retired — see harness-kit install)")
@@ -166,6 +169,7 @@ Examples:
   harness-kit sync --only mcp-server                  Just MCP servers
   harness-kit sync --from claude-code --to cursor     One direction
   harness-kit sync --only mcp-server:postgres --yes   Apply one resource
+  harness-kit sync --to pi --prompt                   Agent prompts for cells we cannot write
 
 Note: plugin installation moved to 'harness-kit install' in v0.2.`,
   )

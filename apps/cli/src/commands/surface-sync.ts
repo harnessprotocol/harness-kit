@@ -1,7 +1,9 @@
 import { homedir } from "node:os";
 import { resolve } from "node:path";
+import { writeFile } from "node:fs/promises";
 import {
   applyCellAction,
+  buildAgentPrompt,
   buildMachineInventory,
   CellActionError,
   createHomeTransactionRoot,
@@ -29,6 +31,12 @@ export interface SurfaceSyncFlags {
   dryRun?: boolean;
   yes?: boolean;
   json?: boolean;
+  /** Emit agent prompts for the selected actions instead of applying them. */
+  prompt?: boolean;
+  /** Persist generated prompts to this path (AC-35). */
+  out?: string;
+  /** Include literal secret values in generated prompts (D5). */
+  revealSecrets?: boolean;
   /** Retired flags from the pre-M2 `sync`, caught to give a real message. */
   frozen?: boolean;
   locked?: boolean;
@@ -137,6 +145,26 @@ export async function surfaceSyncCommand(flags: SurfaceSyncFlags): Promise<void>
   }
 
   const actionable = actions.filter((action) => action.plan.supported && !action.plan.noop);
+
+  if (flags.prompt) {
+    // Prompts cover cells with no direct-write path too, so this deliberately
+    // uses every selected action rather than only the writable ones (AC-13).
+    const prompts = actions.map((action) =>
+      buildAgentPrompt(
+        action.plan,
+        { kind: action.kind, name: action.name, from: action.from, to: action.to, scope },
+        { revealSecrets: flags.revealSecrets === true },
+      ),
+    );
+    const text = prompts.join("\n---\n\n");
+    if (flags.json) console.log(JSON.stringify({ prompts }, null, 2));
+    else console.log(text);
+    if (flags.out) {
+      await writeFile(resolve(flags.out), text, { mode: 0o600 });
+      console.log(`\nWritten to ${resolve(flags.out)}`);
+    }
+    return;
+  }
 
   if (!flags.yes || flags.dryRun) {
     report(actions, flags, scope);

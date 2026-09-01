@@ -59,6 +59,12 @@ export interface CellActionPlan {
    * that matters.
    */
   requiresConfirmation: boolean;
+  /**
+   * The source resource's literal value. Present whenever the source was
+   * found — the agent prompt needs it to describe what to reproduce, and
+   * sanitizes it itself rather than receiving a pre-sanitized copy.
+   */
+  value?: unknown;
   source?: { file: string; formatId: StoreFormatId };
   target?: { file: string; formatId: StoreFormatId };
 }
@@ -171,14 +177,23 @@ export async function planCellAction(
     (store) => store.kind === request.kind && store.scope === request.scope,
   );
   if (!targetStore) {
-    return refuse(
-      `${request.to} has no ${request.scope}-scope store for '${request.kind}' — use the agent prompt for this cell.`,
-      loss,
-    );
+    return {
+      ...refuse(
+        `${request.to} has no ${request.scope}-scope store for '${request.kind}' — use the agent prompt for this cell.`,
+        loss,
+      ),
+      // The prompt still needs the value: a cell with no write path is
+      // exactly the case the agent prompt exists to cover (AC-13).
+      value: found.entry.value,
+      source: { file: found.path, formatId: found.entry.provenance.formatId },
+    };
   }
   const targetPath = storePath(fs, targetStore, opts);
   if (targetPath === null) {
-    return refuse(`${request.to}'s ${request.scope} store needs a project context.`, loss);
+    return {
+      ...refuse(`${request.to}'s ${request.scope} store needs a project context.`, loss),
+      value: found.entry.value,
+    };
   }
 
   const written = await planStoreWrite(fs, targetStore, targetPath, {
@@ -190,7 +205,7 @@ export async function planCellAction(
   const source = { file: found.path, formatId: found.entry.provenance.formatId };
   const target = { file: targetPath, formatId: targetStore.formatId };
   if (!written.supported) {
-    return { ...refuse(written.reason, loss), source, target };
+    return { ...refuse(written.reason, loss), value: found.entry.value, source, target };
   }
 
   // A change whose after equals its before is not a change.
@@ -200,6 +215,7 @@ export async function planCellAction(
     changes,
     noop: changes.length === 0,
     carriesSecret: containsSecret(found.entry.value),
+    value: found.entry.value,
     loss,
     requiresConfirmation: hasGenuineLoss(loss),
     source,

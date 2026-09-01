@@ -99,6 +99,39 @@ describe.sequential("cross-surface sync", () => {
     expect(payload.actions.filter((e: { status: string }) => e.status === "ready")).toEqual([]);
   });
 
+  it("generates agent prompts without applying (AC-11)", async () => {
+    const before = await readFile(join(home, ".cursor", "mcp.json"), "utf8");
+    await surfaceSyncCommand({ to: ["cursor"], prompt: true });
+    const output = env.consoleLog.join("\n");
+    expect(output).toContain("postgres");
+    expect(output).toContain(".cursor/mcp.json");
+    expect(await readFile(join(home, ".cursor", "mcp.json"), "utf8")).toBe(before);
+  });
+
+  it("persists prompts to --out with restrictive permissions (AC-35)", async () => {
+    const out = join(root, "prompt.md");
+    await surfaceSyncCommand({ to: ["cursor"], prompt: true, out });
+    const written = await readFile(out, "utf8");
+    expect(written).toContain("postgres");
+    const { stat } = await import("node:fs/promises");
+    expect((await stat(out)).mode & 0o777).toBe(0o600);
+  });
+
+  it("keeps secrets out of generated prompts by default (AC-22)", async () => {
+    await writeFile(
+      join(home, ".claude.json"),
+      JSON.stringify({
+        mcpServers: {
+          postgres: { type: "stdio", command: "pg-mcp", env: { API_TOKEN: "sk-live-abc123" } },
+        },
+      }),
+    );
+    await surfaceSyncCommand({ to: ["cursor"], prompt: true });
+    const output = env.consoleLog.join("\n");
+    expect(output).not.toContain("sk-live-abc123");
+    expect(output).toContain("HARNESS_API_TOKEN");
+  });
+
   it("records the apply in the rollback ledger", async () => {
     await surfaceSyncCommand({ only: ["mcp-server:postgres"], to: ["cursor"], yes: true });
     const { SqliteStateStore } = await import("../src/state/sqlite-store.js");
