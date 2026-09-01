@@ -295,6 +295,113 @@ describe("file transactions", () => {
       { fs, timestamp: "symlink" },
     )).rejects.toThrow("crosses a symbolic link");
   });
+
+  // ── Named transaction roots (M2, AC-31 / AC-39) ────────────────────
+  //
+  // User-scope writes arrive as a second *named root* rather than as relaxed
+  // path validation: member paths stay root-relative, so assertRelativeSafePath
+  // and assertNoSymlinkBoundary keep running unchanged against a different base.
+
+  it("writes a home-root change under the home root, not the project root", async () => {
+    const fs = new MockFsProvider({ "/home/user/.claude.json": "{}" });
+    const result = await applyFileTransaction(
+      [{ root: "home", path: ".claude.json", before: "{}", after: '{"mcpServers":{}}' }],
+      { fs, timestamp: "home", roots: { home: { absolutePath: "/home/user" } } },
+    );
+    expect(result.committed).toBe(true);
+    expect(fs.getFile("/home/user/.claude.json")).toBe('{"mcpServers":{}}');
+    // Backup follows its change's root — never into the project.
+    expect(fs.getFile("/home/user/.harness/backups/home/.claude.json")).toBe("{}");
+    expect(fs.getFile("/project/.harness/backups/home/.claude.json")).toBeUndefined();
+  });
+
+  it("refuses a home-root change when no home root is configured", async () => {
+    const fs = new MockFsProvider({ "/home/user/.claude.json": "{}" });
+    await expect(applyFileTransaction(
+      [{ root: "home", path: ".claude.json", before: "{}", after: "{}" }],
+      { fs, timestamp: "unconfigured" },
+    )).rejects.toThrow(/home/);
+    expect(fs.getFile("/home/user/.claude.json")).toBe("{}");
+  });
+
+  it("keeps traversal and absolute-path guards inside the home root", async () => {
+    const fs = new MockFsProvider();
+    const context = { fs, timestamp: "guard", roots: { home: { absolutePath: "/home/user" } } };
+    for (const path of ["../escape.json", "/etc/passwd", "~/.ssh/id_rsa", "a/../../b.json"]) {
+      await expect(applyFileTransaction(
+        [{ root: "home" as const, path, before: null, after: "x" }],
+        context,
+      )).rejects.toThrow();
+    }
+  });
+
+  it("refuses a symbolic-link boundary inside the home root", async () => {
+    class SymlinkFs extends MockFsProvider {
+      override async isSymlink(path: string): Promise<boolean> {
+        return path === "/home/user/.codex";
+      }
+    }
+    const fs = new SymlinkFs();
+    await expect(applyFileTransaction(
+      [{ root: "home", path: ".codex/config.toml", before: null, after: "model = 'gpt-5'" }],
+      { fs, timestamp: "home-symlink", roots: { home: { absolutePath: "/home/user" } } },
+    )).rejects.toThrow("crosses a symbolic link");
+  });
+
+  it("treats duplicate detection as per-root, not per-path", async () => {
+    const fs = new MockFsProvider({
+      "/project/settings.json": "p0",
+      "/home/user/settings.json": "h0",
+    });
+    const result = await applyFileTransaction(
+      [
+        { path: "settings.json", before: "p0", after: "p1" },
+        { root: "home", path: "settings.json", before: "h0", after: "h1" },
+      ],
+      { fs, timestamp: "dup", roots: { home: { absolutePath: "/home/user" } } },
+    );
+    expect(result.committed).toBe(true);
+    expect(fs.getFile("/project/settings.json")).toBe("p1");
+    expect(fs.getFile("/home/user/settings.json")).toBe("h1");
+  });
+
+  it("restores both roots when a mixed transaction fails mid-apply", async () => {
+    class FailHomeWriteFs extends MockFsProvider {
+      override async renameFile(from: string, to: string): Promise<void> {
+        if (to === "/home/user/.claude.json") throw new Error("injected home failure");
+        await super.renameFile(from, to);
+      }
+    }
+    const fs = new FailHomeWriteFs({
+      "/project/a.txt": "a0",
+      "/home/user/.claude.json": "{}",
+    });
+    const result = await applyFileTransaction(
+      [
+        { path: "a.txt", before: "a0", after: "a1" },
+        { root: "home", path: ".claude.json", before: "{}", after: '{"x":1}' },
+      ],
+      { fs, timestamp: "mixed", roots: { home: { absolutePath: "/home/user" } } },
+    );
+    expect(result.committed).toBe(false);
+    expect(fs.getFile("/project/a.txt")).toBe("a0");
+    expect(fs.getFile("/home/user/.claude.json")).toBe("{}");
+  });
+
+  it("round-trips a v1 (rootless) manifest as project-rooted", async () => {
+    const fs = new MockFsProvider({ "/project/a.txt": "a0" });
+    await applyFileTransaction([{ path: "a.txt", before: "a0", after: "a1" }], {
+      fs,
+      timestamp: "v1",
+    });
+    const manifest = JSON.parse(fs.getFile("/project/.harness/backups/v1/transaction.json")!);
+    // A manifest written before named roots existed carries no root field at all.
+    expect(manifest.changes[0].root).toBeUndefined();
+    const rolledBack = await rollbackFileTransaction(manifest, { fs, timestamp: "v1-rollback" });
+    expect(rolledBack.committed).toBe(true);
+    expect(fs.getFile("/project/a.txt")).toBe("a0");
+  });
+
 });
 
 describe("capture secret sanitization", () => {

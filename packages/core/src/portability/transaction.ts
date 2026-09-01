@@ -3,12 +3,30 @@ import type {
   TransactionFileChange,
   TransactionManifest,
   TransactionResult,
+  TransactionRootId,
 } from "./types.js";
+
+/** Where a named root lives, and (optionally) what may be written inside it. */
+export interface TransactionRoot {
+  absolutePath: string;
+}
 
 export interface TransactionContext {
   fs: FsProvider;
   timestamp: string;
   backupRoot?: string;
+  /**
+   * Named roots this transaction may touch. "project" defaults to `fs.cwd()`;
+   * "home" has no default — a home-rooted change without a configured home
+   * root is refused, so a caller cannot reach the user's config by accident.
+   */
+  roots?: Partial<Record<TransactionRootId, TransactionRoot>>;
+}
+
+/** Changes are keyed by (root, path): the same relative path in two roots is
+ *  two distinct files, not a duplicate. */
+function changeKey(change: TransactionFileChange): string {
+  return `${change.root ?? "project"}\u0000${change.path}`;
 }
 
 function assertRelativeSafePath(path: string): void {
@@ -65,22 +83,47 @@ export async function applyFileTransaction(
   context: TransactionContext,
 ): Promise<TransactionResult> {
   const { fs, timestamp } = context;
-  const root = fs.cwd();
+  const roots: Partial<Record<TransactionRootId, string>> = {
+    project: context.roots?.project?.absolutePath ?? fs.cwd(),
+    ...(context.roots?.home ? { home: context.roots.home.absolutePath } : {}),
+  };
+  const rootOf = (change: TransactionFileChange): string => {
+    const id = change.root ?? "project";
+    const absolute = roots[id];
+    if (!absolute) {
+      throw new Error(
+        `transaction targets the "${id}" root, which this context does not configure`,
+      );
+    }
+    return absolute;
+  };
+
   const backupDir = fs.joinPath(context.backupRoot ?? ".harness/backups", timestamp);
+  // Backups and the manifest live in the root they describe. A mixed
+  // transaction anchors its manifest in the project root; a pure user-scope
+  // one has no project to write into, so it anchors in the home root.
+  const manifestRootId: TransactionRootId =
+    changes.length === 0 || changes.some((change) => (change.root ?? "project") === "project")
+      ? "project"
+      : "home";
+  const manifestRoot = rootOf({ root: manifestRootId } as TransactionFileChange);
   const manifestPath = fs.joinPath(backupDir, "transaction.json");
 
-  for (const change of changes) assertRelativeSafePath(change.path);
+  for (const change of changes) {
+    assertRelativeSafePath(change.path);
+    rootOf(change);
+  }
   assertRelativeSafePath(backupDir);
-  const unique = new Set(changes.map((change) => change.path));
+  const unique = new Set(changes.map(changeKey));
   if (unique.size !== changes.length) throw new Error("transaction contains duplicate file paths");
 
-  await assertNoSymlinkBoundary(fs, root, backupDir);
-  for (const change of changes) await assertNoSymlinkBoundary(fs, root, change.path);
+  await assertNoSymlinkBoundary(fs, manifestRoot, backupDir);
+  for (const change of changes) await assertNoSymlinkBoundary(fs, rootOf(change), change.path);
 
   // Verify stale plans before creating any backups or changing files.
   const originalModes = new Map<string, number>();
   for (const change of changes) {
-    const fullPath = fs.joinPath(root, change.path);
+    const fullPath = fs.joinPath(rootOf(change), change.path);
     const exists = await fs.exists(fullPath);
     if (change.before === null && exists) {
       throw new Error(`transaction precondition failed: ${change.path} now exists`);
@@ -92,24 +135,24 @@ export async function applyFileTransaction(
         throw new Error(`transaction precondition failed: ${change.path} changed after preview`);
       }
       const mode = await fs.getFileMode?.(fullPath);
-      if (mode !== null && mode !== undefined) originalModes.set(change.path, mode);
+      if (mode !== null && mode !== undefined) originalModes.set(changeKey(change), mode);
     }
   }
 
   // Back up every existing preimage before the first mutation.
   for (const change of changes) {
     if (change.before === null) continue;
-    const backupPath = fs.joinPath(root, backupDir, change.path);
+    const backupPath = fs.joinPath(rootOf(change), backupDir, change.path);
     await atomicWrite(fs, backupPath, change.before, `${timestamp}-backup`, 0o600);
   }
 
   const manifest: TransactionManifest = {
-    version: 1,
+    version: changes.some((change) => change.root !== undefined) ? 2 : 1,
     timestamp,
     status: "prepared",
     changes,
   };
-  await writeManifest(fs, root, manifestPath, manifest);
+  await writeManifest(fs, manifestRoot, manifestPath, manifest);
 
   const mutated: TransactionFileChange[] = [];
   const written: string[] = [];
@@ -117,29 +160,29 @@ export async function applyFileTransaction(
 
   try {
     for (const [index, change] of changes.entries()) {
-      const fullPath = fs.joinPath(root, change.path);
+      const fullPath = fs.joinPath(rootOf(change), change.path);
       if (change.after === null) {
         await remove(fs, fullPath);
         removed.push(change.path);
       } else {
-        await atomicWrite(fs, fullPath, change.after, `${timestamp}-${index}`, originalModes.get(change.path));
+        await atomicWrite(fs, fullPath, change.after, `${timestamp}-${index}`, originalModes.get(changeKey(change)));
         written.push(change.path);
       }
       mutated.push(change);
     }
     manifest.status = "committed";
-    await writeManifest(fs, root, manifestPath, manifest);
+    await writeManifest(fs, manifestRoot, manifestPath, manifest);
     return { committed: true, written, removed, rolledBack: [], backupDir, manifestPath };
   } catch (error) {
     const rolledBack: string[] = [];
     const rollbackErrors: string[] = [];
     for (const [index, change] of [...mutated].reverse().entries()) {
-      const fullPath = fs.joinPath(root, change.path);
+      const fullPath = fs.joinPath(rootOf(change), change.path);
       try {
         if (change.before === null) {
           if (await fs.exists(fullPath)) await remove(fs, fullPath);
         } else {
-          await atomicWrite(fs, fullPath, change.before, `${timestamp}-rollback-${index}`, originalModes.get(change.path));
+          await atomicWrite(fs, fullPath, change.before, `${timestamp}-rollback-${index}`, originalModes.get(changeKey(change)));
         }
         rolledBack.push(change.path);
       } catch (rollbackError) {
@@ -152,7 +195,7 @@ export async function applyFileTransaction(
     manifest.status = rollbackErrors.length === 0 ? "rolled-back" : "rollback-failed";
     manifest.error = rollbackErrors.length ? `${message}; rollback failures: ${rollbackErrors.join("; ")}` : message;
     try {
-      await writeManifest(fs, root, manifestPath, manifest);
+      await writeManifest(fs, manifestRoot, manifestPath, manifest);
     } catch (manifestError) {
       rollbackErrors.push(
         `manifest: ${manifestError instanceof Error ? manifestError.message : String(manifestError)}`,
@@ -175,11 +218,14 @@ export async function rollbackFileTransaction(
   manifest: TransactionManifest,
   context: TransactionContext,
 ): Promise<TransactionResult> {
-  if (manifest.version !== 1 || manifest.status !== "committed") {
+  if ((manifest.version !== 1 && manifest.version !== 2) || manifest.status !== "committed") {
     throw new Error("only committed transaction manifests can be rolled back");
   }
 
+  // v1 manifests predate named roots: every change was project-rooted, and
+  // omitting `root` here preserves that meaning exactly.
   const reverseChanges = manifest.changes.map((change) => ({
+    ...(change.root ? { root: change.root } : {}),
     path: change.path,
     before: change.after,
     after: change.before,

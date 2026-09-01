@@ -373,6 +373,7 @@ export type {
   TransactionFileChange,
   TransactionResult,
   TransactionManifest,
+  TransactionRootId,
   CapsuleDependency,
   CapsuleManifest,
   CapsuleValidationFinding,
@@ -406,6 +407,7 @@ export {
 } from "./portability/capabilities.js";
 export { reconcileResources, resolveReconciliationPlan } from "./portability/reconcile.js";
 export { applyFileTransaction, rollbackFileTransaction } from "./portability/transaction.js";
+export type { TransactionContext, TransactionRoot } from "./portability/transaction.js";
 export {
   EMPTY_PORTABILITY_STATE,
   readPortabilityState,
