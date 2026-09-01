@@ -2,13 +2,13 @@ import { mkdtemp, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import type {
   ObservationSnapshotMeta,
   StoredResource,
   TransactionRecord,
 } from "@harness-kit/core";
-import { SqliteStateStore } from "../src/state/sqlite-store.js";
+import { defaultStatePath, SqliteStateStore } from "../src/state/sqlite-store.js";
 
 const META: ObservationSnapshotMeta = {
   observedAt: "2026-08-31T12:00:00.000Z",
@@ -344,6 +344,32 @@ describe("transaction ledger (AC-32)", () => {
     } finally {
       await migrated.close();
       await rm(legacyDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("HARNESS_STATE_PATH override", () => {
+  it("uses the override and creates its directory", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "harness-state-override-"));
+    const target = join(dir, "nested", "custom.db");
+    vi.stubEnv("HARNESS_STATE_PATH", target);
+    try {
+      expect(defaultStatePath()).toBe(target);
+      const store = await SqliteStateStore.open(defaultStatePath());
+      await store.close();
+      await expect(stat(target)).resolves.toBeTruthy();
+    } finally {
+      vi.unstubAllEnvs();
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("falls back to ~/.harness when the override is blank", () => {
+    vi.stubEnv("HARNESS_STATE_PATH", "   ");
+    try {
+      expect(defaultStatePath().endsWith(join(".harness", "harness.db"))).toBe(true);
+    } finally {
+      vi.unstubAllEnvs();
     }
   });
 });

@@ -1,6 +1,6 @@
 import { chmodSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
 import type {
   ObservationSnapshot,
@@ -101,12 +101,30 @@ CREATE TABLE IF NOT EXISTS definitions_cache (
 `;
 
 /**
- * Resolve the shared state db path, `~/.harness/harness.db`, creating
- * `~/.harness/` when missing (same home resolution convention as
+ * Resolve the shared state db path, `~/.harness/harness.db`, creating its
+ * directory when missing (same home resolution convention as
  * registry-client.ts's AUTH_PATH).
+ *
+ * `HARNESS_STATE_PATH` overrides the whole path. The state db is shared
+ * between the CLI and the desktop app, so tests, CI, and anyone running two
+ * checkouts against separate machine state need a way to point elsewhere
+ * without touching the real one. The override names the FILE, not its
+ * directory, so a caller can keep several databases side by side.
  */
 export function defaultStatePath(): string {
+  const override = process.env.HARNESS_STATE_PATH?.trim();
+  if (override) {
+    const path = resolve(override);
+    tightenDirectory(dirname(path));
+    return path;
+  }
   const dir = resolve(homedir(), ".harness");
+  tightenDirectory(dir);
+  return resolve(dir, "harness.db");
+}
+
+/** Create a state directory if absent and keep it owner-only. */
+function tightenDirectory(dir: string): void {
   mkdirSync(dir, { recursive: true, mode: 0o700 });
   // mkdir's mode only applies on creation — tighten a pre-existing dir too.
   // Best-effort: chmod is meaningless on Windows and may fail on exotic
@@ -118,7 +136,6 @@ export function defaultStatePath(): string {
       // best effort
     }
   }
-  return resolve(dir, "harness.db");
 }
 
 interface ObservationRow {
