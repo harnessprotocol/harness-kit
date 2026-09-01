@@ -262,7 +262,8 @@ program
 program
   .command("rollback")
   .description("Preview or restore a complete prior Harness Kit transaction")
-  .option("--transaction <path>", "Transaction manifest (defaults to last-known-good)")
+  .option("--transaction <id|path>", "Transaction id from --list, or a manifest path (defaults to last-known-good)")
+  .option("--list", "List recorded rollback points, newest first")
   .option("--yes", "Execute the rollback (default is preview only)")
   .option("--json", "Output the rollback preview as JSON")
   .action(async (flags) => {
