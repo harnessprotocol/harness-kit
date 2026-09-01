@@ -19,6 +19,7 @@ import type {
   ObserveOptions,
   SurfaceId,
   SurfaceScope,
+  TransactionFileChange,
 } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
 import { defaultStatePath, SqliteStateStore } from "../state/sqlite-store.js";
@@ -181,6 +182,11 @@ export async function surfaceSyncCommand(flags: SurfaceSyncFlags): Promise<void>
     for (const action of actionable) {
       const stamp = timestamp();
       try {
+        const applyOptions = {
+          homeRoot: home,
+          ...(scope === "project" ? { projectRoot: cwd } : {}),
+          confirmed: true,
+        };
         const result = await applyCellAction(
           action.plan,
           {
@@ -188,12 +194,20 @@ export async function surfaceSyncCommand(flags: SurfaceSyncFlags): Promise<void>
             timestamp: stamp,
             roots: { home: createHomeTransactionRoot(home, platform) },
           },
-          { homeRoot: home, projectRoot: scope === "project" ? cwd : undefined, confirmed: true },
+          applyOptions,
         );
-        await recordAppliedTransaction(result, [], {
+        // The ledger derives `roots` from the change set, so it needs the
+        // real changes — passing [] recorded roots: [] on every row. And the
+        // manifest is anchored wherever applyFileTransaction put it: the
+        // project root when any change is project-rooted, else home.
+        // Hardcoding home made a project-scope apply unrollbackable by id.
+        const changes = rebaseForLedger(action.plan.changes, applyOptions);
+        await recordAppliedTransaction(result, changes, {
           transactionId: stamp,
           appliedAt: new Date().toISOString(),
-          manifestRoot: home,
+          manifestRoot: changes.some((change) => (change.root ?? "project") === "project")
+            ? cwd
+            : home,
           surfaces: [action.to],
           kinds: [action.kind],
           identityKeys: [`${action.kind}:${action.name.toLowerCase()}`],
@@ -220,6 +234,30 @@ export async function surfaceSyncCommand(flags: SurfaceSyncFlags): Promise<void>
     for (const failure of failed) console.log(`  failed  ${failure.cli}\n          ${failure.reason}`);
   }
   if (failed.length > 0) throw new Error(`${failed.length} action(s) failed`);
+}
+
+/**
+ * Rebase a plan's absolute paths onto named roots, mirroring what
+ * applyCellAction does internally, so the ledger records the same roots the
+ * transaction actually used.
+ */
+function rebaseForLedger(
+  changes: CellActionPlan["changes"],
+  options: { homeRoot: string; projectRoot?: string },
+): TransactionFileChange[] {
+  const candidates = [
+    ...(options.projectRoot ? [{ root: "project" as const, base: options.projectRoot }] : []),
+    { root: "home" as const, base: options.homeRoot },
+  ];
+  return changes.map((change) => {
+    for (const { root, base } of candidates) {
+      const prefix = base.endsWith("/") ? base : `${base}/`;
+      if (change.path.startsWith(prefix)) {
+        return { root, path: change.path.slice(prefix.length), before: change.before, after: change.after };
+      }
+    }
+    return { path: change.path, before: change.before, after: change.after };
+  });
 }
 
 function report(actions: PlannedAction[], flags: SurfaceSyncFlags, scope: SurfaceScope): void {

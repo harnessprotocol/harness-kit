@@ -132,14 +132,48 @@ describe.sequential("cross-surface sync", () => {
     expect(output).toContain("HARNESS_API_TOKEN");
   });
 
-  it("records the apply in the rollback ledger", async () => {
+  it("records the apply in the rollback ledger with a usable manifest", async () => {
     await surfaceSyncCommand({ only: ["mcp-server:postgres"], to: ["cursor"], yes: true });
     const { SqliteStateStore } = await import("../src/state/sqlite-store.js");
     const store = await SqliteStateStore.open(join(home, ".harness", "harness.db"));
     try {
       const listed = await store.listTransactions();
       expect(listed.length).toBeGreaterThan(0);
-      expect(listed[0]?.surfaces).toContain("cursor");
+      const record = listed[0]!;
+      expect(record.surfaces).toContain("cursor");
+      // Previously [] on every row, because an empty change list was passed
+      // to the ledger — which rollback --list then rendered as "[]".
+      expect(record.roots).toEqual(["home"]);
+      // The recorded manifest must actually exist, or the rollback point is
+      // fiction. This is the assertion the original test lacked.
+      const { access } = await import("node:fs/promises");
+      await expect(access(join(record.manifestRoot, record.manifestPath))).resolves.toBeUndefined();
+    } finally {
+      await store.close();
+    }
+  });
+
+  it("records a project-scope apply against the project root", async () => {
+    await writeFile(
+      join(project, ".mcp.json"),
+      JSON.stringify({ mcpServers: { local: { type: "stdio", command: "local-mcp" } } }),
+    );
+    await mkdir(join(project, ".cursor"), { recursive: true });
+    await surfaceSyncCommand({
+      only: ["mcp-server:local"],
+      to: ["cursor"],
+      scope: "project",
+      yes: true,
+    });
+    const { SqliteStateStore } = await import("../src/state/sqlite-store.js");
+    const store = await SqliteStateStore.open(join(home, ".harness", "harness.db"));
+    try {
+      const record = (await store.listTransactions())[0]!;
+      expect(record.roots).toEqual(["project"]);
+      // Hardcoding manifestRoot to home pointed rollback at a path that does
+      // not exist, so a project-scope write had no recovery path at all.
+      const { access } = await import("node:fs/promises");
+      await expect(access(join(record.manifestRoot, record.manifestPath))).resolves.toBeUndefined();
     } finally {
       await store.close();
     }

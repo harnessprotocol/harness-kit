@@ -1,4 +1,4 @@
-import { looksLikeSecret } from "../portability/secrets.js";
+import { looksLikeSecret, sanitizeCommandArgs } from "../portability/secrets.js";
 import { getSurface } from "../surfaces/registry.js";
 import { isRecord } from "../utils/is-record.js";
 import type { CellActionPlan, CellActionRequest } from "./plan-cell-action.js";
@@ -22,17 +22,84 @@ export interface AgentPromptOptions {
 
 /** `${HARNESS_<NAME>}` reference for a secret-bearing key. */
 function reference(key: string): string {
-  const upper = key.replace(/[^A-Za-z0-9]+/g, "_").toUpperCase();
+  const upper = (key || "secret").replace(/[^A-Za-z0-9]+/g, "_").toUpperCase();
   return `\${HARNESS_${upper}}`;
 }
 
-/** Replace secret-looking values with env references, recursively. */
-function sanitize(value: unknown, key = ""): unknown {
-  if (typeof value === "string") return looksLikeSecret(key, value) ? reference(key) : value;
-  if (Array.isArray(value)) return value.map((item) => sanitize(item, key));
+/**
+ * Sanitize a URL's query string. A credential in `?access_token=…` is not
+ * reachable by key name — the key is "url" — so the query has to be inspected
+ * on its own terms. (normalize.ts already strips userinfo; this is the other
+ * half.)
+ */
+function sanitizeUrl(url: string): string {
+  const query = url.indexOf("?");
+  if (query === -1) return url;
+  const head = url.slice(0, query);
+  const rest = url.slice(query + 1);
+  const [params, fragment] = rest.split("#", 2);
+  const sanitized = (params ?? "")
+    .split("&")
+    .map((pair) => {
+      const equals = pair.indexOf("=");
+      if (equals === -1) return pair;
+      const key = pair.slice(0, equals);
+      const value = pair.slice(equals + 1);
+      return looksLikeSecret(key, decodeURIComponent(value))
+        ? `${key}=${reference(key)}`
+        : pair;
+    })
+    .join("&");
+  return `${head}?${sanitized}${fragment === undefined ? "" : `#${fragment}`}`;
+}
+
+/**
+ * Replace secret-looking values with env references.
+ *
+ * This deliberately reuses the repo's own sanitizer rules rather than
+ * re-deriving them. A hand-rolled walk over `looksLikeSecret(key, value)`
+ * alone missed five shapes an adversarial review demonstrated: a positional
+ * arg after `--token`, an inline `--api-key=…`, a `headers.Cookie`, a
+ * credential in a URL query string, and a secret nested inside a
+ * JSON-encoded env value. Prompts are pasted into other agents and tickets,
+ * so this is the leakiest sink in the milestone — it gets the strict rules,
+ * not the convenient ones.
+ */
+function sanitize(value: unknown, path: string[] = []): unknown {
+  const key = path.at(-1) ?? "";
+
+  if (typeof value === "string") {
+    if (key.toLowerCase() === "url") return sanitizeUrl(value);
+    // Anything under `headers` is credential-bearing by position, matching
+    // sanitizeCapturedSecrets' isSecretPath rule.
+    const inHeaders = path.some((segment) => segment.toLowerCase() === "headers");
+    if (inHeaders || looksLikeSecret(key, value)) return reference(key);
+    // A JSON-encoded blob hides its own keys from the walk above.
+    const trimmed = value.trim();
+    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+      try {
+        const inner = JSON.parse(trimmed) as unknown;
+        const cleaned = sanitize(inner, path);
+        if (JSON.stringify(cleaned) !== JSON.stringify(inner)) return JSON.stringify(cleaned);
+      } catch {
+        // Not JSON after all — fall through and keep the literal.
+      }
+    }
+    return value;
+  }
+
+  if (Array.isArray(value)) {
+    // Command arguments are positional: `--token <secret>` and
+    // `--api-key=<secret>` are only detectable in sequence.
+    if (key === "args" && value.every((item) => typeof item === "string")) {
+      return sanitizeCommandArgs(value as string[], reference(key));
+    }
+    return value.map((item) => sanitize(item, path));
+  }
+
   if (isRecord(value)) {
     return Object.fromEntries(
-      Object.entries(value).map(([childKey, child]) => [childKey, sanitize(child, childKey)]),
+      Object.entries(value).map(([childKey, child]) => [childKey, sanitize(child, [...path, childKey])]),
     );
   }
   return value;
@@ -81,10 +148,14 @@ export function buildAgentPrompt(
       "",
       "WARNING: this prompt contains a real secret value. It is intended for a single local paste — do not commit it, forward it, or paste it into a shared channel.",
     );
-  } else if ((JSON.stringify(value) ?? "").includes("${HARNESS_")) {
+  } else {
+    // Stated unconditionally. Conditioning it on a ${HARNESS_*} marker meant
+    // that when sanitization matched nothing — including because it FAILED to
+    // match — the reader got no warning and reasonably assumed the
+    // default-sanitized promise had held.
     lines.push(
       "",
-      "Secret values are shown as ${HARNESS_*} references. Source each from the environment variable of that name, or ask the user for the value — never invent one.",
+      "Secret values, if any, are shown as ${HARNESS_*} references. Source each from the environment variable of that name, or ask the user — never invent one. Sanitization is heuristic: check the definition above before pasting it anywhere shared.",
     );
   }
 
