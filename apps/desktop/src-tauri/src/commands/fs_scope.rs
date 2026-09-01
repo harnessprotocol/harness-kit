@@ -14,6 +14,14 @@ fn expand_tilde(path: &str) -> String {
     path.to_string()
 }
 
+/// The trust check `grant_project_scope` enforces: reject `candidate` when it
+/// is the home directory or an ancestor of it. Both paths must already be
+/// canonicalized. Taking `home` as a parameter keeps this testable without
+/// touching the process-global `HOME`.
+fn is_home_or_ancestor(candidate: &Path, home: &Path) -> bool {
+    home.starts_with(candidate)
+}
+
 /// Grant the webview's Tauri FS plugin scope read/write access to a single,
 /// user-chosen project directory for the rest of this app session.
 ///
@@ -32,14 +40,6 @@ fn expand_tilde(path: &str) -> String {
 /// to enforce. Reject any target that is the home directory or an ancestor
 /// of it (`/`, `/Users`, `~`, etc.) — granting one of those would silently
 /// recreate the `$HOME/**` grant this change removes, or worse.
-/// The trust check `grant_project_scope` enforces: reject `candidate` when it
-/// is the home directory or an ancestor of it. Both paths must already be
-/// canonicalized. Taking `home` as a parameter keeps this testable without
-/// touching the process-global `HOME`.
-fn is_home_or_ancestor(candidate: &Path, home: &Path) -> bool {
-    home.starts_with(candidate)
-}
-
 #[tauri::command]
 pub fn grant_project_scope(app: AppHandle, path: String) -> Result<(), String> {
     let expanded = expand_tilde(&path);
