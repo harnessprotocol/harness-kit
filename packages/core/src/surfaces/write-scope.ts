@@ -25,7 +25,13 @@ function isDirectoryStore(store: ConfigStore): boolean {
 }
 
 function normalize(path: string): string {
-  return path.replace(/\\/g, "/").replace(/\/+$/, "");
+  const slashed = path.replace(/\\/g, "/");
+  // Trailing slashes are trimmed by slicing rather than /\/+$/, which is
+  // polynomial-backtracking on a long run of slashes (CodeQL
+  // js/polynomial-redos) — and this runs on caller-supplied paths.
+  let end = slashed.length;
+  while (end > 0 && slashed[end - 1] === "/") end -= 1;
+  return slashed.slice(0, end);
 }
 
 /** Build the write scope for a platform from every surface's user-scope stores. */

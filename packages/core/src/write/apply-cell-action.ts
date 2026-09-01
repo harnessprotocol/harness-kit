@@ -57,8 +57,25 @@ function rebase(
   );
 }
 
-/** The engine's stale-preimage messages, which AC-17 renames. */
-const PRECONDITION = /transaction precondition failed: (.+?) (?:now exists|was removed|changed after preview)/;
+/** The engine's stale-preimage message prefix and its three suffixes. */
+const PRECONDITION_PREFIX = "transaction precondition failed: ";
+const PRECONDITION_SUFFIXES = [" now exists", " was removed", " changed after preview"] as const;
+
+/**
+ * Extract the path from a stale-preimage message, or null if it is not one.
+ *
+ * Deliberately not a regex. `(.+?) (?:a|b|c)` is polynomial-backtracking on a
+ * long non-matching input (CodeQL js/polynomial-redos), and the message shape
+ * is fixed enough that prefix/suffix matching is both linear and clearer.
+ */
+function stalePreimagePath(message: string): string | null {
+  if (!message.startsWith(PRECONDITION_PREFIX)) return null;
+  const body = message.slice(PRECONDITION_PREFIX.length);
+  for (const suffix of PRECONDITION_SUFFIXES) {
+    if (body.endsWith(suffix)) return body.slice(0, -suffix.length);
+  }
+  return null;
+}
 
 /**
  * Apply a planned cell action through the transaction engine.
@@ -97,12 +114,12 @@ export async function applyCellAction(
 
   const result = await applyFileTransaction(changes, context).catch((error: unknown) => {
     const message = error instanceof Error ? error.message : String(error);
-    const stale = PRECONDITION.exec(message);
-    if (stale) {
+    const stale = stalePreimagePath(message);
+    if (stale !== null) {
       throw new CellActionError(
         "user-modified-outside",
-        `${stale[1]} changed outside HarnessKit since this action was previewed — re-read it and try again`,
-        [stale[1]!],
+        `${stale} changed outside HarnessKit since this action was previewed — re-read it and try again`,
+        [stale],
       );
     }
     throw new CellActionError("apply-failed", message);
