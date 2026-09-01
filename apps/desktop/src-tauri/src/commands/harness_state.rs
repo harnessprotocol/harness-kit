@@ -289,6 +289,8 @@ fn tighten_permissions(path: &std::path::Path) {
 }
 
 /// Best-effort array-of-strings extraction, independent of sibling fields.
+/// Only the (test-only) read path needs it.
+#[cfg(test)]
 fn string_array(document: &serde_json::Value, key: &str) -> Vec<String> {
     document
         .get(key)
@@ -363,11 +365,12 @@ pub(crate) fn record_transaction_at(
 
 /// Recorded transactions, newest first.
 ///
-/// Deliberately NOT a #[tauri::command]. Nothing in the app reads the ledger —
+/// Deliberately NOT a #[tauri::command], and `cfg(test)` because that leaves
+/// it with no production caller at all: nothing in the app reads the ledger —
 /// `rollback --list` is a CLI command — and exposing a read over IPC with no
-/// caller is attack surface bought for nothing. It stays as an internal
-/// function because the tests need it and re-exposing it later is one
-/// attribute.
+/// caller is attack surface bought for nothing. Re-exposing it later means
+/// lifting the cfg and adding the attribute.
+#[cfg(test)]
 pub(crate) fn list_transactions_at(
     path: &std::path::Path,
     limit: Option<i64>,
