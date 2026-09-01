@@ -37,6 +37,20 @@ describe("store write executors (AC-12, AC-13)", () => {
     expect(plan.changes[0]!.before).toContain("gh-mcp");
   });
 
+  it("emits the surface's native key shape, not the portable one", async () => {
+    const fs = new MockFsProvider();
+    const plan = await planStoreWrite(fs, store({}), "/home/user/.claude.json", {
+      kind: "mcp-server",
+      name: "postgres",
+      value: MCP,
+    });
+    if (!plan.supported) throw new Error("expected supported");
+    const entry = JSON.parse(plan.changes[0]!.after!).mcpServers.postgres;
+    // `type` is the native key; `transport` is ours and must never be written.
+    expect(entry.type).toBe("stdio");
+    expect(entry).not.toHaveProperty("transport");
+  });
+
   it("creates the file when the store does not exist yet", async () => {
     const fs = new MockFsProvider();
     const plan = await planStoreWrite(fs, store({}), "/home/user/.claude.json", {

@@ -2,6 +2,7 @@ import { translateServer } from "../adapters/opencode/config-file.js";
 import { writeCodexMcp } from "../codecs/toml-codex.js";
 import type { CodexMcpValue } from "../codecs/toml-codex.js";
 import { appendMarkerBlock, findMarkerBlock, replaceMarkerBlock } from "../compile/markers.js";
+import { translateServer as translateMcpJson } from "../compile/mcp-servers.js";
 import type { FsProvider } from "../fs-provider.js";
 import type { HarnessResourceKind } from "../portability/types.js";
 import type { ConfigStore, StoreFormatId } from "../surfaces/types.js";
@@ -103,7 +104,10 @@ async function writeJsonMcpServers(
   const existing = doc[rootKey];
   const servers = isRecord(existing) ? { ...existing } : {};
   if (edit.value === null) delete servers[edit.name];
-  else servers[edit.name] = edit.value;
+  // The portable shape keys transport as `transport`; the native file keys it
+  // as `type`. Writing the portable value verbatim would leak an internal
+  // field into the user's config.
+  else servers[edit.name] = translateMcpJson(edit.value as McpServer);
 
   return {
     supported: true,
