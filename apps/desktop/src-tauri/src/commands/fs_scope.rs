@@ -14,6 +14,14 @@ fn expand_tilde(path: &str) -> String {
     path.to_string()
 }
 
+/// The trust check `grant_project_scope` enforces: reject `candidate` when it
+/// is the home directory or an ancestor of it. Both paths must already be
+/// canonicalized. Taking `home` as a parameter keeps this testable without
+/// touching the process-global `HOME`.
+fn is_home_or_ancestor(candidate: &Path, home: &Path) -> bool {
+    home.starts_with(candidate)
+}
+
 /// Grant the webview's Tauri FS plugin scope read/write access to a single,
 /// user-chosen project directory for the rest of this app session.
 ///
@@ -45,7 +53,7 @@ pub fn grant_project_scope(app: AppHandle, path: String) -> Result<(), String> {
 
     if let Some(home) = dirs::home_dir() {
         let canonical_home = home.canonicalize().unwrap_or(home);
-        if canonical_home.starts_with(&canonical) {
+        if is_home_or_ancestor(&canonical, &canonical_home) {
             return Err(
                 "Refusing to grant scope over the home directory or one of its ancestors"
                     .to_string(),
@@ -78,13 +86,40 @@ mod tests {
     }
 
     #[test]
-    fn home_dir_is_rejected_as_an_ancestor_of_itself() {
-        let home = dirs::home_dir().unwrap();
-        let canonical_home = home.canonicalize().unwrap_or(home);
-        // Mirrors the guard in grant_project_scope: a directory is rejected
-        // when the home dir starts with it (i.e. it is home, or an ancestor).
-        let root: PathBuf = "/".into();
-        assert!(canonical_home.starts_with(&root));
-        assert!(canonical_home.starts_with(&canonical_home));
+    fn home_dir_itself_is_rejected() {
+        let home: PathBuf = "/Users/example".into();
+        assert!(is_home_or_ancestor(&home, &home));
+    }
+
+    #[test]
+    fn ancestors_of_home_are_rejected() {
+        let home: PathBuf = "/Users/example".into();
+        for ancestor in ["/", "/Users"] {
+            assert!(
+                is_home_or_ancestor(Path::new(ancestor), &home),
+                "{} should be rejected as an ancestor of home",
+                ancestor
+            );
+        }
+    }
+
+    #[test]
+    fn directories_under_home_are_allowed() {
+        let home: PathBuf = "/Users/example".into();
+        for allowed in ["/Users/example/repos/foo", "/Users/example/repos", "/tmp/scratch"] {
+            assert!(
+                !is_home_or_ancestor(Path::new(allowed), &home),
+                "{} should be allowed",
+                allowed
+            );
+        }
+    }
+
+    #[test]
+    fn sibling_with_shared_name_prefix_is_allowed() {
+        // /Users/exampleother must not be treated as an ancestor of
+        // /Users/example — component-wise comparison, not string prefix.
+        let home: PathBuf = "/Users/example".into();
+        assert!(!is_home_or_ancestor(Path::new("/Users/exampleother"), &home));
     }
 }

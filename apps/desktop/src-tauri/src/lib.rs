@@ -1,12 +1,6 @@
 mod commands;
 mod db;
 
-/// Process-wide lock for tests that mutate the HOME env variable.
-/// All `with_home()` helpers across test modules must hold this lock
-/// to prevent races when Rust runs tests in parallel threads.
-#[cfg(test)]
-pub static HOME_LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
-
 use tauri::{LogicalSize, Manager};
 
 /// Detect the current git branch by running `git branch --show-current`
