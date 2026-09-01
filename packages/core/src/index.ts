@@ -266,6 +266,8 @@ export { recordAppliedTransaction } from "./state/ledger.js";
 export type { LedgerEntryInput, LedgerOutcome } from "./state/ledger.js";
 export type { CodexMcpValue, CodexMcpReadResult, CodexMcpWrite } from "./codecs/toml-codex.js";
 export { writeCodexMcp } from "./codecs/toml-codex.js";
+export { planStoreWrite } from "./write/write-store.js";
+export type { StoreEdit, StoreWritePlan, PlannedFileChange } from "./write/write-store.js";
 export { readCodexMcp } from "./codecs/toml-codex.js";
 export type { OpenCodeMcpValue, OpenCodeMcpReadResult } from "./codecs/json-opencode.js";
 export { readOpenCodeMcpConfig } from "./codecs/json-opencode.js";
