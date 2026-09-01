@@ -4,11 +4,13 @@ import {
   buildAgentPrompt,
   createHomeTransactionRoot,
   planCellAction,
+  recordAppliedTransaction,
   syncCliCommand,
 } from "@harness-kit/core";
 import type { CellActionPlan, CellActionRequest, GridRow, SurfaceId } from "@harness-kit/core";
 import { TauriFsProvider } from "../../lib/harness-fs";
 import { TauriSurfaceFsProvider } from "../../lib/surface-fs";
+import { TauriTransactionLedger } from "../../lib/state-ledger";
 import { detectDesktopPlatform } from "./machine-data";
 
 /**
@@ -86,16 +88,39 @@ export async function applyCellActionViaTauri(
   confirmedLoss = false,
 ): Promise<string[]> {
   const home = await homeDir();
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const changes = view.plan.changes.map((change) => ({
+    root: "home" as const,
+    path: change.path.startsWith(`${home}/`) ? change.path.slice(home.length + 1) : change.path,
+    before: change.before,
+    after: change.after,
+  }));
+
   const result = await applyCellAction(
     view.plan,
     {
       fs: new TauriSurfaceFsProvider(home),
-      timestamp: new Date().toISOString().replace(/[:.]/g, "-"),
+      timestamp,
       roots: { home: createHomeTransactionRoot(home, detectDesktopPlatform()) },
     },
     // Not `true`: a disabled button is UX, not a boundary. The engine's own
     // gate must see the real acknowledgement.
     { homeRoot: home, confirmed: confirmedLoss },
   );
+
+  await recordAppliedTransaction(
+    result,
+    changes,
+    {
+      transactionId: timestamp,
+      appliedAt: new Date().toISOString(),
+      manifestRoot: home,
+      surfaces: [view.request.to],
+      kinds: [view.request.kind],
+      identityKeys: [`${view.request.kind}:${view.request.name.toLowerCase()}`],
+    },
+    new TauriTransactionLedger(),
+  );
+
   return result.written;
 }

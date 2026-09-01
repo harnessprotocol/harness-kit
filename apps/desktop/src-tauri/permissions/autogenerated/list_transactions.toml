@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-list-transactions"
+description = "Enables the list_transactions command without any pre-configured scope."
+commands.allow = ["list_transactions"]
+
+[[permission]]
+identifier = "deny-list-transactions"
+description = "Denies the list_transactions command without any pre-configured scope."
+commands.deny = ["list_transactions"]

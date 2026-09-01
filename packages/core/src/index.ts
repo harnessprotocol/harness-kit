@@ -260,6 +260,7 @@ export type {
   StoredResource,
   ObservationSnapshot,
   StateStore,
+  TransactionLedger,
   TransactionRecord,
 } from "./state/store.js";
 export {
