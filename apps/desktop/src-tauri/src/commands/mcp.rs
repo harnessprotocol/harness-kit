@@ -1,3 +1,12 @@
+use std::path::Path;
+
+/// Resolve the user's home directory. The `*_in` functions below take the
+/// home directory as a parameter so tests can pass a tempdir instead of
+/// mutating the process-global `HOME`.
+fn home_dir() -> Result<std::path::PathBuf, String> {
+    dirs::home_dir().ok_or_else(|| "Could not resolve home directory".to_string())
+}
+
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpConfigResult {
@@ -12,8 +21,11 @@ pub struct McpConfigResult {
 /// return just the `mcpServers` object as a JSON string.
 #[tauri::command]
 pub fn read_mcp_config() -> Result<McpConfigResult, String> {
-    let home_raw = dirs::home_dir()
-        .ok_or_else(|| "Could not resolve home directory".to_string())?;
+    read_mcp_config_in(&home_dir()?)
+}
+
+fn read_mcp_config_in(home_raw: &Path) -> Result<McpConfigResult, String> {
+    let home_raw = home_raw.to_path_buf();
     // Canonicalize home so symlink-heavy temp paths (e.g. macOS /tmp → /private/tmp)
     // compare correctly against the canonicalized candidate paths below.
     let home = home_raw.canonicalize().unwrap_or(home_raw);
@@ -69,12 +81,15 @@ pub fn read_mcp_config() -> Result<McpConfigResult, String> {
 /// Returns the display path on success.
 #[tauri::command]
 pub fn write_mcp_config(servers_json: String) -> Result<String, String> {
+    write_mcp_config_in(&home_dir()?, servers_json)
+}
+
+fn write_mcp_config_in(home: &Path, servers_json: String) -> Result<String, String> {
     // Validate that the caller passed valid JSON before touching the filesystem.
     let servers_value: serde_json::Value = serde_json::from_str(&servers_json)
         .map_err(|e| format!("Invalid JSON for servers_json: {}", e))?;
 
-    let home = dirs::home_dir()
-        .ok_or_else(|| "Could not resolve home directory".to_string())?;
+    let home = home.to_path_buf();
 
     let claude_dir = home.join(".claude");
     if !claude_dir.exists() {
@@ -124,30 +139,15 @@ pub fn write_mcp_config(servers_json: String) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::env;
     use tempfile::TempDir;
-
-    fn with_home(dir: &TempDir, f: impl FnOnce()) {
-        // Hold the crate-level lock so parallel tests don't race on HOME.
-        let _guard = crate::HOME_LOCK.lock().unwrap();
-        let old = env::var("HOME").ok();
-        env::set_var("HOME", dir.path());
-        f();
-        match old {
-            Some(v) => env::set_var("HOME", v),
-            None => env::remove_var("HOME"),
-        }
-    }
 
     #[test]
     fn read_mcp_config_returns_not_found_when_absent() {
         let dir = TempDir::new().unwrap();
-        with_home(&dir, || {
-            let result = read_mcp_config().unwrap();
-            assert!(!result.found);
-            assert!(result.servers_json.is_none());
-            assert!(result.source.is_none());
-        });
+        let result = read_mcp_config_in(dir.path()).unwrap();
+        assert!(!result.found);
+        assert!(result.servers_json.is_none());
+        assert!(result.source.is_none());
     }
 
     #[test]
@@ -160,34 +160,30 @@ mod tests {
             r#"{"mcpServers":{"test":{"command":"npx"}}}"#,
         )
         .unwrap();
-        with_home(&dir, || {
-            let result = read_mcp_config().unwrap();
-            assert!(result.found);
-            assert_eq!(result.source.unwrap(), "~/.claude/mcp.json");
-            let servers: serde_json::Value =
-                serde_json::from_str(&result.servers_json.unwrap()).unwrap();
-            assert!(servers.get("test").is_some());
-            assert_eq!(
-                servers["test"]["command"],
-                serde_json::Value::String("npx".to_string())
-            );
-        });
+        let result = read_mcp_config_in(dir.path()).unwrap();
+        assert!(result.found);
+        assert_eq!(result.source.unwrap(), "~/.claude/mcp.json");
+        let servers: serde_json::Value =
+            serde_json::from_str(&result.servers_json.unwrap()).unwrap();
+        assert!(servers.get("test").is_some());
+        assert_eq!(
+            servers["test"]["command"],
+            serde_json::Value::String("npx".to_string())
+        );
     }
 
     #[test]
     fn write_mcp_config_creates_file() {
         let dir = TempDir::new().unwrap();
-        with_home(&dir, || {
-            let servers = r#"{"my-server":{"command":"node","args":["server.js"]}}"#;
-            let path = write_mcp_config(servers.to_string()).unwrap();
-            assert_eq!(path, "~/.claude/mcp.json");
+        let servers = r#"{"my-server":{"command":"node","args":["server.js"]}}"#;
+        let path = write_mcp_config_in(dir.path(), servers.to_string()).unwrap();
+        assert_eq!(path, "~/.claude/mcp.json");
 
-            let written =
-                std::fs::read_to_string(dir.path().join(".claude/mcp.json")).unwrap();
-            let parsed: serde_json::Value = serde_json::from_str(&written).unwrap();
-            assert!(parsed.get("mcpServers").is_some());
-            assert!(parsed["mcpServers"].get("my-server").is_some());
-        });
+        let written =
+            std::fs::read_to_string(dir.path().join(".claude/mcp.json")).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&written).unwrap();
+        assert!(parsed.get("mcpServers").is_some());
+        assert!(parsed["mcpServers"].get("my-server").is_some());
     }
 
     #[test]
@@ -200,32 +196,28 @@ mod tests {
             r#"{"extra":"value","mcpServers":{}}"#,
         )
         .unwrap();
-        with_home(&dir, || {
-            let new_servers = r#"{"added":{"command":"npx"}}"#;
-            write_mcp_config(new_servers.to_string()).unwrap();
+        let new_servers = r#"{"added":{"command":"npx"}}"#;
+        write_mcp_config_in(dir.path(), new_servers.to_string()).unwrap();
 
-            let written =
-                std::fs::read_to_string(dir.path().join(".claude/mcp.json")).unwrap();
-            let parsed: serde_json::Value = serde_json::from_str(&written).unwrap();
-            // Unknown key must survive the round-trip.
-            assert_eq!(
-                parsed.get("extra"),
-                Some(&serde_json::Value::String("value".to_string()))
-            );
-            // New servers value must be written.
-            assert!(parsed["mcpServers"].get("added").is_some());
-        });
+        let written =
+            std::fs::read_to_string(dir.path().join(".claude/mcp.json")).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&written).unwrap();
+        // Unknown key must survive the round-trip.
+        assert_eq!(
+            parsed.get("extra"),
+            Some(&serde_json::Value::String("value".to_string()))
+        );
+        // New servers value must be written.
+        assert!(parsed["mcpServers"].get("added").is_some());
     }
 
     #[test]
     fn write_mcp_config_rejects_invalid_json() {
         let dir = TempDir::new().unwrap();
-        with_home(&dir, || {
-            let result = write_mcp_config("not valid json {{".to_string());
-            assert!(result.is_err());
-            let msg = result.unwrap_err();
-            assert!(msg.contains("Invalid JSON"));
-        });
+        let result = write_mcp_config_in(dir.path(), "not valid json {{".to_string());
+        assert!(result.is_err());
+        let msg = result.unwrap_err();
+        assert!(msg.contains("Invalid JSON"));
     }
 
     #[test]
@@ -235,14 +227,12 @@ mod tests {
         std::fs::create_dir(&claude).unwrap();
         // Only write .mcp.json, not mcp.json
         std::fs::write(claude.join(".mcp.json"), r#"{"mcpServers":{"legacy":{"command":"npx"}}}"#).unwrap();
-        with_home(&dir, || {
-            let result = read_mcp_config().unwrap();
-            assert!(result.found);
-            assert_eq!(result.source.unwrap(), "~/.claude/.mcp.json");
-            let servers: serde_json::Value =
-                serde_json::from_str(&result.servers_json.unwrap()).unwrap();
-            assert!(servers.get("legacy").is_some());
-        });
+        let result = read_mcp_config_in(dir.path()).unwrap();
+        assert!(result.found);
+        assert_eq!(result.source.unwrap(), "~/.claude/.mcp.json");
+        let servers: serde_json::Value =
+            serde_json::from_str(&result.servers_json.unwrap()).unwrap();
+        assert!(servers.get("legacy").is_some());
     }
 
     #[test]
@@ -251,12 +241,10 @@ mod tests {
         let claude = dir.path().join(".claude");
         std::fs::create_dir(&claude).unwrap();
         std::fs::write(claude.join("mcp.json"), b"not valid json at all!!!").unwrap();
-        with_home(&dir, || {
-            let result = write_mcp_config(r#"{"new":{"command":"npx"}}"#.to_string());
-            assert!(result.is_ok());
-            let content = std::fs::read_to_string(claude.join("mcp.json")).unwrap();
-            let parsed: serde_json::Value = serde_json::from_str(&content).unwrap();
-            assert!(parsed.get("mcpServers").is_some());
-        });
+        let result = write_mcp_config_in(dir.path(), r#"{"new":{"command":"npx"}}"#.to_string());
+        assert!(result.is_ok());
+        let content = std::fs::read_to_string(claude.join("mcp.json")).unwrap();
+        let parsed: serde_json::Value = serde_json::from_str(&content).unwrap();
+        assert!(parsed.get("mcpServers").is_some());
     }
 }

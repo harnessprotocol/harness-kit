@@ -1,3 +1,12 @@
+use std::path::Path;
+
+/// Resolve the user's home directory. The `*_in` functions below take the
+/// home directory as a parameter so tests can pass a tempdir instead of
+/// mutating the process-global `HOME`.
+fn home_dir() -> Result<std::path::PathBuf, String> {
+    dirs::home_dir().ok_or_else(|| "Could not resolve home directory".to_string())
+}
+
 #[derive(serde::Serialize)]
 pub struct HarnessFileResult {
     pub found: bool,
@@ -7,8 +16,11 @@ pub struct HarnessFileResult {
 
 #[tauri::command]
 pub fn read_harness_file() -> Result<HarnessFileResult, String> {
-    let home_raw = dirs::home_dir()
-        .ok_or_else(|| "Could not resolve home directory".to_string())?;
+    read_harness_file_in(&home_dir()?)
+}
+
+fn read_harness_file_in(home_raw: &Path) -> Result<HarnessFileResult, String> {
+    let home_raw = home_raw.to_path_buf();
     // Canonicalize home so symlink-heavy temp paths (e.g. macOS /tmp → /private/tmp)
     // compare correctly against the canonicalized candidate paths below.
     let home = home_raw.canonicalize().unwrap_or(home_raw);
@@ -54,9 +66,10 @@ pub fn read_harness_file() -> Result<HarnessFileResult, String> {
 /// Returns the display path on success.
 #[tauri::command]
 pub fn write_harness_file(content: String) -> Result<String, String> {
-    let home = dirs::home_dir()
-        .ok_or_else(|| "Could not resolve home directory".to_string())?;
+    write_harness_file_in(&home_dir()?, content)
+}
 
+fn write_harness_file_in(home: &Path, content: String) -> Result<String, String> {
     let claude_dir = home.join(".claude");
     if !claude_dir.exists() {
         std::fs::create_dir_all(&claude_dir)
@@ -90,8 +103,10 @@ pub struct ClaudeConfigScan {
 
 #[tauri::command]
 pub fn scan_claude_config() -> Result<ClaudeConfigScan, String> {
-    let home = dirs::home_dir()
-        .ok_or_else(|| "Could not resolve home directory".to_string())?;
+    scan_claude_config_in(&home_dir()?)
+}
+
+fn scan_claude_config_in(home: &Path) -> Result<ClaudeConfigScan, String> {
     let claude_dir = home.join(".claude");
 
     // MCP servers: mcp.json is the current Claude Code location; .mcp.json is a legacy fallback.
@@ -123,30 +138,15 @@ pub fn scan_claude_config() -> Result<ClaudeConfigScan, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::env;
     use tempfile::TempDir;
-
-    fn with_home(dir: &TempDir, f: impl FnOnce()) {
-        // Hold the crate-level lock so parallel tests don't race on HOME.
-        let _guard = crate::HOME_LOCK.lock().unwrap();
-        let old = env::var("HOME").ok();
-        env::set_var("HOME", dir.path());
-        f();
-        match old {
-            Some(v) => env::set_var("HOME", v),
-            None => env::remove_var("HOME"),
-        }
-    }
 
     #[test]
     fn read_harness_file_returns_not_found_when_absent() {
         let dir = TempDir::new().unwrap();
-        with_home(&dir, || {
-            let result = read_harness_file().unwrap();
-            assert!(!result.found);
-            assert!(result.content.is_none());
-            assert!(result.path.is_none());
-        });
+        let result = read_harness_file_in(dir.path()).unwrap();
+        assert!(!result.found);
+        assert!(result.content.is_none());
+        assert!(result.path.is_none());
     }
 
     #[test]
@@ -155,45 +155,37 @@ mod tests {
         let claude = dir.path().join(".claude");
         std::fs::create_dir(&claude).unwrap();
         std::fs::write(claude.join("harness.yaml"), "version: \"1\"\n").unwrap();
-        with_home(&dir, || {
-            let result = read_harness_file().unwrap();
-            assert!(result.found);
-            assert_eq!(result.content.unwrap(), "version: \"1\"\n");
-            assert_eq!(result.path.unwrap(), "~/.claude/harness.yaml");
-        });
+        let result = read_harness_file_in(dir.path()).unwrap();
+        assert!(result.found);
+        assert_eq!(result.content.unwrap(), "version: \"1\"\n");
+        assert_eq!(result.path.unwrap(), "~/.claude/harness.yaml");
     }
 
     #[test]
     fn read_harness_file_falls_back_to_home_root() {
         let dir = TempDir::new().unwrap();
         std::fs::write(dir.path().join("harness.yaml"), "version: \"1\"\n").unwrap();
-        with_home(&dir, || {
-            let result = read_harness_file().unwrap();
-            assert!(result.found);
-            assert_eq!(result.path.unwrap(), "~/harness.yaml");
-        });
+        let result = read_harness_file_in(dir.path()).unwrap();
+        assert!(result.found);
+        assert_eq!(result.path.unwrap(), "~/harness.yaml");
     }
 
     #[test]
     fn write_harness_file_creates_claude_dir_and_file() {
         let dir = TempDir::new().unwrap();
-        with_home(&dir, || {
-            let path = write_harness_file("content: test".to_string()).unwrap();
-            assert_eq!(path, "~/.claude/harness.yaml");
-            let written = std::fs::read_to_string(dir.path().join(".claude/harness.yaml")).unwrap();
-            assert_eq!(written, "content: test");
-        });
+        let path = write_harness_file_in(dir.path(), "content: test".to_string()).unwrap();
+        assert_eq!(path, "~/.claude/harness.yaml");
+        let written = std::fs::read_to_string(dir.path().join(".claude/harness.yaml")).unwrap();
+        assert_eq!(written, "content: test");
     }
 
     #[test]
     fn scan_claude_config_returns_none_when_files_absent() {
         let dir = TempDir::new().unwrap();
         std::fs::create_dir(dir.path().join(".claude")).unwrap();
-        with_home(&dir, || {
-            let result = scan_claude_config().unwrap();
-            assert!(result.mcp_servers_json.is_none());
-            assert!(result.settings_json.is_none());
-        });
+        let result = scan_claude_config_in(dir.path()).unwrap();
+        assert!(result.mcp_servers_json.is_none());
+        assert!(result.settings_json.is_none());
     }
 
     #[test]
@@ -203,12 +195,10 @@ mod tests {
         std::fs::create_dir(&claude).unwrap();
         std::fs::write(claude.join("mcp.json"), r#"{"mcpServers":{}}"#).unwrap();
         std::fs::write(claude.join("settings.local.json"), r#"{"permissions":{"allow":[]}}"#).unwrap();
-        with_home(&dir, || {
-            let result = scan_claude_config().unwrap();
-            assert!(result.mcp_servers_json.is_some());
-            assert_eq!(result.mcp_source.unwrap(), "~/.claude/mcp.json");
-            assert!(result.settings_json.is_some());
-            assert_eq!(result.settings_source.unwrap(), "~/.claude/settings.local.json");
-        });
+        let result = scan_claude_config_in(dir.path()).unwrap();
+        assert!(result.mcp_servers_json.is_some());
+        assert_eq!(result.mcp_source.unwrap(), "~/.claude/mcp.json");
+        assert!(result.settings_json.is_some());
+        assert_eq!(result.settings_source.unwrap(), "~/.claude/settings.local.json");
     }
 }
