@@ -103,13 +103,21 @@ export interface TransactionRecord {
  * use for, and a stub that silently returns nothing is worse than a type that
  * says what is actually supported.
  */
-export interface TransactionLedger {
+export interface TransactionRecorder {
   /**
    * Record one committed transaction as a rollback point. Recording the same
    * transactionId twice is idempotent — the later record wins.
    */
   recordTransaction(record: TransactionRecord): Promise<void>;
+}
 
+/**
+ * Recording plus reading. Split from {@link TransactionRecorder} because the
+ * desktop only ever records: `rollback --list` is a CLI command and nothing
+ * in the app's UI reads the ledger. Exposing a read over IPC with no caller
+ * would be attack surface bought for nothing.
+ */
+export interface TransactionLedger extends TransactionRecorder {
   /** Recorded transactions, newest first, capped by `limit` when given. */
   listTransactions(limit?: number): Promise<TransactionRecord[]>;
 }

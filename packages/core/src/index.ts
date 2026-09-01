@@ -261,6 +261,7 @@ export type {
   ObservationSnapshot,
   StateStore,
   TransactionLedger,
+  TransactionRecorder,
   TransactionRecord,
 } from "./state/store.js";
 export {

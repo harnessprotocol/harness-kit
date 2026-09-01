@@ -26,19 +26,6 @@ describe("TauriTransactionLedger", () => {
     expect(invoke).toHaveBeenCalledWith("record_transaction", { record: RECORD });
   });
 
-  it("passes an explicit null limit rather than omitting it", async () => {
-    invoke.mockResolvedValue([]);
-    await new TauriTransactionLedger().listTransactions();
-    // Tauri maps a missing key to a deserialization error for Option<i64>
-    // in some versions; null is unambiguous.
-    expect(invoke).toHaveBeenCalledWith("list_transactions", { limit: null });
-  });
-
-  it("returns what Rust returns", async () => {
-    invoke.mockResolvedValue([RECORD]);
-    expect(await new TauriTransactionLedger().listTransactions(5)).toEqual([RECORD]);
-  });
-
   it("surfaces a Rust-side failure so core's ledger guard can catch it", async () => {
     // core's recordAppliedTransaction swallows this — by the time it runs the
     // files are written, so failing an apply over a locked database would be

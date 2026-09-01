@@ -10,7 +10,12 @@ const invoke = vi.hoisted(() => vi.fn());
 const homeDir = vi.hoisted(() => vi.fn(async () => "/home/user"));
 const applyCellAction = vi.hoisted(() => vi.fn() as unknown as ReturnType<typeof vi.fn> & ((...args: unknown[]) => unknown));
 const recordAppliedTransaction = vi.hoisted(
-  () => vi.fn(async (..._args: unknown[]) => ({ recorded: true })),
+  () =>
+    vi.fn(
+      async (..._args: unknown[]): Promise<{ recorded: boolean; error?: string }> => ({
+        recorded: true,
+      }),
+    ),
 );
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
@@ -75,6 +80,17 @@ describe("applyCellActionViaTauri records a rollback point", () => {
     expect(input.manifestRoot).toBe("/home/user");
     expect(input.surfaces).toEqual(["cursor"]);
     expect(input.identityKeys).toEqual(["mcp-server:postgres"]);
+  });
+
+  it("returns the ledger failure instead of only logging it", async () => {
+    recordAppliedTransaction.mockResolvedValueOnce({
+      recorded: false,
+      error: "database is locked",
+    });
+    const applied = await applyCellActionViaTauri(view(), true);
+    expect(applied.ledgerError).toContain("database is locked");
+    // The write itself still succeeded — degrade, don't fail.
+    expect(applied.written).toEqual([".cursor/mcp.json"]);
   });
 
   it("does not record a no-op apply", async () => {

@@ -5,7 +5,7 @@ import type {
 } from "../portability/types.js";
 import type { HarnessResourceKind } from "../portability/types.js";
 import type { SurfaceId } from "../surfaces/types.js";
-import type { TransactionLedger, TransactionRecord } from "./store.js";
+import type { TransactionRecord, TransactionRecorder } from "./store.js";
 
 /** What the caller knows about an apply that the transaction result does not. */
 export interface LedgerEntryInput {
@@ -45,7 +45,7 @@ export async function recordAppliedTransaction(
   result: TransactionResult,
   changes: TransactionFileChange[],
   input: LedgerEntryInput,
-  store: TransactionLedger | null,
+  store: TransactionRecorder | null,
 ): Promise<LedgerOutcome> {
   if (!result.committed || store === null) return { recorded: false };
   const record: TransactionRecord = {

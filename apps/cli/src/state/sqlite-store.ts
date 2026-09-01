@@ -2,7 +2,11 @@ import { chmodSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
 import type { DatabaseSync } from "node:sqlite";
-import { STATE_SCHEMA_VERSION, stateSchemaStatements } from "@harness-kit/core";
+import {
+  STATE_SCHEMA_VERSION,
+  STATE_VERSION_PROBES,
+  stateSchemaStatements,
+} from "@harness-kit/core";
 import type {
   ObservationSnapshot,
   ObservationSnapshotMeta,
@@ -132,20 +136,43 @@ export class SqliteStateStore implements StateStore {
       const row = this.db.prepare("SELECT schema_version FROM meta").get() as
         | { schema_version: number }
         | undefined;
-      const version = row?.schema_version ?? 0;
+      // A missing version ROW is ambiguous: a fresh database looks identical
+      // to one whose meta was lost, and the v2 step opens with
+      // DROP TABLE transactions. Ask the tables themselves before believing 0
+      // — the same guard harness_state.rs applies, from the same source.
+      const version = row?.schema_version ?? this.detectVersion();
       // Statements come from core so the desktop's Rust implementation runs
       // the same DDL rather than a hand-copied second version of it.
       for (const statement of stateSchemaStatements(version)) this.db.exec(statement);
-      if (version === 0) {
-        this.db.prepare("INSERT INTO meta (schema_version) VALUES (?)").run(STATE_SCHEMA_VERSION);
-      } else if (version < STATE_SCHEMA_VERSION) {
-        this.db.prepare("UPDATE meta SET schema_version = ?").run(STATE_SCHEMA_VERSION);
-      }
+      // Always leave meta stating the truth, including when the version was
+      // inferred rather than read: detecting a damaged meta and then leaving
+      // it damaged just hands the next process the same landmine.
+      this.db.exec("DELETE FROM meta");
+      this.db.prepare("INSERT INTO meta (schema_version) VALUES (?)").run(
+        Math.max(version, STATE_SCHEMA_VERSION),
+      );
       this.db.exec("COMMIT");
     } catch (error) {
       this.db.exec("ROLLBACK");
       throw error;
     }
+  }
+
+  /**
+   * Infer the schema version from what exists on disk, for a database whose
+   * `meta` carries no row. Probes are ordered highest-first.
+   */
+  private detectVersion(): number {
+    for (const probe of STATE_VERSION_PROBES) {
+      try {
+        const row = this.db.prepare(probe.sql).get() as Record<string, number> | undefined;
+        const matched = row ? Object.values(row)[0] : 0;
+        if (typeof matched === "number" && matched > 0) return probe.version;
+      } catch {
+        // A probe that cannot run tells us nothing; try the next.
+      }
+    }
+    return 0;
   }
 
   async recordObservation(

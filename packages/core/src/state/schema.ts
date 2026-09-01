@@ -14,7 +14,18 @@
  * executes them individually.
  */
 
-/** Schema version this build knows how to produce. */
+/**
+ * Schema version this build knows how to produce.
+ *
+ * CONSTRAINT FOR WHOEVER BUMPS THIS: migrations on `transactions` must stay
+ * ADDITIVE. The CLI ships via Homebrew and the app via a cask, so they update
+ * independently and version skew between them is guaranteed, not
+ * hypothetical. Forward skew is only safe because an older build's
+ * seven-column SELECT still works and its INSERT still satisfies every
+ * constraint. Renaming a column breaks the old reader; adding a NOT NULL
+ * without a default breaks the old writer — and both sides swallow ledger
+ * errors by design, so it would fail silently.
+ */
 export const STATE_SCHEMA_VERSION = 2;
 
 /**
@@ -122,7 +133,11 @@ export function stateSchemaStatements(fromVersion: number): string[] {
  * reads identically to "fresh database", and the v2 step opens with
  * `DROP TABLE transactions`. Treating an empty `meta` as version 0 therefore
  * destroys every rollback point on a database that is actually current.
- * Both implementations run this probe before trusting a 0.
+ * Both implementations run these probes before trusting a 0 — the CLI in
+ * SqliteStateStore.migrate(), the desktop in harness_state.rs's
+ * detect_version. (An earlier version of this comment claimed that while only
+ * the Rust side used them, which left the CLI destroying ledgers on exactly
+ * the case the comment promised was handled.)
  *
  * Returns the version implied by what actually exists on disk.
  */

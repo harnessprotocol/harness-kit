@@ -176,7 +176,6 @@ pub fn run() {
             commands::sync::sync_write_files,
             commands::surface_write::apply_surface_transaction,
             commands::harness_state::record_transaction,
-            commands::harness_state::list_transactions,
             commands::sync::sync_create_backup,
             commands::sync::sync_list_backups,
             commands::sync::sync_restore_backup,

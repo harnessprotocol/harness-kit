@@ -192,7 +192,6 @@
     "allow-sync-write-files",
     "allow-apply-surface-transaction",
     "allow-record-transaction",
-    "allow-list-transactions",
     "allow-sync-create-backup",
     "allow-sync-list-backups",
     "allow-sync-restore-backup",

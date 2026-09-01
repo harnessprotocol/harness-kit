@@ -82,13 +82,27 @@ export async function buildCellAction(
  * `harness-kit rollback --transaction <path>`; it just will not appear in
  * `rollback --list` until that bridge lands.
  */
+export interface CellApplyResult {
+  written: string[];
+  /**
+   * Set when the apply succeeded but its rollback point was not recorded.
+   * The caller MUST show this: the files changed, and the user would
+   * otherwise believe the change is in `rollback --list` when it is not.
+   */
+  ledgerError?: string;
+}
+
 export async function applyCellActionViaTauri(
   view: CellActionView,
   /** The user's explicit acknowledgement of capability loss (AC-34). */
   confirmedLoss = false,
-): Promise<string[]> {
+): Promise<CellApplyResult> {
   const home = await homeDir();
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  // Namespaced: the CLI mints ids from the same clock with the same format,
+  // and record_transaction does ON CONFLICT DO UPDATE — so a same-millisecond
+  // collision would silently overwrite one apply's rollback point with the
+  // other's, and they would share a backups/<ts>/ directory too.
+  const timestamp = `${new Date().toISOString().replace(/[:.]/g, "-")}-app`;
   const prefix = home.endsWith("/") ? home : `${home}/`;
   // The drawer only ever applies at user scope, so every change is home-rooted
   // and the manifest anchors at home. That is an INVARIANT, not an assumption:
@@ -125,7 +139,7 @@ export async function applyCellActionViaTauri(
   // A no-op apply has nothing to roll back, and applyFileTransaction anchors
   // an empty change set at the PROJECT root — recording manifestRoot: home
   // for it would point rollback at a path that does not exist.
-  if (changes.length === 0) return result.written;
+  if (changes.length === 0) return { written: result.written };
 
   const outcome = await recordAppliedTransaction(
     result,
@@ -140,11 +154,11 @@ export async function applyCellActionViaTauri(
     },
     new TauriTransactionLedger(),
   );
-  if (outcome.error) {
-    // Surfaced, not swallowed: the write succeeded but this apply will not
-    // appear in `rollback --list`, and the user should know that.
-    console.warn(`Applied, but the rollback point was not recorded: ${outcome.error}`);
-  }
-
-  return result.written;
+  // Returned rather than logged. An earlier version console.warn'd here and
+  // called that "surfaced" while the drawer still reported a plain "Applied."
+  // — a warning only devtools sees is swallowing with extra steps.
+  return {
+    written: result.written,
+    ...(outcome.error ? { ledgerError: outcome.error } : {}),
+  };
 }

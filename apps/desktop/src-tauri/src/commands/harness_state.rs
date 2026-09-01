@@ -74,6 +74,12 @@ struct RecordPayload {
 /// Resolve the shared db path the same way the CLI does, `HARNESS_STATE_PATH`
 /// included — if the two disagreed, the app would write a ledger the CLI's
 /// `rollback --list` never reads.
+///
+/// One asymmetry worth knowing rather than claiming away: a Finder-launched
+/// app inherits no shell environment, so it will not see HARNESS_STATE_PATH
+/// even when the user's shell exports it. The override is therefore reliable
+/// for CI and tests, not for a GUI launch — parity holds for the default
+/// path, which is what matters in practice.
 fn state_path() -> Result<PathBuf, String> {
     if let Ok(override_path) = std::env::var("HARNESS_STATE_PATH") {
         let trimmed = override_path.trim();
@@ -159,6 +165,7 @@ fn migrate_locked(conn: &Connection) -> Result<(), String> {
     // step, turning a transient failure into permanent data loss. Refuse
     // instead; a read that returns an error is recoverable, a dropped ledger
     // is not.
+    let mut meta_missing = false;
     let current: i64 = match conn.query_row("SELECT schema_version FROM meta", [], |row| row.get(0))
     {
         Ok(version) => version,
@@ -166,7 +173,10 @@ fn migrate_locked(conn: &Connection) -> Result<(), String> {
         // identical to one whose meta was lost. Ask the tables themselves
         // before believing 0, because believing 0 runs DROP TABLE
         // transactions and takes every rollback point with it.
-        Err(rusqlite::Error::QueryReturnedNoRows) => detect_version(conn),
+        Err(rusqlite::Error::QueryReturnedNoRows) => {
+            meta_missing = true;
+            detect_version(conn)
+        }
         Err(error) => {
             return Err(format!(
                 "Refusing to migrate: could not read the schema version ({}). \
@@ -180,6 +190,16 @@ fn migrate_locked(conn: &Connection) -> Result<(), String> {
     // backwards. Reads and inserts still work because the schema is additive;
     // an older app writing a newer ledger is better than one rewriting it.
     if current >= schema.version {
+        // But if the version was INFERRED because meta had no row, repair it.
+        // Detecting a damaged meta and leaving it damaged just hands the next
+        // process — usually the CLI, which opens this far more often — the
+        // same landmine.
+        if meta_missing {
+            conn.execute("DELETE FROM meta", [])
+                .map_err(|e| format!("Failed to reset meta: {}", e))?;
+            conn.execute("INSERT INTO meta (schema_version) VALUES (?1)", [current])
+                .map_err(|e| format!("Failed to repair schema version: {}", e))?;
+        }
         return Ok(());
     }
 
@@ -342,12 +362,12 @@ pub(crate) fn record_transaction_at(
 }
 
 /// Recorded transactions, newest first.
-#[tauri::command]
-pub fn list_transactions(limit: Option<i64>) -> Result<Vec<TransactionRecord>, String> {
-    list_transactions_at(&state_path()?, limit)
-}
-
-/// Path-taking core of {@link list_transactions}; see record_transaction_at.
+///
+/// Deliberately NOT a #[tauri::command]. Nothing in the app reads the ledger —
+/// `rollback --list` is a CLI command — and exposing a read over IPC with no
+/// caller is attack surface bought for nothing. It stays as an internal
+/// function because the tests need it and re-exposing it later is one
+/// attribute.
 pub(crate) fn list_transactions_at(
     path: &std::path::Path,
     limit: Option<i64>,
@@ -537,6 +557,31 @@ mod tests {
         assert_eq!(listed[0].kinds, vec!["mcp-server".to_string()]);
         assert_eq!(listed[0].identity_keys, vec!["mcp-server:x".to_string()]);
         assert!(listed[0].surfaces.is_empty());
+    }
+
+    #[test]
+    fn repairs_a_damaged_meta_rather_than_leaving_it() {
+        // Detecting the damage and protecting only ourselves hands the same
+        // landmine to the CLI, which opens this database far more often.
+        let path = scratch("meta-repair");
+        record_transaction_at(&path, record("survivor")).unwrap();
+        let conn = Connection::open(&path).unwrap();
+        conn.execute("DELETE FROM meta", []).unwrap();
+        drop(conn);
+
+        list_transactions_at(&path, None).unwrap();
+
+        let conn = Connection::open(&path).unwrap();
+        let version: i64 = conn
+            .query_row("SELECT schema_version FROM meta", [], |row| row.get(0))
+            .expect("meta should have been repaired");
+        let rows: i64 = conn
+            .query_row("SELECT COUNT(*) FROM meta", [], |row| row.get(0))
+            .unwrap();
+        drop(conn);
+        std::fs::remove_file(&path).ok();
+        assert_eq!(version, schema().version);
+        assert_eq!(rows, 1);
     }
 
     #[test]

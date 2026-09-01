@@ -2499,12 +2499,6 @@
           "markdownDescription": "Enables the list_sessions_summary command without any pre-configured scope."
         },
         {
-          "description": "Enables the list_transactions command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-list-transactions",
-          "markdownDescription": "Enables the list_transactions command without any pre-configured scope."
-        },
-        {
           "description": "Enables the push_file_history command without any pre-configured scope.",
           "type": "string",
           "const": "allow-push-file-history",
@@ -3079,12 +3073,6 @@
           "type": "string",
           "const": "deny-list-sessions-summary",
           "markdownDescription": "Denies the list_sessions_summary command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the list_transactions command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-list-transactions",
-          "markdownDescription": "Denies the list_transactions command without any pre-configured scope."
         },
         {
           "description": "Denies the push_file_history command without any pre-configured scope.",

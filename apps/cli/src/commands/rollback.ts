@@ -41,8 +41,15 @@ async function readLedger(limit?: number): Promise<LedgerRead> {
   }
 }
 
+/**
+ * Default cap on `--list`. The ledger is never pruned, so an unbounded read
+ * materializes every row ever recorded — the `limit` parameter was plumbed
+ * all the way through and then never used on the one path that needs it.
+ */
+const DEFAULT_LIST_LIMIT = 50;
+
 async function listRollbackPoints(flags: RollbackFlags): Promise<void> {
-  const { records, degraded } = await readLedger();
+  const { records, degraded } = await readLedger(DEFAULT_LIST_LIMIT);
   const root = resolve(".");
   // With no usable ledger there is still one recoverable point: the project's
   // own last-known-good. Report it, and say why the list is short.
@@ -74,6 +81,9 @@ async function listRollbackPoints(flags: RollbackFlags): Promise<void> {
     console.log(
       `  ${record.appliedAt}  ${record.transactionId}  [${record.roots.join("+")}]  ${record.surfaces.join(", ")}`,
     );
+  }
+  if (records.length === DEFAULT_LIST_LIMIT) {
+    console.log(`  … showing the most recent ${DEFAULT_LIST_LIMIT}.`);
   }
   if (fallback) console.log(`  (project last-known-good) ${fallback}`);
 }
