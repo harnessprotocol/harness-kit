@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use super::fs_scope::is_home_or_ancestor;
+
 // ── Path helpers ───────────────────────────────────────────────
 
 /// Expand a leading `~/` to the user's home directory.
@@ -51,14 +53,6 @@ fn resolve_project_root(project_dir: &str) -> Result<PathBuf, String> {
     }
 
     Ok(canonical_root)
-}
-
-/// True when `root` is the home directory itself or an ancestor of it.
-/// Split out from `resolve_project_root` so it is testable without reading
-/// the ambient `HOME` — several tests in this crate mutate that global while
-/// the suite runs in parallel.
-fn is_home_or_ancestor(root: &Path, home: &Path) -> bool {
-    home.starts_with(root)
 }
 
 /// Validate that `relative` is safely within `project_dir`.
@@ -362,30 +356,8 @@ mod tests {
     // set_var("HOME", ...) on the shared process env, and cargo runs tests
     // in parallel, so anything reading dirs::home_dir() here is racy.
 
-    #[test]
-    fn treats_the_home_directory_itself_as_out_of_bounds() {
-        let home = Path::new("/Users/example");
-        assert!(is_home_or_ancestor(home, home));
-    }
-
-    #[test]
-    fn treats_ancestors_of_home_as_out_of_bounds() {
-        let home = Path::new("/Users/example");
-        assert!(is_home_or_ancestor(Path::new("/"), home));
-        assert!(is_home_or_ancestor(Path::new("/Users"), home));
-    }
-
-    #[test]
-    fn allows_a_directory_below_home() {
-        let home = Path::new("/Users/example");
-        assert!(!is_home_or_ancestor(Path::new("/Users/example/repos/app"), home));
-    }
-
-    #[test]
-    fn allows_a_directory_outside_home() {
-        let home = Path::new("/Users/example");
-        assert!(!is_home_or_ancestor(Path::new("/opt/src"), home));
-    }
+    // The home/ancestor predicate itself is covered in fs_scope.rs; these
+    // tests pin that the *sync bridge* actually consults it.
 
     #[test]
     fn rejects_an_ancestor_of_the_home_directory() {

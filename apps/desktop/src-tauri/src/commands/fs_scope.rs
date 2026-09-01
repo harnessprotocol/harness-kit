@@ -18,7 +18,7 @@ fn expand_tilde(path: &str) -> String {
 /// is the home directory or an ancestor of it. Both paths must already be
 /// canonicalized. Taking `home` as a parameter keeps this testable without
 /// touching the process-global `HOME`.
-fn is_home_or_ancestor(candidate: &Path, home: &Path) -> bool {
+pub(crate) fn is_home_or_ancestor(candidate: &Path, home: &Path) -> bool {
     home.starts_with(candidate)
 }
 
