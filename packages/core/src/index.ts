@@ -268,6 +268,8 @@ export type { CodexMcpValue, CodexMcpReadResult, CodexMcpWrite } from "./codecs/
 export { writeCodexMcp } from "./codecs/toml-codex.js";
 export { planStoreWrite } from "./write/write-store.js";
 export { planCellAction } from "./write/plan-cell-action.js";
+export { applyCellAction, CellActionError } from "./write/apply-cell-action.js";
+export type { ApplyCellActionOptions, CellActionErrorCode } from "./write/apply-cell-action.js";
 export type { CellActionRequest, CellActionPlan } from "./write/plan-cell-action.js";
 export type { StoreEdit, StoreWritePlan, PlannedFileChange } from "./write/write-store.js";
 export { readCodexMcp } from "./codecs/toml-codex.js";

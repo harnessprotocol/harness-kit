@@ -3,6 +3,8 @@ import type { ObserveOptions } from "../observe/observe-surface.js";
 import { readStore } from "../observe/read-store.js";
 import type { StoreEntry } from "../observe/read-store.js";
 import type { HarnessResourceKind } from "../portability/types.js";
+import { buildLossReport } from "../portability/capabilities.js";
+import type { HarnessResource, LossReport } from "../portability/types.js";
 import { looksLikeSecret } from "../portability/secrets.js";
 import { getSurface } from "../surfaces/registry.js";
 import type { ConfigStore, StoreFormatId, SurfaceId, SurfaceScope } from "../surfaces/types.js";
@@ -42,12 +44,64 @@ export interface CellActionPlan {
   noop: boolean;
   /** True when the copied value contains a secret-looking literal (AC-21). */
   carriesSecret: boolean;
+  /**
+   * What the target cannot fully express, per the capability matrix, or null
+   * when the copy is lossless (AC-34). Present even on an unsupported plan —
+   * the reason a cell cannot be written is exactly what the user needs shown.
+   */
+  loss: LossReport | null;
+  /**
+   * True only when some loss is genuine — the target cannot express the
+   * resource at all. A "translated" loss is informational: the resource IS
+   * expressed, just mapped into the surface's native shape, which is what
+   * the writer does anyway. Gating on translation would demand confirmation
+   * for nearly every copy and train people to click through the one prompt
+   * that matters.
+   */
+  requiresConfirmation: boolean;
   source?: { file: string; formatId: StoreFormatId };
   target?: { file: string; formatId: StoreFormatId };
 }
 
-function refuse(reason: string): CellActionPlan {
-  return { supported: false, reason, changes: [], noop: false, carriesSecret: false };
+function refuse(reason: string, loss: LossReport | null = null): CellActionPlan {
+  return {
+    supported: false,
+    reason,
+    changes: [],
+    noop: false,
+    carriesSecret: false,
+    loss,
+    requiresConfirmation: false,
+  };
+}
+
+/** Whether a report contains loss beyond mere translation into native shape. */
+function hasGenuineLoss(loss: LossReport | null): boolean {
+  return (loss?.losses ?? []).some((item) => item.capability !== "translated");
+}
+
+/**
+ * Ask the capability matrix what the target loses. The matrix speaks
+ * HarnessResource, so the cell request is adapted to one — "user" scope is
+ * the portability layer's "personal".
+ */
+function lossFor(
+  request: CellActionRequest,
+  entry: StoreEntry,
+  sourceFile: string,
+): LossReport | null {
+  const scope = request.scope === "user" ? "personal" : "project";
+  const resource: HarnessResource = {
+    identity: { kind: request.kind, source: sourceFile, name: entry.name },
+    alias: entry.name,
+    scope,
+    value: entry.value,
+    provenance: { adapter: request.from, file: sourceFile, scope },
+  };
+  // "apply" is the lifecycle operation a cell action performs — it writes a
+  // resource into a surface's native store.
+  const report = buildLossReport(request.to, [resource], "apply");
+  return report.losses.length > 0 ? report : null;
 }
 
 /** Resolve a store's absolute path for this platform and scope. */
@@ -111,6 +165,7 @@ export async function planCellAction(
       `'${request.name}' (${request.kind}) is absent on ${request.from} — nothing to copy.`,
     );
   }
+  const loss = lossFor(request, found.entry, found.path);
 
   const targetStore = getSurface(request.to).stores.find(
     (store) => store.kind === request.kind && store.scope === request.scope,
@@ -118,11 +173,12 @@ export async function planCellAction(
   if (!targetStore) {
     return refuse(
       `${request.to} has no ${request.scope}-scope store for '${request.kind}' — use the agent prompt for this cell.`,
+      loss,
     );
   }
   const targetPath = storePath(fs, targetStore, opts);
   if (targetPath === null) {
-    return refuse(`${request.to}'s ${request.scope} store needs a project context.`);
+    return refuse(`${request.to}'s ${request.scope} store needs a project context.`, loss);
   }
 
   const written = await planStoreWrite(fs, targetStore, targetPath, {
@@ -134,7 +190,7 @@ export async function planCellAction(
   const source = { file: found.path, formatId: found.entry.provenance.formatId };
   const target = { file: targetPath, formatId: targetStore.formatId };
   if (!written.supported) {
-    return { ...refuse(written.reason), source, target };
+    return { ...refuse(written.reason, loss), source, target };
   }
 
   // A change whose after equals its before is not a change.
@@ -144,6 +200,8 @@ export async function planCellAction(
     changes,
     noop: changes.length === 0,
     carriesSecret: containsSecret(found.entry.value),
+    loss,
+    requiresConfirmation: hasGenuineLoss(loss),
     source,
     target,
   };
