@@ -1,6 +1,5 @@
 import type { FsProvider } from "../fs-provider.js";
-import type { DetectedPlatform, TargetPlatform } from "../types.js";
-import { TARGETS } from "../compile/targets.js";
+import type { DetectedPlatform, SurfaceId } from "../types.js";
 
 interface DetectionPaths {
   paths: string[];
@@ -15,15 +14,19 @@ interface DetectionPaths {
 // needsConfirmation instead of a silent miss.
 const AGENTS_MD = "AGENTS.md";
 
-const DETECTION_PATHS: Partial<Record<TargetPlatform, DetectionPaths>> = {
+const DETECTION_PATHS: Partial<Record<SurfaceId, DetectionPaths>> = {
   "claude-code": { paths: ["CLAUDE.md", ".claude", ".mcp.json"], ambiguous: [] },
   "cursor":      { paths: [".cursor", ".cursor/rules", ".cursor/mcp.json", ".cursor/skills"], ambiguous: [AGENTS_MD] },
-  "copilot":     { paths: [".github/copilot-instructions.md", ".vscode/mcp.json", ".github/skills"], ambiguous: [".github", AGENTS_MD] },
+  "copilot-vscode": { paths: [".github/copilot-instructions.md", ".vscode/mcp.json", ".github/skills"], ambiguous: [".github", AGENTS_MD] },
   "codex":       { paths: [".codex"], ambiguous: [AGENTS_MD] },
   "opencode":    { paths: ["opencode.json", ".opencode"], ambiguous: [AGENTS_MD] },
   "windsurf":    { paths: [".windsurf"], ambiguous: [AGENTS_MD] },
   "gemini":      { paths: [".gemini"], ambiguous: [AGENTS_MD] },
   "junie":       { paths: [".junie"], ambiguous: [AGENTS_MD] },
+  // pi is detectable but not compilable (it's absent from COMPILE_SURFACE_IDS).
+  // `.pi/` is pi's own config directory — no other tool claims it — so it's a
+  // confident indicator, not an ambiguous one.
+  "pi":          { paths: [".pi"], ambiguous: [] },
 };
 
 export async function detectPlatforms(
@@ -32,10 +35,13 @@ export async function detectPlatforms(
   const cwd = fs.cwd();
   const results: DetectedPlatform[] = [];
 
-  for (const target of TARGETS) {
-    const detection = DETECTION_PATHS[target.id];
-    if (!detection) continue;
+  // Iterate the probe map itself rather than the compile-target list: the
+  // detectable domain is a superset of the compilable one (pi is detectable
+  // but has no compile target). Insertion order above matches TARGETS order
+  // for the compilable surfaces, so existing result ordering is unchanged.
+  const entries = Object.entries(DETECTION_PATHS) as [SurfaceId, DetectionPaths][];
 
+  for (const [platform, detection] of entries) {
     const ambiguousSet = new Set(detection.ambiguous);
     const allPaths = [...detection.paths, ...detection.ambiguous];
 
@@ -53,7 +59,7 @@ export async function detectPlatforms(
 
     if (allFound.length > 0) {
       results.push({
-        platform: target.id,
+        platform,
         indicators: allFound,
         needsConfirmation: foundIndicators.length === 0 && foundAmbiguous.length > 0,
       });

@@ -46,7 +46,7 @@ describe("compileInstructions", () => {
   it("creates Copilot files with applyTo frontmatter", async () => {
     const fs = new MockFsProvider();
     const config = makeConfig();
-    const { files } = await compileInstructions(config, ["copilot"], fs);
+    const { files } = await compileInstructions(config, ["copilot-vscode"], fs);
 
     const ops = files.find((f) => f.slot === "operational");
     expect(ops).toBeDefined();
@@ -63,7 +63,7 @@ describe("compileInstructions", () => {
         "import-mode": "merge",
       },
     });
-    const { files } = await compileInstructions(config, ["cursor", "copilot"], fs);
+    const { files } = await compileInstructions(config, ["cursor", "copilot-vscode"], fs);
 
     const identity = files.filter((f) => f.slot === "identity");
     expect(identity).toHaveLength(0);
@@ -174,7 +174,7 @@ describe("compileInstructions", () => {
     await expect(
       compileInstructions(
         config,
-        ["claude-code", "cursor", "copilot", "codex", "opencode", "windsurf", "gemini", "junie"],
+        ["claude-code", "cursor", "copilot-vscode", "codex", "opencode", "windsurf", "gemini", "junie"],
         fs,
       ),
     ).resolves.not.toThrow();

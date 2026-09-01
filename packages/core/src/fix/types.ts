@@ -1,5 +1,5 @@
 import type { AdapterId } from "../adapters/adapter.js";
-import type { TargetPlatform } from "../types.js";
+import type { SurfaceId } from "../types.js";
 
 // ── Drift classification ───────────────────────────────────────
 //
@@ -27,7 +27,7 @@ export interface DriftItem {
   /** The adapter that owns this file/slot. */
   adapter: AdapterId;
   /** The legacy per-tool target this item belongs to (for multi-target adapters like agents-md). */
-  target: TargetPlatform;
+  target: SurfaceId;
   /** harness.yaml `metadata.name` — the marker block's `name` component. */
   harnessName: string;
   /**

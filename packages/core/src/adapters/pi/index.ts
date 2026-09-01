@@ -1,4 +1,4 @@
-import type { FileAction, HarnessConfig, TargetPlatform } from "../../types.js";
+import type { FileAction, HarnessConfig, SurfaceId } from "../../types.js";
 import { appendMarkerBlock, findMarkerBlock, replaceMarkerBlock } from "../../compile/markers.js";
 import type { AdapterContext, AdapterCapabilities, FilePlan, HarnessAdapter, DetectResult, DriftReport } from "../adapter.js";
 import type { ImportedFragment } from "../../import/types.js";
@@ -54,24 +54,15 @@ import { toDriftReport } from "../../fix/detect.js";
  *     surface does exist).
  *
  * Note on `platform`/`target` typing: `FileAction.platform`,
- * `DetectedPlatform.platform`, and `DriftItem.target` are all typed against
- * the legacy 8-member `TargetPlatform` union (claude-code/cursor/copilot/
- * codex/opencode/windsurf/gemini/junie) — pi was never a member of that
- * union (unlike opencode, which already existed as a legacy TargetPlatform).
- * Widening `TargetPlatform` to include "pi" would force exhaustive
- * `Record<TargetPlatform, ...>` maps in apps/desktop (e.g.
- * capability-catalog.ts's parity matrix) to add a "pi" entry too — out of
- * bounds per this WP ("never touch apps/*"). This adapter therefore
- * constructs its own FileAction/DetectResult/DriftItem values with `"pi"` as
- * the platform/target tag via a narrow, contained cast (see PI_PLATFORM
- * below) — every consumer of TargetPlatform outside this adapter (report.ts's
- * PLATFORM_ORDER.indexOf lookup, compile.ts's dispatch) already treats
- * unrecognized platform values leniently (indexOf returns -1, not a throw),
- * and this adapter's own exportConfig/detect/diff are never routed through
- * compile.ts's legacy groupTargetsByAdapter dispatch — they're invoked
- * standalone via getAdapter("pi"), exactly like the new opencode adapter.
+ * `DetectedPlatform.platform`, and `DriftItem.target` are typed against
+ * `SurfaceId`, of which "pi" is a member — but pi still has no compile-target
+ * slot (no TARGETS entry, no SKILL_TARGET_DIR/slot-mapping entries), so this
+ * adapter constructs its own FileAction/DetectResult/DriftItem values with
+ * `"pi"` as the platform/target tag. Its exportConfig/detect/diff are never
+ * routed through compile.ts's groupSurfacesByAdapter dispatch — they're
+ * invoked standalone via getAdapter("pi"), exactly like the opencode adapter.
  */
-const PI_PLATFORM = "pi" as unknown as TargetPlatform;
+const PI_PLATFORM: SurfaceId = "pi";
 
 const capabilities: AdapterCapabilities = {
   export: {
@@ -101,11 +92,11 @@ const APPEND_SYSTEM_PATH = `${PI_CONFIG_DIR}/APPEND_SYSTEM.md`;
 const SKILLS_DIR = `${PI_CONFIG_DIR}/skills`;
 
 /**
- * pi has no harness-kit-writable TargetPlatform slot in compile/targets.ts
- * (unlike opencode, pi was never a legacy TargetPlatform at all — it's
+ * pi has no harness-kit-writable compile-target slot in compile/targets.ts
+ * (unlike opencode, pi never had a legacy compile-target slot at all — it's
  * brand new this WP) — so compileSkills()/compileInstructions()'s per-target
- * dispatch tables don't know about it. Rather than adding "pi" as an eighth
- * legacy TargetPlatform (out of scope / would ripple through compile.ts,
+ * dispatch tables don't know about it. Rather than adding a "pi" compile
+ * target (out of scope / would ripple through compile.ts,
  * targets.ts, detect-platforms.ts, apps/desktop's exhaustive parity catalog,
  * and every golden fixture), this adapter writes its own file actions
  * directly for the two domains it actually supports — instructions (single
@@ -201,8 +192,8 @@ async function exportConfig(config: HarnessConfig, ctx: AdapterContext): Promise
 /**
  * Reuses compileSkills()'s plugin → SKILL.md resolution logic (manifest-first
  * resolution) but targets .pi/skills directly, since pi has no entry in
- * compile/skills.ts's SKILL_TARGET_DIR map (that map is keyed by the legacy
- * TargetPlatform union, which pi isn't a member of). Delegates to the same
+ * compile/skills.ts's SKILL_TARGET_DIR map (partial over SurfaceId, with no
+ * pi entry). Delegates to the same
  * shared discovery helpers compileSkills() uses (findSkillFiles/
  * computeSourceDir) rather than reimplementing resolution.
  */
@@ -338,10 +329,10 @@ async function importConfig(ctx: AdapterContext): Promise<ImportedFragment[]> {
 /**
  * Drift detection (WP-2.3): .pi/APPEND_SYSTEM.md's operational marker block
  * vs compiled output. detectInstructionDrift() is driven by
- * getSlotMappings(), which is keyed by the legacy TargetPlatform union pi
- * isn't part of — so this adapter classifies its own single file directly
- * via the same underlying primitive (classifyInstructionFile) rather than
- * detectInstructionDrift's per-TargetPlatform loop.
+ * getSlotMappings(), whose per-surface file maps have no pi entries — so
+ * this adapter classifies its own single file directly via the same
+ * underlying primitive (classifyInstructionFile) rather than
+ * detectInstructionDrift's per-surface loop.
  */
 async function diff(config: HarnessConfig, ctx: AdapterContext): Promise<DriftReport> {
   const instructions = config.instructions;

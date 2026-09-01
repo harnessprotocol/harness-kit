@@ -10,11 +10,52 @@ export interface SecretSanitizationResult {
   findings: SecretSanitizationFinding[];
 }
 
-const SENSITIVE_KEY = /(?:authorization|token|api[-_]?key|access[-_]?key|client[-_]?secret|password|passwd|private[-_]?key|secret)/i;
+// Substring patterns for compound names (api_key, apiKey, client-secret, …)
+// plus token-boundary patterns for short bare words (key, pat, auth,
+// credential) that would over-match as substrings (KEYSPACE, path, author).
+// The token boundary is "start/end or a non-alphanumeric" — `\b` treats `_`
+// as a word character, so it would miss MY_KEY.
+const SENSITIVE_KEY = /(?:authorization|token|api[-_]?key|access[-_]?key|client[-_]?secret|password|passwd|private[-_]?key|secret|(?:^|[^a-z0-9])(?:key|pat|auth|credentials?)(?:[^a-z0-9]|$))/i;
 const REFERENCE = /^(?:\$[A-Za-z_][A-Za-z0-9_]*|\$\{[A-Za-z_][A-Za-z0-9_]*\}|env:[A-Za-z_][A-Za-z0-9_]*|secret:\/\/[^\s]+)$/;
-const CREDENTIAL_VALUE = /(?:-----BEGIN [A-Z ]*PRIVATE KEY-----|\bBearer\s+[A-Za-z0-9._~+/=-]{8,}|\bgh[pousr]_[A-Za-z0-9]{20,}|\bsk-[A-Za-z0-9_-]{16,}|\bAKIA[A-Z0-9]{16}\b|:\/\/[^\s/:]+:[^\s/@]+@)/;
+const CREDENTIAL_VALUE = /(?:-----BEGIN [A-Z ]*PRIVATE KEY-----|\bBearer\s+[A-Za-z0-9._~+/=-]{8,}|\bgh[pousr]_[A-Za-z0-9]{20,}|\bsk-[A-Za-z0-9_-]{16,}|\bAKIA[A-Z0-9]{16}\b|:\/\/[^\s/:]+:[^\s/@]+@|\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b|\bxox[baprs]-[A-Za-z0-9-]{10,})/;
 const SENSITIVE_FLAG = /^--?(?:authorization|token|auth[-_]?token|api[-_]?key|access[-_]?token|access[-_]?key|client[-_]?secret|password|passwd|private[-_]?key|secret)$/i;
 const INLINE_SENSITIVE_FLAG = /^(--?(?:authorization|token|auth[-_]?token|api[-_]?key|access[-_]?token|access[-_]?key|client[-_]?secret|password|passwd|private[-_]?key|secret)=)(.+)$/i;
+
+/**
+ * Value-level secret heuristic, shared with observe/normalize.ts: does this
+ * key/value pair look like credential material? Reuses the same key-name and
+ * value-shape patterns sanitizeCapturedSecrets applies during capture. A
+ * value that is already an env/secret REFERENCE contains no secret material
+ * and its identity is semantic, so it is never treated as a secret.
+ */
+export function looksLikeSecret(key: string, value: string): boolean {
+  if (value.length === 0 || REFERENCE.test(value)) return false;
+  return SENSITIVE_KEY.test(key) || CREDENTIAL_VALUE.test(value);
+}
+
+/**
+ * Sanitize a command's argument list against the same patterns
+ * sanitizeCapturedSecrets applies to arrays, but with a caller-chosen
+ * placeholder instead of env-var references (observe/normalize.ts uses the
+ * fixed "<secret>" placeholder so secret rotations never change a digest):
+ * - inline sensitive flags (`--api-key=VALUE`) keep the flag name, replace
+ *   the value — a flag RENAME still diffs;
+ * - a bare sensitive flag (`--token`) placeholders the NEXT element;
+ * - an element matching a credential value shape is placeholdered.
+ * Order is preserved; values that are already REFERENCEs stay verbatim.
+ * Additive helper — sanitizeCapturedSecrets behavior is unchanged.
+ */
+export function sanitizeCommandArgs(args: string[], placeholder: string): string[] {
+  return args.map((arg, index) => {
+    const inline = arg.match(INLINE_SENSITIVE_FLAG);
+    if (inline && !REFERENCE.test(inline[2])) return `${inline[1]}${placeholder}`;
+    const followsSensitiveFlag = index > 0 && SENSITIVE_FLAG.test(args[index - 1]);
+    if ((followsSensitiveFlag || CREDENTIAL_VALUE.test(arg)) && arg.length > 0 && !REFERENCE.test(arg)) {
+      return placeholder;
+    }
+    return arg;
+  });
+}
 
 function variableName(path: string[]): string {
   const normalized = path

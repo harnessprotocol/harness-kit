@@ -4,7 +4,7 @@ import {
   getAdapter,
   getAllAdapters,
   adapterIdForTarget,
-  groupTargetsByAdapter,
+  groupSurfacesByAdapter,
 } from "../src/adapters/registry.js";
 import { claudeCodeAdapter } from "../src/adapters/claude-code/index.js";
 import { cursorAdapter } from "../src/adapters/cursor/index.js";
@@ -42,10 +42,10 @@ describe("adapter registry", () => {
     expect(getAllAdapters()).toBe(ADAPTERS);
   });
 
-  it("maps every legacy TargetPlatform to an adapter", () => {
+  it("maps every compile-target surface to an adapter", () => {
     expect(adapterIdForTarget("claude-code")).toBe("claude-code");
     expect(adapterIdForTarget("cursor")).toBe("cursor");
-    expect(adapterIdForTarget("copilot")).toBe("copilot");
+    expect(adapterIdForTarget("copilot-vscode")).toBe("copilot");
     expect(adapterIdForTarget("codex")).toBe("agents-md");
     expect(adapterIdForTarget("opencode")).toBe("opencode");
     expect(adapterIdForTarget("windsurf")).toBe("agents-md");
@@ -54,7 +54,7 @@ describe("adapter registry", () => {
   });
 
   it("groups a mixed target list by adapter, preserving first-seen order", () => {
-    const groups = groupTargetsByAdapter(["cursor", "codex", "claude-code", "gemini"]);
+    const groups = groupSurfacesByAdapter(["cursor", "codex", "claude-code", "gemini"]);
     expect(groups.map((g) => g.adapter.id)).toEqual(["cursor", "agents-md", "claude-code"]);
     expect(groups.find((g) => g.adapter.id === "agents-md")!.legacyTargets).toEqual([
       "codex",

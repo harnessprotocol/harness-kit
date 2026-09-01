@@ -1,4 +1,4 @@
-import type { FileAction, HarnessConfig, TargetPlatform } from "../../types.js";
+import type { FileAction, HarnessConfig, SurfaceId } from "../../types.js";
 import { compileInstructions } from "../../compile/instructions.js";
 import { compileMcpServers } from "../../compile/mcp-servers.js";
 import { compileSkills } from "../../compile/skills.js";
@@ -19,12 +19,12 @@ import { detectInstructionDrift, toDriftReport } from "../../fix/detect.js";
  * ../../compile/targets.ts (TARGETS) for the per-tool variant map this
  * adapter delegates to unchanged.
  *
- * `AGENTS_MD_TARGETS` (all legacy `TargetPlatform`s whose instructionFile is
+ * `AGENTS_MD_TARGETS` (all legacy `SurfaceId`s whose instructionFile is
  * "AGENTS.md") is the single source of truth for which legacy targets this
  * adapter covers — kept derived rather than hardcoded so it can't drift from
  * targets.ts.
  */
-const LEGACY_TARGETS: TargetPlatform[] = AGENTS_MD_TARGETS.filter((target) => target !== "opencode");
+const LEGACY_TARGETS: SurfaceId[] = AGENTS_MD_TARGETS.filter((target) => target !== "opencode");
 
 // Declared honestly from exportConfig below: instructions (AGENTS.md,
 // operational slot only — behavioral/identity are not supported by any tool

@@ -1,5 +1,6 @@
 import { Button, Card, StatusChip, type StatusChipVariant } from "@harness-kit/ui";
-import type { CompileResult, FileAction, TargetPlatform } from "@harness-kit/core";
+import type { CompileResult, FileAction, SurfaceId } from "@harness-kit/core";
+import { surfaceLabel } from "../../../lib/surface-labels";
 
 interface SyncPreviewProps {
   result: CompileResult;
@@ -14,17 +15,6 @@ const ACTION_VARIANT: Record<string, StatusChipVariant> = {
   "needs-confirmation": "warning",
 };
 
-const PLATFORM_LABELS: Record<TargetPlatform, string> = {
-  "claude-code": "Claude Code",
-  cursor: "Cursor",
-  copilot: "Copilot",
-  codex: "Codex",
-  opencode: "OpenCode",
-  windsurf: "Windsurf",
-  gemini: "Gemini CLI",
-  junie: "Junie",
-};
-
 function ActionBadge({ action }: { action: string }) {
   return (
     <StatusChip variant={ACTION_VARIANT[action] ?? "subtle"} hideDot>
@@ -33,7 +23,7 @@ function ActionBadge({ action }: { action: string }) {
   );
 }
 
-function PlatformBadge({ platform }: { platform: TargetPlatform }) {
+function PlatformBadge({ platform }: { platform: SurfaceId }) {
   return (
     <span style={{
       display: "inline-flex",
@@ -45,7 +35,7 @@ function PlatformBadge({ platform }: { platform: TargetPlatform }) {
       background: "var(--bg-elevated)",
       color: "var(--fg-subtle)",
     }}>
-      {PLATFORM_LABELS[platform]}
+      {surfaceLabel(platform)}
     </span>
   );
 }
@@ -81,7 +71,7 @@ export default function SyncPreview({ result, applying, onApply }: SyncPreviewPr
         <span>
           <strong style={{ color: "var(--fg-base)" }}>{result.harnessName}</strong>
         </span>
-        <span>{result.targets.map((t) => PLATFORM_LABELS[t]).join(", ")}</span>
+        <span>{result.targets.map((t) => surfaceLabel(t)).join(", ")}</span>
         <span>
           <strong style={{ color: "var(--fg-base)" }}>{fileCount}</strong> file{fileCount !== 1 ? "s" : ""}
         </span>

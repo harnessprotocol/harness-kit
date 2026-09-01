@@ -1,0 +1,15 @@
+{
+  "numStartups": 12,
+  "theme": "dark",
+  "mcpServers": {
+    "github": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "ghcr.io/github/github-mcp-server"],
+      "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "FAKE-github-token-for-fixture" }
+    },
+    "docs": {
+      "type": "http",
+      "url": "https://docs.example.com/mcp"
+    }
+  }
+}

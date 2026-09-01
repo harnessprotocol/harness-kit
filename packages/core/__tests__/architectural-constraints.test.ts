@@ -133,7 +133,7 @@ describe("compiling architectural-constraints", () => {
         "instructions:\n  operational: |\n    ## Commands\n" +
         CONSTRAINTS +
         "permissions:\n  tools:\n    allow: [\"Bash(pnpm build)\"]\n",
-      ["copilot"],
+      ["copilot-vscode"],
       fs,
       { dryRun: true },
     );
@@ -159,7 +159,7 @@ describe("compiling architectural-constraints", () => {
   // five of eight targets, and constraints reaching three of eight is worse than none.
   it("reaches every target platform", async () => {
     const fs = new MockFsProvider();
-    const targets = ["claude-code", "cursor", "copilot", "codex"] as const;
+    const targets = ["claude-code", "cursor", "copilot-vscode", "codex"] as const;
     const result = await compile(HEADER + CONSTRAINTS, [...targets], fs, {
       dryRun: true,
     });

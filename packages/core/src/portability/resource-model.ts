@@ -1,4 +1,6 @@
 import { computeFileHash } from "../compile/check.js";
+import { isProtocolV2 } from "../utils/legacy.js";
+import { CURRENT_PROTOCOL_VERSION } from "../utils/protocol-version.js";
 import type {
   EnvDeclaration,
   HarnessConfig,
@@ -6,7 +8,7 @@ import type {
   HarnessPlugin,
   HarnessSkillRef,
   McpServer,
-  TargetPlatform,
+  SurfaceId,
 } from "../types.js";
 import type {
   HarnessResource,
@@ -65,7 +67,7 @@ function makeResource<T>(
   scope: HarnessScope,
   profileSource: string,
   revision?: { requestedVersion?: string; digest?: ReleaseDigest },
-  nativeTarget?: TargetPlatform,
+  nativeTarget?: SurfaceId,
 ): HarnessResource<T> {
   return {
     identity: { kind, source, name },
@@ -194,7 +196,7 @@ export function profileToResources(profile: LayeredHarnessProfile): HarnessResou
         scope,
         profileSource,
         undefined,
-        target as TargetPlatform,
+        target as SurfaceId,
       ),
     );
   }
@@ -214,7 +216,7 @@ export function resourcesToProfile(
 ): HarnessConfig {
   const config: HarnessConfig = {
     $schema: "https://harnessprotocol.io/schema/v2/harness.schema.json",
-    version: "2",
+    version: CURRENT_PROTOCOL_VERSION,
     kind: "profile",
     metadata: options.metadata,
     scope: options.scope ?? "project",
@@ -224,7 +226,7 @@ export function resourcesToProfile(
   const skills: HarnessSkillRef[] = [];
   const servers: Record<string, McpServer> = {};
   const env: EnvDeclaration[] = [];
-  const vendor: Partial<Record<TargetPlatform, Record<string, unknown>>> = {};
+  const vendor: Partial<Record<SurfaceId, Record<string, unknown>>> = {};
   const parents: Array<{ source: string; version?: string }> = [];
 
   for (const resource of resources) {
@@ -283,8 +285,9 @@ export interface MigrationPreview {
   changes: string[];
 }
 
+/** Preview a v1 → v2 migration. A config already in the v2 family ("2" or "2.1") is returned by reference, unchanged. */
 export function migrateHarnessV1ToV2(config: HarnessConfig): MigrationPreview {
-  if (config.version === "2") return { config, changes: [] };
+  if (isProtocolV2(config.version)) return { config, changes: [] };
   return {
     config: {
       ...config,

@@ -1,6 +1,6 @@
 {
   "identifier": "default",
-  "description": "Default capability — grants core API, read access to ~/.claude/, and shell spawn for comparator",
+  "description": "Default capability — grants core API, read access to harness config roots under $HOME (read-ONLY for the Machine-observation paths: .claude.json, the exact Claude Desktop / VS Code User config files the surface registry declares, .copilot, .agents), and shell spawn for comparator",
   "windows": ["main"],
   "permissions": [
     "core:default",
@@ -41,6 +41,51 @@
         { "path": "$HOME/.pi/**" },
         { "path": "$HOME/.harness-kit" },
         { "path": "$HOME/.harness-kit/**" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-read-text-file",
+      "allow": [
+        { "path": "$HOME/.claude.json" },
+        { "path": "$HOME/Library/Application Support/Claude/claude_desktop_config.json" },
+        { "path": "$HOME/AppData/Roaming/Claude/claude_desktop_config.json" },
+        { "path": "$HOME/Library/Application Support/Code/User/mcp.json" },
+        { "path": "$HOME/.config/Code/User/mcp.json" },
+        { "path": "$HOME/AppData/Roaming/Code/User/mcp.json" },
+        { "path": "$HOME/.copilot" },
+        { "path": "$HOME/.copilot/**" },
+        { "path": "$HOME/.agents" },
+        { "path": "$HOME/.agents/**" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-read-dir",
+      "allow": [
+        { "path": "$HOME/.claude.json" },
+        { "path": "$HOME/Library/Application Support/Claude/claude_desktop_config.json" },
+        { "path": "$HOME/AppData/Roaming/Claude/claude_desktop_config.json" },
+        { "path": "$HOME/Library/Application Support/Code/User/mcp.json" },
+        { "path": "$HOME/.config/Code/User/mcp.json" },
+        { "path": "$HOME/AppData/Roaming/Code/User/mcp.json" },
+        { "path": "$HOME/.copilot" },
+        { "path": "$HOME/.copilot/**" },
+        { "path": "$HOME/.agents" },
+        { "path": "$HOME/.agents/**" }
+      ]
+    },
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [
+        { "path": "$HOME/.claude.json" },
+        { "path": "$HOME/Library/Application Support/Claude/claude_desktop_config.json" },
+        { "path": "$HOME/AppData/Roaming/Claude/claude_desktop_config.json" },
+        { "path": "$HOME/Library/Application Support/Code/User/mcp.json" },
+        { "path": "$HOME/.config/Code/User/mcp.json" },
+        { "path": "$HOME/AppData/Roaming/Code/User/mcp.json" },
+        { "path": "$HOME/.copilot" },
+        { "path": "$HOME/.copilot/**" },
+        { "path": "$HOME/.agents" },
+        { "path": "$HOME/.agents/**" }
       ]
     },
     "dialog:default",
@@ -153,7 +198,6 @@
     "allow-get-harness-health",
     "allow-detect-harnesses",
     "allow-grant-project-scope",
-    "allow-probe-harness-capabilities",
     "allow-acknowledge-drift-item",
     "allow-unacknowledge-drift-item",
     "allow-get-acknowledged-drift-items",

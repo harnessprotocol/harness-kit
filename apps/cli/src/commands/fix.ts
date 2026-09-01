@@ -9,10 +9,11 @@ import {
   buildFixPlan,
   applyFix,
   getCheckableTargets,
+  isProtocolV2,
 } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
-import type { FixOperation, TargetPlatform } from "@harness-kit/core";
-import { buildReconciliationContext, summarizePlan } from "./portability-common.js";
+import type { FixOperation, SurfaceId } from "@harness-kit/core";
+import { buildReconciliationContext, legacyTargetHint, summarizePlan } from "./portability-common.js";
 
 interface FixFlags {
   target?: string;
@@ -23,12 +24,12 @@ interface FixFlags {
 
 const ALL_TARGETS = getCheckableTargets();
 
-function parseTargets(targetStr: string): TargetPlatform[] {
+function parseTargets(targetStr: string): SurfaceId[] {
   if (targetStr === "all") return ALL_TARGETS;
   return targetStr.split(",").map((t) => {
-    const trimmed = t.trim() as TargetPlatform;
+    const trimmed = t.trim() as SurfaceId;
     if (!ALL_TARGETS.includes(trimmed)) {
-      console.error(`Unknown target: ${trimmed}. Valid targets: ${ALL_TARGETS.join(", ")}, all`);
+      console.error(`Unknown target: ${trimmed}${legacyTargetHint(trimmed)}. Valid targets: ${ALL_TARGETS.join(", ")}, all`);
       process.exit(1);
     }
     return trimmed;
@@ -84,7 +85,7 @@ export async function fixCommand(
   const targets = flags.target ? parseTargets(flags.target) : ALL_TARGETS;
   const adapterCtx = { fs, projectRoot: fs.cwd(), homeRoot: await fs.homedir() };
 
-  const reconciliationContext = config.version === "2"
+  const reconciliationContext = isProtocolV2(config.version)
     ? await buildReconciliationContext(resolved, { target: targets.join(",") })
     : undefined;
   if (reconciliationContext?.plan.blocked) {

@@ -1,4 +1,5 @@
-import type { TargetPlatform } from "../types.js";
+import type { CompileSurfaceId, SurfaceId } from "../types.js";
+import { COMPILE_SURFACE_IDS, isCompileSurface } from "../surfaces/types.js";
 import type { AdapterId, HarnessAdapter } from "./adapter.js";
 import { claudeCodeAdapter } from "./claude-code/index.js";
 import { cursorAdapter } from "./cursor/index.js";
@@ -14,7 +15,7 @@ import { AGENTS_MD_TARGETS } from "./target-metadata.js";
  *
  * OpenCode routes through its dedicated adapter so capability declarations
  * and emitted native configuration stay aligned. Pi remains standalone
- * because it is not a legacy TargetPlatform.
+ * because it has no legacy compile-target slot.
  */
 export const ADAPTERS: HarnessAdapter[] = [
   claudeCodeAdapter,
@@ -40,15 +41,16 @@ export function getAllAdapters(): HarnessAdapter[] {
 }
 
 /**
- * Maps every legacy `TargetPlatform` (the existing per-tool compile target
- * id, unchanged by this refactor) to the `AdapterId` that now implements it.
- * Single source of truth for compile.ts's orchestration — derived from
- * targets.ts's AGENTS_MD_TARGETS rather than hardcoded, so it can't drift.
+ * Maps every compile-target surface (the existing per-tool compile target
+ * id) to the `AdapterId` that implements it. Exhaustive over
+ * `CompileSurfaceId`: extending COMPILE_SURFACE_IDS without a mapping here
+ * fails to compile. Single source of truth for compile.ts's orchestration —
+ * checked against targets.ts's AGENTS_MD_TARGETS below, so it can't drift.
  */
-const LEGACY_TARGET_TO_ADAPTER: Record<TargetPlatform, AdapterId> = {
+const LEGACY_TARGET_TO_ADAPTER: Record<CompileSurfaceId, AdapterId> = {
   "claude-code": "claude-code",
   cursor: "cursor",
-  copilot: "copilot",
+  "copilot-vscode": "copilot",
   codex: "agents-md",
   opencode: "opencode",
   windsurf: "agents-md",
@@ -65,20 +67,26 @@ for (const t of AGENTS_MD_TARGETS.filter((target) => target !== "opencode")) {
   }
 }
 
-export function adapterIdForTarget(target: TargetPlatform): AdapterId {
+export function adapterIdForTarget(target: SurfaceId): AdapterId {
+  if (!isCompileSurface(target)) {
+    throw new Error(
+      `No compile adapter is registered for surface '${target}'. Valid targets: ${COMPILE_SURFACE_IDS.join(", ")}`,
+    );
+  }
   return LEGACY_TARGET_TO_ADAPTER[target];
 }
 
 /**
- * Groups a flat list of legacy targets by the adapter that covers them,
- * preserving first-seen order of adapters. Used by compile.ts to dispatch
- * one exportConfig call per adapter, each restricted to its requested subset.
+ * Groups a flat list of compile-target surfaces by the adapter that covers
+ * them, preserving first-seen order of adapters. Used by compile.ts to
+ * dispatch one exportConfig call per adapter, each restricted to its
+ * requested subset.
  */
-export function groupTargetsByAdapter(
-  targets: TargetPlatform[],
-): Array<{ adapter: HarnessAdapter; legacyTargets: TargetPlatform[] }> {
+export function groupSurfacesByAdapter(
+  targets: SurfaceId[],
+): Array<{ adapter: HarnessAdapter; legacyTargets: SurfaceId[] }> {
   const order: AdapterId[] = [];
-  const groups = new Map<AdapterId, TargetPlatform[]>();
+  const groups = new Map<AdapterId, SurfaceId[]>();
 
   for (const target of targets) {
     const adapterId = adapterIdForTarget(target);

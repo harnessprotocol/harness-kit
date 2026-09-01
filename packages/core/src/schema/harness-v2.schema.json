@@ -8,7 +8,7 @@
   "properties": {
     "version": {
       "type": "string",
-      "const": "2"
+      "enum": ["2", "2.1"]
     },
     "scope": {
       "type": "string",
@@ -19,7 +19,7 @@
       "type": "object",
       "description": "Lossless target-native configuration. A block is only applied by its matching adapter.",
       "propertyNames": {
-        "enum": ["claude-code", "cursor", "copilot", "codex", "opencode", "windsurf", "gemini", "junie"]
+        "enum": ["claude-code", "claude-desktop", "cursor", "copilot", "copilot-vscode", "copilot-cli", "codex", "opencode", "pi", "windsurf", "gemini", "junie"]
       },
       "additionalProperties": {
         "type": "object",
@@ -27,5 +27,26 @@
       }
     }
   },
+  "allOf": [
+    {
+      "$comment": "v2.1 re-keys vendor blocks by surface id: the legacy 'copilot' key (kept in the base enum so v2 documents in the wild still validate) is rejected and must be spelled 'copilot-vscode'.",
+      "if": {
+        "properties": {
+          "version": { "const": "2.1" }
+        },
+        "required": ["version"]
+      },
+      "then": {
+        "properties": {
+          "vendor": {
+            "type": "object",
+            "propertyNames": {
+              "not": { "const": "copilot" }
+            }
+          }
+        }
+      }
+    }
+  ],
   "additionalProperties": true
 }

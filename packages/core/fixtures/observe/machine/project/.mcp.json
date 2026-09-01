@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "project-db": {
+      "command": "npx",
+      "args": ["-y", "db-mcp", "--dsn", "postgresql://localhost/proj"]
+    }
+  }
+}

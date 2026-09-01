@@ -2,7 +2,9 @@
   "name": "@harness-kit/core",
   "version": "0.1.0",
   "type": "module",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "publishConfig": {
     "access": "public"
   },
@@ -27,6 +29,7 @@
   "dependencies": {
     "@harness-kit/shared": "workspace:*",
     "@noble/hashes": "^1.8.0",
+    "smol-toml": "^1.8.0",
     "yaml": "^2.9.0"
   },
   "devDependencies": {

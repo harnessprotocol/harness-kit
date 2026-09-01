@@ -1,6 +1,6 @@
 import { parse as parseYaml } from "yaml";
 import type { ValidationError, ValidationResult } from "../types.js";
-import { isLegacyFormat } from "../utils/legacy.js";
+import { isLegacyFormat, isProtocolV2 } from "../utils/legacy.js";
 // Precompiled standalone validator (no `eval`/`new Function`), so the desktop
 // prod CSP can forbid `unsafe-eval`. Regenerate with `pnpm generate:validator`
 // after any change to harness.schema.json — this is a manual step; CI's
@@ -24,8 +24,13 @@ function getFix(schemaPath: string, keyword: string, params: Record<string, unkn
     }
     return `Remove unknown property '${prop}', or check for typos.`;
   }
-  if (keyword === "const" && schemaPath.includes("version")) {
-    return 'version must be the string "1" or "2".';
+  if ((keyword === "const" || keyword === "enum") && schemaPath.includes("version")) {
+    return 'version must be the string "1", "2", or "2.1".';
+  }
+  if (keyword === "propertyNames" && params.propertyName === "copilot") {
+    // Only reachable via the v2.1 conditional — the base vendor enum still
+    // accepts the legacy "copilot" key for version "2" documents.
+    return 'Rename the vendor "copilot" block to "copilot-vscode", or keep version: "2".';
   }
   if (keyword === "required") {
     const missing = params.missingProperty as string;
@@ -41,6 +46,29 @@ function getFix(schemaPath: string, keyword: string, params: Record<string, unkn
     }
   }
   return undefined;
+}
+
+// The v2.1 legacy-key conditional in harness-v2.schema.json emits companion
+// errors alongside the actionable propertyNames error. Drop them structurally:
+// "if" errors carry no information of their own (ajv never emits one without
+// the underlying then/else failure also surfacing), and the inner "not"
+// failure of a propertyNames subschema duplicates the propertyNames error we
+// already report with a friendly message.
+function isV21ConditionalNoise(err: { keyword: string; schemaPath: string }): boolean {
+  if (err.keyword === "if") return true;
+  return err.keyword === "not" && err.schemaPath.endsWith("/propertyNames/not");
+}
+
+function getFriendlyMessage(
+  keyword: string,
+  params: Record<string, unknown>,
+  message: string | undefined,
+): string {
+  if (keyword === "propertyNames" && params.propertyName === "copilot") {
+    // Raw ajv output for the v2.1 conditional is "property name must be valid".
+    return 'vendor key "copilot" is not valid in version "2.1" — this surface id was renamed to "copilot-vscode".';
+  }
+  return message ?? "Unknown validation error";
 }
 
 function formatPath(instancePath: string): string {
@@ -63,7 +91,7 @@ export function validateHarness(config: unknown): ValidationResult {
   const doc = config as Record<string, unknown>;
   const legacy = isLegacyFormat(doc);
 
-  const protocolV2 = doc?.version === "2";
+  const protocolV2 = isProtocolV2(doc?.version);
   let schemaErrors = [] as NonNullable<typeof validate.errors>;
   if (protocolV2) {
     validateV2(config);
@@ -78,9 +106,15 @@ export function validateHarness(config: unknown): ValidationResult {
     schemaErrors = [...(validate.errors ?? [])];
   }
 
-  const errors: ValidationError[] = schemaErrors.map((err) => ({
+  const errors: ValidationError[] = schemaErrors
+    .filter((err) => !isV21ConditionalNoise(err))
+    .map((err) => ({
         path: formatPath(err.instancePath),
-        message: err.message ?? "Unknown validation error",
+        message: getFriendlyMessage(
+          err.keyword,
+          (err.params as Record<string, unknown>) ?? {},
+          err.message,
+        ),
         fix: getFix(
           err.schemaPath,
           err.keyword,

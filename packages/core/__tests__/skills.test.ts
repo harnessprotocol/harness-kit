@@ -101,7 +101,7 @@ describe("compileSkills", () => {
       { name: "explain", source: "siracusa5/harness-kit" },
     ]);
 
-    const { files } = await compileSkills(config, ["cursor", "copilot"], fs);
+    const { files } = await compileSkills(config, ["cursor", "copilot-vscode"], fs);
     expect(files).toHaveLength(2);
     expect(files.map((f) => f.path)).toContain(".cursor/skills/explain/SKILL.md");
     expect(files.map((f) => f.path)).toContain(".github/skills/explain/SKILL.md");

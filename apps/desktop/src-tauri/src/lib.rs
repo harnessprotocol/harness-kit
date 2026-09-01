@@ -187,10 +187,9 @@ pub fn run() {
             commands::harnesses::detect_harnesses,
             // Runtime FS scope grants (used by Fleet/Drift's project scope)
             commands::fs_scope::grant_project_scope,
-            // Drift (capability probing + acknowledgement persistence;
-            // drift computation itself lives in packages/core, run from the
-            // Drift page — see commands/parity.rs module docs)
-            commands::parity::probe_harness_capabilities,
+            // Drift (acknowledgement persistence; drift computation itself
+            // lives in packages/core, run from the Drift page — see
+            // commands/parity.rs module docs)
             commands::parity::acknowledge_drift_item,
             commands::parity::unacknowledge_drift_item,
             commands::parity::get_acknowledged_drift_items,

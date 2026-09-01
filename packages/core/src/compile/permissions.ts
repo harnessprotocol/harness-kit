@@ -3,13 +3,13 @@ import type {
   FileAction,
   HarnessConfig,
   HarnessPermissions,
-  TargetPlatform,
+  SurfaceId,
 } from "../types.js";
 import { readJsonOrDefault } from "../utils/read-json.js";
 
 export async function compilePermissions(
   config: HarnessConfig,
-  targets: TargetPlatform[],
+  targets: SurfaceId[],
   fs: FsProvider,
 ): Promise<{ files: FileAction[]; warnings: string[] }> {
   const perms = config.permissions;

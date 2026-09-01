@@ -23,6 +23,7 @@ const ComparatorPage = lazy(() => import("./pages/comparator/ComparatorPage"));
 const PermissionsPage = lazy(() => import("./pages/security/PermissionsPage"));
 const SecretsPage = lazy(() => import("./pages/security/SecretsPage"));
 const AuditLogPage = lazy(() => import("./pages/security/AuditLogPage"));
+const MachinePage = lazy(() => import("./pages/machine/MachinePage"));
 const FleetPage = lazy(() => import("./pages/fleet/FleetPage"));
 const DriftPage = lazy(() => import("./pages/drift/DriftPage"));
 const AgentsPage = lazy(() => import("./pages/agents/AgentsPage"));
@@ -31,6 +32,7 @@ const AgentsPage = lazy(() => import("./pages/agents/AgentsPage"));
 // Onboarding's presentational views with static data, no Tauri/core backend
 // required. Not linked from any nav; only mounted below when import.meta.env.DEV is true.
 const FleetFixture = lazy(() => import("./pages/__fixtures__/FleetFixture"));
+const MachineFixture = lazy(() => import("./pages/__fixtures__/MachineFixture"));
 const DriftFixture = lazy(() => import("./pages/__fixtures__/DriftFixture"));
 const OnboardingFixture = lazy(() => import("./pages/__fixtures__/OnboardingFixture"));
 
@@ -78,13 +80,15 @@ export default function App() {
             {import.meta.env.DEV && (
               <>
                 <Route path="__fixtures__/fleet" element={<FleetFixture />} />
+                <Route path="__fixtures__/machine" element={<MachineFixture />} />
                 <Route path="__fixtures__/drift" element={<DriftFixture />} />
                 <Route path="__fixtures__/onboarding" element={<OnboardingFixture />} />
               </>
             )}
             <Route path="/" element={<AppLayout />}>
-            {/* Fleet — home */}
+            {/* Machine — home (default section; user-overridable in preferences) */}
             <Route index element={<DefaultRedirect />} />
+            <Route path="machine" element={<MachinePage />} />
             <Route path="fleet" element={<FleetPage />} />
 
             {/* Harness Manager */}

@@ -1,3 +1,11 @@
+/**
+ * Filesystem abstraction all core IO goes through.
+ *
+ * Surface observation (observe/) assumes `exists` and `isDirectory` are
+ * non-throwing boolean probes — a provider that throws from them is out of
+ * contract, and observeAllSurfaces catches such throws only as a backstop
+ * (degrading that surface, never crashing the sweep).
+ */
 export interface FsProvider {
   readFile(path: string): Promise<string>;
   writeFile(path: string, content: string): Promise<void>;

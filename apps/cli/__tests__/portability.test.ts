@@ -6,7 +6,7 @@ import { captureCommand } from "../src/commands/capture.js";
 import { applyCommand } from "../src/commands/apply.js";
 import { rollbackCommand } from "../src/commands/rollback.js";
 import { skillsPromoteCommand } from "../src/commands/skills.js";
-import { buildReconciliationContext } from "../src/commands/portability-common.js";
+import { buildReconciliationContext, parseTargets } from "../src/commands/portability-common.js";
 import { digestValue, TARGETS } from "@harness-kit/core";
 import type { HarnessConfig } from "@harness-kit/core";
 import { syncOrganizationRollout } from "../src/commands/org-rollout.js";
@@ -41,9 +41,13 @@ describe.sequential("portability CLI workflows", () => {
     vi.restoreAllMocks();
   });
 
+  it("suggests copilot-vscode when the legacy copilot target is requested", () => {
+    expect(() => parseTargets("copilot")).toThrow("did you mean copilot-vscode?");
+  });
+
   it("captures, applies, and restores a whole transaction", async () => {
     await captureCommand({ scope: "project", yes: true });
-    expect(await readFile(join(project, "harness.yaml"), "utf8")).toContain('version: "2"');
+    expect(await readFile(join(project, "harness.yaml"), "utf8")).toContain('version: "2.1"');
 
     await unlink(join(project, ".codex/config.toml"));
     await applyCommand("harness.yaml", { target: "codex", yes: true });

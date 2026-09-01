@@ -2,6 +2,7 @@ import { Command } from "commander";
 import chalk from "chalk";
 import { validateCommand } from "./commands/validate.js";
 import { compileCommand } from "./commands/compile.js";
+import { migrateCommand } from "./commands/migrate.js";
 import { checkCommand } from "./commands/check.js";
 import { detectCommand } from "./commands/detect.js";
 import { initCommand, initSkillCommand } from "./commands/init.js";
@@ -73,12 +74,29 @@ Examples:
   });
 
 program
+  .command("migrate")
+  .description("Migrate a harness profile to the current protocol version (v2.1)")
+  .argument("[path]", "Path to harness.yaml", "harness.yaml")
+  .option("--write", "Write the migrated profile back to the file (default is a dry run)")
+  .addHelpText(
+    "after",
+    `
+Examples:
+  harness-kit migrate                 Preview the migration for ./harness.yaml (dry run)
+  harness-kit migrate --write         Migrate ./harness.yaml in place
+  harness-kit migrate ~/team.yaml     Preview the migration for a specific file`,
+  )
+  .action(async (path: string, flags) => {
+    await migrateCommand(path, flags);
+  });
+
+program
   .command("compile")
   .description("Compile harness.yaml into native config files for AI coding tools")
   .argument("[path]", "Path to harness.yaml", "harness.yaml")
   .option(
     "--target <targets>",
-    "Target platforms: claude-code, cursor, copilot, codex, opencode, windsurf, gemini, junie (comma-separated), or all",
+    "Target platforms: claude-code, cursor, copilot-vscode, codex, opencode, windsurf, gemini, junie (comma-separated), or all",
   )
   .option("--dry-run", "Preview output without writing files")
   .option("--clean", "Remove orphaned marker blocks from previous compilations")
@@ -92,7 +110,7 @@ Examples:
   harness-kit compile                           Interactive platform detection
   harness-kit compile --target all --dry-run    Preview output for all platforms
   harness-kit compile --target claude-code      Compile for Claude Code only
-  harness-kit compile --target cursor,copilot   Compile for Cursor and Copilot
+  harness-kit compile --target cursor,copilot-vscode   Compile for Cursor and Copilot
   harness-kit compile --clean                   Compile and remove orphaned blocks
   harness-kit compile --watch                   Recompile automatically on harness.yaml changes`,
   )
@@ -134,7 +152,7 @@ program
     `
 Examples:
   harness-kit check                         Check all targets
-  harness-kit check --target cursor,copilot Check specific targets
+  harness-kit check --target cursor,copilot-vscode Check specific targets
 
 Exit code 0 if all ok. Exit code 1 if any drift or missing.`,
   )
@@ -355,6 +373,9 @@ program
     "--target <targets>",
     "Target platforms to check (comma-separated), or all",
   )
+  .option("--from <surface>", "Cross-surface mode: compare from this surface")
+  .option("--to <surface>", "Cross-surface mode: compare to this surface")
+  .option("--only <kind[:name]>", "Cross-surface mode: filter rows by kind or kind:name prefix")
   .option("--json", "Output the raw DriftReport as JSON")
   .addHelpText(
     "after",
@@ -362,6 +383,8 @@ program
 Examples:
   harness-kit diff                        Show drift for all targets
   harness-kit diff --target claude-code   Show drift for Claude Code only
+  harness-kit diff --from claude-code --to cursor   Compare two surfaces' observed state
+  harness-kit diff --from claude-code --to cursor --only mcp-server   Only MCP server rows
 
 Exit code 0 if no drift. Exit code 1 if any drift.`,
   )

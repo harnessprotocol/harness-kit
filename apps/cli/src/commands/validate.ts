@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import chalk from "chalk";
 import { parseHarness, validateHarness } from "@harness-kit/core";
 import { formatValidationResult } from "../formatters/validation.js";
 
@@ -25,8 +26,9 @@ export async function validateCommand(filePath?: string, flags: ValidateFlags = 
   }
 
   let config;
+  let warnings: string[] = [];
   try {
-    ({ config } = parseHarness(yamlString));
+    ({ config, warnings } = parseHarness(yamlString));
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     if (flags.json) {
@@ -43,9 +45,15 @@ export async function validateCommand(filePath?: string, flags: ValidateFlags = 
     console.log(JSON.stringify({
       valid: result.valid,
       errors: result.errors.map((e) => e.path ? `${e.path}: ${e.message}` : e.message),
+      warnings,
     }));
   } else {
     console.log(formatValidationResult(result, resolved));
+    if (result.valid && warnings.length > 0) {
+      for (const warning of warnings) {
+        console.log(chalk.yellow("Warning:") + ` ${warning}`);
+      }
+    }
   }
   process.exit(result.valid ? 0 : 1);
 }

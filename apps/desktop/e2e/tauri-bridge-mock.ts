@@ -97,9 +97,8 @@ export const MOCK_RESPONSES: Record<string, unknown> = {
     dimensionWinRates: [],
   },
   sync_list_backups: [],
-  // Drift (capability probing + acknowledgement persistence — drift itself
-  // is computed by @harness-kit/core against the mocked FsProvider, not IPC)
-  probe_harness_capabilities: {},
+  // Drift (acknowledgement persistence — drift itself is computed by
+  // @harness-kit/core against the mocked FsProvider, not IPC)
   acknowledge_drift_item: null,
   unacknowledge_drift_item: null,
   get_acknowledged_drift_items: [],

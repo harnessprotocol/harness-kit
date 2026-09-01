@@ -1,0 +1,6 @@
+---
+description: Testing conventions
+globs: ["**/*.test.ts"]
+---
+
+Every bugfix lands with a regression test.

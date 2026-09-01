@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { compile } from "../src/compile/compile.js";
-import type { TargetPlatform } from "../src/types.js";
+import type { SurfaceId } from "../src/types.js";
 import { MockFsProvider } from "./helpers/mock-fs.js";
 
 /**
@@ -21,10 +21,10 @@ import { MockFsProvider } from "./helpers/mock-fs.js";
 const FIXTURES = resolve(import.meta.dirname, "fixtures");
 const GOLDEN_DIR = resolve(import.meta.dirname, "..", "fixtures", "golden");
 
-const ALL_TARGETS: TargetPlatform[] = [
+const ALL_TARGETS: SurfaceId[] = [
   "claude-code",
   "cursor",
-  "copilot",
+  "copilot-vscode",
   "codex",
   "opencode",
   "windsurf",
@@ -38,13 +38,13 @@ function loadFixture(name: string): string {
 
 interface GoldenSnapshot {
   fixture: string;
-  targets: TargetPlatform[];
+  targets: SurfaceId[];
   harnessName: string;
   warnings: string[];
   skippedPlugins: string[];
   files: Array<{
     path: string;
-    platform: TargetPlatform;
+    platform: SurfaceId;
     slot: string;
     action: string;
     content: string;
@@ -52,7 +52,7 @@ interface GoldenSnapshot {
 }
 
 /** Cases we snapshot: every target individually, plus the "all targets" case. */
-const CASES: Array<{ id: string; fixture: string; targets: TargetPlatform[] }> = [
+const CASES: Array<{ id: string; fixture: string; targets: SurfaceId[] }> = [
   { id: "all-targets", fixture: "valid-harness.yaml", targets: ALL_TARGETS },
   ...ALL_TARGETS.map((t) => ({
     id: `single-${t}`,

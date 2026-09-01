@@ -3,6 +3,7 @@ import { promisify } from "node:util";
 import { basename, relative, resolve } from "node:path";
 import { stringify } from "yaml";
 import {
+  CURRENT_PROTOCOL_VERSION,
   TARGETS,
   applyFileTransaction,
   collectCapsuleFiles,
@@ -163,7 +164,7 @@ async function loadPromotionProfile(path: string, scope: "personal" | "project")
   if (!existing) {
     return {
       $schema: "https://harnessprotocol.io/schema/v2/harness.schema.json",
-      version: "2",
+      version: CURRENT_PROTOCOL_VERSION,
       kind: "profile",
       metadata: { name: `${scope}-catalog`, description: `${scope} Harness Kit catalog.` },
       scope,
@@ -173,7 +174,7 @@ async function loadPromotionProfile(path: string, scope: "personal" | "project")
   const validation = validateHarness(config);
   if (!validation.valid) throw new Error(`${path} is not a valid harness profile`);
   if (config.scope && config.scope !== scope) throw new Error(`${path} has scope '${config.scope}', expected '${scope}'`);
-  return { ...config, version: "2", scope };
+  return { ...config, version: CURRENT_PROTOCOL_VERSION, scope };
 }
 
 export async function skillsPromoteCommand(directory: string, flags: PromoteFlags): Promise<void> {

@@ -2,10 +2,10 @@ import type {
   CompileReport,
   CompileReportEntry,
   CompileResult,
-  TargetPlatform,
+  SurfaceId,
 } from "../types.js";
 
-const PLATFORM_ORDER: TargetPlatform[] = ["claude-code", "cursor", "copilot"];
+const PLATFORM_ORDER: SurfaceId[] = ["claude-code", "cursor", "copilot-vscode"];
 
 const SLOT_ORDER = [
   "operational",

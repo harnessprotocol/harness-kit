@@ -2,8 +2,9 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Wrench, Pencil, Check, X as XIcon } from "lucide-react";
 import { Button, Card, EmptyState, Input } from "@harness-kit/ui";
-import { compile, detectPlatforms, parseHarness } from "@harness-kit/core";
-import type { CompileResult, DetectedPlatform, TargetPlatform } from "@harness-kit/core";
+import { COMPILE_SURFACE_IDS, compile, detectPlatforms, isCompileSurface, parseHarness } from "@harness-kit/core";
+import type { CompileResult, DetectedPlatform, SurfaceId } from "@harness-kit/core";
+import { surfaceLabel } from "../../lib/surface-labels";
 import {
   readHarnessFile,
   syncCreateBackup,
@@ -16,19 +17,7 @@ import { SyncFsProvider } from "../../lib/sync-fs";
 import SyncPreview from "./sync/SyncPreview";
 import BackupHistory from "./sync/BackupHistory";
 
-const ALL_PLATFORMS: TargetPlatform[] = [
-  "claude-code", "cursor", "copilot", "codex", "opencode", "windsurf", "gemini", "junie",
-];
-const PLATFORM_LABELS: Record<TargetPlatform, string> = {
-  "claude-code": "Claude Code",
-  cursor: "Cursor",
-  copilot: "Copilot",
-  codex: "Codex",
-  opencode: "OpenCode",
-  windsurf: "Windsurf",
-  gemini: "Gemini CLI",
-  junie: "Junie",
-};
+const ALL_PLATFORMS: readonly SurfaceId[] = COMPILE_SURFACE_IDS;
 const RECENT_DIRS_KEY = "harness-kit-sync-recent-dirs";
 const MAX_RECENT = 10;
 
@@ -72,7 +61,7 @@ export default function SyncPage() {
 
   // Platforms
   const [detectedPlatforms, setDetectedPlatforms] = useState<DetectedPlatform[]>([]);
-  const [selectedTargets, setSelectedTargets] = useState<Set<TargetPlatform>>(new Set());
+  const [selectedTargets, setSelectedTargets] = useState<Set<SurfaceId>>(new Set());
 
   // Sync flow
   const [phase, setPhase] = useState<Phase>("idle");
@@ -132,7 +121,13 @@ export default function SyncPage() {
         const fs = new SyncFsProvider(dir);
         const detected = await detectPlatforms(fs);
         setDetectedPlatforms(detected);
-        setSelectedTargets(new Set(detected.map((d) => d.platform)));
+        // Detection can report surfaces that aren't compile targets (e.g. pi).
+        // The chip UI only renders COMPILE_SURFACE_IDS, so an unfiltered seed
+        // would put an invisible, untoggleable target into the set — and
+        // compile() throws for non-compile surfaces (adapterIdForTarget guard),
+        // so Preview would fail with an error the user can't clear from the
+        // chips. Seed the selection with compile surfaces only.
+        setSelectedTargets(new Set(detected.map((d) => d.platform).filter(isCompileSurface)));
       } catch { setDirValid(false); }
       finally { setDirChecking(false); }
     }, 300);
@@ -146,7 +141,7 @@ export default function SyncPage() {
     } catch {}
   }
 
-  function toggleTarget(platform: TargetPlatform) {
+  function toggleTarget(platform: SurfaceId) {
     setSelectedTargets((prev) => {
       const next = new Set(prev);
       if (next.has(platform)) next.delete(platform); else next.add(platform);
@@ -336,7 +331,7 @@ export default function SyncPage() {
                         background: checked ? "var(--accent)" : "var(--border-strong)",
                         flexShrink: 0,
                       }} />
-                      {PLATFORM_LABELS[platform]}
+                      {surfaceLabel(platform)}
                       {detected && (
                         <span style={{ fontSize: "9px", opacity: 0.7 }}>detected</span>
                       )}

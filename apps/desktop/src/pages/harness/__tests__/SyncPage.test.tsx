@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import { compile, detectPlatforms } from "@harness-kit/core";
 import SyncPage from "../SyncPage";
 
 // ── Mocks ──────────────────────────────────────────────────────
@@ -23,6 +24,10 @@ vi.mock("../../../lib/tauri", () => ({
 }));
 
 vi.mock("@harness-kit/core", () => ({
+  COMPILE_SURFACE_IDS: ["claude-code", "cursor", "copilot-vscode", "codex", "opencode", "windsurf", "gemini", "junie"],
+  isCompileSurface: (id: string) =>
+    ["claude-code", "cursor", "copilot-vscode", "codex", "opencode", "windsurf", "gemini", "junie"].includes(id),
+  getSurface: vi.fn((id: string) => ({ id, label: id })),
   compile: vi.fn(() => Promise.resolve({ outputs: {} })),
   detectPlatforms: vi.fn(() => Promise.resolve([])),
   parseHarness: vi.fn(() => ({ config: { version: "1" } })),
@@ -36,7 +41,9 @@ vi.mock("../../../lib/harness-generator", () => ({
 }));
 
 vi.mock("../../../lib/sync-fs", () => ({
-  SyncFsProvider: vi.fn().mockImplementation(() => ({})),
+  // Must be constructible — SyncPage calls `new SyncFsProvider(dir)`, and an
+  // arrow-function implementation throws "not a constructor" under `new`.
+  SyncFsProvider: vi.fn(function SyncFsProvider() { return {}; }),
 }));
 
 // framer-motion: render children without animation
@@ -110,5 +117,42 @@ describe("SyncPage", () => {
     await waitFor(() => {
       expect(screen.getByText(/No harness\.yaml found/i)).toBeInTheDocument();
     });
+  });
+
+  it("seeds target selection from detection with compile surfaces only", async () => {
+    // Detection can report surfaces that aren't compile targets (pi). The
+    // seeded selection feeds compile() directly, so a non-compile surface in
+    // the detection results must never reach the compile targets list.
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.claude/harness.yaml" });
+    mockSyncFileExists.mockResolvedValue(true);
+    vi.mocked(detectPlatforms).mockResolvedValueOnce([
+      { platform: "pi", indicators: [".pi"], needsConfirmation: false },
+      { platform: "cursor", indicators: [".cursor"], needsConfirmation: false },
+    ]);
+    vi.mocked(compile).mockResolvedValueOnce({
+      harnessName: "default",
+      targets: ["cursor"],
+      files: [],
+      warnings: [],
+    } as never);
+
+    renderPage();
+
+    const dirInput = await screen.findByPlaceholderText("~/repos/my-project");
+    fireEvent.change(dirInput, { target: { value: "/repo/with-pi" } });
+
+    // Debounced (300ms) validation + detection
+    await waitFor(() => {
+      expect(screen.getByText(/Directory found/i)).toBeInTheDocument();
+    }, { timeout: 3000 });
+
+    fireEvent.click(screen.getByRole("button", { name: /Preview Changes/i }));
+
+    await waitFor(() => {
+      expect(compile).toHaveBeenCalledTimes(1);
+    });
+    const targets = vi.mocked(compile).mock.calls[0][1] as string[];
+    expect(targets).toContain("cursor");
+    expect(targets).not.toContain("pi");
   });
 });

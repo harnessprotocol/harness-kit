@@ -1,14 +1,7 @@
-// ── Target platforms ─────────────────────────────────────────
+// ── Surfaces ─────────────────────────────────────────────────
 
-export type TargetPlatform =
-  | "claude-code"
-  | "cursor"
-  | "copilot"
-  | "codex"
-  | "opencode"
-  | "windsurf"
-  | "gemini"
-  | "junie";
+import type { SurfaceId } from "./surfaces/types.js";
+export type { SurfaceId, CompileSurfaceId } from "./surfaces/types.js";
 
 // ── Harness config (parsed harness.yaml) ─────────────────────
 
@@ -175,7 +168,7 @@ export interface HarnessPolicy {
  * Harness Protocol field exists. Values are opaque to other targets and are
  * only written back by the matching adapter.
  */
-export type HarnessVendorConfig = Partial<Record<TargetPlatform, Record<string, unknown>>>;
+export type HarnessVendorConfig = Partial<Record<SurfaceId, Record<string, unknown>>>;
 
 export interface HarnessConfig {
   $schema?: string;
@@ -200,7 +193,7 @@ export interface HarnessConfig {
 // ── Compile types ────────────────────────────────────────────
 
 export interface CompileOptions {
-  target?: TargetPlatform[];
+  target?: SurfaceId[];
   dryRun?: boolean;
   clean?: boolean;
   verbose?: boolean;
@@ -217,14 +210,14 @@ export interface FileAction {
   path: string;
   content: string;
   action: FileActionType;
-  platform: TargetPlatform;
+  platform: SurfaceId;
   slot: string;
   linesAdded?: number;
 }
 
 export interface CompileResult {
   harnessName: string;
-  targets: TargetPlatform[];
+  targets: SurfaceId[];
   files: FileAction[];
   warnings: string[];
   skippedPlugins: string[];
@@ -259,7 +252,7 @@ export interface OrphanedBlock {
 // ── Platform detection ───────────────────────────────────────
 
 export interface DetectedPlatform {
-  platform: TargetPlatform;
+  platform: SurfaceId;
   indicators: string[];
   needsConfirmation: boolean;
 }
@@ -271,12 +264,12 @@ export interface CompileReportEntry {
   slot: string;
   action: string;
   detail: string;
-  platform: TargetPlatform;
+  platform: SurfaceId;
 }
 
 export interface CompileReport {
   harnessName: string;
-  targets: TargetPlatform[];
+  targets: SurfaceId[];
   entries: CompileReportEntry[];
   warnings: string[];
   skippedPlugins: string[];

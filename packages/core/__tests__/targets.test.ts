@@ -1,12 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { TARGETS, getTarget, AGENTS_MD_TARGETS } from "../src/compile/targets.js";
-import type { TargetPlatform } from "../src/types.js";
+import type { SurfaceId } from "../src/types.js";
 
 describe("TARGETS registry", () => {
   it("contains all 8 platforms", () => {
     const ids = TARGETS.map((t) => t.id);
-    const expected: TargetPlatform[] = [
-      "claude-code", "cursor", "copilot",
+    const expected: SurfaceId[] = [
+      "claude-code", "cursor", "copilot-vscode",
       "codex", "opencode", "windsurf", "gemini", "junie",
     ];
     expect(ids).toEqual(expected);
@@ -60,21 +60,21 @@ describe("TARGETS registry", () => {
   });
 
   it("getTarget throws for unknown id", () => {
-    expect(() => getTarget("unknown" as TargetPlatform)).toThrow("Unknown target: unknown");
+    expect(() => getTarget("unknown" as SurfaceId)).toThrow("Unknown target: unknown");
   });
 });
 
 describe("AGENTS_MD_TARGETS", () => {
   it("includes codex, opencode, windsurf, gemini, junie", () => {
-    const expected: TargetPlatform[] = ["codex", "opencode", "windsurf", "gemini", "junie"];
+    const expected: SurfaceId[] = ["codex", "opencode", "windsurf", "gemini", "junie"];
     for (const id of expected) {
       expect(AGENTS_MD_TARGETS).toContain(id);
     }
   });
 
-  it("does not include claude-code, cursor, or copilot", () => {
+  it("does not include claude-code, cursor, or copilot-vscode", () => {
     expect(AGENTS_MD_TARGETS).not.toContain("claude-code");
     expect(AGENTS_MD_TARGETS).not.toContain("cursor");
-    expect(AGENTS_MD_TARGETS).not.toContain("copilot");
+    expect(AGENTS_MD_TARGETS).not.toContain("copilot-vscode");
   });
 });

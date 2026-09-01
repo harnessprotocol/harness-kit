@@ -1,5 +1,6 @@
 import { stringify as yamlStringify, parse as yamlParse } from "yaml";
 import type { HarnessConfig } from "../types.js";
+import { isProtocolV2 } from "../utils/legacy.js";
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -117,11 +118,11 @@ export function isLockFileFresh(
   config: HarnessConfig,
 ): boolean {
   const plugins = config.plugins ?? [];
-  if (plugins.length === 0 && (config.version !== "2" || (config.skills ?? []).length === 0)) return true;
+  if (plugins.length === 0 && (!isProtocolV2(config.version) || (config.skills ?? []).length === 0)) return true;
 
   const lockedNames = new Set(lock.plugins.map((p) => p.name));
   const pluginsFresh = plugins.every((p) => lockedNames.has(p.name));
-  if (config.version !== "2") return pluginsFresh;
+  if (!isProtocolV2(config.version)) return pluginsFresh;
   const lockedSkills = new Set(
     (lock.resources ?? []).filter((resource) => resource.kind === "skill").map((resource) => resource.name),
   );
@@ -140,7 +141,7 @@ export function getMissingLockEntries(
   const missing = plugins
     .filter((p) => !lockedNames.has(p.name))
     .map((p) => p.name);
-  if (config.version === "2") {
+  if (isProtocolV2(config.version)) {
     const lockedSkills = new Set(
       (lock.resources ?? []).filter((resource) => resource.kind === "skill").map((resource) => resource.name),
     );

@@ -1,4 +1,5 @@
 import {
+  COMPILE_SURFACE_IDS,
   EMPTY_PORTABILITY_STATE,
   TARGET_CAPABILITY_MATRIX,
   buildInventorySnapshot,
@@ -21,15 +22,13 @@ import type {
   LayeredHarnessProfile,
   ReconciliationConflict,
   ReconciliationOperation,
-  TargetPlatform,
+  SurfaceId,
   InventorySnapshot,
   PortabilityState,
 } from "@harness-kit/core";
 import { TauriFsProvider } from "../../lib/harness-fs";
 
-const TARGETS: TargetPlatform[] = [
-  "claude-code", "cursor", "copilot", "codex", "opencode", "windsurf", "gemini", "junie",
-];
+const TARGETS: SurfaceId[] = [...COMPILE_SURFACE_IDS];
 
 export interface DesktopPortabilitySnapshot {
   generatedAt: string;
@@ -37,7 +36,7 @@ export interface DesktopPortabilitySnapshot {
   conflicts: ReconciliationConflict[];
   operations: ReconciliationOperation[];
   lossCount: number;
-  capabilityTotals: Record<"native" | "translated" | "source-only" | "unsupported", number>;
+  capabilityTotals: Record<"native" | "translated" | "source-only" | "unsupported" | "not-applicable", number>;
   capturePreview: { resources: number; targets: number };
   applyPreview: { createsOrUpdates: number; captures: number; deletions: number };
   rollbackHistory: string[];
@@ -176,7 +175,7 @@ export async function buildDesktopPortabilitySnapshot(
     targets: TARGETS,
     conflicts: resolved.conflicts,
   });
-  const capabilityTotals = { native: 0, translated: 0, "source-only": 0, unsupported: 0 };
+  const capabilityTotals = { native: 0, translated: 0, "source-only": 0, unsupported: 0, "not-applicable": 0 };
   for (const capability of TARGET_CAPABILITY_MATRIX) {
     capabilityTotals[capability.operations.apply] += 1;
   }

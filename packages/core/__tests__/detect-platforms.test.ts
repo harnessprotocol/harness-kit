@@ -29,7 +29,7 @@ describe("detectPlatforms", () => {
     });
     const result = await detectPlatforms(fs);
     expect(result).toHaveLength(1);
-    expect(result[0].platform).toBe("copilot");
+    expect(result[0].platform).toBe("copilot-vscode");
     expect(result[0].needsConfirmation).toBe(false);
   });
 
@@ -39,7 +39,7 @@ describe("detectPlatforms", () => {
     });
     const result = await detectPlatforms(fs);
     expect(result).toHaveLength(1);
-    expect(result[0].platform).toBe("copilot");
+    expect(result[0].platform).toBe("copilot-vscode");
     expect(result[0].needsConfirmation).toBe(true);
   });
 
@@ -106,5 +106,37 @@ describe("detectPlatforms", () => {
     const result = await detectPlatforms(fs);
     expect(result).toHaveLength(1);
     expect(result[0].platform).toBe("junie");
+  });
+
+  it("detects pi from .pi directory as a confident indicator", async () => {
+    const fs = new MockFsProvider({
+      "/project/.pi/skills/x/SKILL.md": "# skill",
+    });
+    const result = await detectPlatforms(fs);
+    expect(result).toHaveLength(1);
+    expect(result[0].platform).toBe("pi");
+    expect(result[0].indicators).toContain(".pi");
+    expect(result[0].needsConfirmation).toBe(false);
+  });
+
+  it("does not report pi for an empty project", async () => {
+    const fs = new MockFsProvider({});
+    const result = await detectPlatforms(fs);
+    expect(result.map((r) => r.platform)).not.toContain("pi");
+  });
+
+  it("detects pi and cursor together without interference", async () => {
+    const fs = new MockFsProvider({
+      "/project/.pi/skills/x/SKILL.md": "# skill",
+      "/project/.cursor/rules/test.mdc": "rule",
+    });
+    const result = await detectPlatforms(fs);
+    expect(result).toHaveLength(2);
+    const platforms = result.map((r) => r.platform);
+    expect(platforms).toContain("pi");
+    expect(platforms).toContain("cursor");
+    for (const entry of result) {
+      expect(entry.needsConfirmation).toBe(false);
+    }
   });
 });

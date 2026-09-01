@@ -1,7 +1,9 @@
 import { access, readFile } from "node:fs/promises";
 import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 import {
+  COMPILE_SURFACE_IDS,
   EMPTY_PORTABILITY_STATE,
+  LEGACY_SURFACE_RENAMES,
   capabilityForResource,
   computeFileHash,
   parseHarness,
@@ -19,23 +21,15 @@ import type {
   HarnessResource,
   HarnessScope,
   LayeredHarnessProfile,
+  ObserveOptions,
   PortabilityState,
   ReconciliationPlan,
   ReconciliationResolution,
-  TargetPlatform,
+  SurfaceId,
 } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
 
-export const ALL_TARGETS: TargetPlatform[] = [
-  "claude-code",
-  "cursor",
-  "copilot",
-  "codex",
-  "opencode",
-  "windsurf",
-  "gemini",
-  "junie",
-];
+export const ALL_TARGETS: readonly SurfaceId[] = COMPILE_SURFACE_IDS;
 
 export interface LayerFlags {
   organization?: string;
@@ -47,7 +41,7 @@ export interface LayerFlags {
 
 export interface ReconciliationContext {
   root: string;
-  targets: TargetPlatform[];
+  targets: SurfaceId[];
   profiles: LayeredHarnessProfile[];
   projectProfile: LayeredHarnessProfile;
   state: PortabilityState;
@@ -61,12 +55,32 @@ export function timestamp(): string {
   return new Date().toISOString().replace(/[:.]/g, "-");
 }
 
-export function parseTargets(value?: string): TargetPlatform[] {
+/** Map process.platform onto the three platforms core's observe layer
+ * understands. Everything Node reports beyond darwin/win32 (freebsd, aix,
+ * sunos, ...) uses linux-style config paths — the closest model core has. */
+export function currentPlatform(): ObserveOptions["platform"] {
+  const platform = process.platform;
+  if (platform === "darwin" || platform === "win32") return platform;
+  return "linux";
+}
+
+/**
+ * Hint appended to unknown-target errors when the id is a legacy surface
+ * spelling renamed by protocol v2.1 (e.g. `copilot` → `copilot-vscode`).
+ * Includes a leading space so it can be interpolated directly after the id.
+ */
+export function legacyTargetHint(target: string): string {
+  const renamed = LEGACY_SURFACE_RENAMES[target];
+  return renamed ? ` (did you mean ${renamed}?)` : "";
+}
+
+export function parseTargets(value?: string): SurfaceId[] {
   if (!value || value === "all") return [...ALL_TARGETS];
-  const selected = value.split(",").map((entry) => entry.trim() as TargetPlatform);
+  const selected = value.split(",").map((entry) => entry.trim() as SurfaceId);
   const unknown = selected.filter((target) => !ALL_TARGETS.includes(target));
   if (unknown.length > 0) {
-    throw new Error(`unknown target(s): ${unknown.join(", ")}; expected ${ALL_TARGETS.join(", ")} or all`);
+    const listed = unknown.map((target) => `${target}${legacyTargetHint(target)}`).join(", ");
+    throw new Error(`unknown target(s): ${listed}; expected ${ALL_TARGETS.join(", ")} or all`);
   }
   return [...new Set(selected)];
 }
@@ -155,7 +169,7 @@ async function retainManagedSourceOnlyResources(
   root: string,
   current: HarnessResource[],
   state: PortabilityState,
-  targets: TargetPlatform[],
+  targets: SurfaceId[],
 ): Promise<HarnessResource[]> {
   const result = [...current];
   const keyFor = (resource: HarnessResource) => `${resource.identity.kind}\0${resource.alias}`;
@@ -231,7 +245,7 @@ async function captureModifiedManagedInstructions(
   root: string,
   current: HarnessResource[],
   state: PortabilityState,
-  targets: TargetPlatform[],
+  targets: SurfaceId[],
 ): Promise<HarnessResource[]> {
   const result = new Map(current.map((resource) => [`${resource.identity.kind}\0${resource.alias}`, resource]));
   const selectedTargets = new Set(targets);

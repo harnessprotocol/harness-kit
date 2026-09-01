@@ -1,0 +1,15 @@
+model = "gpt-5-codex"
+
+[mcp_servers.docs]
+command = "npx"
+args = ["-y", "docs-mcp-server"]
+
+[mcp_servers.docs.env_vars]
+DOCS_API_KEY = "sk-FAKE-codex-docs"
+
+[mcp_servers.linear]
+url = "https://mcp.linear.app/mcp"
+bearer_token_env_var = "LINEAR_TOKEN"
+
+[mcp_servers.broken]
+note = "has neither command nor url"

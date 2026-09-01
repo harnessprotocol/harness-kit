@@ -373,15 +373,6 @@ export async function getAcknowledgedDriftItems(): Promise<DriftAcknowledgement[
   return invoke<DriftAcknowledgement[]>("get_acknowledged_drift_items");
 }
 
-export type FileProbeState = "detected" | "missing" | "not_applicable";
-
-/** Probe each installed harness + its on-disk capability files.
- * Returns a flat map of `"targetId::capabilityId"` → file state.
- * Requires the `probe_harness_capabilities` Rust command. */
-export async function probeHarnessCapabilities(): Promise<Record<string, FileProbeState>> {
-  return invoke<Record<string, FileProbeState>>("probe_harness_capabilities");
-}
-
 // ── Comparator session commands ─────────────────────────────
 
 export async function saveComparison(

@@ -74,6 +74,19 @@ describe("Harness Protocol v2", () => {
     expect(migration.config).toMatchObject({ version: "2", scope: "project", permissions: original.permissions });
   });
 
+  it("leaves a v2.1 config unchanged instead of downgrading it to v2", () => {
+    const original: HarnessConfig = {
+      version: "2.1",
+      metadata: { name: "portable", description: "Portable harness" },
+      scope: "personal",
+      vendor: { "copilot-vscode": { "chat.mode": "agent" } },
+    };
+    const migration = migrateHarnessV1ToV2(original);
+    expect(migration.changes).toEqual([]);
+    expect(migration.config).toBe(original);
+    expect(migration.config.version).toBe("2.1");
+  });
+
   it("scans whole-profile instructions and validates native-extension integrity", () => {
     const config: HarnessConfig = {
       version: "2",
@@ -164,7 +177,7 @@ describe("resource layers and reconciliation", () => {
 describe("capability and safety contracts", () => {
   it("has an explicit cell for every target and resource kind", () => {
     expect(() => assertCapabilityMatrixComplete()).not.toThrow();
-    expect(TARGET_CAPABILITY_MATRIX).toHaveLength(80);
+    expect(TARGET_CAPABILITY_MATRIX).toHaveLength(110);
   });
 
   it("rejects escaping and dangerous capsule content", () => {

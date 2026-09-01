@@ -1,5 +1,5 @@
 import chalk from "chalk";
-import type { CompileReport, CompileResult, TargetPlatform } from "@harness-kit/core";
+import type { CompileReport, CompileResult, SurfaceId } from "@harness-kit/core";
 import { buildReport } from "@harness-kit/core";
 
 export function formatCompileReport(
@@ -25,7 +25,7 @@ function formatReport(report: CompileReport, dryRun: boolean): string {
   );
 
   // Group entries by platform
-  let currentPlatform: TargetPlatform | null = null;
+  let currentPlatform: SurfaceId | null = null;
 
   for (const entry of report.entries) {
     if (entry.platform !== currentPlatform) {
@@ -65,14 +65,14 @@ function formatReport(report: CompileReport, dryRun: boolean): string {
   return lines.join("\n");
 }
 
-function formatTarget(target: TargetPlatform): string {
+function formatTarget(target: SurfaceId): string {
   switch (target) {
     case "claude-code":
       return chalk.blue("claude-code");
     case "cursor":
       return chalk.magenta("cursor");
-    case "copilot":
-      return chalk.green("copilot");
+    case "copilot-vscode":
+      return chalk.green("copilot-vscode");
   }
 }
 

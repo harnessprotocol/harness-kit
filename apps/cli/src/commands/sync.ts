@@ -47,8 +47,14 @@ function cachePathForSource(source: string): string {
 // ── Git helpers ───────────────────────────────────────────────
 
 async function gitClone(repoUrl: string, targetDir: string): Promise<void> {
+  // A plugin source beginning with "-" must never be parsed as a git option
+  // (e.g. --upload-pack executes arbitrary commands); "--" ends option
+  // parsing, and option-shaped sources are rejected outright.
+  if (repoUrl.startsWith("-")) {
+    throw new Error(`Invalid plugin source: "${repoUrl}" — sources must not start with "-"`);
+  }
   await mkdir(targetDir, { recursive: true });
-  await execFileAsync("git", ["clone", "--depth=1", repoUrl, targetDir]);
+  await execFileAsync("git", ["clone", "--depth=1", "--", repoUrl, targetDir]);
 }
 
 async function gitPull(dir: string): Promise<void> {

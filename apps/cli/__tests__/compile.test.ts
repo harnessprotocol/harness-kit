@@ -68,7 +68,7 @@ describe("compile command", () => {
       const output = env.getLog();
       expect(output).toContain("claude-code");
       expect(output).toContain("cursor");
-      expect(output).toContain("copilot");
+      expect(output).toContain("copilot-vscode");
       expect(output).toContain("CLAUDE.md");
       expect(output).toContain(".cursor/rules/harness.mdc");
       expect(output).toContain(".github/copilot-instructions.md");
@@ -134,7 +134,7 @@ describe("compile command", () => {
       const output = env.getLog();
       expect(output).toContain("claude-code");
       expect(output).toContain("cursor");
-      expect(output).toContain("copilot");
+      expect(output).toContain("copilot-vscode");
       expect(env.exitCode).toBeNull();
     });
 
@@ -149,6 +149,21 @@ describe("compile command", () => {
       ).rejects.toThrow();
 
       expect(env.getError()).toContain("Unknown target");
+      expect(env.exitCode).toBe(1);
+    });
+
+    it("suggests copilot-vscode for the legacy copilot target", async () => {
+      const fixturePath = resolve(FIXTURES, "valid-harness.yaml");
+
+      await expect(
+        compileCommand(fixturePath, {
+          target: "copilot",
+          dryRun: true,
+        }),
+      ).rejects.toThrow();
+
+      expect(env.getError()).toContain("Unknown target");
+      expect(env.getError()).toContain("did you mean copilot-vscode?");
       expect(env.exitCode).toBe(1);
     });
 
@@ -201,7 +216,7 @@ describe("compile command", () => {
       const fixturePath = resolve(FIXTURES, "valid-harness.yaml");
 
       await compileCommand(fixturePath, {
-        target: "copilot",
+        target: "copilot-vscode",
         dryRun: true,
       });
 
