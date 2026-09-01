@@ -296,6 +296,31 @@ mod tests {
     }
 
     #[test]
+    fn writes_a_row_the_cli_schema_can_read() {
+        // End-to-end shape check: a desktop-recorded row must sit in the same
+        // table, with the same column names, that the CLI's listTransactions
+        // selects from. If the generated schema drifted, this reads garbage.
+        let path = scratch("cli-shape");
+        record_transaction_at(&path, record("shared")).unwrap();
+
+        let conn = Connection::open(&path).unwrap();
+        let (id, roots, manifest_root, payload): (String, String, String, String) = conn
+            .query_row(
+                "SELECT transaction_id, roots, manifest_root, payload FROM transactions",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)),
+            )
+            .unwrap();
+        assert_eq!(id, "shared");
+        assert_eq!(roots, r#"["home"]"#);
+        assert_eq!(manifest_root, "/Users/tester");
+        // The CLI parses payload as {surfaces, kinds, identityKeys}.
+        assert!(payload.contains("\"identityKeys\""));
+        assert!(payload.contains("cursor"));
+        std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
     fn honours_a_limit_and_orders_newest_first() {
         let path = scratch("limit");
         for (id, at) in [("old", "2026-09-01T09:00:00.000Z"), ("new", "2026-09-01T11:00:00.000Z")] {
@@ -307,5 +332,34 @@ mod tests {
         assert_eq!(listed.len(), 1);
         assert_eq!(listed[0].transaction_id, "new");
         std::fs::remove_file(&path).ok();
+    }
+}
+
+#[cfg(test)]
+mod cross_impl {
+    use super::*;
+
+    /// Write a database at a caller-chosen path so a shell-level check can
+    /// diff Rust's schema against the CLI's. Ignored by default: it exists to
+    /// be driven with `--ignored` plus HARNESS_E2E_DB, not on every run.
+    #[test]
+    #[ignore]
+    fn emit_database_for_cross_impl_diff() {
+        let path = PathBuf::from(std::env::var("HARNESS_E2E_DB").expect("HARNESS_E2E_DB"));
+        record_transaction_at(
+            &path,
+            TransactionRecord {
+                transaction_id: "e2e".to_string(),
+                applied_at: "2026-09-01T10:00:00.000Z".to_string(),
+                roots: vec!["home".to_string()],
+                manifest_path: ".harness/backups/e2e/transaction.json".to_string(),
+                manifest_root: "/Users/tester".to_string(),
+                backup_dir: ".harness/backups/e2e".to_string(),
+                surfaces: vec!["cursor".to_string()],
+                kinds: vec!["mcp-server".to_string()],
+                identity_keys: vec!["mcp-server:postgres".to_string()],
+            },
+        )
+        .unwrap();
     }
 }
