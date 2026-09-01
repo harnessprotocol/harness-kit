@@ -43,12 +43,23 @@ Format: EARS (`WHEN … THE SYSTEM SHALL …`). Grouped by requirement area; eve
 ### Sync actions (three action surfaces)
 
 - [ ] AC-11: WHEN the user selects any gap or diff THE SYSTEM SHALL offer all three action surfaces: (a) direct apply, (b) the equivalent `harness-kit` CLI command shown verbatim, (c) a generated agent prompt that instructs the target harness's own agent to make the change.
-- [ ] AC-12: WHEN a cell's capability is native THE SYSTEM SHALL apply direct writes for the tier-one kinds at launch: mcp-server, skill, instruction, plugin. Other kinds MAY launch with CLI-native-command and agent-prompt surfaces only, and gain direct writes per the capability matrix.
+- [ ] AC-12: WHEN a cell's capability is native THE SYSTEM SHALL apply direct writes for the tier-one kinds at launch: `mcp-server`, `skill`, `instructions`. Other kinds MAY launch with CLI-native-command and agent-prompt surfaces only, and gain direct writes per the capability matrix. *(Amended 2026-09-01: `plugin` moves to M3 with the PluginBroker of AC-18/AC-19 — a plugin action shells out to a native installer or unpacks a manifest rather than writing a canonicalized resource, so it does not share this milestone's write path. Plugin cells render read-only with their M3 affordance until then.)*
 - [ ] AC-13: WHEN direct write is unsupported for a cell THE SYSTEM SHALL still render actionable output (agent prompt, and native CLI command where the harness has one) — no dead cells.
 - [ ] AC-14: WHEN a sync targets Codex THE SYSTEM SHALL read and write the TOML `[mcp_servers.*]` form of `~/.codex/config.toml` (closing the current write-blind gap).
 - [ ] AC-15: WHEN a single resource is synced THE SYSTEM SHALL apply only that resource (resource-level selection generalized from the skills pipeline), not the whole reconciled set.
 - [ ] AC-16: WHEN any direct apply runs THE SYSTEM SHALL use the existing file-transaction machinery (preimage verify, backup, atomic rename) and record a rollback point; WHEN the user invokes rollback THE SYSTEM SHALL restore the pre-apply state.
 - [ ] AC-17: WHEN a native file was modified outside HarnessKit since last observation THE SYSTEM SHALL refuse silent overwrite and present the conflict (existing `user-modified-outside` semantics).
+
+### Write safety and transactions (M2)
+
+- [ ] AC-31: WHEN a direct apply targets a path outside the project root THE SYSTEM SHALL execute it through a named transaction root (`home`), keeping every member path relative within that root so the existing traversal and symlink-boundary guards apply unchanged, and SHALL reject any path the surface registry does not declare as a config store for that surface and scope.
+- [ ] AC-32: WHEN a user-scope apply commits THE SYSTEM SHALL write preimage backups and the transaction manifest under `~/.harness/backups/<timestamp>/` and record the transaction in the state database's `transactions` table.
+- [ ] AC-33: WHEN the user invokes `harness-kit rollback --list` THE SYSTEM SHALL enumerate rollback points from both scopes out of the state database; WHEN the state database is unavailable THE SYSTEM SHALL fall back to the `.harness/state.json` last-known-good manifest and state that it did so.
+- [ ] AC-34: WHEN the capability matrix reports that the target surface cannot fully express the resource being copied THE SYSTEM SHALL present the loss report naming each dropped or downgraded field before mutating anything, and SHALL NOT apply without explicit confirmation (`--yes` constitutes confirmation in the CLI).
+- [ ] AC-35: WHEN the user generates an agent prompt THE SYSTEM SHALL render it inline (desktop drawer with copy affordance; CLI stdout) and SHALL additionally persist it to a caller-named path when `--out <path>` is supplied.
+- [ ] AC-36: WHEN the desktop performs a user-scope write THE SYSTEM SHALL route it through a Tauri command that accepts only the store paths the surface registry declares, and SHALL NOT widen the existing project-scoped `sync_write_files` bridge to reach the home directory.
+- [ ] AC-37: WHEN the release ships THE SYSTEM SHALL present drift within the Machine view, redirect the legacy `/drift` route to it, and migrate existing drift acknowledgements onto the shared state store.
+- [ ] AC-38: WHEN `harness-kit sync` receives `--frozen` or `--locked` THE SYSTEM SHALL fail with an error naming `harness-kit install` as the replacement rather than a generic unknown-flag message.
 
 ### Plugins (ADR 0003)
 
@@ -76,13 +87,14 @@ Format: EARS (`WHEN … THE SYSTEM SHALL …`). Grouped by requirement area; eve
 
 ### CLI
 
-- [ ] AC-27: WHEN the release ships THE SYSTEM SHALL provide `harness-kit install` with the behavior of today's `sync` (plugin fetch + lockfile), keep `sync` as a deprecation alias for one release cycle with a warning, and introduce the cross-surface resource action under `harness-kit sync` thereafter (pre-1.0 minor-bump breaking change).
+- [ ] AC-27: WHEN the release ships THE SYSTEM SHALL provide `harness-kit install` with the behavior of today's `sync` (plugin fetch + lockfile) and SHALL introduce the cross-surface resource action under `harness-kit sync` in the same release (pre-1.0 minor-bump breaking change). *(Amended 2026-09-01: the planned one-cycle deprecation alias is dropped. The two grammars have no flag in common — old `sync` accepts only `--frozen`/`--locked`, the new verb only `--from/--to/--only/--scope/--dry-run/--yes` — and the new bare `sync` is read-only, so an existing invocation either prints a report and writes nothing or hard-errors on an unknown flag. There is no silent behavior change for an alias window to protect against.)*
 - [ ] AC-28: WHEN any grid action is possible in the desktop app THE SYSTEM SHALL have a CLI equivalent whose exact invocation the app displays.
 
 ### Unchanged behavior
 
 - [ ] AC-29: WHEN existing `compile`, `capture`, `reconcile`, `apply`, `rollback`, `diff`, `fix`, `status`, and `skills` workflows run against v1/v2 profiles THE SYSTEM SHALL CONTINUE TO behave as specified in `specs/whole-harness-portability/spec.md`.
 - [ ] AC-30: WHEN project-scoped compiles run THE SYSTEM SHALL CONTINUE TO write marker-delimited instruction blocks and preserve non-HarnessKit content in shared files.
+- [ ] AC-39: WHEN a project-scope apply runs THE SYSTEM SHALL CONTINUE TO resolve paths relative to the project root, write backups under `.harness/backups/`, and record last-known-good in `.harness/state.json` — the named-root generalization of AC-31 SHALL NOT change project-scope layout or discovery.
 
 ## Out of Scope
 
