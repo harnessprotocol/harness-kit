@@ -18,6 +18,49 @@ fn expand_tilde(path: &str) -> String {
 
 // ── Path validation ───────────────────────────────────────────
 
+/// Resolve a caller-supplied project directory to a canonical root.
+///
+/// These commands are reachable from any webview JS and write through
+/// `std::fs`, which bypasses the Tauri FS plugin scope entirely — so the
+/// home-directory refusal in `fs_scope::grant_project_scope` does *not*
+/// protect them. Without this guard a caller could pass `~/` (or any absolute
+/// path) as the "project" and use the relative-path writer to reach
+/// `~/.zshrc`, `~/.ssh/`, or a git hooks directory: path traversal is
+/// correctly blocked, but the root itself was never constrained.
+///
+/// Mirrors `grant_project_scope`'s rule: reject the home directory and any
+/// ancestor of it (`/`, `/Users`, `~`).
+fn resolve_project_root(project_dir: &str) -> Result<PathBuf, String> {
+    let expanded = expand_tilde(project_dir);
+    let project = Path::new(&expanded);
+    if !project.exists() {
+        return Err(format!("Project directory does not exist: {}", expanded));
+    }
+
+    let canonical_root = project
+        .canonicalize()
+        .map_err(|e| format!("Failed to resolve project directory: {}", e))?;
+
+    if let Some(home) = dirs::home_dir() {
+        let canonical_home = home.canonicalize().unwrap_or(home);
+        if is_home_or_ancestor(&canonical_root, &canonical_home) {
+            return Err(
+                "Refusing to operate on the home directory or one of its ancestors".to_string(),
+            );
+        }
+    }
+
+    Ok(canonical_root)
+}
+
+/// True when `root` is the home directory itself or an ancestor of it.
+/// Split out from `resolve_project_root` so it is testable without reading
+/// the ambient `HOME` — several tests in this crate mutate that global while
+/// the suite runs in parallel.
+fn is_home_or_ancestor(root: &Path, home: &Path) -> bool {
+    home.starts_with(root)
+}
+
 /// Validate that `relative` is safely within `project_dir`.
 /// Rejects absolute paths and ".." components in `relative`.
 fn validate_project_path(project_dir: &str, relative: &str) -> Result<PathBuf, String> {
@@ -28,14 +71,7 @@ fn validate_project_path(project_dir: &str, relative: &str) -> Result<PathBuf, S
         return Err("relative path must not contain '..'".to_string());
     }
 
-    let project = Path::new(project_dir);
-    if !project.exists() {
-        return Err(format!("Project directory does not exist: {}", project_dir));
-    }
-
-    let canonical_root = project
-        .canonicalize()
-        .map_err(|e| format!("Failed to resolve project directory: {}", e))?;
+    let canonical_root = resolve_project_root(project_dir)?;
 
     let full_path = canonical_root.join(relative);
 
@@ -103,7 +139,6 @@ pub struct BackupManifest {
 /// Read a file from a project directory.
 #[tauri::command]
 pub fn sync_read_file(project_dir: String, file_path: String) -> Result<String, String> {
-    let project_dir = expand_tilde(&project_dir);
     let canonical = validate_project_path(&project_dir, &file_path)?;
     fs::read_to_string(&canonical)
         .map_err(|e| format!("Failed to read {}: {}", file_path, e))
@@ -113,21 +148,26 @@ pub fn sync_read_file(project_dir: String, file_path: String) -> Result<String, 
 /// Pass "." to check if the project directory itself exists.
 #[tauri::command]
 pub fn sync_file_exists(project_dir: String, file_path: String) -> Result<bool, String> {
-    let project_dir = expand_tilde(&project_dir);
-    if file_path == "." {
-        return Ok(Path::new(&project_dir).exists());
-    }
     if Path::new(&file_path).is_absolute() || file_path.contains("..") {
         return Err("Invalid file path".to_string());
     }
-    let full = Path::new(&project_dir).join(&file_path);
-    Ok(full.exists())
+    // "." asks whether the project directory itself exists, so a missing
+    // directory is a legitimate `false` rather than an error — but the root
+    // still has to clear the home-directory guard.
+    let expanded = expand_tilde(&project_dir);
+    if !Path::new(&expanded).exists() {
+        return Ok(false);
+    }
+    let canonical_root = resolve_project_root(&project_dir)?;
+    if file_path == "." {
+        return Ok(true);
+    }
+    Ok(canonical_root.join(&file_path).exists())
 }
 
 /// List file names in a directory within a project directory.
 #[tauri::command]
 pub fn sync_read_dir(project_dir: String, dir_path: String) -> Result<Vec<String>, String> {
-    let project_dir = expand_tilde(&project_dir);
     let canonical = validate_project_path(&project_dir, &dir_path)?;
     let entries = fs::read_dir(&canonical)
         .map_err(|e| format!("Failed to read directory {}: {}", dir_path, e))?;
@@ -143,7 +183,6 @@ pub fn sync_read_dir(project_dir: String, dir_path: String) -> Result<Vec<String
 /// Write compiled output files into a project directory.
 #[tauri::command]
 pub fn sync_write_files(project_dir: String, files: Vec<SyncFileWrite>) -> Result<(), String> {
-    let project_dir = expand_tilde(&project_dir);
     for file in &files {
         let dest = validate_project_path(&project_dir, &file.relative_path)?;
         if let Some(parent) = dest.parent() {
@@ -165,7 +204,6 @@ pub fn sync_create_backup(
     platforms: Vec<String>,
     file_paths: Vec<String>,
 ) -> Result<BackupManifest, String> {
-    let project_dir = expand_tilde(&project_dir);
     let backup_id = uuid::Uuid::new_v4().to_string();
     let timestamp = chrono::Utc::now().to_rfc3339();
 
@@ -313,4 +351,96 @@ pub fn sync_restore_backup(backup_id: String) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // The guard's logic is tested against explicit paths rather than the
+    // ambient HOME: agents.rs, harness_file.rs, mcp.rs and plugins.rs all
+    // set_var("HOME", ...) on the shared process env, and cargo runs tests
+    // in parallel, so anything reading dirs::home_dir() here is racy.
+
+    #[test]
+    fn treats_the_home_directory_itself_as_out_of_bounds() {
+        let home = Path::new("/Users/example");
+        assert!(is_home_or_ancestor(home, home));
+    }
+
+    #[test]
+    fn treats_ancestors_of_home_as_out_of_bounds() {
+        let home = Path::new("/Users/example");
+        assert!(is_home_or_ancestor(Path::new("/"), home));
+        assert!(is_home_or_ancestor(Path::new("/Users"), home));
+    }
+
+    #[test]
+    fn allows_a_directory_below_home() {
+        let home = Path::new("/Users/example");
+        assert!(!is_home_or_ancestor(Path::new("/Users/example/repos/app"), home));
+    }
+
+    #[test]
+    fn allows_a_directory_outside_home() {
+        let home = Path::new("/Users/example");
+        assert!(!is_home_or_ancestor(Path::new("/opt/src"), home));
+    }
+
+    #[test]
+    fn rejects_an_ancestor_of_the_home_directory() {
+        // "/" is an ancestor of home under any HOME value, so this stays
+        // deterministic even while another test has HOME reassigned.
+        let err = resolve_project_root("/").unwrap_err();
+        assert!(err.contains("Refusing to operate on the home directory"));
+    }
+
+    #[test]
+    fn write_is_refused_when_the_root_is_an_ancestor_of_home() {
+        // The reachable shape of the bug: an unconstrained root plus the
+        // relative-path writer reaching a dotfile outside any project.
+        let result = sync_write_files(
+            "/".to_string(),
+            vec![SyncFileWrite {
+                relative_path: "harness-kit-guard-probe".to_string(),
+                content: "should never be written".to_string(),
+            }],
+        );
+        // Assert on the guard's own message: writing under "/" would fail on
+        // permissions anyway, so `is_err()` alone would pass even with the
+        // guard removed (confirmed by mutation).
+        let err = result.unwrap_err();
+        assert!(
+            err.contains("Refusing to operate on the home directory"),
+            "expected the root guard to reject this, got: {err}"
+        );
+        assert!(!Path::new("/harness-kit-guard-probe").exists());
+    }
+
+    #[test]
+    fn allows_an_ordinary_project_directory() {
+        let dir = std::env::temp_dir().join("harness-kit-sync-guard-ok");
+        fs::create_dir_all(&dir).unwrap();
+        assert!(resolve_project_root(dir.to_str().unwrap()).is_ok());
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn still_rejects_traversal_within_an_allowed_root() {
+        let dir = std::env::temp_dir().join("harness-kit-sync-guard-traversal");
+        fs::create_dir_all(&dir).unwrap();
+        let err = validate_project_path(dir.to_str().unwrap(), "../escape.txt").unwrap_err();
+        assert!(err.contains(".."));
+        fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn file_exists_reports_false_for_a_missing_root_without_erroring() {
+        let missing = std::env::temp_dir().join("harness-kit-sync-guard-absent");
+        fs::remove_dir_all(&missing).ok();
+        assert_eq!(
+            sync_file_exists(missing.to_string_lossy().into_owned(), ".".to_string()),
+            Ok(false)
+        );
+    }
 }
