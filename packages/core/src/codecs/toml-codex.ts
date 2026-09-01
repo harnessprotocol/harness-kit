@@ -231,6 +231,9 @@ function renderTable(name: string, value: CodexMcpValue): string[] {
 /** Any table header line, e.g. `[a]`, `[[a]]`, `  [a.b]  # note`. */
 const TABLE_HEADER = /^\s*\[\[?([^\]]*)\]\]?\s*(#.*)?$/;
 
+/** The two multi-line string delimiters TOML allows. */
+const MULTILINE_DELIMITERS = ['"'.repeat(3), "'".repeat(3)] as const;
+
 /** Parse a header's dotted key path into its segments, unquoting as needed. */
 function headerSegments(header: string): string[] | null {
   const segments: string[] = [];
@@ -265,26 +268,90 @@ function headerSegments(header: string): string[] | null {
   return segments;
 }
 
-/** Line span [start, end) of `[mcp_servers.NAME]` and its sub-tables. */
-function findRegion(lines: string[], name: string): { start: number; end: number } | null {
-  let start = -1;
+/**
+ * Line indices that sit inside a multi-line string.
+ *
+ * Without this, a `[mcp_servers.x]` written as prose inside a triple-quoted
+ * block reads as a real table header, and the editor splices from the middle
+ * of the user's string — deleting their text and emitting unparseable TOML.
+ */
+function multilineStringLines(lines: string[]): Set<number> {
+  const inside = new Set<number>();
+  let open: string | null = null;
   for (const [index, line] of lines.entries()) {
-    const match = TABLE_HEADER.exec(line);
-    if (!match) continue;
-    const segments = headerSegments(match[1] ?? "");
-    if (!segments) continue;
-    if (start === -1) {
-      if (segments.length === 2 && segments[0] === "mcp_servers" && segments[1] === name) {
-        start = index;
-      }
+    if (open !== null) {
+      inside.add(index);
+      if (line.includes(open)) open = null;
       continue;
     }
-    // A deeper table under the same server stays inside the region.
-    const isSubTable =
-      segments.length > 2 && segments[0] === "mcp_servers" && segments[1] === name;
-    if (!isSubTable) return { start, end: index };
+    for (const delimiter of MULTILINE_DELIMITERS) {
+      // An odd number of delimiters on a line leaves a block open.
+      if ((line.split(delimiter).length - 1) % 2 === 1) {
+        open = delimiter;
+        break;
+      }
+    }
   }
-  return start === -1 ? null : { start, end: lines.length };
+  return inside;
+}
+
+/** Header key path for a line, or null when the line is not a header. */
+function headerAt(lines: string[], index: number, insideString: Set<number>): string[] | null {
+  if (insideString.has(index)) return null;
+  const match = TABLE_HEADER.exec(lines[index] ?? "");
+  if (!match) return null;
+  return headerSegments(match[1] ?? "");
+}
+
+/**
+ * Every line span belonging to `[mcp_servers.NAME]` and its sub-tables.
+ *
+ * Returns a list, because a sub-table is legal anywhere in the file rather
+ * than only adjacent to its parent. Leaving a distant `[mcp_servers.x.env]`
+ * behind orphaned the server on remove (a table with no command, which the
+ * reader then skips as malformed) and produced a duplicate-key parse error
+ * on upsert.
+ */
+function findRegions(
+  lines: string[],
+  name: string,
+  insideString: Set<number>,
+): Array<{ start: number; end: number; isParent: boolean }> {
+  const regions: Array<{ start: number; end: number; isParent: boolean }> = [];
+  let current: { start: number; isParent: boolean } | null = null;
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const segments = headerAt(lines, index, insideString);
+    if (!segments) continue;
+    if (current) {
+      regions.push({ ...current, end: index });
+      current = null;
+    }
+    if (segments.length >= 2 && segments[0] === "mcp_servers" && segments[1] === name) {
+      current = { start: index, isParent: segments.length === 2 };
+    }
+  }
+  if (current) regions.push({ ...current, end: lines.length });
+  return regions;
+}
+
+/**
+ * Pull a region's end back off the comment block introducing the NEXT table.
+ *
+ * A region runs to the following header, which sweeps up the comment lines
+ * written immediately above it. Those belong to the next table, and deleting
+ * them contradicts this file's entire reason for existing.
+ */
+function trimTrailingPreamble(lines: string[], start: number, end: number): number {
+  let cut = end;
+  while (cut > start) {
+    const line = (lines[cut - 1] ?? "").trim();
+    if (line.startsWith("#") || line.length === 0) cut -= 1;
+    else break;
+  }
+  // Keep one blank line as the separator the region already had.
+  if (cut < end && (lines[cut] ?? "").trim().length === 0) cut += 1;
+  return cut;
 }
 
 /**
@@ -311,11 +378,10 @@ export function writeCodexMcp(content: string, edit: CodexMcpWrite): string {
 
   if (hasTables && Object.keys((doc as { mcp_servers: Record<string, unknown> }).mcp_servers).length > 0) {
     // Values exist but no `[mcp_servers.*]` header does ⇒ inline form.
-    const anyHeader = body.some((line) => {
-      const match = TABLE_HEADER.exec(line);
-      const segments = match ? headerSegments(match[1] ?? "") : null;
-      return segments?.[0] === "mcp_servers";
-    });
+    const stringLines = multilineStringLines(body);
+    const anyHeader = body.some(
+      (_line, index) => headerAt(body, index, stringLines)?.[0] === "mcp_servers",
+    );
     if (!anyHeader) {
       throw new Error(
         "refusing to edit an inline mcp_servers table — rewrite it as [mcp_servers.NAME] tables first",
@@ -325,26 +391,32 @@ export function writeCodexMcp(content: string, edit: CodexMcpWrite): string {
 
   const name = edit.upsert?.name ?? edit.remove;
   if (name === undefined) throw new Error("writeCodexMcp requires an upsert or a remove");
-  const region = findRegion(body, name);
 
-  if (edit.remove !== undefined) {
-    if (!region) return content;
-    const next = [...body.slice(0, region.start), ...body.slice(region.end)];
-    return `${next.join("\n")}${hasTrailingNewline ? "\n" : ""}`;
+  const insideString = multilineStringLines(body);
+  const regions = findRegions(body, name, insideString).map((region) => ({
+    ...region,
+    end: trimTrailingPreamble(body, region.start, region.end),
+  }));
+
+  if (regions.length === 0) {
+    if (edit.remove !== undefined) return content;
+    const rendered = renderTable(edit.upsert!.name, edit.upsert!.value);
+    const needsBlank = body.length > 0 && body.at(-1)?.trim() !== "";
+    return `${[...body, ...(needsBlank ? [""] : []), ...rendered].join("\n")}\n`;
   }
 
-  const rendered = renderTable(edit.upsert!.name, edit.upsert!.value);
-  if (region) {
-    // Preserve the blank-line separation the region already had.
-    const trailing: string[] = [];
-    for (let index = region.end - 1; index > region.start && body[index]?.trim() === ""; index -= 1) {
-      trailing.unshift(body[index]!);
-    }
-    const next = [...body.slice(0, region.start), ...rendered, ...trailing, ...body.slice(region.end)];
-    return `${next.join("\n")}${hasTrailingNewline ? "\n" : ""}`;
+  // Splice every region out, re-inserting the rendered table where the parent
+  // table was, so a sub-table elsewhere in the file cannot survive its parent.
+  const rendered = edit.remove !== undefined ? [] : renderTable(edit.upsert!.name, edit.upsert!.value);
+  const parentIndex = regions.findIndex((region) => region.isParent);
+  const insertAt = parentIndex === -1 ? 0 : parentIndex;
+  const next: string[] = [];
+  let cursor = 0;
+  for (const [index, region] of regions.entries()) {
+    next.push(...body.slice(cursor, region.start));
+    if (index === insertAt) next.push(...rendered);
+    cursor = region.end;
   }
-
-  const needsBlank = body.length > 0 && body.at(-1)?.trim() !== "";
-  const next = [...body, ...(needsBlank ? [""] : []), ...rendered];
-  return `${next.join("\n")}\n`;
+  next.push(...body.slice(cursor));
+  return `${next.join("\n")}${hasTrailingNewline ? "\n" : ""}`;
 }

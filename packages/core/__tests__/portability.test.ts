@@ -433,6 +433,19 @@ describe("file transactions", () => {
     expect(fs.getFile("/home/user/.claude.json")).toBe('{"a":1}');
   });
 
+  it("refuses two changes that resolve to the same file through different roots", async () => {
+    const fs = new MockFsProvider({ "/project/conf.json": "a" });
+    await expect(applyFileTransaction(
+      [
+        { path: "conf.json", before: "a", after: "b" },
+        { root: "home", path: "conf.json", before: "a", after: "c" },
+      ],
+      // Both roots deliberately point at the same directory.
+      { fs, timestamp: "same", roots: { home: { absolutePath: "/project" } } },
+    )).rejects.toThrow(/same file/);
+    expect(fs.getFile("/project/conf.json")).toBe("a");
+  });
+
   it("round-trips a v1 (rootless) manifest as project-rooted", async () => {
     const fs = new MockFsProvider({ "/project/a.txt": "a0" });
     await applyFileTransaction([{ path: "a.txt", before: "a0", after: "a1" }], {

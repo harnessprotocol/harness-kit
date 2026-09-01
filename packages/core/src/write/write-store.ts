@@ -220,11 +220,18 @@ async function writeMarkdownInstructions(
     if (!findMarkerBlock(current, MARKER_NAME, edit.name)) {
       return { supported: true, changes: [] };
     }
-    const after = replaceMarkerBlock(current, MARKER_NAME, edit.name, "")
-      .split("\n")
-      .filter((line) => !line.trim().startsWith(`<!-- BEGIN harness:${MARKER_NAME}:${edit.name}`))
-      .filter((line) => !line.trim().startsWith(`<!-- END harness:${MARKER_NAME}:${edit.name}`))
-      .join("\n");
+    // Exact marker match, not startsWith: removing "api" was stripping the
+    // markers off "api-extra", turning managed content into unmanaged prose
+    // and making the next sync append a duplicate block.
+    const beginTag = `<!-- BEGIN harness:${MARKER_NAME}:${edit.name} -->`;
+    const endTag = `<!-- END harness:${MARKER_NAME}:${edit.name} -->`;
+    const lines = current.split("\n");
+    const begin = lines.findIndex((line) => line.trim() === beginTag);
+    const end = lines.findIndex((line, index) => index > begin && line.trim() === endTag);
+    const after =
+      begin === -1 || end === -1
+        ? current
+        : [...lines.slice(0, begin), ...lines.slice(end + 1)].join("\n").replace(/\n{3,}/g, "\n\n");
     return { supported: true, changes: [{ path, before, after }] };
   }
 

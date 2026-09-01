@@ -174,6 +174,27 @@ describe("store write executors (AC-12, AC-13)", () => {
     expect(after.match(/BEGIN harness:sync:house-style/g)).toHaveLength(1);
   });
 
+  it("removing one instruction block leaves a name-prefixed sibling intact", async () => {
+    const fs = new MockFsProvider({
+      "/home/user/.claude/CLAUDE.md":
+        "# Notes\n\n<!-- BEGIN harness:sync:api -->\napi body\n<!-- END harness:sync:api -->\n\n<!-- BEGIN harness:sync:api-extra -->\napi-extra body\n<!-- END harness:sync:api-extra -->\n",
+    });
+    const plan = await planStoreWrite(
+      fs,
+      store({ kind: "instructions", formatId: "markdown-instructions", path: ".claude/CLAUDE.md" }),
+      "/home/user/.claude/CLAUDE.md",
+      { kind: "instructions", name: "api", value: null },
+    );
+    if (!plan.supported) throw new Error("expected supported");
+    const after = plan.changes[0]!.after!;
+    // The sibling must keep BOTH markers — losing them turns managed content
+    // into unmanaged prose and makes the next sync append a duplicate.
+    expect(after).toContain("<!-- BEGIN harness:sync:api-extra -->");
+    expect(after).toContain("<!-- END harness:sync:api-extra -->");
+    expect(after).toContain("api-extra body");
+    expect(after).not.toContain("api body");
+  });
+
   it("reports unsupported rather than throwing for a kind the format cannot hold", async () => {
     const fs = new MockFsProvider();
     const plan = await planStoreWrite(

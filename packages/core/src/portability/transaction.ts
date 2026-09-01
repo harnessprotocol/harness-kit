@@ -134,6 +134,15 @@ export async function applyFileTransaction(
   assertRelativeSafePath(backupDir);
   const unique = new Set(changes.map(changeKey));
   if (unique.size !== changes.length) throw new Error("transaction contains duplicate file paths");
+  // (root, path) is not sufficient on its own: two roots can resolve to the
+  // same directory, and the same file reached through both would pass the
+  // check above, then last-write-wins with the second backup clobbering the
+  // first — rollback would restore a state that never existed. No caller
+  // does this today; the guard is here so none can start.
+  const resolved = new Set(changes.map((change) => fs.joinPath(rootOf(change), change.path)));
+  if (resolved.size !== changes.length) {
+    throw new Error("transaction contains two changes that resolve to the same file");
+  }
 
   await assertNoSymlinkBoundary(fs, manifestRoot, backupDir);
   for (const change of changes) await assertNoSymlinkBoundary(fs, rootOf(change), change.path);
