@@ -103,6 +103,7 @@ fn main() {
                 "sync_read_dir",
                 "sync_write_files",
                 "apply_surface_transaction",
+                "record_transaction",
                 "sync_create_backup",
                 "sync_list_backups",
                 "sync_restore_backup",

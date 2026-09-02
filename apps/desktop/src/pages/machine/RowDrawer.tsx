@@ -292,8 +292,12 @@ function RowActions({ row, onApplied }: { row: GridRow; onApplied?: () => void }
     if (!view) return;
     setBusy(true);
     try {
-      await applyCellActionViaTauri(view, confirmedLoss);
-      setStatus("Applied.");
+      const applied = await applyCellActionViaTauri(view, confirmedLoss);
+      setStatus(
+        applied.ledgerError
+          ? `Applied, but this change was not added to the rollback list (${applied.ledgerError}). The backup is still on disk.`
+          : "Applied.",
+      );
       onApplied?.();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : String(error));

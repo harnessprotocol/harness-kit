@@ -2589,6 +2589,12 @@
           "markdownDescription": "Enables the record_harness_launch_result command without any pre-configured scope."
         },
         {
+          "description": "Enables the record_transaction command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-record-transaction",
+          "markdownDescription": "Enables the record_transaction command without any pre-configured scope."
+        },
+        {
           "description": "Enables the remove_worktrees command without any pre-configured scope.",
           "type": "string",
           "const": "allow-remove-worktrees",
@@ -3157,6 +3163,12 @@
           "type": "string",
           "const": "deny-record-harness-launch-result",
           "markdownDescription": "Denies the record_harness_launch_result command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the record_transaction command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-record-transaction",
+          "markdownDescription": "Denies the record_transaction command without any pre-configured scope."
         },
         {
           "description": "Denies the remove_worktrees command without any pre-configured scope.",

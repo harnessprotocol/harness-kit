@@ -48,9 +48,9 @@ Core ships generic executors for the common format families: `json-mcpservers` (
 Core takes injected effects only: existing `FsProvider`, plus new `StateStore`, `Fetch`, and `ProcessRunner` interfaces. No driver imports in core (the `node:crypto` webview crash, institutionalized as a rule).
 
 - **CLI**: `StateStore` backed by `node:sqlite`; `ProcessRunner` = child_process.
-- **Desktop**: webview runs the same core; `StateStore` bridges over Tauri commands (SQL plugin) to the same DB; `ProcessRunner` = Rust spawn command.
-- **DB**: `~/.harness/harness.db`, WAL mode + busy timeout for CLI/app concurrency. Shipped v1 tables: `meta`, `observations`, `observed_resources`, `fingerprints`, `transactions` (rollback points, M2), `plugin_installs` (manifest digest + file list, M3), `definitions_cache` (M4). The desktop's drift `acknowledgements` stay in its own SQLite until the M2 StateStore bridge migrates them.
-- The `probe_harness_capabilities` command is deleted from `apps/desktop/src-tauri/src/commands/parity.rs` (the file's acknowledgement persistence remains until M2); Rust keeps fs bridge, process spawn, file watching.
+- **Desktop**: webview runs the same core; the ledger half of `StateStore` bridges over hand-written Tauri commands backed by `rusqlite` (not the SQL plugin) to the same DB; `ProcessRunner` = Rust spawn command.
+- **DB**: `~/.harness/harness.db`, WAL mode + busy timeout for CLI/app concurrency. Shipped v1 tables: `meta`, `observations`, `observed_resources`, `fingerprints`, `transactions` (rollback points, M2), `plugin_installs` (manifest digest + file list, M3), `definitions_cache` (M4). The desktop reaches this db through Rust ledger commands over a schema generated from core (`generated/state-schema.json`, drift-tested), because the webview has no node builtins and a desktop-only user has no CLI run to create the file. The desktop's drift `acknowledgements` remain in its own SQLite — they move with the M3 Drift work, not with this bridge.
+- The `probe_harness_capabilities` command is deleted from `apps/desktop/src-tauri/src/commands/parity.rs` (the file's acknowledgement persistence remains until M3, when Drift is reworked); Rust keeps fs bridge, process spawn, file watching.
 
 ## 5. Identity, normalization, diff
 

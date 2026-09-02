@@ -4,11 +4,13 @@ import {
   buildAgentPrompt,
   createHomeTransactionRoot,
   planCellAction,
+  recordAppliedTransaction,
   syncCliCommand,
 } from "@harness-kit/core";
 import type { CellActionPlan, CellActionRequest, GridRow, SurfaceId } from "@harness-kit/core";
 import { TauriFsProvider } from "../../lib/harness-fs";
 import { TauriSurfaceFsProvider } from "../../lib/surface-fs";
+import { TauriTransactionLedger } from "../../lib/state-ledger";
 import { detectDesktopPlatform } from "./machine-data";
 
 /**
@@ -80,22 +82,83 @@ export async function buildCellAction(
  * `harness-kit rollback --transaction <path>`; it just will not appear in
  * `rollback --list` until that bridge lands.
  */
+export interface CellApplyResult {
+  written: string[];
+  /**
+   * Set when the apply succeeded but its rollback point was not recorded.
+   * The caller MUST show this: the files changed, and the user would
+   * otherwise believe the change is in `rollback --list` when it is not.
+   */
+  ledgerError?: string;
+}
+
 export async function applyCellActionViaTauri(
   view: CellActionView,
   /** The user's explicit acknowledgement of capability loss (AC-34). */
   confirmedLoss = false,
-): Promise<string[]> {
+): Promise<CellApplyResult> {
   const home = await homeDir();
+  // Namespaced: the CLI mints ids from the same clock with the same format,
+  // and record_transaction does ON CONFLICT DO UPDATE — so a same-millisecond
+  // collision would silently overwrite one apply's rollback point with the
+  // other's, and they would share a backups/<ts>/ directory too.
+  const timestamp = `${new Date().toISOString().replace(/[:.]/g, "-")}-app`;
+  const prefix = home.endsWith("/") ? home : `${home}/`;
+  // The drawer only ever applies at user scope, so every change is home-rooted
+  // and the manifest anchors at home. That is an INVARIANT, not an assumption:
+  // the CLI derives both from the change set, and hardcoding them is precisely
+  // how the M2 ledger shipped with roots: [] and an unusable manifestRoot. If
+  // a project-scope apply is ever added here, this must derive them too —
+  // so it is asserted rather than assumed.
+  const changes = view.plan.changes.map((change) => {
+    if (!change.path.startsWith(prefix)) {
+      throw new Error(
+        `${change.path} is outside the home root; the ledger's root derivation needs updating`,
+      );
+    }
+    return {
+      root: "home" as const,
+      path: change.path.slice(prefix.length),
+      before: change.before,
+      after: change.after,
+    };
+  });
+
   const result = await applyCellAction(
     view.plan,
     {
       fs: new TauriSurfaceFsProvider(home),
-      timestamp: new Date().toISOString().replace(/[:.]/g, "-"),
+      timestamp,
       roots: { home: createHomeTransactionRoot(home, detectDesktopPlatform()) },
     },
     // Not `true`: a disabled button is UX, not a boundary. The engine's own
     // gate must see the real acknowledgement.
     { homeRoot: home, confirmed: confirmedLoss },
   );
-  return result.written;
+
+  // A no-op apply has nothing to roll back, and applyFileTransaction anchors
+  // an empty change set at the PROJECT root — recording manifestRoot: home
+  // for it would point rollback at a path that does not exist.
+  if (changes.length === 0) return { written: result.written };
+
+  const outcome = await recordAppliedTransaction(
+    result,
+    changes,
+    {
+      transactionId: timestamp,
+      appliedAt: new Date().toISOString(),
+      manifestRoot: home,
+      surfaces: [view.request.to],
+      kinds: [view.request.kind],
+      identityKeys: [`${view.request.kind}:${view.request.name.toLowerCase()}`],
+    },
+    new TauriTransactionLedger(),
+  );
+  // Returned rather than logged. An earlier version console.warn'd here and
+  // called that "surfaced" while the drawer still reported a plain "Applied."
+  // — a warning only devtools sees is swallowing with extra steps.
+  return {
+    written: result.written,
+    ...(outcome.error ? { ledgerError: outcome.error } : {}),
+  };
 }

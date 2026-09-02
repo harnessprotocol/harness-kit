@@ -373,3 +373,41 @@ describe("HARNESS_STATE_PATH override", () => {
     }
   });
 });
+
+describe("empty meta must not destroy the ledger", () => {
+  it("keeps rollback points when meta has no version row", async () => {
+    // The exact scenario harness_state.rs's a_read_never_destroys_the_ledger
+    // covers on the Rust side. The CLI path runs on every rollback --list,
+    // scan, and sync — far more traffic than the desktop path that was
+    // hardened — so a one-sided guard hands the landmine to the busier caller.
+    const dir = await mkdtemp(join(tmpdir(), "harness-empty-meta-"));
+    const dbPath = join(dir, "harness.db");
+    const store = await SqliteStateStore.open(dbPath);
+    await store.recordTransaction({
+      transactionId: "keep-me",
+      appliedAt: "2026-09-01T10:00:00.000Z",
+      roots: ["home"],
+      manifestPath: ".harness/backups/a/transaction.json",
+      manifestRoot: "/Users/tester",
+      backupDir: ".harness/backups/a",
+      surfaces: ["cursor"],
+      kinds: ["mcp-server"],
+      identityKeys: ["mcp-server:postgres"],
+    });
+    await store.close();
+
+    // Lose the version row, as a crash mid-provision or a damaged page would.
+    const raw = new DatabaseSync(dbPath);
+    raw.exec("DELETE FROM meta");
+    raw.close();
+
+    const reopened = await SqliteStateStore.open(dbPath);
+    try {
+      const listed = await reopened.listTransactions();
+      expect(listed.map((entry) => entry.transactionId)).toEqual(["keep-me"]);
+    } finally {
+      await reopened.close();
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});

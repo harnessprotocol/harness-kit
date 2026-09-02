@@ -9,7 +9,7 @@ import type { StoreFormatId, SurfaceId, SurfaceScope } from "../surfaces/types.j
  * desktop webview loads core and cannot resolve node builtins (the node:crypto
  * production crash institutionalized this rule), so implementations live with
  * their hosts: the CLI backs this with `node:sqlite`
- * (apps/cli/src/state/sqlite-store.ts); the desktop bridges via Tauri in M2.
+ * (apps/cli/src/state/sqlite-store.ts); the desktop bridges the ledger half via Tauri commands backed by rusqlite.
  *
  * Implementation contract:
  * - The backing store is SHARED between the CLI and the desktop app
@@ -94,11 +94,40 @@ export interface TransactionRecord {
 }
 
 /**
+ * The rollback-point half of the state store.
+ *
+ * Split out from {@link StateStore} because the desktop needs exactly this
+ * and nothing else: its applies must appear in `harness-kit rollback --list`,
+ * but observation snapshots are written by the CLI's scan path. A desktop
+ * implementation of the full StateStore would have to stub methods it has no
+ * use for, and a stub that silently returns nothing is worse than a type that
+ * says what is actually supported.
+ */
+export interface TransactionRecorder {
+  /**
+   * Record one committed transaction as a rollback point. Recording the same
+   * transactionId twice is idempotent — the later record wins.
+   */
+  recordTransaction(record: TransactionRecord): Promise<void>;
+}
+
+/**
+ * Recording plus reading. Split from {@link TransactionRecorder} because the
+ * desktop only ever records: `rollback --list` is a CLI command and nothing
+ * in the app's UI reads the ledger. Exposing a read over IPC with no caller
+ * would be attack surface bought for nothing.
+ */
+export interface TransactionLedger extends TransactionRecorder {
+  /** Recorded transactions, newest first, capped by `limit` when given. */
+  listTransactions(limit?: number): Promise<TransactionRecord[]>;
+}
+
+/**
  * Durable machine state store. M1 uses only the observation-related methods;
  * plugin installs / definitions cache land in later milestones behind the
  * same interface.
  */
-export interface StateStore {
+export interface StateStore extends TransactionLedger {
   /**
    * Persist one observation snapshot with its resources in a single atomic
    * transaction. Returns the new snapshot's id.
@@ -113,15 +142,6 @@ export interface StateStore {
 
   /** Upsert the digest for a surface × scope pair. */
   setFingerprint(surface: SurfaceId, scope: SurfaceScope, digest: string): Promise<void>;
-
-  /**
-   * Record one committed transaction as a rollback point. Recording the same
-   * transactionId twice is idempotent — the later record wins.
-   */
-  recordTransaction(record: TransactionRecord): Promise<void>;
-
-  /** Recorded transactions, newest first, capped by `limit` when given. */
-  listTransactions(limit?: number): Promise<TransactionRecord[]>;
 
   /** Release the underlying store. Further calls after close are invalid. */
   close(): Promise<void>;
