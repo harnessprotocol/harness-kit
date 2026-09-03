@@ -262,8 +262,12 @@ export function computeMachineInventory(observations: SurfaceObservation[]): Mac
     id: observation.surface,
     detected: observation.detected,
     resourceCount: observation.resources.length,
-    marketplaces: observation.marketplaces.map((entry) => ({ ...entry })),
-    marketplacesReadable: observation.marketplacesReadable,
+    // Defensive: both fields are required on SurfaceObservation, but
+    // computeMachineInventory is exported and callers construct observations
+    // by hand. A missing field degrades to "none, and we cannot say" rather
+    // than throwing halfway through building the grid.
+    marketplaces: (observation.marketplaces ?? []).map((entry) => ({ ...entry })),
+    marketplacesReadable: observation.marketplacesReadable === true,
     skipped: observation.skipped.map((entry) => ({ ...entry })),
   }));
   const detectedById = new Map(observations.map((o) => [o.surface, o.detected]));
@@ -272,7 +276,13 @@ export function computeMachineInventory(observations: SurfaceObservation[]): Mac
   const marketplacesById = new Map<SurfaceId, ReadonlySet<string> | null>(
     observations.map((o) => [
       o.surface,
-      o.marketplacesReadable ? new Set(o.marketplaces.map((m) => m.id)) : null,
+      // Case-folded: row identity folds case (`identityKey` lowercases the
+      // name, so `board@Harness-Kit` and `board@harness-kit` join one row),
+      // and a reachability check that did not fold would suppress a gap on a
+      // target that HAS registered the marketplace under different casing.
+      o.marketplacesReadable === true
+        ? new Set((o.marketplaces ?? []).map((m) => m.id.toLowerCase()))
+        : null,
     ]),
   );
   const surfaceOrder = observations.map((o) => o.surface);
@@ -377,7 +387,7 @@ export function computeMachineInventory(observations: SurfaceObservation[]): Mac
             const registered = marketplacesById.get(surfaceId);
             if (!registered) return true;
             const marketplace = rowMarketplace(accumulator, effectiveForms);
-            return marketplace === null || registered.has(marketplace);
+            return marketplace === null || registered.has(marketplace.toLowerCase());
           })
         : missingOn;
 

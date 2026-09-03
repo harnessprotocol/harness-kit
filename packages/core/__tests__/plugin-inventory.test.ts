@@ -57,6 +57,16 @@ const INSTALLED_PLUGINS = JSON.stringify({
   },
 });
 
+/**
+ * A real machine has an `enabledPlugins` entry for everything `claude plugin
+ * install` put in the install record, so the baseline fixture carries one.
+ * Without it every install reads as DISABLED, which is Claude Code's own
+ * behaviour (verified) but not the state most tests here are about.
+ */
+const CLAUDE_SETTINGS = JSON.stringify({
+  enabledPlugins: { "board@harness-kit": true, "research@harness-kit": true },
+});
+
 const KNOWN_MARKETPLACES = JSON.stringify({
   "harness-kit": {
     installLocation: `${HOME}/.claude/plugins/marketplaces/harness-kit`,
@@ -95,7 +105,9 @@ enabled = false
 
 describe("readClaudePlugins (AC-4)", () => {
   it("splits '<name>@<marketplace>' and carries version and revision", () => {
-    const result = readClaudePlugins(INSTALLED_PLUGINS, PROJECT);
+    const result = readClaudePlugins(INSTALLED_PLUGINS, PROJECT, {
+      "board@harness-kit": true,
+    });
     const user = result.entries.find((e) => e.name === "board@harness-kit" && e.scope === "user");
     expect(user?.value).toEqual({
       marketplace: "harness-kit",
@@ -181,10 +193,8 @@ describe("readClaudePlugins (AC-4)", () => {
 });
 
 describe("Claude Code enablement lives in settings, not the install record", () => {
-  // `claude plugin disable` writes `enabledPlugins` into settings and leaves
-  // installed_plugins.json untouched, so presence there means INSTALLED and
-  // says nothing about active. `enabled` is the only interesting field in the
-  // plugin digest, so getting this wrong breaks comparison in both directions.
+  // Every property below was verified against `claude plugin list` with an
+  // isolated CLAUDE_CONFIG_DIR, not assumed from the file's shape.
   const settings = (map: Record<string, boolean>) => JSON.stringify({ enabledPlugins: map });
 
   function pluginFs(files: Record<string, string>): MockFsProvider {
@@ -195,52 +205,97 @@ describe("Claude Code enablement lives in settings, not the install record", () 
     );
   }
 
-  async function pluginsOf(fs: MockFsProvider) {
-    const obs = await observeSurface(fs, getSurface("claude-code"), OPTS);
-    return obs.resources.filter((r) => r.kind === "plugin");
+  async function enabledByName(fs: MockFsProvider, opts = OPTS) {
+    const obs = await observeSurface(fs, getSurface("claude-code"), opts);
+    return Object.fromEntries(
+      obs.resources
+        .filter((r) => r.kind === "plugin")
+        .map((r) => [`${r.name}:${r.scope}`, (r.value as { enabled: boolean }).enabled]),
+    );
   }
 
-  it("reports a plugin disabled in user settings as disabled", async () => {
-    const plugins = await pluginsOf(
-      pluginFs({ [`${HOME}/.claude/settings.json`]: settings({ "research@harness-kit": false }) }),
+  it("treats an ABSENT key as disabled, not enabled", async () => {
+    // Deleting one key reports that plugin disabled in `claude plugin list`;
+    // deleting the whole map reports every install disabled. `disable`
+    // happens to write `false`, so an enabled-by-default reading passes the
+    // happy path and fails on a hand-edited or freshly imported file.
+    const listed = await enabledByName(
+      pluginFs({ [`${HOME}/.claude/settings.json`]: settings({ "board@harness-kit": true }) }),
     );
-    const research = plugins.find((p) => p.name === "research@harness-kit");
-    expect((research?.value as { enabled: boolean }).enabled).toBe(false);
-    // Untouched installs stay enabled.
-    const board = plugins.find((p) => p.name === "board@harness-kit");
-    expect((board?.value as { enabled: boolean }).enabled).toBe(true);
+    expect(listed["board@harness-kit:user"]).toBe(true);
+    expect(listed["research@harness-kit:user"]).toBe(false);
+
+    const noSettings = await enabledByName(pluginFs({}));
+    expect(Object.values(noSettings).every((v) => v === false)).toBe(true);
+
+    const emptyMap = await enabledByName(
+      pluginFs({ [`${HOME}/.claude/settings.json`]: settings({}) }),
+    );
+    expect(Object.values(emptyMap).every((v) => v === false)).toBe(true);
   });
 
-  it("layers settings.local.json over settings.json, matching Claude Code", async () => {
-    const plugins = await pluginsOf(
+  it("honours an explicit false", async () => {
+    const listed = await enabledByName(
       pluginFs({
-        [`${HOME}/.claude/settings.json`]: settings({ "research@harness-kit": false }),
-        [`${HOME}/.claude/settings.local.json`]: settings({ "research@harness-kit": true }),
+        [`${HOME}/.claude/settings.json`]: settings({
+          "board@harness-kit": false,
+          "research@harness-kit": true,
+        }),
       }),
     );
-    const research = plugins.find((p) => p.name === "research@harness-kit");
-    expect((research?.value as { enabled: boolean }).enabled).toBe(true);
+    expect(listed["board@harness-kit:user"]).toBe(false);
+    expect(listed["research@harness-kit:user"]).toBe(true);
   });
 
-  it("applies project settings only to project-scope installs", async () => {
-    const plugins = await pluginsOf(
+  it("lets PROJECT settings disable a USER-scope install", async () => {
+    // enabledPlugins is one map, not one per install scope: running Claude
+    // Code inside a project whose settings disable a plugin disables it there
+    // even though the install itself is user-scope.
+    const listed = await enabledByName(
       pluginFs({
+        [`${HOME}/.claude/settings.json`]: settings({ "board@harness-kit": true }),
         [`${PROJECT}/.claude/settings.json`]: settings({ "board@harness-kit": false }),
       }),
     );
-    const byScope = Object.fromEntries(
-      plugins
-        .filter((p) => p.name === "board@harness-kit")
-        .map((p) => [p.scope, (p.value as { enabled: boolean }).enabled]),
-    );
-    expect(byScope).toEqual({ project: false, user: true });
+    expect(listed["board@harness-kit:user"]).toBe(false);
+    expect(listed["board@harness-kit:project"]).toBe(false);
   });
 
-  it("a corrupt settings file is a diagnostic, not a silent 'all enabled'", async () => {
+  it("lets PROJECT settings re-enable what user settings disabled", async () => {
+    const listed = await enabledByName(
+      pluginFs({
+        [`${HOME}/.claude/settings.json`]: settings({ "board@harness-kit": false }),
+        [`${PROJECT}/.claude/settings.json`]: settings({ "board@harness-kit": true }),
+      }),
+    );
+    expect(listed["board@harness-kit:user"]).toBe(true);
+  });
+
+  it("layers project settings.local.json over project settings.json", async () => {
+    const listed = await enabledByName(
+      pluginFs({
+        [`${PROJECT}/.claude/settings.json`]: settings({ "board@harness-kit": false }),
+        [`${PROJECT}/.claude/settings.local.json`]: settings({ "board@harness-kit": true }),
+      }),
+    );
+    expect(listed["board@harness-kit:user"]).toBe(true);
+  });
+
+  it("does NOT consult ~/.claude/settings.local.json", async () => {
+    // Claude Code ignores it for enablement: a true there does not override a
+    // false in ~/.claude/settings.json.
+    const listed = await enabledByName(
+      pluginFs({
+        [`${HOME}/.claude/settings.json`]: settings({ "board@harness-kit": false }),
+        [`${HOME}/.claude/settings.local.json`]: settings({ "board@harness-kit": true }),
+      }),
+    );
+    expect(listed["board@harness-kit:user"]).toBe(false);
+  });
+
+  it("a corrupt settings file is a diagnostic, not a silent decision", async () => {
     const fs = pluginFs({ [`${HOME}/.claude/settings.json`]: "{not json" });
     const obs = await observeSurface(fs, getSurface("claude-code"), OPTS);
-    // settings.json is also a `permissions` store, so it produces its own
-    // parse diagnostic too; this asserts the enablement-specific one exists.
     const reason = obs.skipped
       .map((entry) => entry.reason)
       .find((text) => text.includes("enable/disable state could not be read"));
@@ -255,11 +310,6 @@ describe("Claude Code enablement lives in settings, not the install record", () 
     expect("enabled" in parsed ? parsed.enabled : null).toEqual({ a: true, d: false });
   });
 
-  it("a settings file with no enabledPlugins key contributes nothing", () => {
-    const parsed = readClaudeEnabledPlugins(JSON.stringify({ permissions: {} }));
-    expect("enabled" in parsed ? parsed.enabled : null).toEqual({});
-  });
-
   it("disabled on one surface and enabled on the other IS a diff (changelog claim)", async () => {
     const fs = new MockFsProvider(
       {
@@ -271,15 +321,12 @@ describe("Claude Code enablement lives in settings, not the install record", () 
       HOME,
     );
     // Machine-only: board also has a project install in the fixture, and
-    // project scope wins precedence within a surface — with a project root
-    // set, that (still-enabled) entry would be the one compared, which is
-    // correct behaviour but not what this test is about.
+    // project scope wins precedence within a surface.
     const machineOnly = { ...OPTS, projectRoot: null };
     const inventory = computeMachineInventory([
       await observeSurface(fs, getSurface("claude-code"), machineOnly),
       await observeSurface(fs, getSurface("codex"), machineOnly),
     ]);
-    // board is enabled on codex, disabled on claude-code.
     const diff = inventory.diffs.find((d) => d.row === "plugin:board@harness-kit");
     expect(diff?.delta).toEqual([
       { path: "enabled", kind: "changed", left: false, right: true },
@@ -427,6 +474,7 @@ function machineFs(): MockFsProvider {
     {
       [`${HOME}/.claude/plugins/installed_plugins.json`]: INSTALLED_PLUGINS,
       [`${HOME}/.claude/plugins/known_marketplaces.json`]: KNOWN_MARKETPLACES,
+      [`${HOME}/.claude/settings.json`]: CLAUDE_SETTINGS,
       [`${HOME}/.codex/config.toml`]: CODEX_CONFIG,
     },
     PROJECT,
@@ -607,6 +655,45 @@ describe("machine inventory: plugin rows join across surfaces", () => {
     expect(diff?.delta).toEqual([
       { path: "enabled", kind: "changed", left: true, right: false },
     ]);
+  });
+
+  it("does not suppress a gap when the target registered the marketplace under different casing", async () => {
+    // Row identity folds case, so `board@Harness-Kit` and `board@harness-kit`
+    // join one row. The reachability check must fold too, or a target that
+    // HAS the marketplace loses its gap.
+    const fs = new MockFsProvider(
+      {
+        [`${HOME}/.claude/plugins/installed_plugins.json`]: JSON.stringify({
+          plugins: { "board@Harness-Kit": [{ scope: "user", version: "1.0.0" }] },
+        }),
+        [`${HOME}/.claude/settings.json`]: JSON.stringify({
+          enabledPlugins: { "board@Harness-Kit": true },
+        }),
+        [`${HOME}/.codex/config.toml`]: '[marketplaces.harness-kit]\nsource_type = "git"\n',
+      },
+      PROJECT,
+      HOME,
+    );
+    const inventory = computeMachineInventory([
+      await observeSurface(fs, getSurface("claude-code"), OPTS),
+      await observeSurface(fs, getSurface("codex"), OPTS),
+    ]);
+    const gap = inventory.gaps.find((g) => g.row === "plugin:board@harness-kit");
+    expect(gap?.missingOn).toEqual(["codex"]);
+  });
+
+  it("degrades rather than throwing on an observation missing the new fields", () => {
+    // computeMachineInventory is exported and callers build observations by
+    // hand; the contract is "degraded, never crashed".
+    const partial = {
+      surface: "claude-code",
+      detected: true,
+      resources: [],
+      skipped: [],
+    } as unknown as Parameters<typeof computeMachineInventory>[0][number];
+    const inventory = computeMachineInventory([partial]);
+    expect(inventory.surfaces[0].marketplaces).toEqual([]);
+    expect(inventory.surfaces[0].marketplacesReadable).toBe(false);
   });
 
   it("reports marketplaces per surface and whether they are readable at all", async () => {

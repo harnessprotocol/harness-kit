@@ -23,6 +23,20 @@ import type { MarketplaceValue, PluginInstallScope, PluginStoreValue } from "./p
  * about active. The store executor reads the settings files named by the
  * descriptor's `enablement` list and passes their merged map in here.
  *
+ * Three properties of that map, each verified against `claude plugin list`
+ * with an isolated CLAUDE_CONFIG_DIR rather than assumed:
+ *
+ * 1. An ABSENT key means disabled, not enabled. Deleting one key reports
+ *    that plugin as disabled; deleting the whole map reports every install
+ *    as disabled. `claude plugin disable` happens to write `false` rather
+ *    than removing the key, so an enabled-by-default reading survives the
+ *    happy path and fails on a hand-edited or freshly imported settings file.
+ * 2. It is ONE map, not one per install scope. A project settings file
+ *    disables a USER-scope install when Claude Code runs in that project.
+ * 3. `~/.claude/settings.local.json` is NOT consulted — a `true` there does
+ *    not override a `false` in `~/.claude/settings.json`. The project-level
+ *    `settings.local.json` IS consulted.
+ *
  * The `<name>@<marketplace>` identity convention is shared with Codex's
  * `[plugins."name@marketplace"]` tables, so the same plugin installed on
  * both surfaces joins onto one grid row without a translation table.
@@ -65,12 +79,11 @@ export function readClaudeEnabledPlugins(
 }
 
 /**
- * `enabledPlugins` maps per scope, already merged in precedence order by the
- * caller (later settings file wins). A missing scope, or a plugin absent from
- * its map, means enabled: a plugin is recorded here only once enable/disable
- * has touched it, and an untouched install is active.
+ * The merged `enabledPlugins` map, in precedence order (later file wins),
+ * applied to every install regardless of the install's own scope. A plugin
+ * absent from it is DISABLED — see property 1 above.
  */
-export type ClaudeEnablement = Partial<Record<PluginInstallScope, Record<string, boolean>>>;
+export type ClaudeEnablement = Record<string, boolean>;
 
 export interface ClaudePluginsReadResult {
   entries: ClaudePluginEntry[];
@@ -213,7 +226,9 @@ export function readClaudePlugins(
         value: {
           marketplace: identity.marketplace,
           name: identity.name,
-          enabled: enablement[scope]?.[key] !== false,
+          // Absent means disabled, and the map is not partitioned by the
+          // install's scope — see the properties at the top of this file.
+          enabled: enablement[key] === true,
           ...(stringOrUndefined(install.version) !== undefined
             ? { version: stringOrUndefined(install.version) as string }
             : {}),

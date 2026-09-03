@@ -572,19 +572,22 @@ export function relativizeHome(value: string, homeRoot: string | undefined): str
 }
 
 /**
- * Resolve and merge the `enabledPlugins` maps the store's descriptor names.
- * Later files override earlier ones within a scope, which is how Claude Code
- * layers `settings.local.json` over `settings.json`. A file that exists but
- * cannot be read or parsed produces a diagnostic rather than being treated as
- * "nothing disabled" — otherwise a corrupt settings file would silently
- * report every plugin as active.
+ * Resolve and merge the `enabledPlugins` maps the store's descriptor names,
+ * in declaration order — later files win. The result is ONE map applied to
+ * every install; it is deliberately not partitioned by the install's scope,
+ * because a project settings file disables a user-scope install too (see the
+ * verified properties in codecs/json-claude-plugins.ts).
+ *
+ * A file that exists but cannot be read or parsed produces a diagnostic and
+ * contributes nothing, so a corrupt settings file never silently decides
+ * enablement for the whole surface.
  */
 async function readEnablement(
   fs: FsProvider,
   store: ConfigStore,
   context: StoreReadContext,
 ): Promise<{ enablement: ClaudeEnablement; skipped: SkippedEntry[] }> {
-  const enablement: ClaudeEnablement = {};
+  let enablement: ClaudeEnablement = {};
   const skipped: SkippedEntry[] = [];
   for (const source of store.enablement ?? []) {
     const root = source.scope === "user" ? context.homeRoot : context.projectRoot;
@@ -604,7 +607,7 @@ async function readEnablement(
       });
       continue;
     }
-    enablement[source.scope] = { ...enablement[source.scope], ...parsed.enabled };
+    enablement = { ...enablement, ...parsed.enabled };
   }
   return { enablement, skipped };
 }

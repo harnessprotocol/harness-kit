@@ -45,12 +45,14 @@ const SURFACE_TABLE: Record<SurfaceId, Omit<SurfaceDescriptor, "id">> = {
         path: ".claude/plugins/installed_plugins.json",
         // `claude plugin enable/disable` writes `enabledPlugins` into
         // settings, not into the install record, so enablement is read from
-        // there. `settings.local.json` layers over `settings.json`, matching
-        // Claude Code's own precedence; managed/enterprise settings are not
-        // consulted (HarnessKit does not manage those).
+        // there. Order is precedence, verified against `claude plugin list`
+        // with an isolated CLAUDE_CONFIG_DIR: the PROJECT files override the
+        // user file (and do so for user-scope installs too), while
+        // `~/.claude/settings.local.json` is NOT consulted at all — a `true`
+        // there does not override a `false` in `~/.claude/settings.json`.
+        // Managed/enterprise settings are out of scope.
         enablement: [
           { scope: "user", path: ".claude/settings.json" },
-          { scope: "user", path: ".claude/settings.local.json" },
           { scope: "project", path: ".claude/settings.json" },
           { scope: "project", path: ".claude/settings.local.json" },
         ],

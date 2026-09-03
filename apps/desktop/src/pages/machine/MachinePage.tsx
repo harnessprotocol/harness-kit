@@ -268,7 +268,12 @@ export default function MachinePage() {
       )}
 
       {selectedRow && (
-        <RowDrawer row={selectedRow} diffs={rowDiffs} onClose={() => setSelectedRow(null)} />
+        <RowDrawer
+          row={selectedRow}
+          diffs={rowDiffs}
+          gaps={inventory?.gaps ?? []}
+          onClose={() => setSelectedRow(null)}
+        />
       )}
     </div>
   );

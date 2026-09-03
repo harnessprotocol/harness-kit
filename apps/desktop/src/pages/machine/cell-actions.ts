@@ -7,7 +7,13 @@ import {
   recordAppliedTransaction,
   syncCliCommand,
 } from "@harness-kit/core";
-import type { CellActionPlan, CellActionRequest, GridRow, SurfaceId } from "@harness-kit/core";
+import type {
+  CellActionPlan,
+  CellActionRequest,
+  GridRow,
+  MachineGap,
+  SurfaceId,
+} from "@harness-kit/core";
 import { TauriFsProvider } from "../../lib/harness-fs";
 import { TauriSurfaceFsProvider } from "../../lib/surface-fs";
 import { TauriTransactionLedger } from "../../lib/state-ledger";
@@ -28,11 +34,24 @@ export interface CellActionView {
   prompt: string;
 }
 
-/** Surfaces this row is missing from, as action targets. */
-export function missingTargets(row: GridRow): SurfaceId[] {
-  return (Object.entries(row.cells) as Array<[SurfaceId, GridRow["cells"][SurfaceId]]>)
+/**
+ * Surfaces this row is missing from, as action targets.
+ *
+ * Prefer the ENGINE's gap list when one is supplied: an "absent" cell is not
+ * automatically a closable gap. A plugin whose marketplace the target has
+ * never registered is absent and unreachable, and offering it as a copy
+ * target would propose an action that cannot succeed. Falling back to cell
+ * status keeps this usable for callers that only hold a row.
+ */
+export function missingTargets(row: GridRow, gaps?: MachineGap[]): SurfaceId[] {
+  const absent = (Object.entries(row.cells) as Array<[SurfaceId, GridRow["cells"][SurfaceId]]>)
     .filter(([, cell]) => cell.status === "absent")
     .map(([id]) => id);
+  if (gaps === undefined) return absent;
+  const gap = gaps.find((entry) => entry.row === row.key);
+  if (gap === undefined) return [];
+  const reachable = new Set(gap.missingOn);
+  return absent.filter((id) => reachable.has(id));
 }
 
 /** Surfaces this row is present on, as action sources. */

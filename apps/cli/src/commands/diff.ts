@@ -192,14 +192,24 @@ async function crossSurfaceDiff(flags: DiffFlags): Promise<void> {
     pairRows.push({ key: row.key, kind: row.kind, name: row.name, from: fromStatus, to: toStatus, deltas });
   }
 
-  // Exit-1 triggers: a gap is one side present while the other is plain
-  // "absent" (not-applicable and unknown cells never trigger); a diff is
-  // any oriented FieldDelta between two present cells.
-  const gapRows = pairRows.filter(
-    (row) =>
-      (row.from === "present" && row.to === "absent") ||
-      (row.from === "absent" && row.to === "present"),
+  // Exit-1 triggers: a gap is one the ENGINE emitted, not one recomputed
+  // from cell status. The engine applies rules the statuses alone do not
+  // carry — a plugin whose marketplace the target has never registered is
+  // absent but not closable, and reporting it here would exit 1 forever on a
+  // gap no action can close.
+  const engineGaps = new Set(
+    inventory.gaps.flatMap((gap) => gap.missingOn.map((surface) => `${gap.row}\u0000${surface}`)),
   );
+  const isGap = (row: (typeof pairRows)[number]): boolean => {
+    if (row.from === "present" && row.to === "absent") {
+      return engineGaps.has(`${row.key}\u0000${to}`);
+    }
+    if (row.from === "absent" && row.to === "present") {
+      return engineGaps.has(`${row.key}\u0000${from}`);
+    }
+    return false;
+  };
+  const gapRows = pairRows.filter(isGap);
   const diffRows = pairRows.filter((row) => row.deltas.length > 0);
   const identicalRows = pairRows.filter(
     (row) => row.from === "present" && row.to === "present" && row.deltas.length === 0,
