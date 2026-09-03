@@ -17,6 +17,12 @@ import type { MarketplaceValue, PluginInstallScope, PluginStoreValue } from "./p
  * - `known_marketplaces.json` — `{ "<id>": { installLocation, lastUpdated,
  *   source } }`.
  *
+ * Enablement lives in a THIRD place: `claude plugin enable` / `disable`
+ * writes an `enabledPlugins` map into settings, not into the install record,
+ * so presence in `installed_plugins.json` means installed and says nothing
+ * about active. The store executor reads the settings files named by the
+ * descriptor's `enablement` list and passes their merged map in here.
+ *
  * The `<name>@<marketplace>` identity convention is shared with Codex's
  * `[plugins."name@marketplace"]` tables, so the same plugin installed on
  * both surfaces joins onto one grid row without a translation table.
@@ -27,13 +33,55 @@ export interface ClaudePluginEntry {
   scope: PluginInstallScope;
   /** Absolute project path for a project-scope install; absent at user scope. */
   projectPath?: string;
-  /** Claude Code has no per-install disable flag: presence IS enablement. */
   value: PluginStoreValue;
 }
+
+/**
+ * Read one settings file's `enabledPlugins` map. Anything that is not a
+ * boolean-valued entry under that key is ignored rather than guessed at, and
+ * a settings file HarnessKit cannot parse contributes nothing instead of
+ * silently reporting every plugin as enabled — the caller reports the parse
+ * failure so a wrong-looking grid has a stated reason.
+ */
+export function readClaudeEnabledPlugins(
+  content: string,
+): { enabled: Record<string, boolean> } | { reason: string } {
+  let doc: unknown;
+  try {
+    doc = JSON.parse(content);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { reason: `is not valid JSON (${message})` };
+  }
+  if (!isRecord(doc)) return { reason: "root is not a JSON object" };
+  const raw = doc.enabledPlugins;
+  if (raw === undefined) return { enabled: {} };
+  if (!isRecord(raw)) return { reason: "'enabledPlugins' is not a JSON object" };
+  const enabled: Record<string, boolean> = {};
+  for (const [key, value] of Object.entries(raw)) {
+    if (typeof value === "boolean") enabled[key] = value;
+  }
+  return { enabled };
+}
+
+/**
+ * `enabledPlugins` maps per scope, already merged in precedence order by the
+ * caller (later settings file wins). A missing scope, or a plugin absent from
+ * its map, means enabled: a plugin is recorded here only once enable/disable
+ * has touched it, and an untouched install is active.
+ */
+export type ClaudeEnablement = Partial<Record<PluginInstallScope, Record<string, boolean>>>;
 
 export interface ClaudePluginsReadResult {
   entries: ClaudePluginEntry[];
   skipped: Array<{ reason: string }>;
+}
+
+/** Human-readable JSON value description for skipped[] reasons. */
+function describeValue(value: unknown): string {
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "an array";
+  return `a ${typeof value}`;
 }
 
 /**
@@ -64,6 +112,26 @@ function stringOrUndefined(value: unknown): string | undefined {
 }
 
 /**
+ * Normalize a project root for comparison: backslashes to forward slashes,
+ * trailing separators trimmed. The desktop passes a user-TYPED directory
+ * through verbatim, and a pasted or tab-completed path carrying a trailing
+ * slash would otherwise match nothing and report "no project plugins" with
+ * no diagnostic — a silent zero.
+ *
+ * Case is deliberately NOT folded. macOS and Windows are usually
+ * case-insensitive and Linux is not, and folding unconditionally would make
+ * two genuinely different roots collide on the platforms where they can
+ * coexist. A case-differing root still under-reports; normalizing it belongs
+ * to whoever resolves the path, not to this comparison.
+ */
+function normalizeProjectPath(path: string): string {
+  const slashed = path.replace(/\\/g, "/");
+  let end = slashed.length;
+  while (end > 1 && slashed[end - 1] === "/") end -= 1;
+  return slashed.slice(0, end);
+}
+
+/**
  * Parse `installed_plugins.json`. Degraded, never thrown: a whole-file parse
  * failure becomes one skipped entry, and per-entry junk is skipped with a
  * reason naming the identity.
@@ -79,6 +147,7 @@ function stringOrUndefined(value: unknown): string | undefined {
 export function readClaudePlugins(
   content: string,
   projectRoot: string | null | undefined,
+  enablement: ClaudeEnablement = {},
 ): ClaudePluginsReadResult {
   let doc: unknown;
   try {
@@ -130,7 +199,12 @@ export function readClaudePlugins(
           continue;
         }
         if (projectRoot === null) continue;
-        if (projectPath !== projectRoot) continue;
+        if (
+          projectPath === undefined ||
+          normalizeProjectPath(projectPath) !== normalizeProjectPath(projectRoot)
+        ) {
+          continue;
+        }
       }
       entries.push({
         name: key,
@@ -139,7 +213,7 @@ export function readClaudePlugins(
         value: {
           marketplace: identity.marketplace,
           name: identity.name,
-          enabled: true,
+          enabled: enablement[scope]?.[key] !== false,
           ...(stringOrUndefined(install.version) !== undefined
             ? { version: stringOrUndefined(install.version) as string }
             : {}),
@@ -201,8 +275,19 @@ export function readClaudeMarketplaces(content: string): MarketplacesReadResult 
   }
 
   const entries: MarketplaceValue[] = [];
+  const skipped: Array<{ reason: string }> = [];
   for (const id of Object.keys(doc).sort()) {
-    entries.push({ id, ...readClaudeSource(isRecord(doc[id]) ? doc[id].source : undefined) });
+    const value = doc[id];
+    // Only object values are marketplaces. The sibling installed_plugins.json
+    // already carries a top-level `version` number, so a scalar key here is a
+    // schema field, not a registered marketplace — reporting beats inventing
+    // a phantom marketplace that would show up in the badge and in `status`.
+    // The Codex reader in toml-codex.ts applies the same rule.
+    if (!isRecord(value)) {
+      skipped.push({ reason: `marketplace '${id}' is ${describeValue(value)}, not an object` });
+      continue;
+    }
+    entries.push({ id, ...readClaudeSource(value.source) });
   }
-  return { entries, skipped: [] };
+  return { entries, skipped };
 }

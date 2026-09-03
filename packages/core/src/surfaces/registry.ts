@@ -38,7 +38,23 @@ const SURFACE_TABLE: Record<SurfaceId, Omit<SurfaceDescriptor, "id">> = {
       // entries carrying a projectPath. The codec stamps each entry's own
       // scope and filters project installs to the observed project root, so
       // this store is declared once, at user scope, not twice.
-      { kind: "plugin", scope: "user", formatId: "json-claude-plugins", path: ".claude/plugins/installed_plugins.json" },
+      {
+        kind: "plugin",
+        scope: "user",
+        formatId: "json-claude-plugins",
+        path: ".claude/plugins/installed_plugins.json",
+        // `claude plugin enable/disable` writes `enabledPlugins` into
+        // settings, not into the install record, so enablement is read from
+        // there. `settings.local.json` layers over `settings.json`, matching
+        // Claude Code's own precedence; managed/enterprise settings are not
+        // consulted (HarnessKit does not manage those).
+        enablement: [
+          { scope: "user", path: ".claude/settings.json" },
+          { scope: "user", path: ".claude/settings.local.json" },
+          { scope: "project", path: ".claude/settings.json" },
+          { scope: "project", path: ".claude/settings.local.json" },
+        ],
+      },
     ],
     notApplicable: [],
     marketplaces: [

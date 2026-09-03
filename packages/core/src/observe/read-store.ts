@@ -13,9 +13,11 @@ import { frontmatterName, frontmatterDescription } from "../import/read-skills.j
 import { readCodexMarketplaces, readCodexMcp, readCodexPlugins } from "../codecs/toml-codex.js";
 import { readOpenCodeMcpConfig } from "../codecs/json-opencode.js";
 import {
+  readClaudeEnabledPlugins,
   readClaudeMarketplaces,
   readClaudePlugins,
 } from "../codecs/json-claude-plugins.js";
+import type { ClaudeEnablement } from "../codecs/json-claude-plugins.js";
 import type { MarketplaceValue } from "../codecs/plugin-shapes.js";
 
 /**
@@ -151,8 +153,15 @@ export interface StoreReadContext {
   /**
    * Project root, for formats whose user-scoped file records project-scoped
    * entries keyed by project path. `null` = machine-only observation with no
-   * project; OMITTED entirely = the caller supplied no project context, which
-   * such a format reports as a skipped diagnostic rather than as "none".
+   * project.
+   *
+   * The key may also be OMITTED, which such a format reports as a diagnostic
+   * rather than as "none". No caller inside this repo omits it — both
+   * `observeSurface` and `planCellAction` always spread it from
+   * `ObserveOptions`, where it is required. The optionality guards
+   * `readStore` as an EXPORTED api: an outside caller passing `{}` should get
+   * a stated reason, not a confident zero. Treat the branch as API
+   * hardening, not as a path production takes.
    */
   projectRoot?: string | null;
   /** Home directory, used to strip the machine owner's username from
@@ -543,9 +552,61 @@ function stampCodecResult(
  */
 export function relativizeHome(value: string, homeRoot: string | undefined): string {
   if (homeRoot === undefined || homeRoot.length === 0) return value;
-  const root = homeRoot.endsWith("/") ? homeRoot.slice(0, -1) : homeRoot;
-  if (value === root) return "~";
-  return value.startsWith(`${root}/`) ? `~${value.slice(root.length)}` : value;
+  // Separator-agnostic: `platform: "win32"` is a supported observation target
+  // and `write-scope.json` carries a full win32 section, so a POSIX-only
+  // match would leave the username in place on exactly the platform whose
+  // home paths (`C:\\Users\\<name>`) contain it most prominently.
+  const trimSeparators = (path: string): string => {
+    let end = path.length;
+    while (end > 0 && (path[end - 1] === "/" || path[end - 1] === "\\")) end -= 1;
+    return path.slice(0, end);
+  };
+  const root = trimSeparators(homeRoot);
+  if (root.length === 0) return value;
+  if (trimSeparators(value) === root) return "~";
+  const next = value[root.length];
+  if (value.startsWith(root) && (next === "/" || next === "\\")) {
+    return `~${value.slice(root.length)}`;
+  }
+  return value;
+}
+
+/**
+ * Resolve and merge the `enabledPlugins` maps the store's descriptor names.
+ * Later files override earlier ones within a scope, which is how Claude Code
+ * layers `settings.local.json` over `settings.json`. A file that exists but
+ * cannot be read or parsed produces a diagnostic rather than being treated as
+ * "nothing disabled" — otherwise a corrupt settings file would silently
+ * report every plugin as active.
+ */
+async function readEnablement(
+  fs: FsProvider,
+  store: ConfigStore,
+  context: StoreReadContext,
+): Promise<{ enablement: ClaudeEnablement; skipped: SkippedEntry[] }> {
+  const enablement: ClaudeEnablement = {};
+  const skipped: SkippedEntry[] = [];
+  for (const source of store.enablement ?? []) {
+    const root = source.scope === "user" ? context.homeRoot : context.projectRoot;
+    if (root === undefined || root === null) continue;
+    const path = fs.joinPath(root, source.path);
+    const read = await readText(fs, path);
+    if (read.status === "missing") continue;
+    if (read.status === "unreadable") {
+      skipped.push({ file: path, reason: read.reason });
+      continue;
+    }
+    const parsed = readClaudeEnabledPlugins(read.content);
+    if ("reason" in parsed) {
+      skipped.push({
+        file: path,
+        reason: `${parsed.reason} — plugin enable/disable state could not be read from it`,
+      });
+      continue;
+    }
+    enablement[source.scope] = { ...enablement[source.scope], ...parsed.enabled };
+  }
+  return { enablement, skipped };
 }
 
 async function readClaudePluginsStore(
@@ -563,7 +624,8 @@ async function readClaudePluginsStore(
   // drop project installs silently) from an absent key (no project context
   // was supplied: report rather than imply "none").
   const projectRoot = "projectRoot" in context ? context.projectRoot : undefined;
-  const result = readClaudePlugins(read.content, projectRoot);
+  const enablement = await readEnablement(fs, store, context);
+  const result = readClaudePlugins(read.content, projectRoot, enablement.enablement);
   return {
     entries: result.entries.map((entry) => ({
       kind: store.kind,
@@ -572,7 +634,10 @@ async function readClaudePluginsStore(
       provenance: { file: absolutePath, formatId: store.formatId },
       scope: entry.scope,
     })),
-    skipped: result.skipped.map(({ reason }) => ({ file: absolutePath, reason })),
+    skipped: [
+      ...result.skipped.map(({ reason }) => ({ file: absolutePath, reason })),
+      ...enablement.skipped,
+    ],
   };
 }
 

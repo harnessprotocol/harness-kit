@@ -56,10 +56,20 @@ export interface SurfaceObservation {
   resources: ObservedResource[];
   /**
    * Registered plugin marketplaces (AC-4). Empty both when a surface
-   * registers none and when its descriptor declares no marketplace store —
-   * `SurfaceDescriptor.marketplaces` is what distinguishes the two.
+   * registers none and when HarnessKit could not read them —
+   * `marketplacesReadable` is what distinguishes the two.
    */
   marketplaces: MarketplaceEntry[];
+  /**
+   * Whether this observation actually READ the surface's marketplaces:
+   * the descriptor declares at least one marketplace store AND every
+   * declared store was read without a diagnostic. Deliberately not just
+   * "the descriptor declares one" — a store that exists but is unreadable
+   * (permission denied, unparseable) yields an empty list that would
+   * otherwise be reported as "none registered", which is the absent/unknown
+   * conflation AC-2 exists to prevent.
+   */
+  marketplacesReadable: boolean;
   /** Aggregated readStore diagnostics, file paths as returned. */
   skipped: SkippedEntry[];
 }
@@ -130,8 +140,12 @@ export async function observeSurface(
   }
 
   const marketplaces: MarketplaceEntry[] = [];
-  for (const store of descriptor.marketplaces ?? []) {
+  const declaredMarketplaceStores = descriptor.marketplaces ?? [];
+  let marketplacesReadable = declaredMarketplaceStores.length > 0;
+  for (const store of declaredMarketplaceStores) {
     const storePath = resolveStorePath(fs, store, opts);
+    // A project-scope marketplace store with no project context is not a
+    // failed read — there is simply no project to read one from.
     if (storePath === null) continue;
     const result = await readMarketplaceStore(fs, store, storePath, {
       projectRoot: opts.projectRoot,
@@ -139,9 +153,17 @@ export async function observeSurface(
     });
     marketplaces.push(...result.entries);
     skipped.push(...result.skipped);
+    if (result.skipped.length > 0) marketplacesReadable = false;
   }
 
-  return { surface: descriptor.id, detected, resources, marketplaces, skipped };
+  return {
+    surface: descriptor.id,
+    detected,
+    resources,
+    marketplaces,
+    marketplacesReadable,
+    skipped,
+  };
 }
 
 /**
@@ -171,6 +193,8 @@ export async function observeAllSurfaces(
         detected: false,
         resources: [],
         marketplaces: [],
+        // The surface could not be observed at all, so nothing was read.
+        marketplacesReadable: false,
         skipped: [
           {
             file: "<observation>",

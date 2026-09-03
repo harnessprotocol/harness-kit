@@ -196,6 +196,19 @@ function validateStore(value: unknown, path: string): ConfigStore {
     }
     store.shape = shape;
   }
+  if (value.enablement !== undefined) {
+    if (!Array.isArray(value.enablement)) {
+      fail(`${path}.enablement must be an array (got ${describe(value.enablement)})`);
+    }
+    store.enablement = value.enablement.map((source, i) => {
+      const at = `${path}.enablement[${i}]`;
+      if (!isRecord(source)) fail(`${at} must be an object (got ${describe(source)})`);
+      return {
+        scope: requireScope(source.scope, `${at}.scope`),
+        path: requireString(source.path, `${at}.path`),
+      };
+    });
+  }
   if (value.needsConfirmation !== undefined) {
     if (typeof value.needsConfirmation !== "boolean") {
       fail(`${path}.needsConfirmation must be a boolean (got ${describe(value.needsConfirmation)})`);

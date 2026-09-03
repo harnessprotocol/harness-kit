@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  readClaudeEnabledPlugins,
   readClaudeMarketplaces,
   readClaudePlugins,
 } from "../src/codecs/json-claude-plugins.js";
@@ -133,6 +134,28 @@ describe("readClaudePlugins (AC-4)", () => {
     expect(result.skipped[0].reason).toContain("without project context");
   });
 
+  it("tolerates a trailing separator on the project root", () => {
+    // The desktop passes a user-TYPED directory through verbatim, so a
+    // pasted or tab-completed path with a trailing slash must not silently
+    // report zero project plugins.
+    for (const root of [PROJECT, `${PROJECT}/`, `${PROJECT}//`]) {
+      const { entries } = readClaudePlugins(INSTALLED_PLUGINS, root);
+      expect(
+        entries.filter((e) => e.scope === "project").map((e) => e.name),
+        `project root ${JSON.stringify(root)}`,
+      ).toEqual(["board@harness-kit"]);
+    }
+  });
+
+  it("splits the identity on the LAST @, so a scoped name keeps its marketplace", () => {
+    const doc = JSON.stringify({
+      plugins: { "@acme/toolkit@harness-kit": [{ scope: "user" }] },
+    });
+    const { entries } = readClaudePlugins(doc, PROJECT);
+    expect(entries).toHaveLength(1);
+    expect(entries[0].value).toMatchObject({ name: "@acme/toolkit", marketplace: "harness-kit" });
+  });
+
   it("degrades on malformed input rather than throwing", () => {
     expect(readClaudePlugins("{not json", PROJECT).skipped[0].reason).toContain("not valid JSON");
     expect(readClaudePlugins("[]", PROJECT).skipped[0].reason).toContain("root is not a JSON object");
@@ -157,6 +180,113 @@ describe("readClaudePlugins (AC-4)", () => {
   });
 });
 
+describe("Claude Code enablement lives in settings, not the install record", () => {
+  // `claude plugin disable` writes `enabledPlugins` into settings and leaves
+  // installed_plugins.json untouched, so presence there means INSTALLED and
+  // says nothing about active. `enabled` is the only interesting field in the
+  // plugin digest, so getting this wrong breaks comparison in both directions.
+  const settings = (map: Record<string, boolean>) => JSON.stringify({ enabledPlugins: map });
+
+  function pluginFs(files: Record<string, string>): MockFsProvider {
+    return new MockFsProvider(
+      { [`${HOME}/.claude/plugins/installed_plugins.json`]: INSTALLED_PLUGINS, ...files },
+      PROJECT,
+      HOME,
+    );
+  }
+
+  async function pluginsOf(fs: MockFsProvider) {
+    const obs = await observeSurface(fs, getSurface("claude-code"), OPTS);
+    return obs.resources.filter((r) => r.kind === "plugin");
+  }
+
+  it("reports a plugin disabled in user settings as disabled", async () => {
+    const plugins = await pluginsOf(
+      pluginFs({ [`${HOME}/.claude/settings.json`]: settings({ "research@harness-kit": false }) }),
+    );
+    const research = plugins.find((p) => p.name === "research@harness-kit");
+    expect((research?.value as { enabled: boolean }).enabled).toBe(false);
+    // Untouched installs stay enabled.
+    const board = plugins.find((p) => p.name === "board@harness-kit");
+    expect((board?.value as { enabled: boolean }).enabled).toBe(true);
+  });
+
+  it("layers settings.local.json over settings.json, matching Claude Code", async () => {
+    const plugins = await pluginsOf(
+      pluginFs({
+        [`${HOME}/.claude/settings.json`]: settings({ "research@harness-kit": false }),
+        [`${HOME}/.claude/settings.local.json`]: settings({ "research@harness-kit": true }),
+      }),
+    );
+    const research = plugins.find((p) => p.name === "research@harness-kit");
+    expect((research?.value as { enabled: boolean }).enabled).toBe(true);
+  });
+
+  it("applies project settings only to project-scope installs", async () => {
+    const plugins = await pluginsOf(
+      pluginFs({
+        [`${PROJECT}/.claude/settings.json`]: settings({ "board@harness-kit": false }),
+      }),
+    );
+    const byScope = Object.fromEntries(
+      plugins
+        .filter((p) => p.name === "board@harness-kit")
+        .map((p) => [p.scope, (p.value as { enabled: boolean }).enabled]),
+    );
+    expect(byScope).toEqual({ project: false, user: true });
+  });
+
+  it("a corrupt settings file is a diagnostic, not a silent 'all enabled'", async () => {
+    const fs = pluginFs({ [`${HOME}/.claude/settings.json`]: "{not json" });
+    const obs = await observeSurface(fs, getSurface("claude-code"), OPTS);
+    // settings.json is also a `permissions` store, so it produces its own
+    // parse diagnostic too; this asserts the enablement-specific one exists.
+    const reason = obs.skipped
+      .map((entry) => entry.reason)
+      .find((text) => text.includes("enable/disable state could not be read"));
+    expect(reason).toBeDefined();
+    expect(reason).toContain("not valid JSON");
+  });
+
+  it("ignores non-boolean entries rather than coercing them", () => {
+    const parsed = readClaudeEnabledPlugins(
+      JSON.stringify({ enabledPlugins: { a: true, b: "yes", c: 0, d: false } }),
+    );
+    expect("enabled" in parsed ? parsed.enabled : null).toEqual({ a: true, d: false });
+  });
+
+  it("a settings file with no enabledPlugins key contributes nothing", () => {
+    const parsed = readClaudeEnabledPlugins(JSON.stringify({ permissions: {} }));
+    expect("enabled" in parsed ? parsed.enabled : null).toEqual({});
+  });
+
+  it("disabled on one surface and enabled on the other IS a diff (changelog claim)", async () => {
+    const fs = new MockFsProvider(
+      {
+        [`${HOME}/.claude/plugins/installed_plugins.json`]: INSTALLED_PLUGINS,
+        [`${HOME}/.claude/settings.json`]: settings({ "board@harness-kit": false }),
+        [`${HOME}/.codex/config.toml`]: CODEX_CONFIG,
+      },
+      PROJECT,
+      HOME,
+    );
+    // Machine-only: board also has a project install in the fixture, and
+    // project scope wins precedence within a surface — with a project root
+    // set, that (still-enabled) entry would be the one compared, which is
+    // correct behaviour but not what this test is about.
+    const machineOnly = { ...OPTS, projectRoot: null };
+    const inventory = computeMachineInventory([
+      await observeSurface(fs, getSurface("claude-code"), machineOnly),
+      await observeSurface(fs, getSurface("codex"), machineOnly),
+    ]);
+    // board is enabled on codex, disabled on claude-code.
+    const diff = inventory.diffs.find((d) => d.row === "plugin:board@harness-kit");
+    expect(diff?.delta).toEqual([
+      { path: "enabled", kind: "changed", left: false, right: true },
+    ]);
+  });
+});
+
 describe("readClaudeMarketplaces (AC-4)", () => {
   it("reads each registered marketplace's source type and location", () => {
     const { entries } = readClaudeMarketplaces(KNOWN_MARKETPLACES);
@@ -168,6 +298,18 @@ describe("readClaudeMarketplaces (AC-4)", () => {
 
   it("degrades on malformed input", () => {
     expect(readClaudeMarketplaces("nope").skipped[0].reason).toContain("not valid JSON");
+  });
+
+  it("reports a non-object entry instead of inventing a phantom marketplace", () => {
+    // installed_plugins.json already carries a top-level `version` number; a
+    // future schema field here must not become a marketplace in the badge.
+    const result = readClaudeMarketplaces(
+      JSON.stringify({ version: 1, "harness-kit": { source: { source: "github", repo: "a/b" } } }),
+    );
+    expect(result.entries.map((e) => e.id)).toEqual(["harness-kit"]);
+    expect(result.skipped.map((s) => s.reason)).toEqual([
+      "marketplace 'version' is a number, not an object",
+    ]);
   });
 });
 
@@ -185,9 +327,25 @@ describe("readCodexPlugins / readCodexMarketplaces (AC-4)", () => {
     ]);
   });
 
-  it("treats a table with no `enabled` key as enabled", () => {
-    const { entries } = readCodexPlugins('[plugins."x@y"]\n');
-    expect(entries[0].value.enabled).toBe(true);
+  it("treats a table with no `enabled` key as enabled, but only a real true as enabled", () => {
+    expect(readCodexPlugins('[plugins."x@y"]\n').entries[0].value.enabled).toBe(true);
+    // Not `!== false`: a non-boolean is not an assertion of enablement, and
+    // reading it as enabled would silently disagree with what Codex does.
+    expect(readCodexPlugins('[plugins."x@y"]\nenabled = "yes"\n').entries[0].value.enabled).toBe(
+      false,
+    );
+    expect(readCodexPlugins('[plugins."x@y"]\nenabled = false\n').entries[0].value.enabled).toBe(
+      false,
+    );
+  });
+
+  it("splits the identity on the LAST @, matching the Claude Code codec", () => {
+    const { entries } = readCodexPlugins('[plugins."@acme/toolkit@harness-kit"]\nenabled = true\n');
+    expect(entries[0].value).toEqual({
+      marketplace: "harness-kit",
+      name: "@acme/toolkit",
+      enabled: true,
+    });
   });
 
   it("reads [marketplaces.ID] tables", () => {
@@ -247,6 +405,15 @@ describe("relativizeHome", () => {
     expect(relativizeHome("/home/user2/.codex", HOME)).toBe("/home/user2/.codex");
   });
 
+  it("strips a Windows home directory too", () => {
+    // platform: "win32" is a supported observation target, and a Windows home
+    // path is where the username is most prominent.
+    const win = "C:\\Users\\tester";
+    expect(relativizeHome(`${win}\\.codex\\.tmp\\bundled`, win)).toBe("~\\.codex\\.tmp\\bundled");
+    expect(relativizeHome(win, win)).toBe("~");
+    expect(relativizeHome("C:\\Users\\tester2\\.codex", win)).toBe("C:\\Users\\tester2\\.codex");
+  });
+
   it("is a no-op without a home root", () => {
     expect(relativizeHome("/home/user/x", undefined)).toBe("/home/user/x");
     expect(relativizeHome("/home/user/x", "")).toBe("/home/user/x");
@@ -289,9 +456,33 @@ describe("observeSurface: plugins and marketplaces (AC-4)", () => {
     expect(obs.marketplaces.map((m) => m.source ?? "").join("|")).not.toContain(HOME);
   });
 
+  it("an unreadable marketplace file is NOT 'none registered'", async () => {
+    // The empty list is identical either way; `marketplacesReadable` is the
+    // only thing separating "we looked and there are none" from "we could not
+    // look". Deriving it from the descriptor alone would report a corrupt or
+    // permission-denied file as a confident zero.
+    const fs = new MockFsProvider(
+      {
+        [`${HOME}/.claude/plugins/installed_plugins.json`]: INSTALLED_PLUGINS,
+        [`${HOME}/.claude/plugins/known_marketplaces.json`]: "{ not json",
+      },
+      PROJECT,
+      HOME,
+    );
+    const obs = await observeSurface(fs, getSurface("claude-code"), OPTS);
+    expect(obs.marketplaces).toEqual([]);
+    expect(obs.marketplacesReadable).toBe(false);
+    expect(obs.skipped.some((entry) => entry.reason.includes("not valid JSON"))).toBe(true);
+
+    // The same surface with a readable file says so.
+    const good = await observeSurface(machineFs(), getSurface("claude-code"), OPTS);
+    expect(good.marketplacesReadable).toBe(true);
+  });
+
   it("a surface with no marketplace store observes an empty list, not an error", async () => {
     const obs = await observeSurface(machineFs(), getSurface("cursor"), OPTS);
     expect(obs.marketplaces).toEqual([]);
+    expect(obs.marketplacesReadable).toBe(false);
     expect(getSurface("cursor").marketplaces).toBeUndefined();
   });
 });

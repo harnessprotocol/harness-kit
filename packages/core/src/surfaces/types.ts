@@ -104,6 +104,15 @@ export interface ConfigStore {
      */
     directory?: true;
   };
+  /**
+   * Files whose `enabledPlugins` map records whether each install in THIS
+   * store is active — Claude Code keeps the install list and the enable/
+   * disable state in different files (`claude plugin disable` writes
+   * `enabledPlugins` into settings, not into the install record). Later
+   * entries override earlier ones, and an entry is consulted only for
+   * installs of its own scope. Paths are relative to that scope's root.
+   */
+  enablement?: Array<{ scope: SurfaceScope; path: string }>;
   /** Inventory from this store may be incomplete or ambiguous (e.g. VS Code profile dirs). */
   needsConfirmation?: boolean;
 }

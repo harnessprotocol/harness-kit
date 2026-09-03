@@ -192,6 +192,7 @@ function makeInventory() {
           },
           "claude-desktop": { status: "not-applicable", entries: [] },
           pi: { status: "not-applicable", entries: [] },
+          cursor: { status: "unmanaged", entries: [] },
         }),
       },
       {
@@ -328,6 +329,20 @@ describe("MachinePage", () => {
 
     expect(screen.getByText("Plugins")).toBeInTheDocument();
     expect(screen.getByText("board@harness-kit")).toBeInTheDocument();
+  });
+
+  it("draws an 'unmanaged' cell distinctly from both absent and not-applicable", async () => {
+    renderPage();
+    await screen.findByTestId("machine-grid");
+
+    // cursor HAS a plugin concept but HarnessKit reads no store for it, so
+    // the cell must not be the blank that means "could hold this, doesn't".
+    const cell = screen.getByLabelText("unmanaged locally");
+    expect(cell).toBeInTheDocument();
+    expect(cell).toHaveAttribute("title", expect.stringContaining("not managed locally"));
+    expect(cell).toHaveAttribute("title", expect.stringContaining("not a gap"));
+    // not-applicable keeps its own em-dash glyph.
+    expect(cell).not.toHaveTextContent("—");
   });
 
   it("derives totals from the inventory rows/gaps/diffs, not resourceCount", async () => {

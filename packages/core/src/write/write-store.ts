@@ -278,6 +278,29 @@ const WRITERS: Record<StoreFormatId, StoreWriter | null> = {
 };
 
 /**
+ * Why this kind cannot be written directly, or null if it can.
+ *
+ * Hoisted out of planStoreWrite so callers can ask BEFORE resolving a target
+ * store: whether a plugin goes through the surface's installer does not
+ * depend on which file that surface keeps its install list in, and a caller
+ * that checked the store first would report a store-shaped reason for a
+ * kind-shaped fact.
+ */
+export function unsupportedKindReason(kind: HarnessResourceKind): string | null {
+  if (TIER_ONE.has(kind)) return null;
+  // Plugins get their own wording: a direct write is not a missing feature
+  // here, it is the wrong mechanism. Editing the surface's install record by
+  // hand would leave its cache and that record disagreeing.
+  if (kind === "plugin") {
+    return (
+      "plugins are installed through the surface's own installer, not by editing its config — " +
+      "use the CLI command or agent prompt for this cell."
+    );
+  }
+  return `'${kind}' has no direct-write path yet — use the CLI command or agent prompt for this cell.`;
+}
+
+/**
  * Whether this build can write a store of the given format.
  *
  * The home write allowlist (surfaces/write-scope.ts) is derived through this
@@ -301,20 +324,8 @@ export async function planStoreWrite(
   absolutePath: string,
   edit: StoreEdit,
 ): Promise<StoreWritePlan> {
-  if (!TIER_ONE.has(edit.kind)) {
-    // Plugins get their own wording: a direct write is not a missing feature
-    // here, it is the wrong mechanism. Editing the surface's install record
-    // by hand would leave its cache and that record disagreeing.
-    if (edit.kind === "plugin") {
-      return unsupported(
-        "plugins are installed through the surface's own installer, not by editing its config — " +
-          "use the CLI command or agent prompt for this cell.",
-      );
-    }
-    return unsupported(
-      `'${edit.kind}' has no direct-write path yet — use the CLI command or agent prompt for this cell.`,
-    );
-  }
+  const kindReason = unsupportedKindReason(edit.kind);
+  if (kindReason !== null) return unsupported(kindReason);
   const writer = (WRITERS as Partial<Record<string, StoreWriter | null>>)[store.formatId];
   if (!writer) {
     return unsupported(

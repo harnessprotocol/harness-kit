@@ -20,6 +20,20 @@ function CellContent({ cell, kind }: { cell: GridCell; kind: GridRow["kind"] }) 
       </span>
     );
   }
+  if (cell.status === "unmanaged") {
+    // Distinct from both "—" (no such concept) and blank (could hold this,
+    // does not): the harness HAS the concept, but keeps no store HarnessKit
+    // reads or writes here, so nothing can be copied in either direction.
+    return (
+      <span
+        title={`${KIND_LABELS[kind] ?? kind} are not managed locally on this surface — HarnessKit reads no store for them here, so this is not a gap.`}
+        aria-label="unmanaged locally"
+        style={{ color: "var(--fg-subtle)", opacity: 0.4, fontSize: 11 }}
+      >
+        ·
+      </span>
+    );
+  }
   if (cell.status === "unknown") {
     return (
       <span
@@ -72,7 +86,7 @@ function CellContent({ cell, kind }: { cell: GridCell; kind: GridRow["kind"] }) 
       </span>
     );
   }
-  // absent — deliberately empty
+  // absent — deliberately empty: the surface could hold this and does not.
   return null;
 }
 

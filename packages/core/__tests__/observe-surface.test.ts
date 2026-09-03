@@ -138,6 +138,8 @@ describe("observeSurface: scope attribution", () => {
       surface: "claude-desktop",
       detected: false,
       marketplaces: [],
+      // claude-desktop declares no marketplace store at all, so nothing was read.
+      marketplacesReadable: false,
       resources: [],
       skipped: [],
     });
