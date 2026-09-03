@@ -184,6 +184,23 @@ mod tests {
     }
 
     #[test]
+    fn rejects_a_store_the_engine_only_reads() {
+        // Plugin state is enumerated, never written: installing goes through
+        // the surface's own installer, and editing the install record by hand
+        // would leave it disagreeing with the surface's cache. The generated
+        // allowlist is derived from WRITABLE stores, so this file never
+        // reaches the Rust side even though the registry declares it.
+        assert!(!is_declared_store(".claude/plugins/installed_plugins.json"));
+        assert!(!is_declared_store(".claude/plugins/known_marketplaces.json"));
+        // Formats with no writer this milestone are out too.
+        assert!(!is_declared_store(".claude/settings.json"));
+        assert!(!is_declared_store(".cursor/cli-config.json"));
+        // ~/.codex/config.toml stays writable: the MCP codec edits it, and
+        // its managed region is [mcp_servers.*] alone.
+        assert!(is_declared_store(".codex/config.toml"));
+    }
+
+    #[test]
     fn rejects_an_undeclared_path() {
         assert!(!is_declared_store(".zshrc"));
         assert!(!is_declared_store(".ssh/id_rsa"));

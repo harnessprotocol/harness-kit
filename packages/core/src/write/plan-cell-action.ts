@@ -146,7 +146,14 @@ async function findEntry(
   for (const store of ordered) {
     const path = storePath(fs, store, opts);
     if (path === null) continue;
-    const result = await readStore(fs, store, path);
+    // Pass the observation context: a format whose user-scoped file records
+    // project entries (Claude Code plugin installs) needs the project root to
+    // attribute them. Without it a project-only resource reads as absent, and
+    // the caller would refuse with "nothing to copy" instead of the real reason.
+    const result = await readStore(fs, store, path, {
+      projectRoot: opts.projectRoot,
+      homeRoot: opts.homeRoot,
+    });
     const entry = result.entries.find(
       (candidate) => candidate.kind === kind && candidate.name.toLowerCase() === wanted,
     );

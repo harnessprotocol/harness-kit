@@ -7,7 +7,7 @@ import type { ObserveOptions, SurfaceObservation } from "./observe-surface.js";
 import { observeAllSurfaces } from "./observe-surface.js";
 import type { NormalizedResource } from "./normalize.js";
 import { normalizeObservation } from "./normalize.js";
-import type { SkippedEntry } from "./read-store.js";
+import type { MarketplaceEntry, SkippedEntry } from "./read-store.js";
 
 /**
  * Machine inventory engine (design.md §3, Task 10): fold normalized
@@ -130,6 +130,16 @@ export interface MachineInventory {
      * included), not grid rows — column-header row counts must be derived
      * from cells, not this field. */
     resourceCount: number;
+    /**
+     * Registered plugin marketplaces (AC-4), in read order. Empty covers two
+     * different situations — the surface registers none, and HarnessKit
+     * cannot read this surface's marketplaces at all — which
+     * `marketplacesReadable` separates.
+     */
+    marketplaces: MarketplaceEntry[];
+    /** Whether the surface's descriptor declares a marketplace store, i.e.
+     * whether an empty `marketplaces` means "none registered" or "unknown". */
+    marketplacesReadable: boolean;
     skipped: SkippedEntry[];
   }>;
   /** Sorted lexicographically by `key` (kind then name) — pinned. */
@@ -220,6 +230,8 @@ export function computeMachineInventory(observations: SurfaceObservation[]): Mac
     id: observation.surface,
     detected: observation.detected,
     resourceCount: observation.resources.length,
+    marketplaces: observation.marketplaces.map((entry) => ({ ...entry })),
+    marketplacesReadable: (getSurface(observation.surface).marketplaces ?? []).length > 0,
     skipped: observation.skipped.map((entry) => ({ ...entry })),
   }));
   const detectedById = new Map(observations.map((o) => [o.surface, o.detected]));

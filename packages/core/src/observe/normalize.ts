@@ -5,6 +5,7 @@ import { looksLikeSecret, sanitizeCommandArgs } from "../portability/secrets.js"
 import { isRecord } from "../utils/is-record.js";
 import type { ObservedResource, SurfaceObservation } from "./observe-surface.js";
 import type { InstructionsStoreValue, SkillStoreValue } from "./read-store.js";
+import type { PluginStoreValue } from "../codecs/plugin-shapes.js";
 
 /**
  * Cross-surface resource normalization, identity, and digests (design.md §3,
@@ -262,6 +263,31 @@ function canonicalizeInstructions(value: unknown): unknown {
   };
 }
 
+/**
+ * plugin canonical form: `{ marketplace, name, enabled }` (AC-4).
+ *
+ * Deliberately NARROW. `version` and `revision` are excluded because
+ * surfaces disagree about whether they record them at all — Claude Code
+ * stores a version and a commit sha, Codex stores neither — so digesting
+ * them would report a content diff on every plugin installed on both,
+ * drowning real signal. Install paths and timestamps are excluded for the
+ * same reason skillPath is: they are machine facts, not resource content
+ * (and an installPath carries the machine owner's username).
+ *
+ * Version drift IS a real signal; it belongs to the recommendation layer,
+ * which can compare only where both sides report a version, rather than to
+ * a digest that must be equal-iff-equivalent across surfaces.
+ */
+function canonicalizePlugin(value: unknown): unknown {
+  if (!isRecord(value)) return deepCanonical(value);
+  const plugin = value as Partial<PluginStoreValue>;
+  return {
+    enabled: plugin.enabled !== false,
+    marketplace: typeof plugin.marketplace === "string" ? plugin.marketplace : "",
+    name: typeof plugin.name === "string" ? plugin.name : "",
+  };
+}
+
 /** Default: deep key-sort + secret-placeholder pass over the raw value. */
 function canonicalizeGeneric(value: unknown): unknown {
   return deepCanonical(value);
@@ -277,7 +303,7 @@ const CANONICALIZERS: Record<HarnessResourceKind, Canonicalizer> = {
   skill: canonicalizeSkill,
   instructions: canonicalizeInstructions,
   permissions: canonicalizeGeneric,
-  plugin: canonicalizeGeneric,
+  plugin: canonicalizePlugin,
   env: canonicalizeGeneric,
   "architectural-constraints": canonicalizeGeneric,
   policy: canonicalizeGeneric,

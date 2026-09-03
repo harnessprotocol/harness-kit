@@ -6,17 +6,20 @@ import {
   isWritableHomePath,
 } from "../src/surfaces/write-scope.js";
 import { SURFACES } from "../src/surfaces/registry.js";
+import { isWritableFormat } from "../src/write/write-store.js";
 import { MockFsProvider } from "./helpers/mock-fs.js";
 
 describe("home write scope (AC-31)", () => {
   const scope = homeWriteScope("darwin");
 
   it("derives the allowlist from the registry rather than a hardcoded list", () => {
-    // Every user-scope store the registry declares must be reachable; if a
-    // descriptor gains a store, this passes without touching write-scope.ts.
+    // Every user-scope store whose format this build can WRITE must be
+    // reachable; if a descriptor gains a writable store, this passes without
+    // touching write-scope.ts.
     for (const surface of SURFACES) {
       for (const store of surface.stores) {
         if (store.scope !== "user") continue;
+        if (!isWritableFormat(store.formatId)) continue;
         const path = store.pathByPlatform?.darwin ?? store.path;
         // A directory store is never written *at* its own path — only
         // beneath it — so reachability is the property, not exact acceptance.
@@ -27,6 +30,41 @@ describe("home write scope (AC-31)", () => {
           `${surface.id} declares ${path} but the write scope cannot reach it`,
         ).toBe(true);
       }
+    }
+  });
+
+  it("a READ-ONLY store never widens the allowlist", () => {
+    // Adding a store the engine can only read — plugin enumeration reads
+    // ~/.claude/plugins/installed_plugins.json and Codex's [plugins.*]
+    // tables — must not make that file writable by a user-scope apply. The
+    // PluginBroker drives the surface's own installer instead (AC-18).
+    //
+    // A path is judged across ALL the stores that declare it, not per store:
+    // Codex's plugin tables live in the same ~/.codex/config.toml the MCP
+    // writer already edits, so that file stays writable and this test must
+    // not claim otherwise. Only paths declared exclusively by read-only
+    // stores are the ones the allowlist must refuse.
+    const userStores = SURFACES.flatMap((surface) =>
+      surface.stores
+        .filter((store) => store.scope === "user")
+        .map((store) => ({
+          surface: surface.id,
+          path: store.pathByPlatform?.darwin ?? store.path,
+          writable: isWritableFormat(store.formatId),
+        })),
+    );
+    const writablePaths = new Set(userStores.filter((s) => s.writable).map((s) => s.path));
+    const readOnlyOnly = userStores.filter((s) => !s.writable && !writablePaths.has(s.path));
+
+    // Guard the guard: if every format became writable this test would pass
+    // vacuously and stop protecting anything.
+    expect(readOnlyOnly.length).toBeGreaterThan(0);
+    expect(readOnlyOnly.some((s) => s.path === ".claude/plugins/installed_plugins.json")).toBe(true);
+    for (const { surface, path } of readOnlyOnly) {
+      expect(
+        isWritableHomePath(path, scope),
+        `${surface} declares read-only ${path} but the write scope accepts it`,
+      ).toBe(false);
     }
   });
 

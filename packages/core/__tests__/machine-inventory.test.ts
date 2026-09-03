@@ -58,6 +58,7 @@ function obs(
       value: r.value,
       provenance: { file: r.file ?? `${HOME}/${surface}.json`, formatId: "json-mcpservers" },
     })),
+    marketplaces: [],
     skipped: [],
   };
 }
@@ -286,6 +287,7 @@ describe("cell precedence", () => {
             provenance: { file: `${HOME}/.agents/skills/helper/SKILL.md`, formatId: "skills-dir" },
           },
         ],
+        marketplaces: [],
         skipped: [],
       },
     ]);

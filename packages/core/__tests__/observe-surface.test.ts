@@ -137,6 +137,7 @@ describe("observeSurface: scope attribution", () => {
     expect(observation).toEqual<SurfaceObservation>({
       surface: "claude-desktop",
       detected: false,
+      marketplaces: [],
       resources: [],
       skipped: [],
     });

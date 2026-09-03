@@ -34,8 +34,16 @@ const SURFACE_TABLE: Record<SurfaceId, Omit<SurfaceDescriptor, "id">> = {
       { kind: "permissions", scope: "project", formatId: "json-generic", path: ".claude/settings.json" },
       { kind: "skill", scope: "project", formatId: "skills-dir", path: ".claude/skills" },
       { kind: "instructions", scope: "project", formatId: "markdown-instructions", path: "CLAUDE.md" },
+      // One user-scoped file records BOTH scopes: project-local installs are
+      // entries carrying a projectPath. The codec stamps each entry's own
+      // scope and filters project installs to the observed project root, so
+      // this store is declared once, at user scope, not twice.
+      { kind: "plugin", scope: "user", formatId: "json-claude-plugins", path: ".claude/plugins/installed_plugins.json" },
     ],
     notApplicable: [],
+    marketplaces: [
+      { scope: "user", formatId: "json-claude-marketplaces", path: ".claude/plugins/known_marketplaces.json" },
+    ],
   },
   "claude-desktop": {
     label: "Claude Desktop",
@@ -147,8 +155,14 @@ const SURFACE_TABLE: Record<SurfaceId, Omit<SurfaceDescriptor, "id">> = {
       { kind: "mcp-server", scope: "project", formatId: "toml-codex", path: ".codex/config.toml" },
       { kind: "instructions", scope: "project", formatId: "markdown-instructions", path: "AGENTS.md" },
       { kind: "skill", scope: "project", formatId: "skills-dir", path: ".agents/skills" },
+      { kind: "plugin", scope: "user", formatId: "toml-codex-plugins", path: ".codex/config.toml" },
+      { kind: "plugin", scope: "project", formatId: "toml-codex-plugins", path: ".codex/config.toml" },
     ],
     notApplicable: [],
+    marketplaces: [
+      { scope: "user", formatId: "toml-codex-marketplaces", path: ".codex/config.toml" },
+      { scope: "project", formatId: "toml-codex-marketplaces", path: ".codex/config.toml" },
+    ],
   },
   cursor: {
     label: "Cursor",

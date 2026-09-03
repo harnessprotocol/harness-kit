@@ -3,14 +3,15 @@ import type { HarnessResourceKind } from "../portability/types.js";
 import type {
   ConfigStore,
   DetectProbe,
+  MarketplaceStore,
   StoreFormatId,
   SurfaceDescriptor,
   SurfaceId,
   SurfaceScope,
 } from "../surfaces/types.js";
 import { SURFACES } from "../surfaces/registry.js";
-import { readStore } from "./read-store.js";
-import type { SkippedEntry } from "./read-store.js";
+import { readMarketplaceStore, readStore } from "./read-store.js";
+import type { MarketplaceEntry, SkippedEntry } from "./read-store.js";
 
 /**
  * Descriptor-driven surface observation (design.md §3, Task 8): walk a
@@ -53,6 +54,12 @@ export interface SurfaceObservation {
   /** Any detect probe's resolved path exists (scope-aware, platform-resolved). */
   detected: boolean;
   resources: ObservedResource[];
+  /**
+   * Registered plugin marketplaces (AC-4). Empty both when a surface
+   * registers none and when its descriptor declares no marketplace store —
+   * `SurfaceDescriptor.marketplaces` is what distinguishes the two.
+   */
+  marketplaces: MarketplaceEntry[];
   /** Aggregated readStore diagnostics, file paths as returned. */
   skipped: SkippedEntry[];
 }
@@ -66,7 +73,7 @@ export interface SurfaceObservation {
  */
 function resolveStorePath(
   fs: FsProvider,
-  item: ConfigStore | DetectProbe,
+  item: ConfigStore | DetectProbe | MarketplaceStore,
   opts: ObserveOptions,
 ): string | null {
   const relativePath = item.pathByPlatform?.[opts.platform] ?? item.path;
@@ -101,12 +108,18 @@ export async function observeSurface(
   for (const store of descriptor.stores) {
     const storePath = resolveStorePath(fs, store, opts);
     if (storePath === null) continue;
-    const result = await readStore(fs, store, storePath);
+    const result = await readStore(fs, store, storePath, {
+      projectRoot: opts.projectRoot,
+      homeRoot: opts.homeRoot,
+    });
     for (const entry of result.entries) {
       resources.push({
         surface: descriptor.id,
         kind: entry.kind,
-        scope: store.scope,
+        // A format whose single file records both scopes stamps its own
+        // (Claude Code's user-scoped installed_plugins.json holds project
+        // installs); every other format takes the store's declared scope.
+        scope: entry.scope ?? store.scope,
         name: entry.name,
         value: entry.value,
         provenance: entry.provenance,
@@ -116,7 +129,19 @@ export async function observeSurface(
     skipped.push(...result.skipped);
   }
 
-  return { surface: descriptor.id, detected, resources, skipped };
+  const marketplaces: MarketplaceEntry[] = [];
+  for (const store of descriptor.marketplaces ?? []) {
+    const storePath = resolveStorePath(fs, store, opts);
+    if (storePath === null) continue;
+    const result = await readMarketplaceStore(fs, store, storePath, {
+      projectRoot: opts.projectRoot,
+      homeRoot: opts.homeRoot,
+    });
+    marketplaces.push(...result.entries);
+    skipped.push(...result.skipped);
+  }
+
+  return { surface: descriptor.id, detected, resources, marketplaces, skipped };
 }
 
 /**
@@ -145,6 +170,7 @@ export async function observeAllSurfaces(
         surface: descriptor.id,
         detected: false,
         resources: [],
+        marketplaces: [],
         skipped: [
           {
             file: "<observation>",

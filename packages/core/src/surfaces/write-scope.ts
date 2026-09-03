@@ -1,6 +1,7 @@
 import type { TransactionRoot } from "../portability/transaction.js";
 import { SURFACES } from "./registry.js";
 import type { ConfigStore, PlatformPathOverrides } from "./types.js";
+import { isWritableFormat } from "../write/write-store.js";
 
 type Platform = keyof PlatformPathOverrides;
 
@@ -9,8 +10,14 @@ type Platform = keyof PlatformPathOverrides;
  * surface registry's user-scope config stores.
  *
  * This is what bounds a user-scope apply: the blast radius is exactly the
- * files M1 already knows how to read, and it moves with the descriptors
- * rather than with code (AC-31).
+ * user-scope files this build can actually WRITE, and it moves with the
+ * descriptors rather than with code (AC-31).
+ *
+ * Writability is the gate, not mere declaration. A store the registry
+ * declares for reading only — plugin enumeration reads
+ * `.claude/plugins/installed_plugins.json`, which the PluginBroker will
+ * never edit by hand — must not become writable as a side effect of
+ * teaching the engine to read it.
  */
 export interface HomeWriteScope {
   /** Exact home-relative paths of single-file stores. */
@@ -41,6 +48,7 @@ export function homeWriteScope(platform: Platform): HomeWriteScope {
   for (const surface of SURFACES) {
     for (const store of surface.stores) {
       if (store.scope !== "user") continue;
+      if (!isWritableFormat(store.formatId)) continue;
       const path = normalize(store.pathByPlatform?.[platform] ?? store.path);
       if (path.length === 0) continue;
       if (isDirectoryStore(store)) directories.add(path);

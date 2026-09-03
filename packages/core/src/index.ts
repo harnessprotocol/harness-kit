@@ -212,10 +212,13 @@ export type {
   StoreEntry,
   SkippedEntry,
   StoreReadResult,
+  StoreReadContext,
   SkillStoreValue,
   InstructionsStoreValue,
+  MarketplaceEntry,
+  MarketplaceReadResult,
 } from "./observe/read-store.js";
-export { readStore } from "./observe/read-store.js";
+export { readStore, readMarketplaceStore, relativizeHome } from "./observe/read-store.js";
 
 // ── Observe (Task 8): descriptor-driven surface observation ───
 //
@@ -282,7 +285,25 @@ export type { AgentPromptOptions } from "./write/agent-prompt.js";
 export type { ApplyCellActionOptions, CellActionErrorCode } from "./write/apply-cell-action.js";
 export type { CellActionRequest, CellActionPlan } from "./write/plan-cell-action.js";
 export type { StoreEdit, StoreWritePlan, PlannedFileChange } from "./write/write-store.js";
-export { readCodexMcp } from "./codecs/toml-codex.js";
+export { readCodexMcp, readCodexPlugins, readCodexMarketplaces } from "./codecs/toml-codex.js";
+export type {
+  CodexPluginsReadResult,
+  CodexMarketplacesReadResult,
+} from "./codecs/toml-codex.js";
+
+// Plugin/marketplace enumeration (AC-4). Shared value shapes plus the
+// Claude Code codec; Codex's live in toml-codex.ts beside its MCP reader.
+export type {
+  PluginInstallScope,
+  PluginStoreValue,
+  MarketplaceValue,
+} from "./codecs/plugin-shapes.js";
+export type {
+  ClaudePluginEntry,
+  ClaudePluginsReadResult,
+  MarketplacesReadResult,
+} from "./codecs/json-claude-plugins.js";
+export { readClaudePlugins, readClaudeMarketplaces } from "./codecs/json-claude-plugins.js";
 export type { OpenCodeMcpValue, OpenCodeMcpReadResult } from "./codecs/json-opencode.js";
 export { readOpenCodeMcpConfig } from "./codecs/json-opencode.js";
 
@@ -346,6 +367,8 @@ export type {
   ProductFamily,
   SurfaceScope,
   StoreFormatId,
+  MarketplaceFormatId,
+  MarketplaceStore,
   PlatformPathOverrides,
   ConfigStore,
   DetectProbe,

@@ -2,6 +2,8 @@ import { PRODUCT_FAMILIES, SURFACE_IDS } from "../surfaces/types.js";
 import type {
   ConfigStore,
   DetectProbe,
+  MarketplaceFormatId,
+  MarketplaceStore,
   PlatformPathOverrides,
   StoreFormatId,
   SurfaceDescriptor,
@@ -203,6 +205,23 @@ function validateStore(value: unknown, path: string): ConfigStore {
   return store;
 }
 
+function validateMarketplaceStore(value: unknown, path: string): MarketplaceStore {
+  if (!isRecord(value)) {
+    fail(`${path} must be an object (got ${describe(value)})`);
+  }
+  // `formatId` is open-set for the same reason store formatIds are: a bundle
+  // naming a marketplace format this binary lacks must survive validation so
+  // the reader can degrade rather than reject the whole bundle.
+  const store: MarketplaceStore = {
+    scope: requireScope(value.scope, `${path}.scope`),
+    formatId: requireString(value.formatId, `${path}.formatId`) as MarketplaceFormatId,
+    path: requireString(value.path, `${path}.path`),
+  };
+  const pathByPlatform = validatePathOverrides(value.pathByPlatform, `${path}.pathByPlatform`);
+  if (pathByPlatform !== undefined) store.pathByPlatform = pathByPlatform;
+  return store;
+}
+
 function validateSurface(value: unknown, path: string): SurfaceDescriptor {
   if (!isRecord(value)) {
     fail(`${path} must be an object (got ${describe(value)})`);
@@ -247,6 +266,14 @@ function validateSurface(value: unknown, path: string): SurfaceDescriptor {
   };
   if (value.requiredBinary !== undefined) {
     surface.requiredBinary = requireString(value.requiredBinary, `${path}.requiredBinary`);
+  }
+  if (value.marketplaces !== undefined) {
+    if (!Array.isArray(value.marketplaces)) {
+      fail(`${path}.marketplaces must be an array (got ${describe(value.marketplaces)})`);
+    }
+    surface.marketplaces = value.marketplaces.map((store, i) =>
+      validateMarketplaceStore(store, `${path}.marketplaces[${i}]`),
+    );
   }
   if (value.mergedClients !== undefined) {
     if (!Array.isArray(value.mergedClients)) {

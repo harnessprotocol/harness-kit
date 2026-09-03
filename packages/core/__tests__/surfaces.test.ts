@@ -50,6 +50,7 @@ describe("surface registry", () => {
       instructions: ["markdown-instructions"],
       "mcp-server": ["json-mcpservers", "toml-codex", "json-opencode"],
       permissions: ["json-generic"],
+      plugin: ["json-claude-plugins", "toml-codex-plugins"],
     };
     for (const s of SURFACES) {
       for (const store of s.stores) {
