@@ -1,7 +1,7 @@
 import type { HarnessResourceKind } from "../portability/types.js";
 import type { StoreFormatId, SurfaceId, SurfaceScope } from "../surfaces/types.js";
 import { digestValue } from "../portability/resource-model.js";
-import { looksLikeSecret, sanitizeCommandArgs } from "../portability/secrets.js";
+import { looksLikeSecret, sanitizeCommandArgs, sanitizeUrl } from "../portability/secrets.js";
 import { isRecord } from "../utils/is-record.js";
 import type { ObservedResource, SurfaceObservation } from "./observe-surface.js";
 import type { InstructionsStoreValue, SkillStoreValue } from "./read-store.js";
@@ -122,63 +122,6 @@ function canonicalStringMap(map: Record<string, unknown>): Record<string, unknow
  * `author` etc. non-sensitive while catching `api_key`, `access-token`,
  * `apiKey`, `X-Signature`, …
  */
-const SENSITIVE_QUERY_TOKENS = new Set([
-  "key",
-  "apikey",
-  "token",
-  "accesstoken",
-  "secret",
-  "signature",
-  "sig",
-  "password",
-  "auth",
-  "bearer",
-]);
-
-function isSensitiveQueryParam(name: string): boolean {
-  return name
-    .toLowerCase()
-    .split(/[^a-z0-9]+/)
-    .some((token) => SENSITIVE_QUERY_TOKENS.has(token));
-}
-
-/**
- * Sanitize a URL's embedded secrets while keeping everything semantic:
- * - userinfo (`scheme://user[:pass]@host`) → `scheme://<secret>@host`;
- * - query values whose param NAME is sensitive, or whose value matches the
- *   credential-shape heuristics, → `<secret>`.
- * Param names stay verbatim (a param rename must still diff), and host +
- * path stay verbatim — deliberately narrower than running looksLikeSecret
- * over the whole URL, which would hide host/path changes.
- */
-function sanitizeUrl(url: string): string {
-  // Userinfo: `?`/`#` excluded (userinfo cannot legally contain them, so a
-  // `@` inside a query/fragment never matches); `@` allowed inside with
-  // greedy matching so an invalid unencoded `@` in the password fails safe
-  // (whole userinfo placeholdered, nothing leaks past the last `@` before
-  // host).
-  const withUserinfo = url.replace(/(:\/\/)[^/\s?#]*@/, `$1${SECRET_PLACEHOLDER}@`);
-  const queryIndex = withUserinfo.indexOf("?");
-  if (queryIndex === -1) return withUserinfo;
-  const base = withUserinfo.slice(0, queryIndex);
-  const query = withUserinfo
-    .slice(queryIndex + 1)
-    .split("&")
-    .map((pair) => {
-      const eq = pair.indexOf("=");
-      if (eq === -1) return pair;
-      const name = pair.slice(0, eq);
-      const value = pair.slice(eq + 1);
-      if (value.length === 0) return pair;
-      if (isSensitiveQueryParam(name) || looksLikeSecret(name, value)) {
-        return `${name}=${SECRET_PLACEHOLDER}`;
-      }
-      return pair;
-    })
-    .join("&");
-  return `${base}?${query}`;
-}
-
 // ── kind-specific canonicalizers ────────────────────────────────
 
 type Canonicalizer = (value: unknown) => unknown;
@@ -227,7 +170,7 @@ function canonicalizeMcpServer(value: unknown): unknown {
     );
   }
   if (isRecord(value.env)) result.env = canonicalStringMap(value.env);
-  if (typeof value.url === "string") result.url = sanitizeUrl(value.url);
+  if (typeof value.url === "string") result.url = sanitizeUrl(value.url, SECRET_PLACEHOLDER);
   if (isRecord(value.headers)) result.headers = canonicalStringMap(value.headers);
   if (typeof value.bearerTokenEnvVar === "string") result.bearerTokenEnvVar = value.bearerTokenEnvVar;
   if (value.enabled === false) result.enabled = false;

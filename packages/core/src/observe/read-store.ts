@@ -19,6 +19,7 @@ import {
 } from "../codecs/json-claude-plugins.js";
 import type { ClaudeEnablement } from "../codecs/json-claude-plugins.js";
 import type { MarketplaceValue } from "../codecs/plugin-shapes.js";
+import { sanitizeUrl } from "../portability/secrets.js";
 
 /**
  * Read side of surface observation (design.md §3): given a ConfigStore from
@@ -657,6 +658,15 @@ async function readCodexPluginsStore(
   return stampCodecResult(readCodexPlugins(read.content), store, absolutePath);
 }
 
+/**
+ * Fixed placeholder for credential material found in a marketplace source.
+ * Matches observe/normalize.ts's SECRET_PLACEHOLDER: marketplaces travel
+ * BESIDE the resource pipeline rather than through it, so they never reach
+ * the normalizer that sanitizes every other value — this is where their one
+ * secret-bearing field gets the same treatment.
+ */
+const MARKETPLACE_SECRET_PLACEHOLDER = "<secret>";
+
 /** One registered marketplace with where it was read from. */
 export interface MarketplaceEntry extends MarketplaceValue {
   scope: SurfaceScope;
@@ -714,8 +724,18 @@ export async function readMarketplaceStore(
   return {
     entries: result.entries.map((value) => ({
       ...value,
+      // A marketplace source is routinely a git URL, and `git`/`gh` accept
+      // credentials inline (`https://user:ghp_…@host/repo.git`). Codex writes
+      // exactly that shape for private marketplaces. Unsanitized it would
+      // reach `harness-kit status --json`, which is the artifact users paste
+      // into bug reports.
       ...(value.source !== undefined
-        ? { source: relativizeHome(value.source, context.homeRoot) }
+        ? {
+            source: sanitizeUrl(
+              relativizeHome(value.source, context.homeRoot),
+              MARKETPLACE_SECRET_PLACEHOLDER,
+            ),
+          }
         : {}),
       scope: store.scope,
       provenance: { file: absolutePath, formatId: store.formatId },

@@ -33,6 +33,18 @@ describe("home write scope (AC-31)", () => {
     }
   });
 
+  it("an UNRECOGNIZED format fails closed, so a newer bundle cannot widen the allowlist", () => {
+    // definitions/bundle.ts deliberately treats formatId as an open runtime
+    // set so a bundle naming a newer format degrades rather than being
+    // rejected. If an unknown id read as writable, a remote definitions
+    // bundle (M4) could name any path and have it admitted.
+    expect(isWritableFormat("json-mcpservers")).toBe(true);
+    expect(isWritableFormat("json-claude-plugins")).toBe(false);
+    for (const unknown of ["future-format", "__proto__", "constructor", "toString", "valueOf"]) {
+      expect(isWritableFormat(unknown as never), `unknown format '${unknown}'`).toBe(false);
+    }
+  });
+
   it("a READ-ONLY store never widens the allowlist", () => {
     // Adding a store the engine can only read — plugin enumeration reads
     // ~/.claude/plugins/installed_plugins.json and Codex's [plugins.*]

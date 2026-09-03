@@ -310,7 +310,25 @@ export function unsupportedKindReason(kind: HarnessResourceKind): string | null 
  * writer narrows the allowlist; it never widens it.
  */
 export function isWritableFormat(formatId: StoreFormatId): boolean {
-  return WRITERS[formatId] !== null;
+  return lookupWriter(formatId) !== null;
+}
+
+/**
+ * Resolve a format's writer, or null when this build has none.
+ *
+ * `hasOwnProperty` rather than a bare index: an unknown formatId must fail
+ * CLOSED. A bare lookup returns `undefined` for an unrecognized id, and
+ * `undefined !== null` would report it as writable — the exact inversion of
+ * the invariant above. Worse, ids like `toString` or `constructor` resolve to
+ * Object.prototype members, which are functions. `definitions/bundle.ts`
+ * deliberately treats `formatId` as an open runtime set so a bundle naming a
+ * newer format degrades instead of being rejected, so unrecognized ids are a
+ * designed-for input here, not a theoretical one.
+ */
+function lookupWriter(formatId: string): StoreWriter | null {
+  if (!Object.prototype.hasOwnProperty.call(WRITERS, formatId)) return null;
+  const writer = (WRITERS as Record<string, StoreWriter | null>)[formatId];
+  return typeof writer === "function" ? writer : null;
 }
 
 /**
@@ -326,7 +344,7 @@ export async function planStoreWrite(
 ): Promise<StoreWritePlan> {
   const kindReason = unsupportedKindReason(edit.kind);
   if (kindReason !== null) return unsupported(kindReason);
-  const writer = (WRITERS as Partial<Record<string, StoreWriter | null>>)[store.formatId];
+  const writer = lookupWriter(store.formatId);
   if (!writer) {
     return unsupported(
       `formatId '${store.formatId}' has no writer — use the CLI command or agent prompt for this cell.`,

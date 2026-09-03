@@ -482,6 +482,68 @@ function machineFs(): MockFsProvider {
   );
 }
 
+describe("marketplace sources cannot carry credentials off the machine", () => {
+  // Marketplaces travel BESIDE the resource pipeline, so they never reach the
+  // normalizer that sanitizes every other value. A git URL with inline
+  // credentials is the shape both surfaces genuinely record for a private
+  // marketplace, and `harness-kit status --json` is what users paste into
+  // bug reports.
+  const TOKEN = "ghp_EXAMPLETOKEN0000000000000000000000";
+
+  async function sourcesFor(files: Record<string, string>, surface: "claude-code" | "codex") {
+    const fs = new MockFsProvider(files, PROJECT, HOME);
+    const obs = await observeSurface(fs, getSurface(surface), OPTS);
+    return obs.marketplaces.map((m) => m.source ?? "");
+  }
+
+  it("placeholders userinfo in a Claude Code marketplace URL", async () => {
+    const sources = await sourcesFor(
+      {
+        [`${HOME}/.claude/plugins/known_marketplaces.json`]: JSON.stringify({
+          priv: { source: { source: "git", url: `https://john:${TOKEN}@github.com/acme/m.git` } },
+        }),
+      },
+      "claude-code",
+    );
+    expect(sources).toEqual(["https://<secret>@github.com/acme/m.git"]);
+    expect(sources.join()).not.toContain(TOKEN);
+  });
+
+  it("placeholders userinfo in a Codex marketplace URL", async () => {
+    const sources = await sourcesFor(
+      {
+        [`${HOME}/.codex/config.toml`]:
+          `[marketplaces.priv]\nsource_type = "git"\nsource = "https://x-access-token:${TOKEN}@github.com/acme/m.git"\n`,
+      },
+      "codex",
+    );
+    expect(sources).toEqual(["https://<secret>@github.com/acme/m.git"]);
+    expect(sources.join()).not.toContain(TOKEN);
+  });
+
+  it("placeholders a credential in a query string too", async () => {
+    const sources = await sourcesFor(
+      {
+        [`${HOME}/.codex/config.toml`]:
+          `[marketplaces.priv]\nsource = "https://host/repo.git?access_token=${TOKEN}"\n`,
+      },
+      "codex",
+    );
+    expect(sources).toEqual(["https://host/repo.git?access_token=<secret>"]);
+  });
+
+  it("leaves an ordinary source untouched, and still relativizes home", async () => {
+    const sources = await sourcesFor(
+      {
+        [`${HOME}/.codex/config.toml`]:
+          `[marketplaces.a]\nsource = "https://github.com/acme/m.git"\n\n[marketplaces.b]\nsource = "${HOME}/.codex/bundled"\n\n[marketplaces.c]\nsource = "acme/m"\n`,
+      },
+      "codex",
+    );
+    expect(sources).toEqual(["https://github.com/acme/m.git", "~/.codex/bundled", "acme/m"]);
+  });
+});
+
 describe("observeSurface: plugins and marketplaces (AC-4)", () => {
   it("stamps each Claude Code plugin with its own scope, filtered to this project", async () => {
     const obs = await observeSurface(machineFs(), getSurface("claude-code"), OPTS);

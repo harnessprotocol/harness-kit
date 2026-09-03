@@ -185,11 +185,15 @@ mod tests {
 
     #[test]
     fn rejects_a_store_the_engine_only_reads() {
-        // Plugin state is enumerated, never written: installing goes through
-        // the surface's own installer, and editing the install record by hand
-        // would leave it disagreeing with the surface's cache. The generated
-        // allowlist is derived from WRITABLE stores, so this file never
-        // reaches the Rust side even though the registry declares it.
+        // Plugin state is enumerated, never written BY THE SURFACE ENGINE:
+        // installing goes through the surface's own installer, and editing
+        // the install record by hand would leave it disagreeing with the
+        // surface's cache. The generated allowlist is derived from WRITABLE
+        // stores, so this file never reaches this command even though the
+        // registry declares it. Note the scope of that guarantee: the
+        // separate plugins.rs command does rewrite installed_plugins.json on
+        // its uninstall path, so this is an invariant of the surface write
+        // path, not of the whole app.
         assert!(!is_declared_store(".claude/plugins/installed_plugins.json"));
         assert!(!is_declared_store(".claude/plugins/known_marketplaces.json"));
         // Formats with no writer this milestone are out too.
