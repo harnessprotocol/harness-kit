@@ -1,6 +1,7 @@
 import { parse as parseToml } from "smol-toml";
 import type { McpServer } from "../types.js";
 import { isRecord } from "../utils/is-record.js";
+import type { MarketplaceValue, PluginStoreValue } from "./plugin-shapes.js";
 
 /**
  * READ-ONLY codec for Codex's `~/.codex/config.toml` MCP tables
@@ -178,6 +179,115 @@ export function readCodexMcp(content: string): CodexMcpReadResult {
   return { entries, skipped };
 }
 
+
+// ── plugins and marketplaces (AC-4) ─────────────────────────────
+
+export interface CodexPluginsReadResult {
+  entries: Array<{ name: string; value: PluginStoreValue }>;
+  skipped: Array<{ reason: string }>;
+}
+
+export interface CodexMarketplacesReadResult {
+  entries: MarketplaceValue[];
+  skipped: Array<{ reason: string }>;
+}
+
+/**
+ * Split `"<name>@<marketplace>"` on the LAST `@` — same convention Claude
+ * Code uses in `installed_plugins.json`, which is what lets one plugin
+ * installed on both surfaces join onto a single grid row.
+ */
+function splitPluginIdentity(key: string): { name: string; marketplace: string } | null {
+  const at = key.lastIndexOf("@");
+  if (at <= 0 || at === key.length - 1) return null;
+  return { name: key.slice(0, at), marketplace: key.slice(at + 1) };
+}
+
+function parseDocument(content: string): { doc: Record<string, unknown> } | { reason: string } {
+  let parsed: unknown;
+  try {
+    parsed = parseToml(content);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return { reason: `is not valid TOML (${message})` };
+  }
+  if (!isRecord(parsed)) return { reason: "root is not a TOML table" };
+  return { doc: parsed };
+}
+
+/**
+ * Parse `[plugins."NAME@MARKETPLACE"]` tables. Codex records only an
+ * `enabled` flag per plugin — no version, no revision — so those fields stay
+ * absent rather than being invented. Degraded, never thrown.
+ */
+export function readCodexPlugins(content: string): CodexPluginsReadResult {
+  const parsed = parseDocument(content);
+  if ("reason" in parsed) return { entries: [], skipped: [{ reason: parsed.reason }] };
+
+  const plugins = parsed.doc.plugins;
+  if (plugins === undefined) return { entries: [], skipped: [] };
+  if (!isRecord(plugins)) {
+    return { entries: [], skipped: [{ reason: "'plugins' is not a TOML table" }] };
+  }
+
+  const entries: Array<{ name: string; value: PluginStoreValue }> = [];
+  const skipped: Array<{ reason: string }> = [];
+  for (const key of Object.keys(plugins).sort()) {
+    const identity = splitPluginIdentity(key);
+    if (!identity) {
+      skipped.push({ reason: `plugin '${key}' is not in '<name>@<marketplace>' form` });
+      continue;
+    }
+    const table = plugins[key];
+    if (!isRecord(table)) {
+      skipped.push({ reason: `plugin '${key}' is ${describe(table)}, not a table` });
+      continue;
+    }
+    // Absent `enabled` means enabled: Codex writes the flag explicitly today,
+    // but a table's mere presence is the install record.
+    const enabled = table.enabled === undefined ? true : table.enabled === true;
+    entries.push({
+      name: key,
+      value: { marketplace: identity.marketplace, name: identity.name, enabled },
+    });
+  }
+  return { entries, skipped };
+}
+
+/**
+ * Parse `[marketplaces.ID]` tables: `source_type` (`git` / `local` / …) and
+ * `source` (a URL or a filesystem path). Codex genuinely writes absolute
+ * home paths for its bundled marketplaces — home-relativizing them is the
+ * caller's job (observe/read-store.ts), not this pure parser's.
+ */
+export function readCodexMarketplaces(content: string): CodexMarketplacesReadResult {
+  const parsed = parseDocument(content);
+  if ("reason" in parsed) return { entries: [], skipped: [{ reason: parsed.reason }] };
+
+  const marketplaces = parsed.doc.marketplaces;
+  if (marketplaces === undefined) return { entries: [], skipped: [] };
+  if (!isRecord(marketplaces)) {
+    return { entries: [], skipped: [{ reason: "'marketplaces' is not a TOML table" }] };
+  }
+
+  const entries: MarketplaceValue[] = [];
+  const skipped: Array<{ reason: string }> = [];
+  for (const id of Object.keys(marketplaces).sort()) {
+    const table = marketplaces[id];
+    if (!isRecord(table)) {
+      skipped.push({ reason: `marketplace '${id}' is ${describe(table)}, not a table` });
+      continue;
+    }
+    const sourceType = typeof table.source_type === "string" ? table.source_type : undefined;
+    const source = typeof table.source === "string" ? table.source : undefined;
+    entries.push({
+      id,
+      ...(sourceType !== undefined ? { sourceType } : {}),
+      ...(source !== undefined ? { source } : {}),
+    });
+  }
+  return { entries, skipped };
+}
 
 // ── write side (AC-14) ──────────────────────────────────────────
 

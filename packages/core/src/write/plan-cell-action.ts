@@ -9,7 +9,7 @@ import { looksLikeSecret } from "../portability/secrets.js";
 import { getSurface } from "../surfaces/registry.js";
 import type { ConfigStore, StoreFormatId, SurfaceId, SurfaceScope } from "../surfaces/types.js";
 import { isRecord } from "../utils/is-record.js";
-import { planStoreWrite } from "./write-store.js";
+import { planStoreWrite, unsupportedKindReason } from "./write-store.js";
 import type { PlannedFileChange } from "./write-store.js";
 
 /**
@@ -146,7 +146,14 @@ async function findEntry(
   for (const store of ordered) {
     const path = storePath(fs, store, opts);
     if (path === null) continue;
-    const result = await readStore(fs, store, path);
+    // Pass the observation context: a format whose user-scoped file records
+    // project entries (Claude Code plugin installs) needs the project root to
+    // attribute them. Without it a project-only resource reads as absent, and
+    // the caller would refuse with "nothing to copy" instead of the real reason.
+    const result = await readStore(fs, store, path, {
+      projectRoot: opts.projectRoot,
+      homeRoot: opts.homeRoot,
+    });
     const entry = result.entries.find(
       (candidate) => candidate.kind === kind && candidate.name.toLowerCase() === wanted,
     );
@@ -172,6 +179,21 @@ export async function planCellAction(
     );
   }
   const loss = lossFor(request, found.entry, found.path);
+
+  // Kind-level refusals come FIRST. Whether a plugin goes through the
+  // surface's own installer has nothing to do with which file that surface
+  // keeps its install list in, and resolving the store first would answer a
+  // kind question with a store-shaped reason — telling the user "claude-code
+  // has no project-scope store for 'plugin'" while the grid, correctly,
+  // shows project-scope Claude Code plugin cells.
+  const kindReason = unsupportedKindReason(request.kind);
+  if (kindReason !== null) {
+    return {
+      ...refuse(kindReason, loss),
+      value: found.entry.value,
+      source: { file: found.path, formatId: found.entry.provenance.formatId },
+    };
+  }
 
   const targetStore = getSurface(request.to).stores.find(
     (store) => store.kind === request.kind && store.scope === request.scope,

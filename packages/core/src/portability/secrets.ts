@@ -139,3 +139,62 @@ export function sanitizeCapturedSecrets(config: HarnessConfig): SecretSanitizati
   if (declarations.size > 0) sanitized.env = [...declarations.values()];
   return { config: sanitized, findings };
 }
+
+// ── URL sanitization ────────────────────────────────────────────
+
+const SENSITIVE_QUERY_TOKENS = new Set([
+  "key",
+  "apikey",
+  "token",
+  "accesstoken",
+  "secret",
+  "signature",
+  "sig",
+  "password",
+  "auth",
+  "bearer",
+]);
+
+export function isSensitiveQueryParam(name: string): boolean {
+  return name
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .some((token) => SENSITIVE_QUERY_TOKENS.has(token));
+}
+
+/**
+ * Sanitize a URL's embedded secrets while keeping everything semantic:
+ * - userinfo (`scheme://user[:pass]@host`) → `scheme://<secret>@host`;
+ * - query values whose param NAME is sensitive, or whose value matches the
+ *   credential-shape heuristics, → `<secret>`.
+ * Param names stay verbatim (a param rename must still diff), and host +
+ * path stay verbatim — deliberately narrower than running looksLikeSecret
+ * over the whole URL, which would hide host/path changes.
+ */
+export function sanitizeUrl(url: string, placeholder: string): string {
+  // Userinfo: `?`/`#` excluded (userinfo cannot legally contain them, so a
+  // `@` inside a query/fragment never matches); `@` allowed inside with
+  // greedy matching so an invalid unencoded `@` in the password fails safe
+  // (whole userinfo placeholdered, nothing leaks past the last `@` before
+  // host).
+  const withUserinfo = url.replace(/(:\/\/)[^/\s?#]*@/, `$1${placeholder}@`);
+  const queryIndex = withUserinfo.indexOf("?");
+  if (queryIndex === -1) return withUserinfo;
+  const base = withUserinfo.slice(0, queryIndex);
+  const query = withUserinfo
+    .slice(queryIndex + 1)
+    .split("&")
+    .map((pair) => {
+      const eq = pair.indexOf("=");
+      if (eq === -1) return pair;
+      const name = pair.slice(0, eq);
+      const value = pair.slice(eq + 1);
+      if (value.length === 0) return pair;
+      if (isSensitiveQueryParam(name) || looksLikeSecret(name, value)) {
+        return `${name}=${placeholder}`;
+      }
+      return pair;
+    })
+    .join("&");
+  return `${base}?${query}`;
+}

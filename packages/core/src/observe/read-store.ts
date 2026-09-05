@@ -1,11 +1,25 @@
 import type { FsProvider } from "../fs-provider.js";
-import type { ConfigStore, StoreFormatId } from "../surfaces/types.js";
+import type {
+  ConfigStore,
+  MarketplaceFormatId,
+  MarketplaceStore,
+  StoreFormatId,
+  SurfaceScope,
+} from "../surfaces/types.js";
 import type { HarnessResourceKind } from "../portability/types.js";
 import { isRecord } from "../utils/is-record.js";
 import { reverseTranslateServer, type McpJsonEntry } from "../import/read-mcp.js";
 import { frontmatterName, frontmatterDescription } from "../import/read-skills.js";
-import { readCodexMcp } from "../codecs/toml-codex.js";
+import { readCodexMarketplaces, readCodexMcp, readCodexPlugins } from "../codecs/toml-codex.js";
 import { readOpenCodeMcpConfig } from "../codecs/json-opencode.js";
+import {
+  readClaudeEnabledPlugins,
+  readClaudeMarketplaces,
+  readClaudePlugins,
+} from "../codecs/json-claude-plugins.js";
+import type { ClaudeEnablement } from "../codecs/json-claude-plugins.js";
+import type { MarketplaceValue } from "../codecs/plugin-shapes.js";
+import { sanitizeUrl } from "../portability/secrets.js";
 
 /**
  * Read side of surface observation (design.md §3): given a ConfigStore from
@@ -35,6 +49,14 @@ export interface StoreEntry {
    */
   value: unknown;
   provenance: { file: string; formatId: StoreFormatId };
+  /**
+   * Overrides the store's declared scope for THIS entry. Set only by stores
+   * whose single file records entries of both scopes — Claude Code's
+   * user-scoped `installed_plugins.json` holds project-local installs too.
+   * Absent means the entry takes the store's scope, as every other format
+   * does.
+   */
+  scope?: SurfaceScope;
 }
 
 /** Something the executor looked at but could not observe, with why. */
@@ -123,10 +145,36 @@ async function readText(fs: FsProvider, path: string): Promise<ReadTextResult> {
   return { status: "ok", content };
 }
 
+/**
+ * Runtime context a few formats need beyond their own file contents.
+ * Deliberately NOT part of `ConfigStore`: a descriptor is pure data compiled
+ * into the definitions bundle, while this is per-run machine state.
+ */
+export interface StoreReadContext {
+  /**
+   * Project root, for formats whose user-scoped file records project-scoped
+   * entries keyed by project path. `null` = machine-only observation with no
+   * project.
+   *
+   * The key may also be OMITTED, which such a format reports as a diagnostic
+   * rather than as "none". No caller inside this repo omits it — both
+   * `observeSurface` and `planCellAction` always spread it from
+   * `ObserveOptions`, where it is required. The optionality guards
+   * `readStore` as an EXPORTED api: an outside caller passing `{}` should get
+   * a stated reason, not a confident zero. Treat the branch as API
+   * hardening, not as a path production takes.
+   */
+  projectRoot?: string | null;
+  /** Home directory, used to strip the machine owner's username from
+   * absolute paths a surface records (see `relativizeHome`). */
+  homeRoot?: string;
+}
+
 type StoreExecutor = (
   fs: FsProvider,
   store: ConfigStore,
   absolutePath: string,
+  context: StoreReadContext,
 ) => Promise<StoreReadResult>;
 
 /**
@@ -142,6 +190,8 @@ const EXECUTORS: Record<StoreFormatId, StoreExecutor> = {
   "markdown-instructions": readMarkdownInstructionsStore,
   "toml-codex": readTomlCodexStore,
   "json-opencode": readJsonOpencodeStore,
+  "json-claude-plugins": readClaudePluginsStore,
+  "toml-codex-plugins": readCodexPluginsStore,
 };
 
 /**
@@ -153,6 +203,7 @@ export async function readStore(
   fs: FsProvider,
   store: ConfigStore,
   absolutePath: string,
+  context: StoreReadContext = {},
 ): Promise<StoreReadResult> {
   const executor = (EXECUTORS as Partial<Record<string, StoreExecutor>>)[store.formatId];
   if (!executor) {
@@ -166,7 +217,7 @@ export async function readStore(
       ],
     };
   }
-  return executor(fs, store, absolutePath);
+  return executor(fs, store, absolutePath, context);
 }
 
 // ── json-mcpservers ─────────────────────────────────────────────
@@ -484,6 +535,209 @@ function stampCodecResult(
       kind: store.kind,
       name,
       value,
+      provenance: { file: absolutePath, formatId: store.formatId },
+    })),
+    skipped: result.skipped.map(({ reason }) => ({ file: absolutePath, reason })),
+  };
+}
+
+// ── plugins and marketplaces (AC-4) ─────────────────────────────
+
+/**
+ * Replace a leading home directory with `~` so an absolute path a surface
+ * recorded (Codex writes `/Users/<name>/.codex/.tmp/…` for its bundled
+ * marketplaces) does not carry the machine owner's username into inventory
+ * output, grid state, or anything exported from them. Paths outside home,
+ * and every non-path source (a repo slug, an https URL), pass through
+ * untouched.
+ */
+export function relativizeHome(value: string, homeRoot: string | undefined): string {
+  if (homeRoot === undefined || homeRoot.length === 0) return value;
+  // Separator-agnostic: `platform: "win32"` is a supported observation target
+  // and `write-scope.json` carries a full win32 section, so a POSIX-only
+  // match would leave the username in place on exactly the platform whose
+  // home paths (`C:\\Users\\<name>`) contain it most prominently.
+  const trimSeparators = (path: string): string => {
+    let end = path.length;
+    while (end > 0 && (path[end - 1] === "/" || path[end - 1] === "\\")) end -= 1;
+    return path.slice(0, end);
+  };
+  const root = trimSeparators(homeRoot);
+  if (root.length === 0) return value;
+  if (trimSeparators(value) === root) return "~";
+  const next = value[root.length];
+  if (value.startsWith(root) && (next === "/" || next === "\\")) {
+    return `~${value.slice(root.length)}`;
+  }
+  return value;
+}
+
+/**
+ * Resolve and merge the `enabledPlugins` maps the store's descriptor names,
+ * in declaration order — later files win. The result is ONE map applied to
+ * every install; it is deliberately not partitioned by the install's scope,
+ * because a project settings file disables a user-scope install too (see the
+ * verified properties in codecs/json-claude-plugins.ts).
+ *
+ * A file that exists but cannot be read or parsed produces a diagnostic and
+ * contributes nothing, so a corrupt settings file never silently decides
+ * enablement for the whole surface.
+ */
+async function readEnablement(
+  fs: FsProvider,
+  store: ConfigStore,
+  context: StoreReadContext,
+): Promise<{ enablement: ClaudeEnablement; skipped: SkippedEntry[] }> {
+  let enablement: ClaudeEnablement = {};
+  const skipped: SkippedEntry[] = [];
+  for (const source of store.enablement ?? []) {
+    const root = source.scope === "user" ? context.homeRoot : context.projectRoot;
+    if (root === undefined || root === null) continue;
+    const path = fs.joinPath(root, source.path);
+    const read = await readText(fs, path);
+    if (read.status === "missing") continue;
+    if (read.status === "unreadable") {
+      skipped.push({ file: path, reason: read.reason });
+      continue;
+    }
+    const parsed = readClaudeEnabledPlugins(read.content);
+    if ("reason" in parsed) {
+      skipped.push({
+        file: path,
+        reason: `${parsed.reason} — plugin enable/disable state could not be read from it`,
+      });
+      continue;
+    }
+    enablement = { ...enablement, ...parsed.enabled };
+  }
+  return { enablement, skipped };
+}
+
+async function readClaudePluginsStore(
+  fs: FsProvider,
+  store: ConfigStore,
+  absolutePath: string,
+  context: StoreReadContext,
+): Promise<StoreReadResult> {
+  const read = await readText(fs, absolutePath);
+  if (read.status === "missing") return empty();
+  if (read.status === "unreadable") {
+    return { entries: [], skipped: [{ file: absolutePath, reason: read.reason }] };
+  }
+  // "projectRoot" in context distinguishes an explicit null (machine-only:
+  // drop project installs silently) from an absent key (no project context
+  // was supplied: report rather than imply "none").
+  const projectRoot = "projectRoot" in context ? context.projectRoot : undefined;
+  const enablement = await readEnablement(fs, store, context);
+  const result = readClaudePlugins(read.content, projectRoot, enablement.enablement);
+  return {
+    entries: result.entries.map((entry) => ({
+      kind: store.kind,
+      name: entry.name,
+      value: entry.value,
+      provenance: { file: absolutePath, formatId: store.formatId },
+      scope: entry.scope,
+    })),
+    skipped: [
+      ...result.skipped.map(({ reason }) => ({ file: absolutePath, reason })),
+      ...enablement.skipped,
+    ],
+  };
+}
+
+async function readCodexPluginsStore(
+  fs: FsProvider,
+  store: ConfigStore,
+  absolutePath: string,
+): Promise<StoreReadResult> {
+  const read = await readText(fs, absolutePath);
+  if (read.status === "missing") return empty();
+  if (read.status === "unreadable") {
+    return { entries: [], skipped: [{ file: absolutePath, reason: read.reason }] };
+  }
+  return stampCodecResult(readCodexPlugins(read.content), store, absolutePath);
+}
+
+/**
+ * Fixed placeholder for credential material found in a marketplace source.
+ * Matches observe/normalize.ts's SECRET_PLACEHOLDER: marketplaces travel
+ * BESIDE the resource pipeline rather than through it, so they never reach
+ * the normalizer that sanitizes every other value — this is where their one
+ * secret-bearing field gets the same treatment.
+ */
+const MARKETPLACE_SECRET_PLACEHOLDER = "<secret>";
+
+/** One registered marketplace with where it was read from. */
+export interface MarketplaceEntry extends MarketplaceValue {
+  scope: SurfaceScope;
+  provenance: { file: string; formatId: MarketplaceFormatId };
+}
+
+export interface MarketplaceReadResult {
+  entries: MarketplaceEntry[];
+  skipped: SkippedEntry[];
+}
+
+type MarketplaceReader = (content: string) => {
+  entries: MarketplaceValue[];
+  skipped: Array<{ reason: string }>;
+};
+
+/** Exhaustive reader table: adding a MarketplaceFormatId without a reader
+ * fails to compile. */
+const MARKETPLACE_READERS: Record<MarketplaceFormatId, MarketplaceReader> = {
+  "json-claude-marketplaces": readClaudeMarketplaces,
+  "toml-codex-marketplaces": readCodexMarketplaces,
+};
+
+/**
+ * Read one marketplace store at its resolved absolute path (AC-4). Same
+ * contract as readStore: absence is "none registered", unreadable is a
+ * diagnostic, an unknown formatId degrades rather than throwing.
+ */
+export async function readMarketplaceStore(
+  fs: FsProvider,
+  store: MarketplaceStore,
+  absolutePath: string,
+  context: StoreReadContext = {},
+): Promise<MarketplaceReadResult> {
+  const reader = (MARKETPLACE_READERS as Partial<Record<string, MarketplaceReader>>)[
+    store.formatId
+  ];
+  if (!reader) {
+    return {
+      entries: [],
+      skipped: [
+        {
+          file: absolutePath,
+          reason: `no reader for marketplace formatId '${store.formatId}' — this store needs a newer app version to observe.`,
+        },
+      ],
+    };
+  }
+  const read = await readText(fs, absolutePath);
+  if (read.status === "missing") return { entries: [], skipped: [] };
+  if (read.status === "unreadable") {
+    return { entries: [], skipped: [{ file: absolutePath, reason: read.reason }] };
+  }
+  const result = reader(read.content);
+  return {
+    entries: result.entries.map((value) => ({
+      ...value,
+      // A marketplace source is routinely a git URL, and `git`/`gh` accept
+      // credentials inline (`https://user:ghp_…@host/repo.git`). Codex writes
+      // exactly that shape for private marketplaces. Unsanitized it would
+      // reach `harness-kit status --json`, which is the artifact users paste
+      // into bug reports.
+      ...(value.source !== undefined
+        ? {
+            source: sanitizeUrl(
+              relativizeHome(value.source, context.homeRoot),
+              MARKETPLACE_SECRET_PLACEHOLDER,
+            ),
+          }
+        : {}),
+      scope: store.scope,
       provenance: { file: absolutePath, formatId: store.formatId },
     })),
     skipped: result.skipped.map(({ reason }) => ({ file: absolutePath, reason })),

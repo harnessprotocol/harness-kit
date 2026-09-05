@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@harness-kit/ui";
-import type { GridRow, MachineDiff, SurfaceId } from "@harness-kit/core";
+import type { GridRow, MachineDiff, MachineGap, SurfaceId } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
 import { KIND_LABELS, shortDigest } from "./machine-view-model";
 import {
@@ -29,12 +29,14 @@ function renderValue(value: unknown): string {
 export interface RowDrawerProps {
   row: GridRow;
   diffs: MachineDiff[];
+  /** The engine's gaps for this inventory — what is actually closable. */
+  gaps: MachineGap[];
   onClose: () => void;
   /** Re-scan after a successful apply so the grid reflects the write. */
   onApplied?: () => void;
 }
 
-export function RowDrawer({ row, diffs, onClose, onApplied }: RowDrawerProps) {
+export function RowDrawer({ row, diffs, gaps, onClose, onApplied }: RowDrawerProps) {
   const presentSurfaces = Object.entries(row.cells).filter(
     ([, cell]) => cell.status === "present",
   );
@@ -242,7 +244,7 @@ export function RowDrawer({ row, diffs, onClose, onApplied }: RowDrawerProps) {
         </div>
       )}
 
-      <RowActions row={row} onApplied={onApplied} />
+      <RowActions row={row} gaps={gaps} onApplied={onApplied} />
     </aside>
   );
 }
@@ -252,9 +254,20 @@ export function RowDrawer({ row, diffs, onClose, onApplied }: RowDrawerProps) {
  * string comes from core's own builder, so it is literally the string the CLI
  * parses rather than a second hand-written formatter that could drift.
  */
-function RowActions({ row, onApplied }: { row: GridRow; onApplied?: () => void }) {
+function RowActions({
+  row,
+  gaps,
+  onApplied,
+}: {
+  row: GridRow;
+  gaps: MachineGap[];
+  onApplied?: () => void;
+}) {
   const sources = presentSources(row);
-  const targets = missingTargets(row);
+  // Engine gaps, not raw "absent" cells: a target that cannot receive this
+  // resource (a plugin from a marketplace it has not registered) is absent
+  // but not offerable.
+  const targets = missingTargets(row, gaps);
   const [target, setTarget] = useState<SurfaceId | "">(targets[0] ?? "");
   const [view, setView] = useState<CellActionView | null>(null);
   const [status, setStatus] = useState<string | null>(null);

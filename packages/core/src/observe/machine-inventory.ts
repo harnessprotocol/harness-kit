@@ -7,7 +7,7 @@ import type { ObserveOptions, SurfaceObservation } from "./observe-surface.js";
 import { observeAllSurfaces } from "./observe-surface.js";
 import type { NormalizedResource } from "./normalize.js";
 import { normalizeObservation } from "./normalize.js";
-import type { SkippedEntry } from "./read-store.js";
+import type { MarketplaceEntry, SkippedEntry } from "./read-store.js";
 
 /**
  * Machine inventory engine (design.md §3, Task 10): fold normalized
@@ -29,10 +29,17 @@ import type { SkippedEntry } from "./read-store.js";
  */
 
 /**
- * Cell status semantics (AC-2 three-state distinction):
+ * Cell status semantics (AC-2).
  * - "not-applicable": the surface's registry descriptor lists the row's
  *   kind in `notApplicable` — the harness lacks the concept entirely
  *   (e.g. pi × mcp-server). Applies regardless of detection.
+ * - "unmanaged": the harness HAS the concept but declares no locally
+ *   managed store for it, so HarnessKit cannot see or write it here
+ *   (windsurf × mcp-server, cursor × plugin). Like not-applicable this is a
+ *   descriptor fact, so it applies regardless of detection — and like it,
+ *   it is never a gap: nothing can be copied into a store that does not
+ *   exist. Distinct from "absent", which means the surface COULD hold this
+ *   and does not.
  * - "present": ≥1 entry observed for this identity on this surface.
  * - "unknown": zero entries, but the surface is DETECTED and has a
  *   needsConfirmation store for the kind (e.g. copilot-vscode user MCP,
@@ -41,7 +48,12 @@ import type { SkippedEntry } from "./read-store.js";
  *   undetected surface with a needsConfirmation store is still "absent":
  *   there is no installation whose hidden config could surprise us).
  */
-export type CellStatus = "present" | "absent" | "not-applicable" | "unknown";
+export type CellStatus =
+  | "present"
+  | "absent"
+  | "not-applicable"
+  | "unmanaged"
+  | "unknown";
 
 export interface GridCellEntry {
   scope: SurfaceScope;
@@ -81,12 +93,11 @@ export interface GridRow {
 
 /**
  * AC-9 gap: a row present somewhere and absent on surfaces that could hold
- * it. `missingOn` lists only surfaces that are DETECTED, have ≥1 store for
- * the row's kind (kind-supporting: a surface with the concept but no
- * locally managed store — e.g. windsurf MCP — is unmanaged locally, not a
- * gap), and whose cell is "absent". Undetected surfaces never appear
- * (installing a tool is not a config gap); "unknown" and "not-applicable"
- * cells are excluded from both lists.
+ * it. `missingOn` lists only surfaces that are DETECTED and whose cell is
+ * "absent". Undetected surfaces never appear (installing a tool is not a
+ * config gap); "unmanaged", "unknown" and "not-applicable" cells are
+ * excluded from both lists — a surface with the concept but no locally
+ * managed store (windsurf MCP, cursor plugins) has nowhere to copy into.
  */
 export interface MachineGap {
   row: string;
@@ -130,6 +141,17 @@ export interface MachineInventory {
      * included), not grid rows — column-header row counts must be derived
      * from cells, not this field. */
     resourceCount: number;
+    /**
+     * Registered plugin marketplaces (AC-4), in read order. Empty covers two
+     * different situations — the surface registers none, and HarnessKit
+     * cannot read this surface's marketplaces at all — which
+     * `marketplacesReadable` separates.
+     */
+    marketplaces: MarketplaceEntry[];
+    /** Whether the marketplaces were actually READ — declared by the
+     * descriptor and read without a diagnostic. This is what separates an
+     * empty list meaning "none registered" from one meaning "cannot say". */
+    marketplacesReadable: boolean;
     skipped: SkippedEntry[];
   }>;
   /** Sorted lexicographically by `key` (kind then name) — pinned. */
@@ -183,6 +205,26 @@ function diffForms(left: unknown, right: unknown, path: string, deltas: FieldDel
 
 // ── engine ──────────────────────────────────────────────────────
 
+/**
+ * The marketplace a plugin row belongs to, from the canonical form of a
+ * present cell (authoritative — the codecs put it there), falling back to
+ * splitting the row name on its last `@`. Returns null when neither yields
+ * one, which callers must treat as "unknown", never as "no marketplace".
+ */
+function rowMarketplace(
+  accumulator: RowAccumulator,
+  effectiveForms: Map<SurfaceId, { digest: string; form: unknown }>,
+): string | null {
+  for (const { form } of effectiveForms.values()) {
+    if (isRecord(form) && typeof form.marketplace === "string" && form.marketplace.length > 0) {
+      return form.marketplace;
+    }
+  }
+  const at = accumulator.name.lastIndexOf("@");
+  if (at > 0 && at < accumulator.name.length - 1) return accumulator.name.slice(at + 1);
+  return null;
+}
+
 /** Per-cell working state: normalized resources in observation order. */
 interface CellAccumulator {
   resources: NormalizedResource[];
@@ -220,9 +262,29 @@ export function computeMachineInventory(observations: SurfaceObservation[]): Mac
     id: observation.surface,
     detected: observation.detected,
     resourceCount: observation.resources.length,
+    // Defensive: both fields are required on SurfaceObservation, but
+    // computeMachineInventory is exported and callers construct observations
+    // by hand. A missing field degrades to "none, and we cannot say" rather
+    // than throwing halfway through building the grid.
+    marketplaces: (observation.marketplaces ?? []).map((entry) => ({ ...entry })),
+    marketplacesReadable: observation.marketplacesReadable === true,
     skipped: observation.skipped.map((entry) => ({ ...entry })),
   }));
   const detectedById = new Map(observations.map((o) => [o.surface, o.detected]));
+  // Per-surface marketplace ids, for the plugin gap rule below. `null` means
+  // "could not be read", which is never grounds for suppressing a gap.
+  const marketplacesById = new Map<SurfaceId, ReadonlySet<string> | null>(
+    observations.map((o) => [
+      o.surface,
+      // Case-folded: row identity folds case (`identityKey` lowercases the
+      // name, so `board@Harness-Kit` and `board@harness-kit` join one row),
+      // and a reachability check that did not fold would suppress a gap on a
+      // target that HAS registered the marketplace under different casing.
+      o.marketplacesReadable === true
+        ? new Set((o.marketplaces ?? []).map((m) => m.id.toLowerCase()))
+        : null,
+    ]),
+  );
   const surfaceOrder = observations.map((o) => o.surface);
 
   // Group normalized resources by identityKey × surface.
@@ -270,6 +332,11 @@ export function computeMachineInventory(observations: SurfaceObservation[]): Mac
         status = "not-applicable";
       } else if (cellResources.length > 0) {
         status = "present";
+      } else if (!descriptor.stores.some((store) => store.kind === accumulator.kind)) {
+        // Descriptor fact, like not-applicable: the concept exists for this
+        // harness but HarnessKit manages no store for it here. Rendering this
+        // as "absent" would make a blank cell mean two different things.
+        status = "unmanaged";
       } else if (
         detected &&
         descriptor.stores.some(
@@ -295,12 +362,9 @@ export function computeMachineInventory(observations: SurfaceObservation[]): Mac
         cell.effectiveDigest = winner.digest;
         effectiveForms.set(surfaceId, { digest: winner.digest, form: winner.canonicalForm });
         presentOn.push(surfaceId);
-      } else if (
-        status === "absent" &&
-        detected &&
-        // Kind-supporting: the surface manages ≥1 local store for the kind.
-        descriptor.stores.some((store) => store.kind === accumulator.kind)
-      ) {
+      } else if (status === "absent" && detected) {
+        // Kind-supporting is already implied: a surface managing no store for
+        // the kind resolved to "unmanaged" above, never to "absent".
         missingOn.push(surfaceId);
       }
       cells[surfaceId] = cell;
@@ -308,8 +372,27 @@ export function computeMachineInventory(observations: SurfaceObservation[]): Mac
 
     rows.push({ key, kind: accumulator.kind, name: accumulator.name, cells });
 
-    if (presentOn.length > 0 && missingOn.length > 0) {
-      gaps.push({ row: key, presentOn, missingOn });
+    // A plugin gap is only a gap where the target could actually install it.
+    // Plugin identity is `name@marketplace` and marketplaces are registered
+    // per surface, so a plugin from a marketplace the target has never
+    // registered is not one action away — and some are unreachable outright
+    // (Codex's bundled marketplaces are local directories inside the ChatGPT
+    // app). Proposing those would hand the PluginBroker installs that cannot
+    // succeed, and on a real machine they are most of the plugin gaps.
+    // Suppressed only where the target's marketplaces were actually READ:
+    // "cannot say" is never grounds for hiding a gap.
+    const reachableMissingOn =
+      accumulator.kind === "plugin"
+        ? missingOn.filter((surfaceId) => {
+            const registered = marketplacesById.get(surfaceId);
+            if (!registered) return true;
+            const marketplace = rowMarketplace(accumulator, effectiveForms);
+            return marketplace === null || registered.has(marketplace.toLowerCase());
+          })
+        : missingOn;
+
+    if (presentOn.length > 0 && reachableMissingOn.length > 0) {
+      gaps.push({ row: key, presentOn, missingOn: reachableMissingOn });
     }
 
     // Pairwise diffs among present cells with differing effective digests,

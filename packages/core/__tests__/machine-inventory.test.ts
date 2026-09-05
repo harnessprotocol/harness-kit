@@ -58,6 +58,7 @@ function obs(
       value: r.value,
       provenance: { file: r.file ?? `${HOME}/${surface}.json`, formatId: "json-mcpservers" },
     })),
+    marketplaces: [],
     skipped: [],
   };
 }
@@ -120,7 +121,10 @@ describe("gaps (AC-9)", () => {
     ]);
 
     const cell = row(inventory, "mcp-server:gh").cells.windsurf;
-    expect(cell.status).toBe("absent"); // not "unknown", not "not-applicable"
+    // "unmanaged", not "absent": windsurf HAS an MCP concept but declares no
+    // locally managed MCP store, so this is nowhere to copy into rather than
+    // a surface that could hold it and doesn't.
+    expect(cell.status).toBe("unmanaged");
 
     const gap = inventory.gaps.find((g) => g.row === "mcp-server:gh")!;
     expect(gap).toBeDefined();
@@ -286,6 +290,7 @@ describe("cell precedence", () => {
             provenance: { file: `${HOME}/.agents/skills/helper/SKILL.md`, formatId: "skills-dir" },
           },
         ],
+        marketplaces: [],
         skipped: [],
       },
     ]);
