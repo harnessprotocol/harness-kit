@@ -118,6 +118,27 @@ describe("readClaudePlugins (AC-4)", () => {
     });
   });
 
+  it("recognizes all three of Claude Code's install scopes, not just two", () => {
+    // `claude plugin install --scope` takes user/project/local and writes all
+    // three verbatim. Treating "project" as unrecognized dropped exactly the
+    // scope a team shares through a committed settings file — verified by
+    // installing into an isolated CLAUDE_CONFIG_DIR.
+    const doc = JSON.stringify({
+      plugins: {
+        "a@m": [{ scope: "user" }],
+        "b@m": [{ scope: "project", projectPath: PROJECT }],
+        "c@m": [{ scope: "local", projectPath: PROJECT }],
+      },
+    });
+    const { entries, skipped } = readClaudePlugins(doc, PROJECT);
+    expect(skipped).toEqual([]);
+    expect(entries.map((e) => `${e.name}:${e.scope}:${e.nativeScope}`)).toEqual([
+      "a@m:user:user",
+      "b@m:project:project",
+      "c@m:project:local",
+    ]);
+  });
+
   it("attributes each install to its OWN scope, not the store's", () => {
     // The file lives at user scope but records project-local installs too.
     const { entries } = readClaudePlugins(INSTALLED_PLUGINS, PROJECT);

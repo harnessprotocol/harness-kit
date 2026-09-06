@@ -42,9 +42,19 @@ import type { MarketplaceValue, PluginInstallScope, PluginStoreValue } from "./p
  * both surfaces joins onto one grid row without a translation table.
  */
 
+/** The scope value Claude Code itself records, before collapsing to HarnessKit's two. */
+export type ClaudeInstallScope = "user" | "project" | "local";
+
 export interface ClaudePluginEntry {
   name: string;
   scope: PluginInstallScope;
+  /**
+   * The scope Claude Code recorded, preserved so the PluginBroker can pass
+   * the same `--scope` back. Deliberately NOT in the canonical form: a plugin
+   * installed `--scope project` on one machine and `--scope local` on another
+   * is the same plugin.
+   */
+  nativeScope: ClaudeInstallScope;
   /** Absolute project path for a project-scope install; absent at user scope. */
   projectPath?: string;
   value: PluginStoreValue;
@@ -110,13 +120,29 @@ function splitIdentity(key: string): { name: string; marketplace: string } | nul
 }
 
 /**
- * Claude Code writes `"user"` and `"local"`; `"local"` is a project-scoped
- * install pinned to `projectPath`. Anything else is a scope this build does
- * not understand — reported, never guessed at.
+ * `claude plugin install --scope` takes THREE values, and all three appear
+ * verbatim in this file. Verified by installing into an isolated
+ * CLAUDE_CONFIG_DIR and reading back what each wrote:
+ *
+ * | --scope   | recorded  | enablement file                        |
+ * |-----------|-----------|----------------------------------------|
+ * | `user`    | "user"    | `~/.claude/settings.json`              |
+ * | `project` | "project" | `<proj>/.claude/settings.json`         |
+ * | `local`   | "local"   | `<proj>/.claude/settings.local.json`   |
+ *
+ * Both `project` and `local` carry `projectPath` and both collapse to
+ * HarnessKit's project scope — the difference between them is which settings
+ * file holds enablement, which the descriptor's `enablement` chain already
+ * covers. `nativeScope` keeps the distinction for the PluginBroker, which
+ * must pass the right `--scope` back when it installs.
+ *
+ * Anything else is a scope this build does not understand — reported, never
+ * guessed at.
  */
-function mapScope(raw: unknown): PluginInstallScope | null {
-  if (raw === "user") return "user";
-  if (raw === "local") return "project";
+function mapScope(raw: unknown): { scope: PluginInstallScope; native: ClaudeInstallScope } | null {
+  if (raw === "user") return { scope: "user", native: "user" };
+  if (raw === "project") return { scope: "project", native: "project" };
+  if (raw === "local") return { scope: "project", native: "local" };
   return null;
 }
 
@@ -198,13 +224,14 @@ export function readClaudePlugins(
         skipped.push({ reason: `plugin '${key}' has an install that is not an object` });
         continue;
       }
-      const scope = mapScope(install.scope);
-      if (scope === null) {
+      const mapped = mapScope(install.scope);
+      if (mapped === null) {
         skipped.push({
           reason: `plugin '${key}' has an install with unrecognized scope ${JSON.stringify(install.scope)}`,
         });
         continue;
       }
+      const { scope, native } = mapped;
       const projectPath = stringOrUndefined(install.projectPath);
       if (scope === "project") {
         if (projectRoot === undefined) {
@@ -222,6 +249,7 @@ export function readClaudePlugins(
       entries.push({
         name: key,
         scope,
+        nativeScope: native,
         ...(projectPath !== undefined ? { projectPath } : {}),
         value: {
           marketplace: identity.marketplace,
