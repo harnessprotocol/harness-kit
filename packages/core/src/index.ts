@@ -220,6 +220,20 @@ export type {
 } from "./observe/read-store.js";
 export { readStore, readMarketplaceStore, relativizeHome } from "./observe/read-store.js";
 
+// ── Process execution (design.md §4, D3) ─────────────────────
+//
+// The second injected effect beside FsProvider. Core never imports
+// node:child_process; NodeProcessRunner is exported from the `node` entry
+// only, so the webview bundle cannot pull it in. `assertSafeArgs` guards the
+// values that reach argv — plugin identities come from files other tools
+// write, and a name beginning `-` would be read as an option.
+export type {
+  ProcessRunner,
+  ProcessCommand,
+  ProcessResult,
+} from "./process-runner.js";
+export { assertSafeArgs, isFlagLike, UnsafeArgumentError } from "./process-runner.js";
+
 // ── Observe (Task 8): descriptor-driven surface observation ───
 //
 // Walks each SurfaceDescriptor's detect probes and config stores, resolves
