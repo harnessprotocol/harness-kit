@@ -258,6 +258,13 @@ type StoreWriter = (
  * Exhaustive writer table: adding a StoreFormatId without a writer fails to
  * compile. `null` means the format has no write side this milestone —
  * json-generic holds permissions, which is not a tier-one kind.
+ *
+ * The two plugin formats are `null` by design, not by omission. Installing a
+ * plugin is not a config-store write: it shells out to the surface's own
+ * installer, or unpacks an artifact into surface-native locations. Editing
+ * `installed_plugins.json` or a `[plugins."x@y"]` table directly would leave
+ * the surface's cache and the record disagreeing. That work is the M3
+ * PluginBroker (AC-18/AC-19), which goes through ProcessRunner instead.
  */
 const WRITERS: Record<StoreFormatId, StoreWriter | null> = {
   "json-mcpservers": writeJsonMcpServers,
@@ -266,7 +273,63 @@ const WRITERS: Record<StoreFormatId, StoreWriter | null> = {
   "markdown-instructions": writeMarkdownInstructions,
   "toml-codex": writeTomlCodex,
   "json-opencode": writeJsonOpencode,
+  "json-claude-plugins": null,
+  "toml-codex-plugins": null,
 };
+
+/**
+ * Why this kind cannot be written directly, or null if it can.
+ *
+ * Hoisted out of planStoreWrite so callers can ask BEFORE resolving a target
+ * store: whether a plugin goes through the surface's installer does not
+ * depend on which file that surface keeps its install list in, and a caller
+ * that checked the store first would report a store-shaped reason for a
+ * kind-shaped fact.
+ */
+export function unsupportedKindReason(kind: HarnessResourceKind): string | null {
+  if (TIER_ONE.has(kind)) return null;
+  // Plugins get their own wording: a direct write is not a missing feature
+  // here, it is the wrong mechanism. Editing the surface's install record by
+  // hand would leave its cache and that record disagreeing.
+  if (kind === "plugin") {
+    return (
+      "plugins are installed through the surface's own installer, not by editing its config — " +
+      "use the CLI command or agent prompt for this cell."
+    );
+  }
+  return `'${kind}' has no direct-write path yet — use the CLI command or agent prompt for this cell.`;
+}
+
+/**
+ * Whether this build can write a store of the given format.
+ *
+ * The home write allowlist (surfaces/write-scope.ts) is derived through this
+ * predicate rather than from every declared store, so adding a READ-ONLY
+ * store to the registry — plugin enumeration, say — cannot silently widen
+ * what a user-scope apply is permitted to touch. Adding a format without a
+ * writer narrows the allowlist; it never widens it.
+ */
+export function isWritableFormat(formatId: StoreFormatId): boolean {
+  return lookupWriter(formatId) !== null;
+}
+
+/**
+ * Resolve a format's writer, or null when this build has none.
+ *
+ * `hasOwnProperty` rather than a bare index: an unknown formatId must fail
+ * CLOSED. A bare lookup returns `undefined` for an unrecognized id, and
+ * `undefined !== null` would report it as writable — the exact inversion of
+ * the invariant above. Worse, ids like `toString` or `constructor` resolve to
+ * Object.prototype members, which are functions. `definitions/bundle.ts`
+ * deliberately treats `formatId` as an open runtime set so a bundle naming a
+ * newer format degrades instead of being rejected, so unrecognized ids are a
+ * designed-for input here, not a theoretical one.
+ */
+function lookupWriter(formatId: string): StoreWriter | null {
+  if (!Object.prototype.hasOwnProperty.call(WRITERS, formatId)) return null;
+  const writer = (WRITERS as Record<string, StoreWriter | null>)[formatId];
+  return typeof writer === "function" ? writer : null;
+}
 
 /**
  * Plan the file changes that realize one resource-level edit against one
@@ -279,12 +342,9 @@ export async function planStoreWrite(
   absolutePath: string,
   edit: StoreEdit,
 ): Promise<StoreWritePlan> {
-  if (!TIER_ONE.has(edit.kind)) {
-    return unsupported(
-      `'${edit.kind}' has no direct-write path yet — use the CLI command or agent prompt for this cell.`,
-    );
-  }
-  const writer = (WRITERS as Partial<Record<string, StoreWriter | null>>)[store.formatId];
+  const kindReason = unsupportedKindReason(edit.kind);
+  if (kindReason !== null) return unsupported(kindReason);
+  const writer = lookupWriter(store.formatId);
   if (!writer) {
     return unsupported(
       `formatId '${store.formatId}' has no writer — use the CLI command or agent prompt for this cell.`,

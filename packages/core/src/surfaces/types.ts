@@ -72,7 +72,9 @@ export type StoreFormatId =
   | "toml-codex"           // code codec (read-only for now)
   | "json-opencode"        // code codec (merged opencode.json)
   | "skills-dir"           // SKILL.md tree
-  | "markdown-instructions"; // one markdown file; with shape.directory, every *.md/*.mdc in the dir
+  | "markdown-instructions" // one markdown file; with shape.directory, every *.md/*.mdc in the dir
+  | "json-claude-plugins"  // code codec (Claude Code installed_plugins.json)
+  | "toml-codex-plugins";  // code codec ([plugins."name@marketplace"] in config.toml)
 
 /**
  * Per-OS path overrides. The entry for the current platform wins; a missing
@@ -102,8 +104,40 @@ export interface ConfigStore {
      */
     directory?: true;
   };
+  /**
+   * Files whose `enabledPlugins` map records whether each install in THIS
+   * store is active — Claude Code keeps the install list and the enable/
+   * disable state in different files (`claude plugin disable` writes
+   * `enabledPlugins` into settings, not into the install record). Later
+   * entries override earlier ones, and an entry is consulted only for
+   * installs of its own scope. Paths are relative to that scope's root.
+   */
+  enablement?: Array<{ scope: SurfaceScope; path: string }>;
   /** Inventory from this store may be incomplete or ambiguous (e.g. VS Code profile dirs). */
   needsConfirmation?: boolean;
+}
+
+/**
+ * Formats recording a surface's *registered plugin marketplaces* (AC-4).
+ * Marketplaces are not a `HarnessResourceKind` — they are where plugins come
+ * from, not configuration a user holds — so they travel beside the resource
+ * pipeline rather than through it.
+ */
+export type MarketplaceFormatId =
+  | "json-claude-marketplaces" // Claude Code known_marketplaces.json
+  | "toml-codex-marketplaces"; // [marketplaces.ID] in ~/.codex/config.toml
+
+/** One file a surface records its registered plugin marketplaces in. */
+export interface MarketplaceStore {
+  scope: SurfaceScope;
+  formatId: MarketplaceFormatId;
+  /**
+   * Project-relative (scope "project") or home-relative (scope "user") path.
+   * Holds the darwin/default value; a matching pathByPlatform entry wins.
+   */
+  path: string;
+  /** Per-OS overrides: the current platform's entry wins; a missing key falls back to `path`. */
+  pathByPlatform?: PlatformPathOverrides;
 }
 
 /** Detection probe: the probe path existing on disk ⇒ surface detected. */
@@ -134,6 +168,15 @@ export interface SurfaceDescriptor {
    * "unmanaged locally" (e.g. claude-desktop skills, which are cloud-side).
    */
   notApplicable: HarnessResourceKind[];
+  /**
+   * Where this surface records its registered plugin marketplaces (AC-4).
+   * Absent means HarnessKit cannot enumerate this surface's marketplaces —
+   * which is NOT the same as the surface having no plugin model. Read it
+   * together with `notApplicable`: `plugin` listed there means the harness
+   * has no plugin concept at all; `plugin` absent from both `stores` and
+   * `notApplicable` means it has one HarnessKit does not yet read locally.
+   */
+  marketplaces?: MarketplaceStore[];
   /** Distinct clients sharing this surface's config store. */
   mergedClients?: string[];
 }

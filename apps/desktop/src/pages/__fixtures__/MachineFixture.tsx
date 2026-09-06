@@ -50,6 +50,7 @@ export default function MachineFixture() {
         <RowDrawer
           row={selectedRow}
           diffs={inventory.diffs.filter((diff) => diff.row === selectedRow.key)}
+          gaps={inventory.gaps}
           onClose={() => setSelectedRow(null)}
         />
       )}

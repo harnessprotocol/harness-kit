@@ -20,6 +20,20 @@ function CellContent({ cell, kind }: { cell: GridCell; kind: GridRow["kind"] }) 
       </span>
     );
   }
+  if (cell.status === "unmanaged") {
+    // Distinct from both "—" (no such concept) and blank (could hold this,
+    // does not): the harness HAS the concept, but keeps no store HarnessKit
+    // reads or writes here, so nothing can be copied in either direction.
+    return (
+      <span
+        title={`${KIND_LABELS[kind] ?? kind} are not managed locally on this surface — HarnessKit reads no store for them here, so this is not a gap.`}
+        aria-label="unmanaged locally"
+        style={{ color: "var(--fg-subtle)", opacity: 0.4, fontSize: 11 }}
+      >
+        ·
+      </span>
+    );
+  }
   if (cell.status === "unknown") {
     return (
       <span
@@ -72,7 +86,7 @@ function CellContent({ cell, kind }: { cell: GridCell; kind: GridRow["kind"] }) 
       </span>
     );
   }
-  // absent — deliberately empty
+  // absent — deliberately empty: the surface could hold this and does not.
   return null;
 }
 
@@ -88,6 +102,19 @@ export function MachineGrid({ inventory, selectedRowKey, onRowClick }: MachineGr
   const detectedById = new Map(inventory.surfaces.map((surface) => [surface.id, surface.detected]));
   const skippedById = new Map(
     inventory.surfaces.map((surface) => [surface.id, surface.skipped.length]),
+  );
+  // Registered plugin marketplaces per surface (AC-4). The badge is present
+  // iff HarnessKit can READ this surface's marketplaces — so a badge reading
+  // "0" means "we looked and there are none", while no badge at all means
+  // "we cannot say". Collapsing those two into an absent badge would repeat
+  // the absent/unknown mistake AC-2 exists to prevent.
+  const marketplacesById = new Map(
+    inventory.surfaces.map((surface) => [
+      surface.id,
+      surface.marketplacesReadable
+        ? [...new Set(surface.marketplaces.map((m) => m.id))]
+        : null,
+    ]),
   );
 
   const headCellStyle: React.CSSProperties = {
@@ -140,6 +167,7 @@ export function MachineGrid({ inventory, selectedRowKey, onRowClick }: MachineGr
             {surfaceOrder.map((id) => {
               const detected = detectedById.get(id) ?? false;
               const skipped = skippedById.get(id) ?? 0;
+              const marketplaces = marketplacesById.get(id) ?? null;
               return (
                 <th
                   key={id}
@@ -168,6 +196,31 @@ export function MachineGrid({ inventory, selectedRowKey, onRowClick }: MachineGr
                         }}
                       >
                         {skipped}
+                      </span>
+                    )}
+                    {marketplaces !== null && (
+                      <span
+                        data-testid={`surface-marketplaces-${id}`}
+                        title={
+                          marketplaces.length === 0
+                            ? "no plugin marketplaces registered"
+                            : `${marketplaces.length} plugin ${marketplaces.length === 1 ? "marketplace" : "marketplaces"}: ${marketplaces.join(", ")}`
+                        }
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          minWidth: 14,
+                          height: 14,
+                          padding: "0 3px",
+                          borderRadius: 7,
+                          background: "var(--bg-elevated)",
+                          color: "var(--fg-muted)",
+                          fontSize: 9,
+                          fontWeight: 650,
+                        }}
+                      >
+                        {`⌂${marketplaces.length}`}
                       </span>
                     )}
                   </span>

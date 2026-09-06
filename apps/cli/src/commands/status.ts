@@ -106,6 +106,13 @@ function formatMachineSection(machine: MachineInventory): string {
       } else {
         lines.push(chalk.dim(`  ✗ ${label}${counts} (not installed)`));
       }
+      // Registered plugin marketplaces (AC-4). Printed only where the
+      // surface actually registers some — an unreadable surface stays quiet
+      // here rather than claiming it has none.
+      if (surface.detected && surface.marketplaces.length > 0) {
+        const ids = [...new Set(surface.marketplaces.map((m) => m.id))].join(", ");
+        lines.push(chalk.dim(`      marketplaces: ${ids}`));
+      }
     }
   }
 

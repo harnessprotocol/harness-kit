@@ -137,6 +137,9 @@ describe("observeSurface: scope attribution", () => {
     expect(observation).toEqual<SurfaceObservation>({
       surface: "claude-desktop",
       detected: false,
+      marketplaces: [],
+      // claude-desktop declares no marketplace store at all, so nothing was read.
+      marketplacesReadable: false,
       resources: [],
       skipped: [],
     });

@@ -101,6 +101,32 @@ function makeInventory() {
               { file: "/home/user/.agents/skills/x", reason: "unreadable" },
             ]
           : [],
+      // Only claude-code and codex declare a marketplace store; everywhere
+      // else an empty list means "not readable", not "none registered".
+      marketplaces:
+        id === "claude-code"
+          ? [
+              {
+                id: "harness-kit",
+                sourceType: "github",
+                source: "harnessprotocol/harness-kit",
+                scope: "user",
+                provenance: {
+                  file: "/home/user/.claude/plugins/known_marketplaces.json",
+                  formatId: "json-claude-marketplaces",
+                },
+              },
+              {
+                id: "official",
+                scope: "user",
+                provenance: {
+                  file: "/home/user/.claude/plugins/known_marketplaces.json",
+                  formatId: "json-claude-marketplaces",
+                },
+              },
+            ]
+          : [],
+      marketplacesReadable: id === "claude-code" || id === "codex",
     })),
     rows: [
       {
@@ -132,6 +158,41 @@ function makeInventory() {
           },
           "copilot-vscode": { status: "unknown", entries: [] },
           pi: { status: "not-applicable", entries: [] },
+        }),
+      },
+      {
+        key: "plugin:board@harness-kit",
+        kind: "plugin",
+        name: "board@harness-kit",
+        cells: makeCells({
+          "claude-code": {
+            status: "present",
+            effectiveDigest: "sha256:b0a4d17e55",
+            entries: [
+              {
+                scope: "user",
+                digest: "sha256:b0a4d17e55",
+                provenance: {
+                  file: "/home/user/.claude/plugins/installed_plugins.json",
+                  formatId: "json-claude-plugins",
+                },
+              },
+            ],
+          },
+          codex: {
+            status: "present",
+            effectiveDigest: "sha256:b0a4d17e55",
+            entries: [
+              {
+                scope: "user",
+                digest: "sha256:b0a4d17e55",
+                provenance: { file: "/home/user/.codex/config.toml", formatId: "toml-codex-plugins" },
+              },
+            ],
+          },
+          "claude-desktop": { status: "not-applicable", entries: [] },
+          pi: { status: "not-applicable", entries: [] },
+          cursor: { status: "unmanaged", entries: [] },
         }),
       },
       {
@@ -238,12 +299,58 @@ describe("MachinePage", () => {
     expect(drawer).not.toHaveTextContent("Sync arrives in M2");
   });
 
+  it("badges a surface's registered plugin marketplaces, naming them in the title (AC-4)", async () => {
+    renderPage();
+    await screen.findByTestId("machine-grid");
+
+    const badge = screen.getByTestId("surface-marketplaces-claude-code");
+    expect(badge).toHaveTextContent("2");
+    expect(badge).toHaveAttribute("title", expect.stringContaining("harness-kit"));
+    expect(badge).toHaveAttribute("title", expect.stringContaining("official"));
+  });
+
+  it("separates 'none registered' from 'cannot be read' (AC-2 semantics)", async () => {
+    renderPage();
+    await screen.findByTestId("machine-grid");
+
+    // codex CAN be read and registers none here: a badge reading 0.
+    const codex = screen.getByTestId("surface-marketplaces-codex");
+    expect(codex).toHaveTextContent("0");
+    expect(codex).toHaveAttribute("title", "no plugin marketplaces registered");
+
+    // cursor declares no marketplace store at all, so HarnessKit cannot say
+    // — no badge, rather than a badge claiming zero.
+    expect(screen.queryByTestId("surface-marketplaces-cursor")).not.toBeInTheDocument();
+  });
+
+  it("renders plugin rows in the grid under their own kind section (AC-4)", async () => {
+    renderPage();
+    await screen.findByTestId("machine-grid");
+
+    expect(screen.getByText("Plugins")).toBeInTheDocument();
+    expect(screen.getByText("board@harness-kit")).toBeInTheDocument();
+  });
+
+  it("draws an 'unmanaged' cell distinctly from both absent and not-applicable", async () => {
+    renderPage();
+    await screen.findByTestId("machine-grid");
+
+    // cursor HAS a plugin concept but HarnessKit reads no store for it, so
+    // the cell must not be the blank that means "could hold this, doesn't".
+    const cell = screen.getByLabelText("unmanaged locally");
+    expect(cell).toBeInTheDocument();
+    expect(cell).toHaveAttribute("title", expect.stringContaining("not managed locally"));
+    expect(cell).toHaveAttribute("title", expect.stringContaining("not a gap"));
+    // not-applicable keeps its own em-dash glyph.
+    expect(cell).not.toHaveTextContent("—");
+  });
+
   it("derives totals from the inventory rows/gaps/diffs, not resourceCount", async () => {
     renderPage();
     await screen.findByTestId("machine-grid");
 
     // resourceCount is 99 on every surface — if totals used it, these fail.
-    expect(screen.getByText("Resources").parentElement).toHaveTextContent("Resources2");
+    expect(screen.getByText("Resources").parentElement).toHaveTextContent("Resources3");
     expect(screen.getByText("Gaps").parentElement).toHaveTextContent("Gaps1");
     expect(screen.getByText("Diffs").parentElement).toHaveTextContent("Diffs1");
     expect(screen.getByText("Surfaces detected").parentElement).toHaveTextContent("4/11");
