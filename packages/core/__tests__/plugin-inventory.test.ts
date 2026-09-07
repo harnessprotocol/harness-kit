@@ -697,9 +697,16 @@ describe("plugin cells are actionable but not directly writable (AC-12, AC-13)",
       OPTS,
     );
     expect(plan.supported).toBe(false);
-    const reason = plan.supported === false ? plan.reason : "";
-    expect(reason).toContain("surface's own installer");
+    const reason = plan.reason ?? "";
+    // The refusal must be about the INSTALLER, never about the resource being
+    // absent — the plugin is right there, at project scope. Since the broker
+    // landed, codex gets the more specific answer (it has no --scope option
+    // at all) rather than the generic kind-level one.
+    expect(reason).toContain("scope option");
     expect(reason).not.toContain("nothing to copy");
+    // And it is a broker plan, so the caller knows not to apply a transaction.
+    expect(plan.plugin?.kind).toBe("native");
+    expect(plan.changes).toEqual([]);
   });
 
   it("no plugin format has a writer, so no apply can reach an install record", () => {

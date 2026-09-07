@@ -10,6 +10,8 @@ import { getSurface } from "../surfaces/registry.js";
 import type { ConfigStore, StoreFormatId, SurfaceId, SurfaceScope } from "../surfaces/types.js";
 import { isRecord } from "../utils/is-record.js";
 import { planStoreWrite, unsupportedKindReason } from "./write-store.js";
+import { planPluginAction } from "../plugins/broker.js";
+import type { BrokerPlan } from "../plugins/broker.js";
 import type { PlannedFileChange } from "./write-store.js";
 
 /**
@@ -67,6 +69,14 @@ export interface CellActionPlan {
   value?: unknown;
   source?: { file: string; formatId: StoreFormatId };
   target?: { file: string; formatId: StoreFormatId };
+  /**
+   * Set for `plugin` cells only. A plugin is not installed by writing a
+   * config store — it goes through the surface's own installer, or is
+   * unpacked. `changes` stays empty for these; the caller executes this
+   * instead of applying a transaction. Routed here rather than at each call
+   * site so the CLI, the desktop and `--dry-run` cannot drift apart.
+   */
+  plugin?: BrokerPlan;
 }
 
 function refuse(reason: string, loss: LossReport | null = null): CellActionPlan {
@@ -180,12 +190,42 @@ export async function planCellAction(
   }
   const loss = lossFor(request, found.entry, found.path);
 
-  // Kind-level refusals come FIRST. Whether a plugin goes through the
-  // surface's own installer has nothing to do with which file that surface
-  // keeps its install list in, and resolving the store first would answer a
-  // kind question with a store-shaped reason — telling the user "claude-code
-  // has no project-scope store for 'plugin'" while the grid, correctly,
-  // shows project-scope Claude Code plugin cells.
+  // Plugins do not go through the config-store write path at all: they go to
+  // the broker, which drives the surface's own installer. Routed here so
+  // every caller gets the same answer.
+  if (request.kind === "plugin") {
+    const broker = planPluginAction({
+      surface: request.to,
+      identity: request.name,
+      scope: request.scope,
+      action: "install",
+      projectRoot: opts.projectRoot,
+    });
+    const usable =
+      broker.kind !== "unsupported" && broker.plan.supported === true;
+    const reason =
+      broker.kind === "unsupported"
+        ? broker.reason
+        : broker.plan.supported === false
+          ? broker.plan.reason
+          : undefined;
+    return {
+      supported: usable,
+      ...(reason !== undefined ? { reason } : {}),
+      changes: [],
+      noop: false,
+      carriesSecret: false,
+      loss,
+      requiresConfirmation: false,
+      value: found.entry.value,
+      source: { file: found.path, formatId: found.entry.provenance.formatId },
+      plugin: broker,
+    };
+  }
+
+  // Kind-level refusals come next. Whether a resource has a direct-write path
+  // has nothing to do with which file the target keeps it in, and resolving
+  // the store first would answer a kind question with a store-shaped reason.
   const kindReason = unsupportedKindReason(request.kind);
   if (kindReason !== null) {
     return {

@@ -178,4 +178,35 @@ describe.sequential("cross-surface sync", () => {
       await store.close();
     }
   });
+
+  /**
+   * `--only` regression. Commander treats an option as variadic only when its
+   * value name is a plain identifier ending in `...`; the declaration read
+   * `<kind[:name]...>`, so the value arrived as a STRING and `.map` threw.
+   * Every `sync --only` crashed, for every kind — including the plugin
+   * filters the broker now depends on.
+   */
+  describe("--only accepts what commander actually delivers", () => {
+    it("does not crash when --only arrives as a bare string", async () => {
+      await surfaceSyncCommand({ only: "mcp-server" } as never);
+      expect(env.getLog()).not.toContain("is not a function");
+      expect(env.getLog()).toContain("mcp-server:postgres");
+    });
+
+    it("accepts the array form too", async () => {
+      await surfaceSyncCommand({ only: ["mcp-server"] } as never);
+      expect(env.getLog()).toContain("mcp-server:postgres");
+    });
+
+    it("still filters by kind:name, and excludes a non-matching name", async () => {
+      await surfaceSyncCommand({ only: "mcp-server:postgres" } as never);
+      expect(env.getLog()).toContain("mcp-server:postgres");
+
+      env.restore();
+      env = new CliTestEnv();
+      env.setup();
+      await surfaceSyncCommand({ only: "mcp-server:nothing-by-this-name" } as never);
+      expect(env.getLog()).not.toContain("mcp-server:postgres");
+    });
+  });
 });

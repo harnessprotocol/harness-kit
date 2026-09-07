@@ -2,6 +2,12 @@ import { applyFileTransaction } from "../portability/transaction.js";
 import type { TransactionContext } from "../portability/transaction.js";
 import type { TransactionFileChange, TransactionResult } from "../portability/types.js";
 import type { CellActionPlan } from "./plan-cell-action.js";
+import type { FsProvider } from "../fs-provider.js";
+import type { ProcessRunner } from "../process-runner.js";
+import type { SurfaceId } from "../surfaces/types.js";
+import type { StateStore } from "../state/store.js";
+import { executePluginAction } from "../plugins/broker.js";
+import type { PluginActionOutcome } from "../plugins/broker.js";
 
 /**
  * Why a cell action could not be applied, in the vocabulary the UI and CLI
@@ -35,6 +41,22 @@ export interface ApplyCellActionOptions {
   projectRoot?: string;
   /** Explicit confirmation for a plan that reports capability loss (AC-34). */
   confirmed?: boolean;
+  /**
+   * Everything a `plugin` plan needs to execute. Required when the plan
+   * carries one: plugins do not go through the transaction engine, so
+   * applying such a plan without these would write nothing and report
+   * success — the failure mode this option exists to make impossible.
+   */
+  plugin?: {
+    runner: ProcessRunner;
+    fs: FsProvider;
+    /** Injected clock — core never reads the system clock. */
+    now: string;
+    /** Surface to copy plugin contents from, for the unpack driver. */
+    sourceSurface?: SurfaceId;
+    /** Records the install so an unpack can be undone later (AC-19). */
+    state?: Pick<StateStore, "recordPluginInstall">;
+  };
 }
 
 /** Absolute path -> (root, root-relative path). */
@@ -98,6 +120,12 @@ export async function applyCellAction(
   if (!plan.supported) {
     throw new CellActionError("unsupported", plan.reason ?? "this cell cannot be written directly");
   }
+  if (plan.plugin !== undefined) {
+    throw new CellActionError(
+      "unsupported",
+      "this is a plugin action — run it with applyPluginCellAction, which drives the surface's installer rather than a file transaction",
+    );
+  }
   if (plan.requiresConfirmation && options.confirmed !== true) {
     const fields = (plan.loss?.losses ?? []).map((loss) => loss.detail).join("; ");
     throw new CellActionError(
@@ -133,4 +161,61 @@ export async function applyCellAction(
     );
   }
   return result;
+}
+
+/**
+ * Apply a `plugin` cell action (AC-18, AC-19).
+ *
+ * Separate from applyCellAction because it is a different mechanism, not a
+ * different case: no preimage, no backup, no rollback manifest, because
+ * nothing here writes a config store HarnessKit owns. The surface's own
+ * installer is the source of truth for undoing a native install; only the
+ * unpack driver's files are ours to remove, and those are what get recorded.
+ */
+export async function applyPluginCellAction(
+  plan: CellActionPlan,
+  options: NonNullable<ApplyCellActionOptions["plugin"]> & {
+    surface: SurfaceId;
+    identity: string;
+    /** Home root — the unpack driver resolves the plugin's cached files under it. */
+    homeRoot: string;
+  },
+): Promise<PluginActionOutcome> {
+  if (plan.plugin === undefined) {
+    throw new CellActionError("unsupported", "this plan is not a plugin action");
+  }
+  if (!plan.supported) {
+    throw new CellActionError("unsupported", plan.reason ?? "this plugin cell cannot be actioned");
+  }
+
+  const outcome = await executePluginAction(plan.plugin, {
+    runner: options.runner,
+    fs: options.fs,
+    now: options.now,
+    ...(options.sourceSurface !== undefined ? { sourceSurface: options.sourceSurface } : {}),
+    homeRoot: options.homeRoot,
+  });
+
+  // Recording is best-effort by design: the plugin is already on disk by the
+  // time this runs, so a state-store failure must not turn a successful
+  // install into a reported failure. The cost of losing the row is that an
+  // unpacked plugin cannot be cleanly removed later, which is worth stating
+  // rather than hiding.
+  if (
+    options.state !== undefined &&
+    (outcome.status === "installed" || outcome.status === "uninstalled")
+  ) {
+    try {
+      await options.state.recordPluginInstall({
+        surface: options.surface,
+        plugin: options.identity,
+        manifestDigest: "",
+        files: outcome.files,
+        installedAt: options.now,
+      });
+    } catch {
+      // Swallowed deliberately — see above.
+    }
+  }
+  return outcome;
 }

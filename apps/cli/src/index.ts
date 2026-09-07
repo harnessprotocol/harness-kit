@@ -147,7 +147,10 @@ program
   .description("Copy resources between harness surfaces to close machine gaps")
   .option("--from <surface>", "Only copy FROM this surface")
   .option("--to <surface...>", "Only copy TO these surfaces")
-  .option("--only <kind[:name]...>", "Only these resource kinds, or one named resource")
+  // The value name must be a bare identifier ending in `...` for commander
+  // to treat the option as variadic. `<kind[:name]...>` silently yields a
+  // STRING instead of an array, which crashed every `sync --only`.
+  .option("--only <kind...>", "Only these resource kinds, or one named resource (kind, or kind:name)")
   .option("--scope <scope>", "user (default) or project", "user")
   .option("--dry-run", "Report proposed actions without writing (the default)")
   .option("--yes", "Apply the proposed actions")

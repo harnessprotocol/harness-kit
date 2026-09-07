@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { writeFile } from "node:fs/promises";
 import {
   applyCellAction,
+  applyPluginCellAction,
   buildAgentPrompt,
   buildMachineInventory,
   CellActionError,
@@ -21,14 +22,14 @@ import type {
   SurfaceScope,
   TransactionFileChange,
 } from "@harness-kit/core";
-import { NodeFsProvider } from "@harness-kit/core/node";
+import { NodeFsProvider, NodeProcessRunner } from "@harness-kit/core/node";
 import { defaultStatePath, SqliteStateStore } from "../state/sqlite-store.js";
 import { timestamp } from "./portability-common.js";
 
 export interface SurfaceSyncFlags {
   from?: string;
   to?: string[];
-  only?: string[];
+  only?: string | string[];
   scope?: string;
   dryRun?: boolean;
   yes?: boolean;
@@ -61,9 +62,19 @@ function assertSurface(value: string, flag: string): SurfaceId {
   return value as SurfaceId;
 }
 
-/** `--only mcp-server` or `--only mcp-server:postgres`. */
-function parseOnly(filters: string[] | undefined): Array<{ kind: string; name?: string }> {
-  return (filters ?? []).map((filter) => {
+/**
+ * `--only mcp-server` or `--only mcp-server:postgres`, one or many.
+ *
+ * Accepts a bare string as well as an array. Commander only treats an option
+ * as variadic when its value name is a plain identifier ending in `...`, and
+ * the declaration read `<kind[:name]...>` — so this arrived as a string and
+ * `.map` threw, crashing every `sync --only`. The declaration is fixed; this
+ * normalizes anyway, because a parser boundary should not depend on a
+ * framework's naming heuristics staying the same across versions.
+ */
+function parseOnly(filters: string | string[] | undefined): Array<{ kind: string; name?: string }> {
+  const list = filters === undefined ? [] : Array.isArray(filters) ? filters : [filters];
+  return list.map((filter) => {
     const [kind, ...rest] = filter.split(":");
     return { kind: kind!, name: rest.length > 0 ? rest.join(":") : undefined };
   });
@@ -182,6 +193,28 @@ export async function surfaceSyncCommand(flags: SurfaceSyncFlags): Promise<void>
     for (const action of actionable) {
       const stamp = timestamp();
       try {
+        // A plugin action drives the surface's own installer; there is no
+        // transaction, no preimage and no rollback point, because nothing
+        // HarnessKit owns was written. Routing it through the transaction
+        // path would apply an empty change set and report success.
+        if (action.plan.plugin !== undefined) {
+          const outcome = await applyPluginCellAction(action.plan, {
+            runner: new NodeProcessRunner(cwd),
+            fs,
+            now: new Date().toISOString(),
+            sourceSurface: action.from,
+            homeRoot: home,
+            surface: action.to,
+            identity: action.name,
+            ...(store ? { state: store } : {}),
+          });
+          if (outcome.status === "refused" || outcome.status === "failed") {
+            failed.push({ cli: action.cli, reason: outcome.reason });
+          } else {
+            applied.push(action.cli);
+          }
+          continue;
+        }
         const applyOptions = {
           homeRoot: home,
           ...(scope === "project" ? { projectRoot: cwd } : {}),

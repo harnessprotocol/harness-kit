@@ -317,7 +317,7 @@ export type { CodexMcpValue, CodexMcpReadResult, CodexMcpWrite } from "./codecs/
 export { writeCodexMcp } from "./codecs/toml-codex.js";
 export { planStoreWrite, unsupportedKindReason } from "./write/write-store.js";
 export { planCellAction, syncCliCommand } from "./write/plan-cell-action.js";
-export { applyCellAction, CellActionError } from "./write/apply-cell-action.js";
+export { applyCellAction, applyPluginCellAction, CellActionError } from "./write/apply-cell-action.js";
 export { buildAgentPrompt } from "./write/agent-prompt.js";
 export type { AgentPromptOptions } from "./write/agent-prompt.js";
 export type { ApplyCellActionOptions, CellActionErrorCode } from "./write/apply-cell-action.js";
