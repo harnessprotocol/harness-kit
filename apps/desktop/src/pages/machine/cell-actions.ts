@@ -116,6 +116,18 @@ export async function applyCellActionViaTauri(
   /** The user's explicit acknowledgement of capability loss (AC-34). */
   confirmedLoss = false,
 ): Promise<CellApplyResult> {
+  // A plugin action drives the surface's own installer, which needs a
+  // process-spawn bridge the app does not have. Adding arbitrary binary
+  // execution to the webview is a trust boundary of its own and gets its own
+  // change; until then the drawer shows the exact CLI invocation and the
+  // agent prompt (AC-13), and says why the button is off rather than
+  // applying an empty transaction and reporting success.
+  if (view.plan.plugin !== undefined) {
+    throw new Error(
+      "Installing a plugin runs the surface's own installer, which the app cannot do yet — " +
+        "copy the CLI command below, or use the agent prompt.",
+    );
+  }
   const home = await homeDir();
   // Namespaced: the CLI mints ids from the same clock with the same format,
   // and record_transaction does ON CONFLICT DO UPDATE — so a same-millisecond

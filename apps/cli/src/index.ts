@@ -397,6 +397,7 @@ program
   .description("Show the fleet: which harnesses are installed, where, and how drifted")
   .option("--global", "Include the personal catalog and global native tool state")
   .option("--json", "Output the raw FleetReport as JSON")
+  .option("--baseline <path>", "Diff the machine against a team baseline harness.yaml (AC-10)")
   .addHelpText(
     "after",
     `

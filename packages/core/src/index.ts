@@ -257,6 +257,19 @@ export type {
 } from "./plugins/broker.js";
 export { executePluginAction, planPluginAction } from "./plugins/broker.js";
 
+// ── Recommendations (AC-10) ──────────────────────────────────
+//
+// Two deterministic sources only: machine gaps (read from the inventory, so
+// they can never propose what the grid calls unreachable) and baseline gaps
+// (a git-hosted harness.yaml the team extends). Pure — the caller loads and
+// parses the baseline.
+export type {
+  Recommendation,
+  RecommendationSource,
+  RecommendOptions,
+} from "./observe/recommendations.js";
+export { recommend } from "./observe/recommendations.js";
+
 // ── Observe (Task 8): descriptor-driven surface observation ───
 //
 // Walks each SurfaceDescriptor's detect probes and config stores, resolves
