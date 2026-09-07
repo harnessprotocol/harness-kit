@@ -234,6 +234,29 @@ export type {
 } from "./process-runner.js";
 export { assertSafeArgs, isFlagLike, UnsafeArgumentError } from "./process-runner.js";
 
+// ── PluginBroker (AC-18/19/20) ───────────────────────────────
+//
+// Native drivers shell out to each surface's own installer through
+// ProcessRunner; the unpack driver places a plugin's skills into surfaces
+// with no plugin model. Planning is pure and separate from execution so the
+// exact invocation can be displayed (AC-28) and --dry-run is the same path.
+export type {
+  NativePluginInstaller,
+  PluginActionPlan,
+  PluginActionRequest,
+  PluginSelector,
+} from "./plugins/installer.js";
+export { planNativePluginAction } from "./plugins/installer.js";
+export type { UnpackPlan } from "./plugins/unpack.js";
+export { planUnpackAction } from "./plugins/unpack.js";
+export type {
+  BrokerPlan,
+  ExecuteOptions,
+  PluginActionOutcome,
+  PluginBrokerRequest,
+} from "./plugins/broker.js";
+export { executePluginAction, planPluginAction } from "./plugins/broker.js";
+
 // ── Observe (Task 8): descriptor-driven surface observation ───
 //
 // Walks each SurfaceDescriptor's detect probes and config stores, resolves
@@ -275,6 +298,7 @@ export { computeMachineInventory, buildMachineInventory } from "./observe/machin
 export type {
   ObservationSnapshotMeta,
   StoredResource,
+  PluginInstallRecord,
   ObservationSnapshot,
   StateStore,
   TransactionLedger,
@@ -384,6 +408,7 @@ export type {
   MarketplaceFormatId,
   MarketplaceStore,
   PlatformPathOverrides,
+  PluginInstallModel,
   ConfigStore,
   DetectProbe,
   SurfaceDescriptor,

@@ -10,6 +10,7 @@ import {
 import type {
   ObservationSnapshot,
   ObservationSnapshotMeta,
+  PluginInstallRecord,
   StateStore,
   StoredResource,
   SurfaceId,
@@ -85,6 +86,16 @@ interface ResourceRow {
   provenance_file: string;
   provenance_format: string;
   needs_confirmation: number;
+}
+
+/** Decode a recorded file list, degrading to empty rather than throwing. */
+function parseFileList(raw: string): string[] {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
 }
 
 export class SqliteStateStore implements StateStore {
@@ -275,6 +286,46 @@ export class SqliteStateStore implements StateStore {
            updated_at = excluded.updated_at`,
       )
       .run(surface, scope, digest, new Date().toISOString());
+  }
+
+  async recordPluginInstall(record: PluginInstallRecord): Promise<void> {
+    this.db
+      .prepare(
+        `INSERT INTO plugin_installs (surface, plugin, manifest_digest, files, installed_at)
+         VALUES (?, ?, ?, ?, ?)`,
+      )
+      .run(
+        record.surface,
+        record.plugin,
+        record.manifestDigest,
+        JSON.stringify(record.files),
+        record.installedAt,
+      );
+  }
+
+  async listPluginInstalls(surface: SurfaceId): Promise<PluginInstallRecord[]> {
+    const rows = this.db
+      .prepare(
+        `SELECT surface, plugin, manifest_digest, files, installed_at
+         FROM plugin_installs WHERE surface = ? ORDER BY id DESC`,
+      )
+      .all(surface) as Array<{
+      surface: string;
+      plugin: string;
+      manifest_digest: string;
+      files: string;
+      installed_at: string;
+    }>;
+    return rows.map((row) => ({
+      surface: row.surface as SurfaceId,
+      plugin: row.plugin,
+      manifestDigest: row.manifest_digest,
+      // A row whose files column is not a JSON array is a corrupt record, not
+      // a reason to fail the read — an empty list means "we know of no files
+      // to remove", which is the safe answer for an uninstall to act on.
+      files: parseFileList(row.files),
+      installedAt: row.installed_at,
+    }));
   }
 
   async recordTransaction(record: TransactionRecord): Promise<void> {

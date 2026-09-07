@@ -127,7 +127,32 @@ export interface TransactionLedger extends TransactionRecorder {
  * plugin installs / definitions cache land in later milestones behind the
  * same interface.
  */
+/**
+ * One plugin install HarnessKit performed (AC-19). Recorded for BOTH drivers:
+ * the native one so the app knows it drove an installer rather than the user,
+ * and the unpack one because `files` is the only way to remove later exactly
+ * what was added and nothing else.
+ */
+export interface PluginInstallRecord {
+  surface: SurfaceId;
+  /** `name@marketplace`. */
+  plugin: string;
+  /** Digest of the plugin manifest that was installed, or "" when unknown. */
+  manifestDigest: string;
+  /** Absolute paths written, for the unpack driver; empty for native installs. */
+  files: string[];
+  /** ISO-8601, supplied by the caller — implementations never read the clock. */
+  installedAt: string;
+}
+
 export interface StateStore extends TransactionLedger {
+  /** Record one plugin install. Failure is never a reason to fail the install
+   * itself — by the time this runs the plugin is already on disk. */
+  recordPluginInstall(record: PluginInstallRecord): Promise<void>;
+
+  /** Installs recorded for a surface, newest first. */
+  listPluginInstalls(surface: SurfaceId): Promise<PluginInstallRecord[]>;
+
   /**
    * Persist one observation snapshot with its resources in a single atomic
    * transaction. Returns the new snapshot's id.

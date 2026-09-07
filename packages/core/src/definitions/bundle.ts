@@ -4,11 +4,13 @@ import type {
   DetectProbe,
   MarketplaceFormatId,
   MarketplaceStore,
+  PluginInstallModel,
   PlatformPathOverrides,
   StoreFormatId,
   SurfaceDescriptor,
   SurfaceScope,
 } from "../surfaces/types.js";
+import type { PluginSelector } from "../plugins/installer.js";
 import { HARNESS_RESOURCE_KINDS } from "../portability/types.js";
 import type { HarnessResourceKind } from "../portability/types.js";
 import { isRecord } from "../utils/is-record.js";
@@ -235,6 +237,52 @@ function validateMarketplaceStore(value: unknown, path: string): MarketplaceStor
   return store;
 }
 
+function validateStringArray(value: unknown, path: string): string[] {
+  if (!Array.isArray(value)) fail(`${path} must be an array (got ${describe(value)})`);
+  return value.map((item, i) => requireString(item, `${path}[${i}]`));
+}
+
+function validateSelector(value: unknown, path: string): PluginSelector {
+  const raw = requireString(value, path);
+  if (raw !== "identity" && raw !== "name") {
+    fail(`${path} must be "identity" or "name" (got ${JSON.stringify(raw)})`);
+  }
+  return raw;
+}
+
+function validatePluginInstall(value: unknown, path: string): PluginInstallModel {
+  if (!isRecord(value)) fail(`${path} must be an object (got ${describe(value)})`);
+  if (value.kind === "unpack") return { kind: "unpack" };
+  if (value.kind !== "native") {
+    fail(`${path}.kind must be "native" or "unpack" (got ${describe(value.kind)})`);
+  }
+  const model: PluginInstallModel = {
+    kind: "native",
+    binary: requireString(value.binary, `${path}.binary`),
+    installArgs: validateStringArray(value.installArgs, `${path}.installArgs`),
+    uninstallArgs: validateStringArray(value.uninstallArgs, `${path}.uninstallArgs`),
+    installSelector: validateSelector(value.installSelector, `${path}.installSelector`),
+    uninstallSelector: validateSelector(value.uninstallSelector, `${path}.uninstallSelector`),
+  };
+  if (value.scope !== undefined) {
+    if (!isRecord(value.scope)) fail(`${path}.scope must be an object (got ${describe(value.scope)})`);
+    if (!isRecord(value.scope.values)) {
+      fail(`${path}.scope.values must be an object (got ${describe(value.scope.values)})`);
+    }
+    const values: Record<SurfaceScope, string | null> = { user: null, project: null };
+    for (const scope of ["user", "project"] as const) {
+      const raw = value.scope.values[scope];
+      if (raw === undefined || raw === null) continue;
+      values[scope] = requireString(raw, `${path}.scope.values.${scope}`);
+    }
+    model.scope = { flag: requireString(value.scope.flag, `${path}.scope.flag`), values };
+  }
+  if (value.jsonFlag !== undefined) {
+    model.jsonFlag = requireString(value.jsonFlag, `${path}.jsonFlag`);
+  }
+  return model;
+}
+
 function validateSurface(value: unknown, path: string): SurfaceDescriptor {
   if (!isRecord(value)) {
     fail(`${path} must be an object (got ${describe(value)})`);
@@ -279,6 +327,9 @@ function validateSurface(value: unknown, path: string): SurfaceDescriptor {
   };
   if (value.requiredBinary !== undefined) {
     surface.requiredBinary = requireString(value.requiredBinary, `${path}.requiredBinary`);
+  }
+  if (value.pluginInstall !== undefined) {
+    surface.pluginInstall = validatePluginInstall(value.pluginInstall, `${path}.pluginInstall`);
   }
   if (value.marketplaces !== undefined) {
     if (!Array.isArray(value.marketplaces)) {
