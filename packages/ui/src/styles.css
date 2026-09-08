@@ -718,6 +718,11 @@
   max-width: 760px;
   padding: 64px 28px 80px;
 }
+.hk-onboard-skip {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 8px;
+}
 
 .hk-onboard-eyebrow {
   display: inline-flex;

@@ -31,10 +31,16 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
   const [writing, setWriting] = useState(false);
   const [writeError, setWriteError] = useState<string | null>(null);
   const startedAt = useRef<number>(Date.now());
+  // Bumped by Retry; the scan effect is keyed on it so a rerun resets the
+  // scan state and goes back through the scan step (AC-32).
+  const [scanRun, setScanRun] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     startedAt.current = Date.now();
+    setScanError(null);
+    setScanSeconds(null);
+    setStep("scan");
 
     async function runScan() {
       try {
@@ -77,7 +83,7 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [scanRun]);
 
   // Auto-advance from the scan step once it completes (success or error) —
   // the error is still shown, just on the reveal-adjacent step so the user
@@ -107,6 +113,13 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
     }
   }, [result, onFinish]);
 
+  const handleRetry = useCallback(() => setScanRun((n) => n + 1), []);
+
+  const handleSkip = useCallback(() => {
+    // Nothing is written; the caller marks the welcome as seen (AC-33).
+    onFinish();
+  }, [onFinish]);
+
   const handleExploreReadOnly = useCallback(() => {
     // Nothing is written — see DESIGN.md §6.3 CTA copy. Just dismiss.
     onFinish();
@@ -124,6 +137,8 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
       onAdvance={handleAdvance}
       onWriteAndFinish={handleWriteAndFinish}
       onExploreReadOnly={handleExploreReadOnly}
+      onSkip={handleSkip}
+      onRetry={handleRetry}
     />
   );
 }

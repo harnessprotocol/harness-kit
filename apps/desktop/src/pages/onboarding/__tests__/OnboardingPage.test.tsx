@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import OnboardingPage from "../OnboardingPage";
 import { ONBOARDING_FIXTURE_RESULT, ONBOARDING_FIXTURE_LOW_COUNT } from "../../__fixtures__/onboarding-fixture-data";
@@ -117,6 +117,43 @@ describe("OnboardingPage", () => {
 
     expect(mockWriteHarnessFile).not.toHaveBeenCalled();
     expect(onFinish).toHaveBeenCalled();
+  });
+
+  it("shows the scan error with Retry and Skip instead of a blank step", async () => {
+    mockImportMachine.mockRejectedValueOnce(new Error("EACCES: ~/.codex"));
+    const { onFinish } = renderPage();
+
+    // The scan step flashes the error first; the failed step is the one
+    // that must carry the error plus the actions.
+    expect(await screen.findByText(/machine scan did not finish/i)).toBeInTheDocument();
+    expect(screen.getByText(/EACCES/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retry scan" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Skip setup" })).toBeInTheDocument();
+    expect(onFinish).not.toHaveBeenCalled();
+  });
+
+  it("Retry scan runs the scan again and reaches the reveal", async () => {
+    mockImportMachine.mockResolvedValue(ONBOARDING_FIXTURE_RESULT);
+    mockImportMachine.mockRejectedValueOnce(new Error("EACCES: ~/.codex"));
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Retry scan" }));
+
+    await waitFor(() => expect(screen.getByText(/They don.t agree\./)).toBeInTheDocument(), {
+      timeout: 3000,
+    });
+    expect(screen.queryByText(/EACCES/)).not.toBeInTheDocument();
+    expect(mockImportMachine).toHaveBeenCalledTimes(2);
+  });
+
+  it("Skip setup finishes onboarding without writing", async () => {
+    mockImportMachine.mockResolvedValue(ONBOARDING_FIXTURE_RESULT);
+    const { onFinish } = renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Skip setup" }));
+
+    expect(onFinish).toHaveBeenCalledTimes(1);
+    expect(mockWriteHarnessFile).not.toHaveBeenCalled();
   });
 
   it("surfaces a scan error without crashing", async () => {
