@@ -82,7 +82,7 @@ Format: EARS (`WHEN … THE SYSTEM SHALL …`). Grouped by requirement area; eve
 
 ### Remote definitions (ADR 0004)
 
-- [ ] AC-25: WHEN the app or CLI starts with network access THE SYSTEM SHALL fetch versioned, signature-verified surface definitions (paths, formats, capability matrix, recommendation rules) from harnesskit.ai; WHEN offline or verification fails THE SYSTEM SHALL fall back to the release-bundled snapshot and say so.
+- [ ] AC-25: WHEN the app or CLI starts with network access THE SYSTEM SHALL fetch versioned, signature-verified surface definitions (paths, formats, capability matrix, recommendation rules) from harnesskit.ai; WHEN offline or verification fails THE SYSTEM SHALL fall back to the release-bundled snapshot and say so. *(In progress 2026-09-08, M4: the verification core landed — verify-before-parse, anti-rollback against a machine-history floor, cross-signed key rotation per D7, and snapshot fallback with a stated reason. NOT yet wired: nothing calls `loadDefinitions`, so no remote data reaches the registry and AC-26's end-to-end path is unproven. Also open: `definitions_cache` persistence, a desktop verifier (which cannot use `node:crypto`), CI bundle publishing, and hosting. Known residual: no freshness bound, so withholding updates pins a client on the newest bundle it has seen — design.md §7 does not require a maximum age.)*
 - [ ] AC-26: WHEN a definition update changes a surface's config path THE SYSTEM SHALL use the new path on next inventory without an app update.
 
 ### CLI

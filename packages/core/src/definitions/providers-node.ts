@@ -37,54 +37,135 @@ export class NodeSignatureVerifier implements SignatureVerifier {
   }
 }
 
+/**
+ * How many same-origin redirects to follow before giving up.
+ *
+ * The origin pin makes a self-referential `302 Location: <self>` the ONLY
+ * redirect this will follow, which is exactly the shape of an infinite loop —
+ * one CDN misconfiguration, no attacker required. Recursion without a bound
+ * spun 100k hops in 156ms, allocating a timer and an AbortController per hop.
+ */
+const MAX_REDIRECTS = 5;
+
+/** A duration a person can read: "800ms", "10s". `Math.round(ms/1000)` said
+ * "within 0s" for any sub-second timeout. */
+function humanDuration(ms: number): string {
+  return ms < 1000 ? `${ms}ms` : `${Math.round(ms / 1000)}s`;
+}
+
 export class NodeFetcher implements Fetcher {
   async get(
     url: string,
     options: { maxBytes: number; timeoutMs: number },
   ): Promise<FetchResult> {
-    if (!url.startsWith("https://")) {
-      return { status: "failed", reason: "refusing to fetch definitions over a non-https URL" };
-    }
-    const origin = new URL(url).origin;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), options.timeoutMs);
+    // One deadline for the WHOLE call, redirects included. A per-hop timeout
+    // bounds no redirect chain: each hop resets it, so N hops take N times as
+    // long as the caller asked to wait.
+    return this.fetchWithin(url, options, Date.now() + options.timeoutMs, MAX_REDIRECTS);
+  }
+
+  private async fetchWithin(
+    url: string,
+    options: { maxBytes: number; timeoutMs: number },
+    deadline: number,
+    redirectsLeft: number,
+  ): Promise<FetchResult> {
+    // Everything that can throw lives inside the try. `new URL()` on a
+    // malformed feed URL used to sit above it, so a typo took the process
+    // down instead of degrading to the snapshot.
     try {
-      // `redirect: "manual"` rather than following: a redirect that leaves the
-      // original origin would let a compromised CDN point verification at
-      // another host, and the signature check alone would not notice, since
-      // the attacker would be serving a bundle they also signed for.
-      const response = await fetch(url, { signal: controller.signal, redirect: "manual" });
-      if (response.status >= 300 && response.status < 400) {
-        const location = response.headers.get("location");
-        const target = location === null ? null : new URL(location, url);
-        return target !== null && target.origin === origin
-          ? this.get(target.toString(), options)
-          : { status: "failed", reason: "the definitions feed redirected off its own origin" };
+      if (!url.startsWith("https://")) {
+        return { status: "failed", reason: "refusing to fetch definitions over a non-https URL" };
       }
-      if (response.status === 404) return { status: "not-found" };
-      if (!response.ok) {
-        return { status: "failed", reason: `the feed answered ${response.status}` };
+      const origin = new URL(url).origin;
+      const remaining = deadline - Date.now();
+      if (remaining <= 0) {
+        return {
+          status: "failed",
+          reason: `the feed did not answer within ${humanDuration(options.timeoutMs)}`,
+        };
       }
-      const declared = Number(response.headers.get("content-length") ?? "0");
-      if (declared > options.maxBytes) {
-        return { status: "failed", reason: "the definitions payload is larger than this build accepts" };
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), remaining);
+      try {
+        const response = await fetch(url, { signal: controller.signal, redirect: "manual" });
+        if (response.status >= 300 && response.status < 400) {
+          if (redirectsLeft <= 0) {
+            return { status: "failed", reason: "the definitions feed redirected too many times" };
+          }
+          const location = response.headers.get("location");
+          if (location === null) {
+            return { status: "failed", reason: "the definitions feed redirected without a target" };
+          }
+          const target = new URL(location, url);
+          // Origin includes the scheme, so this also blocks an https→http
+          // downgrade on an otherwise same-host redirect.
+          if (target.origin !== origin) {
+            return { status: "failed", reason: "the definitions feed redirected off its own origin" };
+          }
+          return this.fetchWithin(target.toString(), options, deadline, redirectsLeft - 1);
+        }
+        if (response.status === 404) return { status: "not-found" };
+        if (!response.ok) {
+          return { status: "failed", reason: `the feed answered ${response.status}` };
+        }
+        const declared = Number(response.headers.get("content-length") ?? "0");
+        if (Number.isFinite(declared) && declared > options.maxBytes) {
+          return {
+            status: "failed",
+            reason: "the definitions payload is larger than this build accepts",
+          };
+        }
+        return await readCapped(response, options.maxBytes);
+      } finally {
+        clearTimeout(timer);
       }
-      const bytes = new Uint8Array(await response.arrayBuffer());
-      // Checked again after reading: content-length is a claim, not a limit.
-      if (bytes.byteLength > options.maxBytes) {
-        return { status: "failed", reason: "the definitions payload is larger than this build accepts" };
-      }
-      return { status: "ok", bytes };
     } catch (error) {
       const reason =
         error instanceof Error && error.name === "AbortError"
-          ? `the feed did not answer within ${Math.round(options.timeoutMs / 1000)}s`
+          ? `the feed did not answer within ${humanDuration(options.timeoutMs)}`
           : error instanceof Error
             ? error.message
             : String(error);
       return { status: "failed", reason };
-    } finally {
-      clearTimeout(timer);
     }
   }
+}
+
+/**
+ * Read a response body, STOPPING at the cap rather than buffering and then
+ * complaining. `arrayBuffer()` reads it all first: a 1.5 GiB response against
+ * a 2 MiB cap put 1.5 GiB resident before the check ran, and a response with
+ * no content-length skipped the earlier check entirely.
+ */
+async function readCapped(response: Response, maxBytes: number): Promise<FetchResult> {
+  const body = response.body;
+  if (body === null) return { status: "ok", bytes: new Uint8Array(0) };
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel();
+        return {
+          status: "failed",
+          reason: "the definitions payload is larger than this build accepts",
+        };
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return { status: "ok", bytes };
 }
