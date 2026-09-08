@@ -1,5 +1,5 @@
 import { useSearchParams } from "react-router-dom";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Input, SummaryStrip, EmptyState, type SummaryCell } from "@harness-kit/ui";
 import { ScanSearch } from "lucide-react";
 import type { GridRow, MachineInventory } from "@harness-kit/core";
@@ -30,10 +30,17 @@ export default function MachinePage() {
   const [searchParams] = useSearchParams();
   const driftRequested = searchParams.get("drift") === "1";
   const [driftOpen, setDriftOpen] = useState(driftRequested);
+  const driftSectionRef = useRef<HTMLElement | null>(null);
   useEffect(() => {
     // Opens on request; never force-closes, so a user who opened the section
-    // by hand does not lose it by navigating within Machine.
-    if (driftRequested) setDriftOpen(true);
+    // by hand does not lose it by navigating within Machine. The section sits
+    // below the grid, so opening it without scrolling left the user looking
+    // at an unchanged screen. jsdom has no scrollIntoView, hence the optional
+    // call.
+    if (driftRequested) {
+      setDriftOpen(true);
+      driftSectionRef.current?.scrollIntoView?.({ block: "start" });
+    }
   }, [driftRequested]);
   const [selectedRow, setSelectedRow] = useState<GridRow | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
@@ -293,7 +300,7 @@ export default function MachinePage() {
         above compares surfaces against each other. Two different questions, one
         screen.
       */}
-      <section style={{ marginTop: 28 }} data-testid="machine-drift-section">
+      <section ref={driftSectionRef} style={{ marginTop: 28 }} data-testid="machine-drift-section">
         <button
           type="button"
           onClick={() => setDriftOpen((open) => !open)}

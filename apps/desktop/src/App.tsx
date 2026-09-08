@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AppLayout from "./layouts/AppLayout";
 import { getDefaultSection, getWelcomeSeen, setWelcomeSeen } from "./lib/preferences";
 import { ObservatoryProvider } from "./hooks/useObservatoryData";
+import { DriftRedirect } from "./routes/DriftRedirect";
 
 // Lazy-load all pages so the initial bundle only includes the shell + router
 const PreferencesPage = lazy(() => import("./pages/PreferencesPage"));
@@ -120,7 +121,7 @@ export default function App() {
             {/* Drift */}
             {/* AC-37: Drift is presented inside the Machine view; the legacy
                 route redirects rather than 404ing anyone's bookmark. */}
-            <Route path="drift" element={<Navigate to="/machine?drift=1" replace />} />
+            <Route path="drift" element={<DriftRedirect />} />
 
             {/* Preferences / Settings (Security folds in here as tabs — DESIGN.md §5) */}
             <Route path="preferences" element={<PreferencesPage />} />

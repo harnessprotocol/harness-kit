@@ -4,6 +4,7 @@ import { MemoryRouter, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { buildMachineInventory } from "@harness-kit/core";
 import MachinePage from "../MachinePage";
+import { collectDrift } from "../../drift/drift-data";
 
 // ── Mocks ──────────────────────────────────────────────────────
 
@@ -67,6 +68,24 @@ vi.mock("@harness-kit/core", async () => ({
 const mockGrantProjectScope = vi.fn();
 vi.mock("../../../lib/tauri", () => ({
   grantProjectScope: (...args: unknown[]) => mockGrantProjectScope(...args),
+  // DriftPage's acknowledgement round-trips. It calls getAcknowledgedDriftItems
+  // synchronously while assembling its Promise.all, so a missing export here
+  // is not a rejected promise it can catch — it throws the whole load into the
+  // error state and the populated header never renders.
+  getAcknowledgedDriftItems: vi.fn(async () => []),
+  migrateDriftAcknowledgements: vi.fn(async () => 0),
+  acknowledgeDriftItem: vi.fn(async () => undefined),
+  unacknowledgeDriftItem: vi.fn(async () => undefined),
+}));
+
+// Drift's scans. The fixture has no harness.yaml, so the real collectDrift
+// yields nothing and DriftView only ever shows its empty state; the filter
+// test needs one entry to reach the populated header. driftItemKey stays real
+// because DriftView keys its rows with it.
+vi.mock("../../drift/drift-data", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../drift/drift-data")>()),
+  buildDriftScopes: vi.fn(async () => []),
+  collectDrift: vi.fn(),
 }));
 
 // The drawer's action strip. The selectors (presentSources, missingTargets,
@@ -89,6 +108,11 @@ vi.mock("../cell-actions", async (importOriginal) => ({
 
 vi.mock("@tauri-apps/api/path", () => ({
   homeDir: vi.fn(() => Promise.resolve("/home/user")),
+  // DriftPage locates the legacy comparator.db before it scans; both calls
+  // sit ahead of collectDrift in its load, so they must resolve for the
+  // populated header to be reachable at all.
+  appDataDir: vi.fn(() => Promise.resolve("/home/user/appdata")),
+  join: vi.fn((...parts: string[]) => Promise.resolve(parts.join("/"))),
 }));
 
 vi.mock("@tauri-apps/plugin-fs", () => ({
@@ -283,8 +307,13 @@ function renderPage() {
 describe("MachinePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // clearAllMocks does not drain a mockResolvedValueOnce queue; a leftover
+    // from the rescan test would otherwise feed the next test's first scan.
+    vi.mocked(buildMachineInventory).mockReset();
     vi.mocked(buildMachineInventory).mockResolvedValue(makeInventory() as never);
     mockGrantProjectScope.mockResolvedValue(undefined);
+    vi.mocked(collectDrift).mockReset();
+    vi.mocked(collectDrift).mockResolvedValue([]);
   });
 
   it("renders all 11 surface columns grouped by family, undetected dimmed and annotated", async () => {
@@ -449,6 +478,45 @@ describe("MachinePage", () => {
         screen.getByRole("button", { name: /Drift from harness.yaml/ }),
       ).toHaveAttribute("aria-expanded", "true"),
     );
+  });
+
+  it("scrolls the Drift section into view when it is requested", async () => {
+    // jsdom does not implement scrollIntoView; the page calls it optionally.
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    render(
+      <MemoryRouter initialEntries={["/machine?drift=1"]}>
+        <MachinePage />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
+    expect(scrollIntoView.mock.instances[0]).toBe(screen.getByTestId("machine-drift-section"));
+  });
+
+  it("filters the Drift section to the harness named in the URL", async () => {
+    // Fleet's row click goes to /drift?harness=<adapter>; the redirect keeps
+    // the query (src/routes/DriftRedirect.tsx), so this is what Machine sees.
+    vi.mocked(collectDrift).mockResolvedValue([
+      {
+        scope: { kind: "global", root: "/home/user", label: "Global", fs: {} as never },
+        item: {
+          class: "missing",
+          path: "CLAUDE.md",
+          adapter: "claude-code",
+          target: "claude-code",
+          harnessName: "test",
+          slot: "operational",
+          detail: "CLAUDE.md is missing.",
+        } as never,
+      },
+    ]);
+    render(
+      <MemoryRouter initialEntries={["/machine?drift=1&harness=claude-code"]}>
+        <MachinePage />
+      </MemoryRouter>,
+    );
+    await screen.findByTestId("drift-view");
+    expect(await screen.findByText("Showing drift for Claude Code.")).toBeInTheDocument();
   });
 
   it("mounts Drift when the section is opened", async () => {
