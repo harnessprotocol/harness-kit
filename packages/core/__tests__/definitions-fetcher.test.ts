@@ -101,7 +101,11 @@ describe("redirects", () => {
       new Response(null, { status: 302, headers: { location: "http://harnesskit.ai/x" } }),
     );
     const result = await fetcher.get("https://harnesskit.ai/definitions.json", limits);
-    expect(result.status).toBe("failed");
+    // Asserting only `status === "failed"` passed with the origin pin
+    // deleted: the recursive call's own non-https guard produced the same
+    // verdict, so the test never exercised the comparison it is named for.
+    // The reason is what tells the two guards apart.
+    expect(result.status === "failed" ? result.reason : "").toContain("off its own origin");
   });
 
   it("refuses a redirect with no target", async () => {
@@ -125,6 +129,33 @@ describe("redirects", () => {
     // The REASON is what distinguishes the deadline from the redirect bound:
     // with a per-hop timeout the chain would instead run out of hops, and an
     // elapsed-time assertion alone cannot tell those apart.
+    expect(result.status === "failed" ? result.reason : "").toContain("did not answer within");
+  });
+
+  it("ARMS the abort signal, so one hung request is cut off too", async () => {
+    // The test above passes entirely on the `remaining <= 0` check BETWEEN
+    // hops, so replacing `controller.abort()` with a no-op kept the whole
+    // suite green. A single request that never answers has no next hop to
+    // check: only the signal stops it. This stub honours the signal the way
+    // undici does, which is what makes the assertion meaningful.
+    let aborted = false;
+    vi.stubGlobal("fetch", (_url: string, init?: { signal?: AbortSignal }) => {
+      return new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          aborted = true;
+          const error = new Error("This operation was aborted");
+          error.name = "AbortError";
+          reject(error);
+        });
+      });
+    });
+    const started = Date.now();
+    const result = await fetcher.get("https://harnesskit.ai/definitions.json", {
+      maxBytes: 4096,
+      timeoutMs: 100,
+    });
+    expect(aborted).toBe(true);
+    expect(Date.now() - started).toBeLessThan(3_000);
     expect(result.status === "failed" ? result.reason : "").toContain("did not answer within");
   });
 });
@@ -168,11 +199,62 @@ describe("body caps", () => {
   });
 
   it("ignores a nonsense content-length and falls back to the read cap", async () => {
+    // `Number("not-a-number")` is NaN and `NaN > maxBytes` is already false,
+    // so this case passes with the `Number.isFinite` guard deleted. The guard
+    // exists for a literal `Infinity`, which is the case below.
     vi.stubGlobal("fetch", async () =>
       new Response("tiny", { status: 200, headers: { "content-length": "not-a-number" } }),
     );
     const result = await fetcher.get("https://harnesskit.ai/definitions.json", limits);
     expect(result.status).toBe("ok");
+  });
+
+  it("treats an Infinity content-length as unknown, deferring to the read cap", async () => {
+    // This is the case the isFinite guard actually changes: without it,
+    // `Infinity > maxBytes` rejects a body that in fact fits.
+    vi.stubGlobal("fetch", async () =>
+      new Response("tiny", { status: 200, headers: { "content-length": "Infinity" } }),
+    );
+    const result = await fetcher.get("https://harnesskit.ai/definitions.json", limits);
+    expect(result.status).toBe("ok");
+  });
+
+  it("still enforces the cap when the body arrives one byte at a time", async () => {
+    // A drip-fed body is the shape that made chunk RETENTION expensive: the
+    // cap counted bytes while every chunk stayed in an array, so 4 MiB of
+    // payload reached 2.2 GiB resident. The bytes-read cap must fire on this
+    // shape exactly as it does on large chunks.
+    //
+    // The memory fix itself is deliberately NOT asserted here. Measured under
+    // `node --expose-gc`, a 2 MiB drip cost 70-84 MiB retaining chunks and
+    // 1.9-20.4 MiB with one growing buffer — a real 4-40x win, but the lower
+    // figure swings by an order of magnitude with heap ordering and vitest
+    // does not run with `--expose-gc`. A threshold across that range would
+    // either flake or pass vacuously, which is worse than not asserting it.
+    const counter = { read: 0 };
+    const chunks = Array.from({ length: 200_000 }, () => new Uint8Array(1));
+    vi.stubGlobal("fetch", async () => streaming(chunks, counter));
+    const result = await fetcher.get("https://harnesskit.ai/definitions.json", {
+      maxBytes: 64 * 1024,
+      timeoutMs: 30_000,
+    });
+    expect(result.status).toBe("failed");
+    expect(result.status === "failed" ? result.reason : "").toContain("larger than");
+    // Stopped at the cap rather than draining all 200k chunks.
+    expect(counter.read).toBeLessThan(70 * 1024);
+  });
+
+  it("reassembles a drip-fed body byte-for-byte", async () => {
+    // Growing one buffer instead of concatenating chunks is only correct if
+    // the bytes still come back in order and intact.
+    const counter = { read: 0 };
+    const expected = new Uint8Array(200_000).map((_, index) => index % 251);
+    const chunks: Uint8Array[] = [];
+    for (let at = 0; at < expected.length; at += 7) chunks.push(expected.subarray(at, at + 7));
+    vi.stubGlobal("fetch", async () => streaming(chunks, counter));
+    const result = await fetcher.get("https://harnesskit.ai/definitions.json", limits);
+    expect(result.status).toBe("ok");
+    expect(result.status === "ok" ? Array.from(result.bytes) : []).toEqual(Array.from(expected));
   });
 
   it("returns a body that fits", async () => {

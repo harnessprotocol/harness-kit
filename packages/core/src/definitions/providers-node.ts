@@ -1,4 +1,4 @@
-import { verify as verifyEd } from "node:crypto";
+import { createPublicKey, verify as verifyEd } from "node:crypto";
 import type { FetchResult, Fetcher, SignatureVerifier } from "./providers.js";
 
 /**
@@ -15,14 +15,23 @@ const SPKI_ED25519_PREFIX = Uint8Array.from([
   0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00,
 ]);
 
+/** Raw Ed25519 public key length, hardcoded into the DER lengths above. */
+const ED25519_PUBLIC_KEY_BYTES = 32;
+
 export class NodeSignatureVerifier implements SignatureVerifier {
   async verifyEd25519(
     message: Uint8Array,
     signature: Uint8Array,
     publicKey: Uint8Array,
   ): Promise<boolean> {
+    // The DER lengths in the prefix are fixed for 32 bytes, and OpenSSL
+    // ignores trailing data after the SEQUENCE — so a 33-byte or 4 KiB key
+    // was silently TRUNCATED to its first 32 and accepted, making infinitely
+    // many distinct key values the same key. Short keys already failed on
+    // their own; long ones did not. The contract says a malformed key returns
+    // false, so check the length rather than relying on the parser to.
+    if (publicKey.length !== ED25519_PUBLIC_KEY_BYTES) return false;
     try {
-      const { createPublicKey } = await import("node:crypto");
       const der = new Uint8Array(SPKI_ED25519_PREFIX.length + publicKey.length);
       der.set(SPKI_ED25519_PREFIX);
       der.set(publicKey, SPKI_ED25519_PREFIX.length);
@@ -40,10 +49,13 @@ export class NodeSignatureVerifier implements SignatureVerifier {
 /**
  * How many same-origin redirects to follow before giving up.
  *
- * The origin pin makes a self-referential `302 Location: <self>` the ONLY
- * redirect this will follow, which is exactly the shape of an infinite loop —
- * one CDN misconfiguration, no attacker required. Recursion without a bound
- * spun 100k hops in 156ms, allocating a timer and an AbortController per hop.
+ * The origin pin bounds redirects to the ORIGIN, not to a single URL: any
+ * same-origin target is followed, including relative and port-normalised
+ * ones, so a CDN can legitimately hop `/definitions.json` → `/latest/` →
+ * `/cdn/v9/definitions.json`. A self-referential `302 Location: <self>` is
+ * therefore only the tightest case of a loop the pin permits — one CDN
+ * misconfiguration, no attacker required. Recursion without a bound spun
+ * 100k hops in 156ms, allocating a timer and an AbortController per hop.
  */
 const MAX_REDIRECTS = 5;
 
@@ -132,40 +144,54 @@ export class NodeFetcher implements Fetcher {
   }
 }
 
+/** Initial read buffer; grows geometrically, never past `maxBytes`. */
+const INITIAL_READ_BYTES = 64 * 1024;
+
 /**
  * Read a response body, STOPPING at the cap rather than buffering and then
  * complaining. `arrayBuffer()` reads it all first: a 1.5 GiB response against
  * a 2 MiB cap put 1.5 GiB resident before the check ran, and a response with
  * no content-length skipped the earlier check entirely.
+ *
+ * Bytes are copied into ONE growing buffer rather than collected in a chunk
+ * array, because a cap on total bytes is not a cap on memory. Retaining each
+ * chunk let a server drip its response one byte at a time and pay `maxBytes`
+ * for orders of magnitude more allocation: 4 MiB of payload across two
+ * concurrent fetches reached 2.2 GiB resident, well inside the 10s timeout.
+ * Per-chunk overhead is what costs, so the fix is to stop keeping chunks.
  */
 async function readCapped(response: Response, maxBytes: number): Promise<FetchResult> {
   const body = response.body;
   if (body === null) return { status: "ok", bytes: new Uint8Array(0) };
   const reader = body.getReader();
-  const chunks: Uint8Array[] = [];
+  const tooLarge: FetchResult = {
+    status: "failed",
+    reason: "the definitions payload is larger than this build accepts",
+  };
+  let buffer = new Uint8Array(Math.min(maxBytes, INITIAL_READ_BYTES));
   let total = 0;
   try {
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
-      total += value.byteLength;
-      if (total > maxBytes) {
+      // Checked BEFORE the copy, so an oversized chunk is never resident.
+      if (total + value.byteLength > maxBytes) {
         await reader.cancel();
-        return {
-          status: "failed",
-          reason: "the definitions payload is larger than this build accepts",
-        };
+        return tooLarge;
       }
-      chunks.push(value);
+      if (total + value.byteLength > buffer.length) {
+        const grown = new Uint8Array(
+          Math.min(maxBytes, Math.max(buffer.length * 2, total + value.byteLength)),
+        );
+        grown.set(buffer.subarray(0, total));
+        buffer = grown;
+      }
+      buffer.set(value, total);
+      total += value.byteLength;
     }
   } finally {
     reader.releaseLock();
   }
-  const bytes = new Uint8Array(total);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return { status: "ok", bytes };
+  // Copy out so the returned array does not retain the grown buffer's slack.
+  return { status: "ok", bytes: buffer.slice(0, total) };
 }

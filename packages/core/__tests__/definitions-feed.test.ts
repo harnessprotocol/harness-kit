@@ -311,12 +311,16 @@ describe("falling back, and saying so (AC-25)", () => {
     // nothing to do with the test's name.
     const key = keypair();
     const cases = [
-      { bytes: new Uint8Array([0xff, 0xfe]), label: "invalid UTF-8" },
-      { bytes: new TextEncoder().encode("{not json"), label: "invalid JSON" },
-      { bytes: new TextEncoder().encode("[]"), label: "JSON that is not a bundle" },
-      { bytes: new TextEncoder().encode(JSON.stringify({ formatVersion: 99 })), label: "a newer format" },
+      // Each case pins the reason to ITS OWN branch. Asserting only "not
+      // 'did not verify'" let the UTF-8 case pass with `fatal: true` removed:
+      // 0xff 0xfe became two replacement characters and fell through to the
+      // JSON branch, which the assertions could not tell apart.
+      { bytes: new Uint8Array([0xff, 0xfe]), label: "invalid UTF-8", expect: "not valid UTF-8" },
+      { bytes: new TextEncoder().encode("{not json"), label: "invalid JSON", expect: "not valid JSON" },
+      { bytes: new TextEncoder().encode("[]"), label: "JSON that is not a bundle", expect: "not usable by this build" },
+      { bytes: new TextEncoder().encode(JSON.stringify({ formatVersion: 99 })), label: "a newer format", expect: "not usable by this build" },
     ];
-    for (const { bytes, label } of cases) {
+    for (const { bytes, label, expect: fragment } of cases) {
       const loaded = await loadDefinitions(
         options({
           publisherKeys: [{ id: "k1", publicKey: key.raw }],
@@ -329,7 +333,7 @@ describe("falling back, and saying so (AC-25)", () => {
       expect(loaded.source, label).toBe("snapshot");
       // Reached the DECODER, not the signature check — that is the point.
       expect(loaded.reason, label).not.toContain("did not verify");
-      expect((loaded.reason ?? "").length, label).toBeGreaterThan(0);
+      expect(loaded.reason, label).toContain(fragment);
     }
 
     for (const result of [
@@ -340,6 +344,108 @@ describe("falling back, and saying so (AC-25)", () => {
         options({ fetcher: fetcher({ [BODY_URL]: result, [SIG_URL]: result }) }),
       );
       expect(loaded.source).toBe("snapshot");
+    }
+  });
+
+  it("degrades when an injected provider REJECTS instead of returning", async () => {
+    // Every case above supplies a well-behaved provider that returns a
+    // FetchResult. But these are interfaces the CALLER implements, and the
+    // next one planned is a Tauri `invoke` — which rejects whenever the Rust
+    // side returns Err. Nothing here caught that, so the one function whose
+    // whole purpose is degrading instead of crashing took the app down.
+    const key = keypair();
+    const bytes = bundleBytes(9);
+
+    const thrownFetcher = await loadDefinitions(
+      options({
+        fetcher: {
+          get: () => Promise.reject(new Error("invoke('fetch_definitions') failed")),
+        },
+      }),
+    );
+    expect(thrownFetcher.source).toBe("snapshot");
+    expect(thrownFetcher.reason).toContain("the fetcher threw");
+
+    const thrownVerifier = await loadDefinitions(
+      options({
+        publisherKeys: [{ id: "k1", publicKey: key.raw }],
+        verifier: {
+          verifyEd25519: () => Promise.reject(new Error("command not found")),
+        },
+        fetcher: fetcher({
+          [BODY_URL]: { status: "ok", bytes },
+          [SIG_URL]: { status: "ok", bytes: key.sign(bytes) },
+        }),
+      }),
+    );
+    expect(thrownVerifier.source).toBe("snapshot");
+    // A verifier that throws is a verifier that failed — no trust granted.
+    expect(thrownVerifier.reason).toContain("did not verify");
+
+    // A synchronous throw, not just a rejected promise.
+    const syncThrow = await loadDefinitions(
+      options({
+        fetcher: {
+          get: () => {
+            throw new Error("synchronous boom");
+          },
+        },
+      }),
+    );
+    expect(syncThrow.source).toBe("snapshot");
+  });
+
+  it("refuses a limit that would not bound the response, rather than substituting one", async () => {
+    // `NaN` compares false against every size, so `maxBytes: NaN` read an
+    // unbounded body; a timeoutMs past 2^31 collapses setTimeout to ~1ms.
+    // Both are the shape that made the rollback floor a no-op: a bad number
+    // silently disarming the control it configures.
+    for (const [field, value] of [
+      ["maxBytes", Number.NaN],
+      ["maxBytes", 0],
+      ["maxBytes", -1],
+      ["timeoutMs", Number.NaN],
+      ["timeoutMs", Number.POSITIVE_INFINITY],
+      ["timeoutMs", 2_147_483_648],
+    ] as const) {
+      let called = false;
+      const loaded = await loadDefinitions(
+        options({
+          [field]: value,
+          fetcher: {
+            get: () => {
+              called = true;
+              return Promise.resolve({ status: "not-found" as const });
+            },
+          },
+        }),
+      );
+      const label = `${field}=${String(value)}`;
+      expect(loaded.source, label).toBe("snapshot");
+      expect(loaded.reason, label).toContain(`unusable ${field}`);
+      expect(called, label).toBe(false);
+    }
+  });
+
+  it("refuses a clock it cannot read, rather than blaming the signature", async () => {
+    // A timezone-less `now` used to leave perpetual keys trusted while
+    // revoking every key that had a notAfter — a split failure, and the user
+    // was told the signature did not verify.
+    const key = keypair();
+    const bytes = bundleBytes(9);
+    for (const now of ["not a date", "2026-09-08T00:00:00", ""]) {
+      const loaded = await loadDefinitions(
+        options({
+          now,
+          publisherKeys: [{ id: "k1", publicKey: key.raw }],
+          fetcher: fetcher({
+            [BODY_URL]: { status: "ok", bytes },
+            [SIG_URL]: { status: "ok", bytes: key.sign(bytes) },
+          }),
+        }),
+      );
+      expect(loaded.source, now).toBe("snapshot");
+      expect(loaded.reason, now).toContain("UTC offset");
     }
   });
 
@@ -397,42 +503,106 @@ describe("notAfter is an instant, not a string", () => {
   it("still accepts a key that genuinely has not expired", async () => {
     expect(await accepted("2027-01-01T00:00:00.000Z", "2026-09-08T00:00:00.000Z")).toBe(true);
   });
+
+  it("refuses an expiry with no UTC offset, which the host timezone would resolve", async () => {
+    // `2026-09-08T00:00:00` is valid ISO-8601 and Date.parse reads it in the
+    // HOST's zone: the same key expired in Tokyo and stayed honoured in
+    // Honolulu 26 hours later, so a bundle verified on one machine and not
+    // its neighbour. Ambiguous is refused rather than guessed.
+    expect(await accepted("2026-09-08T00:00:00", "2026-09-08T02:00:00.000Z")).toBe(false);
+    expect(await accepted("2027-01-01T00:00:00", "2026-09-08T02:00:00.000Z")).toBe(false);
+  });
+
+  it("makes the notAfter boundary EXCLUSIVE, at the instant itself", async () => {
+    // RFC 5280 treats notAfter as inclusive; this does not. Pinned by test so
+    // the next reader finds the answer instead of re-deriving it.
+    const instant = "2026-09-08T00:00:00.000Z";
+    expect(await accepted(instant, instant)).toBe(false);
+    expect(await accepted(instant, "2026-09-07T23:59:59.999Z")).toBe(true);
+  });
+});
+
+describe("the verifier's key handling", () => {
+  // The DER lengths in the SPKI prefix are fixed for 32 bytes and OpenSSL
+  // ignores trailing data after the SEQUENCE, so an over-length key was
+  // silently truncated to its first 32 and ACCEPTED — infinitely many
+  // distinct key values acting as one key. Short keys failed on their own.
+  const verifier = new NodeSignatureVerifier();
+
+  it("refuses a public key that is not exactly 32 bytes", async () => {
+    const key = keypair();
+    const message = new TextEncoder().encode("definitions");
+    const signature = key.sign(message);
+
+    expect(await verifier.verifyEd25519(message, signature, key.raw)).toBe(true);
+
+    for (const extra of [1, 32, 4096]) {
+      const padded = new Uint8Array(key.raw.length + extra);
+      padded.set(key.raw);
+      expect(await verifier.verifyEd25519(message, signature, padded), `+${extra}`).toBe(false);
+    }
+    for (const short of [0, 31]) {
+      expect(await verifier.verifyEd25519(message, signature, key.raw.subarray(0, short))).toBe(
+        false,
+      );
+    }
+  });
+
+  it("returns false rather than throwing on a malformed signature", async () => {
+    const key = keypair();
+    const message = new TextEncoder().encode("definitions");
+    for (const length of [0, 1, 63, 65, 128]) {
+      expect(await verifier.verifyEd25519(message, new Uint8Array(length), key.raw)).toBe(false);
+    }
+  });
 });
 
 describe("anti-rollback cannot be disabled by a bad floor", () => {
-  it("ignores a non-integer floor rather than treating it as no floor", async () => {
-    // The persistence that produces this value lands next; a parseInt on a
-    // truncated ledger file yields NaN, which must not switch the defence off.
-    const key = keypair();
+  // An earlier version of this block asserted `toBe("remote")` for every
+  // garbage floor — it accepted the rollback under a title saying the defence
+  // could not be switched off, and under a comment saying the same. The
+  // assertion and the name were opposites, and the name was right.
+  const rollback = (floor: unknown, key: ReturnType<typeof keypair>) => {
     const bytes = bundleBytes(2);
-    for (const floor of [Number.NaN, 1.5, "30" as unknown as number]) {
-      const loaded = await loadDefinitions(
-        options({
-          publisherKeys: [{ id: "k1", publicKey: key.raw }],
-          highestSeenBundleNumber: floor,
-          fetcher: fetcher({
-            [BODY_URL]: { status: "ok", bytes },
-            [SIG_URL]: { status: "ok", bytes: key.sign(bytes) },
-          }),
-        }),
-      );
-      // A garbage floor must not silently ACCEPT what a real floor rejects.
-      // With no usable floor the bundle is taken on its signature alone,
-      // which is the documented behaviour when no floor exists at all.
-      expect(loaded.source, String(floor)).toBe("remote");
-    }
-    // And a real floor still rejects the same bundle.
-    const guarded = await loadDefinitions(
+    return loadDefinitions(
       options({
         publisherKeys: [{ id: "k1", publicKey: key.raw }],
-        highestSeenBundleNumber: 30,
+        highestSeenBundleNumber: floor as number,
         fetcher: fetcher({
           [BODY_URL]: { status: "ok", bytes },
           [SIG_URL]: { status: "ok", bytes: key.sign(bytes) },
         }),
       }),
     );
-    expect(guarded.source).toBe("snapshot");
+  };
+
+  it("REFUSES a rollback when the floor is present but unreadable", async () => {
+    // A truncated ledger yields NaN; a JSON round-trip yields "30". Neither
+    // is a floor of zero, and neither may mean "no protection" — a corrupt
+    // machine history is a reason to distrust a replayed bundle, not to wave
+    // it through. `n < NaN` is already false, which is why the previous
+    // `Number.isInteger` guard did nothing for the case it was written for.
+    const key = keypair();
+    for (const floor of [Number.NaN, 1.5, "30", -1, null]) {
+      const loaded = await rollback(floor, key);
+      expect(loaded.source, String(floor)).toBe("snapshot");
+      expect(loaded.reason, String(floor)).toContain("unreadable");
+    }
+  });
+
+  it("still refuses a rollback against a real floor, and says the number", async () => {
+    const key = keypair();
+    const loaded = await rollback(30, key);
+    expect(loaded.source).toBe("snapshot");
+    expect(loaded.reason).toContain("older than 30");
+  });
+
+  it("accepts the bundle when no floor is recorded at all", async () => {
+    // Absent is not the same as corrupt: a machine with no history yet has
+    // nothing to roll back from.
+    const key = keypair();
+    const loaded = await rollback(undefined, key);
+    expect(loaded.source).toBe("remote");
   });
 });
 
@@ -476,139 +646,5 @@ describe("key rotation", () => {
       }),
     );
     expect(loaded.source).toBe("snapshot");
-  });
-});
-
-describe("cross-signed key rotation (design.md D7)", () => {
-  // The reason definitions are remote at all is that they change without an
-  // app release. A compiled-in key list with expiry dates does not rotate
-  // anything: introducing a key still needs a new binary. A transition
-  // statement signed by BOTH the outgoing and incoming keys does.
-  const b64 = (bytes: Uint8Array) => Buffer.from(bytes).toString("base64");
-
-  function statement(from: Uint8Array, to: Uint8Array, over: Record<string, unknown> = {}) {
-    return new TextEncoder().encode(
-      JSON.stringify({
-        fromKey: b64(from),
-        toKey: b64(to),
-        toKeyId: "k2",
-        effectiveFrom: "2026-01-01T00:00:00.000Z",
-        ...over,
-      }),
-    );
-  }
-
-  it("trusts a bundle signed by the INCOMING key once the statement verifies", async () => {
-    const outgoing = keypair();
-    const incoming = keypair();
-    const doc = statement(outgoing.raw, incoming.raw);
-    const bytes = bundleBytes(11);
-    const loaded = await loadDefinitions(
-      options({
-        publisherKeys: [{ id: "k1", publicKey: outgoing.raw }],
-        transition: {
-          bytes: doc,
-          signature: outgoing.sign(doc),
-          counterSignature: incoming.sign(doc),
-        },
-        fetcher: fetcher({
-          [BODY_URL]: { status: "ok", bytes },
-          [SIG_URL]: { status: "ok", bytes: incoming.sign(bytes) },
-        }),
-      }),
-    );
-    expect(loaded.source).toBe("remote");
-  });
-
-  it("refuses a statement the incoming key did not counter-sign", async () => {
-    // Cross-signing is what stops a STOLEN outgoing key installing a public
-    // key whose private half the thief does not hold.
-    const outgoing = keypair();
-    const incoming = keypair();
-    const doc = statement(outgoing.raw, incoming.raw);
-    const bytes = bundleBytes(11);
-    const loaded = await loadDefinitions(
-      options({
-        publisherKeys: [{ id: "k1", publicKey: outgoing.raw }],
-        transition: { bytes: doc, signature: outgoing.sign(doc) },
-        fetcher: fetcher({
-          [BODY_URL]: { status: "ok", bytes },
-          [SIG_URL]: { status: "ok", bytes: incoming.sign(bytes) },
-        }),
-      }),
-    );
-    expect(loaded.source).toBe("snapshot");
-  });
-
-  it("refuses a statement whose outgoing key this build does not already trust", async () => {
-    // Otherwise a statement bootstraps trust from nothing.
-    const stranger = keypair();
-    const incoming = keypair();
-    const known = keypair();
-    const doc = statement(stranger.raw, incoming.raw);
-    const bytes = bundleBytes(11);
-    const loaded = await loadDefinitions(
-      options({
-        publisherKeys: [{ id: "k1", publicKey: known.raw }],
-        transition: {
-          bytes: doc,
-          signature: stranger.sign(doc),
-          counterSignature: incoming.sign(doc),
-        },
-        fetcher: fetcher({
-          [BODY_URL]: { status: "ok", bytes },
-          [SIG_URL]: { status: "ok", bytes: incoming.sign(bytes) },
-        }),
-      }),
-    );
-    expect(loaded.source).toBe("snapshot");
-  });
-
-  it("ignores a statement that is not yet effective", async () => {
-    const outgoing = keypair();
-    const incoming = keypair();
-    const doc = statement(outgoing.raw, incoming.raw, {
-      effectiveFrom: "2099-01-01T00:00:00.000Z",
-    });
-    const bytes = bundleBytes(11);
-    const loaded = await loadDefinitions(
-      options({
-        publisherKeys: [{ id: "k1", publicKey: outgoing.raw }],
-        transition: {
-          bytes: doc,
-          signature: outgoing.sign(doc),
-          counterSignature: incoming.sign(doc),
-        },
-        fetcher: fetcher({
-          [BODY_URL]: { status: "ok", bytes },
-          [SIG_URL]: { status: "ok", bytes: incoming.sign(bytes) },
-        }),
-      }),
-    );
-    expect(loaded.source).toBe("snapshot");
-  });
-
-  it("ignores a malformed statement without disturbing the compiled-in keys", async () => {
-    const outgoing = keypair();
-    const bytes = bundleBytes(11);
-    for (const doc of [
-      new Uint8Array([0xff, 0xfe]),
-      new TextEncoder().encode("{not json"),
-      new TextEncoder().encode(JSON.stringify({ fromKey: 1 })),
-      new TextEncoder().encode(JSON.stringify({ fromKey: "!!", toKey: "!!", toKeyId: "x", effectiveFrom: "2026-01-01T00:00:00.000Z" })),
-    ]) {
-      const loaded = await loadDefinitions(
-        options({
-          publisherKeys: [{ id: "k1", publicKey: outgoing.raw }],
-          transition: { bytes: doc, signature: outgoing.sign(doc), counterSignature: outgoing.sign(doc) },
-          fetcher: fetcher({
-            [BODY_URL]: { status: "ok", bytes },
-            [SIG_URL]: { status: "ok", bytes: outgoing.sign(bytes) },
-          }),
-        }),
-      );
-      // The compiled-in key still works; the statement simply did nothing.
-      expect(loaded.source).toBe("remote");
-    }
   });
 });

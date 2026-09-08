@@ -24,12 +24,10 @@ import { isRecord } from "../utils/is-record.js";
  * structural validation (`fromBundle`) of the JSON payload. In M1 the bundle
  * is loaded from disk or memory.
  *
- * Deliberately NOT here (all M4):
- * - remote fetch of the bundle;
- * - Ed25519 signature creation/verification (detached signatures, key
- *   rotation via cross-signed transition statements);
- * - monotonic `bundleNumber` anti-rollback enforcement — the field is carried
- *   from v1 so M4 can enforce it without a format bump.
+ * Deliberately NOT here — remote fetch, detached-signature verification and
+ * `bundleNumber` anti-rollback all live in `feed.ts` (M4). Key ROTATION is
+ * not built anywhere yet: see the trust-anchor note in `feed.ts` for why
+ * cross-signed transition statements were withdrawn rather than shipped.
  *
  * Open M4 design question: runtime-extensible surface ids. Today `fromBundle`
  * rejects any surface id outside the compiled `SURFACE_IDS` union, so a

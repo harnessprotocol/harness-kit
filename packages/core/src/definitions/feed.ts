@@ -1,6 +1,6 @@
 import { fromBundle, BundleError } from "./bundle.js";
 import type { DefinitionsBundle } from "./bundle.js";
-import type { Fetcher, SignatureVerifier } from "./providers.js";
+import type { FetchResult, Fetcher, SignatureVerifier } from "./providers.js";
 
 /**
  * The definitions feed (AC-25, AC-26, ADR 0004, design.md §7).
@@ -29,14 +29,32 @@ import type { Fetcher, SignatureVerifier } from "./providers.js";
  * process running as the user can rewrite, so "we verified it when we stored
  * it" says nothing about what is there now.
  *
+ * TRUST ANCHOR — compiled-in keys only. The set of keys that can authorise a
+ * bundle is fixed at build time; `notAfter` retires one, and only a new
+ * binary introduces one. That means key ROTATION still needs a release, and
+ * design.md D7 (cross-signed transition statements) is deliberately NOT
+ * implemented here. A first attempt at it was written and withdrawn: an
+ * attacker could replay the publisher's own statement to resurrect a revoked
+ * key, and revoking the outgoing key destroyed the incoming one with it, so
+ * rotation could not survive the event it exists for. Both follow from
+ * revocation semantics design.md §7 does not yet pin down — expiry and
+ * compromise are not the same thing and cannot share one `notAfter` field.
+ * That is a design decision to take deliberately, not a patch to land in a
+ * review round.
+ *
+ * Cross-signing, when it is built, proves POSSESSION of the incoming key. It
+ * is not theft protection: a thief holding a stolen publisher key generates
+ * their own second keypair and counter-signs with it. An earlier draft of
+ * this file claimed otherwise.
+ *
  * KNOWN RESIDUAL — no freshness bound. `generatedAt` is validated as
  * parseable and then not used, so an attacker who can withhold updates pins a
  * client on the newest bundle it ever saw for as long as they like.
  * Anti-rollback stops movement backwards; nothing here notices standing
- * still. design.md §7 does not call for a maximum age, so closing it is a
- * deliberate future decision rather than an oversight — but it is the
- * residual risk after anti-rollback, and it is written down here so the next
- * reader does not have to rediscover it.
+ * still. This matters more than it looks: freezing a client also freezes the
+ * arrival of a `notAfter`, which is currently the only way to retire a
+ * compromised key. Closing it is a prerequisite for rotation, not an
+ * independent nicety.
  */
 
 /** Where the definitions in force came from. */
@@ -88,19 +106,64 @@ export interface FeedOptions {
    */
   highestSeenBundleNumber?: number;
   /**
-   * A cross-signed key-rotation statement, when one has been fetched or
-   * cached. Optional: without it only the compiled-in keys are trusted.
+   * Injected clock — core never reads the system clock. MUST carry a UTC
+   * offset (`Z` or `±HH:MM`); see `keyUsableAt`.
    */
-  transition?: SignedArtifact & { counterSignature?: Uint8Array };
-  /** Injected clock — core never reads the system clock. */
   now: string;
-  /** Refuse a body larger than this. */
+  /**
+   * Refuse a body larger than this. A non-finite or non-positive value is
+   * refused rather than substituted: the one option whose whole purpose is
+   * bounding a hostile response must not be disarmed by a bad number.
+   */
   maxBytes?: number;
+  /** Deadline for the whole fetch. Same fail-closed rule as `maxBytes`. */
   timeoutMs?: number;
 }
 
 const DEFAULT_MAX_BYTES = 2 * 1024 * 1024;
 const DEFAULT_TIMEOUT_MS = 10_000;
+/**
+ * Largest value `setTimeout` honours. Past this it wraps to ~1 ms, so a
+ * caller asking for "effectively no timeout" gets the tightest possible
+ * deadline instead of the loosest.
+ */
+const MAX_TIMER_MS = 2_147_483_647;
+
+/**
+ * Call an injected provider without letting it throw.
+ *
+ * `Fetcher` and `SignatureVerifier` are interfaces the CALLER implements, so
+ * a non-conforming one is the ordinary case rather than the exotic one — the
+ * planned desktop verifier is a Tauri `invoke`, and `invoke` rejects whenever
+ * the Rust side returns `Err`. Nothing else in this module has a throwing
+ * path, so without these wrappers the single function documented to degrade
+ * instead of crashing is the one that takes the app down.
+ */
+async function fetchOrFail(
+  options: FeedOptions,
+  url: string,
+  limits: { maxBytes: number; timeoutMs: number },
+): Promise<FetchResult> {
+  try {
+    return await options.fetcher.get(url, limits);
+  } catch (error) {
+    return { status: "failed", reason: `the fetcher threw (${errorText(error)})` };
+  }
+}
+
+/** A verifier that throws is a verifier that failed: no signature, no trust. */
+async function verifyOrFalse(
+  options: FeedOptions,
+  message: Uint8Array,
+  signature: Uint8Array,
+  publicKey: Uint8Array,
+): Promise<boolean> {
+  try {
+    return await options.verifier.verifyEd25519(message, signature, publicKey);
+  } catch {
+    return false;
+  }
+}
 
 /** Decode verified bytes into a bundle, or explain why they are unusable. */
 function decode(bytes: Uint8Array): { bundle: DefinitionsBundle } | { reason: string } {
@@ -136,28 +199,43 @@ function errorText(error: unknown): string {
 }
 
 /**
- * Whether a key is still usable at `now`.
+ * Whether an instant string is absolute — ISO-8601 carrying a UTC offset.
  *
- * Both sides go through `Date.parse`. Comparing ISO-8601 as STRINGS looked
- * fine and was not: `2026-09-08T00:00:00+09:00` sorts after a `Z` instant it
- * actually precedes, second precision loses to millisecond precision, and an
- * unpadded `2026-9-8` sorts after everything — that last one kept a revoked
- * key honoured for months. An unparseable `notAfter` is treated as EXPIRED
- * rather than as "no expiry", so a typo in a revocation fails closed.
+ * `Date.parse` resolves an offset-less `2026-09-08T00:00:00` in the HOST's
+ * timezone, so the same `notAfter` expired in Tokyo and was still honoured in
+ * Honolulu 26 hours later, and a bundle verified on one machine and not its
+ * neighbour. Refusing the ambiguous form is the only way to keep this
+ * decision independent of where the user happens to be: core does not read
+ * the system clock, and it must not read the system timezone either.
  */
-function keyUsableAt(key: PublisherKey, now: string): boolean {
-  if (key.notAfter === undefined) return true;
-  const expires = Date.parse(key.notAfter);
-  const current = Date.parse(now);
-  if (Number.isNaN(expires)) return false;
-  if (Number.isNaN(current)) return false;
-  return current < expires;
+function isAbsoluteInstant(value: string): boolean {
+  return /(?:Z|[+-]\d{2}:\d{2})$/.test(value) && !Number.isNaN(Date.parse(value));
 }
 
 /**
- * Verify a detached signature against every key trusted right now — the keys
- * compiled into this release, plus any key a verified transition statement
- * has introduced (see `resolveTrustedKeys`).
+ * Whether a key is still usable at `now`.
+ *
+ * Every ambiguous or unparseable input fails CLOSED — treated as expired
+ * rather than as "no expiry" — so a typo in a revocation, a bad clock, or a
+ * timezone-dependent timestamp cannot keep a revoked key alive. Comparing
+ * ISO-8601 as STRINGS looked fine and was not: an unpadded `2026-9-8` sorts
+ * after everything, which kept a revoked key honoured for months.
+ *
+ * The boundary is EXCLUSIVE: a key is unusable at exactly its `notAfter`.
+ * That is stricter than RFC 5280, where `notAfter` is inclusive, and is
+ * pinned by test rather than left to be rediscovered.
+ */
+function keyUsableAt(key: PublisherKey, now: string): boolean {
+  if (!isAbsoluteInstant(now)) return false;
+  if (key.notAfter === undefined) return true;
+  if (!isAbsoluteInstant(key.notAfter)) return false;
+  return Date.parse(now) < Date.parse(key.notAfter);
+}
+
+/**
+ * Verify a detached signature against every key compiled into this release
+ * that is still usable at `options.now`. That set is the whole trust anchor:
+ * nothing at runtime can add a key to it.
  */
 async function verifyWithAnyKey(
   artifact: SignedArtifact,
@@ -166,119 +244,11 @@ async function verifyWithAnyKey(
 ): Promise<boolean> {
   for (const key of keys) {
     if (!keyUsableAt(key, options.now)) continue;
-    if (await options.verifier.verifyEd25519(artifact.bytes, artifact.signature, key.publicKey)) {
+    if (await verifyOrFalse(options, artifact.bytes, artifact.signature, key.publicKey)) {
       return true;
     }
   }
   return false;
-}
-
-/**
- * A key-rotation transition statement (design.md D7).
- *
- * The document names the outgoing and incoming keys and is signed by BOTH:
- * the outgoing signature proves the current publisher authorised the
- * handover, and the incoming one proves whoever holds the new key
- * participated, so a stolen outgoing key cannot install a public key its
- * holder does not have the private half of.
- *
- * This is what makes rotation possible WITHOUT an app release, which is the
- * whole reason definitions are remote. A compiled-in key list with expiry
- * dates — which is what this shipped as first — still requires a new binary
- * to introduce a key, and so does not rotate anything.
- */
-export interface TransitionStatement {
-  /** Base64 of the raw 32-byte outgoing public key. */
-  fromKey: string;
-  /** Base64 of the raw 32-byte incoming public key. */
-  toKey: string;
-  /** Identifier for the incoming key. */
-  toKeyId: string;
-  /** ISO-8601; the statement is ignored before this instant. */
-  effectiveFrom: string;
-}
-
-function decodeBase64(value: string): Uint8Array | null {
-  if (!/^[A-Za-z0-9+/]*={0,2}$/.test(value) || value.length % 4 !== 0) return null;
-  try {
-    const binary = atob(value);
-    const bytes = new Uint8Array(binary.length);
-    for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-    return bytes.length === 32 ? bytes : null;
-  } catch {
-    return null;
-  }
-}
-
-/** Byte-compare two keys without leaking a position through early exit. */
-function sameKey(left: Uint8Array, right: Uint8Array): boolean {
-  if (left.length !== right.length) return false;
-  let difference = 0;
-  for (let index = 0; index < left.length; index += 1) difference |= left[index] ^ right[index];
-  return difference === 0;
-}
-
-/**
- * Resolve the keys to trust for this load: the compiled-in set, plus any key
- * a valid transition statement introduces.
- *
- * A statement is accepted only when its `fromKey` is a key this build already
- * trusts AND both signatures verify over the statement's exact bytes. An
- * unverifiable statement is ignored silently — it is an attacker's opening
- * move, not a condition worth reporting to a user.
- */
-async function resolveTrustedKeys(options: FeedOptions): Promise<readonly PublisherKey[]> {
-  const statement = options.transition;
-  if (statement === undefined) return options.publisherKeys;
-
-  let parsed: TransitionStatement;
-  try {
-    const text = new TextDecoder("utf-8", { fatal: true }).decode(statement.bytes);
-    const value: unknown = JSON.parse(text);
-    if (value === null || typeof value !== "object") return options.publisherKeys;
-    const candidate = value as Partial<TransitionStatement>;
-    if (
-      typeof candidate.fromKey !== "string" ||
-      typeof candidate.toKey !== "string" ||
-      typeof candidate.toKeyId !== "string" ||
-      typeof candidate.effectiveFrom !== "string"
-    ) {
-      return options.publisherKeys;
-    }
-    parsed = candidate as TransitionStatement;
-  } catch {
-    return options.publisherKeys;
-  }
-
-  const effective = Date.parse(parsed.effectiveFrom);
-  const current = Date.parse(options.now);
-  if (Number.isNaN(effective) || Number.isNaN(current) || current < effective) {
-    return options.publisherKeys;
-  }
-
-  const from = decodeBase64(parsed.fromKey);
-  const to = decodeBase64(parsed.toKey);
-  if (from === null || to === null) return options.publisherKeys;
-
-  // The outgoing key must be one this build already trusts. Without that a
-  // statement could bootstrap trust from nothing.
-  const outgoing = options.publisherKeys.find(
-    (key) => sameKey(key.publicKey, from) && keyUsableAt(key, options.now),
-  );
-  if (outgoing === undefined) return options.publisherKeys;
-
-  // Cross-signed: BOTH halves must sign the same bytes.
-  const byOutgoing = await options.verifier.verifyEd25519(
-    statement.bytes,
-    statement.signature,
-    from,
-  );
-  const byIncoming =
-    statement.counterSignature !== undefined &&
-    (await options.verifier.verifyEd25519(statement.bytes, statement.counterSignature, to));
-  if (!byOutgoing || !byIncoming) return options.publisherKeys;
-
-  return [...options.publisherKeys, { id: parsed.toKeyId, publicKey: to }];
 }
 
 /**
@@ -296,16 +266,30 @@ async function accept(
   const decoded = decode(artifact.bytes);
   if ("reason" in decoded) return decoded;
 
-  // Only an integer floor disables nothing by accident. A NaN from a
-  // truncated ledger file would otherwise switch anti-rollback off silently,
-  // and the persistence that produces this value lands in the next commit.
+  // A floor that is PRESENT but not a usable integer means the machine
+  // history is corrupt, and a corrupt history must not silently mean "no
+  // protection". The previous shape here — skipping the comparison unless
+  // `Number.isInteger(floor)` — was worse than no guard at all: `n < NaN` is
+  // already false, so it did nothing for the truncated-ledger case it was
+  // written for, while turning `"30"` and `30.5` from REFUSED into ACCEPTED.
+  // Fail closed instead: an unreadable floor rejects every remote bundle and
+  // says why, which surfaces the corruption rather than disarming quietly.
   const floor = options.highestSeenBundleNumber;
-  if (floor !== undefined && Number.isInteger(floor) && decoded.bundle.bundleNumber < floor) {
-    return {
-      reason:
-        `bundle ${decoded.bundle.bundleNumber} is older than ${floor}, which this machine has already accepted ` +
-        "— refusing a rollback even though its signature is valid",
-    };
+  if (floor !== undefined) {
+    if (!Number.isInteger(floor) || floor < 0) {
+      return {
+        reason:
+          `this machine's rollback floor is unreadable (${JSON.stringify(floor)}), so a replayed old bundle ` +
+          "could not be ruled out — refusing the remote definitions until the machine history is repaired",
+      };
+    }
+    if (decoded.bundle.bundleNumber < floor) {
+      return {
+        reason:
+          `bundle ${decoded.bundle.bundleNumber} is older than ${floor}, which this machine has already accepted ` +
+          "— refusing a rollback even though its signature is valid",
+      };
+    }
   }
   return decoded;
 }
@@ -314,10 +298,17 @@ async function accept(
  * Load the definitions in force: remote if it verifies, else the last
  * verified cache, else the snapshot that shipped in this release.
  *
- * Never throws. Every failure mode here — offline, forged, rolled back,
- * corrupt — has to end with HarnessKit still running against SOME set of
- * definitions, because the alternative is an app that stops working when a
- * CDN does.
+ * Never throws on anything the outside world can cause. Offline, forged,
+ * rolled back, corrupt, a hostile CDN, a clock this build cannot read, or an
+ * injected provider that rejects instead of returning — all of them end with
+ * HarnessKit still running against SOME set of definitions, because the
+ * alternative is an app that stops working when a CDN does.
+ *
+ * The single exception is a caller that supplies no `snapshot`. That is a
+ * type violation and a bug in the caller, not a condition to degrade on:
+ * there is nothing left to fall back TO, and returning a `LoadedDefinitions`
+ * with an undefined bundle would push the crash into whichever consumer
+ * touched it first.
  */
 export async function loadDefinitions(options: FeedOptions): Promise<LoadedDefinitions> {
   const snapshot = (reason: string): LoadedDefinitions => ({
@@ -326,27 +317,63 @@ export async function loadDefinitions(options: FeedOptions): Promise<LoadedDefin
     reason,
   });
 
+  // "Never to nothing" is the contract, and TypeScript does not enforce it at
+  // a JS call site. A caller that hands over no snapshot gets a stated
+  // failure, not a `LoadedDefinitions` whose bundle is undefined.
+  if (options.snapshot === undefined || options.snapshot === null) {
+    throw new TypeError("loadDefinitions requires a snapshot bundle to fall back to");
+  }
+
   if (!options.baseUrl.startsWith("https://")) {
     return snapshot(
       `definitions feed ${JSON.stringify(options.baseUrl)} is not https — refusing to fetch definitions over an unauthenticated transport`,
     );
   }
+  if (!isAbsoluteInstant(options.now)) {
+    return snapshot(
+      `the current time ${JSON.stringify(options.now)} is not an ISO-8601 instant with a UTC offset, so key expiry ` +
+        "could not be judged — using the definitions that shipped with this release",
+    );
+  }
 
+  // Both limits fail closed. Substituting a default for a caller's nonsense
+  // would disarm the two controls that bound a hostile response: `NaN`
+  // compares false against every size, so `maxBytes: NaN` read an unbounded
+  // body, and a `timeoutMs` outside 32-bit range collapses to a ~1 ms
+  // deadline rather than the long one the caller asked for.
   const limits = {
     maxBytes: options.maxBytes ?? DEFAULT_MAX_BYTES,
     timeoutMs: options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
   };
-  // Resolved once per load, before anything is verified against them.
-  const trustedKeys = await resolveTrustedKeys(options);
-  const base = options.baseUrl.replace(/\/+$/, "");
+  for (const [name, value] of [
+    ["maxBytes", limits.maxBytes],
+    ["timeoutMs", limits.timeoutMs],
+  ] as const) {
+    if (!Number.isFinite(value) || value <= 0 || value > MAX_TIMER_MS) {
+      return snapshot(
+        `the definitions feed was given an unusable ${name} (${JSON.stringify(value)}) — refusing to fetch with a ` +
+          "limit that would not bound the response",
+      );
+    }
+  }
+
+  // Trailing slashes are stripped by scanning, not by `/\/+$/`. That regex
+  // backtracks quadratically on a run of slashes: 80k of them took 3s.
+  let base = options.baseUrl;
+  while (base.endsWith("/")) base = base.slice(0, -1);
+
   const [body, signature] = await Promise.all([
-    options.fetcher.get(`${base}/definitions.json`, limits),
-    options.fetcher.get(`${base}/definitions.json.sig`, limits),
+    fetchOrFail(options, `${base}/definitions.json`, limits),
+    fetchOrFail(options, `${base}/definitions.json.sig`, limits),
   ]);
 
   let remoteReason: string;
   if (body.status === "ok" && signature.status === "ok") {
-    const result = await accept({ bytes: body.bytes, signature: signature.bytes }, trustedKeys, options);
+    const result = await accept(
+      { bytes: body.bytes, signature: signature.bytes },
+      options.publisherKeys,
+      options,
+    );
     if ("bundle" in result) return { bundle: result.bundle, source: "remote" };
     remoteReason = result.reason;
   } else {
@@ -360,7 +387,7 @@ export async function loadDefinitions(options: FeedOptions): Promise<LoadedDefin
   // The cache is re-verified, not trusted: it lives in a file any process
   // running as this user can rewrite.
   if (options.cached !== undefined) {
-    const result = await accept(options.cached, trustedKeys, options);
+    const result = await accept(options.cached, options.publisherKeys, options);
     if ("bundle" in result) {
       return {
         bundle: result.bundle,
