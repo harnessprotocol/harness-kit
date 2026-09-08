@@ -50,21 +50,14 @@ describe("MonacoEditor Cmd+S action", () => {
     expect(second).toHaveBeenCalledTimes(1);
   });
 
-  it("registers the action without onSave and no-ops until one is provided", () => {
-    const later = vi.fn();
-    const { rerender } = render(
-      <MonacoEditor filePath="a.json" content="{}" onChange={() => {}} />,
-    );
+  it("registers no Cmd+S action when onSave is omitted at mount, so the chord bubbles", () => {
+    render(<MonacoEditor filePath="a.json" content="{}" onChange={() => {}} />);
     const actions: Action[] = [];
     const { editor, monaco } = fakeMonaco(actions);
     capturedOnMount!(editor, monaco);
 
-    const save = actions.find((a) => a.id === "harness-kit-save");
-    expect(save).toBeDefined();
-    expect(() => save!.run()).not.toThrow();
-
-    rerender(<MonacoEditor filePath="a.json" content="{}" onChange={() => {}} onSave={later} />);
-    save!.run();
-    expect(later).toHaveBeenCalledTimes(1);
+    // Monaco swallows any chord that resolves to a registered action, even a no-op.
+    // Not registering is what lets the keystroke reach the page's window listener.
+    expect(actions.find((a) => a.id === "harness-kit-save")).toBeUndefined();
   });
 });

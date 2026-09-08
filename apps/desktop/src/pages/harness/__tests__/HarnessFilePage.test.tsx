@@ -1,13 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import HarnessFilePage from "../HarnessFilePage";
 
 // ── Mocks ──────────────────────────────────────────────────────
 
 const mockReadHarnessFile = vi.fn();
+const mockWriteHarnessFile = vi.fn();
 vi.mock("../../../lib/tauri", () => ({
   readHarnessFile: () => mockReadHarnessFile(),
+  writeHarnessFile: (content: string) => mockWriteHarnessFile(content),
+}));
+
+// The page passes no onSave to MonacoEditor and relies on its own window keydown
+// listener for Cmd+S. Stand in for the lazy editor with a textarea so the test can
+// dirty the content without loading Monaco.
+vi.mock("../../../components/plugin-explorer/MonacoEditor", () => ({
+  default: ({ content, onChange }: { content: string; onChange: (v: string) => void }) => (
+    <textarea data-testid="fake-editor" value={content} onChange={(e) => onChange(e.target.value)} />
+  ),
 }));
 
 // @harness-kit/core may not build cleanly in jsdom — mock the whole module
@@ -63,6 +74,24 @@ describe("HarnessFilePage", () => {
       // The file path now appears in the EditorToolbar subtitle
       expect(screen.getByText("~/.claude/harness.yaml")).toBeInTheDocument();
     });
+  });
+
+  it("saves once on Cmd+S in editor view with dirty content", async () => {
+    mockReadHarnessFile.mockResolvedValue({
+      found: true,
+      content: 'version: "1"\n',
+      path: "~/.claude/harness.yaml",
+    });
+    mockWriteHarnessFile.mockResolvedValue("~/.claude/harness.yaml");
+    renderPage();
+    fireEvent.click(await screen.findByText("Editor"));
+    const editor = await screen.findByTestId("fake-editor");
+    fireEvent.change(editor, { target: { value: 'version: "1"\nmetadata:\n  name: edited\n' } });
+
+    fireEvent.keyDown(window, { key: "s", metaKey: true });
+
+    await waitFor(() => expect(mockWriteHarnessFile).toHaveBeenCalledTimes(1));
+    expect(mockWriteHarnessFile).toHaveBeenCalledWith('version: "1"\nmetadata:\n  name: edited\n');
   });
 
   it("shows error when readHarnessFile throws", async () => {

@@ -68,7 +68,13 @@ interface MonacoEditorProps {
   filePath: string;
   content: string;
   onChange: (value: string) => void;
-  /** When omitted, Monaco registers no Cmd+S action and the keystroke reaches the window. */
+  /**
+   * When omitted at mount, no Cmd+S action is registered, so the keystroke bubbles
+   * to the page's own window listener (Monaco swallows any chord that resolves to
+   * a registered action, even one that no-ops). When provided, the latest handler
+   * is called: @monaco-editor/react captures onMount once, so the action reads
+   * through a ref rather than the closure from the first render.
+   */
   onSave?: () => void;
   readOnly?: boolean;
 }
@@ -90,14 +96,18 @@ export default function MonacoEditor({ filePath, content, onChange, onSave, read
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // Registered unconditionally: onSave may arrive on a later render. When it is
-    // undefined the action no-ops and the keystroke reaches the window listener.
-    editor.addAction({
-      id: "harness-kit-save",
-      label: "Save File",
-      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
-      run: () => onSaveRef.current?.(),
-    });
+    // Only register when a handler exists at mount. Monaco's keybinding service
+    // calls preventDefault + stopPropagation for any chord that resolves to an
+    // action, so a no-op action would swallow Cmd+S before it reaches the page's
+    // window listener (HarnessFilePage relies on that listener).
+    if (onSaveRef.current) {
+      editor.addAction({
+        id: "harness-kit-save",
+        label: "Save File",
+        keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
+        run: () => onSaveRef.current?.(),
+      });
+    }
 
     // Set initial theme
     monaco.editor.setTheme(getMonacoTheme());
