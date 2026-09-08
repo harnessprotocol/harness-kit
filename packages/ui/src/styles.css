@@ -769,6 +769,14 @@
 .hk-onboard-scan-sub[data-error="true"] {
   color: var(--danger);
 }
+/* The failed-scan step reuses the lede and action row inside the centred
+   scan block; both default to left alignment. */
+.hk-onboard-scan .hk-onboard-lede {
+  margin: 0 auto 28px;
+}
+.hk-onboard-scan .hk-onboard-actions {
+  justify-content: center;
+}
 
 .hk-onboard-headline {
   font-size: 28px;

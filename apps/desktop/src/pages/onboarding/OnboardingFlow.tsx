@@ -77,6 +77,8 @@ export function OnboardingFlow({
 // ── Step 1: Scan progress ──────────────────────────────────────────
 
 function ScanStep({ scanSeconds, scanError }: { scanSeconds: number | null; scanError: string | null }) {
+  // A failure advances to ScanFailedStep on the next tick, which owns the
+  // error copy — this step only stops pulsing.
   const done = scanSeconds !== null || scanError !== null;
   return (
     <div className="hk-onboard-scan">
@@ -85,21 +87,13 @@ function ScanStep({ scanSeconds, scanError }: { scanSeconds: number | null; scan
         <span>{done ? "Scan complete" : "Scanning your machine…"}</span>
       </div>
       <h1 className="hk-onboard-scan-title">
-        {scanError
-          ? "Machine scan hit a snag"
-          : done
-            ? `Machine scan complete · ${scanSeconds}s`
-            : "Reading your existing harness configs"}
+        {scanSeconds !== null
+          ? `Machine scan complete · ${scanSeconds}s`
+          : "Reading your existing harness configs"}
       </h1>
-      {scanError ? (
-        <p className="hk-onboard-scan-sub" data-error="true">
-          {scanError}
-        </p>
-      ) : (
-        <p className="hk-onboard-scan-sub">
-          Looking for Claude Code, Cursor, Copilot, and other AI coding tool configs already on this machine.
-        </p>
-      )}
+      <p className="hk-onboard-scan-sub">
+        Looking for Claude Code, Cursor, Copilot, and other AI coding tool configs already on this machine.
+      </p>
     </div>
   );
 }

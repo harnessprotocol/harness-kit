@@ -57,6 +57,7 @@ describe("OnboardingPage", () => {
     // Scan step shows first.
     expect(screen.getByText(/scanning your machine/i)).toBeInTheDocument();
 
+    // The `.` stands in for the curly apostrophe in "They don’t agree."
     await waitFor(
       () => expect(screen.getByText(/They don.t agree\./)).toBeInTheDocument(),
       { timeout: 3000 },
@@ -123,10 +124,11 @@ describe("OnboardingPage", () => {
     mockImportMachine.mockRejectedValueOnce(new Error("EACCES: ~/.codex"));
     const { onFinish } = renderPage();
 
-    // The scan step flashes the error first; the failed step is the one
-    // that must carry the error plus the actions.
+    // The scan step no longer renders the error; the failed step is the
+    // only place it appears, alongside the actions.
     expect(await screen.findByText(/machine scan did not finish/i)).toBeInTheDocument();
-    expect(screen.getByText(/EACCES/)).toBeInTheDocument();
+    expect(screen.getByText("EACCES: ~/.codex")).toBeInTheDocument(); // no "Error:" prefix
+    expect(screen.queryByText(/scanning your machine/i)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retry scan" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Skip setup" })).toBeInTheDocument();
     expect(onFinish).not.toHaveBeenCalled();
@@ -138,6 +140,10 @@ describe("OnboardingPage", () => {
     renderPage();
 
     fireEvent.click(await screen.findByRole("button", { name: "Retry scan" }));
+
+    // Retry goes back through the scan step, not straight to the reveal.
+    expect(screen.getByText(/scanning your machine/i)).toBeInTheDocument();
+    expect(screen.queryByText(/machine scan did not finish/i)).not.toBeInTheDocument();
 
     await waitFor(() => expect(screen.getByText(/They don.t agree\./)).toBeInTheDocument(), {
       timeout: 3000,
