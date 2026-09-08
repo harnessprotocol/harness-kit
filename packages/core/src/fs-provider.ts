@@ -1,5 +1,9 @@
 /**
- * Filesystem abstraction all core IO goes through.
+ * Filesystem abstraction all core FILESYSTEM access goes through.
+ *
+ * One of several injected effects, not the only one: process execution goes
+ * through `ProcessRunner`, network and signature verification through the
+ * providers in `definitions/`. Core imports no driver for any of them.
  *
  * Surface observation (observe/) assumes `exists` and `isDirectory` are
  * non-throwing boolean probes — a provider that throws from them is out of

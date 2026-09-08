@@ -440,6 +440,28 @@ export { SURFACES, PRIORITY_SURFACES, getSurface } from "./surfaces/registry.js"
 export type { DefinitionsBundle } from "./definitions/bundle.js";
 export { BUNDLE_FORMAT_VERSION, BundleError, toBundle, fromBundle } from "./definitions/bundle.js";
 
+// ── Definitions feed (AC-25/AC-26, ADR 0004) ─────────────────
+//
+// Remote, signature-verified surface definitions with a release-bundled
+// snapshot as fallback. Verification precedes parsing, a valid signature is
+// not sufficient (anti-rollback), and every fallback states its reason. The
+// Fetcher and SignatureVerifier are injected — core imports no crypto or
+// network driver, which is why a bare node:crypto import once broke four
+// packaged desktop routes.
+export type {
+  Fetcher,
+  FetchResult,
+  SignatureVerifier,
+} from "./definitions/providers.js";
+export type {
+  DefinitionsSource,
+  FeedOptions,
+  LoadedDefinitions,
+  PublisherKey,
+  SignedArtifact,
+} from "./definitions/feed.js";
+export { loadDefinitions } from "./definitions/feed.js";
+
 // ── Whole-harness portability (Protocol v2) ──────────────────
 export type {
   HarnessScope,

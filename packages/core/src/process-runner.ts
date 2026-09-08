@@ -1,6 +1,7 @@
 /**
- * Process execution abstraction (design.md §4, D3) — the second injected
- * effect beside `FsProvider`. Core never imports `node:child_process`; the
+ * Process execution abstraction (design.md §4, D3) — one of core's injected
+ * effects, alongside `FsProvider` and the definitions feed's `Fetcher` and
+ * `SignatureVerifier`. Core never imports `node:child_process`; the
  * CLI backs this with a real spawn and the desktop with a Rust command, the
  * same split the filesystem already uses.
  *
