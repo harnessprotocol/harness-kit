@@ -78,23 +78,30 @@ export default function MonacoEditor({ filePath, content, onChange, onSave, read
   const monacoRef = useRef<Monaco | null>(null);
   const themeRef = useRef(getMonacoTheme());
 
+  // @monaco-editor/react stores onMount in a ref at first render and never refreshes
+  // it, so the Cmd+S action would otherwise call the onSave from the first render
+  // for the life of the mount. Route the action through a ref that tracks the latest.
+  const onSaveRef = useRef(onSave);
+  useEffect(() => {
+    onSaveRef.current = onSave;
+  }, [onSave]);
+
   const handleMount: OnMount = useCallback((editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // Register Cmd+S save action only when the caller owns the save path
-    if (onSave) {
-      editor.addAction({
-        id: "harness-kit-save",
-        label: "Save File",
-        keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
-        run: () => onSave(),
-      });
-    }
+    // Registered unconditionally: onSave may arrive on a later render. When it is
+    // undefined the action no-ops and the keystroke reaches the window listener.
+    editor.addAction({
+      id: "harness-kit-save",
+      label: "Save File",
+      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
+      run: () => onSaveRef.current?.(),
+    });
 
     // Set initial theme
     monaco.editor.setTheme(getMonacoTheme());
-  }, [onSave]);
+  }, []);
 
   // Watch for dark/light mode changes via MutationObserver
   useEffect(() => {

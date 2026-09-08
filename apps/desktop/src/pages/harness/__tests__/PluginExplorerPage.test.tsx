@@ -26,15 +26,42 @@ vi.mock("../../../lib/tauri", () => ({
   pushFileHistory: vi.fn(async () => undefined),
 }));
 
-vi.mock("../../../components/plugin-explorer/MonacoEditor", () => ({
-  default: ({ onSave, onChange }: { onSave?: () => void; onChange: (v: string) => void }) => (
-    <div>
-      <button onClick={() => onChange('{"changed":true}')}>edit</button>
-      {/* Stands in for Monaco's own Cmd+S action, which calls onSave directly */}
-      <button onClick={() => onSave?.()}>monaco-save</button>
-    </div>
-  ),
-}));
+// Mimics @monaco-editor/react rather than replacing MonacoEditor: the library stores
+// onMount in a ref at first render and never refreshes it, so whatever the real
+// MonacoEditor's Cmd+S action captures at mount is what the "monaco-save" button runs.
+vi.mock("@monaco-editor/react", async () => {
+  const { useRef, useEffect, useState } = await import("react");
+  type Action = { id: string; run: () => void };
+  type Props = {
+    onMount: (editor: unknown, monaco: unknown) => void;
+    onChange: (value: string | undefined) => void;
+  };
+  return {
+    loader: { config: vi.fn() },
+    default: ({ onMount, onChange }: Props) => {
+      const mountAtFirstRender = useRef(onMount);
+      const [actions] = useState<Action[]>([]);
+      useEffect(() => {
+        const editor = { addAction: (a: Action) => actions.push(a) };
+        const monaco = {
+          KeyMod: { CtrlCmd: 2048 },
+          KeyCode: { KeyS: 49 },
+          editor: { setTheme: () => {} },
+        };
+        mountAtFirstRender.current(editor, monaco);
+      }, [actions]);
+      return (
+        <div>
+          <button onClick={() => onChange('{"changed":true}')}>edit</button>
+          <button onClick={() => actions.find((a) => a.id === "harness-kit-save")?.run()}>
+            monaco-save
+          </button>
+        </div>
+      );
+    },
+  };
+});
+vi.mock("monaco-editor", () => ({}));
 
 function renderPage() {
   return render(
