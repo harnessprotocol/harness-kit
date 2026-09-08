@@ -480,17 +480,38 @@ describe("MachinePage", () => {
     );
   });
 
-  it("scrolls the Drift section into view when it is requested", async () => {
-    // jsdom does not implement scrollIntoView; the page calls it optionally.
+  it("scrolls the Drift section into view once the scan above it has rendered", async () => {
+    // The section sits below the summary strip and the grid. Scrolling on
+    // first commit, while the page still reads "Scanning this machine…",
+    // lands on a layout the grid then pushes below the fold.
     const scrollIntoView = vi.fn();
     Element.prototype.scrollIntoView = scrollIntoView;
-    render(
-      <MemoryRouter initialEntries={["/machine?drift=1"]}>
-        <MachinePage />
-      </MemoryRouter>,
-    );
-    await waitFor(() => expect(scrollIntoView).toHaveBeenCalled());
-    expect(scrollIntoView.mock.instances[0]).toBe(screen.getByTestId("machine-drift-section"));
+    try {
+      let resolve!: (value: unknown) => void;
+      vi.mocked(buildMachineInventory).mockReturnValueOnce(
+        new Promise((r) => { resolve = r; }) as never,
+      );
+      render(
+        <MemoryRouter initialEntries={["/machine?drift=1"]}>
+          <MachinePage />
+        </MemoryRouter>,
+      );
+      expect(screen.getByText(/Scanning this machine/)).toBeInTheDocument();
+      expect(scrollIntoView).not.toHaveBeenCalled();
+
+      resolve(makeInventory());
+      await screen.findByTestId("machine-grid");
+      await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
+      expect(scrollIntoView.mock.contexts[0]).toBe(screen.getByTestId("machine-drift-section"));
+
+      // One scroll per request: a manual rescan must not yank the page back.
+      fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+      await waitFor(() => expect(screen.getByRole("button", { name: "Refresh" })).toBeEnabled());
+      expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    } finally {
+      // jsdom has no scrollIntoView of its own, so deleting is the restore.
+      delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+    }
   });
 
   it("filters the Drift section to the harness named in the URL", async () => {

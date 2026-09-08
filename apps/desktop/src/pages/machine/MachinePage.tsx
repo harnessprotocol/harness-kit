@@ -31,17 +31,22 @@ export default function MachinePage() {
   const driftRequested = searchParams.get("drift") === "1";
   const [driftOpen, setDriftOpen] = useState(driftRequested);
   const driftSectionRef = useRef<HTMLElement | null>(null);
+  const driftScrollPending = useRef(false);
   useEffect(() => {
     // Opens on request; never force-closes, so a user who opened the section
-    // by hand does not lose it by navigating within Machine. The section sits
-    // below the grid, so opening it without scrolling left the user looking
-    // at an unchanged screen. jsdom has no scrollIntoView, hence the optional
-    // call.
+    // by hand does not lose it by navigating within Machine.
     if (driftRequested) {
       setDriftOpen(true);
-      driftSectionRef.current?.scrollIntoView?.({ block: "start" });
+      driftScrollPending.current = true;
     }
   }, [driftRequested]);
+  useEffect(() => {
+    // Scroll only after the scan above has rendered, otherwise the grid
+    // appears afterwards and pushes the section back below the fold.
+    if (!driftScrollPending.current || loading) return;
+    driftScrollPending.current = false;
+    driftSectionRef.current?.scrollIntoView?.({ block: "start" });
+  }, [loading]);
   const [selectedRow, setSelectedRow] = useState<GridRow | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
   const [projectDegraded, setProjectDegraded] = useState(false);
