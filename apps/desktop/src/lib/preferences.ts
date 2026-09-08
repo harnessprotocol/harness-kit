@@ -182,7 +182,6 @@ export type PermissionMode = "skip" | "auto" | "allowed-tools";
 
 const KEY_PERMISSION_MODE = "harness-kit-permission-mode";
 const KEY_ALLOWED_TOOLS = "harness-kit-allowed-tools";
-const KEY_PERMISSION_MODE_ACKED = "harness-kit-permission-mode-acked";
 const KEY_HARNESS_PERMISSION_OVERRIDES = "harness-kit-harness-permission-overrides";
 const KEY_AUTO_MODE_UNLOCKED = "harness-kit-auto-mode-unlocked";
 
@@ -216,14 +215,6 @@ export function setAllowedTools(tools: string[]) {
   localStorage.setItem(KEY_ALLOWED_TOOLS, JSON.stringify(tools));
 }
 
-export function getPermissionModeAcked(): boolean {
-  return localStorage.getItem(KEY_PERMISSION_MODE_ACKED) === "true";
-}
-
-export function setPermissionModeAcked() {
-  localStorage.setItem(KEY_PERMISSION_MODE_ACKED, "true");
-}
-
 export interface HarnessPermissionOverride {
   mode?: PermissionMode;
   allowedTools?: string[];
@@ -248,7 +239,8 @@ export function setHarnessPermissionOverrides(overrides: Record<string, HarnessP
  *  Does NOT change the selected permission mode — the user keeps their choice. */
 export function resetPermissionDefaults() {
   localStorage.removeItem(KEY_ALLOWED_TOOLS);
-  localStorage.removeItem(KEY_PERMISSION_MODE_ACKED);
+  // Legacy key cleanup: the first-run ack modal was removed with the settings page.
+  localStorage.removeItem("harness-kit-permission-mode-acked");
   localStorage.removeItem(KEY_HARNESS_PERMISSION_OVERRIDES);
 }
 

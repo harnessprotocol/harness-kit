@@ -21,7 +21,7 @@ import { getTheme, setTheme } from "../lib/theme";
 
 // Security surfaces are re-homed under Settings (DESIGN.md §5) — lazy-loaded
 // so the General tab's bundle stays light. Routes under /security/* still
-// redirect here (legacy /security/* links land on this page).
+// render these pages directly; the Settings tabs are the primary entry.
 const PermissionsPage = lazy(() => import("./security/PermissionsPage"));
 const SecretsPage = lazy(() => import("./security/SecretsPage"));
 const AuditLogPage = lazy(() => import("./security/AuditLogPage"));
@@ -603,8 +603,8 @@ function GeneralTab() {
 
 // ── Settings shell (tab bar + General/Permissions/Secrets/Audit Log) ────
 // Security surfaces re-home here per DESIGN.md §5 — folded under Settings,
-// removed from top-level nav. Routes under /security/* remain reachable
-// directly; legacy /security/* links redirect here.
+// removed from top-level nav. Routes under /security/* still render these
+// pages directly; the Settings tabs are the primary entry.
 
 function SettingsTabBar({ active, onChange }: { active: SettingsTab; onChange: (tab: SettingsTab) => void }) {
   return (
