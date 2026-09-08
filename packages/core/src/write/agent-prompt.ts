@@ -120,10 +120,56 @@ export function buildAgentPrompt(
   const value = reveal ? plan.value : sanitize(plan.value);
   const targetFile = plan.target?.file ?? "its own configuration";
 
+  // A plugin is installed by the surface's own installer, never by editing
+  // its config. The generic prompt below would tell an agent to reproduce the
+  // install RECORD by hand, which is precisely what leaves that record and
+  // the tool's cache disagreeing — the thing the rest of this codebase
+  // refuses to do. The broker already computed the exact invocation; hand it
+  // over instead of describing a file to edit.
+  if (request.kind === "plugin") {
+    const invocation =
+      plan.plugin !== undefined &&
+      plan.plugin.kind === "native" &&
+      plan.plugin.plan.supported
+        ? plan.plugin.plan.display
+        : null;
+    const pluginLines = [
+      `Install the plugin "${request.name}" on ${target.label}.`,
+      "",
+      `It is already installed on ${source.label} and missing from ${target.label}.`,
+      "",
+      ...(invocation !== null
+        ? [
+            `Run ${target.label}'s own installer:`,
+            "```sh",
+            invocation,
+            "```",
+            "",
+            "Do NOT edit the install record by hand — the surface keeps a cache alongside it, and editing one without the other leaves them disagreeing.",
+          ]
+        : [
+            `${target.label} has no installer HarnessKit can name for this. Use ${target.label}'s documented way of installing a plugin; do not hand-edit its install record, which would leave it disagreeing with the surface's own cache.`,
+          ]),
+      "",
+      `Scope: ${request.scope === "user" ? "user/global (applies everywhere)" : "this project only"}`,
+    ];
+    if (!plan.supported && plan.reason) {
+      pluginLines.push("", `Note: ${plan.reason}`);
+    }
+    return pluginLines.join("\n");
+  }
+
   const lines = [
     `Add the ${request.kind} "${request.name}" to ${target.label}.`,
     "",
-    `It is already configured in ${source.label} and missing from ${target.label}. Reproduce it using ${target.label}'s own configuration — do not copy ${source.label}'s file format verbatim.`,
+    // "missing from" is only true for a gap. Since the diff case landed
+    // (AC-11) this same builder receives actions where the target HAS the
+    // resource with different content — telling an agent it is missing is a
+    // false premise, and saying nothing about the replacement hides the part
+    // that destroys work.
+    plan.overwrites === undefined
+      ? `It is already configured in ${source.label} and missing from ${target.label}. Reproduce it using ${target.label}'s own configuration — do not copy ${source.label}'s file format verbatim.`
+      : `${target.label} ALREADY has this, with different content. Replace its version with ${source.label}'s, using ${target.label}'s own configuration — do not copy ${source.label}'s file format verbatim.`,
     "",
     `Target configuration: ${targetFile}`,
     `Scope: ${request.scope === "user" ? "user/global (applies everywhere)" : "this project only"}`,
@@ -134,6 +180,15 @@ export function buildAgentPrompt(
     "```",
   ];
 
+  if (plan.overwrites !== undefined) {
+    lines.push(
+      "",
+      "This REPLACES the following, which currently differs:",
+      ...plan.overwrites.map(
+        (delta) => `- ${delta.path}: ${JSON.stringify(delta.left)} → ${JSON.stringify(delta.right)}`,
+      ),
+    );
+  }
   if (!plan.supported && plan.reason) {
     lines.push("", `Note: HarnessKit cannot write this cell directly — ${plan.reason}`);
   }

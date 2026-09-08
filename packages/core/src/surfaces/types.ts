@@ -1,4 +1,5 @@
 import type { HarnessResourceKind } from "../portability/types.js";
+import type { NativePluginInstaller } from "../plugins/installer.js";
 
 /**
  * Surface model (design.md §2, D1).
@@ -140,6 +141,29 @@ export interface MarketplaceStore {
   pathByPlatform?: PlatformPathOverrides;
 }
 
+/**
+ * How a surface installs plugins (AC-18, AC-19).
+ *
+ * `native` drives the surface's own installer through ProcessRunner — the
+ * only correct mechanism where one exists, since writing the install record
+ * by hand would leave it disagreeing with the tool's cache. `unpack` is for
+ * surfaces with no plugin model at all (pi, opencode): HarnessKit writes the
+ * plugin's SKILLS into surface-native locations itself and records the paths
+ * so a later uninstall can remove exactly those. Instructions and MCP servers
+ * are not unpacked (see plugins/unpack.ts).
+ *
+ * Absent means neither is available and plugin cells stay read-only.
+ *
+ * Independent of `notApplicable`. pi lists `plugin` as not-applicable AND
+ * declares an unpack model: the first says pi has no plugin concept (true,
+ * and why it is never a gap target), the second says HarnessKit can still
+ * place a plugin's contents there when a user explicitly asks. Cell status
+ * describes the harness; this describes what we can do to it.
+ */
+export type PluginInstallModel =
+  | ({ kind: "native" } & NativePluginInstaller)
+  | { kind: "unpack" };
+
 /** Detection probe: the probe path existing on disk ⇒ surface detected. */
 export interface DetectProbe {
   scope: SurfaceScope;
@@ -177,6 +201,8 @@ export interface SurfaceDescriptor {
    * `notApplicable` means it has one HarnessKit does not yet read locally.
    */
   marketplaces?: MarketplaceStore[];
+  /** How this surface installs plugins; absent = plugin cells are read-only. */
+  pluginInstall?: PluginInstallModel;
   /** Distinct clients sharing this surface's config store. */
   mergedClients?: string[];
 }

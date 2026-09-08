@@ -147,10 +147,16 @@ program
   .description("Copy resources between harness surfaces to close machine gaps")
   .option("--from <surface>", "Only copy FROM this surface")
   .option("--to <surface...>", "Only copy TO these surfaces")
-  .option("--only <kind[:name]...>", "Only these resource kinds, or one named resource")
+  // The value name must be a bare identifier ending in `...` for commander
+  // to treat the option as variadic. `<kind[:name]...>` silently yields a
+  // STRING instead of an array, which crashed every `sync --only`.
+  .option("--only <kind...>", "Only these resource kinds, or one named resource (kind, or kind:name)")
   .option("--scope <scope>", "user (default) or project", "user")
   .option("--dry-run", "Report proposed actions without writing (the default)")
-  .option("--yes", "Apply the proposed actions")
+  .option(
+    "--yes",
+    "Apply the proposed actions. For plugin rows this RUNS the target surface's own installer",
+  )
   .option("--json", "Output machine-readable JSON")
   .option("--prompt", "Generate agent prompts for the selected actions instead of applying")
   .option("--out <path>", "Also write generated prompts to this file")
@@ -170,6 +176,11 @@ Examples:
   harness-kit sync --from claude-code --to cursor     One direction
   harness-kit sync --only mcp-server:postgres --yes   Apply one resource
   harness-kit sync --to pi --prompt                   Agent prompts for cells we cannot write
+
+Plugin rows are applied by running the target surface's own installer
+(claude plugin install / codex plugin add / copilot plugin install), not by
+editing its config. Filter with --only before --yes if you would rather not
+spawn one per gap.
 
 Note: plugin installation moved to 'harness-kit install' in v0.2.`,
   )
@@ -394,6 +405,7 @@ program
   .description("Show the fleet: which harnesses are installed, where, and how drifted")
   .option("--global", "Include the personal catalog and global native tool state")
   .option("--json", "Output the raw FleetReport as JSON")
+  .option("--baseline <path>", "Diff the machine against a team baseline harness.yaml (AC-10)")
   .addHelpText(
     "after",
     `

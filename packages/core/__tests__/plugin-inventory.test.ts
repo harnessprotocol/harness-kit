@@ -12,7 +12,9 @@ import { normalizeResource } from "../src/observe/normalize.js";
 import { computeMachineInventory } from "../src/observe/machine-inventory.js";
 import { getSurface, SURFACES } from "../src/surfaces/registry.js";
 import { isWritableFormat, planStoreWrite } from "../src/write/write-store.js";
-import { planCellAction } from "../src/write/plan-cell-action.js";
+import { planCellAction, syncCliCommand } from "../src/write/plan-cell-action.js";
+import { buildAgentPrompt } from "../src/write/agent-prompt.js";
+import { applyCellAction } from "../src/write/apply-cell-action.js";
 import { MockFsProvider } from "./helpers/mock-fs.js";
 
 /**
@@ -116,6 +118,27 @@ describe("readClaudePlugins (AC-4)", () => {
       version: "0.2.0",
       revision: "9e622671eaee6e99215b08a457308e0a7b98fb37",
     });
+  });
+
+  it("recognizes all three of Claude Code's install scopes, not just two", () => {
+    // `claude plugin install --scope` takes user/project/local and writes all
+    // three verbatim. Treating "project" as unrecognized dropped exactly the
+    // scope a team shares through a committed settings file — verified by
+    // installing into an isolated CLAUDE_CONFIG_DIR.
+    const doc = JSON.stringify({
+      plugins: {
+        "a@m": [{ scope: "user" }],
+        "b@m": [{ scope: "project", projectPath: PROJECT }],
+        "c@m": [{ scope: "local", projectPath: PROJECT }],
+      },
+    });
+    const { entries, skipped } = readClaudePlugins(doc, PROJECT);
+    expect(skipped).toEqual([]);
+    expect(entries.map((e) => `${e.name}:${e.scope}:${e.nativeScope}`)).toEqual([
+      "a@m:user:user",
+      "b@m:project:project",
+      "c@m:project:local",
+    ]);
   });
 
   it("attributes each install to its OWN scope, not the store's", () => {
@@ -676,9 +699,16 @@ describe("plugin cells are actionable but not directly writable (AC-12, AC-13)",
       OPTS,
     );
     expect(plan.supported).toBe(false);
-    const reason = plan.supported === false ? plan.reason : "";
-    expect(reason).toContain("surface's own installer");
+    const reason = plan.reason ?? "";
+    // The refusal must be about the INSTALLER, never about the resource being
+    // absent — the plugin is right there, at project scope. Since the broker
+    // landed, codex gets the more specific answer (it has no --scope option
+    // at all) rather than the generic kind-level one.
+    expect(reason).toContain("scope option");
     expect(reason).not.toContain("nothing to copy");
+    // And it is a broker plan, so the caller knows not to apply a transaction.
+    expect(plan.plugin?.kind).toBe("native");
+    expect(plan.changes).toEqual([]);
   });
 
   it("no plugin format has a writer, so no apply can reach an install record", () => {
@@ -771,5 +801,246 @@ describe("machine inventory: plugin rows join across surfaces", () => {
     // Empty for two different reasons — the flag is what separates them.
     expect(cursor?.marketplacesReadable).toBe(false);
     expect(cursor?.marketplaces).toEqual([]);
+  });
+});
+
+describe("a multi-scope plugin resolves by SCOPE, not by file order", () => {
+  // Claude Code declares plugins in a single user-scope store whose codec
+  // stamps each install's own scope, so ordering STORES project-first never
+  // ran. The entry chosen was whichever came first in the JSON — the answer
+  // changed with file order and disagreed with the grid, which resolves the
+  // same identity project-first.
+  function fsWithOrder(userFirst: boolean): MockFsProvider {
+    const user = { scope: "user", version: "1.0.0-USER", installPath: `${HOME}/c/u` };
+    const local = {
+      scope: "local",
+      projectPath: PROJECT,
+      version: "2.0.0-LOCAL",
+      installPath: `${HOME}/c/l`,
+    };
+    return new MockFsProvider(
+      {
+        [`${HOME}/.claude/plugins/installed_plugins.json`]: JSON.stringify({
+          plugins: { "board@harness-kit": userFirst ? [user, local] : [local, user] },
+        }),
+        [`${HOME}/.claude/settings.json`]: JSON.stringify({
+          enabledPlugins: { "board@harness-kit": true },
+        }),
+      },
+      PROJECT,
+      HOME,
+    );
+  }
+
+  it("picks the project install regardless of which is listed first", async () => {
+    for (const userFirst of [true, false]) {
+      const plan = await planCellAction(
+        fsWithOrder(userFirst),
+        { from: "claude-code", to: "codex", kind: "plugin", name: "board@harness-kit", scope: "project" },
+        OPTS,
+      );
+      expect((plan.value as { version?: string }).version, `userFirst=${userFirst}`).toBe(
+        "2.0.0-LOCAL",
+      );
+    }
+  });
+});
+
+describe("the displayed CLI command is safe to paste", () => {
+  it("quotes an identity carrying shell metacharacters", () => {
+    // The name is an arbitrary JSON key from a file another tool wrote, and
+    // this string is printed as a runnable line and rendered with a Copy
+    // button. It planned as `unavailable` before this milestone; it plans as
+    // `ready` now, so it is presented as the action to take.
+    const command = syncCliCommand({
+      from: "claude-code",
+      to: "codex",
+      kind: "plugin",
+      name: "board;touch /tmp/PWNED;#@harness-kit",
+      scope: "user",
+    });
+    expect(command).toContain("'plugin:board;touch /tmp/PWNED;#@harness-kit'");
+    // Nothing outside the quotes can reach the shell.
+    expect(command.split("--only ")[1].startsWith("'")).toBe(true);
+  });
+
+  it("leaves an ordinary identity unquoted", () => {
+    const command = syncCliCommand({
+      from: "claude-code",
+      to: "codex",
+      kind: "plugin",
+      name: "board@harness-kit",
+      scope: "user",
+    });
+    expect(command).toContain("--only plugin:board@harness-kit ");
+  });
+
+  it("escapes an embedded single quote", () => {
+    const command = syncCliCommand({
+      from: "claude-code",
+      to: "codex",
+      kind: "skill",
+      name: "it's-a-skill",
+      scope: "user",
+    });
+    expect(command).toContain(`'skill:it'\\''s-a-skill'`);
+  });
+});
+
+describe("the agent prompt for a plugin names the installer", () => {
+  it("hands over the invocation instead of describing a file to edit", async () => {
+    // The generic prompt told an agent to reproduce the install RECORD by
+    // hand — exactly what leaves that record and the surface's cache
+    // disagreeing, which the rest of this codebase refuses to do.
+    const fs = new MockFsProvider(
+      {
+        [`${HOME}/.claude/plugins/installed_plugins.json`]: INSTALLED_PLUGINS,
+        [`${HOME}/.claude/settings.json`]: CLAUDE_SETTINGS,
+      },
+      PROJECT,
+      HOME,
+    );
+    const request = {
+      from: "claude-code" as const,
+      to: "codex" as const,
+      kind: "plugin" as const,
+      name: "board@harness-kit",
+      scope: "user" as const,
+    };
+    const plan = await planCellAction(fs, request, OPTS);
+    const prompt = buildAgentPrompt(plan, request);
+
+    expect(prompt).toContain("codex plugin add board@harness-kit");
+    expect(prompt).toContain("Do NOT edit the install record by hand");
+    // The generic phrasing must not leak into the plugin case.
+    expect(prompt).not.toContain("Definition to reproduce");
+    expect(prompt).not.toContain("its own configuration");
+  });
+});
+
+describe("AC-11 diff case: replacing what the target already has", () => {
+  // Deferred from M2 because a one-click copy would silently pick a winner.
+  // The user still picks — but only after being told what is replaced, and
+  // the plan cannot be applied without an explicit acknowledgement.
+  const SOURCE = JSON.stringify({
+    mcpServers: { postgres: { type: "stdio", command: "pg-mcp", args: ["--fast"] } },
+  });
+  const TARGET_DIFFERENT = JSON.stringify({
+    mcpServers: { postgres: { command: "pg-mcp", args: ["--slow"] } },
+  });
+  const TARGET_SAME = JSON.stringify({
+    mcpServers: { postgres: { command: "pg-mcp", args: ["--fast"] } },
+  });
+
+  const request = {
+    from: "claude-code" as const,
+    to: "cursor" as const,
+    kind: "mcp-server" as const,
+    name: "postgres",
+    scope: "user" as const,
+  };
+
+  function fsWith(cursorContent: string | null): MockFsProvider {
+    return new MockFsProvider(
+      {
+        [`${HOME}/.claude.json`]: SOURCE,
+        ...(cursorContent === null ? {} : { [`${HOME}/.cursor/mcp.json`]: cursorContent }),
+      },
+      PROJECT,
+      HOME,
+    );
+  }
+
+  it("names each field it would replace, and demands confirmation", async () => {
+    const plan = await planCellAction(fsWith(TARGET_DIFFERENT), request, OPTS);
+    expect(plan.supported).toBe(true);
+    expect(plan.overwrites).toBeDefined();
+    expect(plan.overwrites?.map((d) => d.path)).toEqual(["args[0]"]);
+    expect(plan.overwrites?.[0]).toMatchObject({ kind: "changed", left: "--slow", right: "--fast" });
+    expect(plan.requiresConfirmation).toBe(true);
+  });
+
+  it("a plain gap-closing copy overwrites nothing and needs no confirmation", async () => {
+    const plan = await planCellAction(fsWith(null), request, OPTS);
+    expect(plan.supported).toBe(true);
+    expect(plan.overwrites).toBeUndefined();
+    expect(plan.requiresConfirmation).toBe(false);
+  });
+
+  it("writes without demanding confirmation when the content already matches", async () => {
+    // Writing the source still changes cursor's BYTES (key order, absent
+    // fields), so this is not a no-op — but it replaces nothing the user
+    // would recognise as their configuration.
+    //
+    // Note what this does NOT prove: `readStore` normalizes MCP shape before
+    // the planner sees it, so raw and canonical comparison agree here. The
+    // skill test above is the one that pins canonicalization; an earlier
+    // version of this comment claimed this case did, and it did not.
+    const plan = await planCellAction(fsWith(TARGET_SAME), request, OPTS);
+    expect(plan.overwrites).toBeUndefined();
+    expect(plan.requiresConfirmation).toBe(false);
+    expect(plan.changes.length).toBeGreaterThan(0);
+  });
+
+  it("ignores fields that are machine facts, not content (skillPath)", async () => {
+    // The case that makes canonicalization load-bearing rather than
+    // defensive. A skill's value carries the absolute path it was read from,
+    // which necessarily differs between two surfaces.
+    //
+    // The bodies must differ in TRAILING WHITESPACE only: identical bodies
+    // make this a no-op, and `overwrites` is never computed for a no-op — so
+    // an identical-body version of this test passed under a raw comparison
+    // too and proved nothing. Whitespace normalization is part of the skill
+    // canonicalizer, so the canonical forms match while the bytes do not,
+    // which is exactly the case a raw diff would misreport.
+    const body = ["---", "name: reviewer", "---", "# Reviewer"].join("\n");
+    const fs = new MockFsProvider(
+      {
+        [`${HOME}/.claude/skills/reviewer/SKILL.md`]: body,
+        [`${HOME}/.cursor/skills/reviewer/SKILL.md`]: `${body}   \n\n`,
+      },
+      PROJECT,
+      HOME,
+    );
+    const plan = await planCellAction(
+      fs,
+      { from: "claude-code", to: "cursor", kind: "skill", name: "reviewer", scope: "user" },
+      OPTS,
+    );
+    expect(plan.overwrites).toBeUndefined();
+    expect(plan.requiresConfirmation).toBe(false);
+    // Guard the guard: if this were a no-op, `overwrites` would be undefined
+    // for a reason that has nothing to do with canonicalization.
+    expect(plan.noop).toBe(false);
+  });
+
+  it("still reports a REAL skill difference as an overwrite", async () => {
+    const head = ["---", "name: reviewer", "---", ""].join("\n");
+    const fs = new MockFsProvider(
+      {
+        [`${HOME}/.claude/skills/reviewer/SKILL.md`]: `${head}# New body`,
+        [`${HOME}/.cursor/skills/reviewer/SKILL.md`]: `${head}# Old body`,
+      },
+      PROJECT,
+      HOME,
+    );
+    const plan = await planCellAction(
+      fs,
+      { from: "claude-code", to: "cursor", kind: "skill", name: "reviewer", scope: "user" },
+      OPTS,
+    );
+    expect(plan.overwrites?.map((d) => d.path)).toEqual(["content"]);
+    expect(plan.requiresConfirmation).toBe(true);
+  });
+
+  it("refuses to apply an unconfirmed overwrite", async () => {
+    const plan = await planCellAction(fsWith(TARGET_DIFFERENT), request, OPTS);
+    await expect(
+      applyCellAction(
+        plan,
+        { fs: fsWith(TARGET_DIFFERENT), timestamp: "t", roots: {} },
+        { homeRoot: HOME },
+      ),
+    ).rejects.toThrow(/loss-unconfirmed|confirm/i);
   });
 });

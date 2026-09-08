@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import { buildMachineInventory } from "@harness-kit/core";
 import MachinePage from "../MachinePage";
 
@@ -34,7 +35,11 @@ const FAMILY_BY_ID: Record<string, string> = {
   junie: "junie",
 };
 
-vi.mock("@harness-kit/core", () => ({
+// MachinePage now renders the Drift section (AC-37), so this mock must also
+// satisfy what Drift's module tree imports from core. `importOriginal` would
+// be tidier, but core pulls node builtins the jsdom environment cannot
+// resolve — the reason this mock is exhaustive in the first place.
+vi.mock("@harness-kit/core", async () => ({
   buildMachineInventory: vi.fn(),
   getSurface: vi.fn((id: string) => ({
     id,
@@ -43,6 +48,17 @@ vi.mock("@harness-kit/core", () => ({
     notApplicable: [],
     stores: [],
   })),
+  // Pulled in by the Drift section's module tree (AC-37).
+  COMPILE_SURFACE_IDS: [
+    "claude-code",
+    "cursor",
+    "copilot-vscode",
+    "codex",
+    "opencode",
+    "windsurf",
+    "gemini",
+    "junie",
+  ],
   // TauriFsProvider (lib/harness-fs) pulls these from core
   posixJoin: vi.fn((...args: string[]) => args.join("/")),
   posixDirname: vi.fn((p: string) => p.split("/").slice(0, -1).join("/")),
@@ -227,6 +243,15 @@ function makeInventory() {
 
 // ── Helpers ────────────────────────────────────────────────────
 
+/** Pushes a route change after mount, without remounting the page. */
+function NavigateTo({ to }: { to: string }) {
+  const navigate = useNavigate();
+  useEffect(() => {
+    navigate(to);
+  }, [navigate, to]);
+  return null;
+}
+
 function renderPage() {
   return render(
     <MemoryRouter>
@@ -343,6 +368,80 @@ describe("MachinePage", () => {
     expect(cell).toHaveAttribute("title", expect.stringContaining("not a gap"));
     // not-applicable keeps its own em-dash glyph.
     expect(cell).not.toHaveTextContent("—");
+  });
+
+  it("presents Drift inside the Machine view (AC-37)", async () => {
+    // The M2 attempt at this routed /drift here and deleted the acknowledge
+    // and fix workflow, so it was reverted. Absorption means the workflow
+    // moves, not that it disappears — Drift compares harness.yaml against
+    // compiled output, which the surface grid never did.
+    renderPage();
+    await screen.findByTestId("machine-grid");
+
+    expect(screen.getByTestId("machine-drift-section")).toBeInTheDocument();
+    expect(screen.getByText("Drift from harness.yaml")).toBeInTheDocument();
+  });
+
+  it("does not run Drift's scans until the section is opened", async () => {
+    // Not cosmetic. Drift asks Tauri to grant access to the project directory
+    // on mount; the Machine view runs machine-only by default and must not
+    // trigger a permission request nobody asked for. Mounting Drift eagerly
+    // made this fire on every Machine load — caught only because a serial CI
+    // run was slow enough for the async grant to land before the assertion.
+    renderPage();
+    await screen.findByTestId("machine-grid");
+
+    // Structural, not timing-based: Drift's own heading is absent because the
+    // component never mounted. Asserting "grantProjectScope was not called"
+    // alone races the grant's own promise — which is exactly why the eager
+    // version looked green locally and failed on a slower serial run.
+    const toggle = screen.getByRole("button", { name: /Drift from harness.yaml/ });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByTestId("drift-view")).not.toBeInTheDocument();
+    expect(mockGrantProjectScope).not.toHaveBeenCalled();
+  });
+
+  it("opens the section on ?drift=1, cold AND on navigation", async () => {
+    // The sidebar and cmd-4 point at /machine?drift=1. React Router does not
+    // remount MachinePage when only the search string changes, so reading the
+    // param in a useState initializer worked on a cold load and did nothing on
+    // the common path — arriving from anywhere the user had already seen
+    // Machine. Both are asserted here.
+    const { unmount } = render(
+      <MemoryRouter initialEntries={["/machine?drift=1"]}>
+        <MachinePage />
+      </MemoryRouter>,
+    );
+    await screen.findByTestId("machine-grid");
+    expect(
+      screen.getByRole("button", { name: /Drift from harness.yaml/ }),
+    ).toHaveAttribute("aria-expanded", "true");
+    unmount();
+
+    // Navigating within an already-mounted Machine route.
+    render(
+      <MemoryRouter initialEntries={["/machine", "/machine?drift=1"]} initialIndex={0}>
+        <NavigateTo to="/machine?drift=1" />
+        <MachinePage />
+      </MemoryRouter>,
+    );
+    await screen.findByTestId("machine-grid");
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /Drift from harness.yaml/ }),
+      ).toHaveAttribute("aria-expanded", "true"),
+    );
+  });
+
+  it("mounts Drift when the section is opened", async () => {
+    renderPage();
+    await screen.findByTestId("machine-grid");
+    fireEvent.click(screen.getByRole("button", { name: /Drift from harness.yaml/ }));
+    // Embedded, so Drift contributes no second <h1> and no nested page
+    // container — its subtitle is what identifies it here.
+    expect(await screen.findByTestId("drift-view")).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(document.querySelectorAll(".hk-page .hk-page")).toHaveLength(0);
   });
 
   it("derives totals from the inventory rows/gaps/diffs, not resourceCount", async () => {

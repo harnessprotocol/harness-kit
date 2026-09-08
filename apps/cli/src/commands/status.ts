@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { resolve, basename } from "node:path";
 import chalk from "chalk";
@@ -7,10 +8,14 @@ import {
   getSurface,
   normalizeObservation,
   observeAllSurfaces,
+  parseHarness,
   PRODUCT_FAMILIES,
+  recommend,
 } from "@harness-kit/core";
 import type {
   FleetReport,
+  HarnessConfig,
+  Recommendation,
   FleetScopeInput,
   FleetStatus,
   MachineInventory,
@@ -25,6 +30,8 @@ import { buildReconciliationContext, currentPlatform, summarizePlan } from "./po
 interface StatusFlags {
   json?: boolean;
   global?: boolean;
+  /** Path to the team's baseline harness.yaml, for AC-10 recommendations. */
+  baseline?: string;
 }
 
 function statusColor(status: FleetStatus): string {
@@ -128,6 +135,69 @@ function formatMachineSection(machine: MachineInventory): string {
 }
 
 /**
+ * Recommendations section (AC-10). Printed only when there is something to
+ * say — an empty "Recommendations" header trains people to ignore the
+ * section that matters.
+ */
+function formatRecommendations(recommendations: Recommendation[]): string {
+  if (recommendations.length === 0) return "";
+  const lines: string[] = ["", chalk.bold("Recommendations")];
+  for (const item of recommendations) {
+    const tag = item.source === "baseline-gap" ? chalk.yellow("baseline") : chalk.dim("machine ");
+    lines.push(`  ${tag}  ${item.kind}:${item.name}`);
+    lines.push(chalk.dim(`             ${item.summary}`));
+    if (item.missingOn.length > 0) {
+      lines.push(
+        chalk.dim(`             add to: ${item.missingOn.join(", ")}`),
+      );
+    }
+  }
+  return lines.join("\n");
+}
+
+/**
+ * Load and parse a baseline profile from disk.
+ *
+ * Local paths only this milestone. AC-10 describes a GIT-hosted harness.yaml,
+ * and fetching one needs the signed-definitions transport that lands in M4 —
+ * so a `--baseline` pointing at a URL is refused with that reason rather than
+ * silently doing nothing.
+ */
+async function loadBaseline(path: string): Promise<HarnessConfig | null> {
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(path) || path.startsWith("github:")) {
+    console.error(
+      chalk.yellow(
+        `--baseline currently reads a local file; fetching '${path}' needs the signed definitions transport (M4).`,
+      ),
+    );
+    return null;
+  }
+  let text: string;
+  try {
+    text = await readFile(resolve(path), "utf8");
+  } catch (error) {
+    console.error(
+      chalk.yellow(
+        `--baseline: could not read ${path} (${error instanceof Error ? error.message : String(error)})`,
+      ),
+    );
+    return null;
+  }
+  // parseHarness throws on an unparseable document rather than returning a
+  // result flag; a bad baseline must not take the whole status report down.
+  try {
+    return parseHarness(text).config;
+  } catch (error) {
+    console.error(
+      chalk.yellow(
+        `--baseline: ${path} is not a valid harness profile (${error instanceof Error ? error.message : String(error)})`,
+      ),
+    );
+    return null;
+  }
+}
+
+/**
  * Record the observation snapshot into the shared state db. Graceful
  * degrade by contract: any store failure (locked db, corrupt file,
  * unwritable path) returns a short reason instead of throwing — history is
@@ -210,7 +280,14 @@ export async function statusCommand(flags: StatusFlags): Promise<void> {
 
   if (flags.json) {
     console.log(
-      JSON.stringify({ ...report, ...(reconciliation ? { reconciliation } : {}), machine }),
+      JSON.stringify({
+        ...report,
+        ...(reconciliation ? { reconciliation } : {}),
+        machine,
+        recommendations: recommend(machine, {
+          baseline: flags.baseline === undefined ? null : await loadBaseline(flags.baseline),
+        }),
+      }),
     );
     return;
   }
@@ -220,6 +297,10 @@ export async function statusCommand(flags: StatusFlags): Promise<void> {
   console.log(formatTable(report));
   console.log("");
   console.log(formatMachineSection(machine));
+  const baseline = flags.baseline === undefined ? null : await loadBaseline(flags.baseline);
+  const recommendations = recommend(machine, { baseline });
+  const section = formatRecommendations(recommendations);
+  if (section.length > 0) console.log(section);
   if ((reconciliation as { blocked?: boolean } | undefined)?.blocked) {
     console.log("");
     console.log(chalk.yellow("Whole-harness reconciliation has unresolved conflicts."));

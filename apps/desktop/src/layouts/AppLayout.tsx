@@ -73,7 +73,10 @@ export const NAV_SECTIONS: NavSection[] = [
         <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
       </svg>
     ),
-    path: "/drift",
+    // AC-37: Drift is a section of the Machine view now. Pointing straight at
+    // the section (rather than at /drift, which redirects here anyway) keeps
+    // the sidebar honest about where the user lands.
+    path: "/machine?drift=1",
   },
   {
     id: "comparator",
@@ -268,6 +271,35 @@ function SidebarSubnav({ children }: { children: { label: string; path: string }
   );
 }
 
+/**
+ * Whether a nav entry is the one the user is on.
+ *
+ * Compares against the entry's own PATH, not against `/<id>`. Drift's
+ * destination became `/machine?drift=1` when Drift moved into the Machine
+ * view (AC-37), so an id-based match could never light it up — the item the
+ * user had just clicked went dark while Machine lit up instead.
+ *
+ * Two entries can share a pathname and be told apart by a query marker, so
+ * the marker is checked in BOTH directions: present selects the qualified
+ * entry, absent selects the plain one.
+ */
+export function isSectionActive(
+  section: { path: string },
+  location: { pathname: string; search: string },
+): boolean {
+  const [sectionPath, sectionQuery] = section.path.split("?");
+  if (!location.pathname.startsWith(sectionPath)) return false;
+  const params = new URLSearchParams(location.search);
+  const marker = sectionQuery?.split("=")[0];
+  if (marker !== undefined) return params.get(marker) !== null;
+  // A plain entry loses to a query-qualified sibling on the same pathname.
+  return ![...NAV_SECTIONS, ...DEMOTED_SECTIONS].some((candidate) => {
+    const [candidatePath, candidateQuery] = candidate.path.split("?");
+    if (candidateQuery === undefined || candidatePath !== sectionPath) return false;
+    return params.get(candidateQuery.split("=")[0]) !== null;
+  });
+}
+
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -334,7 +366,7 @@ export default function AppLayout() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   function isActive(section: NavSection) {
-    return location.pathname.startsWith(`/${section.id}`);
+    return isSectionActive(section, location);
   }
 
   function handleTitlebarMouseDown(e: React.MouseEvent) {

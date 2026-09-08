@@ -2211,6 +2211,12 @@
       "description": "Permission identifier",
       "oneOf": [
         {
+          "description": "Enables the acknowledge_drift command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-acknowledge-drift",
+          "markdownDescription": "Enables the acknowledge_drift command without any pre-configured scope."
+        },
+        {
           "description": "Enables the acknowledge_drift_item command without any pre-configured scope.",
           "type": "string",
           "const": "allow-acknowledge-drift-item",
@@ -2469,6 +2475,12 @@
           "markdownDescription": "Enables the list_custom_profiles command without any pre-configured scope."
         },
         {
+          "description": "Enables the list_drift_acknowledgements command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-list-drift-acknowledgements",
+          "markdownDescription": "Enables the list_drift_acknowledgements command without any pre-configured scope."
+        },
+        {
           "description": "Enables the list_installed_plugins command without any pre-configured scope.",
           "type": "string",
           "const": "allow-list-installed-plugins",
@@ -2497,6 +2509,12 @@
           "type": "string",
           "const": "allow-list-sessions-summary",
           "markdownDescription": "Enables the list_sessions_summary command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the migrate_drift_acknowledgements command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-migrate-drift-acknowledgements",
+          "markdownDescription": "Enables the migrate_drift_acknowledgements command without any pre-configured scope."
         },
         {
           "description": "Enables the push_file_history command without any pre-configured scope.",
@@ -2715,6 +2733,12 @@
           "markdownDescription": "Enables the trigger_rebuild command without any pre-configured scope."
         },
         {
+          "description": "Enables the unacknowledge_drift command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-unacknowledge-drift",
+          "markdownDescription": "Enables the unacknowledge_drift command without any pre-configured scope."
+        },
+        {
           "description": "Enables the unacknowledge_drift_item command without any pre-configured scope.",
           "type": "string",
           "const": "allow-unacknowledge-drift-item",
@@ -2785,6 +2809,12 @@
           "type": "string",
           "const": "allow-write-plugin-file",
           "markdownDescription": "Enables the write_plugin_file command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the acknowledge_drift command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-acknowledge-drift",
+          "markdownDescription": "Denies the acknowledge_drift command without any pre-configured scope."
         },
         {
           "description": "Denies the acknowledge_drift_item command without any pre-configured scope.",
@@ -3045,6 +3075,12 @@
           "markdownDescription": "Denies the list_custom_profiles command without any pre-configured scope."
         },
         {
+          "description": "Denies the list_drift_acknowledgements command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-list-drift-acknowledgements",
+          "markdownDescription": "Denies the list_drift_acknowledgements command without any pre-configured scope."
+        },
+        {
           "description": "Denies the list_installed_plugins command without any pre-configured scope.",
           "type": "string",
           "const": "deny-list-installed-plugins",
@@ -3073,6 +3109,12 @@
           "type": "string",
           "const": "deny-list-sessions-summary",
           "markdownDescription": "Denies the list_sessions_summary command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the migrate_drift_acknowledgements command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-migrate-drift-acknowledgements",
+          "markdownDescription": "Denies the migrate_drift_acknowledgements command without any pre-configured scope."
         },
         {
           "description": "Denies the push_file_history command without any pre-configured scope.",
@@ -3289,6 +3331,12 @@
           "type": "string",
           "const": "deny-trigger-rebuild",
           "markdownDescription": "Denies the trigger_rebuild command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the unacknowledge_drift command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-unacknowledge-drift",
+          "markdownDescription": "Denies the unacknowledge_drift command without any pre-configured scope."
         },
         {
           "description": "Denies the unacknowledge_drift_item command without any pre-configured scope.",

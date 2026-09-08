@@ -107,7 +107,41 @@ describe("keyboard navigation", () => {
     const drift = screen.getByText("Drift").closest('[role="link"]');
     expect(drift).not.toBeNull();
     fireEvent.keyDown(drift!, { key: "Enter" });
-    expect(screen.getByTestId("loc").textContent).toBe("/drift");
+    // AC-37: Drift is a section of the Machine view. The nav points straight
+    // at the open section rather than at /drift, which only redirects here.
+    expect(screen.getByTestId("loc").textContent).toBe("/machine");
+  });
+
+  it("highlights Drift, not Machine, when Drift is the destination", () => {
+    // Drift's path became /machine?drift=1 (AC-37). An id-based active match
+    // (`pathname.startsWith("/" + id)`) can never match "drift" again, so the
+    // item the user clicked went dark while Machine lit up instead.
+    render(
+      <MemoryRouter initialEntries={["/machine?drift=1"]}>
+        <AppLayout />
+      </MemoryRouter>,
+    );
+    const current = Object.fromEntries(
+      ["Drift", "Machine"].map((label) => [
+        label,
+        screen.getByText(label).closest('[role="link"]')?.getAttribute("aria-current") ?? null,
+      ]),
+    );
+    expect(current).toEqual({ Drift: "page", Machine: null });
+  });
+
+  it("still highlights Machine on the plain /machine route", () => {
+    render(
+      <MemoryRouter initialEntries={["/machine"]}>
+        <AppLayout />
+      </MemoryRouter>,
+    );
+    expect(
+      screen.getByText("Machine").closest('[role="link"]')?.getAttribute("aria-current"),
+    ).toBe("page");
+    expect(
+      screen.getByText("Drift").closest('[role="link"]')?.getAttribute("aria-current"),
+    ).toBeNull();
   });
 
   it("activates a top-level nav item with Space", () => {

@@ -178,4 +178,121 @@ describe.sequential("cross-surface sync", () => {
       await store.close();
     }
   });
+
+  /**
+   * `--only` regression. Commander treats an option as variadic only when its
+   * value name is a plain identifier ending in `...`; the declaration read
+   * `<kind[:name]...>`, so the value arrived as a STRING and `.map` threw.
+   * Every `sync --only` crashed, for every kind — including the plugin
+   * filters the broker now depends on.
+   */
+  describe("--only accepts what commander actually delivers", () => {
+    it("does not crash when --only arrives as a bare string", async () => {
+      await surfaceSyncCommand({ only: "mcp-server" } as never);
+      expect(env.getLog()).not.toContain("is not a function");
+      expect(env.getLog()).toContain("mcp-server:postgres");
+    });
+
+    it("accepts the array form too", async () => {
+      await surfaceSyncCommand({ only: ["mcp-server"] } as never);
+      expect(env.getLog()).toContain("mcp-server:postgres");
+    });
+
+    it("still filters by kind:name, and excludes a non-matching name", async () => {
+      await surfaceSyncCommand({ only: "mcp-server:postgres" } as never);
+      expect(env.getLog()).toContain("mcp-server:postgres");
+
+      env.restore();
+      env = new CliTestEnv();
+      env.setup();
+      await surfaceSyncCommand({ only: "mcp-server:nothing-by-this-name" } as never);
+      expect(env.getLog()).not.toContain("mcp-server:postgres");
+    });
+  });
+
+  /**
+   * AC-11 covers "any gap OR diff". The CLI walked only the gap list, so the
+   * `harness-kit sync …` command the desktop printed for a diff cell silently
+   * did nothing — action surface (b) was missing for half the AC.
+   */
+  describe("reconciling a diff, not just closing a gap", () => {
+    async function seedDiff(): Promise<void> {
+      await writeFile(
+        join(home, ".cursor", "mcp.json"),
+        JSON.stringify({ mcpServers: { postgres: { command: "pg-B", args: ["--from-cursor"] } } }),
+      );
+    }
+
+    it("offers an action when both surfaces hold the row with different content", async () => {
+      await seedDiff();
+      await surfaceSyncCommand({ from: "claude-code", to: ["cursor"], only: "mcp-server" } as never);
+      expect(env.getLog()).toContain("mcp-server:postgres");
+      expect(env.getLog()).not.toContain("No gaps to close");
+    });
+
+    it("applies it, replacing the target's version", async () => {
+      await seedDiff();
+      await surfaceSyncCommand({
+        from: "claude-code",
+        to: ["cursor"],
+        only: "mcp-server",
+        yes: true,
+      } as never);
+      const after = JSON.parse(await readFile(join(home, ".cursor", "mcp.json"), "utf8")) as {
+        mcpServers: { postgres: { command: string } };
+      };
+      expect(after.mcpServers.postgres.command).toBe("pg-mcp");
+    });
+
+    async function seedSkillDiff(): Promise<void> {
+      const head = ["---", "name: reviewer", "---", ""].join("\n");
+      await mkdir(join(home, ".claude", "skills", "reviewer"), { recursive: true });
+      await mkdir(join(home, ".cursor", "skills", "reviewer"), { recursive: true });
+      await writeFile(join(home, ".claude", "skills", "reviewer", "SKILL.md"), `${head}# A`);
+      await writeFile(join(home, ".cursor", "skills", "reviewer", "SKILL.md"), `${head}# B`);
+    }
+
+    it("names each field it will replace, and does not call it lossy", async () => {
+      // "lossy" means the target cannot EXPRESS the resource. An overwrite
+      // means it holds a different version this action replaces. Both set
+      // requiresConfirmation, and reporting the second as the first told the
+      // user the opposite of what was happening — while the field carrying
+      // the real information was dropped.
+      // A skill copy between these two surfaces has NO capability loss, so
+      // "lossy" appearing at all would be the mislabel this guards against.
+      await seedSkillDiff();
+      await surfaceSyncCommand({ from: "claude-code", to: ["cursor"], only: "skill" } as never);
+      const log = env.getLog();
+      expect(log).toContain("replaces content");
+      expect(log).not.toContain("lossy");
+    });
+
+    it("honours --to when choosing diff targets", async () => {
+      await seedDiff();
+      await surfaceSyncCommand({ from: "claude-code", to: ["codex"], only: "mcp-server" } as never);
+      expect(env.getLog()).not.toContain("→ cursor");
+    });
+
+    it("tells an agent the target ALREADY has it, not that it is missing", async () => {
+      await seedSkillDiff();
+      await surfaceSyncCommand({
+        from: "claude-code",
+        to: ["cursor"],
+        only: "skill",
+        prompt: true,
+      } as never);
+      const log = env.getLog();
+      expect(log).toContain("ALREADY has this");
+      expect(log).not.toContain("missing from Cursor");
+      expect(log).toContain("This REPLACES the following");
+    });
+
+    it("offers NOTHING without --from, rather than guessing a winner", async () => {
+      // A diff pair is unordered. Picking a side unasked is exactly what the
+      // M2 deferral of this case warned against.
+      await seedDiff();
+      await surfaceSyncCommand({ only: "mcp-server" } as never);
+      expect(env.getLog()).toContain("No gaps to close");
+    });
+  });
 });

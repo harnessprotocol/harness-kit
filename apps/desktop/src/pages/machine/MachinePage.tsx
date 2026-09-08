@@ -1,3 +1,4 @@
+import { useSearchParams } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, Input, SummaryStrip, EmptyState, type SummaryCell } from "@harness-kit/ui";
 import { ScanSearch } from "lucide-react";
@@ -6,6 +7,7 @@ import { surfaceLabel } from "../../lib/surface-labels";
 import { loadMachineInventory } from "./machine-data";
 import { MachineGrid } from "./MachineGrid";
 import { RowDrawer } from "./RowDrawer";
+import DriftPage from "../drift/DriftPage";
 
 /**
  * Machine view (Task 14): read-only cross-surface inventory of this
@@ -17,6 +19,22 @@ export default function MachinePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [projectDir, setProjectDir] = useState("");
+  // Arriving from the retired /drift route (or the sidebar's Drift entry)
+  // opens the section: redirecting someone to a collapsed accordion is the
+  // same as losing the page they asked for.
+  //
+  // An effect, NOT a useState initializer. React Router does not remount this
+  // component when only the search string changes, so an initializer opened
+  // the section on a cold load of /machine?drift=1 and did nothing on the
+  // common path — clicking Drift in the sidebar while already on Machine.
+  const [searchParams] = useSearchParams();
+  const driftRequested = searchParams.get("drift") === "1";
+  const [driftOpen, setDriftOpen] = useState(driftRequested);
+  useEffect(() => {
+    // Opens on request; never force-closes, so a user who opened the section
+    // by hand does not lose it by navigating within Machine.
+    if (driftRequested) setDriftOpen(true);
+  }, [driftRequested]);
   const [selectedRow, setSelectedRow] = useState<GridRow | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
   const [projectDegraded, setProjectDegraded] = useState(false);
@@ -266,6 +284,47 @@ export default function MachinePage() {
           )}
         </>
       )}
+
+      {/*
+        AC-37: Drift lives here now. Rendered as the existing page rather than
+        reimplemented — the M2 attempt to "absorb" Drift routed /drift at this
+        view and DELETED the acknowledge/fix workflow, which is why it was
+        reverted. Drift compares harness.yaml against compiled output; the grid
+        above compares surfaces against each other. Two different questions, one
+        screen.
+      */}
+      <section style={{ marginTop: 28 }} data-testid="machine-drift-section">
+        <button
+          type="button"
+          onClick={() => setDriftOpen((open) => !open)}
+          aria-expanded={driftOpen}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            background: "none",
+            border: "none",
+            padding: 0,
+            cursor: "pointer",
+            font: "inherit",
+            fontSize: 13,
+            fontWeight: 650,
+            color: "var(--fg)",
+          }}
+        >
+          <span aria-hidden="true" style={{ opacity: 0.6 }}>{driftOpen ? "▾" : "▸"}</span>
+          Drift from harness.yaml
+        </button>
+        {/*
+          Mounted only when opened, and that is behavioural rather than
+          cosmetic: Drift scans project scopes on mount and asks Tauri to grant
+          access to the project directory. The Machine view runs machine-only
+          by default and must not trigger a directory-permission request the
+          user did not ask for, so its own load behaviour stays unchanged
+          until someone opens this.
+        */}
+        {driftOpen && <DriftPage embedded />}
+      </section>
 
       {selectedRow && (
         <RowDrawer

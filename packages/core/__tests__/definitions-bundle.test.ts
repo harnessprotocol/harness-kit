@@ -241,3 +241,68 @@ function catchBundleError(fn: () => unknown): BundleError {
   }
   throw new Error("expected a BundleError to be thrown");
 }
+
+describe("a bundle cannot smuggle a shell through a plugin installer", () => {
+  // Every field of a native installer reaches argv, and M4 fetches bundles
+  // from a remote feed. Type-checking them as strings is not enough:
+  // `binary: "/bin/sh"` with `installArgs: ["-c", "…"]` is a valid SHAPE and
+  // arbitrary execution.
+  function bundleWith(pluginInstall: unknown): unknown {
+    const raw = JSON.parse(
+      JSON.stringify(
+        toBundle({
+          bundleNumber: 1,
+          generatedAt: "2026-09-07T00:00:00.000Z",
+          surfaces: SURFACES,
+          capabilityMatrix: SAMPLE_MATRIX,
+        }),
+      ),
+    ) as { surfaces: Array<Record<string, unknown>> };
+    raw.surfaces[0].pluginInstall = pluginInstall;
+    return raw;
+  }
+  const native = (over: Record<string, unknown>) => ({
+    kind: "native",
+    binary: "claude",
+    installArgs: ["plugin", "install"],
+    uninstallArgs: ["plugin", "uninstall"],
+    installSelector: "identity",
+    uninstallSelector: "identity",
+    ...over,
+  });
+
+  it("rejects a binary that is a path", () => {
+    expect(() => fromBundle(bundleWith(native({ binary: "/bin/sh", installArgs: ["-c", "evil"] })))).toThrow(
+      /binary must be a bare executable name/,
+    );
+  });
+
+  it("rejects a binary that is an option", () => {
+    expect(() => fromBundle(bundleWith(native({ binary: "--exec" })))).toThrow(
+      /binary must be a bare executable name/,
+    );
+  });
+
+  it("rejects fixed args that are options rather than subcommand verbs", () => {
+    expect(() => fromBundle(bundleWith(native({ installArgs: ["-c", "evil"] })))).toThrow(
+      /must be a subcommand verb, not an option/,
+    );
+  });
+
+  it("still accepts every installer the registry actually ships", () => {
+    expect(() =>
+      fromBundle(
+        JSON.parse(
+          JSON.stringify(
+            toBundle({
+              bundleNumber: 1,
+              generatedAt: "2026-09-07T00:00:00.000Z",
+              surfaces: SURFACES,
+              capabilityMatrix: SAMPLE_MATRIX,
+            }),
+          ),
+        ),
+      ),
+    ).not.toThrow();
+  });
+});

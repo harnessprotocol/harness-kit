@@ -12,6 +12,13 @@ function groupKey(entry: ScopedDriftItem): string {
 }
 
 export interface DriftViewProps {
+  /**
+   * Rendered inside another page (the Machine view, AC-37) rather than as a
+   * route of its own. Suppresses the page container and the `<h1>`: nesting
+   * `.hk-page` inside `.hk-page` doubles the chrome, and a second
+   * document-level heading is wrong for assistive technology.
+   */
+  embedded?: boolean;
   entries: ScopedDriftItem[];
   filteredEntries: ScopedDriftItem[];
   acknowledged: Set<string>;
@@ -37,6 +44,7 @@ export interface DriftViewProps {
  * modal's core calls (buildFixPlan/applyFix) stay entirely in DriftPage.
  */
 export function DriftView({
+  embedded = false,
   entries,
   filteredEntries,
   acknowledged,
@@ -71,15 +79,17 @@ export function DriftView({
 
   if (loading && entries.length === 0) {
     return (
-      <div className="hk-page">
-        <div className="hk-page-head">
-          <div>
-            <h1 className="hk-page-title">Drift</h1>
-            <p className="hk-page-subtitle">
-              Every deployed config file that no longer matches harness.yaml, with a fix for each.
-            </p>
+      <div className={embedded ? undefined : "hk-page"} data-testid="drift-view">
+        {!embedded && (
+          <div className="hk-page-head">
+            <div>
+              <h1 className="hk-page-title">Drift</h1>
+              <p className="hk-page-subtitle">
+                Every deployed config file that no longer matches harness.yaml, with a fix for each.
+              </p>
+            </div>
           </div>
-        </div>
+        )}
         <div style={{ padding: "40px 0", textAlign: "center", color: "var(--fg-subtle)", fontSize: 12.5 }}>
           Scanning for drift…
         </div>
@@ -89,15 +99,17 @@ export function DriftView({
 
   if (!loading && filteredEntries.length === 0 && !portability?.conflicts.length) {
     return (
-      <div className="hk-page">
-        <div className="hk-page-head">
-          <div>
-            <h1 className="hk-page-title">Drift</h1>
-            <p className="hk-page-subtitle">
-              Every deployed config file that no longer matches harness.yaml, with a fix for each.
-            </p>
+      <div className={embedded ? undefined : "hk-page"} data-testid="drift-view">
+        {!embedded && (
+          <div className="hk-page-head">
+            <div>
+              <h1 className="hk-page-title">Drift</h1>
+              <p className="hk-page-subtitle">
+                Every deployed config file that no longer matches harness.yaml, with a fix for each.
+              </p>
+            </div>
           </div>
-        </div>
+        )}
         <EmptyState
           icon={<ShieldCheck size={28} strokeWidth={1.5} />}
           title="No drift detected"
@@ -113,10 +125,12 @@ export function DriftView({
   }
 
   return (
-    <div className="hk-page">
+    <div className={embedded ? undefined : "hk-page"} data-testid="drift-view">
       <div className="hk-page-head">
+        {/* The title is the embedding page's job when embedded; the controls
+            beside it are not, so only the heading block is suppressed. */}
         <div>
-          <h1 className="hk-page-title">Drift</h1>
+          {!embedded && <h1 className="hk-page-title">Drift</h1>}
           <p className="hk-page-subtitle">
             {harnessFilter
               ? `Showing drift for ${ADAPTER_META[harnessFilter as keyof typeof ADAPTER_META]?.name ?? harnessFilter}.`

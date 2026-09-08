@@ -66,12 +66,14 @@ test.describe("Navigation smoke tests", () => {
     expect(text).not.toContain("Mock: no response");
   });
 
-  test("Drift page renders without error", async ({ appPage }) => {
+  // AC-37: /drift redirects into the Machine view's Drift section.
+  test("legacy /drift route lands on Machine with Drift open", async ({ appPage }) => {
     await appPage.goto("/drift");
     await appPage.waitForLoadState("networkidle");
+    expect(appPage.url()).toContain("/machine");
+    await expect(appPage.getByTestId("drift-view")).toBeVisible();
     const text = await appPage.locator("body").textContent();
     expect(text).not.toContain("command not found");
-    expect(text).not.toContain("Mock: no response");
   });
 });
 
@@ -106,11 +108,23 @@ test.describe("Fleet page — content validation", () => {
   });
 });
 
-test.describe("Drift page — content validation", () => {
-  test("shows page title", async ({ appPage }) => {
+test.describe("Drift inside the Machine view — content validation", () => {
+  test("renders the drift section, with Machine keeping the only page heading", async ({
+    appPage,
+  }) => {
     await appPage.goto("/drift");
     await appPage.waitForLoadState("networkidle");
-    await expect(appPage.getByRole("heading", { name: "Drift" })).toBeVisible();
+    await expect(appPage.getByTestId("machine-drift-section")).toBeVisible();
+    await expect(appPage.getByTestId("drift-view")).toBeVisible();
+    // Embedded: Drift contributes no second document-level heading.
+    await expect(appPage.getByRole("heading", { level: 1 })).toHaveCount(1);
+  });
+
+  test("the section stays closed when Machine is opened directly", async ({ appPage }) => {
+    await appPage.goto("/machine");
+    await appPage.waitForLoadState("networkidle");
+    await expect(appPage.getByTestId("machine-drift-section")).toBeVisible();
+    await expect(appPage.getByTestId("drift-view")).toHaveCount(0);
   });
 });
 

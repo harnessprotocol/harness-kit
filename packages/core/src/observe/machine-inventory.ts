@@ -203,6 +203,18 @@ function diffForms(left: unknown, right: unknown, path: string, deltas: FieldDel
   }
 }
 
+/**
+ * Structured deltas between two canonical forms, for callers outside the
+ * grid — the AC-11 diff case needs exactly this walk to tell a user what an
+ * overwrite would replace, and a second implementation would drift from the
+ * one the grid displays.
+ */
+export function diffCanonicalForms(left: unknown, right: unknown): FieldDelta[] {
+  const deltas: FieldDelta[] = [];
+  diffForms(left, right, "", deltas);
+  return deltas;
+}
+
 // ── engine ──────────────────────────────────────────────────────
 
 /**

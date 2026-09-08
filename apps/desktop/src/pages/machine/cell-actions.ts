@@ -54,6 +54,26 @@ export function missingTargets(row: GridRow, gaps?: MachineGap[]): SurfaceId[] {
   return absent.filter((id) => reachable.has(id));
 }
 
+/**
+ * Surfaces that HAVE this row but with different content — the AC-11 diff
+ * case. Distinct from `missingTargets`: copying here replaces what is
+ * already there, so the drawer must present it as an overwrite and require
+ * an explicit confirmation, never as an ordinary gap-closing copy.
+ */
+export function divergentTargets(row: GridRow, from: SurfaceId): SurfaceId[] {
+  const source = row.cells[from];
+  if (source?.status !== "present" || source.effectiveDigest === undefined) return [];
+  return (Object.entries(row.cells) as Array<[SurfaceId, GridRow["cells"][SurfaceId]]>)
+    .filter(
+      ([id, cell]) =>
+        id !== from &&
+        cell.status === "present" &&
+        cell.effectiveDigest !== undefined &&
+        cell.effectiveDigest !== source.effectiveDigest,
+    )
+    .map(([id]) => id);
+}
+
 /** Surfaces this row is present on, as action sources. */
 export function presentSources(row: GridRow): SurfaceId[] {
   return (Object.entries(row.cells) as Array<[SurfaceId, GridRow["cells"][SurfaceId]]>)
@@ -116,6 +136,18 @@ export async function applyCellActionViaTauri(
   /** The user's explicit acknowledgement of capability loss (AC-34). */
   confirmedLoss = false,
 ): Promise<CellApplyResult> {
+  // A plugin action drives the surface's own installer, which needs a
+  // process-spawn bridge the app does not have. Adding arbitrary binary
+  // execution to the webview is a trust boundary of its own and gets its own
+  // change; until then the drawer shows the exact CLI invocation and the
+  // agent prompt (AC-13), and says why the button is off rather than
+  // applying an empty transaction and reporting success.
+  if (view.plan.plugin !== undefined) {
+    throw new Error(
+      "Installing a plugin runs the surface's own installer, which the app cannot do yet — " +
+        "copy the CLI command below, or use the agent prompt.",
+    );
+  }
   const home = await homeDir();
   // Namespaced: the CLI mints ids from the same clock with the same format,
   // and record_transaction does ON CONFLICT DO UPDATE — so a same-millisecond

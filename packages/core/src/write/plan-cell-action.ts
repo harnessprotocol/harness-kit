@@ -10,6 +10,11 @@ import { getSurface } from "../surfaces/registry.js";
 import type { ConfigStore, StoreFormatId, SurfaceId, SurfaceScope } from "../surfaces/types.js";
 import { isRecord } from "../utils/is-record.js";
 import { planStoreWrite, unsupportedKindReason } from "./write-store.js";
+import { diffCanonicalForms } from "../observe/machine-inventory.js";
+import type { FieldDelta } from "../observe/machine-inventory.js";
+import { normalizeResource } from "../observe/normalize.js";
+import { planPluginAction } from "../plugins/broker.js";
+import type { BrokerPlan } from "../plugins/broker.js";
 import type { PlannedFileChange } from "./write-store.js";
 
 /**
@@ -67,6 +72,22 @@ export interface CellActionPlan {
   value?: unknown;
   source?: { file: string; formatId: StoreFormatId };
   target?: { file: string; formatId: StoreFormatId };
+  /**
+   * AC-11 diff case: what the target currently holds that this action would
+   * replace. Present ONLY when the target already has the resource with
+   * different content — absent for a plain gap-closing copy, which overwrites
+   * nothing. A plan carrying this always sets `requiresConfirmation`, because
+   * the deferral that created it was about never silently choosing a winner.
+   */
+  overwrites?: FieldDelta[];
+  /**
+   * Set for `plugin` cells only. A plugin is not installed by writing a
+   * config store — it goes through the surface's own installer, or is
+   * unpacked. `changes` stays empty for these; the caller executes this
+   * instead of applying a transaction. Routed here rather than at each call
+   * site so the CLI, the desktop and `--dry-run` cannot drift apart.
+   */
+  plugin?: BrokerPlan;
 }
 
 function refuse(reason: string, loss: LossReport | null = null): CellActionPlan {
@@ -154,9 +175,17 @@ async function findEntry(
       projectRoot: opts.projectRoot,
       homeRoot: opts.homeRoot,
     });
-    const entry = result.entries.find(
+    const matches = result.entries.filter(
       (candidate) => candidate.kind === kind && candidate.name.toLowerCase() === wanted,
     );
+    // Ordering STORES project-first is not enough when one store's format
+    // emits both scopes — Claude Code declares plugins in a single user-scope
+    // store whose codec stamps each install's own scope. Without this the
+    // entry was whichever came first in the JSON, so the answer changed with
+    // file order and disagreed with the grid, which resolves the same way
+    // (`effectiveResource`: project beats user).
+    const entry =
+      matches.find((candidate) => candidate.scope === "project") ?? matches[0];
     if (entry) return { entry, path };
   }
   return null;
@@ -180,12 +209,49 @@ export async function planCellAction(
   }
   const loss = lossFor(request, found.entry, found.path);
 
-  // Kind-level refusals come FIRST. Whether a plugin goes through the
-  // surface's own installer has nothing to do with which file that surface
-  // keeps its install list in, and resolving the store first would answer a
-  // kind question with a store-shaped reason — telling the user "claude-code
-  // has no project-scope store for 'plugin'" while the grid, correctly,
-  // shows project-scope Claude Code plugin cells.
+  // Plugins do not go through the config-store write path at all: they go to
+  // the broker, which drives the surface's own installer. Routed here so
+  // every caller gets the same answer.
+  if (request.kind === "plugin") {
+    // The source entry knows which native scope it was installed at; carrying
+    // it through stops a private `local` install being reproduced as a
+    // committed `project` one.
+    const sourceNativeScope = (found.entry as { nativeScope?: unknown }).nativeScope;
+    const sourceInstallPath = (found.entry as { installPath?: unknown }).installPath;
+    const broker = planPluginAction({
+      surface: request.to,
+      identity: request.name,
+      scope: request.scope,
+      action: "install",
+      projectRoot: opts.projectRoot,
+      ...(typeof sourceNativeScope === "string" ? { nativeScope: sourceNativeScope } : {}),
+      ...(typeof sourceInstallPath === "string" ? { sourcePath: sourceInstallPath } : {}),
+    });
+    const usable =
+      broker.kind !== "unsupported" && broker.plan.supported === true;
+    const reason =
+      broker.kind === "unsupported"
+        ? broker.reason
+        : broker.plan.supported === false
+          ? broker.plan.reason
+          : undefined;
+    return {
+      supported: usable,
+      ...(reason !== undefined ? { reason } : {}),
+      changes: [],
+      noop: false,
+      carriesSecret: false,
+      loss,
+      requiresConfirmation: false,
+      value: found.entry.value,
+      source: { file: found.path, formatId: found.entry.provenance.formatId },
+      plugin: broker,
+    };
+  }
+
+  // Kind-level refusals come next. Whether a resource has a direct-write path
+  // has nothing to do with which file the target keeps it in, and resolving
+  // the store first would answer a kind question with a store-shaped reason.
   const kindReason = unsupportedKindReason(request.kind);
   if (kindReason !== null) {
     return {
@@ -232,6 +298,19 @@ export async function planCellAction(
 
   // A change whose after equals its before is not a change.
   const changes = written.changes.filter((change) => change.after !== change.before);
+
+  // AC-11's diff case. The target already holds this resource with DIFFERENT
+  // content, so this is not a copy into empty space — it replaces the
+  // target's version with the source's. That was deferred from M2 precisely
+  // because a one-click copy would silently pick a winner; the user still
+  // picks, but only after being told what they are overwriting, and the
+  // confirmation gate is the same one capability loss uses.
+  const existing = await findEntry(fs, request.to, request.kind, request.name, opts);
+  const overwrites =
+    changes.length > 0 && existing !== null
+      ? diffAgainstExisting(request.kind, existing.entry.value, found.entry.value)
+      : null;
+
   return {
     supported: true,
     changes,
@@ -239,7 +318,8 @@ export async function planCellAction(
     carriesSecret: containsSecret(found.entry.value),
     value: found.entry.value,
     loss,
-    requiresConfirmation: hasGenuineLoss(loss),
+    ...(overwrites !== null ? { overwrites } : {}),
+    requiresConfirmation: hasGenuineLoss(loss) || overwrites !== null,
     source,
     target,
   };
@@ -257,8 +337,57 @@ export function syncCliCommand(request: CellActionRequest): string {
     "harness-kit sync",
     `--from ${request.from}`,
     `--to ${request.to}`,
-    `--only ${request.kind}:${request.name}`,
+    `--only ${shellQuote(`${request.kind}:${request.name}`)}`,
     `--scope ${request.scope}`,
     "--yes",
   ].join(" ");
+}
+
+/**
+ * Quote a value for a command line a human will paste into a shell.
+ *
+ * The name comes from a file another tool wrote — a plugin identity is an
+ * arbitrary JSON key — and this string is printed as a runnable line by the
+ * CLI and rendered with a Copy button in the drawer. Unquoted, an identity
+ * containing `;` carries whatever follows it into the user's shell. That was
+ * survivable while plugin rows planned as `unavailable`; this milestone makes
+ * them `ready`, so the line is now presented as the action to take.
+ *
+ * Single quotes with the standard `'\''` escape: nothing inside them is
+ * interpreted by any POSIX shell.
+ */
+function shellQuote(value: string): string {
+  if (/^[A-Za-z0-9_@%+=:,./-]+$/.test(value)) return value;
+  return `'${value.replaceAll("'", `'\\''`)}'`;
+}
+
+/**
+ * What the target currently holds that the source would replace.
+ *
+ * Compared on CANONICAL forms, not raw values: two surfaces store the same
+ * MCP server in different native shapes, and a raw comparison would report
+ * every cross-surface copy as an overwrite. Canonicalizing also placeholders
+ * secrets, so a rotated token is not reported as a field about to be lost.
+ *
+ * Returns null when the forms agree — nothing is being replaced, even though
+ * the native bytes differ.
+ */
+function diffAgainstExisting(
+  kind: HarnessResourceKind,
+  existingValue: unknown,
+  incomingValue: unknown,
+): FieldDelta[] | null {
+  const canonical = (value: unknown): unknown =>
+    normalizeResource({
+      // The surface and name only affect fields this comparison ignores; the
+      // canonicalizer is selected by KIND, which is what must be right.
+      surface: "claude-code",
+      kind,
+      scope: "user",
+      name: "comparison",
+      value,
+      provenance: { file: "", formatId: "json-generic" },
+    }).canonicalForm;
+  const deltas = diffCanonicalForms(canonical(existingValue), canonical(incomingValue));
+  return deltas.length > 0 ? deltas : null;
 }

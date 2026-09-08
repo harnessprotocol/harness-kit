@@ -6,6 +6,7 @@ import { KIND_LABELS, shortDigest } from "./machine-view-model";
 import {
   applyCellActionViaTauri,
   buildCellAction,
+  divergentTargets,
   missingTargets,
   presentSources,
 } from "./cell-actions";
@@ -264,17 +265,21 @@ function RowActions({
   onApplied?: () => void;
 }) {
   const sources = presentSources(row);
+  const source = sources[0];
   // Engine gaps, not raw "absent" cells: a target that cannot receive this
   // resource (a plugin from a marketplace it has not registered) is absent
   // but not offerable.
-  const targets = missingTargets(row, gaps);
+  // Gap targets (nothing there) and diff targets (something different there)
+  // are different actions: the second replaces content, so it is listed
+  // separately and gated on an explicit acknowledgement below.
+  const gapTargets = missingTargets(row, gaps);
+  const diffTargets = source === undefined ? [] : divergentTargets(row, source);
+  const targets = [...gapTargets, ...diffTargets];
   const [target, setTarget] = useState<SurfaceId | "">(targets[0] ?? "");
   const [view, setView] = useState<CellActionView | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmedLoss, setConfirmedLoss] = useState(false);
-
-  const source = sources[0];
 
   useEffect(() => {
     setConfirmedLoss(false);
@@ -330,6 +335,13 @@ function RowActions({
   }
 
   const lossBlocked = view?.plan.requiresConfirmation === true && !confirmedLoss;
+  /**
+   * A plugin plan is `supported: true` — core CAN plan it, and the CLI can run
+   * it. The APP cannot: driving an installer needs a process-spawn bridge the
+   * webview does not have. Without this the button was live, threw on click,
+   * and showed its reason only after failing.
+   */
+  const appCannotRun = view?.plan.plugin !== undefined;
 
   return (
     <div style={{ marginTop: "auto", padding: "14px 18px 18px", display: "grid", gap: 10 }}>
@@ -360,17 +372,42 @@ function RowActions({
             type="checkbox"
             checked={confirmedLoss}
             onChange={(event) => setConfirmedLoss(event.target.checked)}
-            aria-label="Acknowledge capability loss"
+            aria-label={
+              view.plan.overwrites === undefined
+                ? "Acknowledge capability loss"
+                : "Acknowledge overwriting the target's version"
+            }
           />
-          <span>
-            {surfaceLabel(target as SurfaceId)} cannot fully express this:{" "}
-            {view.plan.loss?.losses.map((item) => item.detail).join("; ")}
-          </span>
+          {view.plan.overwrites === undefined ? (
+            <span>
+              {surfaceLabel(target as SurfaceId)} cannot fully express this:{" "}
+              {view.plan.loss?.losses.map((item) => item.detail).join("; ")}
+            </span>
+          ) : (
+            // AC-11 diff case. The target already has this resource with
+            // different content; naming each field is the whole point — the
+            // action was deferred from M2 because a one-click copy would
+            // silently pick a winner.
+            <span data-testid="overwrite-warning">
+              {surfaceLabel(target as SurfaceId)} already has this. Applying replaces its
+              version:{" "}
+              {view.plan.overwrites
+                .map((delta) => `${delta.path} (${delta.kind})`)
+                .join(", ")}
+            </span>
+          )}
         </label>
       )}
 
       {view && !view.plan.supported && (
         <p style={{ fontSize: 12, margin: 0 }}>{view.plan.reason}</p>
+      )}
+
+      {view && view.plan.supported && appCannotRun && (
+        <p style={{ fontSize: 12, margin: 0 }} data-testid="app-cannot-run">
+          Installing a plugin runs {surfaceLabel(target as SurfaceId)}&apos;s own installer, which
+          the app cannot do yet. Copy the CLI command below, or use the agent prompt.
+        </p>
       )}
 
       {view && (
@@ -381,7 +418,9 @@ function RowActions({
         <Button
           variant="primary"
           size="sm"
-          disabled={!view || !view.plan.supported || view.plan.noop || lossBlocked || busy}
+          disabled={
+            !view || !view.plan.supported || view.plan.noop || lossBlocked || busy || appCannotRun
+          }
           onClick={apply}
         >
           {view?.plan.noop ? "Up to date" : "Apply"}

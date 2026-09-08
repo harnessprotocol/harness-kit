@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { writeFile } from "node:fs/promises";
 import {
   applyCellAction,
+  applyPluginCellAction,
   buildAgentPrompt,
   buildMachineInventory,
   CellActionError,
@@ -21,14 +22,14 @@ import type {
   SurfaceScope,
   TransactionFileChange,
 } from "@harness-kit/core";
-import { NodeFsProvider } from "@harness-kit/core/node";
+import { NodeFsProvider, NodeProcessRunner } from "@harness-kit/core/node";
 import { defaultStatePath, SqliteStateStore } from "../state/sqlite-store.js";
 import { timestamp } from "./portability-common.js";
 
 export interface SurfaceSyncFlags {
   from?: string;
   to?: string[];
-  only?: string[];
+  only?: string | string[];
   scope?: string;
   dryRun?: boolean;
   yes?: boolean;
@@ -61,9 +62,19 @@ function assertSurface(value: string, flag: string): SurfaceId {
   return value as SurfaceId;
 }
 
-/** `--only mcp-server` or `--only mcp-server:postgres`. */
-function parseOnly(filters: string[] | undefined): Array<{ kind: string; name?: string }> {
-  return (filters ?? []).map((filter) => {
+/**
+ * `--only mcp-server` or `--only mcp-server:postgres`, one or many.
+ *
+ * Accepts a bare string as well as an array. Commander only treats an option
+ * as variadic when its value name is a plain identifier ending in `...`, and
+ * the declaration read `<kind[:name]...>` — so this arrived as a string and
+ * `.map` threw, crashing every `sync --only`. The declaration is fixed; this
+ * normalizes anyway, because a parser boundary should not depend on a
+ * framework's naming heuristics staying the same across versions.
+ */
+function parseOnly(filters: string | string[] | undefined): Array<{ kind: string; name?: string }> {
+  const list = filters === undefined ? [] : Array.isArray(filters) ? filters : [filters];
+  return list.map((filter) => {
     const [kind, ...rest] = filter.split(":");
     return { kind: kind!, name: rest.length > 0 ? rest.join(":") : undefined };
   });
@@ -131,6 +142,34 @@ export async function surfaceSyncCommand(flags: SurfaceSyncFlags): Promise<void>
     }
   }
 
+  // AC-11 covers "any gap OR diff". A diff is a row two surfaces both hold
+  // with different content; reconciling it REPLACES the target's version, so
+  // it is only ever offered with an explicit direction and, at apply time,
+  // the overwrite confirmation `planCellAction` attaches.
+  //
+  // Without this the desktop printed a `harness-kit sync --only …` command
+  // for every diff cell that silently did nothing, because the CLI walked
+  // only the gap list.
+  const seen = new Set(candidates.map((c) => `${c.kind}:${c.name}:${c.from}:${c.to}`));
+  for (const diff of inventory.diffs) {
+    const row = inventory.rows.find((candidate) => candidate.key === diff.row);
+    if (!row || !matchesOnly(only, row.kind, row.name)) continue;
+    // A diff pair is unordered; `--from` picks the winner. Without it there
+    // is no basis to choose, and guessing is what AC-11's deferral warned
+    // against — so an unfiltered run reports the diff and offers no action.
+    if (!from) continue;
+    const [left, right] = diff.surfaces;
+    if (left !== from && right !== from) continue;
+    const other = left === from ? right : left;
+    const targets = to.length > 0 ? [other].filter((surface) => to.includes(surface)) : [other];
+    for (const target of targets) {
+      const key = `${row.kind}:${row.name}:${from}:${target}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      candidates.push({ kind: row.kind, name: row.name, from, to: target });
+    }
+  }
+
   const actions: PlannedAction[] = [];
   for (const candidate of candidates) {
     const plan = await planCellAction(
@@ -182,6 +221,28 @@ export async function surfaceSyncCommand(flags: SurfaceSyncFlags): Promise<void>
     for (const action of actionable) {
       const stamp = timestamp();
       try {
+        // A plugin action drives the surface's own installer; there is no
+        // transaction, no preimage and no rollback point, because nothing
+        // HarnessKit owns was written. Routing it through the transaction
+        // path would apply an empty change set and report success.
+        if (action.plan.plugin !== undefined) {
+          const outcome = await applyPluginCellAction(action.plan, {
+            runner: new NodeProcessRunner(cwd),
+            fs,
+            now: new Date().toISOString(),
+            sourceSurface: action.from,
+            homeRoot: home,
+            surface: action.to,
+            identity: action.name,
+            ...(store ? { state: store } : {}),
+          });
+          if (outcome.status === "refused" || outcome.status === "failed") {
+            failed.push({ cli: action.cli, reason: outcome.reason });
+          } else {
+            applied.push(action.cli);
+          }
+          continue;
+        }
         const applyOptions = {
           homeRoot: home,
           ...(scope === "project" ? { projectRoot: cwd } : {}),
@@ -271,6 +332,12 @@ function report(actions: PlannedAction[], flags: SurfaceSyncFlags, scope: Surfac
     reason: action.plan.reason,
     carriesSecret: action.plan.carriesSecret,
     requiresConfirmation: action.plan.requiresConfirmation,
+    // Distinct from capability loss. "lossy" means the target cannot express
+    // the resource; an overwrite means it holds a DIFFERENT version that this
+    // action replaces. Both set requiresConfirmation, and reporting the
+    // second as the first told users the opposite of what was happening.
+    overwrites: action.plan.overwrites ?? null,
+    lossy: (action.plan.loss?.losses.length ?? 0) > 0,
     cli: action.cli,
   }));
 
@@ -286,12 +353,21 @@ function report(actions: PlannedAction[], flags: SurfaceSyncFlags, scope: Surfac
   for (const row of rows) {
     const badges = [
       row.carriesSecret ? "contains a secret" : null,
-      row.requiresConfirmation ? "lossy" : null,
+      row.lossy ? "lossy" : null,
+      row.overwrites ? `replaces ${row.overwrites.length} field(s)` : null,
     ].filter(Boolean);
     console.log(
       `  ${row.status.padEnd(11)} ${row.kind}:${row.name}  ${row.from} → ${row.to}${badges.length ? `  (${badges.join(", ")})` : ""}`,
     );
     if (row.reason) console.log(`              ${row.reason}`);
+    // AC-11: never replace content without naming what is replaced.
+    if (row.overwrites) {
+      for (const delta of row.overwrites) {
+        console.log(
+          `              replaces ${delta.path}: ${JSON.stringify(delta.left)} → ${JSON.stringify(delta.right)}`,
+        );
+      }
+    }
     console.log(`              ${row.cli}`);
   }
   console.log("\nRe-run with --yes to apply.");
