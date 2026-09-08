@@ -54,6 +54,26 @@ export function missingTargets(row: GridRow, gaps?: MachineGap[]): SurfaceId[] {
   return absent.filter((id) => reachable.has(id));
 }
 
+/**
+ * Surfaces that HAVE this row but with different content — the AC-11 diff
+ * case. Distinct from `missingTargets`: copying here replaces what is
+ * already there, so the drawer must present it as an overwrite and require
+ * an explicit confirmation, never as an ordinary gap-closing copy.
+ */
+export function divergentTargets(row: GridRow, from: SurfaceId): SurfaceId[] {
+  const source = row.cells[from];
+  if (source?.status !== "present" || source.effectiveDigest === undefined) return [];
+  return (Object.entries(row.cells) as Array<[SurfaceId, GridRow["cells"][SurfaceId]]>)
+    .filter(
+      ([id, cell]) =>
+        id !== from &&
+        cell.status === "present" &&
+        cell.effectiveDigest !== undefined &&
+        cell.effectiveDigest !== source.effectiveDigest,
+    )
+    .map(([id]) => id);
+}
+
 /** Surfaces this row is present on, as action sources. */
 export function presentSources(row: GridRow): SurfaceId[] {
   return (Object.entries(row.cells) as Array<[SurfaceId, GridRow["cells"][SurfaceId]]>)

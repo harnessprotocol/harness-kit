@@ -10,6 +10,9 @@ import { getSurface } from "../surfaces/registry.js";
 import type { ConfigStore, StoreFormatId, SurfaceId, SurfaceScope } from "../surfaces/types.js";
 import { isRecord } from "../utils/is-record.js";
 import { planStoreWrite, unsupportedKindReason } from "./write-store.js";
+import { diffCanonicalForms } from "../observe/machine-inventory.js";
+import type { FieldDelta } from "../observe/machine-inventory.js";
+import { normalizeResource } from "../observe/normalize.js";
 import { planPluginAction } from "../plugins/broker.js";
 import type { BrokerPlan } from "../plugins/broker.js";
 import type { PlannedFileChange } from "./write-store.js";
@@ -69,6 +72,14 @@ export interface CellActionPlan {
   value?: unknown;
   source?: { file: string; formatId: StoreFormatId };
   target?: { file: string; formatId: StoreFormatId };
+  /**
+   * AC-11 diff case: what the target currently holds that this action would
+   * replace. Present ONLY when the target already has the resource with
+   * different content — absent for a plain gap-closing copy, which overwrites
+   * nothing. A plan carrying this always sets `requiresConfirmation`, because
+   * the deferral that created it was about never silently choosing a winner.
+   */
+  overwrites?: FieldDelta[];
   /**
    * Set for `plugin` cells only. A plugin is not installed by writing a
    * config store — it goes through the surface's own installer, or is
@@ -272,6 +283,19 @@ export async function planCellAction(
 
   // A change whose after equals its before is not a change.
   const changes = written.changes.filter((change) => change.after !== change.before);
+
+  // AC-11's diff case. The target already holds this resource with DIFFERENT
+  // content, so this is not a copy into empty space — it replaces the
+  // target's version with the source's. That was deferred from M2 precisely
+  // because a one-click copy would silently pick a winner; the user still
+  // picks, but only after being told what they are overwriting, and the
+  // confirmation gate is the same one capability loss uses.
+  const existing = await findEntry(fs, request.to, request.kind, request.name, opts);
+  const overwrites =
+    changes.length > 0 && existing !== null
+      ? diffAgainstExisting(request.kind, existing.entry.value, found.entry.value)
+      : null;
+
   return {
     supported: true,
     changes,
@@ -279,7 +303,8 @@ export async function planCellAction(
     carriesSecret: containsSecret(found.entry.value),
     value: found.entry.value,
     loss,
-    requiresConfirmation: hasGenuineLoss(loss),
+    ...(overwrites !== null ? { overwrites } : {}),
+    requiresConfirmation: hasGenuineLoss(loss) || overwrites !== null,
     source,
     target,
   };
@@ -301,4 +326,35 @@ export function syncCliCommand(request: CellActionRequest): string {
     `--scope ${request.scope}`,
     "--yes",
   ].join(" ");
+}
+
+/**
+ * What the target currently holds that the source would replace.
+ *
+ * Compared on CANONICAL forms, not raw values: two surfaces store the same
+ * MCP server in different native shapes, and a raw comparison would report
+ * every cross-surface copy as an overwrite. Canonicalizing also placeholders
+ * secrets, so a rotated token is not reported as a field about to be lost.
+ *
+ * Returns null when the forms agree — nothing is being replaced, even though
+ * the native bytes differ.
+ */
+function diffAgainstExisting(
+  kind: HarnessResourceKind,
+  existingValue: unknown,
+  incomingValue: unknown,
+): FieldDelta[] | null {
+  const canonical = (value: unknown): unknown =>
+    normalizeResource({
+      // The surface and name only affect fields this comparison ignores; the
+      // canonicalizer is selected by KIND, which is what must be right.
+      surface: "claude-code",
+      kind,
+      scope: "user",
+      name: "comparison",
+      value,
+      provenance: { file: "", formatId: "json-generic" },
+    }).canonicalForm;
+  const deltas = diffCanonicalForms(canonical(existingValue), canonical(incomingValue));
+  return deltas.length > 0 ? deltas : null;
 }

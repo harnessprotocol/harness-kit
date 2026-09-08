@@ -13,6 +13,7 @@ import { computeMachineInventory } from "../src/observe/machine-inventory.js";
 import { getSurface, SURFACES } from "../src/surfaces/registry.js";
 import { isWritableFormat, planStoreWrite } from "../src/write/write-store.js";
 import { planCellAction } from "../src/write/plan-cell-action.js";
+import { applyCellAction } from "../src/write/apply-cell-action.js";
 import { MockFsProvider } from "./helpers/mock-fs.js";
 
 /**
@@ -799,5 +800,121 @@ describe("machine inventory: plugin rows join across surfaces", () => {
     // Empty for two different reasons — the flag is what separates them.
     expect(cursor?.marketplacesReadable).toBe(false);
     expect(cursor?.marketplaces).toEqual([]);
+  });
+});
+
+describe("AC-11 diff case: replacing what the target already has", () => {
+  // Deferred from M2 because a one-click copy would silently pick a winner.
+  // The user still picks — but only after being told what is replaced, and
+  // the plan cannot be applied without an explicit acknowledgement.
+  const SOURCE = JSON.stringify({
+    mcpServers: { postgres: { type: "stdio", command: "pg-mcp", args: ["--fast"] } },
+  });
+  const TARGET_DIFFERENT = JSON.stringify({
+    mcpServers: { postgres: { command: "pg-mcp", args: ["--slow"] } },
+  });
+  const TARGET_SAME = JSON.stringify({
+    mcpServers: { postgres: { command: "pg-mcp", args: ["--fast"] } },
+  });
+
+  const request = {
+    from: "claude-code" as const,
+    to: "cursor" as const,
+    kind: "mcp-server" as const,
+    name: "postgres",
+    scope: "user" as const,
+  };
+
+  function fsWith(cursorContent: string | null): MockFsProvider {
+    return new MockFsProvider(
+      {
+        [`${HOME}/.claude.json`]: SOURCE,
+        ...(cursorContent === null ? {} : { [`${HOME}/.cursor/mcp.json`]: cursorContent }),
+      },
+      PROJECT,
+      HOME,
+    );
+  }
+
+  it("names each field it would replace, and demands confirmation", async () => {
+    const plan = await planCellAction(fsWith(TARGET_DIFFERENT), request, OPTS);
+    expect(plan.supported).toBe(true);
+    expect(plan.overwrites).toBeDefined();
+    expect(plan.overwrites?.map((d) => d.path)).toEqual(["args[0]"]);
+    expect(plan.overwrites?.[0]).toMatchObject({ kind: "changed", left: "--slow", right: "--fast" });
+    expect(plan.requiresConfirmation).toBe(true);
+  });
+
+  it("a plain gap-closing copy overwrites nothing and needs no confirmation", async () => {
+    const plan = await planCellAction(fsWith(null), request, OPTS);
+    expect(plan.supported).toBe(true);
+    expect(plan.overwrites).toBeUndefined();
+    expect(plan.requiresConfirmation).toBe(false);
+  });
+
+  it("does not call a native-shape difference an overwrite", async () => {
+    // claude-code records `type: "stdio"`, cursor omits it. Writing the
+    // source still changes cursor's BYTES, so this is not a no-op — but it
+    // replaces nothing the user would recognise as their configuration, so
+    // it must not demand an overwrite confirmation. Comparing raw values
+    // instead of canonical ones would flag every cross-surface copy.
+    const plan = await planCellAction(fsWith(TARGET_SAME), request, OPTS);
+    expect(plan.overwrites).toBeUndefined();
+    expect(plan.requiresConfirmation).toBe(false);
+    expect(plan.changes.length).toBeGreaterThan(0);
+  });
+
+  it("ignores fields that are machine facts, not content (skillPath)", async () => {
+    // The case that makes canonicalization load-bearing rather than
+    // defensive. A skill's value carries the absolute path it was read from,
+    // which necessarily differs between two surfaces. Diffing raw values
+    // would report `skillPath` as a field the user is about to lose and
+    // demand confirmation for a copy that changes nothing.
+    const body = ["---", "name: reviewer", "---", "# Reviewer"].join("\n");
+    const fs = new MockFsProvider(
+      {
+        [`${HOME}/.claude/skills/reviewer/SKILL.md`]: body,
+        [`${HOME}/.cursor/skills/reviewer/SKILL.md`]: body,
+      },
+      PROJECT,
+      HOME,
+    );
+    const plan = await planCellAction(
+      fs,
+      { from: "claude-code", to: "cursor", kind: "skill", name: "reviewer", scope: "user" },
+      OPTS,
+    );
+    expect(plan.overwrites).toBeUndefined();
+    expect(plan.requiresConfirmation).toBe(false);
+  });
+
+  it("still reports a REAL skill difference as an overwrite", async () => {
+    const head = ["---", "name: reviewer", "---", ""].join("\n");
+    const fs = new MockFsProvider(
+      {
+        [`${HOME}/.claude/skills/reviewer/SKILL.md`]: `${head}# New body`,
+        [`${HOME}/.cursor/skills/reviewer/SKILL.md`]: `${head}# Old body`,
+      },
+      PROJECT,
+      HOME,
+    );
+    const plan = await planCellAction(
+      fs,
+      { from: "claude-code", to: "cursor", kind: "skill", name: "reviewer", scope: "user" },
+      OPTS,
+    );
+    expect(plan.overwrites?.map((d) => d.path)).toEqual(["content"]);
+    expect(plan.requiresConfirmation).toBe(true);
+  });
+
+  it("refuses to apply an unconfirmed overwrite", async () => {
+    const plan = await planCellAction(fsWith(TARGET_DIFFERENT), request, OPTS);
+    await expect(
+      applyCellAction(
+        plan,
+        { fs: fsWith(TARGET_DIFFERENT), timestamp: "t", roots: {} },
+        { homeRoot: HOME },
+      ),
+    ).rejects.toThrow(/loss-unconfirmed|confirm/i);
   });
 });

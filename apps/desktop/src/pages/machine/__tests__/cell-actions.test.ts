@@ -25,7 +25,7 @@ vi.mock("@harness-kit/core", async (importOriginal) => {
   return { ...actual, applyCellAction, recordAppliedTransaction };
 });
 
-const { applyCellActionViaTauri } = await import("../cell-actions");
+const { applyCellActionViaTauri, divergentTargets } = await import("../cell-actions");
 
 function view(changePath = "/home/user/.cursor/mcp.json") {
   return {
@@ -112,5 +112,45 @@ describe("applyCellActionViaTauri records a rollback point", () => {
     await applyCellActionViaTauri(view(), false);
     const call = applyCellAction.mock.calls[0] as unknown as unknown[];
     expect(call[2]).toMatchObject({ confirmed: false });
+  });
+});
+
+describe("divergentTargets (AC-11 diff case)", () => {
+  const cell = (status: string, digest?: string) => ({
+    status,
+    entries: [],
+    ...(digest === undefined ? {} : { effectiveDigest: digest }),
+  });
+
+  const row = {
+    key: "mcp-server:postgres",
+    kind: "mcp-server" as const,
+    name: "postgres",
+    cells: {
+      "claude-code": cell("present", "sha256:aaa"),
+      cursor: cell("present", "sha256:bbb"),
+      codex: cell("present", "sha256:aaa"),
+      "copilot-cli": cell("absent"),
+      pi: cell("not-applicable"),
+    },
+  } as never;
+
+  it("lists surfaces that HAVE the row with different content", () => {
+    expect(divergentTargets(row, "claude-code")).toEqual(["cursor"]);
+  });
+
+  it("excludes surfaces holding identical content", () => {
+    // codex matches claude-code's digest — nothing to reconcile.
+    expect(divergentTargets(row, "claude-code")).not.toContain("codex");
+  });
+
+  it("excludes absent and not-applicable cells, which are not diffs", () => {
+    const targets = divergentTargets(row, "claude-code");
+    expect(targets).not.toContain("copilot-cli");
+    expect(targets).not.toContain("pi");
+  });
+
+  it("returns nothing when the source itself is not present", () => {
+    expect(divergentTargets(row, "copilot-cli")).toEqual([]);
   });
 });
