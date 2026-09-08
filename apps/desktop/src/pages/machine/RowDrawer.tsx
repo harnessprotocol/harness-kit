@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Button } from "@harness-kit/ui";
+import { X } from "lucide-react";
 import type { GridRow, MachineDiff, MachineGap, SurfaceId } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
 import { KIND_LABELS, shortDigest } from "./machine-view-model";
@@ -123,7 +124,7 @@ export function RowDrawer({ row, diffs, gaps, onClose, onApplied }: RowDrawerPro
             fontSize: 13,
           }}
         >
-          ×
+          <X size={13} strokeWidth={1.7} aria-hidden="true" />
         </button>
       </div>
 

@@ -1,7 +1,7 @@
 import { useSearchParams } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Input, SummaryStrip, EmptyState, type SummaryCell } from "@harness-kit/ui";
-import { ScanSearch } from "lucide-react";
+import { ChevronDown, ChevronRight, ScanSearch } from "lucide-react";
 import type { GridRow, MachineInventory } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
 import { loadMachineInventory } from "./machine-data";
@@ -239,17 +239,12 @@ export default function MachinePage() {
                   cursor: "pointer",
                 }}
               >
-                <span
+                <ChevronRight
+                  size={10}
+                  strokeWidth={1.7}
                   aria-hidden="true"
-                  style={{
-                    display: "inline-block",
-                    transform: showSkipped ? "rotate(90deg)" : "none",
-                    transition: "transform 0.15s ease",
-                    fontSize: 9,
-                  }}
-                >
-                  ▶
-                </span>
+                  style={{ transform: showSkipped ? "rotate(90deg)" : "none", transition: "transform 0.15s ease" }}
+                />
                 Skipped diagnostics
                 <span
                   style={{
@@ -328,10 +323,14 @@ export default function MachinePage() {
             font: "inherit",
             fontSize: 13,
             fontWeight: 650,
-            color: "var(--fg)",
+            color: "var(--fg-base)",
           }}
         >
-          <span aria-hidden="true" style={{ opacity: 0.6 }}>{driftOpen ? "▾" : "▸"}</span>
+          {driftOpen ? (
+            <ChevronDown size={12} strokeWidth={1.7} aria-hidden="true" />
+          ) : (
+            <ChevronRight size={12} strokeWidth={1.7} aria-hidden="true" />
+          )}
           Drift from harness.yaml
         </button>
         {/*
