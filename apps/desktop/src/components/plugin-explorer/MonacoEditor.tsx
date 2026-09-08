@@ -68,7 +68,8 @@ interface MonacoEditorProps {
   filePath: string;
   content: string;
   onChange: (value: string) => void;
-  onSave: () => void;
+  /** When omitted, Monaco registers no Cmd+S action and the keystroke reaches the window. */
+  onSave?: () => void;
   readOnly?: boolean;
 }
 
@@ -81,13 +82,15 @@ export default function MonacoEditor({ filePath, content, onChange, onSave, read
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // Register Cmd+S save action
-    editor.addAction({
-      id: "harness-kit-save",
-      label: "Save File",
-      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
-      run: () => onSave(),
-    });
+    // Register Cmd+S save action only when the caller owns the save path
+    if (onSave) {
+      editor.addAction({
+        id: "harness-kit-save",
+        label: "Save File",
+        keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
+        run: () => onSave(),
+      });
+    }
 
     // Set initial theme
     monaco.editor.setTheme(getMonacoTheme());

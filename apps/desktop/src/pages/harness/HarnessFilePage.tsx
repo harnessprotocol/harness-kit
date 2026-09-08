@@ -344,7 +344,6 @@ export default function HarnessFilePage() {
                   filePath="harness.yaml"
                   content={editorContent}
                   onChange={setEditorContent}
-                  onSave={handleSave}
                 />
               </Suspense>
             </div>

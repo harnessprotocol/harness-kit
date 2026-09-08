@@ -268,7 +268,6 @@ function PreviewStep({
               filePath="harness.yaml"
               content={harnessYaml ?? ""}
               onChange={() => {}}
-              onSave={() => {}}
               readOnly
             />
           </div>

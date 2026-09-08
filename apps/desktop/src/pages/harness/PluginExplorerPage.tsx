@@ -44,13 +44,15 @@ export default function PluginExplorerPage() {
     }
   }, [explorer.selectedPath]);
 
-  // Keyboard shortcuts
+  // Window Cmd+S. Keystrokes inside Monaco are handled by its own save action
+  // (wired to requestSave via editorState.saveFile below), so skip them here
+  // to keep one keystroke from reaching two handlers.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
-        e.preventDefault();
-        explorer.requestSave();
-      }
+      if (!(e.metaKey || e.ctrlKey) || e.key !== "s") return;
+      if ((e.target as HTMLElement | null)?.closest?.(".monaco-editor")) return;
+      e.preventDefault();
+      explorer.requestSave();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -66,7 +68,8 @@ export default function PluginExplorerPage() {
     error: explorer.error,
     isDirty: explorer.dirty,
     updateContent: explorer.updateContent,
-    saveFile: explorer.saveFile,
+    // Toolbar Save and Monaco's Cmd+S both go through the confirmation path.
+    saveFile: async () => { explorer.requestSave(); },
     revertFile: explorer.revertFile,
     reload: () => {},
   }), [explorer]);
