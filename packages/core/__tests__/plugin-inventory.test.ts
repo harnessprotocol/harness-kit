@@ -13,6 +13,7 @@ import { computeMachineInventory } from "../src/observe/machine-inventory.js";
 import { getSurface, SURFACES } from "../src/surfaces/registry.js";
 import { isWritableFormat, planStoreWrite } from "../src/write/write-store.js";
 import { planCellAction } from "../src/write/plan-cell-action.js";
+import { buildAgentPrompt } from "../src/write/agent-prompt.js";
 import { applyCellAction } from "../src/write/apply-cell-action.js";
 import { MockFsProvider } from "./helpers/mock-fs.js";
 
@@ -800,6 +801,37 @@ describe("machine inventory: plugin rows join across surfaces", () => {
     // Empty for two different reasons — the flag is what separates them.
     expect(cursor?.marketplacesReadable).toBe(false);
     expect(cursor?.marketplaces).toEqual([]);
+  });
+});
+
+describe("the agent prompt for a plugin names the installer", () => {
+  it("hands over the invocation instead of describing a file to edit", async () => {
+    // The generic prompt told an agent to reproduce the install RECORD by
+    // hand — exactly what leaves that record and the surface's cache
+    // disagreeing, which the rest of this codebase refuses to do.
+    const fs = new MockFsProvider(
+      {
+        [`${HOME}/.claude/plugins/installed_plugins.json`]: INSTALLED_PLUGINS,
+        [`${HOME}/.claude/settings.json`]: CLAUDE_SETTINGS,
+      },
+      PROJECT,
+      HOME,
+    );
+    const request = {
+      from: "claude-code" as const,
+      to: "codex" as const,
+      kind: "plugin" as const,
+      name: "board@harness-kit",
+      scope: "user" as const,
+    };
+    const plan = await planCellAction(fs, request, OPTS);
+    const prompt = buildAgentPrompt(plan, request);
+
+    expect(prompt).toContain("codex plugin add board@harness-kit");
+    expect(prompt).toContain("Do NOT edit the install record by hand");
+    // The generic phrasing must not leak into the plugin case.
+    expect(prompt).not.toContain("Definition to reproduce");
+    expect(prompt).not.toContain("its own configuration");
   });
 });
 

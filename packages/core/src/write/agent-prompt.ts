@@ -120,6 +120,45 @@ export function buildAgentPrompt(
   const value = reveal ? plan.value : sanitize(plan.value);
   const targetFile = plan.target?.file ?? "its own configuration";
 
+  // A plugin is installed by the surface's own installer, never by editing
+  // its config. The generic prompt below would tell an agent to reproduce the
+  // install RECORD by hand, which is precisely what leaves that record and
+  // the tool's cache disagreeing — the thing the rest of this codebase
+  // refuses to do. The broker already computed the exact invocation; hand it
+  // over instead of describing a file to edit.
+  if (request.kind === "plugin") {
+    const invocation =
+      plan.plugin !== undefined &&
+      plan.plugin.kind === "native" &&
+      plan.plugin.plan.supported
+        ? plan.plugin.plan.display
+        : null;
+    const pluginLines = [
+      `Install the plugin "${request.name}" on ${target.label}.`,
+      "",
+      `It is already installed on ${source.label} and missing from ${target.label}.`,
+      "",
+      ...(invocation !== null
+        ? [
+            `Run ${target.label}'s own installer:`,
+            "```sh",
+            invocation,
+            "```",
+            "",
+            "Do NOT edit the install record by hand — the surface keeps a cache alongside it, and editing one without the other leaves them disagreeing.",
+          ]
+        : [
+            `${target.label} has no installer HarnessKit can name for this. Use ${target.label}'s documented way of installing a plugin; do not hand-edit its install record, which would leave it disagreeing with the surface's own cache.`,
+          ]),
+      "",
+      `Scope: ${request.scope === "user" ? "user/global (applies everywhere)" : "this project only"}`,
+    ];
+    if (!plan.supported && plan.reason) {
+      pluginLines.push("", `Note: ${plan.reason}`);
+    }
+    return pluginLines.join("\n");
+  }
+
   const lines = [
     `Add the ${request.kind} "${request.name}" to ${target.label}.`,
     "",

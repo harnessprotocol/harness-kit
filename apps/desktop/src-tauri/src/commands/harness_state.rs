@@ -341,12 +341,39 @@ pub struct DriftAck {
 /// app hang on launch. Far above any plausible acknowledgement count.
 const MAX_MIGRATED_ACKS: usize = 10_000;
 
+/// Bound what a webview can put in an acknowledgement, the same way
+/// `validate_record` bounds the ledger. The comment there once said the
+/// ledger "was the outlier" for taking webview-supplied strings — it stopped
+/// being true the moment these commands landed, and without a cap ten rows
+/// grew the SHARED database (which the CLI also opens) past 100 MB.
+fn validate_ack(ack: &DriftAck) -> Result<(), String> {
+    let fields = [
+        ("scopeRoot", &ack.scope_root),
+        ("adapter", &ack.adapter),
+        ("path", &ack.path),
+        ("harnessName", &ack.harness_name),
+        ("slot", &ack.slot),
+        ("acknowledgedAt", &ack.acknowledged_at),
+    ];
+    for (name, value) in fields {
+        if value.len() > MAX_FIELD_BYTES {
+            return Err(format!("{} exceeds {} bytes", name, MAX_FIELD_BYTES));
+        }
+    }
+    Ok(())
+}
+
+/// Cap what `list_drift_acknowledgements` will materialize. A caller that
+/// somehow accumulated more has a problem the UI cannot render anyway.
+const MAX_LISTED_ACKS: usize = 10_000;
+
 #[tauri::command]
 pub fn acknowledge_drift(ack: DriftAck) -> Result<(), String> {
     acknowledge_drift_at(&state_path()?, ack)
 }
 
 pub(crate) fn acknowledge_drift_at(path: &std::path::Path, ack: DriftAck) -> Result<(), String> {
+    validate_ack(&ack)?;
     let conn = open_at(path)?;
     conn.execute(
         "INSERT INTO drift_acknowledgements \
@@ -373,6 +400,7 @@ pub fn unacknowledge_drift(ack: DriftAck) -> Result<(), String> {
 }
 
 pub(crate) fn unacknowledge_drift_at(path: &std::path::Path, ack: DriftAck) -> Result<(), String> {
+    validate_ack(&ack)?;
     let conn = open_at(path)?;
     conn.execute(
         "DELETE FROM drift_acknowledgements \
@@ -396,11 +424,11 @@ pub(crate) fn list_drift_acknowledgements_at(
     let mut statement = conn
         .prepare(
             "SELECT scope_root, adapter, path, harness_name, slot, acknowledged_at \
-             FROM drift_acknowledgements",
+             FROM drift_acknowledgements LIMIT ?1",
         )
         .map_err(|e| format!("Failed to read acknowledgements: {}", e))?;
     let rows = statement
-        .query_map([], |row| {
+        .query_map([MAX_LISTED_ACKS as i64], |row| {
             Ok(DriftAck {
                 scope_root: row.get(0)?,
                 adapter: row.get(1)?,
@@ -474,6 +502,11 @@ pub(crate) fn migrate_drift_acknowledgements_at(
     let mut pending: Vec<DriftAck> = Vec::new();
     for row in rows {
         let ack = row.map_err(|e| format!("Failed to read a legacy acknowledgement: {}", e))?;
+        // The legacy database is as untrusted as the webview: skip an
+        // oversized row rather than copying it into the shared store.
+        if validate_ack(&ack).is_err() {
+            continue;
+        }
         pending.push(ack);
         if pending.len() >= MAX_MIGRATED_ACKS {
             break;
@@ -665,6 +698,56 @@ mod tests {
             .expect("seed legacy row");
         }
         path
+    }
+
+    #[test]
+    fn refuses_an_oversized_acknowledgement_field() {
+        // The shared harness.db is opened by the CLI too; an unbounded write
+        // from the webview grew it past 100 MB in ten rows.
+        let state = scratch("ack-bounds");
+        let mut ack = DriftAck {
+            scope_root: "/repo".into(),
+            adapter: "claude-code".into(),
+            path: "CLAUDE.md".into(),
+            harness_name: "reviewer".into(),
+            slot: "instructions".into(),
+            acknowledged_at: "2026-09-07T00:00:00Z".into(),
+        };
+        assert!(acknowledge_drift_at(&state, ack.clone()).is_ok());
+
+        ack.scope_root = "x".repeat(MAX_FIELD_BYTES + 1);
+        let err = acknowledge_drift_at(&state, ack.clone()).unwrap_err();
+        assert!(err.contains("scopeRoot"), "unexpected error: {}", err);
+
+        // And the same bound applies to the withdraw path.
+        assert!(unacknowledge_drift_at(&state, ack).is_err());
+    }
+
+    #[test]
+    fn a_hostile_legacy_row_is_skipped_rather_than_copied() {
+        let state = scratch("ack-hostile");
+        let legacy = scratch("ack-hostile-legacy");
+        let conn = rusqlite::Connection::open(&legacy).expect("open legacy");
+        conn.execute_batch(
+            "CREATE TABLE drift_acknowledgements (
+                scope_root TEXT NOT NULL, adapter TEXT NOT NULL, path TEXT NOT NULL,
+                harness_name TEXT NOT NULL, slot TEXT NOT NULL, acknowledged_at TEXT NOT NULL,
+                PRIMARY KEY (scope_root, adapter, path, harness_name, slot))",
+        )
+        .expect("create");
+        conn.execute(
+            "INSERT INTO drift_acknowledgements VALUES (?1, 'a', 'p', 'h', 's', 't')",
+            rusqlite::params!["x".repeat(MAX_FIELD_BYTES + 1)],
+        )
+        .expect("seed oversized");
+        conn.execute(
+            "INSERT INTO drift_acknowledgements VALUES ('/ok', 'a', 'p', 'h', 's', 't')",
+            [],
+        )
+        .expect("seed fine");
+        drop(conn);
+
+        assert_eq!(migrate_drift_acknowledgements_at(&state, &legacy).unwrap(), 1);
     }
 
     #[test]

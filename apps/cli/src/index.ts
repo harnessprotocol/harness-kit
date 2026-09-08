@@ -153,7 +153,10 @@ program
   .option("--only <kind...>", "Only these resource kinds, or one named resource (kind, or kind:name)")
   .option("--scope <scope>", "user (default) or project", "user")
   .option("--dry-run", "Report proposed actions without writing (the default)")
-  .option("--yes", "Apply the proposed actions")
+  .option(
+    "--yes",
+    "Apply the proposed actions. For plugin rows this RUNS the target surface's own installer",
+  )
   .option("--json", "Output machine-readable JSON")
   .option("--prompt", "Generate agent prompts for the selected actions instead of applying")
   .option("--out <path>", "Also write generated prompts to this file")
@@ -173,6 +176,11 @@ Examples:
   harness-kit sync --from claude-code --to cursor     One direction
   harness-kit sync --only mcp-server:postgres --yes   Apply one resource
   harness-kit sync --to pi --prompt                   Agent prompts for cells we cannot write
+
+Plugin rows are applied by running the target surface's own installer
+(claude plugin install / codex plugin add / copilot plugin install), not by
+editing its config. Filter with --only before --yes if you would rather not
+spawn one per gap.
 
 Note: plugin installation moved to 'harness-kit install' in v0.2.`,
   )

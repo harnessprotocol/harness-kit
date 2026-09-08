@@ -128,7 +128,11 @@ export function planNativePluginAction(
     request.action === "install" ? installer.installSelector : installer.uninstallSelector;
   const selector = selectorKind === "identity" ? request.identity : identity.name;
 
-  // Observed data becomes argv here and nowhere else.
+  // Observed data becomes argv here. The selector is the field an attacker
+  // most obviously controls, but it is not the only one: `binary`, the verb
+  // args, the scope flag and its values all come from a descriptor, and the
+  // definitions bundle deliberately accepts descriptors from a remote feed
+  // (M4). Everything that is not a fixed literal in this repo gets checked.
   assertSafeArgs([selector]);
 
   const args: string[] = [...verbArgs, selector];
@@ -144,6 +148,10 @@ export function planNativePluginAction(
         reason: `${installer.binary} cannot install at ${request.scope} scope.`,
       };
     }
+    // The scope VALUE can come from observed data via `nativeScope`. The flag
+    // itself is descriptor data and legitimately starts with `-`, so it is
+    // exempt by construction rather than by omission.
+    assertSafeArgs([value]);
     args.push(installer.scope.flag, value);
   } else if (request.scope === "project") {
     // Silently installing at user scope when the user asked for project

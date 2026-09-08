@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { planPluginAction, executePluginAction } from "../src/plugins/broker.js";
 import type { ExecuteOptions } from "../src/plugins/broker.js";
 import { planNativePluginAction } from "../src/plugins/installer.js";
+import { compareVersions as compareVersionsForTest } from "../src/plugins/unpack.js";
 import { getSurface } from "../src/surfaces/registry.js";
 import type { ProcessCommand, ProcessResult, ProcessRunner } from "../src/process-runner.js";
 import { MockFsProvider } from "./helpers/mock-fs.js";
@@ -359,6 +360,75 @@ describe("unpack driver (AC-19)", () => {
     });
     expect(outcome.status).toBe("refused");
     expect(outcome.status === "refused" ? outcome.reason : "").toContain("no skills to unpack");
+  });
+
+  it("refuses to write through a symlink planted in the skills tree", async () => {
+    // The guard the transaction engine applies and that writing directly
+    // would otherwise lose. One symlink inside a skills directory — from
+    // another installer, synced dotfiles, a previously unpacked plugin —
+    // would turn "unpack a plugin" into a write to any reachable path.
+    const cache = `${HOME}/.claude/plugins/cache/harness-kit/board/0.2.0`;
+    const fs = new MockFsProvider(
+      { [`${cache}/skills/review/SKILL.md`]: "# review" },
+      PROJECT,
+      HOME,
+    );
+    (fs as unknown as { isSymlink: (p: string) => Promise<boolean> }).isSymlink = async (
+      candidate: string,
+    ) => candidate === `${HOME}/.config/opencode/skills/board`;
+
+    const outcome = await executePluginAction(planPluginAction(request), {
+      runner: new FakeRunner(),
+      fs,
+      now: "2026-09-07T00:00:00.000Z",
+      homeRoot: HOME,
+      sourceSurface: "claude-code",
+    });
+    expect(outcome.status).toBe("failed");
+    expect(outcome.status === "failed" ? outcome.reason : "").toContain("symbolic link");
+  });
+
+  it("reports an IO failure instead of throwing, per the never-throws contract", async () => {
+    const cache = `${HOME}/.claude/plugins/cache/harness-kit/board/0.2.0`;
+    const fs = new MockFsProvider(
+      { [`${cache}/skills/review/SKILL.md`]: "# review" },
+      PROJECT,
+      HOME,
+    );
+    (fs as unknown as { writeFile: () => Promise<void> }).writeFile = async () => {
+      throw new Error("EISDIR: illegal operation on a directory");
+    };
+    const outcome = await executePluginAction(planPluginAction(request), {
+      runner: new FakeRunner(),
+      fs,
+      now: "2026-09-07T00:00:00.000Z",
+      homeRoot: HOME,
+      sourceSurface: "claude-code",
+    });
+    expect(outcome.status).toBe("failed");
+    expect(outcome.status === "failed" ? outcome.reason : "").toContain("EISDIR");
+  });
+
+  it("refuses a source surface whose contents it cannot actually read", async () => {
+    // Only Claude Code caches plugin contents on disk. Accepting `codex` and
+    // silently shipping Claude Code's bytes under its name is worse than
+    // refusing — the user picked a surface and would get another vendor's files.
+    const outcome = await executePluginAction(planPluginAction(request), {
+      ...options(new FakeRunner()),
+      sourceSurface: "codex",
+    });
+    expect(outcome.status).toBe("refused");
+    expect(outcome.status === "refused" ? outcome.reason : "").toContain("only claude-code");
+  });
+
+  it("prefers a release over its prerelease", () => {
+    // `1.0.0-beta.1` must rank BELOW `1.0.0`; splitting on `-` as just another
+    // separator ranked it above, unpacking a version nobody is running.
+    const order = ["1.0.0", "1.0.0-beta.1", "0.10.0", "0.9.0", "2.1.0-rc.1", "2.1.0"];
+    const sorted = [...order].sort(compareVersionsForTest);
+    expect(sorted[sorted.length - 1]).toBe("2.1.0");
+    expect(sorted.indexOf("1.0.0")).toBeGreaterThan(sorted.indexOf("1.0.0-beta.1"));
+    expect(sorted.indexOf("0.10.0")).toBeGreaterThan(sorted.indexOf("0.9.0"));
   });
 
   it("says out loud that uninstall needs the recorded file list", async () => {

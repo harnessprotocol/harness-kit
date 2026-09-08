@@ -242,6 +242,23 @@ function validateStringArray(value: unknown, path: string): string[] {
   return value.map((item, i) => requireString(item, `${path}[${i}]`));
 }
 
+/**
+ * The fixed argv that precedes the selector. These are subcommand verbs
+ * (`plugin`, `install`); an entry starting with `-` would be an option a
+ * bundle author chose for us, which is how `["-c", "…"]` becomes a shell.
+ */
+function validateVerbArgs(value: unknown, path: string): string[] {
+  const args = validateStringArray(value, path);
+  args.forEach((argument, index) => {
+    if (argument.startsWith("-") || argument.length === 0) {
+      fail(
+        `${path}[${index}] must be a subcommand verb, not an option (got ${JSON.stringify(argument)})`,
+      );
+    }
+  });
+  return args;
+}
+
 function validateSelector(value: unknown, path: string): PluginSelector {
   const raw = requireString(value, path);
   if (raw !== "identity" && raw !== "name") {
@@ -256,11 +273,22 @@ function validatePluginInstall(value: unknown, path: string): PluginInstallModel
   if (value.kind !== "native") {
     fail(`${path}.kind must be "native" or "unpack" (got ${describe(value.kind)})`);
   }
+  // A bundle is fetched from a remote feed (M4) and every field below reaches
+  // argv. Type-checking them as strings is not enough: `binary: "/bin/sh"`
+  // with `installArgs: ["-c", "…"]` is a valid shape and arbitrary execution.
+  // The binary must be a bare command name resolved on PATH, and the fixed
+  // verb args must be verbs, not options.
+  const binary = requireString(value.binary, `${path}.binary`);
+  if (/[\\/]/.test(binary) || binary.startsWith("-") || binary.length === 0) {
+    fail(
+      `${path}.binary must be a bare executable name, not a path or an option (got ${JSON.stringify(binary)})`,
+    );
+  }
   const model: PluginInstallModel = {
     kind: "native",
-    binary: requireString(value.binary, `${path}.binary`),
-    installArgs: validateStringArray(value.installArgs, `${path}.installArgs`),
-    uninstallArgs: validateStringArray(value.uninstallArgs, `${path}.uninstallArgs`),
+    binary,
+    installArgs: validateVerbArgs(value.installArgs, `${path}.installArgs`),
+    uninstallArgs: validateVerbArgs(value.uninstallArgs, `${path}.uninstallArgs`),
     installSelector: validateSelector(value.installSelector, `${path}.installSelector`),
     uninstallSelector: validateSelector(value.uninstallSelector, `${path}.uninstallSelector`),
   };

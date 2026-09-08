@@ -1,4 +1,5 @@
 import type { FsProvider } from "../fs-provider.js";
+import { assertNoSymlinkBoundary } from "../portability/transaction.js";
 import type { SurfaceDescriptor } from "../surfaces/types.js";
 import type { PluginBrokerRequest, ExecuteOptions, PluginActionOutcome } from "./broker.js";
 
@@ -84,10 +85,18 @@ export function planUnpackAction(
             "that record is written by this milestone but not yet read back.",
         };
       }
-      if (options.sourceSurface === undefined) {
+      // Only Claude Code's cache holds unpacked plugin contents on disk, and
+      // `resolvePluginRoot` reads exactly that. Accepting any other source and
+      // silently shipping Claude Code's bytes under its name would be worse
+      // than refusing: the user picked a surface and would get another
+      // vendor's files.
+      if (options.sourceSurface !== "claude-code") {
         return {
           status: "refused",
-          reason: "unpacking needs a source surface to copy the plugin's contents from.",
+          reason:
+            options.sourceSurface === undefined
+              ? "unpacking needs a source surface to copy the plugin's contents from."
+              : `only claude-code caches plugin contents on disk; HarnessKit cannot unpack from ${options.sourceSurface}.`,
         };
       }
       const source = await resolvePluginRoot(options, request);
@@ -102,7 +111,20 @@ export function planUnpackAction(
         return { status: "refused", reason: `no ${request.scope} root to unpack into.` };
       }
       const destination = options.fs.joinPath(root, store.path, pluginName);
-      const written = await copySkills(options.fs, source, destination);
+      let written: string[];
+      try {
+        written = await copySkills(options.fs, root, source, destination);
+      } catch (error) {
+        // The contract is "never throws for an ordinary failure". A refusal or
+        // an IO error mid-copy is ordinary — and the files already written are
+        // reported so the caller can record and later remove them, rather than
+        // being orphaned untracked on disk.
+        const message = error instanceof Error ? error.message : String(error);
+        return {
+          status: "failed",
+          reason: `unpacking ${request.identity} stopped: ${message}`,
+        };
+      }
       if (written.length === 0) {
         return {
           status: "refused",
@@ -148,13 +170,25 @@ async function resolvePluginRoot(
   return options.fs.joinPath(base, chosen);
 }
 
-/** Copy every SKILL.md tree from the plugin into the destination. */
+/**
+ * Copy every SKILL.md tree from the plugin into the destination.
+ *
+ * `root` anchors the symlink check. Validating the plugin name and each skill
+ * entry as safe segments stops traversal through the NAMES; it says nothing
+ * about the destination directory itself, and a single symlink planted inside
+ * a skills tree — by another installer, by synced dotfiles, by a previously
+ * unpacked plugin — would otherwise redirect these writes to any path the
+ * user can reach. This is the guard the transaction engine applies and that
+ * writing directly would otherwise lose.
+ */
 async function copySkills(
   fs: FsProvider,
+  root: string,
   pluginRoot: string,
   destination: string,
 ): Promise<string[]> {
   const written: string[] = [];
+  const prefix = root.endsWith("/") ? root : `${root}/`;
   for (const directory of PLUGIN_SKILL_DIRS) {
     const source = fs.joinPath(pluginRoot, directory);
     if (!(await fs.isDirectory(source))) continue;
@@ -164,12 +198,26 @@ async function copySkills(
       if (!(await fs.exists(skillFile))) continue;
       const content = await fs.readFile(skillFile);
       const target = fs.joinPath(destination, entry, "SKILL.md");
+      if (!target.startsWith(prefix)) {
+        throw new UnpackRefused(`refusing to write outside ${root}: ${target}`);
+      }
+      // Checked per file, AFTER any mkdir a previous iteration performed, so
+      // a symlink appearing mid-run is caught rather than followed.
+      await assertNoSymlinkBoundary(fs, root, target.slice(prefix.length));
       await fs.mkdir(fs.dirname(target), { recursive: true });
       await fs.writeFile(target, content);
       written.push(target);
     }
   }
   return written;
+}
+
+/** A refusal the driver reports rather than throwing out of the broker. */
+export class UnpackRefused extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "UnpackRefused";
+  }
 }
 
 /**
@@ -179,11 +227,23 @@ async function copySkills(
  * plugin cache actually holds; not a full semver implementation, and it does
  * not need to be.
  */
-function compareVersions(left: string, right: string): number {
-  const parts = (value: string): Array<number | string> =>
-    value.split(/[.-]/).map((segment) => (/^\d+$/.test(segment) ? Number(segment) : segment));
-  const a = parts(left);
-  const b = parts(right);
+export function compareVersions(left: string, right: string): number {
+  // Split the release from any prerelease tag FIRST. Treating `-` as just
+  // another separator makes `1.0.0-beta.1` sort above `1.0.0`, which is the
+  // same class of wrong as the lexical ordering this replaced: it unpacks a
+  // version the user is not running.
+  const split = (value: string): { release: Array<number | string>; pre: string | null } => {
+    const dash = value.indexOf("-");
+    const release = dash === -1 ? value : value.slice(0, dash);
+    return {
+      release: release.split(".").map((segment) => (/^\d+$/.test(segment) ? Number(segment) : segment)),
+      pre: dash === -1 ? null : value.slice(dash + 1),
+    };
+  };
+  const leftParts = split(left);
+  const rightParts = split(right);
+  const a = leftParts.release;
+  const b = rightParts.release;
   for (let index = 0; index < Math.max(a.length, b.length); index += 1) {
     const x = a[index];
     const y = b[index];
@@ -195,5 +255,9 @@ function compareVersions(left: string, right: string): number {
       return String(x) < String(y) ? -1 : 1;
     }
   }
-  return 0;
+  // Same release: a prerelease ranks below the release it precedes.
+  if (leftParts.pre === rightParts.pre) return 0;
+  if (leftParts.pre === null) return 1;
+  if (rightParts.pre === null) return -1;
+  return leftParts.pre < rightParts.pre ? -1 : 1;
 }
