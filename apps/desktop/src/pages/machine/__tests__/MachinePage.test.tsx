@@ -294,6 +294,17 @@ function NavigateTo({ to }: { to: string }) {
   return null;
 }
 
+// A sidebar stand-in: navigates only when clicked, so the test controls
+// whether the grid is already on screen when the request arrives.
+function NavigateOnClick({ to }: { to: string }) {
+  const navigate = useNavigate();
+  return (
+    <button type="button" onClick={() => navigate(to)}>
+      go to drift
+    </button>
+  );
+}
+
 function renderPage() {
   return render(
     <MemoryRouter>
@@ -510,6 +521,36 @@ describe("MachinePage", () => {
       expect(scrollIntoView).toHaveBeenCalledTimes(1);
     } finally {
       // jsdom has no scrollIntoView of its own, so deleting is the restore.
+      delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+    }
+  });
+
+  it("scrolls the Drift section into view when requested after the scan has already rendered", async () => {
+    // The sidebar path: the user is on Machine, the scan is done, and clicks
+    // Drift (or presses ⌘4). `loading` does not change here, so a scroll
+    // keyed on it alone never fires; the armed flag then went off on the
+    // next Refresh and yanked the page.
+    const scrollIntoView = vi.fn();
+    Element.prototype.scrollIntoView = scrollIntoView;
+    try {
+      render(
+        <MemoryRouter initialEntries={["/machine"]}>
+          <NavigateOnClick to="/machine?drift=1" />
+          <MachinePage />
+        </MemoryRouter>,
+      );
+      await screen.findByTestId("machine-grid");
+      expect(scrollIntoView).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole("button", { name: "go to drift" }));
+      await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
+      expect(scrollIntoView.mock.contexts[0]).toBe(screen.getByTestId("machine-drift-section"));
+
+      // Consumed once: a later Refresh must not scroll again.
+      fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+      await waitFor(() => expect(screen.getByRole("button", { name: "Refresh" })).toBeEnabled());
+      expect(scrollIntoView).toHaveBeenCalledTimes(1);
+    } finally {
       delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
     }
   });

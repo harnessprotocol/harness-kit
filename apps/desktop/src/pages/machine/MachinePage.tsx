@@ -41,12 +41,19 @@ export default function MachinePage() {
     }
   }, [driftRequested]);
   useEffect(() => {
-    // Scroll only after the scan above has rendered, otherwise the grid
-    // appears afterwards and pushes the section back below the fold.
+    // Consumes the request once the scan is not loading: immediately when the
+    // user is already on Machine, after the first scan on a cold mount. The
+    // layout signal is `loading`, which flips in the same batch that renders
+    // the grid; scrolling before that lands on a layout the grid then pushes
+    // below the fold. Keyed on both signals: a ref write schedules nothing,
+    // so keying on `loading` alone missed the sidebar path and fired the
+    // armed flag on the next Refresh instead. Consumed once, so a later
+    // Refresh does not yank the page back here. On a failed scan the section
+    // still scrolls: the user asked for Drift.
     if (!driftScrollPending.current || loading) return;
     driftScrollPending.current = false;
     driftSectionRef.current?.scrollIntoView?.({ block: "start" });
-  }, [loading]);
+  }, [driftRequested, loading]);
   const [selectedRow, setSelectedRow] = useState<GridRow | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
   const [projectDegraded, setProjectDegraded] = useState(false);
