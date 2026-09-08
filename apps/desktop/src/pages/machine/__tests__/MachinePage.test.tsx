@@ -69,19 +69,21 @@ vi.mock("../../../lib/tauri", () => ({
   grantProjectScope: (...args: unknown[]) => mockGrantProjectScope(...args),
 }));
 
-// The drawer's action strip. The real module plans through core's engine and
-// writes through Tauri; here it just has to render an enabled Apply and
-// report a successful apply so the page's onApplied wiring can be asserted.
-vi.mock("../cell-actions", () => ({
-  presentSources: vi.fn(() => ["claude-code"]),
-  missingTargets: vi.fn(() => ["cursor"]),
-  divergentTargets: vi.fn(() => []),
-  buildCellAction: vi.fn(async () => ({
-    request: { kind: "skill", name: "reviewer", from: "claude-code", to: "cursor", scope: "user" },
-    plan: { supported: true, noop: false, requiresConfirmation: false, changes: [] },
-    cli: "harness-kit sync --from claude-code --to cursor --only skill/reviewer",
-    prompt: "Install skill reviewer on Cursor.",
-  })),
+// The drawer's action strip. The selectors (presentSources, missingTargets,
+// divergentTargets) stay real so the drawer offers the targets the fixture's
+// gaps actually allow. Only the two that plan through core's engine and
+// write through Tauri are replaced: they render an enabled Apply and report
+// a successful apply so the page's onApplied wiring can be asserted.
+vi.mock("../cell-actions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../cell-actions")>()),
+  buildCellAction: vi.fn(
+    async (row: { key: string; kind: string; name: string }, from: string, to: string) => ({
+      request: { kind: row.kind, name: row.name, from, to, scope: "user" },
+      plan: { supported: true, noop: false, requiresConfirmation: false, changes: [] },
+      cli: `harness-kit sync --from ${from} --to ${to} --only ${row.key.replace(":", "/")}`,
+      prompt: `Install ${row.kind} ${row.name} on ${to}.`,
+    }),
+  ),
   applyCellActionViaTauri: vi.fn(async () => ({ written: [] })),
 }));
 
@@ -559,16 +561,49 @@ describe("MachinePage", () => {
   it("rescans after a successful apply so the grid reflects the write", async () => {
     // AC-16. Without this the cell still read "absent" after a write until
     // the user clicked Refresh.
+    //
+    // mcp-server:postgres is the fixture's only engine gap (missingOn codex),
+    // so the real missingTargets offers codex as the default target. The
+    // second scan is the same fixture with that one cell written.
+    const before = makeInventory();
+    const after = makeInventory();
+    const postgres = after.rows.find((row) => row.key === "mcp-server:postgres")!;
+    postgres.cells.codex = {
+      status: "present",
+      effectiveDigest: "sha256:abc1234567",
+      entries: [
+        {
+          scope: "user",
+          digest: "sha256:abc1234567",
+          provenance: { file: "/home/user/.codex/config.toml", formatId: "toml-codex-mcp" },
+        },
+      ],
+    };
+    after.gaps = [];
+    vi.mocked(buildMachineInventory)
+      .mockResolvedValueOnce(before as never)
+      .mockResolvedValueOnce(after as never);
+
     renderPage();
     await screen.findByTestId("machine-grid");
     expect(vi.mocked(buildMachineInventory)).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId("cell-mcp-server:postgres-codex")).toHaveAttribute(
+      "data-status",
+      "absent",
+    );
 
-    fireEvent.click(screen.getByTestId("machine-row-skill:reviewer"));
+    fireEvent.click(screen.getByTestId("machine-row-mcp-server:postgres"));
     const drawer = await screen.findByTestId("machine-row-drawer");
     const apply = within(drawer).getByRole("button", { name: "Apply" });
     await waitFor(() => expect(apply).toBeEnabled());
     fireEvent.click(apply);
 
     await waitFor(() => expect(vi.mocked(buildMachineInventory)).toHaveBeenCalledTimes(2));
+    await waitFor(() =>
+      expect(screen.getByTestId("cell-mcp-server:postgres-codex")).toHaveAttribute(
+        "data-status",
+        "present",
+      ),
+    );
   });
 });
