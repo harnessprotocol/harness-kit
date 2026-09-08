@@ -367,6 +367,126 @@ fn validate_ack(ack: &DriftAck) -> Result<(), String> {
 /// somehow accumulated more has a problem the UI cannot render anyway.
 const MAX_LISTED_ACKS: usize = 10_000;
 
+/// One cached definitions bundle, mirroring core's `CachedDefinitions`.
+///
+/// Bytes travel base64 because they live base64 in the column (schema v4) and
+/// because that is what the TS side hands back unchanged. The signature covers
+/// an exact byte sequence, so nothing here re-encodes it.
+#[derive(serde::Serialize, serde::Deserialize, Debug, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CachedDefinitions {
+    pub bundle_number: i64,
+    pub fetched_at: String,
+    pub payload_b64: String,
+    pub signature_b64: String,
+}
+
+#[tauri::command]
+pub fn get_cached_definitions() -> Result<Option<CachedDefinitions>, String> {
+    get_cached_definitions_at(&state_path()?)
+}
+
+pub(crate) fn get_cached_definitions_at(
+    path: &std::path::Path,
+) -> Result<Option<CachedDefinitions>, String> {
+    let conn = open_at(path)?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT bundle_number, fetched_at, payload_b64, signature_b64 \
+             FROM definitions_cache WHERE id = 1",
+        )
+        .map_err(|e| format!("Failed to read definitions cache: {}", e))?;
+    let mut rows = stmt
+        .query([])
+        .map_err(|e| format!("Failed to read definitions cache: {}", e))?;
+    match rows.next().map_err(|e| e.to_string())? {
+        Some(row) => Ok(Some(CachedDefinitions {
+            bundle_number: row.get(0).map_err(|e| e.to_string())?,
+            fetched_at: row.get(1).map_err(|e| e.to_string())?,
+            payload_b64: row.get(2).map_err(|e| e.to_string())?,
+            signature_b64: row.get(3).map_err(|e| e.to_string())?,
+        })),
+        None => Ok(None),
+    }
+}
+
+#[tauri::command]
+pub fn put_cached_definitions(entry: CachedDefinitions) -> Result<(), String> {
+    put_cached_definitions_at(&state_path()?, entry)
+}
+
+pub(crate) fn put_cached_definitions_at(
+    path: &std::path::Path,
+    entry: CachedDefinitions,
+) -> Result<(), String> {
+    let conn = open_at(path)?;
+    conn.execute(
+        "INSERT INTO definitions_cache (id, bundle_number, fetched_at, payload_b64, signature_b64) \
+         VALUES (1, ?1, ?2, ?3, ?4) \
+         ON CONFLICT(id) DO UPDATE SET \
+           bundle_number = excluded.bundle_number, \
+           fetched_at = excluded.fetched_at, \
+           payload_b64 = excluded.payload_b64, \
+           signature_b64 = excluded.signature_b64",
+        rusqlite::params![
+            entry.bundle_number,
+            entry.fetched_at,
+            entry.payload_b64,
+            entry.signature_b64
+        ],
+    )
+    .map_err(|e| format!("Failed to cache definitions: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn get_highest_bundle_number() -> Result<Option<i64>, String> {
+    get_highest_bundle_number_at(&state_path()?)
+}
+
+pub(crate) fn get_highest_bundle_number_at(
+    path: &std::path::Path,
+) -> Result<Option<i64>, String> {
+    let conn = open_at(path)?;
+    let mut stmt = conn
+        .prepare("SELECT highest_bundle_number FROM definitions_history WHERE id = 1")
+        .map_err(|e| format!("Failed to read rollback floor: {}", e))?;
+    let mut rows = stmt
+        .query([])
+        .map_err(|e| format!("Failed to read rollback floor: {}", e))?;
+    match rows.next().map_err(|e| e.to_string())? {
+        Some(row) => Ok(Some(row.get(0).map_err(|e| e.to_string())?)),
+        None => Ok(None),
+    }
+}
+
+#[tauri::command]
+pub fn record_bundle_number(bundle_number: i64, at: String) -> Result<(), String> {
+    record_bundle_number_at(&state_path()?, bundle_number, at)
+}
+
+pub(crate) fn record_bundle_number_at(
+    path: &std::path::Path,
+    bundle_number: i64,
+    at: String,
+) -> Result<(), String> {
+    let conn = open_at(path)?;
+    // MAX in the UPDATE so a lower number can never lower the floor: an
+    // anti-rollback floor a later write can walk backwards is not a floor.
+    // The guard is in SQL rather than a read-then-write so two processes —
+    // and the CLI and the app DO run concurrently — cannot interleave past it.
+    conn.execute(
+        "INSERT INTO definitions_history (id, highest_bundle_number, updated_at) \
+         VALUES (1, ?1, ?2) \
+         ON CONFLICT(id) DO UPDATE SET \
+           highest_bundle_number = MAX(definitions_history.highest_bundle_number, excluded.highest_bundle_number), \
+           updated_at = excluded.updated_at",
+        rusqlite::params![bundle_number, at],
+    )
+    .map_err(|e| format!("Failed to record bundle number: {}", e))?;
+    Ok(())
+}
+
 #[tauri::command]
 pub fn acknowledge_drift(ack: DriftAck) -> Result<(), String> {
     acknowledge_drift_at(&state_path()?, ack)
@@ -665,6 +785,91 @@ mod tests {
         let path = std::env::temp_dir().join(format!("harness-state-{}.db", name));
         std::fs::remove_file(&path).ok();
         path
+    }
+
+    #[test]
+    fn the_rollback_floor_only_ever_rises() {
+        // An anti-rollback floor a later write can walk backwards is not a
+        // floor. MAX lives in the SQL rather than a read-then-write because
+        // the CLI and the app genuinely do run at the same time, and a
+        // read-then-write can interleave past the guard.
+        let path = scratch("definitions-floor");
+        record_bundle_number_at(&path, 30, "2026-09-08T00:00:00Z".into()).unwrap();
+        assert_eq!(get_highest_bundle_number_at(&path).unwrap(), Some(30));
+
+        record_bundle_number_at(&path, 2, "2026-09-08T01:00:00Z".into()).unwrap();
+        assert_eq!(
+            get_highest_bundle_number_at(&path).unwrap(),
+            Some(30),
+            "a lower bundle number must not lower the floor"
+        );
+
+        record_bundle_number_at(&path, 31, "2026-09-08T02:00:00Z".into()).unwrap();
+        assert_eq!(get_highest_bundle_number_at(&path).unwrap(), Some(31));
+    }
+
+    #[test]
+    fn no_floor_and_no_cache_on_a_fresh_database() {
+        // Absent is not the same as zero: a machine with no history has
+        // nothing to roll back from, and core distinguishes the two.
+        let path = scratch("definitions-empty");
+        assert_eq!(get_highest_bundle_number_at(&path).unwrap(), None);
+        assert!(get_cached_definitions_at(&path).unwrap().is_none());
+    }
+
+    #[test]
+    fn the_cache_round_trips_the_exact_signed_bytes() {
+        // The cache is RE-VERIFIED on load, so a byte that changes in storage
+        // is a bundle that stops verifying. Base64 in, identical base64 out.
+        let path = scratch("definitions-cache");
+        let entry = CachedDefinitions {
+            bundle_number: 7,
+            fetched_at: "2026-09-08T00:00:00Z".into(),
+            payload_b64: "eyJhIjoxfQ==".into(),
+            signature_b64: "AAECAwQFBgc=".into(),
+        };
+        put_cached_definitions_at(&path, entry.clone()).unwrap();
+
+        let read = get_cached_definitions_at(&path).unwrap().expect("cached row");
+        assert_eq!(read.bundle_number, 7);
+        assert_eq!(read.payload_b64, entry.payload_b64);
+        assert_eq!(read.signature_b64, entry.signature_b64);
+
+        // Single row: a second write replaces rather than accumulating.
+        let replacement = CachedDefinitions { bundle_number: 8, ..entry };
+        put_cached_definitions_at(&path, replacement).unwrap();
+        let read = get_cached_definitions_at(&path).unwrap().expect("cached row");
+        assert_eq!(read.bundle_number, 8);
+    }
+
+    #[test]
+    fn deleting_the_cache_does_not_reset_the_floor() {
+        // The separation these two tables exist for. If one delete cleared
+        // both, an attacker would drop the cache to disable anti-rollback and
+        // then replay a genuinely-signed older bundle.
+        let path = scratch("definitions-independent");
+        record_bundle_number_at(&path, 42, "2026-09-08T00:00:00Z".into()).unwrap();
+        put_cached_definitions_at(
+            &path,
+            CachedDefinitions {
+                bundle_number: 42,
+                fetched_at: "2026-09-08T00:00:00Z".into(),
+                payload_b64: "eyJhIjoxfQ==".into(),
+                signature_b64: "AAECAwQFBgc=".into(),
+            },
+        )
+        .unwrap();
+
+        let conn = open_at(&path).unwrap();
+        conn.execute("DELETE FROM definitions_cache", []).unwrap();
+        drop(conn);
+
+        assert!(get_cached_definitions_at(&path).unwrap().is_none());
+        assert_eq!(
+            get_highest_bundle_number_at(&path).unwrap(),
+            Some(42),
+            "the floor must survive losing the cache"
+        );
     }
 
     /// A legacy comparator.db carrying `count` acknowledgements.

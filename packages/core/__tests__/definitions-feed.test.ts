@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { generateKeyPairSync, sign as signEd } from "node:crypto";
 import { loadDefinitions } from "../src/definitions/feed.js";
 import type { FeedOptions, PublisherKey } from "../src/definitions/feed.js";
-import { NodeFetcher, NodeSignatureVerifier } from "../src/definitions/providers-node.js";
+import { NodeSignatureVerifier } from "../src/definitions/providers-node.js";
+import { HttpsFetcher } from "../src/definitions/fetcher.js";
 import type { FetchResult, Fetcher } from "../src/definitions/providers.js";
 import { toBundle } from "../src/definitions/bundle.js";
 import { SURFACES, getSurface } from "../src/surfaces/registry.js";
@@ -453,7 +454,7 @@ describe("falling back, and saying so (AC-25)", () => {
     // `new URL()` on a typo'd baseUrl used to take the process down.
     for (const bad of ["https://[", "https://harness kit.ai/definitions/v1", "https://%zz/x"]) {
       const loaded = await loadDefinitions(
-        options({ baseUrl: bad, fetcher: new NodeFetcher() }),
+        options({ baseUrl: bad, fetcher: new HttpsFetcher() }),
       );
       expect(loaded.source, bad).toBe("snapshot");
     }

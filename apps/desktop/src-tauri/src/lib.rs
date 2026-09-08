@@ -178,6 +178,10 @@ pub fn run() {
             // Definitions feed: Ed25519 verification the webview cannot do
             // itself (node:crypto is exactly what it cannot load).
             commands::definitions::verify_definitions_signature,
+            commands::harness_state::get_cached_definitions,
+            commands::harness_state::put_cached_definitions,
+            commands::harness_state::get_highest_bundle_number,
+            commands::harness_state::record_bundle_number,
             commands::harness_state::record_transaction,
             commands::harness_state::migrate_drift_acknowledgements,
             commands::harness_state::acknowledge_drift,

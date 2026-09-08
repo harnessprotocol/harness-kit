@@ -2343,6 +2343,12 @@
           "markdownDescription": "Enables the get_acknowledged_drift_items command without any pre-configured scope."
         },
         {
+          "description": "Enables the get_cached_definitions command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-cached-definitions",
+          "markdownDescription": "Enables the get_cached_definitions command without any pre-configured scope."
+        },
+        {
           "description": "Enables the get_comparator_analytics command without any pre-configured scope.",
           "type": "string",
           "const": "allow-get-comparator-analytics",
@@ -2395,6 +2401,12 @@
           "type": "string",
           "const": "allow-get-harness-recommendations",
           "markdownDescription": "Enables the get_harness_recommendations command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the get_highest_bundle_number command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-get-highest-bundle-number",
+          "markdownDescription": "Enables the get_highest_bundle_number command without any pre-configured scope."
         },
         {
           "description": "Enables the get_history_size command without any pre-configured scope.",
@@ -2523,6 +2535,12 @@
           "markdownDescription": "Enables the push_file_history command without any pre-configured scope."
         },
         {
+          "description": "Enables the put_cached_definitions command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-put-cached-definitions",
+          "markdownDescription": "Enables the put_cached_definitions command without any pre-configured scope."
+        },
+        {
           "description": "Enables the read_claude_md command without any pre-configured scope.",
           "type": "string",
           "const": "allow-read-claude-md",
@@ -2599,6 +2617,12 @@
           "type": "string",
           "const": "allow-read-stats-cache",
           "markdownDescription": "Enables the read_stats_cache command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the record_bundle_number command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-record-bundle-number",
+          "markdownDescription": "Enables the record_bundle_number command without any pre-configured scope."
         },
         {
           "description": "Enables the record_harness_launch_result command without any pre-configured scope.",
@@ -2949,6 +2973,12 @@
           "markdownDescription": "Denies the get_acknowledged_drift_items command without any pre-configured scope."
         },
         {
+          "description": "Denies the get_cached_definitions command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-cached-definitions",
+          "markdownDescription": "Denies the get_cached_definitions command without any pre-configured scope."
+        },
+        {
           "description": "Denies the get_comparator_analytics command without any pre-configured scope.",
           "type": "string",
           "const": "deny-get-comparator-analytics",
@@ -3001,6 +3031,12 @@
           "type": "string",
           "const": "deny-get-harness-recommendations",
           "markdownDescription": "Denies the get_harness_recommendations command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the get_highest_bundle_number command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-get-highest-bundle-number",
+          "markdownDescription": "Denies the get_highest_bundle_number command without any pre-configured scope."
         },
         {
           "description": "Denies the get_history_size command without any pre-configured scope.",
@@ -3129,6 +3165,12 @@
           "markdownDescription": "Denies the push_file_history command without any pre-configured scope."
         },
         {
+          "description": "Denies the put_cached_definitions command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-put-cached-definitions",
+          "markdownDescription": "Denies the put_cached_definitions command without any pre-configured scope."
+        },
+        {
           "description": "Denies the read_claude_md command without any pre-configured scope.",
           "type": "string",
           "const": "deny-read-claude-md",
@@ -3205,6 +3247,12 @@
           "type": "string",
           "const": "deny-read-stats-cache",
           "markdownDescription": "Denies the read_stats_cache command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the record_bundle_number command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-record-bundle-number",
+          "markdownDescription": "Denies the record_bundle_number command without any pre-configured scope."
         },
         {
           "description": "Denies the record_harness_launch_result command without any pre-configured scope.",

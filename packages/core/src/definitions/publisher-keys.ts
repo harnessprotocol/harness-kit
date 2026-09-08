@@ -9,17 +9,23 @@ import type { PublisherKey } from "./feed.js";
  * the definitions feed. Nothing at runtime can add to this list; see the
  * trust-anchor note in `feed.ts`.
  *
- * DELIBERATELY EMPTY. No publisher keypair exists yet, and where its private
- * half will live is an open question: design.md §7 and ADR 0004 both specify
- * the signing scheme and neither says anything about key custody. Signing in
- * CI means a private key in CI, and that decision has not been made.
+ * DELIBERATELY EMPTY. No publisher keypair has been generated yet. Custody IS
+ * now decided (design.md §7, ADR 0004 amendment 2026-09-08): the private half
+ * lives offline on the maintainer's machine and never in CI, which signs
+ * nothing and only publishes a pre-signed artifact. Generating the keypair and
+ * adding its public half here is what turns the feed on.
  *
- * The consequence is intended and is the safe direction. `verifyWithAnyKey`
- * over an empty list returns false for every artifact, so `loadDefinitions`
- * refuses every remote and cached bundle and returns the release snapshot
- * with a stated reason. The feed is therefore fully wired and inert: it makes
- * exactly the requests it would make in production, and trusts nothing. When
- * a real key exists, adding it here turns the feed on with no other change.
+ * The consequence is intended and is the safe direction. An empty list means
+ * nothing can ever verify, so `resolveDefinitions` returns the release
+ * snapshot with a stated reason — and skips the fetch entirely, since two
+ * requests and a timeout to reach a guaranteed snapshot is pure cost. The
+ * feed is wired end to end and inert: every caller runs the real code path
+ * and trusts nothing.
+ *
+ * (An earlier version of this note claimed the feed "makes exactly the
+ * requests it would make in production". That stopped being true the moment
+ * the no-keys gate was added, which is the whole point of re-reading a
+ * neighbour's comment when you add a case beside it.)
  *
  * Do NOT add a placeholder or self-signed key to "make it work" in
  * development. A key in this array is a key that can rewrite the user-scope

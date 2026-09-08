@@ -126,6 +126,10 @@ fn main() {
                 // Definitions feed: Ed25519 verification (the webview cannot
                 // use node:crypto, which is what this replaces).
                 "verify_definitions_signature",
+                "get_cached_definitions",
+                "put_cached_definitions",
+                "get_highest_bundle_number",
+                "record_bundle_number",
                 // Feedback
                 "get_system_info",
                 "submit_feedback",

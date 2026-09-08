@@ -433,6 +433,14 @@ export { SURFACE_IDS, COMPILE_SURFACE_IDS, PRODUCT_FAMILIES, isCompileSurface } 
 export { SURFACES, PRIORITY_SURFACES, getSurface } from "./surfaces/registry.js";
 export { resolveSurfaces, getSurfaceFrom } from "./surfaces/resolve.js";
 export { PUBLISHER_KEYS, releaseSnapshot } from "./definitions/publisher-keys.js";
+export { HttpsFetcher } from "./definitions/fetcher.js";
+export { resolveDefinitions, DEFAULT_TTL_MS } from "./definitions/resolve.js";
+export type {
+  CachedDefinitions as CachedDefinitionsEntry,
+  DefinitionsStore,
+  ResolveDefinitionsOptions,
+  ResolvedDefinitions,
+} from "./definitions/resolve.js";
 
 // ── Definitions bundle (cross-harness config management, D7) ─────
 //
