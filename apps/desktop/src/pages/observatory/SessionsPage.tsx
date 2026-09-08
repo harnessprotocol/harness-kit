@@ -77,7 +77,7 @@ function ProjectPill({ name }: { name: string }) {
 // ── Role colors ────────────────────────────────────────────────
 
 const ROLE_COLORS: Record<string, string> = {
-  user: "var(--status-in-progress)",
+  user: "var(--accent-text)",
   assistant: "var(--accent)",
   system: "var(--fg-subtle)",
   result: "var(--success)",

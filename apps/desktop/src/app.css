@@ -44,9 +44,6 @@
   --hover-bg: rgba(0, 0, 0, 0.04);
   --active-bg: rgba(0, 0, 0, 0.07);
 
-  /* Transcript role colour (SessionsPage user role) */
-  --status-in-progress: #2563eb;
-
   --border: var(--border-base);
 
   /* Shadows — warm-tinted (Direction A, DESIGN.md §2) */
