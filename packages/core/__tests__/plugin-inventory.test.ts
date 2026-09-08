@@ -12,7 +12,7 @@ import { normalizeResource } from "../src/observe/normalize.js";
 import { computeMachineInventory } from "../src/observe/machine-inventory.js";
 import { getSurface, SURFACES } from "../src/surfaces/registry.js";
 import { isWritableFormat, planStoreWrite } from "../src/write/write-store.js";
-import { planCellAction } from "../src/write/plan-cell-action.js";
+import { planCellAction, syncCliCommand } from "../src/write/plan-cell-action.js";
 import { buildAgentPrompt } from "../src/write/agent-prompt.js";
 import { applyCellAction } from "../src/write/apply-cell-action.js";
 import { MockFsProvider } from "./helpers/mock-fs.js";
@@ -801,6 +801,89 @@ describe("machine inventory: plugin rows join across surfaces", () => {
     // Empty for two different reasons — the flag is what separates them.
     expect(cursor?.marketplacesReadable).toBe(false);
     expect(cursor?.marketplaces).toEqual([]);
+  });
+});
+
+describe("a multi-scope plugin resolves by SCOPE, not by file order", () => {
+  // Claude Code declares plugins in a single user-scope store whose codec
+  // stamps each install's own scope, so ordering STORES project-first never
+  // ran. The entry chosen was whichever came first in the JSON — the answer
+  // changed with file order and disagreed with the grid, which resolves the
+  // same identity project-first.
+  function fsWithOrder(userFirst: boolean): MockFsProvider {
+    const user = { scope: "user", version: "1.0.0-USER", installPath: `${HOME}/c/u` };
+    const local = {
+      scope: "local",
+      projectPath: PROJECT,
+      version: "2.0.0-LOCAL",
+      installPath: `${HOME}/c/l`,
+    };
+    return new MockFsProvider(
+      {
+        [`${HOME}/.claude/plugins/installed_plugins.json`]: JSON.stringify({
+          plugins: { "board@harness-kit": userFirst ? [user, local] : [local, user] },
+        }),
+        [`${HOME}/.claude/settings.json`]: JSON.stringify({
+          enabledPlugins: { "board@harness-kit": true },
+        }),
+      },
+      PROJECT,
+      HOME,
+    );
+  }
+
+  it("picks the project install regardless of which is listed first", async () => {
+    for (const userFirst of [true, false]) {
+      const plan = await planCellAction(
+        fsWithOrder(userFirst),
+        { from: "claude-code", to: "codex", kind: "plugin", name: "board@harness-kit", scope: "project" },
+        OPTS,
+      );
+      expect((plan.value as { version?: string }).version, `userFirst=${userFirst}`).toBe(
+        "2.0.0-LOCAL",
+      );
+    }
+  });
+});
+
+describe("the displayed CLI command is safe to paste", () => {
+  it("quotes an identity carrying shell metacharacters", () => {
+    // The name is an arbitrary JSON key from a file another tool wrote, and
+    // this string is printed as a runnable line and rendered with a Copy
+    // button. It planned as `unavailable` before this milestone; it plans as
+    // `ready` now, so it is presented as the action to take.
+    const command = syncCliCommand({
+      from: "claude-code",
+      to: "codex",
+      kind: "plugin",
+      name: "board;touch /tmp/PWNED;#@harness-kit",
+      scope: "user",
+    });
+    expect(command).toContain("'plugin:board;touch /tmp/PWNED;#@harness-kit'");
+    // Nothing outside the quotes can reach the shell.
+    expect(command.split("--only ")[1].startsWith("'")).toBe(true);
+  });
+
+  it("leaves an ordinary identity unquoted", () => {
+    const command = syncCliCommand({
+      from: "claude-code",
+      to: "codex",
+      kind: "plugin",
+      name: "board@harness-kit",
+      scope: "user",
+    });
+    expect(command).toContain("--only plugin:board@harness-kit ");
+  });
+
+  it("escapes an embedded single quote", () => {
+    const command = syncCliCommand({
+      from: "claude-code",
+      to: "codex",
+      kind: "skill",
+      name: "it's-a-skill",
+      scope: "user",
+    });
+    expect(command).toContain(`'skill:it'\\''s-a-skill'`);
   });
 });
 

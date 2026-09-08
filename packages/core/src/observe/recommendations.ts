@@ -72,21 +72,35 @@ function candidateSurfaces(
 /** Resources the baseline declares, as `kind` + display name pairs. */
 function baselineResources(baseline: HarnessConfig): Array<{ kind: HarnessResourceKind; name: string }> {
   const declared: Array<{ kind: HarnessResourceKind; name: string }> = [];
-  for (const plugin of baseline.plugins ?? []) {
-    if (typeof plugin.name === "string" && plugin.name.length > 0) {
-      declared.push({ kind: "plugin", name: plugin.name });
-    }
+  // A baseline is a file a human wrote, and `parseHarness` accepts shapes this
+  // does not expect — `plugins:` as a MAP is the form someone would most
+  // plausibly write, and iterating it threw "object is not iterable", taking
+  // down the whole `status` command with a message naming neither the file nor
+  // the field. Nothing here may throw: a malformed section contributes
+  // nothing and the rest of the report still renders.
+  const list = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
+  const named = (value: unknown): string | null => {
+    if (value === null || typeof value !== "object") return null;
+    const name = (value as { name?: unknown }).name;
+    return typeof name === "string" && name.length > 0 ? name : null;
+  };
+  for (const plugin of list(baseline.plugins)) {
+    const name = named(plugin);
+    if (name !== null) declared.push({ kind: "plugin", name });
   }
-  for (const skill of baseline.skills ?? []) {
-    if (typeof skill.name === "string" && skill.name.length > 0) {
+  for (const skill of list(baseline.skills) as Array<{ name?: unknown; enabled?: unknown }>) {
+    if (typeof skill?.name === "string" && skill.name.length > 0) {
       // `enabled: false` in a baseline is a statement that the team does NOT
       // want it; recommending it would invert the baseline's meaning.
       if (skill.enabled === false) continue;
       declared.push({ kind: "skill", name: skill.name });
     }
   }
-  for (const name of Object.keys(baseline["mcp-servers"] ?? {})) {
-    if (name.length > 0) declared.push({ kind: "mcp-server", name });
+  const servers = baseline["mcp-servers"];
+  if (servers !== null && typeof servers === "object" && !Array.isArray(servers)) {
+    for (const name of Object.keys(servers)) {
+      if (name.length > 0) declared.push({ kind: "mcp-server", name });
+    }
   }
   return declared;
 }

@@ -141,10 +141,15 @@ export function planUnpackAction(
 }
 
 /**
- * Locate the plugin's own directory on disk. Claude Code caches every install
- * under `~/.claude/plugins/cache/<marketplace>/<name>/<version>`; that cache
- * is the only copy of a plugin's contents on the machine, so it is what an
- * unpack reads from.
+ * Locate the plugin's own directory on disk.
+ *
+ * Uses the path the surface RECORDED (`installPath` on the install entry),
+ * never a guess. Two attempts at inferring it from the cache's directory
+ * names were both wrong — lexically (`0.9.0` beat `0.10.0`) and then for
+ * prereleases — and neither could ever work for the several plugins on a real
+ * machine that cache by commit SHA, where no ordering of names is meaningful.
+ * When the record is absent there is no honest answer, so this refuses rather
+ * than picking one.
  */
 async function resolvePluginRoot(
   options: ExecuteOptions,
@@ -152,22 +157,15 @@ async function resolvePluginRoot(
 ): Promise<string | null> {
   const home = options.homeRoot;
   if (home === undefined) return null;
-  const at = request.identity.lastIndexOf("@");
-  if (at <= 0) return null;
-  const name = request.identity.slice(0, at);
-  const marketplace = request.identity.slice(at + 1);
-  if (!isSafeSegment(name) || !isSafeSegment(marketplace)) return null;
-
-  const base = options.fs.joinPath(home, ".claude", "plugins", "cache", marketplace, name);
-  if (!(await options.fs.isDirectory(base))) return null;
-  const versions = await options.fs.readDir(base);
-  // Numeric-segment ordering, NOT lexical: "0.10.0" sorts before "0.9.0" as a
-  // string, so a lexical pick silently unpacks an older release whose skill
-  // SET differs — skills the current version added would be missing and ones
-  // it removed would be installed.
-  const chosen = [...versions].sort(compareVersions).pop();
-  if (chosen === undefined || !isSafeSegment(chosen)) return null;
-  return options.fs.joinPath(base, chosen);
+  const recorded = request.sourcePath;
+  if (recorded === undefined) return null;
+  // The recorded path is data from another tool's file: keep it inside the
+  // cache root rather than trusting it to be somewhere sensible.
+  const cacheRoot = options.fs.joinPath(home, ".claude", "plugins", "cache");
+  const prefix = cacheRoot.endsWith("/") ? cacheRoot : `${cacheRoot}/`;
+  if (!recorded.startsWith(prefix) || recorded.includes("..")) return null;
+  if (!(await options.fs.isDirectory(recorded))) return null;
+  return recorded;
 }
 
 /**
@@ -218,46 +216,4 @@ export class UnpackRefused extends Error {
     super(message);
     this.name = "UnpackRefused";
   }
-}
-
-/**
- * Order two cache directory names by their numeric segments, falling back to
- * a string compare for anything non-numeric (pre-release tags, or a directory
- * that is not a version at all). Enough to pick the newest of the versions a
- * plugin cache actually holds; not a full semver implementation, and it does
- * not need to be.
- */
-export function compareVersions(left: string, right: string): number {
-  // Split the release from any prerelease tag FIRST. Treating `-` as just
-  // another separator makes `1.0.0-beta.1` sort above `1.0.0`, which is the
-  // same class of wrong as the lexical ordering this replaced: it unpacks a
-  // version the user is not running.
-  const split = (value: string): { release: Array<number | string>; pre: string | null } => {
-    const dash = value.indexOf("-");
-    const release = dash === -1 ? value : value.slice(0, dash);
-    return {
-      release: release.split(".").map((segment) => (/^\d+$/.test(segment) ? Number(segment) : segment)),
-      pre: dash === -1 ? null : value.slice(dash + 1),
-    };
-  };
-  const leftParts = split(left);
-  const rightParts = split(right);
-  const a = leftParts.release;
-  const b = rightParts.release;
-  for (let index = 0; index < Math.max(a.length, b.length); index += 1) {
-    const x = a[index];
-    const y = b[index];
-    if (x === undefined) return -1;
-    if (y === undefined) return 1;
-    if (typeof x === "number" && typeof y === "number") {
-      if (x !== y) return x - y;
-    } else if (String(x) !== String(y)) {
-      return String(x) < String(y) ? -1 : 1;
-    }
-  }
-  // Same release: a prerelease ranks below the release it precedes.
-  if (leftParts.pre === rightParts.pre) return 0;
-  if (leftParts.pre === null) return 1;
-  if (rightParts.pre === null) return -1;
-  return leftParts.pre < rightParts.pre ? -1 : 1;
 }

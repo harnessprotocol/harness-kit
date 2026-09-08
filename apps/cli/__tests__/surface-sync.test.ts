@@ -244,6 +244,49 @@ describe.sequential("cross-surface sync", () => {
       expect(after.mcpServers.postgres.command).toBe("pg-mcp");
     });
 
+    async function seedSkillDiff(): Promise<void> {
+      const head = ["---", "name: reviewer", "---", ""].join("\n");
+      await mkdir(join(home, ".claude", "skills", "reviewer"), { recursive: true });
+      await mkdir(join(home, ".cursor", "skills", "reviewer"), { recursive: true });
+      await writeFile(join(home, ".claude", "skills", "reviewer", "SKILL.md"), `${head}# A`);
+      await writeFile(join(home, ".cursor", "skills", "reviewer", "SKILL.md"), `${head}# B`);
+    }
+
+    it("names each field it will replace, and does not call it lossy", async () => {
+      // "lossy" means the target cannot EXPRESS the resource. An overwrite
+      // means it holds a different version this action replaces. Both set
+      // requiresConfirmation, and reporting the second as the first told the
+      // user the opposite of what was happening — while the field carrying
+      // the real information was dropped.
+      // A skill copy between these two surfaces has NO capability loss, so
+      // "lossy" appearing at all would be the mislabel this guards against.
+      await seedSkillDiff();
+      await surfaceSyncCommand({ from: "claude-code", to: ["cursor"], only: "skill" } as never);
+      const log = env.getLog();
+      expect(log).toContain("replaces content");
+      expect(log).not.toContain("lossy");
+    });
+
+    it("honours --to when choosing diff targets", async () => {
+      await seedDiff();
+      await surfaceSyncCommand({ from: "claude-code", to: ["codex"], only: "mcp-server" } as never);
+      expect(env.getLog()).not.toContain("→ cursor");
+    });
+
+    it("tells an agent the target ALREADY has it, not that it is missing", async () => {
+      await seedSkillDiff();
+      await surfaceSyncCommand({
+        from: "claude-code",
+        to: ["cursor"],
+        only: "skill",
+        prompt: true,
+      } as never);
+      const log = env.getLog();
+      expect(log).toContain("ALREADY has this");
+      expect(log).not.toContain("missing from Cursor");
+      expect(log).toContain("This REPLACES the following");
+    });
+
     it("offers NOTHING without --from, rather than guessing a winner", async () => {
       // A diff pair is unordered. Picking a side unasked is exactly what the
       // M2 deferral of this case warned against.

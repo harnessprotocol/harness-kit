@@ -15,9 +15,10 @@ import type { ProcessCommand } from "../process-runner.js";
  * | codex       | `plugin add`     | `plugin remove`     | none       | `--json` |
  * | copilot-cli | `plugin install` | `plugin uninstall`  | none       | none     |
  *
- * Note the asymmetry `copilot` has and the others do not: it installs by
- * `name@marketplace` but uninstalls by bare `name`. `uninstallSelector`
- * records that rather than letting a caller assume symmetry.
+ * `uninstallSelector` exists because a surface COULD take a different form on
+ * removal. Today all three take the full identity — an earlier reading of
+ * copilot's truncated top-level help recorded an asymmetry that its own
+ * subcommand help contradicts.
  */
 
 /** Which form of the identity a verb takes as its positional argument. */
@@ -86,6 +87,17 @@ export interface PluginActionRequest {
   nativeScope?: string;
 }
 
+/**
+ * Which HarnessKit scope a surface-native scope value belongs to. Claude Code
+ * is the only surface with a richer set: `local` and `project` are both
+ * project-scoped, differing only in which settings file records enablement.
+ */
+function nativeMapsTo(native: string): SurfaceScope | null {
+  if (native === "user") return "user";
+  if (native === "project" || native === "local") return "project";
+  return null;
+}
+
 /** Split `name@marketplace` on the LAST `@`, matching both codecs. */
 function splitIdentity(identity: string): { name: string; marketplace: string } | null {
   const at = identity.lastIndexOf("@");
@@ -138,10 +150,18 @@ export function planNativePluginAction(
   const args: string[] = [...verbArgs, selector];
 
   if (installer.scope !== undefined) {
+    // `nativeScope` REFINES the requested scope; it must never override it.
+    // Accepting any listed native value made the requested scope decorative:
+    // a project-scope request whose source happened to be a user install
+    // silently installed at user scope. A native value is used only when it
+    // maps back to the scope actually asked for.
+    const mapped = installer.scope.values[request.scope];
     const native = request.nativeScope;
     const acceptsNative =
-      native !== undefined && (installer.scope.nativeValues ?? []).includes(native);
-    const value = acceptsNative ? native : installer.scope.values[request.scope];
+      native !== undefined &&
+      (installer.scope.nativeValues ?? []).includes(native) &&
+      nativeMapsTo(native) === request.scope;
+    const value = acceptsNative ? native : mapped;
     if (value === null) {
       return {
         supported: false,

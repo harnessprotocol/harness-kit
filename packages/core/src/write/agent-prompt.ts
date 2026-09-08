@@ -162,7 +162,14 @@ export function buildAgentPrompt(
   const lines = [
     `Add the ${request.kind} "${request.name}" to ${target.label}.`,
     "",
-    `It is already configured in ${source.label} and missing from ${target.label}. Reproduce it using ${target.label}'s own configuration — do not copy ${source.label}'s file format verbatim.`,
+    // "missing from" is only true for a gap. Since the diff case landed
+    // (AC-11) this same builder receives actions where the target HAS the
+    // resource with different content — telling an agent it is missing is a
+    // false premise, and saying nothing about the replacement hides the part
+    // that destroys work.
+    plan.overwrites === undefined
+      ? `It is already configured in ${source.label} and missing from ${target.label}. Reproduce it using ${target.label}'s own configuration — do not copy ${source.label}'s file format verbatim.`
+      : `${target.label} ALREADY has this, with different content. Replace its version with ${source.label}'s, using ${target.label}'s own configuration — do not copy ${source.label}'s file format verbatim.`,
     "",
     `Target configuration: ${targetFile}`,
     `Scope: ${request.scope === "user" ? "user/global (applies everywhere)" : "this project only"}`,
@@ -173,6 +180,15 @@ export function buildAgentPrompt(
     "```",
   ];
 
+  if (plan.overwrites !== undefined) {
+    lines.push(
+      "",
+      "This REPLACES the following, which currently differs:",
+      ...plan.overwrites.map(
+        (delta) => `- ${delta.path}: ${JSON.stringify(delta.left)} → ${JSON.stringify(delta.right)}`,
+      ),
+    );
+  }
   if (!plan.supported && plan.reason) {
     lines.push("", `Note: HarnessKit cannot write this cell directly — ${plan.reason}`);
   }

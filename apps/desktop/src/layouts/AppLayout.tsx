@@ -271,6 +271,35 @@ function SidebarSubnav({ children }: { children: { label: string; path: string }
   );
 }
 
+/**
+ * Whether a nav entry is the one the user is on.
+ *
+ * Compares against the entry's own PATH, not against `/<id>`. Drift's
+ * destination became `/machine?drift=1` when Drift moved into the Machine
+ * view (AC-37), so an id-based match could never light it up — the item the
+ * user had just clicked went dark while Machine lit up instead.
+ *
+ * Two entries can share a pathname and be told apart by a query marker, so
+ * the marker is checked in BOTH directions: present selects the qualified
+ * entry, absent selects the plain one.
+ */
+export function isSectionActive(
+  section: { path: string },
+  location: { pathname: string; search: string },
+): boolean {
+  const [sectionPath, sectionQuery] = section.path.split("?");
+  if (!location.pathname.startsWith(sectionPath)) return false;
+  const params = new URLSearchParams(location.search);
+  const marker = sectionQuery?.split("=")[0];
+  if (marker !== undefined) return params.get(marker) !== null;
+  // A plain entry loses to a query-qualified sibling on the same pathname.
+  return ![...NAV_SECTIONS, ...DEMOTED_SECTIONS].some((candidate) => {
+    const [candidatePath, candidateQuery] = candidate.path.split("?");
+    if (candidateQuery === undefined || candidatePath !== sectionPath) return false;
+    return params.get(candidateQuery.split("=")[0]) !== null;
+  });
+}
+
 export default function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -337,7 +366,7 @@ export default function AppLayout() {
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   function isActive(section: NavSection) {
-    return location.pathname.startsWith(`/${section.id}`);
+    return isSectionActive(section, location);
   }
 
   function handleTitlebarMouseDown(e: React.MouseEvent) {

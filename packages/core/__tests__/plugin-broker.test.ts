@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { planPluginAction, executePluginAction } from "../src/plugins/broker.js";
 import type { ExecuteOptions } from "../src/plugins/broker.js";
 import { planNativePluginAction } from "../src/plugins/installer.js";
-import { compareVersions as compareVersionsForTest } from "../src/plugins/unpack.js";
 import { getSurface } from "../src/surfaces/registry.js";
 import type { ProcessCommand, ProcessResult, ProcessRunner } from "../src/process-runner.js";
 import { MockFsProvider } from "./helpers/mock-fs.js";
@@ -104,6 +103,33 @@ describe("native driver: the invocation each surface gets", () => {
     });
     if (local.kind !== "native" || !local.plan.supported) throw new Error("expected a plan");
     expect(local.plan.command.args).toContain("local");
+
+    // A native value belonging to a DIFFERENT scope is ignored: it refines
+    // the requested scope, it does not override it. Accepting it made the
+    // requested scope decorative — a project-scope request whose source was a
+    // user install silently installed at user scope.
+    const crossScope = planPluginAction({
+      surface: "claude-code",
+      identity: "board@harness-kit",
+      scope: "project",
+      action: "install",
+      projectRoot: PROJECT,
+      nativeScope: "user",
+    });
+    if (crossScope.kind !== "native" || !crossScope.plan.supported) throw new Error("expected a plan");
+    expect(crossScope.plan.command.args).toContain("project");
+    expect(crossScope.plan.command.args).not.toContain("user");
+
+    const userReq = planPluginAction({
+      surface: "claude-code",
+      identity: "board@harness-kit",
+      scope: "user",
+      action: "install",
+      nativeScope: "local",
+    });
+    if (userReq.kind !== "native" || !userReq.plan.supported) throw new Error("expected a plan");
+    expect(userReq.plan.command.args).toContain("user");
+    expect(userReq.plan.command.args).not.toContain("local");
 
     // An unknown native value is ignored in favour of the mapped one.
     const bogus = planPluginAction({
@@ -281,6 +307,8 @@ describe("native driver: execution outcomes", () => {
 });
 
 describe("unpack driver (AC-19)", () => {
+  /** The directory the install record names — the only place unpack reads. */
+  const CACHE = `${HOME}/.claude/plugins/cache/harness-kit/board/0.2.0`;
   const request = {
     surface: "opencode" as const,
     identity: "board@harness-kit",
@@ -289,7 +317,7 @@ describe("unpack driver (AC-19)", () => {
   };
 
   it("plans a copy into the surface's own skills directory", () => {
-    const plan = planPluginAction(request);
+    const plan = planPluginAction({ ...request, sourcePath: CACHE });
     expect(plan.kind).toBe("unpack");
     if (plan.kind !== "unpack" || !plan.plan.supported) throw new Error("expected an unpack plan");
     expect(plan.plan.targetDirectory).toBe(getSurface("opencode").stores.find(
@@ -308,7 +336,7 @@ describe("unpack driver (AC-19)", () => {
       PROJECT,
       HOME,
     );
-    const outcome = await executePluginAction(planPluginAction(request), {
+    const outcome = await executePluginAction(planPluginAction({ ...request, sourcePath: CACHE }), {
       runner: new FakeRunner(),
       fs,
       now: "2026-09-07T00:00:00.000Z",
@@ -324,27 +352,47 @@ describe("unpack driver (AC-19)", () => {
     expect(await fs.readFile(outcome.files[0])).toBe("# plan");
   });
 
-  it("picks the newest version directory by NUMBER, not lexically", async () => {
-    // "0.10.0" sorts before "0.9.0" as a string, so a lexical pick unpacks an
-    // older release whose skill SET differs — skills the current version added
-    // would be missing and ones it removed would be installed.
+  it("copies from the RECORDED install path, never from a guess", async () => {
+    // Two attempts at inferring the current version from cache directory
+    // names were both wrong, and neither could ever work for the plugins on a
+    // real machine that cache by commit SHA — where no ordering of names
+    // means anything. The install record says which directory is in use.
     const base = `${HOME}/.claude/plugins/cache/harness-kit/board`;
-    const outcome = await executePluginAction(planPluginAction(request), {
-      ...options(new FakeRunner(), {
-        [`${base}/0.9.0/skills/old-skill/SKILL.md`]: "# old",
-        [`${base}/0.10.0/skills/new-skill/SKILL.md`]: "# new",
-      }),
-      sourceSurface: "claude-code",
-    });
+    const outcome = await executePluginAction(
+      planPluginAction({ ...request, sourcePath: `${base}/f372c2212c2e` }),
+      {
+        ...options(new FakeRunner(), {
+          [`${base}/f372c2212c2e/skills/current/SKILL.md`]: "# in use",
+          [`${base}/zzz-newer-looking/skills/stale/SKILL.md`]: "# not in use",
+        }),
+        sourceSurface: "claude-code",
+      },
+    );
     expect(outcome.status).toBe("installed");
     if (outcome.status !== "installed") return;
-    expect(outcome.files).toEqual([
-      `${HOME}/.config/opencode/skills/board/new-skill/SKILL.md`,
-    ]);
+    expect(outcome.files).toEqual([`${HOME}/.config/opencode/skills/board/current/SKILL.md`]);
+  });
+
+  it("refuses rather than guessing when no install path was recorded", async () => {
+    const base = `${HOME}/.claude/plugins/cache/harness-kit/board`;
+    const outcome = await executePluginAction(planPluginAction(request), {
+      ...options(new FakeRunner(), { [`${base}/1.0.0/skills/x/SKILL.md`]: "# x" }),
+      sourceSurface: "claude-code",
+    });
+    expect(outcome.status).toBe("refused");
+    expect(outcome.status === "refused" ? outcome.reason : "").toContain("could not find");
+  });
+
+  it("refuses a recorded path outside the plugin cache", async () => {
+    const outcome = await executePluginAction(
+      planPluginAction({ ...request, sourcePath: `${HOME}/.ssh` }),
+      { ...options(new FakeRunner(), { [`${HOME}/.ssh/skills/x/SKILL.md`]: "# x" }), sourceSurface: "claude-code" },
+    );
+    expect(outcome.status).toBe("refused");
   });
 
   it("refuses when the plugin's files are not on this machine", async () => {
-    const outcome = await executePluginAction(planPluginAction(request), {
+    const outcome = await executePluginAction(planPluginAction({ ...request, sourcePath: CACHE }), {
       ...options(new FakeRunner()),
       sourceSurface: "claude-code",
     });
@@ -354,7 +402,7 @@ describe("unpack driver (AC-19)", () => {
 
   it("refuses a plugin with nothing unpackable rather than reporting success", async () => {
     const cache = `${HOME}/.claude/plugins/cache/harness-kit/board/0.2.0`;
-    const outcome = await executePluginAction(planPluginAction(request), {
+    const outcome = await executePluginAction(planPluginAction({ ...request, sourcePath: CACHE }), {
       ...options(new FakeRunner(), { [`${cache}/README.md`]: "no skills here" }),
       sourceSurface: "claude-code",
     });
@@ -377,7 +425,7 @@ describe("unpack driver (AC-19)", () => {
       candidate: string,
     ) => candidate === `${HOME}/.config/opencode/skills/board`;
 
-    const outcome = await executePluginAction(planPluginAction(request), {
+    const outcome = await executePluginAction(planPluginAction({ ...request, sourcePath: CACHE }), {
       runner: new FakeRunner(),
       fs,
       now: "2026-09-07T00:00:00.000Z",
@@ -398,7 +446,7 @@ describe("unpack driver (AC-19)", () => {
     (fs as unknown as { writeFile: () => Promise<void> }).writeFile = async () => {
       throw new Error("EISDIR: illegal operation on a directory");
     };
-    const outcome = await executePluginAction(planPluginAction(request), {
+    const outcome = await executePluginAction(planPluginAction({ ...request, sourcePath: CACHE }), {
       runner: new FakeRunner(),
       fs,
       now: "2026-09-07T00:00:00.000Z",
@@ -413,22 +461,12 @@ describe("unpack driver (AC-19)", () => {
     // Only Claude Code caches plugin contents on disk. Accepting `codex` and
     // silently shipping Claude Code's bytes under its name is worse than
     // refusing — the user picked a surface and would get another vendor's files.
-    const outcome = await executePluginAction(planPluginAction(request), {
+    const outcome = await executePluginAction(planPluginAction({ ...request, sourcePath: CACHE }), {
       ...options(new FakeRunner()),
       sourceSurface: "codex",
     });
     expect(outcome.status).toBe("refused");
     expect(outcome.status === "refused" ? outcome.reason : "").toContain("only claude-code");
-  });
-
-  it("prefers a release over its prerelease", () => {
-    // `1.0.0-beta.1` must rank BELOW `1.0.0`; splitting on `-` as just another
-    // separator ranked it above, unpacking a version nobody is running.
-    const order = ["1.0.0", "1.0.0-beta.1", "0.10.0", "0.9.0", "2.1.0-rc.1", "2.1.0"];
-    const sorted = [...order].sort(compareVersionsForTest);
-    expect(sorted[sorted.length - 1]).toBe("2.1.0");
-    expect(sorted.indexOf("1.0.0")).toBeGreaterThan(sorted.indexOf("1.0.0-beta.1"));
-    expect(sorted.indexOf("0.10.0")).toBeGreaterThan(sorted.indexOf("0.9.0"));
   });
 
   it("says out loud that uninstall needs the recorded file list", async () => {

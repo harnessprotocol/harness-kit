@@ -188,6 +188,42 @@ describe("baseline recommendations respect marketplace reachability", () => {
   });
 });
 
+describe("a malformed baseline degrades rather than crashing", () => {
+  // `parseHarness` accepts shapes this engine did not expect. A map-shaped
+  // `plugins:` — the form someone would most plausibly hand-write — threw
+  // "object is not iterable" and took down the whole `status` command with a
+  // message naming neither the file nor the field. The CLI's own try/catch
+  // guarded parsing and then called recommend() outside it.
+  const inventory = () => computeMachineInventory([observation("claude-code", [])]);
+
+  it("survives plugins declared as a map", () => {
+    const baseline = { version: "1", plugins: { research: { version: "1.0.0" } } } as never;
+    expect(() => recommend(inventory(), { baseline })).not.toThrow();
+    expect(recommend(inventory(), { baseline })).toEqual([]);
+  });
+
+  it("survives a null list entry", () => {
+    const baseline = { version: "1", plugins: [null], skills: [null] } as never;
+    expect(() => recommend(inventory(), { baseline })).not.toThrow();
+  });
+
+  it("survives mcp-servers declared as a list", () => {
+    const baseline = { version: "1", "mcp-servers": ["postgres"] } as never;
+    expect(() => recommend(inventory(), { baseline })).not.toThrow();
+  });
+
+  it("still reads the well-formed parts of a partly-malformed baseline", () => {
+    const baseline = {
+      version: "1",
+      plugins: { bad: {} },
+      skills: [{ name: "reviewer" }],
+    } as never;
+    expect(recommend(inventory(), { baseline }).map((r) => r.identityKey)).toEqual([
+      "skill:reviewer",
+    ]);
+  });
+});
+
 describe("ordering is deterministic", () => {
   it("puts baseline gaps first, then machine gaps, each by identity", () => {
     const baseline: HarnessConfig = {

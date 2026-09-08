@@ -63,6 +63,8 @@ export interface StoreEntry {
    * instead of collapsing a private install into a shared one.
    */
   nativeScope?: string;
+  /** Where the surface installed this resource, when it records one. */
+  installPath?: string;
 }
 
 /** Something the executor looked at but could not observe, with why. */
@@ -644,6 +646,7 @@ async function readClaudePluginsStore(
       provenance: { file: absolutePath, formatId: store.formatId },
       scope: entry.scope,
       nativeScope: entry.nativeScope,
+      installPath: entry.installPath,
     })),
     skipped: [
       ...result.skipped.map(({ reason }) => ({ file: absolutePath, reason })),

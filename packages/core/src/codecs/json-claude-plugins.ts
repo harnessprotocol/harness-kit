@@ -57,6 +57,13 @@ export interface ClaudePluginEntry {
   nativeScope: ClaudeInstallScope;
   /** Absolute project path for a project-scope install; absent at user scope. */
   projectPath?: string;
+  /**
+   * The directory the surface actually installed this version into. The
+   * authoritative answer to "which cached copy is in use" — inferring it from
+   * the cache's directory names is guesswork, and several plugins cache by
+   * commit SHA where no ordering of names is meaningful at all.
+   */
+  installPath?: string;
   value: PluginStoreValue;
 }
 
@@ -250,6 +257,9 @@ export function readClaudePlugins(
         name: key,
         scope,
         nativeScope: native,
+        ...(stringOrUndefined(install.installPath) !== undefined
+          ? { installPath: stringOrUndefined(install.installPath) as string }
+          : {}),
         ...(projectPath !== undefined ? { projectPath } : {}),
         value: {
           marketplace: identity.marketplace,

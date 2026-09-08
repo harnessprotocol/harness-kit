@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import { buildMachineInventory } from "@harness-kit/core";
 import MachinePage from "../MachinePage";
 
@@ -242,6 +243,15 @@ function makeInventory() {
 
 // ── Helpers ────────────────────────────────────────────────────
 
+/** Pushes a route change after mount, without remounting the page. */
+function NavigateTo({ to }: { to: string }) {
+  const navigate = useNavigate();
+  useEffect(() => {
+    navigate(to);
+  }, [navigate, to]);
+  return null;
+}
+
 function renderPage() {
   return render(
     <MemoryRouter>
@@ -389,6 +399,38 @@ describe("MachinePage", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByTestId("drift-view")).not.toBeInTheDocument();
     expect(mockGrantProjectScope).not.toHaveBeenCalled();
+  });
+
+  it("opens the section on ?drift=1, cold AND on navigation", async () => {
+    // The sidebar and cmd-4 point at /machine?drift=1. React Router does not
+    // remount MachinePage when only the search string changes, so reading the
+    // param in a useState initializer worked on a cold load and did nothing on
+    // the common path — arriving from anywhere the user had already seen
+    // Machine. Both are asserted here.
+    const { unmount } = render(
+      <MemoryRouter initialEntries={["/machine?drift=1"]}>
+        <MachinePage />
+      </MemoryRouter>,
+    );
+    await screen.findByTestId("machine-grid");
+    expect(
+      screen.getByRole("button", { name: /Drift from harness.yaml/ }),
+    ).toHaveAttribute("aria-expanded", "true");
+    unmount();
+
+    // Navigating within an already-mounted Machine route.
+    render(
+      <MemoryRouter initialEntries={["/machine", "/machine?drift=1"]} initialIndex={0}>
+        <NavigateTo to="/machine?drift=1" />
+        <MachinePage />
+      </MemoryRouter>,
+    );
+    await screen.findByTestId("machine-grid");
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: /Drift from harness.yaml/ }),
+      ).toHaveAttribute("aria-expanded", "true"),
+    );
   });
 
   it("mounts Drift when the section is opened", async () => {

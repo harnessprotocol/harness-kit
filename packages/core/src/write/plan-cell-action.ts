@@ -175,9 +175,17 @@ async function findEntry(
       projectRoot: opts.projectRoot,
       homeRoot: opts.homeRoot,
     });
-    const entry = result.entries.find(
+    const matches = result.entries.filter(
       (candidate) => candidate.kind === kind && candidate.name.toLowerCase() === wanted,
     );
+    // Ordering STORES project-first is not enough when one store's format
+    // emits both scopes — Claude Code declares plugins in a single user-scope
+    // store whose codec stamps each install's own scope. Without this the
+    // entry was whichever came first in the JSON, so the answer changed with
+    // file order and disagreed with the grid, which resolves the same way
+    // (`effectiveResource`: project beats user).
+    const entry =
+      matches.find((candidate) => candidate.scope === "project") ?? matches[0];
     if (entry) return { entry, path };
   }
   return null;
@@ -209,6 +217,7 @@ export async function planCellAction(
     // it through stops a private `local` install being reproduced as a
     // committed `project` one.
     const sourceNativeScope = (found.entry as { nativeScope?: unknown }).nativeScope;
+    const sourceInstallPath = (found.entry as { installPath?: unknown }).installPath;
     const broker = planPluginAction({
       surface: request.to,
       identity: request.name,
@@ -216,6 +225,7 @@ export async function planCellAction(
       action: "install",
       projectRoot: opts.projectRoot,
       ...(typeof sourceNativeScope === "string" ? { nativeScope: sourceNativeScope } : {}),
+      ...(typeof sourceInstallPath === "string" ? { sourcePath: sourceInstallPath } : {}),
     });
     const usable =
       broker.kind !== "unsupported" && broker.plan.supported === true;
@@ -327,10 +337,28 @@ export function syncCliCommand(request: CellActionRequest): string {
     "harness-kit sync",
     `--from ${request.from}`,
     `--to ${request.to}`,
-    `--only ${request.kind}:${request.name}`,
+    `--only ${shellQuote(`${request.kind}:${request.name}`)}`,
     `--scope ${request.scope}`,
     "--yes",
   ].join(" ");
+}
+
+/**
+ * Quote a value for a command line a human will paste into a shell.
+ *
+ * The name comes from a file another tool wrote — a plugin identity is an
+ * arbitrary JSON key — and this string is printed as a runnable line by the
+ * CLI and rendered with a Copy button in the drawer. Unquoted, an identity
+ * containing `;` carries whatever follows it into the user's shell. That was
+ * survivable while plugin rows planned as `unavailable`; this milestone makes
+ * them `ready`, so the line is now presented as the action to take.
+ *
+ * Single quotes with the standard `'\''` escape: nothing inside them is
+ * interpreted by any POSIX shell.
+ */
+function shellQuote(value: string): string {
+  if (/^[A-Za-z0-9_@%+=:,./-]+$/.test(value)) return value;
+  return `'${value.replaceAll("'", `'\\''`)}'`;
 }
 
 /**

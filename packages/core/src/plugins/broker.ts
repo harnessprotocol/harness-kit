@@ -48,6 +48,11 @@ export interface PluginBrokerRequest {
    * collapsing `local` — private — into `project` — committed.
    */
   nativeScope?: string;
+  /**
+   * Where the SOURCE surface recorded this plugin's files. The unpack driver
+   * copies from here rather than guessing which cached directory is current.
+   */
+  sourcePath?: string;
 }
 
 export type BrokerPlan =

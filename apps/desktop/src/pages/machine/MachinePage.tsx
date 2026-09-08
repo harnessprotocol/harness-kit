@@ -22,8 +22,19 @@ export default function MachinePage() {
   // Arriving from the retired /drift route (or the sidebar's Drift entry)
   // opens the section: redirecting someone to a collapsed accordion is the
   // same as losing the page they asked for.
+  //
+  // An effect, NOT a useState initializer. React Router does not remount this
+  // component when only the search string changes, so an initializer opened
+  // the section on a cold load of /machine?drift=1 and did nothing on the
+  // common path — clicking Drift in the sidebar while already on Machine.
   const [searchParams] = useSearchParams();
-  const [driftOpen, setDriftOpen] = useState(searchParams.get("drift") === "1");
+  const driftRequested = searchParams.get("drift") === "1";
+  const [driftOpen, setDriftOpen] = useState(driftRequested);
+  useEffect(() => {
+    // Opens on request; never force-closes, so a user who opened the section
+    // by hand does not lose it by navigating within Machine.
+    if (driftRequested) setDriftOpen(true);
+  }, [driftRequested]);
   const [selectedRow, setSelectedRow] = useState<GridRow | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
   const [projectDegraded, setProjectDegraded] = useState(false);

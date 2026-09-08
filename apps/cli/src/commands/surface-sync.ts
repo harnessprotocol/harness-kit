@@ -332,6 +332,12 @@ function report(actions: PlannedAction[], flags: SurfaceSyncFlags, scope: Surfac
     reason: action.plan.reason,
     carriesSecret: action.plan.carriesSecret,
     requiresConfirmation: action.plan.requiresConfirmation,
+    // Distinct from capability loss. "lossy" means the target cannot express
+    // the resource; an overwrite means it holds a DIFFERENT version that this
+    // action replaces. Both set requiresConfirmation, and reporting the
+    // second as the first told users the opposite of what was happening.
+    overwrites: action.plan.overwrites ?? null,
+    lossy: (action.plan.loss?.losses.length ?? 0) > 0,
     cli: action.cli,
   }));
 
@@ -347,12 +353,21 @@ function report(actions: PlannedAction[], flags: SurfaceSyncFlags, scope: Surfac
   for (const row of rows) {
     const badges = [
       row.carriesSecret ? "contains a secret" : null,
-      row.requiresConfirmation ? "lossy" : null,
+      row.lossy ? "lossy" : null,
+      row.overwrites ? `replaces ${row.overwrites.length} field(s)` : null,
     ].filter(Boolean);
     console.log(
       `  ${row.status.padEnd(11)} ${row.kind}:${row.name}  ${row.from} → ${row.to}${badges.length ? `  (${badges.join(", ")})` : ""}`,
     );
     if (row.reason) console.log(`              ${row.reason}`);
+    // AC-11: never replace content without naming what is replaced.
+    if (row.overwrites) {
+      for (const delta of row.overwrites) {
+        console.log(
+          `              replaces ${delta.path}: ${JSON.stringify(delta.left)} → ${JSON.stringify(delta.right)}`,
+        );
+      }
+    }
     console.log(`              ${row.cli}`);
   }
   console.log("\nRe-run with --yes to apply.");
