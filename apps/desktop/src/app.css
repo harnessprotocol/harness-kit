@@ -466,12 +466,6 @@ body {
   background: rgba(230, 237, 243, 0.18);
 }
 
-/* ── Display font ── */
-.text-display {
-  font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
-  letter-spacing: -0.02em;
-}
-
 /* ── Typography helpers ── */
 .text-title {
   font-size: 17px;

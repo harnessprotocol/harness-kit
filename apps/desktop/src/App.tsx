@@ -12,7 +12,6 @@ const HarnessFilePage = lazy(() => import("./pages/harness/HarnessFilePage"));
 const PluginsPage = lazy(() => import("./pages/harness/PluginsPage"));
 const HooksPage = lazy(() => import("./pages/harness/HooksPage"));
 const McpServersPage = lazy(() => import("./pages/harness/McpServersPage"));
-const SettingsPage = lazy(() => import("./pages/harness/SettingsPage"));
 const PluginExplorerPage = lazy(() => import("./pages/harness/PluginExplorerPage"));
 const ClaudeMdPage = lazy(() => import("./pages/harness/ClaudeMdPage"));
 const ConfigFilePage = lazy(() => import("./pages/harness/ConfigFilePage"));
@@ -98,7 +97,8 @@ export default function App() {
             <Route path="harness/hooks" element={<HooksPage />} />
             <Route path="harness/claude-md" element={<ClaudeMdPage />} />
             <Route path="harness/sync" element={<SyncPage />} />
-            <Route path="harness/settings" element={<SettingsPage />} />
+            {/* Retired route (AC-41) */}
+            <Route path="harness/settings" element={<Navigate to="/harness/file" replace />} />
             <Route path="harness/config/:filename" element={<ConfigFilePage />} />
 
             {/* Marketplace */}

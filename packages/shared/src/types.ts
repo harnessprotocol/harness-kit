@@ -521,13 +521,3 @@ export interface HarnessRecommendation {
   sessionCount: number;
   avgDurationMs?: number;
 }
-
-// ── Harness health (resilience profiles) ────────────────────
-
-export interface HarnessHealthRecord {
-  harnessId: string;
-  lastExitCode: number | null;
-  lastFailureAt: string | null;
-  consecutiveFailures: number;
-  totalLaunches: number;
-}

@@ -21,7 +21,7 @@ const ROUTES = [
   "/harness/mcp",
   "/harness/hooks",
   "/harness/claude-md",
-  "/harness/settings",
+  "/harness/settings", // retired route; redirects to /harness/file (AC-41)
   "/comparator",
   "/marketplace",
   "/marketplace/research",
