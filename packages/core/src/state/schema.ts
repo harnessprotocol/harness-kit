@@ -26,7 +26,7 @@
  * without a default breaks the old writer — and both sides swallow ledger
  * errors by design, so it would fail silently.
  */
-export const STATE_SCHEMA_VERSION = 2;
+export const STATE_SCHEMA_VERSION = 3;
 
 /**
  * v1: observations, resources, fingerprints, plus placeholder shapes for
@@ -105,8 +105,29 @@ const V2: readonly string[] = [
   `CREATE INDEX IF NOT EXISTS transactions_applied_at ON transactions(applied_at DESC)`,
 ];
 
+/**
+ * v3: drift acknowledgements (AC-37). Purely additive — a CREATE with no
+ * DROP — so a v2 reader that never learns about this table keeps working,
+ * which is the constraint at the top of this file.
+ *
+ * Keyed by the tuple that identifies one drift item within one scope, the
+ * same key the desktop already used in its own database. `acknowledged_at`
+ * is supplied by the caller; nothing here reads a clock.
+ */
+const V3: readonly string[] = [
+  `CREATE TABLE IF NOT EXISTS drift_acknowledgements (
+  scope_root TEXT NOT NULL,
+  adapter TEXT NOT NULL,
+  path TEXT NOT NULL,
+  harness_name TEXT NOT NULL,
+  slot TEXT NOT NULL,
+  acknowledged_at TEXT NOT NULL,
+  PRIMARY KEY (scope_root, adapter, path, harness_name, slot)
+)`,
+];
+
 /** Each version's statements, indexed by the version they produce. */
-const MIGRATIONS: Record<number, readonly string[]> = { 1: V1, 2: V2 };
+const MIGRATIONS: Record<number, readonly string[]> = { 1: V1, 2: V2, 3: V3 };
 
 /**
  * Statements needed to bring a database at `fromVersion` up to current.
@@ -142,6 +163,10 @@ export function stateSchemaStatements(fromVersion: number): string[] {
  * Returns the version implied by what actually exists on disk.
  */
 export const STATE_VERSION_PROBES: ReadonlyArray<{ version: number; sql: string }> = [
+  {
+    version: 3,
+    sql: "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'drift_acknowledgements'",
+  },
   {
     version: 2,
     sql: "SELECT COUNT(*) FROM pragma_table_info('transactions') WHERE name = 'transaction_id'",

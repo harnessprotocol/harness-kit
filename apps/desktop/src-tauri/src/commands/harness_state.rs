@@ -314,6 +314,128 @@ fn detect_version(conn: &Connection) -> i64 {
 
 /// Record one committed transaction as a rollback point (AC-32).
 /// Recording the same transaction id twice is idempotent — the later wins.
+// ── Drift acknowledgements (AC-37) ─────────────────────────────
+//
+// These lived in the desktop's own comparator.db while Drift was a separate
+// page. Absorbing Drift into the Machine view means both surfaces read the
+// same acknowledgements, so they move to the shared harness.db alongside the
+// ledger.
+//
+// The migration COPIES; it never deletes the source rows. If this proves
+// wrong in some way not caught here, the originals are still on disk and a
+// user has lost nothing — which matters more than tidiness for data the user
+// created by hand.
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct DriftAck {
+    pub scope_root: String,
+    pub adapter: String,
+    pub path: String,
+    pub harness_name: String,
+    pub slot: String,
+    pub acknowledged_at: String,
+}
+
+/// Cap the migration so a corrupt or hostile source database cannot make the
+/// app hang on launch. Far above any plausible acknowledgement count.
+const MAX_MIGRATED_ACKS: usize = 10_000;
+
+#[tauri::command]
+pub fn migrate_drift_acknowledgements(legacy_db: String) -> Result<usize, String> {
+    migrate_drift_acknowledgements_at(&state_path()?, std::path::Path::new(&legacy_db))
+}
+
+/// Path-taking core, so tests point at scratch databases without touching the
+/// process environment.
+pub(crate) fn migrate_drift_acknowledgements_at(
+    state: &std::path::Path,
+    legacy: &std::path::Path,
+) -> Result<usize, String> {
+    // No legacy database is the normal case on a fresh install, not an error.
+    if !legacy.exists() {
+        return Ok(0);
+    }
+    let source = rusqlite::Connection::open_with_flags(
+        legacy,
+        rusqlite::OpenFlags::SQLITE_OPEN_READ_ONLY,
+    )
+    .map_err(|e| format!("Failed to open legacy database: {}", e))?;
+
+    // The table may not exist: a desktop install that never used Drift has a
+    // comparator.db without it. That is zero rows to migrate, not a failure.
+    let has_table: i64 = source
+        .query_row(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'drift_acknowledgements'",
+            [],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("Failed to inspect legacy database: {}", e))?;
+    if has_table == 0 {
+        return Ok(0);
+    }
+
+    let mut statement = source
+        .prepare(
+            "SELECT scope_root, adapter, path, harness_name, slot, acknowledged_at \
+             FROM drift_acknowledgements",
+        )
+        .map_err(|e| format!("Failed to read legacy acknowledgements: {}", e))?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok(DriftAck {
+                scope_root: row.get(0)?,
+                adapter: row.get(1)?,
+                path: row.get(2)?,
+                harness_name: row.get(3)?,
+                slot: row.get(4)?,
+                acknowledged_at: row.get(5)?,
+            })
+        })
+        .map_err(|e| format!("Failed to read legacy acknowledgements: {}", e))?;
+
+    let mut pending: Vec<DriftAck> = Vec::new();
+    for row in rows {
+        let ack = row.map_err(|e| format!("Failed to read a legacy acknowledgement: {}", e))?;
+        pending.push(ack);
+        if pending.len() >= MAX_MIGRATED_ACKS {
+            break;
+        }
+    }
+    drop(statement);
+    drop(source);
+
+    let mut target = open_at(state)?;
+    let tx = target
+        .transaction()
+        .map_err(|e| format!("Failed to begin migration: {}", e))?;
+    let mut migrated = 0usize;
+    for ack in &pending {
+        // Idempotent, and the TARGET wins on conflict: a row already in the
+        // shared store reflects an acknowledgement made after the move, and
+        // re-running the migration must not roll it back to the legacy value.
+        let changed = tx
+            .execute(
+                "INSERT OR IGNORE INTO drift_acknowledgements \
+                   (scope_root, adapter, path, harness_name, slot, acknowledged_at) \
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                rusqlite::params![
+                    ack.scope_root,
+                    ack.adapter,
+                    ack.path,
+                    ack.harness_name,
+                    ack.slot,
+                    ack.acknowledged_at
+                ],
+            )
+            .map_err(|e| format!("Failed to migrate an acknowledgement: {}", e))?;
+        migrated += changed;
+    }
+    tx.commit()
+        .map_err(|e| format!("Failed to commit migration: {}", e))?;
+    Ok(migrated)
+}
+
 #[tauri::command]
 pub fn record_transaction(record: TransactionRecord) -> Result<(), String> {
     record_transaction_at(&state_path()?, record)
@@ -433,6 +555,116 @@ mod tests {
         let path = std::env::temp_dir().join(format!("harness-state-{}.db", name));
         std::fs::remove_file(&path).ok();
         path
+    }
+
+    /// A legacy comparator.db carrying `count` acknowledgements.
+    fn legacy_db(name: &str, count: usize) -> PathBuf {
+        let path = scratch(name);
+        let conn = rusqlite::Connection::open(&path).expect("open legacy");
+        conn.execute_batch(
+            "CREATE TABLE drift_acknowledgements (
+                scope_root TEXT NOT NULL,
+                adapter TEXT NOT NULL,
+                path TEXT NOT NULL,
+                harness_name TEXT NOT NULL,
+                slot TEXT NOT NULL,
+                acknowledged_at TEXT NOT NULL,
+                PRIMARY KEY (scope_root, adapter, path, harness_name, slot)
+            )",
+        )
+        .expect("create legacy table");
+        for i in 0..count {
+            conn.execute(
+                "INSERT INTO drift_acknowledgements VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                rusqlite::params![
+                    "/repo",
+                    "claude-code",
+                    format!("CLAUDE.md-{}", i),
+                    "reviewer",
+                    "instructions",
+                    "2026-09-01T00:00:00Z"
+                ],
+            )
+            .expect("seed legacy row");
+        }
+        path
+    }
+
+    #[test]
+    fn migrates_legacy_acknowledgements_into_the_shared_store() {
+        let state = scratch("ack-migrate");
+        let legacy = legacy_db("ack-legacy", 3);
+        assert_eq!(
+            migrate_drift_acknowledgements_at(&state, &legacy).unwrap(),
+            3
+        );
+        let conn = open_at(&state).unwrap();
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM drift_acknowledgements", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(count, 3);
+    }
+
+    #[test]
+    fn migration_is_idempotent_and_never_deletes_the_source() {
+        let state = scratch("ack-idem");
+        let legacy = legacy_db("ack-idem-legacy", 2);
+        assert_eq!(migrate_drift_acknowledgements_at(&state, &legacy).unwrap(), 2);
+        // A second run migrates nothing new and does not duplicate.
+        assert_eq!(migrate_drift_acknowledgements_at(&state, &legacy).unwrap(), 0);
+        let conn = open_at(&state).unwrap();
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM drift_acknowledgements", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(count, 2);
+
+        // The legacy rows are still there: if this migration is wrong in some
+        // way, the user's own data is recoverable.
+        let source = rusqlite::Connection::open(&legacy).unwrap();
+        let remaining: i64 = source
+            .query_row("SELECT COUNT(*) FROM drift_acknowledgements", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(remaining, 2);
+    }
+
+    #[test]
+    fn a_newer_acknowledgement_in_the_shared_store_wins() {
+        // Re-running the migration must not roll an acknowledgement back to
+        // whatever the abandoned database happened to hold.
+        let state = scratch("ack-newer");
+        let legacy = legacy_db("ack-newer-legacy", 1);
+        migrate_drift_acknowledgements_at(&state, &legacy).unwrap();
+        let conn = open_at(&state).unwrap();
+        conn.execute(
+            "UPDATE drift_acknowledgements SET acknowledged_at = '2026-12-25T00:00:00Z'",
+            [],
+        )
+        .unwrap();
+        drop(conn);
+
+        migrate_drift_acknowledgements_at(&state, &legacy).unwrap();
+        let conn = open_at(&state).unwrap();
+        let stamp: String = conn
+            .query_row("SELECT acknowledged_at FROM drift_acknowledgements", [], |r| r.get(0))
+            .unwrap();
+        assert_eq!(stamp, "2026-12-25T00:00:00Z");
+    }
+
+    #[test]
+    fn a_missing_or_driftless_legacy_database_is_zero_rows_not_an_error() {
+        let state = scratch("ack-missing");
+        // Fresh install: no comparator.db at all.
+        assert_eq!(
+            migrate_drift_acknowledgements_at(&state, &scratch("ack-absent")).unwrap(),
+            0
+        );
+        // Installed, but Drift was never used: the table does not exist.
+        let bare = scratch("ack-bare");
+        rusqlite::Connection::open(&bare)
+            .unwrap()
+            .execute_batch("CREATE TABLE comparisons (id TEXT)")
+            .unwrap();
+        assert_eq!(migrate_drift_acknowledgements_at(&state, &bare).unwrap(), 0);
     }
 
     fn record(id: &str) -> TransactionRecord {

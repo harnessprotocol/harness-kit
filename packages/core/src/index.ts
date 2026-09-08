@@ -312,6 +312,8 @@ export type {
   ObservationSnapshotMeta,
   StoredResource,
   PluginInstallRecord,
+  DriftAcknowledgement,
+  DriftAcknowledgementKey,
   ObservationSnapshot,
   StateStore,
   TransactionLedger,

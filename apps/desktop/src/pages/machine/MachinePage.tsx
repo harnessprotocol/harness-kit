@@ -6,6 +6,7 @@ import { surfaceLabel } from "../../lib/surface-labels";
 import { loadMachineInventory } from "./machine-data";
 import { MachineGrid } from "./MachineGrid";
 import { RowDrawer } from "./RowDrawer";
+import DriftPage from "../drift/DriftPage";
 
 /**
  * Machine view (Task 14): read-only cross-surface inventory of this
@@ -266,6 +267,21 @@ export default function MachinePage() {
           )}
         </>
       )}
+
+      {/*
+        AC-37: Drift lives here now. Rendered as the existing page rather than
+        reimplemented — the M2 attempt to "absorb" Drift routed /drift at this
+        view and DELETED the acknowledge/fix workflow, which is why it was
+        reverted. Drift compares harness.yaml against compiled output; the grid
+        above compares surfaces against each other. Two different questions, one
+        screen.
+      */}
+      <section style={{ marginTop: 28 }} data-testid="machine-drift-section">
+        <h2 style={{ fontSize: 13, fontWeight: 650, margin: "0 0 8px" }}>
+          Drift from harness.yaml
+        </h2>
+        <DriftPage />
+      </section>
 
       {selectedRow && (
         <RowDrawer

@@ -34,7 +34,11 @@ const FAMILY_BY_ID: Record<string, string> = {
   junie: "junie",
 };
 
-vi.mock("@harness-kit/core", () => ({
+// MachinePage now renders the Drift section (AC-37), so this mock must also
+// satisfy what Drift's module tree imports from core. `importOriginal` would
+// be tidier, but core pulls node builtins the jsdom environment cannot
+// resolve — the reason this mock is exhaustive in the first place.
+vi.mock("@harness-kit/core", async () => ({
   buildMachineInventory: vi.fn(),
   getSurface: vi.fn((id: string) => ({
     id,
@@ -43,6 +47,17 @@ vi.mock("@harness-kit/core", () => ({
     notApplicable: [],
     stores: [],
   })),
+  // Pulled in by the Drift section's module tree (AC-37).
+  COMPILE_SURFACE_IDS: [
+    "claude-code",
+    "cursor",
+    "copilot-vscode",
+    "codex",
+    "opencode",
+    "windsurf",
+    "gemini",
+    "junie",
+  ],
   // TauriFsProvider (lib/harness-fs) pulls these from core
   posixJoin: vi.fn((...args: string[]) => args.join("/")),
   posixDirname: vi.fn((p: string) => p.split("/").slice(0, -1).join("/")),
@@ -343,6 +358,18 @@ describe("MachinePage", () => {
     expect(cell).toHaveAttribute("title", expect.stringContaining("not a gap"));
     // not-applicable keeps its own em-dash glyph.
     expect(cell).not.toHaveTextContent("—");
+  });
+
+  it("presents Drift inside the Machine view (AC-37)", async () => {
+    // The M2 attempt at this routed /drift here and deleted the acknowledge
+    // and fix workflow, so it was reverted. Absorption means the workflow
+    // moves, not that it disappears — Drift compares harness.yaml against
+    // compiled output, which the surface grid never did.
+    renderPage();
+    await screen.findByTestId("machine-grid");
+
+    expect(screen.getByTestId("machine-drift-section")).toBeInTheDocument();
+    expect(screen.getByText("Drift from harness.yaml")).toBeInTheDocument();
   });
 
   it("derives totals from the inventory rows/gaps/diffs, not resourceCount", async () => {

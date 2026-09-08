@@ -8,6 +8,8 @@ import {
   stateSchemaStatements,
 } from "@harness-kit/core";
 import type {
+  DriftAcknowledgement,
+  DriftAcknowledgementKey,
   ObservationSnapshot,
   ObservationSnapshotMeta,
   PluginInstallRecord,
@@ -325,6 +327,58 @@ export class SqliteStateStore implements StateStore {
       // to remove", which is the safe answer for an uninstall to act on.
       files: parseFileList(row.files),
       installedAt: row.installed_at,
+    }));
+  }
+
+  async acknowledgeDrift(record: DriftAcknowledgement): Promise<void> {
+    this.db
+      .prepare(
+        `INSERT INTO drift_acknowledgements
+           (scope_root, adapter, path, harness_name, slot, acknowledged_at)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(scope_root, adapter, path, harness_name, slot)
+         DO UPDATE SET acknowledged_at = excluded.acknowledged_at`,
+      )
+      .run(
+        record.scopeRoot,
+        record.adapter,
+        record.path,
+        record.harnessName,
+        record.slot,
+        record.acknowledgedAt,
+      );
+  }
+
+  async unacknowledgeDrift(key: DriftAcknowledgementKey): Promise<void> {
+    this.db
+      .prepare(
+        `DELETE FROM drift_acknowledgements
+         WHERE scope_root = ? AND adapter = ? AND path = ? AND harness_name = ? AND slot = ?`,
+      )
+      .run(key.scopeRoot, key.adapter, key.path, key.harnessName, key.slot);
+  }
+
+  async listDriftAcknowledgements(): Promise<DriftAcknowledgement[]> {
+    const rows = this.db
+      .prepare(
+        `SELECT scope_root, adapter, path, harness_name, slot, acknowledged_at
+         FROM drift_acknowledgements ORDER BY acknowledged_at DESC`,
+      )
+      .all() as Array<{
+      scope_root: string;
+      adapter: string;
+      path: string;
+      harness_name: string;
+      slot: string;
+      acknowledged_at: string;
+    }>;
+    return rows.map((row) => ({
+      scopeRoot: row.scope_root,
+      adapter: row.adapter,
+      path: row.path,
+      harnessName: row.harness_name,
+      slot: row.slot,
+      acknowledgedAt: row.acknowledged_at,
     }));
   }
 

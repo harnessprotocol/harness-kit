@@ -145,6 +145,24 @@ export interface PluginInstallRecord {
   installedAt: string;
 }
 
+/**
+ * The tuple identifying one drift item within one scope (AC-37). Matches the
+ * key the desktop already used in its own database, so migrating rows across
+ * is a copy rather than a re-keying.
+ */
+export interface DriftAcknowledgementKey {
+  scopeRoot: string;
+  adapter: string;
+  path: string;
+  harnessName: string;
+  slot: string;
+}
+
+export interface DriftAcknowledgement extends DriftAcknowledgementKey {
+  /** ISO-8601, supplied by the caller — implementations never read the clock. */
+  acknowledgedAt: string;
+}
+
 export interface StateStore extends TransactionLedger {
   /** Record one plugin install. Failure is never a reason to fail the install
    * itself — by the time this runs the plugin is already on disk. */
@@ -152,6 +170,15 @@ export interface StateStore extends TransactionLedger {
 
   /** Installs recorded for a surface, newest first. */
   listPluginInstalls(surface: SurfaceId): Promise<PluginInstallRecord[]>;
+
+  /** Acknowledge one drift item, or refresh an existing acknowledgement (AC-37). */
+  acknowledgeDrift(record: DriftAcknowledgement): Promise<void>;
+
+  /** Withdraw an acknowledgement so the item resurfaces. */
+  unacknowledgeDrift(key: DriftAcknowledgementKey): Promise<void>;
+
+  /** Every acknowledgement, for hiding items the user has already reviewed. */
+  listDriftAcknowledgements(): Promise<DriftAcknowledgement[]>;
 
   /**
    * Persist one observation snapshot with its resources in a single atomic

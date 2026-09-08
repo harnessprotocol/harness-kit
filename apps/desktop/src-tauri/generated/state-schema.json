@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "migrations": {
     "1": [
       "CREATE TABLE IF NOT EXISTS observations (\n  id INTEGER PRIMARY KEY,\n  observed_at TEXT NOT NULL,\n  platform TEXT NOT NULL,\n  project_root TEXT NULL,\n  home_root TEXT NOT NULL\n)",
@@ -14,9 +14,16 @@
       "DROP TABLE IF EXISTS transactions",
       "CREATE TABLE transactions (\n  id INTEGER PRIMARY KEY,\n  transaction_id TEXT NOT NULL UNIQUE,\n  applied_at TEXT NOT NULL,\n  roots TEXT NOT NULL,\n  manifest_path TEXT NOT NULL,\n  manifest_root TEXT NOT NULL,\n  backup_dir TEXT NOT NULL,\n  payload TEXT NOT NULL\n)",
       "CREATE INDEX IF NOT EXISTS transactions_applied_at ON transactions(applied_at DESC)"
+    ],
+    "3": [
+      "CREATE TABLE IF NOT EXISTS drift_acknowledgements (\n  scope_root TEXT NOT NULL,\n  adapter TEXT NOT NULL,\n  path TEXT NOT NULL,\n  harness_name TEXT NOT NULL,\n  slot TEXT NOT NULL,\n  acknowledged_at TEXT NOT NULL,\n  PRIMARY KEY (scope_root, adapter, path, harness_name, slot)\n)"
     ]
   },
   "versionProbes": [
+    {
+      "version": 3,
+      "sql": "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'drift_acknowledgements'"
+    },
     {
       "version": 2,
       "sql": "SELECT COUNT(*) FROM pragma_table_info('transactions') WHERE name = 'transaction_id'"
