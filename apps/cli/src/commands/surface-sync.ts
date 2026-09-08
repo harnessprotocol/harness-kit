@@ -24,6 +24,7 @@ import type {
 } from "@harness-kit/core";
 import { NodeFsProvider, NodeProcessRunner } from "@harness-kit/core/node";
 import { defaultStatePath, SqliteStateStore } from "../state/sqlite-store.js";
+import { resolveDefinitions } from "../definitions/resolve-definitions.js";
 import { timestamp } from "./portability-common.js";
 
 export interface SurfaceSyncFlags {
@@ -123,7 +124,22 @@ export async function surfaceSyncCommand(flags: SurfaceSyncFlags): Promise<void>
   };
 
   const fs = new NodeFsProvider(cwd);
-  const inventory = await buildMachineInventory(fs, opts);
+
+  // Opened up front rather than at the apply step, because the definitions
+  // feed needs it too: it re-verifies the cached bundle and raises the
+  // anti-rollback floor. Best-effort throughout — a missing or locked
+  // database costs the cache and the ledger, never the command itself.
+  let store: SqliteStateStore | undefined;
+  try {
+    store = await SqliteStateStore.open(defaultStatePath());
+  } catch {
+    store = undefined; // Ledger is an index; losing it must not block a write.
+  }
+
+  // AC-26: a verified bundle can move a surface's config path, and the same
+  // registry must drive observation, the grid and the planned actions below.
+  const definitions = await resolveDefinitions(store);
+  const inventory = await buildMachineInventory(fs, opts, definitions.surfaces);
   const only = parseOnly(flags.only);
   const from = flags.from ? assertSurface(flags.from, "--from") : undefined;
   const to = (flags.to ?? []).map((value) => assertSurface(value, "--to"));
@@ -199,24 +215,22 @@ export async function surfaceSyncCommand(flags: SurfaceSyncFlags): Promise<void>
       await writeFile(resolve(flags.out), text, { mode: 0o600 });
       console.log(`\nWritten to ${resolve(flags.out)}`);
     }
+    // The store is opened before the inventory now (the definitions feed
+    // needs it), so every early return has to close it — the `finally` far
+    // below only covers the apply path.
+    await store?.close();
     return;
   }
 
   if (!flags.yes || flags.dryRun) {
     report(actions, flags, scope);
+    await store?.close();
     return;
   }
 
   // Confirmation gate: --yes is the CLI's explicit confirmation (AC-34).
   const applied: string[] = [];
   const failed: Array<{ cli: string; reason: string }> = [];
-  let store: SqliteStateStore | undefined;
-  try {
-    store = await SqliteStateStore.open(defaultStatePath());
-  } catch {
-    store = undefined; // Ledger is an index; losing it must not block a write.
-  }
-
   try {
     for (const action of actionable) {
       const stamp = timestamp();

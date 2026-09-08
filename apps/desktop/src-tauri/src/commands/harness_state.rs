@@ -1145,7 +1145,12 @@ mod cross_impl {
         // Every table and index the shared migrations define, and nothing the
         // v1 placeholder left behind.
         for expected in [
+            // v4 tables. `drift_acknowledgements` (v3) was missing from this
+            // list until v4 was added, so the assertion had quietly stopped
+            // covering a whole migration step.
             "definitions_cache",
+            "definitions_history",
+            "drift_acknowledgements",
             "fingerprints",
             "idx_observed_resources_observation",
             "meta",

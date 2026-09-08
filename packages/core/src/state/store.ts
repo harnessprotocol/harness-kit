@@ -163,6 +163,16 @@ export interface DriftAcknowledgement extends DriftAcknowledgementKey {
   acknowledgedAt: string;
 }
 
+/** One cached definitions bundle: the verified bytes and their signature. */
+export interface CachedDefinitions {
+  bundleNumber: number;
+  fetchedAt: string;
+  /** The exact bytes the signature covers. */
+  payload: Uint8Array;
+  /** Detached Ed25519 signature over `payload`. */
+  signature: Uint8Array;
+}
+
 export interface StateStore extends TransactionLedger {
   /** Record one plugin install. Failure is never a reason to fail the install
    * itself — by the time this runs the plugin is already on disk. */
@@ -188,6 +198,34 @@ export interface StateStore extends TransactionLedger {
 
   /** The newest snapshot with its resources, or null when none exist. */
   latestObservation(): Promise<ObservationSnapshot | null>;
+
+  /**
+   * The last definitions bundle that verified, with the exact bytes the
+   * signature covers and the detached signature itself (AC-25).
+   *
+   * Both are needed because the loader RE-VERIFIES the cache rather than
+   * trusting it: this row lives in a file any process running as this user
+   * can rewrite, so "we verified it when we stored it" says nothing about
+   * what is there now.
+   */
+  getCachedDefinitions(): Promise<CachedDefinitions | null>;
+
+  /** Replace the cached bundle. Only ever called with bytes that verified. */
+  putCachedDefinitions(entry: CachedDefinitions): Promise<void>;
+
+  /**
+   * Highest bundle number this machine has ever accepted — the anti-rollback
+   * floor.
+   *
+   * Deliberately NOT derived from the cache. The cache is deletable, and if
+   * deleting it also reset the floor an attacker would clear the defence and
+   * then replay a genuinely-signed older bundle. Deleting the cache costs a
+   * re-fetch; it must never cost the floor.
+   */
+  getHighestBundleNumber(): Promise<number | null>;
+
+  /** Raise the floor. Implementations MUST NOT lower it. */
+  recordBundleNumber(bundleNumber: number, at: string): Promise<void>;
 
   /** Last recorded digest for a surface × scope pair, or null if never set. */
   getFingerprint(surface: SurfaceId, scope: SurfaceScope): Promise<string | null>;

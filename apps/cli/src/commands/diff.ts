@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
+import { resolveDefinitions } from "../definitions/resolve-definitions.js";
 import { resolve } from "node:path";
 import chalk from "chalk";
 import {
@@ -160,7 +161,11 @@ async function crossSurfaceDiff(flags: DiffFlags): Promise<void> {
     homeRoot: homedir(),
     platform: currentPlatform(),
   };
-  const inventory = await buildMachineInventory(fs, observeOpts);
+  // AC-26: the registry may come from a verified definitions bundle, so a
+  // moved config path is picked up without a release. `diff` holds no state
+  // store, so it fetches and verifies but neither reads nor writes the cache.
+  const definitions = await resolveDefinitions(undefined);
+  const inventory = await buildMachineInventory(fs, observeOpts, definitions.surfaces);
 
   const pairRows: PairRow[] = [];
   for (const row of inventory.rows) {

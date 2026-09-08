@@ -1,3 +1,4 @@
+pub mod definitions;
 pub mod plugins;
 pub mod plugin_explorer;
 pub mod hooks;

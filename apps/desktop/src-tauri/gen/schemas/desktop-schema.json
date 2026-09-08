@@ -2781,6 +2781,12 @@
           "markdownDescription": "Enables the update_permissions command without any pre-configured scope."
         },
         {
+          "description": "Enables the verify_definitions_signature command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-verify-definitions-signature",
+          "markdownDescription": "Enables the verify_definitions_signature command without any pre-configured scope."
+        },
+        {
           "description": "Enables the write_config_file command without any pre-configured scope.",
           "type": "string",
           "const": "allow-write-config-file",
@@ -3379,6 +3385,12 @@
           "type": "string",
           "const": "deny-update-permissions",
           "markdownDescription": "Denies the update_permissions command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the verify_definitions_signature command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-verify-definitions-signature",
+          "markdownDescription": "Denies the verify_definitions_signature command without any pre-configured scope."
         },
         {
           "description": "Denies the write_config_file command without any pre-configured scope.",

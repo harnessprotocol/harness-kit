@@ -1,7 +1,8 @@
 import type { CompileSurfaceId, SurfaceId } from "../types.js";
 import { TARGETS } from "../adapters/target-metadata.js";
 import { isCompileSurface } from "../surfaces/types.js";
-import { SURFACES, getSurface } from "../surfaces/registry.js";
+import { SURFACES } from "../surfaces/registry.js";
+import { getSurfaceFrom } from "../surfaces/resolve.js";
 import type { SurfaceDescriptor } from "../surfaces/types.js";
 import { HARNESS_RESOURCE_KINDS } from "./types.js";
 import type {
@@ -157,8 +158,12 @@ function captureOnlyCapability(
  *    to apply until write support lands in M2; a kind with no store — and
  *    not `notApplicable` — is `unsupported` (no locally managed store).
  */
-function capabilityFor(target: SurfaceId, resource: HarnessResourceKind): TargetResourceCapability {
-  const descriptor = getSurface(target); // throws on genuinely unknown ids
+function capabilityFor(
+  target: SurfaceId,
+  resource: HarnessResourceKind,
+  registry: readonly SurfaceDescriptor[],
+): TargetResourceCapability {
+  const descriptor = getSurfaceFrom(registry, target); // throws on genuinely unknown ids
   if (descriptor.notApplicable.includes(resource)) {
     return {
       target,
@@ -179,16 +184,50 @@ function capabilityFor(target: SurfaceId, resource: HarnessResourceKind): Target
   };
 }
 
+/**
+ * Derive the capability matrix for a registry (AC-26).
+ *
+ * The matrix is DERIVED from surface descriptors, not transmitted: a cell for
+ * a non-legacy surface is `native`/`source-only`/`unsupported` purely by
+ * whether that surface declares a store for the kind. So when a bundle moves
+ * or removes a store, the matrix has to follow — `plan-cell-action` asks it
+ * what a target loses (AC-34), and a matrix describing stores that are no
+ * longer there reports the wrong loss.
+ *
+ * NOTE — `DefinitionsBundle.capabilityMatrix` is NOT used for this, and
+ * nothing reads that field today. Deriving is deliberate: a bundle carrying
+ * both a surface list and a matrix can carry the two disagreeing, and the
+ * disagreement is security-relevant, since capability decides whether a write
+ * is offered at all. Derivation makes that class of inconsistency
+ * unrepresentable. The field should probably be dropped at the next format
+ * bump rather than wired up.
+ *
+ * LIMIT — this only moves cells for the THREE non-legacy surfaces
+ * (claude-desktop, copilot-cli, pi). The 8 compile surfaces take
+ * `legacyCompileCapability` verbatim and ignore their descriptor's stores, by
+ * the design decision recorded above (keeping compile behaviour
+ * byte-identical through the re-key). So a definitions update can move where
+ * those 8 are READ, but cannot change what the engine believes they support.
+ * Pinned by test in definitions-registry.test.ts.
+ */
+export function buildCapabilityMatrix(
+  registry: readonly SurfaceDescriptor[] = SURFACES,
+): readonly TargetResourceCapability[] {
+  return registry.flatMap((surface) =>
+    PORTABLE_RESOURCE_KINDS.map((resource) => capabilityFor(surface.id, resource, registry)),
+  );
+}
+
 /** Exhaustive: all 11 surfaces × every resource kind, with no implicit/unknown cell. */
-export const TARGET_CAPABILITY_MATRIX: readonly TargetResourceCapability[] = SURFACES.flatMap((surface) =>
-  PORTABLE_RESOURCE_KINDS.map((resource) => capabilityFor(surface.id, resource)),
-);
+export const TARGET_CAPABILITY_MATRIX: readonly TargetResourceCapability[] = buildCapabilityMatrix(SURFACES);
 
 export function getTargetCapability(
   target: SurfaceId,
   resource: HarnessResourceKind,
+  /** The matrix in force; defaults to the compiled-in one. */
+  matrix: readonly TargetResourceCapability[] = TARGET_CAPABILITY_MATRIX,
 ): TargetResourceCapability {
-  const capability = TARGET_CAPABILITY_MATRIX.find(
+  const capability = matrix.find(
     (entry) => entry.target === target && entry.resource === resource,
   );
   if (!capability) throw new Error(`capability matrix is incomplete for ${target}/${resource}`);
@@ -220,11 +259,18 @@ export function buildLossReport(
   target: SurfaceId,
   resources: HarnessResource[],
   operation: LifecycleOperation,
+  /**
+   * The matrix in force (AC-26). Callers holding a registry resolved from a
+   * bundle MUST pass the matrix derived from that same registry: a loss
+   * report built from the compiled-in matrix describes stores the surface may
+   * no longer have.
+   */
+  capabilityMatrix: readonly TargetResourceCapability[] = TARGET_CAPABILITY_MATRIX,
 ): LossReport {
   const losses = resources.flatMap((resource) => {
     const capability = capabilityForResource(target, resource, operation);
     if (capability === "native") return [];
-    const matrix = getTargetCapability(target, resource.identity.kind);
+    const matrix = getTargetCapability(target, resource.identity.kind, capabilityMatrix);
     return [
       {
         resource: resource.identity,
@@ -246,10 +292,13 @@ export function buildLossReport(
   return { target, losses, portable: losses.every((loss) => loss.recoverable) };
 }
 
-export function assertCapabilityMatrixComplete(): void {
-  for (const target of SURFACES.map((entry) => entry.id)) {
+export function assertCapabilityMatrixComplete(
+  matrix: readonly TargetResourceCapability[] = TARGET_CAPABILITY_MATRIX,
+  registry: readonly SurfaceDescriptor[] = SURFACES,
+): void {
+  for (const target of registry.map((entry) => entry.id)) {
     for (const resource of PORTABLE_RESOURCE_KINDS) {
-      const capability = getTargetCapability(target, resource);
+      const capability = getTargetCapability(target, resource, matrix);
       for (const operation of ALL_OPERATIONS) {
         if (!capability.operations[operation]) {
           throw new Error(`missing operation capability for ${target}/${resource}/${operation}`);

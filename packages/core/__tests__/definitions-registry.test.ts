@@ -3,6 +3,12 @@ import { resolveSurfaces, getSurfaceFrom } from "../src/surfaces/resolve.js";
 import { SURFACES, getSurface } from "../src/surfaces/registry.js";
 import { toBundle, fromBundle } from "../src/definitions/bundle.js";
 import { buildMachineInventory } from "../src/observe/machine-inventory.js";
+import {
+  buildCapabilityMatrix,
+  getTargetCapability,
+  assertCapabilityMatrixComplete,
+  TARGET_CAPABILITY_MATRIX,
+} from "../src/portability/capabilities.js";
 import { MockFsProvider } from "./helpers/mock-fs.js";
 import type { SurfaceDescriptor } from "../src/surfaces/types.js";
 
@@ -190,5 +196,74 @@ describe("AC-26: a moved path is read on the next inventory", () => {
     );
     expect(resolved.map((entry) => entry.id)).toEqual(SURFACES.map((entry) => entry.id));
     expect(resolved).toBe(SURFACES);
+  });
+});
+
+describe("AC-26: the capability matrix follows the bundle", () => {
+  // The matrix decides whether a write is OFFERED, and `plan-cell-action`
+  // asks it what a target loses (AC-34). A matrix derived from the
+  // compiled-in registry while observation reads a bundle's registry would
+  // report losses about stores the surface no longer has.
+
+  it("turns a kind unsupported once the bundle drops its only store", () => {
+    // copilot-cli, not claude-code: only the three NON-legacy surfaces derive
+    // their cells from the registry. See the legacy-surface test below.
+    expect(getTargetCapability("copilot-cli", "instructions").operations.capture).not.toBe(
+      "unsupported",
+    );
+
+    const noInstructions: SurfaceDescriptor = {
+      ...getSurface("copilot-cli"),
+      stores: getSurface("copilot-cli").stores.filter((store) => store.kind !== "instructions"),
+    };
+    const resolved = resolveSurfaces(
+      toBundle({ surfaces: [noInstructions], capabilityMatrix: {}, bundleNumber: 2 }),
+    );
+
+    const cell = getTargetCapability("copilot-cli", "instructions", buildCapabilityMatrix(resolved));
+    expect(cell.operations.capture).toBe("unsupported");
+    expect(cell.note).toContain("no local store");
+  });
+
+  it("does NOT change a legacy compile surface, which is a real AC-26 limit", () => {
+    // The 8 compile surfaces (claude-code, cursor, copilot-vscode, codex,
+    // opencode, windsurf, gemini, junie) keep their pre-re-key cells verbatim
+    // so compile/capture/apply stays byte-identical. A consequence nobody has
+    // written down until now: a definitions update CANNOT change capabilities
+    // for those 8 — it can move where they are READ, but not what the engine
+    // believes they support. Pinned here so the limit is a decision on the
+    // record rather than a surprise the first time a bundle tries it.
+    const stripped: SurfaceDescriptor = { ...getSurface("claude-code"), stores: [] };
+    const resolved = resolveSurfaces(
+      toBundle({ surfaces: [stripped], capabilityMatrix: {}, bundleNumber: 2 }),
+    );
+
+    const cell = getTargetCapability("claude-code", "instructions", buildCapabilityMatrix(resolved));
+    expect(cell.operations.capture).toBe(
+      getTargetCapability("claude-code", "instructions").operations.capture,
+    );
+  });
+
+  it("leaves the compiled-in matrix untouched", () => {
+    const dropped: SurfaceDescriptor = { ...getSurface("copilot-cli"), stores: [] };
+    buildCapabilityMatrix(
+      resolveSurfaces(toBundle({ surfaces: [dropped], capabilityMatrix: {}, bundleNumber: 2 })),
+    );
+    expect(getTargetCapability("copilot-cli", "instructions").operations.capture).not.toBe(
+      "unsupported",
+    );
+  });
+
+  it("stays exhaustive for a bundle-resolved registry", () => {
+    const moved: SurfaceDescriptor = {
+      ...getSurface("copilot-cli"),
+      stores: getSurface("copilot-cli").stores.filter((store) => store.kind !== "mcp-server"),
+    };
+    const resolved = resolveSurfaces(
+      toBundle({ surfaces: [moved], capabilityMatrix: {}, bundleNumber: 2 }),
+    );
+    const matrix = buildCapabilityMatrix(resolved);
+    expect(matrix).toHaveLength(TARGET_CAPABILITY_MATRIX.length);
+    expect(() => assertCapabilityMatrixComplete(matrix, resolved)).not.toThrow();
   });
 });

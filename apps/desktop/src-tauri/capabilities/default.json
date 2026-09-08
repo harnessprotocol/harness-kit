@@ -190,6 +190,7 @@
     "allow-sync-file-exists",
     "allow-sync-read-dir",
     "allow-sync-write-files",
+    "allow-verify-definitions-signature",
     "allow-apply-surface-transaction",
     "allow-record-transaction",
     "allow-migrate-drift-acknowledgements",

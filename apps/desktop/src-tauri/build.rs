@@ -123,6 +123,9 @@ fn main() {
                 "acknowledge_drift_item",
                 "unacknowledge_drift_item",
                 "get_acknowledged_drift_items",
+                // Definitions feed: Ed25519 verification (the webview cannot
+                // use node:crypto, which is what this replaces).
+                "verify_definitions_signature",
                 // Feedback
                 "get_system_info",
                 "submit_feedback",

@@ -315,6 +315,7 @@ export type {
   DriftAcknowledgement,
   DriftAcknowledgementKey,
   ObservationSnapshot,
+  CachedDefinitions,
   StateStore,
   TransactionLedger,
   TransactionRecorder,
@@ -431,6 +432,7 @@ export type {
 export { SURFACE_IDS, COMPILE_SURFACE_IDS, PRODUCT_FAMILIES, isCompileSurface } from "./surfaces/types.js";
 export { SURFACES, PRIORITY_SURFACES, getSurface } from "./surfaces/registry.js";
 export { resolveSurfaces, getSurfaceFrom } from "./surfaces/resolve.js";
+export { PUBLISHER_KEYS, releaseSnapshot } from "./definitions/publisher-keys.js";
 
 // ── Definitions bundle (cross-harness config management, D7) ─────
 //
@@ -520,6 +522,7 @@ export { mergePolicyCeilings, evaluatePolicy, resolveProfileLayers, layerFingerp
 export {
   PORTABLE_RESOURCE_KINDS,
   TARGET_CAPABILITY_MATRIX,
+  buildCapabilityMatrix,
   getTargetCapability,
   capabilityForResource,
   buildLossReport,
