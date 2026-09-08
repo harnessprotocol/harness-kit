@@ -349,6 +349,17 @@ export interface DriftAcknowledgement {
   acknowledgedAt: string;
 }
 
+/**
+ * Drift acknowledgements now live in the SHARED ~/.harness/harness.db
+ * alongside the rollback ledger (AC-37), not in the desktop's private
+ * comparator.db. `migrateDriftAcknowledgements` copies anything the old
+ * database still holds; it is idempotent and never deletes the source, so
+ * calling it on every mount is safe and cheap.
+ */
+export async function migrateDriftAcknowledgements(legacyDb: string): Promise<number> {
+  return invoke<number>("migrate_drift_acknowledgements", { legacyDb });
+}
+
 export async function acknowledgeDriftItem(key: {
   scopeRoot: string;
   adapter: string;
@@ -356,7 +367,9 @@ export async function acknowledgeDriftItem(key: {
   harnessName: string;
   slot: string;
 }): Promise<void> {
-  return invoke<void>("acknowledge_drift_item", key);
+  return invoke<void>("acknowledge_drift", {
+    ack: { ...key, acknowledgedAt: new Date().toISOString() },
+  });
 }
 
 export async function unacknowledgeDriftItem(key: {
@@ -366,11 +379,13 @@ export async function unacknowledgeDriftItem(key: {
   harnessName: string;
   slot: string;
 }): Promise<void> {
-  return invoke<void>("unacknowledge_drift_item", key);
+  return invoke<void>("unacknowledge_drift", {
+    ack: { ...key, acknowledgedAt: "" },
+  });
 }
 
 export async function getAcknowledgedDriftItems(): Promise<DriftAcknowledgement[]> {
-  return invoke<DriftAcknowledgement[]>("get_acknowledged_drift_items");
+  return invoke<DriftAcknowledgement[]>("list_drift_acknowledgements");
 }
 
 // ── Comparator session commands ─────────────────────────────

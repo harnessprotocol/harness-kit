@@ -342,6 +342,83 @@ pub struct DriftAck {
 const MAX_MIGRATED_ACKS: usize = 10_000;
 
 #[tauri::command]
+pub fn acknowledge_drift(ack: DriftAck) -> Result<(), String> {
+    acknowledge_drift_at(&state_path()?, ack)
+}
+
+pub(crate) fn acknowledge_drift_at(path: &std::path::Path, ack: DriftAck) -> Result<(), String> {
+    let conn = open_at(path)?;
+    conn.execute(
+        "INSERT INTO drift_acknowledgements \
+           (scope_root, adapter, path, harness_name, slot, acknowledged_at) \
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6) \
+         ON CONFLICT(scope_root, adapter, path, harness_name, slot) \
+         DO UPDATE SET acknowledged_at = excluded.acknowledged_at",
+        rusqlite::params![
+            ack.scope_root,
+            ack.adapter,
+            ack.path,
+            ack.harness_name,
+            ack.slot,
+            ack.acknowledged_at
+        ],
+    )
+    .map_err(|e| format!("Failed to acknowledge drift: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn unacknowledge_drift(ack: DriftAck) -> Result<(), String> {
+    unacknowledge_drift_at(&state_path()?, ack)
+}
+
+pub(crate) fn unacknowledge_drift_at(path: &std::path::Path, ack: DriftAck) -> Result<(), String> {
+    let conn = open_at(path)?;
+    conn.execute(
+        "DELETE FROM drift_acknowledgements \
+         WHERE scope_root = ?1 AND adapter = ?2 AND path = ?3 \
+           AND harness_name = ?4 AND slot = ?5",
+        rusqlite::params![ack.scope_root, ack.adapter, ack.path, ack.harness_name, ack.slot],
+    )
+    .map_err(|e| format!("Failed to withdraw acknowledgement: {}", e))?;
+    Ok(())
+}
+
+#[tauri::command]
+pub fn list_drift_acknowledgements() -> Result<Vec<DriftAck>, String> {
+    list_drift_acknowledgements_at(&state_path()?)
+}
+
+pub(crate) fn list_drift_acknowledgements_at(
+    path: &std::path::Path,
+) -> Result<Vec<DriftAck>, String> {
+    let conn = open_at(path)?;
+    let mut statement = conn
+        .prepare(
+            "SELECT scope_root, adapter, path, harness_name, slot, acknowledged_at \
+             FROM drift_acknowledgements",
+        )
+        .map_err(|e| format!("Failed to read acknowledgements: {}", e))?;
+    let rows = statement
+        .query_map([], |row| {
+            Ok(DriftAck {
+                scope_root: row.get(0)?,
+                adapter: row.get(1)?,
+                path: row.get(2)?,
+                harness_name: row.get(3)?,
+                slot: row.get(4)?,
+                acknowledged_at: row.get(5)?,
+            })
+        })
+        .map_err(|e| format!("Failed to read acknowledgements: {}", e))?;
+    let mut out = Vec::new();
+    for row in rows {
+        out.push(row.map_err(|e| format!("Failed to read an acknowledgement: {}", e))?);
+    }
+    Ok(out)
+}
+
+#[tauri::command]
 pub fn migrate_drift_acknowledgements(legacy_db: String) -> Result<usize, String> {
     migrate_drift_acknowledgements_at(&state_path()?, std::path::Path::new(&legacy_db))
 }
