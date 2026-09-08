@@ -335,6 +335,13 @@ function RowActions({
   }
 
   const lossBlocked = view?.plan.requiresConfirmation === true && !confirmedLoss;
+  /**
+   * A plugin plan is `supported: true` — core CAN plan it, and the CLI can run
+   * it. The APP cannot: driving an installer needs a process-spawn bridge the
+   * webview does not have. Without this the button was live, threw on click,
+   * and showed its reason only after failing.
+   */
+  const appCannotRun = view?.plan.plugin !== undefined;
 
   return (
     <div style={{ marginTop: "auto", padding: "14px 18px 18px", display: "grid", gap: 10 }}>
@@ -396,6 +403,13 @@ function RowActions({
         <p style={{ fontSize: 12, margin: 0 }}>{view.plan.reason}</p>
       )}
 
+      {view && view.plan.supported && appCannotRun && (
+        <p style={{ fontSize: 12, margin: 0 }} data-testid="app-cannot-run">
+          Installing a plugin runs {surfaceLabel(target as SurfaceId)}&apos;s own installer, which
+          the app cannot do yet. Copy the CLI command below, or use the agent prompt.
+        </p>
+      )}
+
       {view && (
         <code style={{ fontSize: 11, opacity: 0.8, wordBreak: "break-all" }}>{view.cli}</code>
       )}
@@ -404,7 +418,9 @@ function RowActions({
         <Button
           variant="primary"
           size="sm"
-          disabled={!view || !view.plan.supported || view.plan.noop || lossBlocked || busy}
+          disabled={
+            !view || !view.plan.supported || view.plan.noop || lossBlocked || busy || appCannotRun
+          }
           onClick={apply}
         >
           {view?.plan.noop ? "Up to date" : "Apply"}

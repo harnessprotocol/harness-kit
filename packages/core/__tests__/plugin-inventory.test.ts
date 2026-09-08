@@ -852,12 +852,15 @@ describe("AC-11 diff case: replacing what the target already has", () => {
     expect(plan.requiresConfirmation).toBe(false);
   });
 
-  it("does not call a native-shape difference an overwrite", async () => {
-    // claude-code records `type: "stdio"`, cursor omits it. Writing the
-    // source still changes cursor's BYTES, so this is not a no-op — but it
-    // replaces nothing the user would recognise as their configuration, so
-    // it must not demand an overwrite confirmation. Comparing raw values
-    // instead of canonical ones would flag every cross-surface copy.
+  it("writes without demanding confirmation when the content already matches", async () => {
+    // Writing the source still changes cursor's BYTES (key order, absent
+    // fields), so this is not a no-op — but it replaces nothing the user
+    // would recognise as their configuration.
+    //
+    // Note what this does NOT prove: `readStore` normalizes MCP shape before
+    // the planner sees it, so raw and canonical comparison agree here. The
+    // skill test above is the one that pins canonicalization; an earlier
+    // version of this comment claimed this case did, and it did not.
     const plan = await planCellAction(fsWith(TARGET_SAME), request, OPTS);
     expect(plan.overwrites).toBeUndefined();
     expect(plan.requiresConfirmation).toBe(false);
@@ -867,14 +870,19 @@ describe("AC-11 diff case: replacing what the target already has", () => {
   it("ignores fields that are machine facts, not content (skillPath)", async () => {
     // The case that makes canonicalization load-bearing rather than
     // defensive. A skill's value carries the absolute path it was read from,
-    // which necessarily differs between two surfaces. Diffing raw values
-    // would report `skillPath` as a field the user is about to lose and
-    // demand confirmation for a copy that changes nothing.
+    // which necessarily differs between two surfaces.
+    //
+    // The bodies must differ in TRAILING WHITESPACE only: identical bodies
+    // make this a no-op, and `overwrites` is never computed for a no-op — so
+    // an identical-body version of this test passed under a raw comparison
+    // too and proved nothing. Whitespace normalization is part of the skill
+    // canonicalizer, so the canonical forms match while the bytes do not,
+    // which is exactly the case a raw diff would misreport.
     const body = ["---", "name: reviewer", "---", "# Reviewer"].join("\n");
     const fs = new MockFsProvider(
       {
         [`${HOME}/.claude/skills/reviewer/SKILL.md`]: body,
-        [`${HOME}/.cursor/skills/reviewer/SKILL.md`]: body,
+        [`${HOME}/.cursor/skills/reviewer/SKILL.md`]: `${body}   \n\n`,
       },
       PROJECT,
       HOME,
@@ -886,6 +894,9 @@ describe("AC-11 diff case: replacing what the target already has", () => {
     );
     expect(plan.overwrites).toBeUndefined();
     expect(plan.requiresConfirmation).toBe(false);
+    // Guard the guard: if this were a no-op, `overwrites` would be undefined
+    // for a reason that has nothing to do with canonicalization.
+    expect(plan.noop).toBe(false);
   });
 
   it("still reports a REAL skill difference as an overwrite", async () => {

@@ -73,7 +73,16 @@ const SURFACE_TABLE: Record<SurfaceId, Omit<SurfaceDescriptor, "id">> = {
       uninstallArgs: ["plugin", "uninstall"],
       installSelector: "identity",
       uninstallSelector: "identity",
-      scope: { flag: "--scope", values: { user: "user", project: "project" } },
+      // `--scope` takes user/project/local. HarnessKit's two scopes map to
+      // user/project, but `nativeValues` lets a copy REPRODUCE the scope the
+      // source actually used: reproducing a `local` install (private, in
+      // settings.local.json) as `project` (committed, team-shared) would
+      // escalate it from private to shared without the user asking.
+      scope: {
+        flag: "--scope",
+        values: { user: "user", project: "project" },
+        nativeValues: ["user", "project", "local"],
+      },
     },
   },
   "claude-desktop": {
@@ -166,8 +175,13 @@ const SURFACE_TABLE: Record<SurfaceId, Omit<SurfaceDescriptor, "id">> = {
       { kind: "instructions", scope: "project", formatId: "markdown-instructions", path: "AGENTS.md" },
     ],
     notApplicable: [],
-    // Installs by `name@marketplace`, uninstalls by bare `name` — an
-    // asymmetry the other two do not have, recorded rather than assumed away.
+    // `copilot plugin uninstall --help` documents its argument as
+    // "plugin-name or plugin-name@marketplace-name" and its own example uses
+    // the qualified form. An earlier reading of the TOP-LEVEL help saw only
+    // `<name>` and recorded a selector asymmetry that does not exist; dropping
+    // the marketplace also drops the disambiguator when two marketplaces
+    // provide the same plugin name.
+    //
     // No plugin STORE is declared: `copilot plugin list` has no machine
     // -readable output and nothing on disk was verifiable, so this surface can
     // be written to but not yet enumerated.
@@ -177,7 +191,7 @@ const SURFACE_TABLE: Record<SurfaceId, Omit<SurfaceDescriptor, "id">> = {
       installArgs: ["plugin", "install"],
       uninstallArgs: ["plugin", "uninstall"],
       installSelector: "identity",
-      uninstallSelector: "name",
+      uninstallSelector: "identity",
     },
   },
   codex: {

@@ -201,10 +201,10 @@ export async function applyPluginCellAction(
   // install into a reported failure. The cost of losing the row is that an
   // unpacked plugin cannot be cleanly removed later, which is worth stating
   // rather than hiding.
-  if (
-    options.state !== undefined &&
-    (outcome.status === "installed" || outcome.status === "uninstalled")
-  ) {
+  // Installs only. `plugin_installs` is the record of what HarnessKit PUT
+  // somewhere; writing a row for an uninstall would make listPluginInstalls
+  // report a removed plugin as present.
+  if (options.state !== undefined && outcome.status === "installed") {
     try {
       await options.state.recordPluginInstall({
         surface: options.surface,

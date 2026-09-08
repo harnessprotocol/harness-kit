@@ -43,6 +43,13 @@ export interface NativePluginInstaller {
     flag: string;
     /** null = this installer cannot express that scope. */
     values: Record<SurfaceScope, string | null>;
+    /**
+     * Scope values the installer accepts verbatim, beyond the two HarnessKit
+     * models. When a request carries a `nativeScope` in this list it is used
+     * as-is, so a copy reproduces the scope the source actually used instead
+     * of collapsing to the mapped one.
+     */
+    nativeValues?: readonly string[];
   };
   /** Flag that makes the tool emit a machine-readable result, when it has one. */
   jsonFlag?: string;
@@ -69,6 +76,14 @@ export interface PluginActionRequest {
   scope: SurfaceScope;
   /** Working directory — a project-scope action must run inside the project. */
   cwd?: string;
+  /**
+   * The scope value the SOURCE surface recorded, when known. Used verbatim if
+   * the installer lists it in `nativeValues`. Claude Code distinguishes a
+   * `local` install (private, settings.local.json) from a `project` one
+   * (committed); both collapse to HarnessKit's project scope, and reproducing
+   * the first as the second would share something the user kept private.
+   */
+  nativeScope?: string;
 }
 
 /** Split `name@marketplace` on the LAST `@`, matching both codecs. */
@@ -119,7 +134,10 @@ export function planNativePluginAction(
   const args: string[] = [...verbArgs, selector];
 
   if (installer.scope !== undefined) {
-    const value = installer.scope.values[request.scope];
+    const native = request.nativeScope;
+    const acceptsNative =
+      native !== undefined && (installer.scope.nativeValues ?? []).includes(native);
+    const value = acceptsNative ? native : installer.scope.values[request.scope];
     if (value === null) {
       return {
         supported: false,

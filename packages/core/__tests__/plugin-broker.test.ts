@@ -72,9 +72,13 @@ describe("native driver: the invocation each surface gets", () => {
     expect(plan.plan.structuredOutput).toBe(true);
   });
 
-  it("uninstalls copilot by bare NAME, not by identity", () => {
-    // The asymmetry is real: copilot installs `name@marketplace` and
-    // uninstalls `name`. Assuming symmetry would uninstall nothing.
+  it("uninstalls copilot by the FULL identity, keeping the marketplace", () => {
+    // `copilot plugin uninstall --help` documents its argument as
+    // "plugin-name or plugin-name@marketplace-name" and its own example uses
+    // the qualified form. A previous reading of the truncated top-level help
+    // recorded a selector asymmetry that does not exist; dropping the
+    // marketplace also drops the disambiguator when two marketplaces provide
+    // the same plugin name.
     const plan = planPluginAction({
       surface: "copilot-cli",
       identity: "spark@copilot-plugins",
@@ -82,7 +86,36 @@ describe("native driver: the invocation each surface gets", () => {
       action: "uninstall",
     });
     if (plan.kind !== "native" || !plan.plan.supported) throw new Error("expected a supported plan");
-    expect(plan.plan.command.args).toEqual(["plugin", "uninstall", "spark"]);
+    expect(plan.plan.command.args).toEqual(["plugin", "uninstall", "spark@copilot-plugins"]);
+  });
+
+  it("reproduces the source's NATIVE scope rather than collapsing it", () => {
+    // A `local` install is private (settings.local.json); a `project` one is
+    // committed. Copying the first as the second would share something the
+    // user deliberately kept to themselves.
+    const local = planPluginAction({
+      surface: "claude-code",
+      identity: "board@harness-kit",
+      scope: "project",
+      action: "install",
+      projectRoot: PROJECT,
+      nativeScope: "local",
+    });
+    if (local.kind !== "native" || !local.plan.supported) throw new Error("expected a plan");
+    expect(local.plan.command.args).toContain("local");
+
+    // An unknown native value is ignored in favour of the mapped one.
+    const bogus = planPluginAction({
+      surface: "claude-code",
+      identity: "board@harness-kit",
+      scope: "project",
+      action: "install",
+      projectRoot: PROJECT,
+      nativeScope: "enterprise",
+    });
+    if (bogus.kind !== "native" || !bogus.plan.supported) throw new Error("expected a plan");
+    expect(bogus.plan.command.args).toContain("project");
+    expect(bogus.plan.command.args).not.toContain("enterprise");
   });
 
   it("runs a project-scope claude install inside the project", () => {
@@ -288,6 +321,25 @@ describe("unpack driver (AC-19)", () => {
       `${HOME}/.config/opencode/skills/board/review/SKILL.md`,
     ]);
     expect(await fs.readFile(outcome.files[0])).toBe("# plan");
+  });
+
+  it("picks the newest version directory by NUMBER, not lexically", async () => {
+    // "0.10.0" sorts before "0.9.0" as a string, so a lexical pick unpacks an
+    // older release whose skill SET differs — skills the current version added
+    // would be missing and ones it removed would be installed.
+    const base = `${HOME}/.claude/plugins/cache/harness-kit/board`;
+    const outcome = await executePluginAction(planPluginAction(request), {
+      ...options(new FakeRunner(), {
+        [`${base}/0.9.0/skills/old-skill/SKILL.md`]: "# old",
+        [`${base}/0.10.0/skills/new-skill/SKILL.md`]: "# new",
+      }),
+      sourceSurface: "claude-code",
+    });
+    expect(outcome.status).toBe("installed");
+    if (outcome.status !== "installed") return;
+    expect(outcome.files).toEqual([
+      `${HOME}/.config/opencode/skills/board/new-skill/SKILL.md`,
+    ]);
   });
 
   it("refuses when the plugin's files are not on this machine", async () => {

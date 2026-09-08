@@ -139,11 +139,11 @@ async function resolvePluginRoot(
   const base = options.fs.joinPath(home, ".claude", "plugins", "cache", marketplace, name);
   if (!(await options.fs.isDirectory(base))) return null;
   const versions = await options.fs.readDir(base);
-  // Newest by lexical order is not semver-correct, but the cache holds one
-  // directory per installed version and the newest is the one in use; a
-  // wrong pick here copies an older copy of the same plugin, not another
-  // plugin.
-  const chosen = [...versions].sort().pop();
+  // Numeric-segment ordering, NOT lexical: "0.10.0" sorts before "0.9.0" as a
+  // string, so a lexical pick silently unpacks an older release whose skill
+  // SET differs — skills the current version added would be missing and ones
+  // it removed would be installed.
+  const chosen = [...versions].sort(compareVersions).pop();
   if (chosen === undefined || !isSafeSegment(chosen)) return null;
   return options.fs.joinPath(base, chosen);
 }
@@ -170,4 +170,30 @@ async function copySkills(
     }
   }
   return written;
+}
+
+/**
+ * Order two cache directory names by their numeric segments, falling back to
+ * a string compare for anything non-numeric (pre-release tags, or a directory
+ * that is not a version at all). Enough to pick the newest of the versions a
+ * plugin cache actually holds; not a full semver implementation, and it does
+ * not need to be.
+ */
+function compareVersions(left: string, right: string): number {
+  const parts = (value: string): Array<number | string> =>
+    value.split(/[.-]/).map((segment) => (/^\d+$/.test(segment) ? Number(segment) : segment));
+  const a = parts(left);
+  const b = parts(right);
+  for (let index = 0; index < Math.max(a.length, b.length); index += 1) {
+    const x = a[index];
+    const y = b[index];
+    if (x === undefined) return -1;
+    if (y === undefined) return 1;
+    if (typeof x === "number" && typeof y === "number") {
+      if (x !== y) return x - y;
+    } else if (String(x) !== String(y)) {
+      return String(x) < String(y) ? -1 : 1;
+    }
+  }
+  return 0;
 }

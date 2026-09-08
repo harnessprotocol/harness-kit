@@ -39,17 +39,32 @@ export interface Recommendation {
   missingOn: SurfaceId[];
 }
 
-/** Surfaces that could hold this kind: detected, and managing a store for it. */
+/**
+ * Surfaces that could hold this kind: detected, managing a store for it, and
+ * — for plugins — actually able to install it.
+ *
+ * That last clause is the same rule the grid's gap computation applies, and
+ * applying it here too is the point: without it the two sources contradict
+ * each other on the same machine, the grid refusing to propose a target that
+ * the baseline list happily suggests.
+ */
 function candidateSurfaces(
   inventory: MachineInventory,
   kind: HarnessResourceKind,
+  marketplace: string | null,
 ): SurfaceId[] {
   return inventory.surfaces
     .filter((surface) => {
       if (!surface.detected) return false;
       const descriptor = getSurface(surface.id);
       if (descriptor.notApplicable.includes(kind)) return false;
-      return descriptor.stores.some((store) => store.kind === kind);
+      if (!descriptor.stores.some((store) => store.kind === kind)) return false;
+      if (kind !== "plugin" || marketplace === null) return true;
+      // "Cannot say" never hides a candidate, matching the gap rule.
+      if (!surface.marketplacesReadable) return true;
+      return surface.marketplaces.some(
+        (entry) => entry.id.toLowerCase() === marketplace.toLowerCase(),
+      );
     })
     .map((surface) => surface.id);
 }
@@ -126,7 +141,12 @@ export function recommend(
         present.has(identityKey) ||
         (declared.kind === "plugin" && presentPluginNames.has(declared.name.toLowerCase()));
       if (satisfied) continue;
-      const candidates = candidateSurfaces(inventory, declared.kind);
+      // A baseline may pin the marketplace (`research@harness-kit`) or not
+      // (`research`). Unqualified means we cannot judge reachability, so
+      // every store-bearing surface stays a candidate.
+      const at = declared.name.lastIndexOf("@");
+      const marketplace = at > 0 && at < declared.name.length - 1 ? declared.name.slice(at + 1) : null;
+      const candidates = candidateSurfaces(inventory, declared.kind, marketplace);
       recommendations.push({
         source: "baseline-gap",
         kind: declared.kind,

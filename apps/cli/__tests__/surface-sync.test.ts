@@ -209,4 +209,47 @@ describe.sequential("cross-surface sync", () => {
       expect(env.getLog()).not.toContain("mcp-server:postgres");
     });
   });
+
+  /**
+   * AC-11 covers "any gap OR diff". The CLI walked only the gap list, so the
+   * `harness-kit sync …` command the desktop printed for a diff cell silently
+   * did nothing — action surface (b) was missing for half the AC.
+   */
+  describe("reconciling a diff, not just closing a gap", () => {
+    async function seedDiff(): Promise<void> {
+      await writeFile(
+        join(home, ".cursor", "mcp.json"),
+        JSON.stringify({ mcpServers: { postgres: { command: "pg-B", args: ["--from-cursor"] } } }),
+      );
+    }
+
+    it("offers an action when both surfaces hold the row with different content", async () => {
+      await seedDiff();
+      await surfaceSyncCommand({ from: "claude-code", to: ["cursor"], only: "mcp-server" } as never);
+      expect(env.getLog()).toContain("mcp-server:postgres");
+      expect(env.getLog()).not.toContain("No gaps to close");
+    });
+
+    it("applies it, replacing the target's version", async () => {
+      await seedDiff();
+      await surfaceSyncCommand({
+        from: "claude-code",
+        to: ["cursor"],
+        only: "mcp-server",
+        yes: true,
+      } as never);
+      const after = JSON.parse(await readFile(join(home, ".cursor", "mcp.json"), "utf8")) as {
+        mcpServers: { postgres: { command: string } };
+      };
+      expect(after.mcpServers.postgres.command).toBe("pg-mcp");
+    });
+
+    it("offers NOTHING without --from, rather than guessing a winner", async () => {
+      // A diff pair is unordered. Picking a side unasked is exactly what the
+      // M2 deferral of this case warned against.
+      await seedDiff();
+      await surfaceSyncCommand({ only: "mcp-server" } as never);
+      expect(env.getLog()).toContain("No gaps to close");
+    });
+  });
 });

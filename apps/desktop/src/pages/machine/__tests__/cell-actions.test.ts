@@ -154,3 +154,29 @@ describe("divergentTargets (AC-11 diff case)", () => {
     expect(divergentTargets(row, "copilot-cli")).toEqual([]);
   });
 });
+
+describe("the app refuses plugin applies before the user clicks", () => {
+  it("throws with a reason naming the installer, not an empty transaction", async () => {
+    // A plugin plan is `supported: true` — core can plan it and the CLI can
+    // run it. The APP cannot, and for a while the drawer's Apply button was
+    // live for these: it threw on click and showed its reason only after
+    // failing. The refusal is asserted here; the button's disabled state is
+    // asserted in MachinePage's drawer tests.
+    await expect(
+      applyCellActionViaTauri({
+        request: { from: "claude-code", to: "codex", kind: "plugin", name: "a@b", scope: "user" },
+        plan: {
+          supported: true,
+          changes: [],
+          noop: false,
+          carriesSecret: false,
+          loss: null,
+          requiresConfirmation: false,
+          plugin: { kind: "native", action: "install", plan: { supported: true } },
+        },
+        cli: "harness-kit sync ...",
+        prompt: "",
+      } as never),
+    ).rejects.toThrow(/installer/);
+  });
+});

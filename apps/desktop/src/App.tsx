@@ -120,7 +120,7 @@ export default function App() {
             {/* Drift */}
             {/* AC-37: Drift is presented inside the Machine view; the legacy
                 route redirects rather than 404ing anyone's bookmark. */}
-            <Route path="drift" element={<Navigate to="/machine" replace />} />
+            <Route path="drift" element={<Navigate to="/machine?drift=1" replace />} />
 
             {/* Preferences / Settings (Security folds in here as tabs — DESIGN.md §5) */}
             <Route path="preferences" element={<PreferencesPage />} />

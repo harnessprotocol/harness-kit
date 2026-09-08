@@ -1,3 +1,4 @@
+import { useSearchParams } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, Input, SummaryStrip, EmptyState, type SummaryCell } from "@harness-kit/ui";
 import { ScanSearch } from "lucide-react";
@@ -18,7 +19,11 @@ export default function MachinePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [projectDir, setProjectDir] = useState("");
-  const [driftOpen, setDriftOpen] = useState(false);
+  // Arriving from the retired /drift route (or the sidebar's Drift entry)
+  // opens the section: redirecting someone to a collapsed accordion is the
+  // same as losing the page they asked for.
+  const [searchParams] = useSearchParams();
+  const [driftOpen, setDriftOpen] = useState(searchParams.get("drift") === "1");
   const [selectedRow, setSelectedRow] = useState<GridRow | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
   const [projectDegraded, setProjectDegraded] = useState(false);
@@ -307,7 +312,7 @@ export default function MachinePage() {
           user did not ask for, so its own load behaviour stays unchanged
           until someone opens this.
         */}
-        {driftOpen && <DriftPage />}
+        {driftOpen && <DriftPage embedded />}
       </section>
 
       {selectedRow && (

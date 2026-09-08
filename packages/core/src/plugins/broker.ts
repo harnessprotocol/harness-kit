@@ -17,9 +17,16 @@ import type { UnpackPlan } from "./unpack.js";
  *   install record, and editing the record by hand would leave the two
  *   disagreeing.
  * - **unpack** is for surfaces with no plugin model (pi, opencode): the
- *   plugin's skills and instructions are written into surface-native
- *   locations through the ordinary transaction engine, and what was written
- *   is recorded so update and uninstall stay possible.
+ *   plugin's SKILLS are written into surface-native locations and the paths
+ *   written are recorded so a later uninstall can remove exactly those.
+ *   Instructions and MCP servers are NOT unpacked — each needs merge
+ *   semantics against a file the user also writes.
+ *
+ *   Note what this does NOT go through: the file-transaction engine. There is
+ *   no preimage, no backup and no rollback manifest, so an unpack overwrites a
+ *   same-named SKILL.md under the plugin's own directory without the
+ *   stale-preimage check a config-store write would get. Routing it through
+ *   the transaction engine is the obvious improvement and is not done here.
  *
  * Planning is separated from execution on purpose. `planPluginAction` is pure
  * and runs nothing, so the CLI can print the exact invocation, the desktop
@@ -35,6 +42,12 @@ export interface PluginBrokerRequest {
   action: "install" | "uninstall";
   /** Project root — required for a project-scope action. */
   projectRoot?: string | null;
+  /**
+   * The scope value the SOURCE surface recorded (Claude Code's
+   * user/project/local). Passed through so a copy reproduces it rather than
+   * collapsing `local` — private — into `project` — committed.
+   */
+  nativeScope?: string;
 }
 
 export type BrokerPlan =
@@ -73,6 +86,7 @@ export function planPluginAction(request: PluginBrokerRequest): BrokerPlan {
         action: request.action,
         identity: request.identity,
         scope: request.scope,
+        ...(request.nativeScope !== undefined ? { nativeScope: request.nativeScope } : {}),
         ...(request.scope === "project" && request.projectRoot
           ? { cwd: request.projectRoot }
           : {}),

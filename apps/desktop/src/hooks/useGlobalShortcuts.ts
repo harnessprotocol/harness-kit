@@ -8,7 +8,8 @@ export const NAV_PATHS = [
   "/machine",
   "/fleet",
   "/harness/file",
-  "/drift",
+  // AC-37: Drift is a Machine-view section; ⌘ 4 opens it directly.
+  "/machine?drift=1",
   "/comparator",
   "/observatory",
   "/marketplace",

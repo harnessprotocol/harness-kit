@@ -107,7 +107,9 @@ describe("keyboard navigation", () => {
     const drift = screen.getByText("Drift").closest('[role="link"]');
     expect(drift).not.toBeNull();
     fireEvent.keyDown(drift!, { key: "Enter" });
-    expect(screen.getByTestId("loc").textContent).toBe("/drift");
+    // AC-37: Drift is a section of the Machine view. The nav points straight
+    // at the open section rather than at /drift, which only redirects here.
+    expect(screen.getByTestId("loc").textContent).toBe("/machine");
   });
 
   it("activates a top-level nav item with Space", () => {

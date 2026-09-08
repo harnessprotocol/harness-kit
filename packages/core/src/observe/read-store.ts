@@ -57,6 +57,12 @@ export interface StoreEntry {
    * does.
    */
   scope?: SurfaceScope;
+  /**
+   * The scope value the SURFACE recorded, when richer than HarnessKit's two
+   * (Claude Code's user/project/local). Carried so a copy can reproduce it
+   * instead of collapsing a private install into a shared one.
+   */
+  nativeScope?: string;
 }
 
 /** Something the executor looked at but could not observe, with why. */
@@ -637,6 +643,7 @@ async function readClaudePluginsStore(
       value: entry.value,
       provenance: { file: absolutePath, formatId: store.formatId },
       scope: entry.scope,
+      nativeScope: entry.nativeScope,
     })),
     skipped: [
       ...result.skipped.map(({ reason }) => ({ file: absolutePath, reason })),

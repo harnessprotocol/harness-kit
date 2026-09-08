@@ -142,6 +142,34 @@ export async function surfaceSyncCommand(flags: SurfaceSyncFlags): Promise<void>
     }
   }
 
+  // AC-11 covers "any gap OR diff". A diff is a row two surfaces both hold
+  // with different content; reconciling it REPLACES the target's version, so
+  // it is only ever offered with an explicit direction and, at apply time,
+  // the overwrite confirmation `planCellAction` attaches.
+  //
+  // Without this the desktop printed a `harness-kit sync --only …` command
+  // for every diff cell that silently did nothing, because the CLI walked
+  // only the gap list.
+  const seen = new Set(candidates.map((c) => `${c.kind}:${c.name}:${c.from}:${c.to}`));
+  for (const diff of inventory.diffs) {
+    const row = inventory.rows.find((candidate) => candidate.key === diff.row);
+    if (!row || !matchesOnly(only, row.kind, row.name)) continue;
+    // A diff pair is unordered; `--from` picks the winner. Without it there
+    // is no basis to choose, and guessing is what AC-11's deferral warned
+    // against — so an unfiltered run reports the diff and offers no action.
+    if (!from) continue;
+    const [left, right] = diff.surfaces;
+    if (left !== from && right !== from) continue;
+    const other = left === from ? right : left;
+    const targets = to.length > 0 ? [other].filter((surface) => to.includes(surface)) : [other];
+    for (const target of targets) {
+      const key = `${row.kind}:${row.name}:${from}:${target}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      candidates.push({ kind: row.kind, name: row.name, from, to: target });
+    }
+  }
+
   const actions: PlannedAction[] = [];
   for (const candidate of candidates) {
     const plan = await planCellAction(

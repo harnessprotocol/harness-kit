@@ -14,7 +14,7 @@ import {
 import { appDataDir, join as joinPath } from "@tauri-apps/api/path";
 import { buildDesktopPortabilitySnapshot, type DesktopPortabilitySnapshot } from "../fleet/portability-data";
 
-export default function DriftPage() {
+export default function DriftPage({ embedded = false }: { embedded?: boolean } = {}) {
   const [searchParams] = useSearchParams();
   const harnessFilter = searchParams.get("harness");
 
@@ -120,7 +120,8 @@ export default function DriftPage() {
   return (
     <>
       <DriftView
-        entries={entries}
+      embedded={embedded}
+             entries={entries}
         filteredEntries={filtered}
         acknowledged={acknowledged}
         loading={loading}

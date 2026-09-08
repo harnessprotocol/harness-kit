@@ -276,6 +276,12 @@ function validatePluginInstall(value: unknown, path: string): PluginInstallModel
       values[scope] = requireString(raw, `${path}.scope.values.${scope}`);
     }
     model.scope = { flag: requireString(value.scope.flag, `${path}.scope.flag`), values };
+    if (value.scope.nativeValues !== undefined) {
+      model.scope.nativeValues = validateStringArray(
+        value.scope.nativeValues,
+        `${path}.scope.nativeValues`,
+      );
+    }
   }
   if (value.jsonFlag !== undefined) {
     model.jsonFlag = requireString(value.jsonFlag, `${path}.jsonFlag`);

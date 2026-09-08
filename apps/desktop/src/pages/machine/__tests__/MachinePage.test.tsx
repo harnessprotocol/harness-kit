@@ -387,7 +387,7 @@ describe("MachinePage", () => {
     // version looked green locally and failed on a slower serial run.
     const toggle = screen.getByRole("button", { name: /Drift from harness.yaml/ });
     expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByRole("heading", { name: "Drift" })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("drift-view")).not.toBeInTheDocument();
     expect(mockGrantProjectScope).not.toHaveBeenCalled();
   });
 
@@ -395,7 +395,11 @@ describe("MachinePage", () => {
     renderPage();
     await screen.findByTestId("machine-grid");
     fireEvent.click(screen.getByRole("button", { name: /Drift from harness.yaml/ }));
-    expect(await screen.findByRole("heading", { name: "Drift" })).toBeInTheDocument();
+    // Embedded, so Drift contributes no second <h1> and no nested page
+    // container — its subtitle is what identifies it here.
+    expect(await screen.findByTestId("drift-view")).toBeInTheDocument();
+    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+    expect(document.querySelectorAll(".hk-page .hk-page")).toHaveLength(0);
   });
 
   it("derives totals from the inventory rows/gaps/diffs, not resourceCount", async () => {

@@ -148,8 +148,9 @@ export interface MarketplaceStore {
  * only correct mechanism where one exists, since writing the install record
  * by hand would leave it disagreeing with the tool's cache. `unpack` is for
  * surfaces with no plugin model at all (pi, opencode): HarnessKit writes the
- * plugin's skills and instructions into surface-native locations itself and
- * records what it wrote so update and uninstall stay possible.
+ * plugin's SKILLS into surface-native locations itself and records the paths
+ * so a later uninstall can remove exactly those. Instructions and MCP servers
+ * are not unpacked (see plugins/unpack.ts).
  *
  * Absent means neither is available and plugin cells stay read-only.
  *

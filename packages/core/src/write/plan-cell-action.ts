@@ -205,12 +205,17 @@ export async function planCellAction(
   // the broker, which drives the surface's own installer. Routed here so
   // every caller gets the same answer.
   if (request.kind === "plugin") {
+    // The source entry knows which native scope it was installed at; carrying
+    // it through stops a private `local` install being reproduced as a
+    // committed `project` one.
+    const sourceNativeScope = (found.entry as { nativeScope?: unknown }).nativeScope;
     const broker = planPluginAction({
       surface: request.to,
       identity: request.name,
       scope: request.scope,
       action: "install",
       projectRoot: opts.projectRoot,
+      ...(typeof sourceNativeScope === "string" ? { nativeScope: sourceNativeScope } : {}),
     });
     const usable =
       broker.kind !== "unsupported" && broker.plan.supported === true;

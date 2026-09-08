@@ -130,6 +130,64 @@ describe("baseline-gap recommendations", () => {
   });
 });
 
+describe("baseline recommendations respect marketplace reachability", () => {
+  // The grid refuses to propose a plugin gap on a surface that has not
+  // registered the marketplace. Without the same rule here, the two sources
+  // contradict each other on one machine: the grid stays silent while the
+  // baseline list happily suggests the target.
+  const baseline: HarnessConfig = {
+    version: "2.1",
+    plugins: [{ name: "research@harness-kit", source: "github:acme/research" }],
+  };
+
+  function withMarketplaces(
+    surface: "claude-code" | "codex",
+    ids: string[],
+    readable: boolean,
+  ): SurfaceObservation {
+    return {
+      ...observation(surface, []),
+      marketplacesReadable: readable,
+      marketplaces: ids.map((id) => ({
+        id,
+        scope: "user" as const,
+        provenance: { file: "/x", formatId: "json-claude-marketplaces" as const },
+      })),
+    };
+  }
+
+  it("omits a surface that has not registered the plugin's marketplace", () => {
+    const inventory = computeMachineInventory([
+      withMarketplaces("claude-code", ["harness-kit"], true),
+      withMarketplaces("codex", ["something-else"], true),
+    ]);
+    const [research] = recommend(inventory, { baseline });
+    expect(research.missingOn).toEqual(["claude-code"]);
+  });
+
+  it("keeps a surface whose marketplaces could not be read — cannot say is not no", () => {
+    const inventory = computeMachineInventory([
+      withMarketplaces("claude-code", ["harness-kit"], true),
+      withMarketplaces("codex", [], false),
+    ]);
+    const [research] = recommend(inventory, { baseline });
+    expect(research.missingOn).toEqual(["claude-code", "codex"]);
+  });
+
+  it("keeps every store-bearing surface when the baseline does not pin a marketplace", () => {
+    const unqualified: HarnessConfig = {
+      version: "2.1",
+      plugins: [{ name: "research", source: "github:acme/research" }],
+    };
+    const inventory = computeMachineInventory([
+      withMarketplaces("claude-code", ["harness-kit"], true),
+      withMarketplaces("codex", ["something-else"], true),
+    ]);
+    const [research] = recommend(inventory, { baseline: unqualified });
+    expect(research.missingOn).toEqual(["claude-code", "codex"]);
+  });
+});
+
 describe("ordering is deterministic", () => {
   it("puts baseline gaps first, then machine gaps, each by identity", () => {
     const baseline: HarnessConfig = {
