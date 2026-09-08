@@ -18,6 +18,7 @@ export default function MachinePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [projectDir, setProjectDir] = useState("");
+  const [driftOpen, setDriftOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState<GridRow | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
   const [projectDegraded, setProjectDegraded] = useState(false);
@@ -277,10 +278,36 @@ export default function MachinePage() {
         screen.
       */}
       <section style={{ marginTop: 28 }} data-testid="machine-drift-section">
-        <h2 style={{ fontSize: 13, fontWeight: 650, margin: "0 0 8px" }}>
+        <button
+          type="button"
+          onClick={() => setDriftOpen((open) => !open)}
+          aria-expanded={driftOpen}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            background: "none",
+            border: "none",
+            padding: 0,
+            cursor: "pointer",
+            font: "inherit",
+            fontSize: 13,
+            fontWeight: 650,
+            color: "var(--fg)",
+          }}
+        >
+          <span aria-hidden="true" style={{ opacity: 0.6 }}>{driftOpen ? "▾" : "▸"}</span>
           Drift from harness.yaml
-        </h2>
-        <DriftPage />
+        </button>
+        {/*
+          Mounted only when opened, and that is behavioural rather than
+          cosmetic: Drift scans project scopes on mount and asks Tauri to grant
+          access to the project directory. The Machine view runs machine-only
+          by default and must not trigger a directory-permission request the
+          user did not ask for, so its own load behaviour stays unchanged
+          until someone opens this.
+        */}
+        {driftOpen && <DriftPage />}
       </section>
 
       {selectedRow && (

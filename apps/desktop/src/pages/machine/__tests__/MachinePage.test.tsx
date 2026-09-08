@@ -372,6 +372,32 @@ describe("MachinePage", () => {
     expect(screen.getByText("Drift from harness.yaml")).toBeInTheDocument();
   });
 
+  it("does not run Drift's scans until the section is opened", async () => {
+    // Not cosmetic. Drift asks Tauri to grant access to the project directory
+    // on mount; the Machine view runs machine-only by default and must not
+    // trigger a permission request nobody asked for. Mounting Drift eagerly
+    // made this fire on every Machine load — caught only because a serial CI
+    // run was slow enough for the async grant to land before the assertion.
+    renderPage();
+    await screen.findByTestId("machine-grid");
+
+    // Structural, not timing-based: Drift's own heading is absent because the
+    // component never mounted. Asserting "grantProjectScope was not called"
+    // alone races the grant's own promise — which is exactly why the eager
+    // version looked green locally and failed on a slower serial run.
+    const toggle = screen.getByRole("button", { name: /Drift from harness.yaml/ });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("heading", { name: "Drift" })).not.toBeInTheDocument();
+    expect(mockGrantProjectScope).not.toHaveBeenCalled();
+  });
+
+  it("mounts Drift when the section is opened", async () => {
+    renderPage();
+    await screen.findByTestId("machine-grid");
+    fireEvent.click(screen.getByRole("button", { name: /Drift from harness.yaml/ }));
+    expect(await screen.findByRole("heading", { name: "Drift" })).toBeInTheDocument();
+  });
+
   it("derives totals from the inventory rows/gaps/diffs, not resourceCount", async () => {
     renderPage();
     await screen.findByTestId("machine-grid");
