@@ -44,13 +44,11 @@ export default function PluginExplorerPage() {
     }
   }, [explorer.selectedPath]);
 
-  // Window Cmd+S. Keystrokes inside Monaco are handled by its own save action
-  // (wired to requestSave via editorState.saveFile below), so skip them here
-  // to keep one keystroke from reaching two handlers.
+  // In-editor Cmd+S is handled by Monaco's registered action (which stops
+  // propagation); this listener covers focus outside the editor.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (!(e.metaKey || e.ctrlKey) || e.key !== "s") return;
-      if ((e.target as HTMLElement | null)?.closest?.(".monaco-editor")) return;
       e.preventDefault();
       explorer.requestSave();
     }

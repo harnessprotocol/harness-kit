@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import PluginExplorerPage from "../PluginExplorerPage";
+import { setConfirmSave } from "../../../lib/preferences";
 
 // Names are exactly what PluginExplorerPage.tsx and hooks/usePluginExplorer.ts import from lib/tauri.
 const mockSave = vi.fn(async (..._args: unknown[]) => undefined);
@@ -16,6 +17,9 @@ vi.mock("../../../lib/tauri", () => ({
     children: [
       // plugin.json is critical per lib/criticalFiles.ts
       { name: "plugin.json", path: "/plugins/demo/plugin.json", kind: "file" },
+      // run.sh is not critical per lib/criticalFiles.ts, and unlike .md it opens in
+      // the editor view (lib/viewModes.ts), so Monaco mounts.
+      { name: "run.sh", path: "/plugins/demo/run.sh", kind: "file" },
     ],
   })),
   readPluginFile: vi.fn(async () => "{}"),
@@ -81,6 +85,7 @@ async function openAndEditCriticalFile() {
 describe("PluginExplorerPage save path (AC-31)", () => {
   beforeEach(() => {
     mockSave.mockClear();
+    setConfirmSave(true);
   });
 
   it("asks before saving a critical file from the editor's own Cmd+S", async () => {
@@ -105,5 +110,19 @@ describe("PluginExplorerPage save path (AC-31)", () => {
     fireEvent.keyDown(window, { key: "s", metaKey: true });
     expect(await screen.findByText(/Save changes\?/)).toBeInTheDocument();
     expect(mockSave).not.toHaveBeenCalled();
+  });
+
+  it("saves a non-critical file once from the editor's own Cmd+S without asking", async () => {
+    // The confirm-save preference defaults to on and would show the inline popover
+    // even for non-critical files; turn it off so only the critical gate applies.
+    setConfirmSave(false);
+    renderPage();
+    fireEvent.click(await screen.findByText("run.sh"));
+    fireEvent.click(await screen.findByText("edit"));
+    fireEvent.click(screen.getByText("monaco-save"));
+    await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(1));
+    await act(async () => {});
+    expect(mockSave).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/Save changes\?/)).not.toBeInTheDocument();
   });
 });

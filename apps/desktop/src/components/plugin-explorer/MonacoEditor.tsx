@@ -96,10 +96,8 @@ export default function MonacoEditor({ filePath, content, onChange, onSave, read
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // Only register when a handler exists at mount. Monaco's keybinding service
-    // calls preventDefault + stopPropagation for any chord that resolves to an
-    // action, so a no-op action would swallow Cmd+S before it reaches the page's
-    // window listener (HarnessFilePage relies on that listener).
+    // Pages that omit `onSave` handle Cmd+S with their own window listener;
+    // registering an action here would swallow the chord.
     if (onSaveRef.current) {
       editor.addAction({
         id: "harness-kit-save",

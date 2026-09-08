@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import HarnessFilePage from "../HarnessFilePage";
 
@@ -91,6 +91,9 @@ describe("HarnessFilePage", () => {
     fireEvent.keyDown(window, { key: "s", metaKey: true });
 
     await waitFor(() => expect(mockWriteHarnessFile).toHaveBeenCalledTimes(1));
+    // waitFor resolves on the first call; flush pending work and confirm no second save landed.
+    await act(async () => {});
+    expect(mockWriteHarnessFile).toHaveBeenCalledTimes(1);
     expect(mockWriteHarnessFile).toHaveBeenCalledWith('version: "1"\nmetadata:\n  name: edited\n');
   });
 
