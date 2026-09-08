@@ -26,7 +26,6 @@ const SecretsPage = lazy(() => import("./pages/security/SecretsPage"));
 const AuditLogPage = lazy(() => import("./pages/security/AuditLogPage"));
 const MachinePage = lazy(() => import("./pages/machine/MachinePage"));
 const FleetPage = lazy(() => import("./pages/fleet/FleetPage"));
-const AgentsPage = lazy(() => import("./pages/agents/AgentsPage"));
 
 // Dev-only screenshot fixtures (DESIGN.md §8 verification) — render Fleet/Drift/
 // Onboarding's presentational views with static data, no Tauri/core backend
@@ -107,8 +106,8 @@ export default function App() {
             <Route path="observatory" element={<DashboardPage />} />
             <Route path="observatory/sessions" element={<SessionsPage />} />
 
-            {/* Agents */}
-            <Route path="agents" element={<AgentsPage />} />
+            {/* Retired route */}
+            <Route path="agents" element={<Navigate to="/machine" replace />} />
 
             {/* Comparator */}
             <Route path="comparator" element={<ComparatorPage />} />
