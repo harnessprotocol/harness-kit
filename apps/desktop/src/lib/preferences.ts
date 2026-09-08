@@ -8,15 +8,12 @@ export const SIDEBAR_WIDTH_MIN = 160;
 export const SIDEBAR_WIDTH_MAX = 320;
 export const SIDEBAR_WIDTH_DEFAULT = 208;
 
-export const OBSERVATORY_REFRESH_DEFAULT = 60_000;
-
 // ── Storage keys ─────────────────────────────────────────────
 
 const KEY_FONT_SIZE = "harness-kit-font-size";
 const KEY_DENSITY = "harness-kit-density";
 const KEY_DEFAULT_SECTION = "harness-kit-default-section";
 const KEY_HIDDEN_SECTIONS = "harness-kit-hidden-sections";
-const KEY_OBSERVATORY_REFRESH = "harness-kit-observatory-refresh";
 const KEY_MARKDOWN_FONT = "harness-kit-markdown-font";
 const KEY_SIDEBAR_WIDTH = "harness-kit-sidebar-width";
 const KEY_CONFIRM_SAVE = "harness-kit-confirm-save";
@@ -91,19 +88,6 @@ export function getHiddenSections(): Set<string> {
 export function setHiddenSections(sections: Set<string>) {
   localStorage.setItem(KEY_HIDDEN_SECTIONS, JSON.stringify([...sections]));
   window.dispatchEvent(new CustomEvent("harness-kit-prefs-changed"));
-}
-
-// ── Observatory Refresh ──────────────────────────────────────
-
-export function getObservatoryRefresh(): number {
-  const raw = localStorage.getItem(KEY_OBSERVATORY_REFRESH);
-  if (raw === null) return OBSERVATORY_REFRESH_DEFAULT;
-  const n = Number(raw);
-  return Number.isFinite(n) && n >= 0 ? n : OBSERVATORY_REFRESH_DEFAULT;
-}
-
-export function setObservatoryRefresh(ms: number) {
-  localStorage.setItem(KEY_OBSERVATORY_REFRESH, String(ms));
 }
 
 // ── Markdown Font ────────────────────────────────────────────

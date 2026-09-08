@@ -342,7 +342,7 @@ function ChartCard({
 
   return (
     <div style={{
-      background: "var(--card-glass)",
+      background: "var(--bg-elevated)",
       backdropFilter: "blur(10px)",
       WebkitBackdropFilter: "blur(10px)",
       border: "1px solid var(--border-base)",

@@ -9,7 +9,6 @@ import {
   getDensity, setDensity,
   getDefaultSection, setDefaultSection,
   getHiddenSections, setHiddenSections,
-  getObservatoryRefresh, setObservatoryRefresh,
   getMarkdownFont, setMarkdownFont,
   getConfirmSave, setConfirmSave,
   getConfigFilesDetailLevel, setConfigFilesDetailLevel,
@@ -156,7 +155,6 @@ function GeneralTab() {
   const [density, setDensityState] = useState(getDensity);
   const [defaultSection, setDefaultSectionState] = useState(getDefaultSection);
   const [hiddenSections, setHiddenSectionsState] = useState(getHiddenSections);
-  const [observatoryRefresh, setObservatoryRefreshState] = useState(getObservatoryRefresh);
   const [markdownFont, setMarkdownFontState] = useState(getMarkdownFont);
   const [confirmSave, setConfirmSaveState] = useState(getConfirmSave);
   const [configFilesDetail, setConfigFilesDetailState] = useState(getConfigFilesDetailLevel);
@@ -200,11 +198,6 @@ function GeneralTab() {
     }
     setHiddenSections(next);
     setHiddenSectionsState(next);
-  }
-
-  function handleSetObservatoryRefresh(ms: number) {
-    setObservatoryRefresh(ms);
-    setObservatoryRefreshState(ms);
   }
 
   function handleSetMarkdownFont(font: MarkdownFont) {
@@ -401,19 +394,6 @@ function GeneralTab() {
       {/* ── Behavior ───────────────────────────────────────────── */}
       <div style={{ marginBottom: "28px" }}>
         <SectionHeader>Behavior</SectionHeader>
-
-        <SettingRow label="Observatory auto-refresh" description="How often the dashboard reloads data">
-          <Segmented
-            options={[
-              { value: 0, label: "Off" },
-              { value: 30000, label: "30s" },
-              { value: 60000, label: "1m" },
-              { value: 300000, label: "5m" },
-            ]}
-            value={observatoryRefresh}
-            onChange={handleSetObservatoryRefresh}
-          />
-        </SettingRow>
 
         <SettingRow
           label="Confirm before saving"

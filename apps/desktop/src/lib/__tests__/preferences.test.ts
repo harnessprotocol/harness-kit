@@ -6,7 +6,6 @@ import {
   SIDEBAR_WIDTH_MIN,
   SIDEBAR_WIDTH_MAX,
   SIDEBAR_WIDTH_DEFAULT,
-  OBSERVATORY_REFRESH_DEFAULT,
   getFontSize,
   setFontSize,
   getDensity,
@@ -15,8 +14,6 @@ import {
   setDefaultSection,
   getHiddenSections,
   setHiddenSections,
-  getObservatoryRefresh,
-  setObservatoryRefresh,
   getMarkdownFont,
   setMarkdownFont,
   getSidebarWidth,
@@ -135,24 +132,6 @@ describe("getHiddenSections / setHiddenSections", () => {
   });
 });
 
-// ── Observatory Refresh ──────────────────────────────────────
-
-describe("getObservatoryRefresh / setObservatoryRefresh", () => {
-  it("returns 60000 when unset", () => {
-    expect(getObservatoryRefresh()).toBe(60_000);
-  });
-
-  it("stores and retrieves a value", () => {
-    setObservatoryRefresh(30_000);
-    expect(getObservatoryRefresh()).toBe(30_000);
-  });
-
-  it("stores 0 for off", () => {
-    setObservatoryRefresh(0);
-    expect(getObservatoryRefresh()).toBe(0);
-  });
-});
-
 // ── Markdown Font ────────────────────────────────────────────
 
 describe("getMarkdownFont / setMarkdownFont", () => {
@@ -236,16 +215,6 @@ describe("corrupted localStorage resilience", () => {
   it("getSidebarWidth falls back to min for non-numeric garbage", () => {
     localStorage.setItem("harness-kit-sidebar-width", "abc");
     expect(getSidebarWidth()).toBe(SIDEBAR_WIDTH_MIN);
-  });
-
-  it("getObservatoryRefresh falls back to default for non-numeric garbage", () => {
-    localStorage.setItem("harness-kit-observatory-refresh", "abc");
-    expect(getObservatoryRefresh()).toBe(OBSERVATORY_REFRESH_DEFAULT);
-  });
-
-  it("getObservatoryRefresh falls back to default for negative values", () => {
-    localStorage.setItem("harness-kit-observatory-refresh", "-500");
-    expect(getObservatoryRefresh()).toBe(OBSERVATORY_REFRESH_DEFAULT);
   });
 
   it("getDensity falls back to 'comfortable' for invalid string", () => {
