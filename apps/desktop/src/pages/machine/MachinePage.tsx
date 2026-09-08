@@ -332,6 +332,7 @@ export default function MachinePage() {
           diffs={rowDiffs}
           gaps={inventory?.gaps ?? []}
           onClose={() => setSelectedRow(null)}
+          onApplied={() => load(projectDir)}
         />
       )}
     </div>

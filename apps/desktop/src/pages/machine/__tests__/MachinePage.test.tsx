@@ -69,6 +69,22 @@ vi.mock("../../../lib/tauri", () => ({
   grantProjectScope: (...args: unknown[]) => mockGrantProjectScope(...args),
 }));
 
+// The drawer's action strip. The real module plans through core's engine and
+// writes through Tauri; here it just has to render an enabled Apply and
+// report a successful apply so the page's onApplied wiring can be asserted.
+vi.mock("../cell-actions", () => ({
+  presentSources: vi.fn(() => ["claude-code"]),
+  missingTargets: vi.fn(() => ["cursor"]),
+  divergentTargets: vi.fn(() => []),
+  buildCellAction: vi.fn(async () => ({
+    request: { kind: "skill", name: "reviewer", from: "claude-code", to: "cursor", scope: "user" },
+    plan: { supported: true, noop: false, requiresConfirmation: false, changes: [] },
+    cli: "harness-kit sync --from claude-code --to cursor --only skill/reviewer",
+    prompt: "Install skill reviewer on Cursor.",
+  })),
+  applyCellActionViaTauri: vi.fn(async () => ({ written: [] })),
+}));
+
 vi.mock("@tauri-apps/api/path", () => ({
   homeDir: vi.fn(() => Promise.resolve("/home/user")),
 }));
@@ -538,5 +554,21 @@ describe("MachinePage", () => {
     expect(screen.getByText(/Scanning this machine/)).toBeInTheDocument();
     resolve(makeInventory());
     await waitFor(() => expect(screen.getByTestId("machine-grid")).toBeInTheDocument());
+  });
+
+  it("rescans after a successful apply so the grid reflects the write", async () => {
+    // AC-16. Without this the cell still read "absent" after a write until
+    // the user clicked Refresh.
+    renderPage();
+    await screen.findByTestId("machine-grid");
+    expect(vi.mocked(buildMachineInventory)).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByTestId("machine-row-skill:reviewer"));
+    const drawer = await screen.findByTestId("machine-row-drawer");
+    const apply = within(drawer).getByRole("button", { name: "Apply" });
+    await waitFor(() => expect(apply).toBeEnabled());
+    fireEvent.click(apply);
+
+    await waitFor(() => expect(vi.mocked(buildMachineInventory)).toHaveBeenCalledTimes(2));
   });
 });
