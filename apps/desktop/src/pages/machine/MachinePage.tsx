@@ -1,7 +1,7 @@
 import { useSearchParams } from "react-router-dom";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Input, SummaryStrip, EmptyState, type SummaryCell } from "@harness-kit/ui";
-import { ScanSearch } from "lucide-react";
+import { ChevronRight, ScanSearch } from "lucide-react";
 import type { GridRow, MachineInventory } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
 import { loadMachineInventory } from "./machine-data";
@@ -29,12 +29,34 @@ export default function MachinePage() {
   // common path — clicking Drift in the sidebar while already on Machine.
   const [searchParams] = useSearchParams();
   const driftRequested = searchParams.get("drift") === "1";
+  const harnessParam = searchParams.get("harness");
   const [driftOpen, setDriftOpen] = useState(driftRequested);
+  const driftSectionRef = useRef<HTMLElement | null>(null);
+  const driftScrollPending = useRef(false);
   useEffect(() => {
     // Opens on request; never force-closes, so a user who opened the section
-    // by hand does not lose it by navigating within Machine.
-    if (driftRequested) setDriftOpen(true);
-  }, [driftRequested]);
+    // by hand does not lose it by navigating within Machine. Keyed on the
+    // harness too: a Fleet row click while already viewing Drift changes
+    // only that param, and is still a new request.
+    if (driftRequested) {
+      setDriftOpen(true);
+      driftScrollPending.current = true;
+    }
+  }, [driftRequested, harnessParam]);
+  useEffect(() => {
+    // Consumes the request once the scan is not loading: immediately when the
+    // user is already on Machine, after the first scan on a cold mount. The
+    // layout signal is `loading`, which flips in the same batch that renders
+    // the grid; scrolling before that lands on a layout the grid then pushes
+    // below the fold. Keyed on the request params as well: a ref write
+    // schedules nothing, so the effect must run on the render the request
+    // arrived in. Consumed once, so a later Refresh does not yank the page
+    // back here. On a failed scan the section still scrolls: the user asked
+    // for Drift.
+    if (!driftScrollPending.current || loading) return;
+    driftScrollPending.current = false;
+    driftSectionRef.current?.scrollIntoView?.({ block: "start" });
+  }, [driftRequested, harnessParam, loading]);
   const [selectedRow, setSelectedRow] = useState<GridRow | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
   const [projectDegraded, setProjectDegraded] = useState(false);
@@ -220,17 +242,12 @@ export default function MachinePage() {
                   cursor: "pointer",
                 }}
               >
-                <span
+                <ChevronRight
+                  size={10}
+                  strokeWidth={1.7}
                   aria-hidden="true"
-                  style={{
-                    display: "inline-block",
-                    transform: showSkipped ? "rotate(90deg)" : "none",
-                    transition: "transform 0.15s ease",
-                    fontSize: 9,
-                  }}
-                >
-                  ▶
-                </span>
+                  style={{ transform: showSkipped ? "rotate(90deg)" : "none", transition: "transform 0.15s ease" }}
+                />
                 Skipped diagnostics
                 <span
                   style={{
@@ -293,7 +310,7 @@ export default function MachinePage() {
         above compares surfaces against each other. Two different questions, one
         screen.
       */}
-      <section style={{ marginTop: 28 }} data-testid="machine-drift-section">
+      <section ref={driftSectionRef} style={{ marginTop: 28 }} data-testid="machine-drift-section">
         <button
           type="button"
           onClick={() => setDriftOpen((open) => !open)}
@@ -309,10 +326,15 @@ export default function MachinePage() {
             font: "inherit",
             fontSize: 13,
             fontWeight: 650,
-            color: "var(--fg)",
+            color: "var(--fg-base)",
           }}
         >
-          <span aria-hidden="true" style={{ opacity: 0.6 }}>{driftOpen ? "▾" : "▸"}</span>
+          <ChevronRight
+            size={12}
+            strokeWidth={1.7}
+            aria-hidden="true"
+            style={{ transform: driftOpen ? "rotate(90deg)" : "none", transition: "transform 0.15s ease" }}
+          />
           Drift from harness.yaml
         </button>
         {/*
@@ -332,6 +354,7 @@ export default function MachinePage() {
           diffs={rowDiffs}
           gaps={inventory?.gaps ?? []}
           onClose={() => setSelectedRow(null)}
+          onApplied={() => load(projectDir)}
         />
       )}
     </div>

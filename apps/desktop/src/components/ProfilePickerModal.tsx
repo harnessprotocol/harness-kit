@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { FileText, X } from "lucide-react";
 import { PROFILES } from "../lib/profiles";
 import type { HarnessProfile } from "../lib/profiles";
 import { listCustomProfiles, getCustomProfile, deleteCustomProfile } from "../lib/tauri";
@@ -49,7 +50,7 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
     setLoadError(null);
     try {
       const yaml = await getCustomProfile(p.id);
-      onSelect({ id: p.id, name: p.name, description: p.description, icon: "📄", tags: [], yaml });
+      onSelect({ id: p.id, name: p.name, description: p.description, icon: FileText, tags: [], yaml });
     } catch (err) {
       setLoadError(String(err));
     } finally {
@@ -125,15 +126,16 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
               </div>
               <button
                 onClick={onClose}
+                aria-label="Close"
                 style={{
                   width: "24px", height: "24px",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   borderRadius: "6px", border: "none",
                   background: "transparent", color: "var(--fg-subtle)",
-                  cursor: "pointer", fontSize: "14px", flexShrink: 0,
+                  cursor: "pointer", flexShrink: 0,
                 }}
               >
-                ✕
+                <X size={14} strokeWidth={1.7} aria-hidden="true" />
               </button>
             </div>
 
@@ -178,7 +180,7 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
                       >
                         <div style={{ display: "flex", alignItems: "center", gap: "8px", justifyContent: "space-between" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <span style={{ fontSize: "20px", lineHeight: 1 }}>📄</span>
+                            <FileText size={20} strokeWidth={1.7} aria-hidden="true" />
                             <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)" }}>
                               {profile.name}
                             </span>
@@ -241,7 +243,7 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                      <span style={{ fontSize: "20px", lineHeight: 1 }}>{profile.icon}</span>
+                      <profile.icon size={20} strokeWidth={1.7} aria-hidden="true" />
                       <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)" }}>
                         {profile.name}
                       </span>

@@ -19,6 +19,10 @@ export interface OnboardingFlowProps {
   onAdvance: () => void;
   onWriteAndFinish: () => void;
   onExploreReadOnly: () => void;
+  /** Dismisses the wizard from any step, writing nothing (AC-33). */
+  onSkip: () => void;
+  /** Reruns the machine scan after a failure (AC-32). */
+  onRetry: () => void;
 }
 
 /**
@@ -39,12 +43,20 @@ export function OnboardingFlow({
   onAdvance,
   onWriteAndFinish,
   onExploreReadOnly,
+  onSkip,
+  onRetry,
 }: OnboardingFlowProps) {
   return (
     <div className="hk-onboard-shell">
       <div className="hk-onboard-frame">
+        <div className="hk-onboard-skip">
+          <Button variant="ghost" size="sm" onClick={onSkip} disabled={writing}>
+            Skip setup
+          </Button>
+        </div>
         {step === "scan" && <ScanStep scanSeconds={scanSeconds} scanError={scanError} />}
-        {step === "reveal" && reveal && <RevealStep reveal={reveal} onAdvance={onAdvance} />}
+        {step === "reveal" && scanError && <ScanFailedStep scanError={scanError} onRetry={onRetry} />}
+        {step === "reveal" && !scanError && reveal && <RevealStep reveal={reveal} onAdvance={onAdvance} />}
         {step === "preview" && (
           <PreviewStep harnessYaml={harnessYaml} reveal={reveal} onAdvance={onAdvance} />
         )}
@@ -65,6 +77,8 @@ export function OnboardingFlow({
 // ── Step 1: Scan progress ──────────────────────────────────────────
 
 function ScanStep({ scanSeconds, scanError }: { scanSeconds: number | null; scanError: string | null }) {
+  // A failure advances to ScanFailedStep on the next tick, which owns the
+  // error copy — this step only stops pulsing.
   const done = scanSeconds !== null || scanError !== null;
   return (
     <div className="hk-onboard-scan">
@@ -73,21 +87,32 @@ function ScanStep({ scanSeconds, scanError }: { scanSeconds: number | null; scan
         <span>{done ? "Scan complete" : "Scanning your machine…"}</span>
       </div>
       <h1 className="hk-onboard-scan-title">
-        {scanError
-          ? "Machine scan hit a snag"
-          : done
-            ? `Machine scan complete · ${scanSeconds}s`
-            : "Reading your existing harness configs"}
+        {scanSeconds !== null
+          ? `Machine scan complete · ${scanSeconds}s`
+          : "Reading your existing harness configs"}
       </h1>
-      {scanError ? (
-        <p className="hk-onboard-scan-sub" data-error="true">
-          {scanError}
-        </p>
-      ) : (
-        <p className="hk-onboard-scan-sub">
-          Looking for Claude Code, Cursor, Copilot, and other AI coding tool configs already on this machine.
-        </p>
-      )}
+      <p className="hk-onboard-scan-sub">
+        Looking for Claude Code, Cursor, Copilot, and other AI coding tool configs already on this machine.
+      </p>
+    </div>
+  );
+}
+
+// ── Step 1b: Scan failed ───────────────────────────────────────────
+
+function ScanFailedStep({ scanError, onRetry }: { scanError: string; onRetry: () => void }) {
+  return (
+    <div className="hk-onboard-scan">
+      <h1 className="hk-onboard-scan-title">The machine scan did not finish</h1>
+      <p className="hk-onboard-scan-sub" data-error="true">
+        {scanError}
+      </p>
+      <p className="hk-onboard-lede">You can retry, or skip setup and scan later from Machine.</p>
+      <div className="hk-onboard-actions">
+        <Button variant="primary" onClick={onRetry}>
+          Retry scan
+        </Button>
+      </div>
     </div>
   );
 }
@@ -268,7 +293,6 @@ function PreviewStep({
               filePath="harness.yaml"
               content={harnessYaml ?? ""}
               onChange={() => {}}
-              onSave={() => {}}
               readOnly
             />
           </div>

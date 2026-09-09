@@ -169,7 +169,7 @@ Full-bleed within the window (no app sidebar yet — it's a wizard). Sequence:
 2. **The sprawl reveal:** honest headline ("You run 5 harnesses. *They don't agree.*", the disagreement clause in azure), lede explaining "we read the config you already have — no authoring required", then a 4-up **stat row** (harnesses found / config files / overlapping instruction sets [warning] / direct conflicts [danger]).
 3. **Convergence map:** source harness chips (each with file counts, drift counts in warning) → converging lines → a single `harness.yaml` card (mono preview: plugins/mcp-servers/skills counts in azure). Schematic, not heavy.
 4. **Conflicts list:** concrete, specific rows in warning tint ("'Run tests before commit' appears in 3 tools with 2 wordings"; "MCP server `github` points at two commands"; "Copilot allows `rm -rf` where Claude Code denies it").
-5. **CTA:** "Preview harness.yaml" (primary) + "Explore read-only" (ghost) + note "Nothing is written until you confirm." Declining leaves a fully usable read-only app.
+5. **CTA:** "Preview harness.yaml" (primary) + "Explore read-only" (ghost) + note "Nothing is written until you confirm." Declining leaves a fully usable read-only app. Every step carries a "Skip setup" ghost action top-right; a failed scan renders its error with "Retry scan" instead of an empty frame (ux-consolidation AC-32, AC-33).
 
 ### Comparator / Observatory / Marketplace / Settings
 Re-skin existing data behavior onto `packages/ui` + these tokens. Security folds into Settings. No new features, no external-service affordances.
@@ -178,7 +178,7 @@ Re-skin existing data behavior onto `packages/ui` + these tokens. Security folds
 
 ## 7. Component library (`packages/ui`) — minimum inventory
 
-Build these token-driven, borderless-by-default (surface via `--bg-elevated`/`--bg-surface` + `--shadow-sm`, no neutral outline). Salvage the typed-wrapper pattern + CommandPalette from branch `c/vigorous-hermann-f3b4ea` (`apps/desktop/src/components/ui/`, `components/CommandPalette.tsx`) — re-token to Direction A, do not carry the old indigo palette.
+Build these token-driven, borderless-by-default (surface via `--bg-elevated`/`--bg-surface` + `--shadow-sm`, no neutral outline). Components live only in `packages/ui/src/components/`; the desktop-local `apps/desktop/src/components/ui/` set was removed (ux-consolidation AC-41) and must not return.
 
 - `Button` (primary=azure fill+white / ghost=elevated / danger), `Sidebar`+`NavItem`, `SummaryStrip`, `Matrix`/`Table`, `StatusChip` (success/warning/danger/subtle), `DiffViewer` (mono), `Modal` (one implementation, kills the 3 legacy modal styles), `Toast`, `EmptyState`, `Stat`, `Card`, form controls (input/select/toggle), `CommandPalette`.
 

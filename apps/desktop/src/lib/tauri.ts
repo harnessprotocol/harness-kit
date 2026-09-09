@@ -3,7 +3,7 @@ import type {
   InstalledPlugin, KnownMarketplace, PluginUpdateInfo, HooksConfig, StatsCache,
   SessionSummary, SessionFacet, ActiveSession, LiveDailyActivity,
   LiveStats, SessionTranscript,
-  HarnessInfo, HarnessHealthRecord,
+  HarnessInfo,
   PermissionsState, SecurityPreset, KeychainSecretInfo,
   EnvConfigEntry, AuditEntry, FileTreeNode,
   ComparisonSummary, ComparisonDetail, FileDiffInput, FileDiffRow,
@@ -462,16 +462,6 @@ export async function getPanelDiffs(
   panelId: string,
 ): Promise<FileDiffRow[]> {
   return invoke<FileDiffRow[]>("get_panel_diffs", { comparisonId, panelId });
-}
-
-// ── Harness health ───────────────────────────────────────────
-
-export async function getHarnessHealth(): Promise<HarnessHealthRecord[]> {
-  return invoke<HarnessHealthRecord[]>("get_harness_health");
-}
-
-export async function recordHarnessLaunchResult(harnessId: string, exitCode: number): Promise<void> {
-  return invoke<void>("record_harness_launch_result", { harnessId, exitCode });
 }
 
 // ── Feedback commands ─────────────────────────────────────────

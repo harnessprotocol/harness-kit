@@ -1,5 +1,5 @@
 import { Button, StatusChip, DiffViewer, EmptyState, ToastViewport, type ToastItem } from "@harness-kit/ui";
-import { ShieldCheck } from "lucide-react";
+import { ChevronRight, ShieldCheck } from "lucide-react";
 import { ADAPTER_META } from "../fleet/adapter-meta";
 import { driftItemKey, type ScopedDriftItem } from "./drift-data";
 import { CLASS_LABEL, CLASS_VARIANT, isRepairable } from "./classification";
@@ -158,7 +158,9 @@ export function DriftView({
           <div key={key} style={{ marginBottom: 24 }}>
             <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 10 }}>
               <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg-base)" }}>{first.scope.label}</span>
-              <span style={{ color: "var(--fg-subtle)", fontSize: 12 }}>›</span>
+              <span style={{ color: "var(--fg-subtle)", display: "inline-flex" }}>
+                <ChevronRight size={12} strokeWidth={1.7} aria-hidden="true" />
+              </span>
               <span className="hk-table-mono" style={{ fontSize: 12.5, color: "var(--fg-muted)" }}>
                 {adapterMeta?.name ?? first.item.adapter}
               </span>

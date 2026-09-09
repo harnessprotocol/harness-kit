@@ -44,13 +44,13 @@ export default function PluginExplorerPage() {
     }
   }, [explorer.selectedPath]);
 
-  // Keyboard shortcuts
+  // In-editor Cmd+S is handled by Monaco's registered action (which stops
+  // propagation); this listener covers focus outside the editor.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
-        e.preventDefault();
-        explorer.requestSave();
-      }
+      if (!(e.metaKey || e.ctrlKey) || e.key !== "s") return;
+      e.preventDefault();
+      explorer.requestSave();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -66,7 +66,8 @@ export default function PluginExplorerPage() {
     error: explorer.error,
     isDirty: explorer.dirty,
     updateContent: explorer.updateContent,
-    saveFile: explorer.saveFile,
+    // Toolbar Save and Monaco's Cmd+S both go through the confirmation path.
+    saveFile: async () => { explorer.requestSave(); },
     revertFile: explorer.revertFile,
     reload: () => {},
   }), [explorer]);

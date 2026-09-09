@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Star } from "lucide-react";
 import type { PanelState } from "../../hooks/useComparator";
 
 // ── Types ────────────────────────────────────────────────────
@@ -569,14 +570,14 @@ export default function HarnessPanel({ panel, rawChunks, outputTick, onSend: _on
                   color: filled ? tokens.warning : tokens.borderStrong,
                   transition: "transform 100ms ease-out, color 100ms ease-out",
                   transform: hoveredStar === star ? "scale(1.25)" : "scale(1)",
-                  display: "inline-block",
+                  display: "inline-flex",
                   lineHeight: 1,
                 }}
                 onClick={() => setRating(star === rating ? 0 : star)}
                 onMouseEnter={() => setHoveredStar(star)}
                 onMouseLeave={() => setHoveredStar(0)}
               >
-                ★
+                <Star size={16} strokeWidth={1.7} aria-hidden="true" fill={filled ? "currentColor" : "none"} />
               </span>
             );
           })}

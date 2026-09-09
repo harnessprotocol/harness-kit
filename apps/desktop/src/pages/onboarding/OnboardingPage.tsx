@@ -31,6 +31,9 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
   const [writing, setWriting] = useState(false);
   const [writeError, setWriteError] = useState<string | null>(null);
   const startedAt = useRef<number>(Date.now());
+  // Bumped by Retry; the scan effect is keyed on it so a rerun goes back
+  // through the scan step (AC-32). handleRetry resets the scan state.
+  const [scanRun, setScanRun] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,7 +72,9 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
         setResult(combined);
         setReveal(buildSprawlReveal(combined));
       } catch (err) {
-        if (!cancelled) setScanError(String(err));
+        // err.message, not String(err): the failed step prints this verbatim
+        // and "Error: EACCES…" reads as a stack line, not a sentence.
+        if (!cancelled) setScanError(err instanceof Error ? err.message : String(err));
       }
     }
 
@@ -77,7 +82,7 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [scanRun]);
 
   // Auto-advance from the scan step once it completes (success or error) —
   // the error is still shown, just on the reveal-adjacent step so the user
@@ -107,6 +112,18 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
     }
   }, [result, onFinish]);
 
+  const handleRetry = useCallback(() => {
+    setScanError(null);
+    setScanSeconds(null);
+    setStep("scan");
+    setScanRun((n) => n + 1);
+  }, []);
+
+  const handleSkip = useCallback(() => {
+    // Nothing is written; the caller marks the welcome as seen (AC-33).
+    onFinish();
+  }, [onFinish]);
+
   const handleExploreReadOnly = useCallback(() => {
     // Nothing is written — see DESIGN.md §6.3 CTA copy. Just dismiss.
     onFinish();
@@ -124,6 +141,8 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
       onAdvance={handleAdvance}
       onWriteAndFinish={handleWriteAndFinish}
       onExploreReadOnly={handleExploreReadOnly}
+      onSkip={handleSkip}
+      onRetry={handleRetry}
     />
   );
 }

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { TriangleAlert, X } from "lucide-react";
 import { formatCost } from "../../lib/pricing";
 
 interface Props {
@@ -55,17 +56,16 @@ export default function BudgetAlertBanner({
         padding: "12px 16px",
         marginBottom: "20px",
         borderRadius: "8px",
-        background: "rgba(217,119,6,0.08)",
-        border: "1px solid rgba(217,119,6,0.3)",
+        background: "var(--warning-light)",
         fontFamily: fontStack,
         fontSize: "13px",
         color: "var(--fg-base)",
       }}
     >
-      <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
-        <span style={{ fontSize: "16px", flexShrink: 0 }}>⚠</span>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <TriangleAlert size={16} strokeWidth={1.7} aria-hidden="true" style={{ color: "var(--warning)", flexShrink: 0 }} />
         <div>
-          <span style={{ fontWeight: 600, color: "#d97706" }}>
+          <span style={{ fontWeight: 600, color: "var(--warning)" }}>
             Daily budget exceeded:&nbsp;
           </span>
           {messages.join(" · ")}
@@ -78,16 +78,18 @@ export default function BudgetAlertBanner({
         aria-label="Dismiss budget alert"
         style={{
           flexShrink: 0,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
           border: "none",
           background: "none",
-          color: "#d97706",
+          color: "var(--warning)",
           cursor: "pointer",
-          fontSize: "16px",
           lineHeight: 1,
           padding: "0 2px",
         }}
       >
-        ×
+        <X size={13} strokeWidth={1.7} aria-hidden="true" />
       </button>
     </div>
   );

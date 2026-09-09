@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { Store } from "lucide-react";
 import type { GridCell, GridRow, MachineInventory, SurfaceId } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
 import { KIND_LABELS, familyGroups, shortDigest } from "./machine-view-model";
@@ -212,6 +213,7 @@ export function MachineGrid({ inventory, selectedRowKey, onRowClick }: MachineGr
                           justifyContent: "center",
                           minWidth: 14,
                           height: 14,
+                          gap: 2,
                           padding: "0 3px",
                           borderRadius: 7,
                           background: "var(--bg-elevated)",
@@ -220,7 +222,8 @@ export function MachineGrid({ inventory, selectedRowKey, onRowClick }: MachineGr
                           fontWeight: 650,
                         }}
                       >
-                        {`⌂${marketplaces.length}`}
+                        <Store size={11} strokeWidth={1.7} aria-hidden="true" />
+                        {marketplaces.length}
                       </span>
                     )}
                   </span>

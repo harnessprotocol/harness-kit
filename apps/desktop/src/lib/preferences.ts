@@ -8,15 +8,12 @@ export const SIDEBAR_WIDTH_MIN = 160;
 export const SIDEBAR_WIDTH_MAX = 320;
 export const SIDEBAR_WIDTH_DEFAULT = 208;
 
-export const OBSERVATORY_REFRESH_DEFAULT = 60_000;
-
 // ── Storage keys ─────────────────────────────────────────────
 
 const KEY_FONT_SIZE = "harness-kit-font-size";
 const KEY_DENSITY = "harness-kit-density";
 const KEY_DEFAULT_SECTION = "harness-kit-default-section";
 const KEY_HIDDEN_SECTIONS = "harness-kit-hidden-sections";
-const KEY_OBSERVATORY_REFRESH = "harness-kit-observatory-refresh";
 const KEY_MARKDOWN_FONT = "harness-kit-markdown-font";
 const KEY_SIDEBAR_WIDTH = "harness-kit-sidebar-width";
 const KEY_CONFIRM_SAVE = "harness-kit-confirm-save";
@@ -91,19 +88,6 @@ export function getHiddenSections(): Set<string> {
 export function setHiddenSections(sections: Set<string>) {
   localStorage.setItem(KEY_HIDDEN_SECTIONS, JSON.stringify([...sections]));
   window.dispatchEvent(new CustomEvent("harness-kit-prefs-changed"));
-}
-
-// ── Observatory Refresh ──────────────────────────────────────
-
-export function getObservatoryRefresh(): number {
-  const raw = localStorage.getItem(KEY_OBSERVATORY_REFRESH);
-  if (raw === null) return OBSERVATORY_REFRESH_DEFAULT;
-  const n = Number(raw);
-  return Number.isFinite(n) && n >= 0 ? n : OBSERVATORY_REFRESH_DEFAULT;
-}
-
-export function setObservatoryRefresh(ms: number) {
-  localStorage.setItem(KEY_OBSERVATORY_REFRESH, String(ms));
 }
 
 // ── Markdown Font ────────────────────────────────────────────
@@ -182,7 +166,6 @@ export type PermissionMode = "skip" | "auto" | "allowed-tools";
 
 const KEY_PERMISSION_MODE = "harness-kit-permission-mode";
 const KEY_ALLOWED_TOOLS = "harness-kit-allowed-tools";
-const KEY_PERMISSION_MODE_ACKED = "harness-kit-permission-mode-acked";
 const KEY_HARNESS_PERMISSION_OVERRIDES = "harness-kit-harness-permission-overrides";
 const KEY_AUTO_MODE_UNLOCKED = "harness-kit-auto-mode-unlocked";
 
@@ -216,14 +199,6 @@ export function setAllowedTools(tools: string[]) {
   localStorage.setItem(KEY_ALLOWED_TOOLS, JSON.stringify(tools));
 }
 
-export function getPermissionModeAcked(): boolean {
-  return localStorage.getItem(KEY_PERMISSION_MODE_ACKED) === "true";
-}
-
-export function setPermissionModeAcked() {
-  localStorage.setItem(KEY_PERMISSION_MODE_ACKED, "true");
-}
-
 export interface HarnessPermissionOverride {
   mode?: PermissionMode;
   allowedTools?: string[];
@@ -248,7 +223,8 @@ export function setHarnessPermissionOverrides(overrides: Record<string, HarnessP
  *  Does NOT change the selected permission mode — the user keeps their choice. */
 export function resetPermissionDefaults() {
   localStorage.removeItem(KEY_ALLOWED_TOOLS);
-  localStorage.removeItem(KEY_PERMISSION_MODE_ACKED);
+  // Legacy key cleanup: the first-run ack modal was removed with the settings page.
+  localStorage.removeItem("harness-kit-permission-mode-acked");
   localStorage.removeItem(KEY_HARNESS_PERMISSION_OVERRIDES);
 }
 
@@ -302,36 +278,6 @@ export function getBudgetGuard(): BudgetGuardConfig {
 export function setBudgetGuard(config: BudgetGuardConfig): void {
   localStorage.setItem(BUDGET_GUARD_KEY, JSON.stringify(config));
   window.dispatchEvent(new CustomEvent("harness-kit-prefs-changed"));
-}
-
-// ── Resilience Profiles ──────────────────────────────────────
-
-export type ResilienceProfile = "conservative" | "balanced" | "aggressive";
-
-export interface HarnessResilienceConfig {
-  /** Determines when fallback is triggered. */
-  profile: ResilienceProfile;
-  /** Harness ID to fall back to when the primary fails. */
-  fallbackHarnessId?: string;
-}
-
-/** Per-harness config keyed by harness ID. */
-export type ResilienceConfigMap = Record<string, HarnessResilienceConfig>;
-
-const RESILIENCE_CONFIG_KEY = "harness-kit-resilience-config";
-
-export function getResilienceConfig(): ResilienceConfigMap {
-  const raw = localStorage.getItem(RESILIENCE_CONFIG_KEY);
-  if (!raw) return {};
-  try {
-    return JSON.parse(raw) as ResilienceConfigMap;
-  } catch {
-    return {};
-  }
-}
-
-export function setResilienceConfig(config: ResilienceConfigMap): void {
-  localStorage.setItem(RESILIENCE_CONFIG_KEY, JSON.stringify(config));
 }
 
 // ── Init ─────────────────────────────────────────────────────

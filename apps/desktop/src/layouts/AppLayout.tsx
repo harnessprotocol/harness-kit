@@ -118,21 +118,6 @@ export const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
-// Demoted from top-level nav (harness-detection overlaps Fleet — DESIGN.md §5).
-// Route stays reachable at /agents; not rendered in the sidebar or shortcuts.
-export const DEMOTED_SECTIONS: NavSection[] = [
-  {
-    id: "agents",
-    label: "Agents",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
-        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-      </svg>
-    ),
-    path: "/agents",
-  },
-];
-
 // Files with dedicated nav items — excluded from the Config Files tree
 const DEDICATED_NAV_FILES = new Set(["harness.yaml", "CLAUDE.md"]);
 
@@ -293,7 +278,7 @@ export function isSectionActive(
   const marker = sectionQuery?.split("=")[0];
   if (marker !== undefined) return params.get(marker) !== null;
   // A plain entry loses to a query-qualified sibling on the same pathname.
-  return ![...NAV_SECTIONS, ...DEMOTED_SECTIONS].some((candidate) => {
+  return !NAV_SECTIONS.some((candidate) => {
     const [candidatePath, candidateQuery] = candidate.path.split("?");
     if (candidateQuery === undefined || candidatePath !== sectionPath) return false;
     return params.get(candidateQuery.split("=")[0]) !== null;

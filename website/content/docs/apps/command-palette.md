@@ -13,7 +13,7 @@ desktop app. Press `Cmd+K` from anywhere to open it, type to filter, and press
 The palette groups commands into:
 
 - **Navigate** — jump to any section or sub-page (Harness, Marketplace,
-  Observatory, Agents, Comparator, Security, Harness Parity, and so on). This
+  Observatory, Comparator, Security, Harness Parity, and so on). This
   replaces hunting through the sidebar.
 - **Actions** — operate the app, including **Toggle light / dark theme**.
 

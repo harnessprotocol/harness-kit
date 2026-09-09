@@ -9,7 +9,6 @@ import {
   getDensity, setDensity,
   getDefaultSection, setDefaultSection,
   getHiddenSections, setHiddenSections,
-  getObservatoryRefresh, setObservatoryRefresh,
   getMarkdownFont, setMarkdownFont,
   getConfirmSave, setConfirmSave,
   getConfigFilesDetailLevel, setConfigFilesDetailLevel,
@@ -21,7 +20,7 @@ import { getTheme, setTheme } from "../lib/theme";
 
 // Security surfaces are re-homed under Settings (DESIGN.md §5) — lazy-loaded
 // so the General tab's bundle stays light. Routes under /security/* still
-// work directly (e.g. FirstRunPermissionModal deep-links there).
+// render these pages directly; the Settings tabs are the primary entry.
 const PermissionsPage = lazy(() => import("./security/PermissionsPage"));
 const SecretsPage = lazy(() => import("./security/SecretsPage"));
 const AuditLogPage = lazy(() => import("./security/AuditLogPage"));
@@ -156,7 +155,6 @@ function GeneralTab() {
   const [density, setDensityState] = useState(getDensity);
   const [defaultSection, setDefaultSectionState] = useState(getDefaultSection);
   const [hiddenSections, setHiddenSectionsState] = useState(getHiddenSections);
-  const [observatoryRefresh, setObservatoryRefreshState] = useState(getObservatoryRefresh);
   const [markdownFont, setMarkdownFontState] = useState(getMarkdownFont);
   const [confirmSave, setConfirmSaveState] = useState(getConfirmSave);
   const [configFilesDetail, setConfigFilesDetailState] = useState(getConfigFilesDetailLevel);
@@ -200,11 +198,6 @@ function GeneralTab() {
     }
     setHiddenSections(next);
     setHiddenSectionsState(next);
-  }
-
-  function handleSetObservatoryRefresh(ms: number) {
-    setObservatoryRefresh(ms);
-    setObservatoryRefreshState(ms);
   }
 
   function handleSetMarkdownFont(font: MarkdownFont) {
@@ -402,19 +395,6 @@ function GeneralTab() {
       <div style={{ marginBottom: "28px" }}>
         <SectionHeader>Behavior</SectionHeader>
 
-        <SettingRow label="Observatory auto-refresh" description="How often the dashboard reloads data">
-          <Segmented
-            options={[
-              { value: 0, label: "Off" },
-              { value: 30000, label: "30s" },
-              { value: 60000, label: "1m" },
-              { value: 300000, label: "5m" },
-            ]}
-            value={observatoryRefresh}
-            onChange={handleSetObservatoryRefresh}
-          />
-        </SettingRow>
-
         <SettingRow
           label="Confirm before saving"
           description="Critical config files always require confirmation"
@@ -603,8 +583,8 @@ function GeneralTab() {
 
 // ── Settings shell (tab bar + General/Permissions/Secrets/Audit Log) ────
 // Security surfaces re-home here per DESIGN.md §5 — folded under Settings,
-// removed from top-level nav. Routes under /security/* remain reachable
-// directly (e.g. FirstRunPermissionModal deep-links to /security/permissions).
+// removed from top-level nav. Routes under /security/* still render these
+// pages directly; the Settings tabs are the primary entry.
 
 function SettingsTabBar({ active, onChange }: { active: SettingsTab; onChange: (tab: SettingsTab) => void }) {
   return (

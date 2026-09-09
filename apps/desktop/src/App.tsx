@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AppLayout from "./layouts/AppLayout";
 import { getDefaultSection, getWelcomeSeen, setWelcomeSeen } from "./lib/preferences";
 import { ObservatoryProvider } from "./hooks/useObservatoryData";
+import { DriftRedirect } from "./routes/DriftRedirect";
 
 // Lazy-load all pages so the initial bundle only includes the shell + router
 const PreferencesPage = lazy(() => import("./pages/PreferencesPage"));
@@ -11,7 +12,6 @@ const HarnessFilePage = lazy(() => import("./pages/harness/HarnessFilePage"));
 const PluginsPage = lazy(() => import("./pages/harness/PluginsPage"));
 const HooksPage = lazy(() => import("./pages/harness/HooksPage"));
 const McpServersPage = lazy(() => import("./pages/harness/McpServersPage"));
-const SettingsPage = lazy(() => import("./pages/harness/SettingsPage"));
 const PluginExplorerPage = lazy(() => import("./pages/harness/PluginExplorerPage"));
 const ClaudeMdPage = lazy(() => import("./pages/harness/ClaudeMdPage"));
 const ConfigFilePage = lazy(() => import("./pages/harness/ConfigFilePage"));
@@ -25,7 +25,6 @@ const SecretsPage = lazy(() => import("./pages/security/SecretsPage"));
 const AuditLogPage = lazy(() => import("./pages/security/AuditLogPage"));
 const MachinePage = lazy(() => import("./pages/machine/MachinePage"));
 const FleetPage = lazy(() => import("./pages/fleet/FleetPage"));
-const AgentsPage = lazy(() => import("./pages/agents/AgentsPage"));
 
 // Dev-only screenshot fixtures (DESIGN.md §8 verification) — render Fleet/Drift/
 // Onboarding's presentational views with static data, no Tauri/core backend
@@ -98,7 +97,8 @@ export default function App() {
             <Route path="harness/hooks" element={<HooksPage />} />
             <Route path="harness/claude-md" element={<ClaudeMdPage />} />
             <Route path="harness/sync" element={<SyncPage />} />
-            <Route path="harness/settings" element={<SettingsPage />} />
+            {/* Retired route (AC-41) */}
+            <Route path="harness/settings" element={<Navigate to="/harness/file" replace />} />
             <Route path="harness/config/:filename" element={<ConfigFilePage />} />
 
             {/* Marketplace */}
@@ -106,8 +106,8 @@ export default function App() {
             <Route path="observatory" element={<DashboardPage />} />
             <Route path="observatory/sessions" element={<SessionsPage />} />
 
-            {/* Agents */}
-            <Route path="agents" element={<AgentsPage />} />
+            {/* Retired route */}
+            <Route path="agents" element={<Navigate to="/machine" replace />} />
 
             {/* Comparator */}
             <Route path="comparator" element={<ComparatorPage />} />
@@ -120,7 +120,7 @@ export default function App() {
             {/* Drift */}
             {/* AC-37: Drift is presented inside the Machine view; the legacy
                 route redirects rather than 404ing anyone's bookmark. */}
-            <Route path="drift" element={<Navigate to="/machine?drift=1" replace />} />
+            <Route path="drift" element={<DriftRedirect />} />
 
             {/* Preferences / Settings (Security folds in here as tabs — DESIGN.md §5) */}
             <Route path="preferences" element={<PreferencesPage />} />
