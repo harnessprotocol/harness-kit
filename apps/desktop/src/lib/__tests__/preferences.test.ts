@@ -23,6 +23,8 @@ import {
   initPreferences,
   getConfigFilesDetailLevel,
   setConfigFilesDetailLevel,
+  getLabs,
+  setLab,
 } from "../preferences";
 
 beforeEach(() => {
@@ -246,6 +248,16 @@ describe("configFilesDetailLevel", () => {
   it("falls back to 'text-files' for unknown stored values", () => {
     localStorage.setItem("harness-kit-config-files-detail", "garbage");
     expect(getConfigFilesDetailLevel()).toBe("text-files");
+  });
+});
+
+// ── labs flags ───────────────────────────────────────────────
+
+describe("labs flags", () => {
+  it("defaults every lab to off and persists a change", () => {
+    expect(getLabs()).toEqual({ comparator: false });
+    setLab("comparator", true);
+    expect(getLabs().comparator).toBe(true);
   });
 });
 

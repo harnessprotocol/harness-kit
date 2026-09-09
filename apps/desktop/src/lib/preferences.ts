@@ -1,3 +1,5 @@
+import type { LabsFlags, LabsKey } from "../nav";
+
 // ── Constants ────────────────────────────────────────────────
 
 export const FONT_SIZE_MIN = 11;
@@ -158,6 +160,24 @@ export function getConfigFilesDetailLevel(): ConfigFilesDetailLevel {
 
 export function setConfigFilesDetailLevel(level: ConfigFilesDetailLevel) {
   localStorage.setItem(KEY_CONFIG_FILES_DETAIL, level);
+}
+
+// ── Labs ─────────────────────────────────────────────────────
+
+const KEY_LABS_PREFIX = "harness-kit-labs-";
+const LABS_DEFAULTS: LabsFlags = { comparator: false };
+
+export function getLabs(): LabsFlags {
+  const flags = { ...LABS_DEFAULTS };
+  for (const key of Object.keys(flags) as LabsKey[]) {
+    flags[key] = localStorage.getItem(KEY_LABS_PREFIX + key) === "true";
+  }
+  return flags;
+}
+
+export function setLab(key: LabsKey, on: boolean) {
+  localStorage.setItem(KEY_LABS_PREFIX + key, String(on));
+  window.dispatchEvent(new CustomEvent("harness-kit-prefs-changed"));
 }
 
 // ── Permission Mode ───────────────────────────────────────────
