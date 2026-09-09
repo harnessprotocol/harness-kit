@@ -136,8 +136,12 @@ export async function surfaceSyncCommand(flags: SurfaceSyncFlags): Promise<void>
     store = undefined; // Ledger is an index; losing it must not block a write.
   }
 
-  // AC-26: a verified bundle can move a surface's config path, and the same
-  // registry must drive observation, the grid and the planned actions below.
+  // AC-26: a verified bundle can move a surface's config path. ONE registry
+  // drives observation, the grid, the planned actions AND the write
+  // allowlist. Threading it to observation alone was worse than not threading
+  // it at all: the grid showed a moved file as present and the planner then
+  // refused it with "nothing to copy", because the two halves disagreed about
+  // where the file was.
   const definitions = await resolveDefinitions(store);
   const inventory = await buildMachineInventory(fs, opts, definitions.surfaces);
   const only = parseOnly(flags.only);
@@ -192,6 +196,7 @@ export async function surfaceSyncCommand(flags: SurfaceSyncFlags): Promise<void>
       fs,
       { kind: candidate.kind, name: candidate.name, from: candidate.from, to: candidate.to, scope },
       opts,
+      definitions.surfaces,
     );
     actions.push({ ...candidate, cli: syncCliCommand({ ...candidate, scope }), plan });
   }
@@ -206,6 +211,7 @@ export async function surfaceSyncCommand(flags: SurfaceSyncFlags): Promise<void>
         action.plan,
         { kind: action.kind, name: action.name, from: action.from, to: action.to, scope },
         { revealSecrets: flags.revealSecrets === true },
+        definitions.surfaces,
       ),
     );
     const text = prompts.join("\n---\n\n");
@@ -267,7 +273,7 @@ export async function surfaceSyncCommand(flags: SurfaceSyncFlags): Promise<void>
           {
             fs,
             timestamp: stamp,
-            roots: { home: createHomeTransactionRoot(home, platform) },
+            roots: { home: createHomeTransactionRoot(home, platform, definitions.surfaces) },
           },
           applyOptions,
         );

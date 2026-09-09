@@ -84,32 +84,6 @@ describe("resolveDefinitions", () => {
     expect(resolved.reason).toContain("HARNESS_NO_DEFINITIONS_FETCH");
   });
 
-  it("degrades to the snapshot when the feed is unreachable", async () => {
-    vi.stubGlobal("fetch", async () => {
-      throw new Error("getaddrinfo ENOTFOUND harnesskit.ai");
-    });
-    const resolved = await resolveDefinitions(undefined, NOW);
-    expect(resolved.source).toBe("snapshot");
-    expect(resolved.surfaces).toEqual(SURFACES);
-  });
-
-  it("never throws when the state store is broken", async () => {
-    // A read-only or corrupt database must cost the cache, never the command
-    // the user actually ran.
-    vi.stubGlobal("fetch", async () => new Response("{}", { status: 404 }));
-    const broken = {
-      async getCachedDefinitions() {
-        throw new Error("database is locked");
-      },
-      async getHighestBundleNumber() {
-        throw new Error("database is locked");
-      },
-    } as unknown as StateStore;
-
-    const resolved = await resolveDefinitions(broken, NOW);
-    expect(resolved.source).toBe("snapshot");
-    expect(resolved.surfaces).toEqual(SURFACES);
-  });
 });
 
 /**
@@ -206,6 +180,49 @@ describe("resolveDefinitions once a publisher key exists", () => {
     // Nothing about a refused bundle may reach the cache or the floor.
     expect(writes.cached).toEqual([]);
     expect(writes.floor).toEqual([]);
+  });
+
+  it("degrades to the snapshot when the feed is unreachable", async () => {
+    // Lives in THIS block deliberately. With no publisher key the no-keys
+    // gate returns "snapshot" before `fetch` is ever called, so outside here
+    // the assertion held without the fixture being reached at all — the
+    // counter proved zero contacts.
+    let contacted = 0;
+    vi.stubGlobal("fetch", async () => {
+      contacted += 1;
+      throw new Error("getaddrinfo ENOTFOUND harnesskit.ai");
+    });
+    const resolve = await withKey();
+
+    const resolved = await resolve(undefined, NOW);
+
+    expect(contacted).toBeGreaterThan(0);
+    expect(resolved.source).toBe("snapshot");
+    expect(resolved.surfaces).toEqual(SURFACES);
+    expect(resolved.reason).not.toContain("no publisher key");
+  });
+
+  it("never throws when the state store is broken", async () => {
+    // Same trap: without a key the store is never consulted.
+    let consulted = 0;
+    vi.stubGlobal("fetch", async () => new Response("{}", { status: 404 }));
+    const broken = {
+      async getCachedDefinitions() {
+        consulted += 1;
+        throw new Error("database is locked");
+      },
+      async getHighestBundleNumber() {
+        consulted += 1;
+        throw new Error("database is locked");
+      },
+    } as unknown as StateStore;
+    const resolve = await withKey();
+
+    const resolved = await resolve(broken, NOW);
+
+    expect(consulted).toBeGreaterThan(0);
+    expect(resolved.source).toBe("snapshot");
+    expect(resolved.surfaces).toEqual(SURFACES);
   });
 
   it("refuses a bundle signed by the wrong key", async () => {

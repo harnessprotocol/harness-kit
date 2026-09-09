@@ -3,11 +3,18 @@ import type { ObserveOptions } from "../observe/observe-surface.js";
 import { readStore } from "../observe/read-store.js";
 import type { StoreEntry } from "../observe/read-store.js";
 import type { HarnessResourceKind } from "../portability/types.js";
-import { buildLossReport } from "../portability/capabilities.js";
+import { buildCapabilityMatrix, buildLossReport } from "../portability/capabilities.js";
 import type { HarnessResource, LossReport } from "../portability/types.js";
 import { looksLikeSecret } from "../portability/secrets.js";
-import { getSurface } from "../surfaces/registry.js";
-import type { ConfigStore, StoreFormatId, SurfaceId, SurfaceScope } from "../surfaces/types.js";
+import { SURFACES } from "../surfaces/registry.js";
+import { getSurfaceFrom } from "../surfaces/resolve.js";
+import type {
+  ConfigStore,
+  StoreFormatId,
+  SurfaceDescriptor,
+  SurfaceId,
+  SurfaceScope,
+} from "../surfaces/types.js";
 import { isRecord } from "../utils/is-record.js";
 import { planStoreWrite, unsupportedKindReason } from "./write-store.js";
 import { diffCanonicalForms } from "../observe/machine-inventory.js";
@@ -116,6 +123,7 @@ function lossFor(
   request: CellActionRequest,
   entry: StoreEntry,
   sourceFile: string,
+  registry: readonly SurfaceDescriptor[],
 ): LossReport | null {
   const scope = request.scope === "user" ? "personal" : "project";
   const resource: HarnessResource = {
@@ -127,7 +135,11 @@ function lossFor(
   };
   // "apply" is the lifecycle operation a cell action performs — it writes a
   // resource into a surface's native store.
-  const report = buildLossReport(request.to, [resource], "apply");
+  // The matrix is derived from the registry in force, not the compiled-in
+  // one: a bundle that drops a store changes what the target can express, and
+  // a loss report built from the wrong matrix describes stores the surface no
+  // longer has.
+  const report = buildLossReport(request.to, [resource], "apply", buildCapabilityMatrix(registry));
   return report.losses.length > 0 ? report : null;
 }
 
@@ -156,10 +168,11 @@ async function findEntry(
   kind: HarnessResourceKind,
   name: string,
   opts: ObserveOptions,
+  registry: readonly SurfaceDescriptor[],
 ): Promise<{ entry: StoreEntry; path: string } | null> {
   const wanted = name.toLowerCase();
   // Project scope beats user scope, matching the inventory's precedence.
-  const stores = getSurface(surface).stores.filter((store) => store.kind === kind);
+  const stores = getSurfaceFrom(registry, surface).stores.filter((store) => store.kind === kind);
   const ordered = [
     ...stores.filter((store) => store.scope === "project"),
     ...stores.filter((store) => store.scope === "user"),
@@ -200,14 +213,21 @@ export async function planCellAction(
   fs: FsProvider,
   request: CellActionRequest,
   opts: ObserveOptions,
+  /**
+   * The registry in force (AC-26). MUST be the same one the inventory was
+   * built with: a planner reading the compiled-in table while observation
+   * read a bundle's will report "nothing to copy" for a row the grid shows
+   * as present, and will target a path outside the write allowlist.
+   */
+  registry: readonly SurfaceDescriptor[] = SURFACES,
 ): Promise<CellActionPlan> {
-  const found = await findEntry(fs, request.from, request.kind, request.name, opts);
+  const found = await findEntry(fs, request.from, request.kind, request.name, opts, registry);
   if (!found) {
     return refuse(
       `'${request.name}' (${request.kind}) is absent on ${request.from} — nothing to copy.`,
     );
   }
-  const loss = lossFor(request, found.entry, found.path);
+  const loss = lossFor(request, found.entry, found.path, registry);
 
   // Plugins do not go through the config-store write path at all: they go to
   // the broker, which drives the surface's own installer. Routed here so
@@ -261,7 +281,7 @@ export async function planCellAction(
     };
   }
 
-  const targetStore = getSurface(request.to).stores.find(
+  const targetStore = getSurfaceFrom(registry, request.to).stores.find(
     (store) => store.kind === request.kind && store.scope === request.scope,
   );
   if (!targetStore) {
@@ -305,7 +325,7 @@ export async function planCellAction(
   // because a one-click copy would silently pick a winner; the user still
   // picks, but only after being told what they are overwriting, and the
   // confirmation gate is the same one capability loss uses.
-  const existing = await findEntry(fs, request.to, request.kind, request.name, opts);
+  const existing = await findEntry(fs, request.to, request.kind, request.name, opts, registry);
   const overwrites =
     changes.length > 0 && existing !== null
       ? diffAgainstExisting(request.kind, existing.entry.value, found.entry.value)

@@ -1,7 +1,8 @@
 import type { HarnessConfig } from "../types.js";
 import type { HarnessResourceKind } from "../portability/types.js";
-import type { SurfaceId } from "../surfaces/types.js";
-import { getSurface } from "../surfaces/registry.js";
+import type { SurfaceDescriptor, SurfaceId } from "../surfaces/types.js";
+import { SURFACES } from "../surfaces/registry.js";
+import { getSurfaceFrom } from "../surfaces/resolve.js";
 import type { MachineInventory } from "./machine-inventory.js";
 
 /**
@@ -52,11 +53,12 @@ function candidateSurfaces(
   inventory: MachineInventory,
   kind: HarnessResourceKind,
   marketplace: string | null,
+  registry: readonly SurfaceDescriptor[],
 ): SurfaceId[] {
   return inventory.surfaces
     .filter((surface) => {
       if (!surface.detected) return false;
-      const descriptor = getSurface(surface.id);
+      const descriptor = getSurfaceFrom(registry, surface.id);
       if (descriptor.notApplicable.includes(kind)) return false;
       if (!descriptor.stores.some((store) => store.kind === kind)) return false;
       if (kind !== "plugin" || marketplace === null) return true;
@@ -130,6 +132,8 @@ export interface RecommendOptions {
 export function recommend(
   inventory: MachineInventory,
   options: RecommendOptions = {},
+  /** The registry in force (AC-26) — must match the one the inventory used. */
+  registry: readonly SurfaceDescriptor[] = SURFACES,
 ): Recommendation[] {
   const recommendations: Recommendation[] = [];
   const rowsByKey = new Map(inventory.rows.map((row) => [row.key, row]));
@@ -160,7 +164,7 @@ export function recommend(
       // every store-bearing surface stays a candidate.
       const at = declared.name.lastIndexOf("@");
       const marketplace = at > 0 && at < declared.name.length - 1 ? declared.name.slice(at + 1) : null;
-      const candidates = candidateSurfaces(inventory, declared.kind, marketplace);
+      const candidates = candidateSurfaces(inventory, declared.kind, marketplace, registry);
       recommendations.push({
         source: "baseline-gap",
         kind: declared.kind,

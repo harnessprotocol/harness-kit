@@ -238,11 +238,18 @@ export function capabilityForResource(
   target: SurfaceId,
   resource: HarnessResource,
   operation: LifecycleOperation,
+  /**
+   * The matrix in force; defaults to the compiled-in one. `buildLossReport`
+   * MUST forward its own matrix here: it previously took the loss DETAIL from
+   * the caller's matrix and the GATE from the compiled-in one, so a
+   * bundle-derived matrix was only half honoured.
+   */
+  matrix: readonly TargetResourceCapability[] = TARGET_CAPABILITY_MATRIX,
 ): CapabilityLevel {
   if (resource.identity.kind === "native-extension") {
     return resource.nativeTarget === target ? "native" : "source-only";
   }
-  const capability = getTargetCapability(target, resource.identity.kind);
+  const capability = getTargetCapability(target, resource.identity.kind, matrix);
   const operationLevel = capability.operations[operation];
   const scopeLevel = capability.scopes[resource.scope];
   const rank: Record<CapabilityLevel, number> = {
@@ -268,7 +275,7 @@ export function buildLossReport(
   capabilityMatrix: readonly TargetResourceCapability[] = TARGET_CAPABILITY_MATRIX,
 ): LossReport {
   const losses = resources.flatMap((resource) => {
-    const capability = capabilityForResource(target, resource, operation);
+    const capability = capabilityForResource(target, resource, operation, capabilityMatrix);
     if (capability === "native") return [];
     const matrix = getTargetCapability(target, resource.identity.kind, capabilityMatrix);
     return [

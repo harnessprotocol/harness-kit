@@ -71,6 +71,24 @@ export class HttpsFetcher implements Fetcher {
       const timer = setTimeout(() => controller.abort(), remaining);
       try {
         const response = await fetch(url, { signal: controller.signal, redirect: "manual" });
+        // `redirect: "manual"` means different things in the two runtimes this
+        // class now serves. Under Node/undici it yields a real 3xx with a
+        // readable `Location`. In a browser engine — which is what the Tauri
+        // webview is — it yields an OPAQUE REDIRECT: `type` is
+        // "opaqueredirect", `status` is 0 and the headers are empty. Without
+        // this branch that falls through to `!response.ok` and reports "the
+        // feed answered 0", so any CDN redirect on the feed URL would break
+        // the desktop while working in the CLI. That is precisely the
+        // dev/prod split this file exists to avoid, so it is named rather
+        // than left to be rediscovered.
+        if (response.type === "opaqueredirect" || (response.status === 0 && !response.ok)) {
+          return {
+            status: "failed",
+            reason:
+              "the definitions feed redirected, and this runtime does not expose the target — " +
+              "the feed must be served without redirects",
+          };
+        }
         if (response.status >= 300 && response.status < 400) {
           if (redirectsLeft <= 0) {
             return { status: "failed", reason: "the definitions feed redirected too many times" };

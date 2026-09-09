@@ -3,6 +3,9 @@ import { resolveSurfaces, getSurfaceFrom } from "../src/surfaces/resolve.js";
 import { SURFACES, getSurface } from "../src/surfaces/registry.js";
 import { toBundle, fromBundle } from "../src/definitions/bundle.js";
 import { buildMachineInventory } from "../src/observe/machine-inventory.js";
+import { planCellAction } from "../src/write/plan-cell-action.js";
+import { homeWriteScope, isWritableHomePath } from "../src/surfaces/write-scope.js";
+import { planPluginAction } from "../src/plugins/broker.js";
 import {
   buildCapabilityMatrix,
   getTargetCapability,
@@ -265,5 +268,128 @@ describe("AC-26: the capability matrix follows the bundle", () => {
     const matrix = buildCapabilityMatrix(resolved);
     expect(matrix).toHaveLength(TARGET_CAPABILITY_MATRIX.length);
     expect(() => assertCapabilityMatrixComplete(matrix, resolved)).not.toThrow();
+  });
+});
+
+describe("AC-26: the reader and the writer must agree", () => {
+  // The defect this block exists for: the resolved registry reached
+  // observation and NOTHING else. Every file was internally consistent; the
+  // disagreement lived at the seam. `sync` showed a moved file as present and
+  // then refused it with "nothing to copy", and the moved path was outside
+  // the write allowlist, so the tool could see a config file it could never
+  // write.
+  const opts = { projectRoot: null, homeRoot: "/home/u", platform: "darwin" as const };
+  const MOVED = ".claude/moved-mcp.json";
+
+  function movedRegistry() {
+    const moved: SurfaceDescriptor = {
+      ...getSurface("claude-code"),
+      stores: getSurface("claude-code").stores.map((store) =>
+        store.kind === "mcp-server" && store.scope === "user"
+          ? { ...store, path: MOVED }
+          : store,
+      ),
+    };
+    return resolveSurfaces(
+      toBundle({ surfaces: [moved], capabilityMatrix: {}, bundleNumber: 2 }),
+    );
+  }
+
+  it("plans an action for the row the inventory reported present", async () => {
+    const registry = movedRegistry();
+    const server = JSON.stringify({ mcpServers: { demo: { command: "demo" } } });
+    // The file exists ONLY at the bundle's path.
+    const fs = new RecordingFs({ [`/home/u/${MOVED}`]: server }, "/project", "/home/u");
+
+    const inventory = await buildMachineInventory(fs, opts, registry);
+    const row = inventory.rows.find((entry) => entry.kind === "mcp-server" && entry.name === "demo");
+    expect(row, "premise: the inventory must see the moved file").toBeDefined();
+    expect(row!.cells["claude-code"].status).toBe("present");
+
+    const plan = await planCellAction(
+      new RecordingFs({ [`/home/u/${MOVED}`]: server }, "/project", "/home/u"),
+      { kind: "mcp-server", name: "demo", from: "claude-code", to: "codex", scope: "user" },
+      opts,
+      registry,
+    );
+    // Passing the compiled-in registry here returns
+    // "'demo' (mcp-server) is absent on claude-code — nothing to copy."
+    expect(plan.reason ?? "").not.toContain("nothing to copy");
+  });
+
+  it("writes to the TARGET path the bundle moved, not the compiled-in one", async () => {
+    // The source side and the target side are separate lookups. A mutation
+    // that reverted only the TARGET lookup to the compiled-in table survived
+    // the first version of this block, because the fixture only ever moved
+    // the SOURCE surface's store.
+    const TARGET_MOVED = ".codex/moved-config.toml";
+    const base = getSurface("codex");
+    const targetStore = base.stores.find((x) => x.kind === "mcp-server" && x.scope === "user");
+    if (targetStore === undefined) throw new Error("premise gone: codex has no user mcp store");
+    const movedTarget: SurfaceDescriptor = {
+      ...base,
+      stores: base.stores.map((store) =>
+        store === targetStore ? { ...store, path: TARGET_MOVED } : store,
+      ),
+    };
+    const registry = resolveSurfaces(
+      toBundle({ surfaces: [movedTarget], capabilityMatrix: {}, bundleNumber: 2 }),
+    );
+
+    const server = JSON.stringify({ mcpServers: { demo: { command: "demo" } } });
+    const plan = await planCellAction(
+      new RecordingFs({ "/home/u/.claude.json": server }, "/project", "/home/u"),
+      { kind: "mcp-server", name: "demo", from: "claude-code", to: "codex", scope: "user" },
+      opts,
+      registry,
+    );
+
+    expect(plan.supported, plan.reason).toBe(true);
+    // Every planned write lands at the bundle's path, never the compiled-in one.
+    expect(plan.changes.length).toBeGreaterThan(0);
+    for (const change of plan.changes) {
+      expect(change.path).toContain(TARGET_MOVED);
+      expect(change.path).not.toContain(targetStore.path);
+    }
+  });
+
+  it("puts the bundle's path INSIDE the write allowlist", () => {
+    const registry = movedRegistry();
+    const scope = homeWriteScope("darwin", registry);
+    expect(isWritableHomePath(MOVED, scope)).toBe(true);
+    // And the path the bundle replaced is no longer writable, so the
+    // allowlist tracks the registry rather than accumulating.
+    expect(isWritableHomePath(".claude.json", scope)).toBe(false);
+    // The compiled-in allowlist is the mirror image, proving the argument
+    // is what decides it.
+    const compiled = homeWriteScope("darwin");
+    expect(isWritableHomePath(MOVED, compiled)).toBe(false);
+    expect(isWritableHomePath(".claude.json", compiled)).toBe(true);
+  });
+
+  it("runs the installer the bundle names, not the compiled-in one", () => {
+    const base = getSurface("claude-code");
+    if (base.pluginInstall === undefined) throw new Error("premise gone: no pluginInstall");
+    const swapped: SurfaceDescriptor = {
+      ...base,
+      pluginInstall: { ...base.pluginInstall, binary: "swapped-installer" },
+    };
+    const registry = resolveSurfaces(
+      toBundle({ surfaces: [swapped], capabilityMatrix: {}, bundleNumber: 2 }),
+    );
+
+    const planned = planPluginAction(
+      { surface: "claude-code", action: "install", identity: "demo@acme", scope: "user" },
+      registry,
+    );
+    expect(JSON.stringify(planned)).toContain("swapped-installer");
+    // The compiled-in default still runs the real binary.
+    const compiled = planPluginAction({
+      surface: "claude-code",
+      action: "install",
+      identity: "demo@acme",
+      scope: "user",
+    });
+    expect(JSON.stringify(compiled)).not.toContain("swapped-installer");
   });
 });
