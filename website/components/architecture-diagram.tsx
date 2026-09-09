@@ -13,13 +13,15 @@ const BORDER_MID = 'rgba(255,255,255,0.14)';
 const MUTED = '#8b919e';
 const SUBTLE = '#4a5060';
 
-// Groups sourced from NAV_SECTIONS + DEMOTED_SECTIONS in AppLayout.tsx.
-// The app has a single sidebar group today ("WORKSPACE"); Agents and Security
-// have real routes but no sidebar entry (Agents is demoted per DESIGN.md §5;
-// Security is reached via Preferences).
+// Groups sourced from NAV_SECTIONS in AppLayout.tsx, plus the Settings button
+// pinned in the sidebar footer (rendered separately from NAV_SECTIONS, so it
+// isn't in the command palette). Security has a real route but no sidebar
+// entry at all — reached only via Preferences. The Agents page was removed
+// in the Phase 0 UX consolidation (unreachable, fed a Comparator form that
+// couldn't submit) — see docs/apps/agents.md.
 const desktopGroups = [
-  { label: 'WORKSPACE',      items: ['Fleet', 'Configure', 'Drift', 'Comparator', 'Observatory', 'Marketplace'] },
-  { label: 'ALSO REACHABLE', items: ['Agents', 'Security'] },
+  { label: 'WORKSPACE',      items: ['Machine', 'Fleet', 'Configure', 'Drift', 'Comparator', 'Observatory', 'Marketplace', 'Settings'] },
+  { label: 'ALSO REACHABLE', items: ['Security'] },
 ];
 
 // Commands sourced from apps/cli/src/index.ts
