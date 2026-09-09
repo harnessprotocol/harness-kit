@@ -64,6 +64,21 @@ export interface LoadedDefinitions {
   bundle: DefinitionsBundle;
   source: DefinitionsSource;
   /**
+   * The exact bytes that verified, and their detached signature — present
+   * only when `source` is "remote".
+   *
+   * A caller that wants to CACHE what it just fetched needs both, because the
+   * cache is re-verified on load rather than trusted. Returning the parsed
+   * bundle alone would force the caller to re-serialize it, and a
+   * re-serialized bundle is not the byte sequence the signature covers: key
+   * order, whitespace and number formatting are all free to differ, so the
+   * cached copy would fail its own verification on the next run.
+   *
+   * Absent for "cache" (the caller already has it) and for "snapshot" (which
+   * is compiled in and unsigned).
+   */
+  artifact?: SignedArtifact;
+  /**
    * Why the source is not "remote", phrased for a user. Always present when
    * it is not, because AC-25 requires the fallback to be stated rather than
    * silently taken.
@@ -374,7 +389,13 @@ export async function loadDefinitions(options: FeedOptions): Promise<LoadedDefin
       options.publisherKeys,
       options,
     );
-    if ("bundle" in result) return { bundle: result.bundle, source: "remote" };
+    if ("bundle" in result) {
+      return {
+        bundle: result.bundle,
+        source: "remote",
+        artifact: { bytes: body.bytes, signature: signature.bytes },
+      };
+    }
     remoteReason = result.reason;
   } else {
     const failed = body.status === "ok" ? signature : body;

@@ -1,6 +1,8 @@
 import { looksLikeSecret, sanitizeCommandArgs } from "../portability/secrets.js";
-import { getSurface } from "../surfaces/registry.js";
+import { SURFACES } from "../surfaces/registry.js";
+import { getSurfaceFrom } from "../surfaces/resolve.js";
 import { isRecord } from "../utils/is-record.js";
+import type { SurfaceDescriptor } from "../surfaces/types.js";
 import type { CellActionPlan, CellActionRequest } from "./plan-cell-action.js";
 
 /**
@@ -113,9 +115,15 @@ export function buildAgentPrompt(
   plan: CellActionPlan,
   request: CellActionRequest,
   options: AgentPromptOptions = {},
+  /**
+   * The registry in force (AC-26). The prompt names the target's config FILE,
+   * so a bundle that moves it must reach here or the prompt tells the agent
+   * to edit a path that no longer exists.
+   */
+  registry: readonly SurfaceDescriptor[] = SURFACES,
 ): string {
-  const target = getSurface(request.to);
-  const source = getSurface(request.from);
+  const target = getSurfaceFrom(registry, request.to);
+  const source = getSurfaceFrom(registry, request.from);
   const reveal = options.revealSecrets === true;
   const value = reveal ? plan.value : sanitize(plan.value);
   const targetFile = plan.target?.file ?? "its own configuration";

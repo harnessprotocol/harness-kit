@@ -30,7 +30,7 @@
         "default-src": "'self'",
         "script-src": "'self' 'unsafe-inline'",
         "style-src": "'self' 'unsafe-inline'",
-        "connect-src": "'self' ipc: http://ipc.localhost http://localhost:* ws://localhost:*",
+        "connect-src": "'self' ipc: http://ipc.localhost https: http://localhost:* ws://localhost:*",
         "img-src": "'self' asset: http://asset.localhost data: blob:",
         "font-src": "'self' data:",
         "object-src": "'none'",

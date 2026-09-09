@@ -1,3 +1,5 @@
+import type { CachedDefinitions, DefinitionsStore } from "../definitions/resolve.js";
+export type { CachedDefinitions };
 import type { HarnessResourceKind, TransactionRootId } from "../portability/types.js";
 import type { StoreFormatId, SurfaceId, SurfaceScope } from "../surfaces/types.js";
 
@@ -163,7 +165,7 @@ export interface DriftAcknowledgement extends DriftAcknowledgementKey {
   acknowledgedAt: string;
 }
 
-export interface StateStore extends TransactionLedger {
+export interface StateStore extends TransactionLedger, DefinitionsStore {
   /** Record one plugin install. Failure is never a reason to fail the install
    * itself — by the time this runs the plugin is already on disk. */
   recordPluginInstall(record: PluginInstallRecord): Promise<void>;

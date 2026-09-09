@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-put-cached-definitions"
+description = "Enables the put_cached_definitions command without any pre-configured scope."
+commands.allow = ["put_cached_definitions"]
+
+[[permission]]
+identifier = "deny-put-cached-definitions"
+description = "Denies the put_cached_definitions command without any pre-configured scope."
+commands.deny = ["put_cached_definitions"]

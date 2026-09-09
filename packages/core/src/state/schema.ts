@@ -26,7 +26,7 @@
  * without a default breaks the old writer — and both sides swallow ledger
  * errors by design, so it would fail silently.
  */
-export const STATE_SCHEMA_VERSION = 3;
+export const STATE_SCHEMA_VERSION = 4;
 
 /**
  * v1: observations, resources, fingerprints, plus placeholder shapes for
@@ -126,8 +126,52 @@ const V3: readonly string[] = [
 )`,
 ];
 
+/**
+ * v4 replaces the v1 `definitions_cache` placeholder with a table the feed can
+ * actually use (AC-25), and adds the anti-rollback floor beside it.
+ *
+ * The placeholder was `(bundle_number, fetched_at, payload TEXT)`, written
+ * before the verification design existed, and it cannot hold what the loader
+ * needs. `loadDefinitions` RE-VERIFIES the cache rather than trusting it, so
+ * it needs the exact bytes the signature covers plus the detached signature
+ * itself — the placeholder has no signature column at all, and "payload" as
+ * decoded TEXT does not round-trip the bytes a signature is computed over.
+ * Like the v2 `transactions` swap, the placeholder shipped with no readers or
+ * writers, so the DROP cannot lose data.
+ *
+ * Bytes are stored base64 in TEXT rather than as BLOB deliberately: this DDL
+ * is executed by BOTH `node:sqlite` and rusqlite, and TEXT needs no
+ * driver-specific binding on either side. Encoding is one-way and
+ * deterministic, so the decode round-trip is exact.
+ *
+ * `definitions_history` is a SEPARATE table, and that separation is the
+ * point. The anti-rollback floor must not live in the cache: the cache is a
+ * file any process running as this user can delete, and if deleting it also
+ * reset the floor, an attacker would clear the defence and then replay a
+ * genuinely-signed old bundle. Deleting the cache costs a re-fetch; it must
+ * never cost the floor.
+ *
+ * Both tables are single-row (`CHECK (id = 1)`) — there is one machine and
+ * one feed, and an UPSERT on a fixed id cannot silently accumulate rows.
+ */
+const V4: readonly string[] = [
+  `DROP TABLE IF EXISTS definitions_cache`,
+  `CREATE TABLE definitions_cache (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  bundle_number INTEGER NOT NULL,
+  fetched_at TEXT NOT NULL,
+  payload_b64 TEXT NOT NULL,
+  signature_b64 TEXT NOT NULL
+)`,
+  `CREATE TABLE IF NOT EXISTS definitions_history (
+  id INTEGER PRIMARY KEY CHECK (id = 1),
+  highest_bundle_number INTEGER NOT NULL,
+  updated_at TEXT NOT NULL
+)`,
+];
+
 /** Each version's statements, indexed by the version they produce. */
-const MIGRATIONS: Record<number, readonly string[]> = { 1: V1, 2: V2, 3: V3 };
+const MIGRATIONS: Record<number, readonly string[]> = { 1: V1, 2: V2, 3: V3, 4: V4 };
 
 /**
  * Statements needed to bring a database at `fromVersion` up to current.
@@ -163,6 +207,16 @@ export function stateSchemaStatements(fromVersion: number): string[] {
  * Returns the version implied by what actually exists on disk.
  */
 export const STATE_VERSION_PROBES: ReadonlyArray<{ version: number; sql: string }> = [
+  {
+    // Probes are checked HIGHEST FIRST, so a new version needs an entry here
+    // or its database reports as the previous one and re-runs the migration.
+    // For v4 that would be actively destructive rather than merely wasteful:
+    // V4 opens with `DROP TABLE IF EXISTS definitions_cache`, so a v4
+    // database mis-probed as v3 would discard a populated cache on every
+    // single startup, silently, and simply re-fetch each time.
+    version: 4,
+    sql: "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'definitions_history'",
+  },
   {
     version: 3,
     sql: "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'drift_acknowledgements'",

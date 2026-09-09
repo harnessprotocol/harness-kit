@@ -8,6 +8,7 @@ import {
 import type { TransactionManifest, TransactionRecord } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
 import { defaultStatePath, SqliteStateStore } from "../state/sqlite-store.js";
+import { resolveDefinitions } from "../definitions/resolve-definitions.js";
 import { readOptional, timestamp } from "./portability-common.js";
 
 interface RollbackFlags {
@@ -139,10 +140,33 @@ export async function rollbackCommand(flags: RollbackFlags): Promise<void> {
     if (!flags.yes) console.log("Preview only. Re-run with --yes to restore this transaction.");
   }
   if (!flags.yes) return;
+  // AC-26: the allowlist must be derived from the registry IN FORCE, not the
+  // compiled-in one. A transaction applied to a path a bundle moved is
+  // restorable only if rollback recognises that path as writable — otherwise
+  // the tool can apply a change it can never undo, which is worse than
+  // refusing the apply in the first place.
+  let definitionsStore: SqliteStateStore | undefined;
+  try {
+    definitionsStore = await SqliteStateStore.open(defaultStatePath());
+  } catch {
+    definitionsStore = undefined;
+  }
+  let rollbackRegistry;
+  try {
+    rollbackRegistry = (await resolveDefinitions(definitionsStore)).surfaces;
+  } finally {
+    await definitionsStore?.close();
+  }
   const result = await rollbackFileTransaction(manifest, {
     fs: new NodeFsProvider(root),
     timestamp: timestamp(),
-    roots: { home: createHomeTransactionRoot(home, process.platform as "darwin" | "linux" | "win32") },
+    roots: {
+      home: createHomeTransactionRoot(
+        home,
+        process.platform as "darwin" | "linux" | "win32",
+        rollbackRegistry,
+      ),
+    },
   });
   if (!result.committed) throw new Error(result.error ?? "rollback transaction failed");
   if (!flags.json) console.log(`Rollback complete. Recovery transaction: ${result.manifestPath}`);

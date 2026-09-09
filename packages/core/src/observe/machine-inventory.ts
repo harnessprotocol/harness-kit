@@ -1,7 +1,8 @@
 import type { FsProvider } from "../fs-provider.js";
 import type { HarnessResourceKind } from "../portability/types.js";
-import type { StoreFormatId, SurfaceId, SurfaceScope } from "../surfaces/types.js";
-import { getSurface } from "../surfaces/registry.js";
+import type { StoreFormatId, SurfaceDescriptor, SurfaceId, SurfaceScope } from "../surfaces/types.js";
+import { SURFACES } from "../surfaces/registry.js";
+import { getSurfaceFrom } from "../surfaces/resolve.js";
 import { isRecord } from "../utils/is-record.js";
 import type { ObserveOptions, SurfaceObservation } from "./observe-surface.js";
 import { observeAllSurfaces } from "./observe-surface.js";
@@ -269,7 +270,18 @@ function effectiveResource(resources: NormalizedResource[]): NormalizedResource 
  * when their content overlaps. Content-level cross-file instruction
  * comparison is post-M1.
  */
-export function computeMachineInventory(observations: SurfaceObservation[]): MachineInventory {
+export function computeMachineInventory(
+  observations: SurfaceObservation[],
+  /**
+   * The registry in force (AC-26). Defaults to the compiled-in one so every
+   * existing caller and test keeps its behaviour; callers that resolved a
+   * registry from a verified bundle MUST pass the same array they observed
+   * with, or the grid describes a different registry than the one that was
+   * read. Named `registry` because a local `surfaces` already means "the
+   * per-surface summary rows" a few lines below.
+   */
+  registry: readonly SurfaceDescriptor[] = SURFACES,
+): MachineInventory {
   const surfaces = observations.map((observation) => ({
     id: observation.surface,
     detected: observation.detected,
@@ -334,7 +346,7 @@ export function computeMachineInventory(observations: SurfaceObservation[]): Mac
     const missingOn: SurfaceId[] = [];
 
     for (const surfaceId of surfaceOrder) {
-      const descriptor = getSurface(surfaceId);
+      const descriptor = getSurfaceFrom(registry, surfaceId);
       const cellResources = accumulator.cells.get(surfaceId)?.resources ?? [];
       const detected = detectedById.get(surfaceId) ?? false;
 
@@ -428,7 +440,14 @@ export function computeMachineInventory(observations: SurfaceObservation[]): Mac
 export async function buildMachineInventory(
   fs: FsProvider,
   opts: ObserveOptions,
+  /**
+   * The registry in force (AC-26). One array threads through BOTH halves —
+   * observation reads store paths from it, and the grid reads
+   * `notApplicable`/`stores` from it — so a bundle that moves a path cannot
+   * move it for one half only.
+   */
+  surfaces: readonly SurfaceDescriptor[] = SURFACES,
 ): Promise<MachineInventory> {
-  const observations = await observeAllSurfaces(fs, opts);
-  return computeMachineInventory(observations);
+  const observations = await observeAllSurfaces(fs, opts, [...surfaces]);
+  return computeMachineInventory(observations, surfaces);
 }

@@ -12,7 +12,7 @@
 | D4 | Machine state | **SQLite everywhere**: shared `~/.harness/harness.db` behind a `StateStore` interface |
 | D5 | Prompt secrets | Sanitized by default + explicit per-generation reveal toggle |
 | D6 | `sync` grammar | One verb + filters (`--from/--to/--only/--scope/--dry-run/--yes`) |
-| D7 | Definitions signing | Ed25519 detached signatures, versioned bundle, monotonic anti-rollback, cross-signed key rotation |
+| D7 | Definitions signing | Ed25519 detached signatures, versioned bundle, monotonic anti-rollback, compiled-in trust anchor (no runtime key rotation — amended 2026-09-08) |
 | D8 | Milestones | Horizontal by capability: M1 read → M2 write → M3 plugins/recs → M4 remote definitions |
 | D9 | User-scope writes | **Named transaction roots** (`project`, `home`) + registry-declared path allowlist; guards unchanged |
 | D10 | Rollback ledger | SQLite `transactions` table is the cross-scope index; preimages stay on disk |
@@ -64,7 +64,22 @@ Observers emit `HarnessResource` records: `(kind, identityKey, scope, provenance
 
 ## 7. Definitions feed (D7)
 
-CI compiles descriptors + matrix + recommendation rules + prompt templates into a JSON bundle at `harnesskit.ai/definitions/v1/` with a detached Ed25519 signature. Binary embeds the publisher key and a release snapshot. Verification requires a valid signature **and** a monotonically increasing bundle number (anti-rollback). Key rotation via a transition statement cross-signed by the outgoing key. Offline or verification failure → snapshot fallback, stated in output (AC-25). The bundle format is used from M1 (loaded from disk) so M4 adds only fetch + verify.
+CI compiles descriptors + matrix + recommendation rules + prompt templates into a JSON bundle at `harnesskit.ai/definitions/v1/` with a detached Ed25519 signature. Binary embeds the publisher key and a release snapshot. Verification requires a valid signature **and** a monotonically increasing bundle number (anti-rollback). Offline or verification failure → snapshot fallback, stated in output (AC-25). The bundle format is used from M1 (loaded from disk) so M4 adds only fetch + verify.
+
+**Amended 2026-09-08 — no runtime key rotation.** This section previously specified "key rotation via a transition statement cross-signed by the outgoing key". That was built and withdrawn. Two defects, both demonstrated:
+
+- The statement has to be published to be useful, so an attacker can replay it. Replaying the publisher's own statement RESURRECTED a key that had been revoked via `notAfter`, and re-added it with no expiry at all.
+- The statement was re-evaluated against the outgoing key's validity at load time, so revoking the outgoing key destroyed the incoming key with it. Rotation could not survive the event it exists for.
+
+Both follow from one gap: expiry and compromise are different events and cannot share a single `notAfter` field. Rather than invent revocation semantics in a review round, **the trust anchor is compiled-in keys only, permanently.** `notAfter` retires a key; only a new binary introduces one. The feed's purpose is updating *definitions* without a release, not *keys* — and the CLI ships via Homebrew and the app via a cask, both of which already auto-update, so a key change riding a release is acceptable.
+
+Note for anyone revisiting this: cross-signing proves POSSESSION of the incoming key. It is not theft protection — a thief holding a stolen publisher key generates their own second keypair and counter-signs with it. An earlier draft claimed otherwise.
+
+**Key custody (decided 2026-09-08).** The private key is held OFFLINE by the maintainer, never in CI. Bundles are signed locally and CI publishes the pre-signed artifact; a compromised workflow therefore cannot sign definitions. This is affordable precisely because definitions change rarely, and it keeps the verifier as built — a raw 32-byte Ed25519 key — rather than requiring certificate and transparency-log checking.
+
+**Freshness.** `generatedAt` is validated and not otherwise used, so an attacker who can withhold updates pins a client on the newest bundle it has seen. Anti-rollback stops movement backwards; nothing notices standing still. With rotation dropped this is a smaller problem than it was — a compromised key is now retired by a release rather than by a `notAfter` the client must receive — but it remains open.
+
+**Fetch cadence (decided 2026-09-08).** A verified bundle is cached with its `fetchedAt`, and re-fetched only once that is older than 24h; inside the window the cache is served, still re-verified rather than trusted. Fetching per command was measured at two requests and up to a 10s timeout on every invocation.
 
 ## 8. CLI and Machine view (D6)
 
