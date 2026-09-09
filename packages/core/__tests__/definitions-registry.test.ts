@@ -7,6 +7,11 @@ import { planCellAction } from "../src/write/plan-cell-action.js";
 import { homeWriteScope, isWritableHomePath } from "../src/surfaces/write-scope.js";
 import { planPluginAction } from "../src/plugins/broker.js";
 import {
+  buildLossReport,
+  capabilityForResource,
+  getTargetCapability,
+} from "../src/portability/capabilities.js";
+import {
   buildCapabilityMatrix,
   getTargetCapability,
   assertCapabilityMatrixComplete,
@@ -391,5 +396,96 @@ describe("AC-26: the reader and the writer must agree", () => {
       scope: "user",
     });
     expect(JSON.stringify(compiled)).not.toContain("swapped-installer");
+  });
+});
+
+describe("AC-26: the registry reaches PRODUCTION paths, not just the API", () => {
+  // Every threaded function took `registry = SURFACES` as a DEFAULT, so a
+  // missed call site fails silently and looks correct. Testing the function
+  // directly proves the signature works and says nothing about whether the
+  // real caller passes anything — `planCellAction`'s plugin branch called
+  // `planPluginAction(request)` with no registry, so a bundle's installer
+  // never reached the only path that runs one.
+  const opts = { projectRoot: null, homeRoot: "/home/u", platform: "darwin" as const };
+
+  it("runs the bundle's installer through planCellAction, not just planPluginAction", async () => {
+    const base = getSurface("codex");
+    if (base.pluginInstall === undefined) throw new Error("premise gone: codex has no pluginInstall");
+    const swapped: SurfaceDescriptor = {
+      ...base,
+      pluginInstall: { ...base.pluginInstall, binary: "swapped-installer" },
+    };
+    const registry = resolveSurfaces(
+      toBundle({ surfaces: [swapped], capabilityMatrix: {}, bundleNumber: 2 }),
+    );
+    const installed = JSON.stringify({
+      version: 1,
+      plugins: {
+        "demo@acme": [
+          { scope: "user", version: "1.0.0", installPath: "/home/u/.claude/plugins/cache/acme/demo/1.0.0" },
+        ],
+      },
+    });
+    const fs = new RecordingFs(
+      { "/home/u/.claude/plugins/installed_plugins.json": installed },
+      "/project",
+      "/home/u",
+    );
+
+    const plan = await planCellAction(
+      fs,
+      { kind: "plugin", name: "demo@acme", from: "claude-code", to: "codex", scope: "user" },
+      opts,
+      registry,
+    );
+
+    expect(JSON.stringify(plan.plugin), plan.reason).toContain("swapped-installer");
+  });
+});
+
+describe("AC-26: the loss GATE follows the bundle, and is reachable", () => {
+  // The commit that threaded this claimed the early return was "not
+  // observable yet — no non-legacy surface has a native cell". That is false:
+  // there are eight, across all three non-legacy surfaces. The gate was
+  // reachable the whole time, so a bundle-derived matrix taking its DETAIL
+  // from the caller and its GATE from the compiled-in table produced a
+  // user-visible wrong answer, not a latent one.
+  it("has native cells on non-legacy surfaces, so the early return is live", () => {
+    const live = (["claude-desktop", "copilot-cli", "pi"] as const).filter((id) =>
+      (["mcp-server", "skill", "instructions", "permissions"] as const).some(
+        (kind) => getTargetCapability(id, kind).operations.capture === "native",
+      ),
+    );
+    expect(live).toEqual(["claude-desktop", "copilot-cli", "pi"]);
+  });
+
+  it("reports a loss once the bundle removes the store the gate passed on", () => {
+    const resource = {
+      identity: { kind: "mcp-server" as const, source: "x", name: "demo" },
+      alias: "demo",
+      scope: "personal" as const,
+      value: {},
+      provenance: { adapter: "claude-desktop" as const, file: "x", scope: "personal" as const },
+    };
+    // Premise: the compiled-in matrix gates this as native, so no loss.
+    expect(capabilityForResource("claude-desktop", resource, "capture")).toBe("native");
+    expect(buildLossReport("claude-desktop", [resource], "capture").losses).toEqual([]);
+
+    const base = getSurface("claude-desktop");
+    const stripped: SurfaceDescriptor = {
+      ...base,
+      stores: base.stores.filter((store) => store.kind !== "mcp-server"),
+    };
+    const registry = resolveSurfaces(
+      toBundle({ surfaces: [stripped], capabilityMatrix: {}, bundleNumber: 2 }),
+    );
+
+    const report = buildLossReport(
+      "claude-desktop",
+      [resource],
+      "capture",
+      buildCapabilityMatrix(registry),
+    );
+    expect(report.losses).toHaveLength(1);
   });
 });

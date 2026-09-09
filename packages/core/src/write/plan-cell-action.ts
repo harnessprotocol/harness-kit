@@ -246,7 +246,12 @@ export async function planCellAction(
       projectRoot: opts.projectRoot,
       ...(typeof sourceNativeScope === "string" ? { nativeScope: sourceNativeScope } : {}),
       ...(typeof sourceInstallPath === "string" ? { sourcePath: sourceInstallPath } : {}),
-    });
+    },
+    // The registry, NOT the default. This is the only production caller of
+    // `planPluginAction`, and the installer binary and its argv come from the
+    // descriptor — so omitting this silently ran the compiled-in installer
+    // while every other part of the plan followed the bundle.
+    registry);
     const usable =
       broker.kind !== "unsupported" && broker.plan.supported === true;
     const reason =

@@ -202,6 +202,16 @@ function capabilityFor(
  * unrepresentable. The field should probably be dropped at the next format
  * bump rather than wired up.
  *
+ * SCOPE — the definitions registry reaches the SURFACE GRID path only:
+ * observe → grid → plan → apply → rollback. The legacy compile/portability
+ * flow (`reconcile.ts`, `apply.ts`, `portability-common.ts`, the desktop
+ * Fleet page) still reads `TARGET_CAPABILITY_MATRIX`, because that flow
+ * compiles a harness.yaml and never resolves definitions at all. AC-26 is
+ * scoped to "next inventory", so this line is deliberate — but it means a
+ * bundle that changes a capability is visible to `sync` and not to `apply`.
+ * Written down because the same asymmetry, left implicit, is exactly what
+ * made the grid and the planner disagree.
+ *
  * LIMIT — this only moves cells for the THREE non-legacy surfaces
  * (claude-desktop, copilot-cli, pi). The 8 compile surfaces take
  * `legacyCompileCapability` verbatim and ignore their descriptor's stores, by
