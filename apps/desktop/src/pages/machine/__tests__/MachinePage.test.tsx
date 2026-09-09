@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { MemoryRouter, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
@@ -491,13 +491,21 @@ describe("MachinePage", () => {
     );
   });
 
-  it("scrolls the Drift section into view once the scan above it has rendered", async () => {
-    // The section sits below the summary strip and the grid. Scrolling on
-    // first commit, while the page still reads "Scanning this machine…",
-    // lands on a layout the grid then pushes below the fold.
-    const scrollIntoView = vi.fn();
-    Element.prototype.scrollIntoView = scrollIntoView;
-    try {
+  describe("Drift scroll", () => {
+    let scrollIntoView: ReturnType<typeof vi.fn<(arg?: boolean | ScrollIntoViewOptions) => void>>;
+    beforeEach(() => {
+      scrollIntoView = vi.fn();
+      Element.prototype.scrollIntoView = scrollIntoView;
+    });
+    afterEach(() => {
+      // jsdom has no scrollIntoView of its own, so deleting is the restore.
+      delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+    });
+
+    it("scrolls the Drift section into view once the scan above it has rendered", async () => {
+      // The section sits below the summary strip and the grid. Scrolling on
+      // first commit, while the page still reads "Scanning this machine…",
+      // lands on a layout the grid then pushes below the fold.
       let resolve!: (value: unknown) => void;
       vi.mocked(buildMachineInventory).mockReturnValueOnce(
         new Promise((r) => { resolve = r; }) as never,
@@ -519,20 +527,12 @@ describe("MachinePage", () => {
       fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
       await waitFor(() => expect(screen.getByRole("button", { name: "Refresh" })).toBeEnabled());
       expect(scrollIntoView).toHaveBeenCalledTimes(1);
-    } finally {
-      // jsdom has no scrollIntoView of its own, so deleting is the restore.
-      delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
-    }
-  });
+    });
 
-  it("scrolls the Drift section into view when requested after the scan has already rendered", async () => {
-    // The sidebar path: the user is on Machine, the scan is done, and clicks
-    // Drift (or presses ⌘4). `loading` does not change here, so a scroll
-    // keyed on it alone never fires; the armed flag then went off on the
-    // next Refresh and yanked the page.
-    const scrollIntoView = vi.fn();
-    Element.prototype.scrollIntoView = scrollIntoView;
-    try {
+    it("scrolls the Drift section into view when requested after the scan has already rendered", async () => {
+      // The sidebar path: the user is on Machine, the scan is done, and clicks
+      // Drift (or presses ⌘4). `loading` does not change here, so the scroll
+      // must key on the request itself.
       render(
         <MemoryRouter initialEntries={["/machine"]}>
           <NavigateOnClick to="/machine?drift=1" />
@@ -550,9 +550,24 @@ describe("MachinePage", () => {
       fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
       await waitFor(() => expect(screen.getByRole("button", { name: "Refresh" })).toBeEnabled());
       expect(scrollIntoView).toHaveBeenCalledTimes(1);
-    } finally {
-      delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
-    }
+    });
+
+    it("re-arms the scroll when the harness changes while Drift is already requested", async () => {
+      // Fleet's row click while already viewing Drift: ?drift=1 stays true, so
+      // only the harness param changes. The request is still a new one.
+      render(
+        <MemoryRouter initialEntries={["/machine?drift=1"]}>
+          <NavigateOnClick to="/machine?drift=1&harness=claude-code" />
+          <MachinePage />
+        </MemoryRouter>,
+      );
+      await screen.findByTestId("machine-grid");
+      await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
+
+      fireEvent.click(screen.getByRole("button", { name: "go to drift" }));
+      await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(2));
+      expect(scrollIntoView.mock.contexts[1]).toBe(screen.getByTestId("machine-drift-section"));
+    });
   });
 
   it("filters the Drift section to the harness named in the URL", async () => {

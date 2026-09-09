@@ -84,9 +84,6 @@ export default function MonacoEditor({ filePath, content, onChange, onSave, read
   const monacoRef = useRef<Monaco | null>(null);
   const themeRef = useRef(getMonacoTheme());
 
-  // @monaco-editor/react stores onMount in a ref at first render and never refreshes
-  // it, so the Cmd+S action would otherwise call the onSave from the first render
-  // for the life of the mount. Route the action through a ref that tracks the latest.
   const onSaveRef = useRef(onSave);
   useEffect(() => {
     onSaveRef.current = onSave;

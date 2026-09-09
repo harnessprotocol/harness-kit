@@ -29,31 +29,34 @@ export default function MachinePage() {
   // common path — clicking Drift in the sidebar while already on Machine.
   const [searchParams] = useSearchParams();
   const driftRequested = searchParams.get("drift") === "1";
+  const harnessParam = searchParams.get("harness");
   const [driftOpen, setDriftOpen] = useState(driftRequested);
   const driftSectionRef = useRef<HTMLElement | null>(null);
   const driftScrollPending = useRef(false);
   useEffect(() => {
     // Opens on request; never force-closes, so a user who opened the section
-    // by hand does not lose it by navigating within Machine.
+    // by hand does not lose it by navigating within Machine. Keyed on the
+    // harness too: a Fleet row click while already viewing Drift changes
+    // only that param, and is still a new request.
     if (driftRequested) {
       setDriftOpen(true);
       driftScrollPending.current = true;
     }
-  }, [driftRequested]);
+  }, [driftRequested, harnessParam]);
   useEffect(() => {
     // Consumes the request once the scan is not loading: immediately when the
     // user is already on Machine, after the first scan on a cold mount. The
     // layout signal is `loading`, which flips in the same batch that renders
     // the grid; scrolling before that lands on a layout the grid then pushes
-    // below the fold. Keyed on both signals: a ref write schedules nothing,
-    // so keying on `loading` alone missed the sidebar path and fired the
-    // armed flag on the next Refresh instead. Consumed once, so a later
-    // Refresh does not yank the page back here. On a failed scan the section
-    // still scrolls: the user asked for Drift.
+    // below the fold. Keyed on the request params as well: a ref write
+    // schedules nothing, so the effect must run on the render the request
+    // arrived in. Consumed once, so a later Refresh does not yank the page
+    // back here. On a failed scan the section still scrolls: the user asked
+    // for Drift.
     if (!driftScrollPending.current || loading) return;
     driftScrollPending.current = false;
     driftSectionRef.current?.scrollIntoView?.({ block: "start" });
-  }, [driftRequested, loading]);
+  }, [driftRequested, harnessParam, loading]);
   const [selectedRow, setSelectedRow] = useState<GridRow | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
   const [projectDegraded, setProjectDegraded] = useState(false);
