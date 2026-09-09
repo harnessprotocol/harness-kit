@@ -14,4 +14,12 @@ describe("nav declaration", () => {
     expect(visibleNav({ comparator: false }).some((e) => e.id === "comparator")).toBe(false);
     expect(visibleNav({ comparator: true }).some((e) => e.id === "comparator")).toBe(true);
   });
+  it("Profile and Claude Code list their children in order", () => {
+    const profile = NAV.find((e) => e.id === "profile");
+    const claudeCode = NAV.find((e) => e.id === "claude-code");
+    expect(profile?.children?.map((c) => c.path)).toEqual(["/harness/file", "/harness/sync"]);
+    expect(claudeCode?.children?.map((c) => c.path)).toEqual([
+      "/harness/claude-md", "/harness/mcp", "/harness/plugins", "/harness/hooks", "/harness/permissions", "/observatory",
+    ]);
+  });
 });

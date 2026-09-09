@@ -39,6 +39,7 @@ export const NAV: NavEntry[] = [
       { label: "MCP servers", path: "/harness/mcp" },
       { label: "Plugins", path: "/harness/plugins" },
       { label: "Hooks", path: "/harness/hooks" },
+      // Route lands in Task 1.4 (AC-10); /security/permissions redirects here once it does.
       { label: "Permissions", path: "/harness/permissions" },
       { label: "Usage", path: "/observatory" },
     ],
