@@ -2,7 +2,7 @@
 
 Turn the desktop app from three product generations sharing one sidebar into one product with five destinations, so a stranger can name what every item does and every screen leads somewhere.
 
-**Workflow:** Requirements-First. **Source:** the 2026-09-08 UX audit (report: https://claude.ai/code/artifact/9053d366-bc71-4315-9922-c7e3124b7d5d). **Vocabulary:** [CONTEXT.md](../../CONTEXT.md). **Visual authority:** [apps/desktop/DESIGN.md](../../apps/desktop/DESIGN.md), which this spec amends in §5 and §6. **Related specs:** [cross-harness-config-management](../cross-harness-config-management/spec.md) (the Machine engine; unchanged here), [team-collaboration](../team-collaboration/spec.md) (stub; AC-26 below is its first desktop step).
+**Workflow:** Requirements-First. **Source:** the 2026-09-08 UX audit (report: https://claude.ai/code/artifact/9053d366-bc71-4315-9922-c7e3124b7d5d). **Vocabulary:** [CONTEXT.md](../../CONTEXT.md). **Visual authority:** [apps/desktop/DESIGN.md](../../apps/desktop/DESIGN.md), which Phase 1 of this spec amends in §5 and §6. **Related specs:** [cross-harness-config-management](../cross-harness-config-management/spec.md) (the Machine engine; unchanged here), [team-collaboration](../team-collaboration/spec.md) (stub; AC-26 below is its first desktop step).
 
 ## Problem Statement
 
@@ -179,8 +179,8 @@ Vitest with jsdom, colocated under `__tests__` next to the page or lib; Playwrig
 
 ```
 apps/desktop/src/
-├── nav.ts                       ← NEW single navigation declaration (AC-4)
-├── lib/commands.ts              ← NEW command registry (AC-21)
+├── nav.ts                       ← NEW in Phase 1: single navigation declaration (AC-4)
+├── lib/commands.ts              ← NEW in Phase 2: command registry (AC-21)
 ├── lib/project-dir.ts           ← the one project-directory store (AC-17)
 ├── lib/preferences.ts           ← settings; labs flags live here
 ├── layouts/AppLayout.tsx        ← sidebar + title bar; consumes nav.ts
