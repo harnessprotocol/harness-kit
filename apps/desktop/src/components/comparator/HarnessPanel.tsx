@@ -570,7 +570,7 @@ export default function HarnessPanel({ panel, rawChunks, outputTick, onSend: _on
                   color: filled ? tokens.warning : tokens.borderStrong,
                   transition: "transform 100ms ease-out, color 100ms ease-out",
                   transform: hoveredStar === star ? "scale(1.25)" : "scale(1)",
-                  display: "inline-block",
+                  display: "inline-flex",
                   lineHeight: 1,
                 }}
                 onClick={() => setRating(star === rating ? 0 : star)}

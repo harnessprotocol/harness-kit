@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { TriangleAlert } from "lucide-react";
+import { TriangleAlert, X } from "lucide-react";
 import { formatCost } from "../../lib/pricing";
 
 interface Props {
@@ -62,7 +62,7 @@ export default function BudgetAlertBanner({
         color: "var(--fg-base)",
       }}
     >
-      <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
         <TriangleAlert size={16} strokeWidth={1.7} aria-hidden="true" style={{ color: "var(--warning)", flexShrink: 0 }} />
         <div>
           <span style={{ fontWeight: 600, color: "var(--warning)" }}>
@@ -78,16 +78,18 @@ export default function BudgetAlertBanner({
         aria-label="Dismiss budget alert"
         style={{
           flexShrink: 0,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
           border: "none",
           background: "none",
           color: "var(--warning)",
           cursor: "pointer",
-          fontSize: "16px",
           lineHeight: 1,
           padding: "0 2px",
         }}
       >
-        ×
+        <X size={13} strokeWidth={1.7} aria-hidden="true" />
       </button>
     </div>
   );

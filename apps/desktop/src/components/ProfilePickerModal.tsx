@@ -132,7 +132,7 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
                   display: "flex", alignItems: "center", justifyContent: "center",
                   borderRadius: "6px", border: "none",
                   background: "transparent", color: "var(--fg-subtle)",
-                  cursor: "pointer", fontSize: "14px", flexShrink: 0,
+                  cursor: "pointer", flexShrink: 0,
                 }}
               >
                 <X size={14} strokeWidth={1.7} aria-hidden="true" />

@@ -1,7 +1,7 @@
 import { useSearchParams } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Input, SummaryStrip, EmptyState, type SummaryCell } from "@harness-kit/ui";
-import { ChevronDown, ChevronRight, ScanSearch } from "lucide-react";
+import { ChevronRight, ScanSearch } from "lucide-react";
 import type { GridRow, MachineInventory } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
 import { loadMachineInventory } from "./machine-data";
@@ -326,11 +326,12 @@ export default function MachinePage() {
             color: "var(--fg-base)",
           }}
         >
-          {driftOpen ? (
-            <ChevronDown size={12} strokeWidth={1.7} aria-hidden="true" />
-          ) : (
-            <ChevronRight size={12} strokeWidth={1.7} aria-hidden="true" />
-          )}
+          <ChevronRight
+            size={12}
+            strokeWidth={1.7}
+            aria-hidden="true"
+            style={{ transform: driftOpen ? "rotate(90deg)" : "none", transition: "transform 0.15s ease" }}
+          />
           Drift from harness.yaml
         </button>
         {/*

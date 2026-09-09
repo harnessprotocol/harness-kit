@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { X } from "lucide-react";
 import {
   AreaChart, Area,
   BarChart, Bar,
@@ -360,8 +361,9 @@ function ChartCard({
         {chartId && (
           <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
             {override && (
-              <button onClick={onClearOverride} style={{ fontSize: "9px", color: "var(--accent-text)", border: "none", background: "none", cursor: "pointer", padding: "1px 4px" }}>
-                ×reset
+              <button onClick={onClearOverride} style={{ display: "inline-flex", alignItems: "center", gap: "2px", fontSize: "9px", color: "var(--accent-text)", border: "none", background: "none", cursor: "pointer", padding: "1px 4px" }}>
+                <X size={11} strokeWidth={1.7} aria-hidden="true" />
+                reset
               </button>
             )}
             <HKTooltip content="Override date range for this chart">

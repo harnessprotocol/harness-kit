@@ -213,6 +213,7 @@ export function MachineGrid({ inventory, selectedRowKey, onRowClick }: MachineGr
                           justifyContent: "center",
                           minWidth: 14,
                           height: 14,
+                          gap: 2,
                           padding: "0 3px",
                           borderRadius: 7,
                           background: "var(--bg-elevated)",
@@ -221,7 +222,7 @@ export function MachineGrid({ inventory, selectedRowKey, onRowClick }: MachineGr
                           fontWeight: 650,
                         }}
                       >
-                        <Store size={9} strokeWidth={1.7} aria-hidden="true" />
+                        <Store size={11} strokeWidth={1.7} aria-hidden="true" />
                         {marketplaces.length}
                       </span>
                     )}

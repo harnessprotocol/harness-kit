@@ -121,7 +121,6 @@ export function RowDrawer({ row, diffs, gaps, onClose, onApplied }: RowDrawerPro
             color: "var(--fg-muted)",
             cursor: "pointer",
             flexShrink: 0,
-            fontSize: 13,
           }}
         >
           <X size={13} strokeWidth={1.7} aria-hidden="true" />
