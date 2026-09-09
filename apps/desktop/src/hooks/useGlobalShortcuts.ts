@@ -1,19 +1,7 @@
 import { useEffect } from "react";
 import type { NavigateFunction } from "react-router-dom";
-
-// Mirrors NAV_SECTIONS order in AppLayout.tsx (DESIGN.md §5): Machine, Fleet,
-// Configure, Drift, Comparator, Observatory, Marketplace. Settings is pinned
-// bottom and reachable via ⌘, — not part of the numbered ⌘1-7 shortcuts.
-export const NAV_PATHS = [
-  "/machine",
-  "/fleet",
-  "/harness/file",
-  // AC-37: Drift is a Machine-view section; ⌘ 4 opens it directly.
-  "/machine?drift=1",
-  "/comparator",
-  "/observatory",
-  "/marketplace",
-] as const;
+import { getLabs } from "../lib/preferences";
+import { shortcutPaths, visibleNav } from "../nav";
 
 interface Options {
   navigate: NavigateFunction;
@@ -53,11 +41,13 @@ export function useGlobalShortcuts({ navigate, toggleSidebar }: Options) {
         return;
       }
 
-      // ⌘1–⌘6 — navigate to sections
+      // ⌘1–⌘N — navigate to nav.ts sections, recomputed on every keydown so a
+      // labs flag flipped mid-session is reflected without a re-render.
+      const paths = shortcutPaths(visibleNav(getLabs()));
       const num = parseInt(e.key, 10);
-      if (num >= 1 && num <= NAV_PATHS.length) {
+      if (num >= 1 && num <= paths.length) {
         e.preventDefault();
-        navigate(NAV_PATHS[num - 1]);
+        navigate(paths[num - 1]);
       }
     }
 

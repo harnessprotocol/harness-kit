@@ -12,8 +12,6 @@ import {
   setDensity,
   getDefaultSection,
   setDefaultSection,
-  getHiddenSections,
-  setHiddenSections,
   getMarkdownFont,
   setMarkdownFont,
   getSidebarWidth,
@@ -103,34 +101,15 @@ describe("getDefaultSection / setDefaultSection", () => {
   });
 
   it("stores and retrieves a value", () => {
+    // /observatory is a child path (Claude Code > Usage), not a top-level
+    // NAV path — exercises the "check children too" branch of getDefaultSection.
     setDefaultSection("/observatory");
     expect(getDefaultSection()).toBe("/observatory");
   });
-});
 
-// ── Hidden Sections ──────────────────────────────────────────
-
-describe("getHiddenSections / setHiddenSections", () => {
-  it("returns empty Set when unset", () => {
-    const result = getHiddenSections();
-    expect(result).toBeInstanceOf(Set);
-    expect(result.size).toBe(0);
-  });
-
-  it("round-trips a Set of strings", () => {
-    const sections = new Set(["/observatory", "/harness/skills"]);
-    setHiddenSections(sections);
-    const result = getHiddenSections();
-    expect(result).toBeInstanceOf(Set);
-    expect(result.size).toBe(2);
-    expect(result.has("/observatory")).toBe(true);
-    expect(result.has("/harness/skills")).toBe(true);
-  });
-
-  it("round-trips an empty Set", () => {
-    setHiddenSections(new Set(["something"]));
-    setHiddenSections(new Set());
-    expect(getHiddenSections().size).toBe(0);
+  it("falls back to /machine when the stored default section is not a nav path", () => {
+    localStorage.setItem("harness-kit-default-section", "/fleet");
+    expect(getDefaultSection()).toBe("/machine");
   });
 });
 
