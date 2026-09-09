@@ -21,7 +21,6 @@ pub mod parity;
 pub mod pairwise;
 pub mod comparator;
 pub mod comparator_panels;
-pub mod agents;
 pub mod harnesses;
 pub mod feedback;
 pub mod fs_scope;

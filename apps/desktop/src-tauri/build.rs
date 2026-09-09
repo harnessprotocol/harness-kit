@@ -70,10 +70,6 @@ fn main() {
                 "delete_comparison",
                 "tag_comparison_task_type",
                 "get_harness_recommendations",
-                // Agents
-                "detect_agents",
-                "record_harness_launch_result",
-                "get_harness_health",
                 // Comparator — panels
                 "save_panel",
                 "update_panel_result",
