@@ -19,19 +19,19 @@ import {
 import { getTheme, setTheme } from "../lib/theme";
 
 // Security surfaces are re-homed under Settings (DESIGN.md §5) — lazy-loaded
-// so the General tab's bundle stays light. Routes under /security/* still
-// render these pages directly; the Settings tabs are the primary entry.
-const PermissionsPage = lazy(() => import("./security/PermissionsPage"));
+// so the General tab's bundle stays light. Permissions moved out to its own
+// page at /harness/permissions (AC-10) and is no longer a Settings tab.
+// Audit Log is retired in favor of an Activity tab (Task 1.7 builds its
+// real content; this task renders a placeholder — see below).
 const SecretsPage = lazy(() => import("./security/SecretsPage"));
-const AuditLogPage = lazy(() => import("./security/AuditLogPage"));
 
-type SettingsTab = "general" | "permissions" | "secrets" | "audit";
+type SettingsTab = "general" | "secrets" | "activity" | "labs";
 
 const TABS: { id: SettingsTab; label: string }[] = [
   { id: "general", label: "General" },
-  { id: "permissions", label: "Permissions" },
   { id: "secrets", label: "Secrets" },
-  { id: "audit", label: "Audit Log" },
+  { id: "activity", label: "Activity" },
+  { id: "labs", label: "Labs" },
 ];
 
 interface UpdateStatus {
@@ -570,9 +570,10 @@ function SettingsTabBar({ active, onChange }: { active: SettingsTab; onChange: (
 
 const TAB_BY_PARAM: Record<string, SettingsTab> = {
   general: "general",
-  permissions: "permissions",
   secrets: "secrets",
-  audit: "audit",
+  activity: "activity",
+  audit: "activity", // legacy param
+  labs: "labs",
 };
 
 export default function PreferencesPage() {
@@ -590,9 +591,11 @@ export default function PreferencesPage() {
       <div style={{ flex: 1, overflowY: "auto" }}>
         <Suspense fallback={<div style={{ padding: "20px 24px", fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</div>}>
           {activeTab === "general" && <GeneralTab />}
-          {activeTab === "permissions" && <PermissionsPage />}
           {activeTab === "secrets" && <SecretsPage />}
-          {activeTab === "audit" && <AuditLogPage />}
+          {/* Placeholder — real content lands in Task 1.7 (ActivityTab) */}
+          {activeTab === "activity" && <div style={{ padding: "20px 24px", fontSize: "13px", color: "var(--fg-muted)" }}>Activity</div>}
+          {/* Placeholder — real content lands in Task 1.5 (LabsTab) */}
+          {activeTab === "labs" && <div style={{ padding: "20px 24px", fontSize: "13px", color: "var(--fg-muted)" }}>Labs</div>}
         </Suspense>
       </div>
     </div>

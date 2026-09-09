@@ -21,10 +21,7 @@ const DashboardPage = lazy(() => import("./pages/observatory/DashboardPage"));
 const SessionsPage = lazy(() => import("./pages/observatory/SessionsPage"));
 const ComparatorPage = lazy(() => import("./pages/comparator/ComparatorPage"));
 const PermissionsPage = lazy(() => import("./pages/security/PermissionsPage"));
-const SecretsPage = lazy(() => import("./pages/security/SecretsPage"));
-const AuditLogPage = lazy(() => import("./pages/security/AuditLogPage"));
 const MachinePage = lazy(() => import("./pages/machine/MachinePage"));
-const FleetPage = lazy(() => import("./pages/fleet/FleetPage"));
 
 // Dev-only screenshot fixtures (DESIGN.md §8 verification) — render Fleet/Drift/
 // Onboarding's presentational views with static data, no Tauri/core backend
@@ -87,7 +84,9 @@ export default function App() {
             {/* Machine — home (default section; user-overridable in preferences) */}
             <Route index element={<DefaultRedirect />} />
             <Route path="machine" element={<MachinePage />} />
-            <Route path="fleet" element={<FleetPage />} />
+            {/* Retired route — Fleet itself is retired in Task 1.6; this just
+                closes the direct-URL path (AC-6). */}
+            <Route path="fleet" element={<Navigate to="/machine" replace />} />
 
             {/* Harness Manager */}
             <Route path="harness/file" element={<HarnessFilePage />} />
@@ -100,6 +99,8 @@ export default function App() {
             {/* Retired route (AC-41) */}
             <Route path="harness/settings" element={<Navigate to="/harness/file" replace />} />
             <Route path="harness/config/:filename" element={<ConfigFilePage />} />
+            {/* Permissions — now under the Claude Code nav group (AC-10) */}
+            <Route path="harness/permissions" element={<PermissionsPage />} />
 
             {/* Marketplace */}
             <Route path="marketplace/:slug?" element={<MarketplacePage />} />
@@ -112,10 +113,11 @@ export default function App() {
             {/* Comparator */}
             <Route path="comparator" element={<ComparatorPage />} />
 
-            {/* Security */}
-            <Route path="security/permissions" element={<PermissionsPage />} />
-            <Route path="security/secrets" element={<SecretsPage />} />
-            <Route path="security/audit" element={<AuditLogPage />} />
+            {/* Security — retired routes (AC-10); Permissions moved under
+                Claude Code, Secrets/Activity moved under Settings. */}
+            <Route path="security/permissions" element={<Navigate to="/harness/permissions" replace />} />
+            <Route path="security/secrets" element={<Navigate to="/preferences/secrets" replace />} />
+            <Route path="security/audit" element={<Navigate to="/preferences/activity" replace />} />
 
             {/* Drift */}
             {/* AC-37: Drift is presented inside the Machine view; the legacy
