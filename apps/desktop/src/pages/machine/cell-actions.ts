@@ -18,6 +18,7 @@ import { TauriFsProvider } from "../../lib/harness-fs";
 import { TauriSurfaceFsProvider } from "../../lib/surface-fs";
 import { TauriTransactionLedger } from "../../lib/state-ledger";
 import { detectDesktopPlatform } from "./machine-data";
+import { resolveDesktopDefinitions } from "../../lib/definitions";
 
 /**
  * The three action surfaces for one grid cell (AC-11).
@@ -90,16 +91,26 @@ export async function buildCellAction(
   const home = await homeDir();
   const fs = new TauriFsProvider(home);
   const request: CellActionRequest = { kind: row.kind, name: row.name, from, to, scope };
-  const plan = await planCellAction(fs, request, {
-    projectRoot: null,
-    homeRoot: home,
-    platform: detectDesktopPlatform(),
-  });
+  // AC-26: the SAME registry the Machine view observed with. Planning against
+  // the compiled-in table while the grid read a bundle's makes the two
+  // disagree — the grid shows a moved file as present and the plan refuses it
+  // with "nothing to copy".
+  const { surfaces } = await resolveDesktopDefinitions();
+  const plan = await planCellAction(
+    fs,
+    request,
+    {
+      projectRoot: null,
+      homeRoot: home,
+      platform: detectDesktopPlatform(),
+    },
+    surfaces,
+  );
   return {
     request,
     plan,
     cli: syncCliCommand(request),
-    prompt: buildAgentPrompt(plan, request),
+    prompt: buildAgentPrompt(plan, request, {}, surfaces),
   };
 }
 
@@ -175,12 +186,18 @@ export async function applyCellActionViaTauri(
     };
   });
 
+  // The write allowlist is derived from the registry in force. Deriving it
+  // from the compiled-in table while the plan targets a bundle's path means
+  // the transaction root rejects the very path the plan chose.
+  const { surfaces: applyRegistry } = await resolveDesktopDefinitions();
   const result = await applyCellAction(
     view.plan,
     {
       fs: new TauriSurfaceFsProvider(home),
       timestamp,
-      roots: { home: createHomeTransactionRoot(home, detectDesktopPlatform()) },
+      roots: {
+        home: createHomeTransactionRoot(home, detectDesktopPlatform(), applyRegistry),
+      },
     },
     // Not `true`: a disabled button is UX, not a boundary. The engine's own
     // gate must see the real acknowledgement.

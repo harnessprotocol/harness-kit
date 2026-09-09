@@ -1,5 +1,6 @@
 import { homeDir } from "@tauri-apps/api/path";
 import { buildMachineInventory } from "@harness-kit/core";
+import { resolveDesktopDefinitions } from "../../lib/definitions.js";
 import type { MachineInventory } from "@harness-kit/core";
 import { TauriFsProvider } from "../../lib/harness-fs";
 import { grantProjectScope } from "../../lib/tauri";
@@ -46,10 +47,18 @@ export async function loadMachineInventory(scanRoot: string | null): Promise<Mac
     );
   }
   const fs = new TauriFsProvider(home);
-  const inventory = await buildMachineInventory(fs, {
-    projectRoot,
-    homeRoot: home,
-    platform: detectDesktopPlatform(),
-  });
+  // AC-26: the registry may come from a verified definitions bundle, so a
+  // moved config path reaches users without an app update. Degrades to the
+  // compiled-in registry on any failure.
+  const definitions = await resolveDesktopDefinitions();
+  const inventory = await buildMachineInventory(
+    fs,
+    {
+      projectRoot,
+      homeRoot: home,
+      platform: detectDesktopPlatform(),
+    },
+    definitions.surfaces,
+  );
   return { inventory, projectDegraded: Boolean(scanRoot) && projectRoot === null };
 }

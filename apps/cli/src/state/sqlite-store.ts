@@ -8,6 +8,7 @@ import {
   stateSchemaStatements,
 } from "@harness-kit/core";
 import type {
+  CachedDefinitions,
   DriftAcknowledgement,
   DriftAcknowledgementKey,
   ObservationSnapshot,
@@ -271,6 +272,67 @@ export class SqliteStateStore implements StateStore {
     };
   }
 
+  async getCachedDefinitions(): Promise<CachedDefinitions | null> {
+    const row = this.db
+      .prepare(
+        "SELECT bundle_number, fetched_at, payload_b64, signature_b64 FROM definitions_cache WHERE id = 1",
+      )
+      .get() as
+      | { bundle_number: number; fetched_at: string; payload_b64: string; signature_b64: string }
+      | undefined;
+    if (!row) return null;
+    try {
+      return {
+        bundleNumber: row.bundle_number,
+        fetchedAt: row.fetched_at,
+        payload: fromBase64(row.payload_b64),
+        signature: fromBase64(row.signature_b64),
+      };
+    } catch {
+      // Undecodable base64 means a corrupt row, which is exactly what the
+      // re-verification step would reject anyway. Report "no cache" rather
+      // than throwing on a path whose whole purpose is degrading.
+      return null;
+    }
+  }
+
+  async putCachedDefinitions(entry: CachedDefinitions): Promise<void> {
+    this.db
+      .prepare(
+        `INSERT INTO definitions_cache (id, bundle_number, fetched_at, payload_b64, signature_b64)
+         VALUES (1, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+           bundle_number = excluded.bundle_number,
+           fetched_at = excluded.fetched_at,
+           payload_b64 = excluded.payload_b64,
+           signature_b64 = excluded.signature_b64`,
+      )
+      .run(entry.bundleNumber, entry.fetchedAt, toBase64(entry.payload), toBase64(entry.signature));
+  }
+
+  async getHighestBundleNumber(): Promise<number | null> {
+    const row = this.db
+      .prepare("SELECT highest_bundle_number FROM definitions_history WHERE id = 1")
+      .get() as { highest_bundle_number: number } | undefined;
+    return row?.highest_bundle_number ?? null;
+  }
+
+  async recordBundleNumber(bundleNumber: number, at: string): Promise<void> {
+    // MAX in the UPDATE, so a lower number can never lower the floor — an
+    // anti-rollback floor that a later write can walk backwards is not a
+    // floor. The guard lives in SQL rather than in a read-then-write so two
+    // concurrent processes cannot interleave past it.
+    this.db
+      .prepare(
+        `INSERT INTO definitions_history (id, highest_bundle_number, updated_at)
+         VALUES (1, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+           highest_bundle_number = MAX(definitions_history.highest_bundle_number, excluded.highest_bundle_number),
+           updated_at = excluded.updated_at`,
+      )
+      .run(bundleNumber, at);
+  }
+
   async getFingerprint(surface: SurfaceId, scope: SurfaceScope): Promise<string | null> {
     const row = this.db
       .prepare("SELECT digest FROM fingerprints WHERE surface = ? AND scope = ?")
@@ -450,4 +512,20 @@ export class SqliteStateStore implements StateStore {
   async close(): Promise<void> {
     this.db.close();
   }
+}
+
+/** Bytes ↔ base64 for the definitions cache columns (see schema v4). */
+function toBase64(bytes: Uint8Array): string {
+  return Buffer.from(bytes).toString("base64");
+}
+
+function fromBase64(value: string): Uint8Array {
+  const bytes = new Uint8Array(Buffer.from(value, "base64"));
+  // Buffer.from is lenient: it silently drops invalid characters instead of
+  // throwing, so a corrupt row would decode to the wrong bytes rather than
+  // failing. Re-encoding and comparing is what actually detects that.
+  if (Buffer.from(bytes).toString("base64") !== value) {
+    throw new Error("definitions cache column is not valid base64");
+  }
+  return bytes;
 }

@@ -1,8 +1,9 @@
 import type { FsProvider } from "../fs-provider.js";
 import type { ProcessResult, ProcessRunner } from "../process-runner.js";
 import { UnsafeArgumentError } from "../process-runner.js";
-import { getSurface } from "../surfaces/registry.js";
-import type { SurfaceId, SurfaceScope } from "../surfaces/types.js";
+import { SURFACES } from "../surfaces/registry.js";
+import { getSurfaceFrom } from "../surfaces/resolve.js";
+import type { SurfaceDescriptor, SurfaceId, SurfaceScope } from "../surfaces/types.js";
 import { planNativePluginAction } from "./installer.js";
 import type { PluginActionPlan } from "./installer.js";
 import { planUnpackAction } from "./unpack.js";
@@ -65,8 +66,16 @@ export type BrokerPlan =
  * lookup; the unpack driver's own planning needs IO and is deferred to
  * `executePluginAction`.
  */
-export function planPluginAction(request: PluginBrokerRequest): BrokerPlan {
-  const descriptor = getSurface(request.surface);
+export function planPluginAction(
+  request: PluginBrokerRequest,
+  /**
+   * The registry in force (AC-26). The installer binary and its argv come
+   * from the descriptor, so a bundle that changes them must reach here — this
+   * is the argv the broker actually executes.
+   */
+  registry: readonly SurfaceDescriptor[] = SURFACES,
+): BrokerPlan {
+  const descriptor = getSurfaceFrom(registry, request.surface);
   const model = descriptor.pluginInstall;
   if (model === undefined) {
     return {

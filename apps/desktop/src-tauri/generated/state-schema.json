@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "migrations": {
     "1": [
       "CREATE TABLE IF NOT EXISTS observations (\n  id INTEGER PRIMARY KEY,\n  observed_at TEXT NOT NULL,\n  platform TEXT NOT NULL,\n  project_root TEXT NULL,\n  home_root TEXT NOT NULL\n)",
@@ -17,9 +17,18 @@
     ],
     "3": [
       "CREATE TABLE IF NOT EXISTS drift_acknowledgements (\n  scope_root TEXT NOT NULL,\n  adapter TEXT NOT NULL,\n  path TEXT NOT NULL,\n  harness_name TEXT NOT NULL,\n  slot TEXT NOT NULL,\n  acknowledged_at TEXT NOT NULL,\n  PRIMARY KEY (scope_root, adapter, path, harness_name, slot)\n)"
+    ],
+    "4": [
+      "DROP TABLE IF EXISTS definitions_cache",
+      "CREATE TABLE definitions_cache (\n  id INTEGER PRIMARY KEY CHECK (id = 1),\n  bundle_number INTEGER NOT NULL,\n  fetched_at TEXT NOT NULL,\n  payload_b64 TEXT NOT NULL,\n  signature_b64 TEXT NOT NULL\n)",
+      "CREATE TABLE IF NOT EXISTS definitions_history (\n  id INTEGER PRIMARY KEY CHECK (id = 1),\n  highest_bundle_number INTEGER NOT NULL,\n  updated_at TEXT NOT NULL\n)"
     ]
   },
   "versionProbes": [
+    {
+      "version": 4,
+      "sql": "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'definitions_history'"
+    },
     {
       "version": 3,
       "sql": "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'drift_acknowledgements'"

@@ -1,8 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { NodeFetcher } from "../src/definitions/providers-node.js";
+import { HttpsFetcher } from "../src/definitions/fetcher.js";
 
 /**
- * `NodeFetcher`'s transport guarantees.
+ * `HttpsFetcher`'s transport guarantees.
+ *
+ * Platform-neutral on purpose: the same class serves the CLI and the Tauri
+ * webview, so these tests cover both. It used only web standards all along,
+ * which is why it moved out of the node-only entry point.
  *
  * These had NO test: every control could be deleted and the whole suite
  * stayed green while the PR asserted each as a fact.
@@ -16,7 +20,7 @@ import { NodeFetcher } from "../src/definitions/providers-node.js";
  * code to make a test easier is how a guarantee quietly stops holding.
  */
 
-const fetcher = new NodeFetcher();
+const fetcher = new HttpsFetcher();
 const limits = { maxBytes: 2 * 1024 * 1024, timeoutMs: 5_000 };
 
 afterEach(() => vi.unstubAllGlobals());
@@ -106,6 +110,26 @@ describe("redirects", () => {
     // verdict, so the test never exercised the comparison it is named for.
     // The reason is what tells the two guards apart.
     expect(result.status === "failed" ? result.reason : "").toContain("off its own origin");
+  });
+
+  it("names an OPAQUE redirect instead of reporting 'answered 0'", async () => {
+    // A browser engine turns `redirect: "manual"` into an opaque redirect —
+    // status 0, empty headers, type "opaqueredirect" — rather than a readable
+    // 3xx. Node never produces one, so this shape can only be simulated; the
+    // desktop is where it would actually occur, and it would otherwise
+    // surface as the meaningless "the feed answered 0".
+    vi.stubGlobal("fetch", async () => {
+      const response = new Response(null, { status: 200 });
+      Object.defineProperty(response, "type", { value: "opaqueredirect" });
+      Object.defineProperty(response, "status", { value: 0 });
+      Object.defineProperty(response, "ok", { value: false });
+      return response;
+    });
+    const result = await fetcher.get("https://harnesskit.ai/definitions.json", limits);
+    expect(result.status).toBe("failed");
+    const reason = result.status === "failed" ? result.reason : "";
+    expect(reason).toContain("does not expose the target");
+    expect(reason).not.toContain("answered 0");
   });
 
   it("refuses a redirect with no target", async () => {

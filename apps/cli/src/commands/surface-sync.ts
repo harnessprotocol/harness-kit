@@ -24,6 +24,7 @@ import type {
 } from "@harness-kit/core";
 import { NodeFsProvider, NodeProcessRunner } from "@harness-kit/core/node";
 import { defaultStatePath, SqliteStateStore } from "../state/sqlite-store.js";
+import { resolveDefinitions } from "../definitions/resolve-definitions.js";
 import { timestamp } from "./portability-common.js";
 
 export interface SurfaceSyncFlags {
@@ -123,7 +124,26 @@ export async function surfaceSyncCommand(flags: SurfaceSyncFlags): Promise<void>
   };
 
   const fs = new NodeFsProvider(cwd);
-  const inventory = await buildMachineInventory(fs, opts);
+
+  // Opened up front rather than at the apply step, because the definitions
+  // feed needs it too: it re-verifies the cached bundle and raises the
+  // anti-rollback floor. Best-effort throughout — a missing or locked
+  // database costs the cache and the ledger, never the command itself.
+  let store: SqliteStateStore | undefined;
+  try {
+    store = await SqliteStateStore.open(defaultStatePath());
+  } catch {
+    store = undefined; // Ledger is an index; losing it must not block a write.
+  }
+
+  // AC-26: a verified bundle can move a surface's config path. ONE registry
+  // drives observation, the grid, the planned actions AND the write
+  // allowlist. Threading it to observation alone was worse than not threading
+  // it at all: the grid showed a moved file as present and the planner then
+  // refused it with "nothing to copy", because the two halves disagreed about
+  // where the file was.
+  const definitions = await resolveDefinitions(store);
+  const inventory = await buildMachineInventory(fs, opts, definitions.surfaces);
   const only = parseOnly(flags.only);
   const from = flags.from ? assertSurface(flags.from, "--from") : undefined;
   const to = (flags.to ?? []).map((value) => assertSurface(value, "--to"));
@@ -176,6 +196,7 @@ export async function surfaceSyncCommand(flags: SurfaceSyncFlags): Promise<void>
       fs,
       { kind: candidate.kind, name: candidate.name, from: candidate.from, to: candidate.to, scope },
       opts,
+      definitions.surfaces,
     );
     actions.push({ ...candidate, cli: syncCliCommand({ ...candidate, scope }), plan });
   }
@@ -190,6 +211,7 @@ export async function surfaceSyncCommand(flags: SurfaceSyncFlags): Promise<void>
         action.plan,
         { kind: action.kind, name: action.name, from: action.from, to: action.to, scope },
         { revealSecrets: flags.revealSecrets === true },
+        definitions.surfaces,
       ),
     );
     const text = prompts.join("\n---\n\n");
@@ -199,24 +221,22 @@ export async function surfaceSyncCommand(flags: SurfaceSyncFlags): Promise<void>
       await writeFile(resolve(flags.out), text, { mode: 0o600 });
       console.log(`\nWritten to ${resolve(flags.out)}`);
     }
+    // The store is opened before the inventory now (the definitions feed
+    // needs it), so every early return has to close it — the `finally` far
+    // below only covers the apply path.
+    await store?.close();
     return;
   }
 
   if (!flags.yes || flags.dryRun) {
     report(actions, flags, scope);
+    await store?.close();
     return;
   }
 
   // Confirmation gate: --yes is the CLI's explicit confirmation (AC-34).
   const applied: string[] = [];
   const failed: Array<{ cli: string; reason: string }> = [];
-  let store: SqliteStateStore | undefined;
-  try {
-    store = await SqliteStateStore.open(defaultStatePath());
-  } catch {
-    store = undefined; // Ledger is an index; losing it must not block a write.
-  }
-
   try {
     for (const action of actionable) {
       const stamp = timestamp();
@@ -253,7 +273,7 @@ export async function surfaceSyncCommand(flags: SurfaceSyncFlags): Promise<void>
           {
             fs,
             timestamp: stamp,
-            roots: { home: createHomeTransactionRoot(home, platform) },
+            roots: { home: createHomeTransactionRoot(home, platform, definitions.surfaces) },
           },
           applyOptions,
         );

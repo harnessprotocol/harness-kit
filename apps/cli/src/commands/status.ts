@@ -25,6 +25,7 @@ import type {
 } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
 import { defaultStatePath, SqliteStateStore } from "../state/sqlite-store.js";
+import { resolveDefinitions } from "../definitions/resolve-definitions.js";
 import { buildReconciliationContext, currentPlatform, summarizePlan } from "./portability-common.js";
 
 interface StatusFlags {
@@ -269,8 +270,25 @@ export async function statusCommand(flags: StatusFlags): Promise<void> {
     homeRoot: homedir(),
     platform: currentPlatform(),
   };
-  const observations = await observeAllSurfaces(projectFs, observeOpts);
-  const machine = computeMachineInventory(observations);
+  // AC-26: `status` is the FOURTH inventory entry point, and the last to be
+  // wired. While it was not, it read the compiled-in registry while `diff`
+  // and `sync` read a bundle's, so the three commands disagreed about the
+  // same machine — `status` called a resource absent that `diff` called
+  // present, in the same directory.
+  let definitionsStore: SqliteStateStore | undefined;
+  try {
+    definitionsStore = await SqliteStateStore.open(defaultStatePath());
+  } catch {
+    definitionsStore = undefined;
+  }
+  let surfaces;
+  try {
+    surfaces = (await resolveDefinitions(definitionsStore)).surfaces;
+  } finally {
+    await definitionsStore?.close();
+  }
+  const observations = await observeAllSurfaces(projectFs, observeOpts, [...surfaces]);
+  const machine = computeMachineInventory(observations, surfaces);
   const stateError = await recordSnapshot(observations, observeOpts);
   if (stateError) {
     console.error(
@@ -284,9 +302,11 @@ export async function statusCommand(flags: StatusFlags): Promise<void> {
         ...report,
         ...(reconciliation ? { reconciliation } : {}),
         machine,
-        recommendations: recommend(machine, {
-          baseline: flags.baseline === undefined ? null : await loadBaseline(flags.baseline),
-        }),
+        recommendations: recommend(
+          machine,
+          { baseline: flags.baseline === undefined ? null : await loadBaseline(flags.baseline) },
+          surfaces,
+        ),
       }),
     );
     return;
@@ -298,7 +318,7 @@ export async function statusCommand(flags: StatusFlags): Promise<void> {
   console.log("");
   console.log(formatMachineSection(machine));
   const baseline = flags.baseline === undefined ? null : await loadBaseline(flags.baseline);
-  const recommendations = recommend(machine, { baseline });
+  const recommendations = recommend(machine, { baseline }, surfaces);
   const section = formatRecommendations(recommendations);
   if (section.length > 0) console.log(section);
   if ((reconciliation as { blocked?: boolean } | undefined)?.blocked) {

@@ -40,6 +40,17 @@ const FAMILY_BY_ID: Record<string, string> = {
 // satisfy what Drift's module tree imports from core. `importOriginal` would
 // be tidier, but core pulls node builtins the jsdom environment cannot
 // resolve — the reason this mock is exhaustive in the first place.
+// The definitions feed is not what this file tests. Mocking it here rather
+// than adding its three core exports to the mock below keeps this test from
+// breaking every time the resolver reaches for something new in core.
+vi.mock("../../../lib/definitions.js", () => ({
+  resolveDesktopDefinitions: vi.fn(async () => ({
+    surfaces: [],
+    source: "snapshot" as const,
+    reason: "test",
+  })),
+}));
+
 vi.mock("@harness-kit/core", async () => ({
   buildMachineInventory: vi.fn(),
   getSurface: vi.fn((id: string) => ({
