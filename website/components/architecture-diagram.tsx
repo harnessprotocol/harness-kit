@@ -1,5 +1,5 @@
 // Architecture flow diagram — "How It Works" docs page.
-// Data sourced from apps/desktop/src/layouts/AppLayout.tsx (NAV_SECTIONS)
+// Data sourced from apps/desktop/src/nav.ts (NAV)
 // and apps/cli/src/index.ts. Keep in sync if sections change.
 
 const FONT = 'system-ui, -apple-system, sans-serif';
@@ -13,15 +13,19 @@ const BORDER_MID = 'rgba(255,255,255,0.14)';
 const MUTED = '#8b919e';
 const SUBTLE = '#4a5060';
 
-// Groups sourced from NAV_SECTIONS in AppLayout.tsx, plus the Settings button
-// pinned in the sidebar footer (rendered separately from NAV_SECTIONS, so it
-// isn't in the command palette). Security has a real route but no sidebar
-// entry at all — reached only via Preferences. The Agents page was removed
-// in the Phase 0 UX consolidation (unreachable, fed a Comparator form that
-// couldn't submit) — see docs/apps/agents.md.
+// Groups sourced from NAV in nav.ts, plus the Settings button pinned in the
+// sidebar footer (rendered separately from NAV, so it isn't in the command
+// palette). Comparator carries a `labs` flag and stays hidden until enabled
+// in Settings › Labs. Drift is a section embedded inside Machine, not a
+// destination of its own; Claude Code's "Usage" child is the old Observatory.
+// Security has no route or sidebar entry of its own anymore — Permissions
+// moved under Claude Code and Secrets/Activity moved under Settings; every
+// /security/* path now only redirects. The Agents page was removed in the
+// Phase 0 UX consolidation (unreachable, fed a Comparator form that couldn't
+// submit) — see docs/apps/agents.md.
 const desktopGroups = [
-  { label: 'WORKSPACE',      items: ['Machine', 'Fleet', 'Configure', 'Drift', 'Comparator', 'Observatory', 'Marketplace', 'Settings'] },
-  { label: 'ALSO REACHABLE', items: ['Security'] },
+  { label: 'WORKSPACE',     items: ['Machine', 'Profile', 'Claude Code', 'Marketplace', 'Settings'] },
+  { label: 'LABS (OPT-IN)', items: ['Comparator'] },
 ];
 
 // Commands sourced from apps/cli/src/index.ts

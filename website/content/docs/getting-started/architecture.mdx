@@ -56,27 +56,18 @@ The full schema also supports top-level skills, architecture constraints, policy
 
 ## Desktop App
 
-The desktop app is a management console organized into named sections. It reads your harness configuration, provides observability into what your AI tools are doing, and gives you direct control over the pieces that are hard to manage from a terminal.
+The desktop app is a management console with a single sidebar: Machine, Profile, Claude Code, and Marketplace, plus Settings pinned at the bottom. It reads your harness configuration, provides observability into what your AI tools are doing, and gives you direct control over the pieces that are hard to manage from a terminal.
 
-**CORE**
-
-- **Harness** — view and edit your harness.yaml, CLAUDE.md, plugins, MCP servers, and hooks in a structured UI
+- **Machine** — home; a cross-surface grid of every AI-harness resource detected on your machine (and, once you point it at a project directory, that project's resources too), with drift repair against harness.yaml embedded as a collapsible section below the grid
+- **Profile** — view, edit, and compile your harness.yaml
+- **Claude Code** — Instructions, MCP servers, Plugins, Hooks, Permissions, and Usage (session telemetry: every session, every tool call, token usage, timeline, trends) — all scoped to that one surface
 - **Marketplace** — browse and install plugins from the registry
-
-**INSIGHTS**
-
-- **Observatory** — session telemetry: every session, every tool call, token usage, timeline, trends
-
-**SYSTEM**
-
-- **Security** — permissions, secrets management, audit log
-
-**Standalone sections**
-
-- **Agents** — detection panel for AI coding agents installed on your machine
-- **Comparator** — run the same prompt across Claude Code, Cursor, and Copilot side by side
-- **Harness Parity** — after compiling, confirm the same plugins, MCP servers, and skills landed in each connected AI tool, and catch drift
+- **Settings** — preferences, secrets management, and the activity log live here as tabs; there's no separate top-level Security section
 - **Command Palette** — Cmd+K to navigate and operate the app
+
+**Labs (opt-in)**
+
+- **Comparator** — run the same prompt across Claude Code, Cursor, and Copilot side by side. Hidden from the sidebar and command palette until you turn it on in Settings › Labs.
 
 Memory (a persistent knowledge graph your agents can orient themselves in) is delivered as the `membrain` plugin over MCP, not a standalone desktop app section — see [Memory](/docs/concepts/memory).
 
