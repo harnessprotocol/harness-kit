@@ -145,7 +145,7 @@ No "Configure" group (retired — spec AC-3, design D5). No Fleet. No Drift or O
 
 `/fleet` and `/drift` (and the other retired routes: `/agents`, `/harness/settings`, `/security/*`) redirect to their consolidated destination and preserve any query parameter the destination reads (spec AC-6). `/machine?drift=1&harness=<id>` opens Machine's Drift section pre-filtered and scrolls it into view (spec AC-7).
 
-Two groups grow further capability in later phases without changing this shape: Machine's grid gains a persistent legend and clickable Gaps/Diffs filtering in P2 (spec AC-13, AC-14), and Profile gains "Share" and a team-baseline column in P3 (spec AC-25, AC-26). Neither is built yet — see the Machine contract in §6 and the Profile note there for what ships today.
+Two groups grow further capability in later phases without changing this shape: Machine's grid gains a persistent legend and clickable Gaps/Diffs filtering in P2 (spec AC-13, AC-14) and a team-baseline column in P3 (spec AC-26), and Profile gains "Share" in P3 (spec AC-25). Neither is built yet — see the Machine contract in §6 and the Profile note there for what ships today.
 
 Active nav item: `--accent-light` background + a 2.5px inset azure rail on the left (`--accent`), `font-weight:550`. Inactive: `--fg-muted`, hover → `--bg-elevated` + `--fg-base`.
 
