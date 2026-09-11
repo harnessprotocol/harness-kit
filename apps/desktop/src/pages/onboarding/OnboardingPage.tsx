@@ -46,9 +46,11 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
         // Scan the global config root first — importProject's synthesizer
         // merges every adapter fragment it finds under a single FsProvider
         // root, so the project dir (when tracked) is scanned as a second,
-        // separate pass and its findings are merged in below. This mirrors
-        // Machine's "Global + tracked project" scoping (DESIGN.md §6.3)
-        // rather than inventing a new convention for onboarding.
+        // separate pass and its findings are merged in below. The tracked
+        // project dir comes from lib/project-dir.ts (getCurrentProjectDir),
+        // the same store other consumers use. Machine still tracks its own
+        // page-local project dir and moves onto this store in a later phase
+        // (specs/ux-consolidation/design.md D9).
         const globalResult = await importMachine({ fs: new TauriFsProvider(home) });
 
         let combined = globalResult;
