@@ -18,6 +18,7 @@ import {
 } from "../lib/preferences";
 import { getTheme, setTheme } from "../lib/theme";
 import { Toggle } from "@harness-kit/ui";
+import FeedbackModal from "../components/FeedbackModal";
 
 // Security surfaces are re-homed under Settings (DESIGN.md §5) — lazy-loaded
 // so the General tab's bundle stays light. Permissions moved out to its own
@@ -133,7 +134,7 @@ function Segmented<T extends string | number | boolean>({
 
 // ── General tab (existing Preferences content) ──────────────────
 
-function GeneralTab() {
+function GeneralTab({ onOpenFeedback }: { onOpenFeedback: () => void }) {
   const [appVersion, setAppVersion] = useState("0.0.0");
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null);
   const [updateChecking, setUpdateChecking] = useState(false);
@@ -355,6 +356,26 @@ function GeneralTab() {
             value={confirmSave}
             onChange={handleSetConfirmSave}
           />
+        </SettingRow>
+
+        <SettingRow
+          label="Send feedback"
+          description="Report a bug or share an idea"
+        >
+          <button
+            onClick={onOpenFeedback}
+            style={{
+              padding: "6px 14px",
+              borderRadius: "6px",
+              border: "1px solid var(--border-base)",
+              background: "transparent",
+              color: "var(--fg-muted)",
+              fontSize: "12px",
+              cursor: "pointer",
+            }}
+          >
+            Send Feedback
+          </button>
         </SettingRow>
       </div>
 
@@ -626,6 +647,7 @@ export default function PreferencesPage() {
   const navigate = useNavigate();
   const { tab: tabParam } = useParams<{ tab?: string }>();
   const activeTab: SettingsTab = (tabParam && TAB_BY_PARAM[tabParam]) || "general";
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   function handleTabChange(tab: SettingsTab) {
     navigate(tab === "general" ? "/preferences" : `/preferences/${tab}`);
@@ -636,12 +658,13 @@ export default function PreferencesPage() {
       <SettingsTabBar active={activeTab} onChange={handleTabChange} />
       <div style={{ flex: 1, overflowY: "auto" }}>
         <Suspense fallback={<div style={{ padding: "20px 24px", fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</div>}>
-          {activeTab === "general" && <GeneralTab />}
+          {activeTab === "general" && <GeneralTab onOpenFeedback={() => setFeedbackOpen(true)} />}
           {activeTab === "secrets" && <SecretsPage />}
           {activeTab === "activity" && <ActivityTabLazy />}
           {activeTab === "labs" && <LabsTab />}
         </Suspense>
       </div>
+      <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
     </div>
   );
 }
