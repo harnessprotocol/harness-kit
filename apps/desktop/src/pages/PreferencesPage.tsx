@@ -8,7 +8,7 @@ import {
   getFontSize, setFontSize, FONT_SIZE_MIN, FONT_SIZE_MAX,
   getDensity, setDensity,
   getDefaultSection, setDefaultSection,
-  getLabs,
+  getLabs, setLab,
   getMarkdownFont, setMarkdownFont,
   getConfirmSave, setConfirmSave,
   getConfigFilesDetailLevel, setConfigFilesDetailLevel,
@@ -17,6 +17,7 @@ import {
   type ConfigFilesDetailLevel,
 } from "../lib/preferences";
 import { getTheme, setTheme } from "../lib/theme";
+import { Toggle } from "@harness-kit/ui";
 
 // Security surfaces are re-homed under Settings (DESIGN.md §5) — lazy-loaded
 // so the General tab's bundle stays light. Permissions moved out to its own
@@ -527,6 +528,50 @@ function GeneralTab() {
   );
 }
 
+// ── Labs tab ─────────────────────────────────────────────────
+
+function LabsTab() {
+  const [labs, setLabsState] = useState(getLabs);
+
+  return (
+    <div style={{ padding: "20px 24px", maxWidth: "640px" }}>
+      <div style={{ marginBottom: "24px" }}>
+        <h1 style={{
+          fontSize: "17px",
+          fontWeight: 600,
+          letterSpacing: "-0.3px",
+          color: "var(--fg-base)",
+          margin: 0,
+        }}>
+          Labs
+        </h1>
+        <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>
+          Experimental features, off by default
+        </p>
+      </div>
+
+      <div>
+        <SectionHeader>Labs</SectionHeader>
+
+        <SettingRow
+          label="Comparator"
+          description="Results and voting only. In-app execution is unavailable in this build."
+        >
+          <Toggle
+            id="lab-comparator"
+            checked={labs.comparator}
+            aria-label="Comparator"
+            onChange={(on) => {
+              setLab("comparator", on);
+              setLabsState(getLabs());
+            }}
+          />
+        </SettingRow>
+      </div>
+    </div>
+  );
+}
+
 // ── Settings shell (tab bar + General/Permissions/Secrets/Audit Log) ────
 // Security surfaces re-home here per DESIGN.md §5 — folded under Settings,
 // removed from top-level nav. Routes under /security/* still render these
@@ -594,8 +639,7 @@ export default function PreferencesPage() {
           {activeTab === "secrets" && <SecretsPage />}
           {/* Placeholder — real content lands in Task 1.7 (ActivityTab) */}
           {activeTab === "activity" && <div style={{ padding: "20px 24px", fontSize: "13px", color: "var(--fg-muted)" }}>Activity</div>}
-          {/* Placeholder — real content lands in Task 1.5 (LabsTab) */}
-          {activeTab === "labs" && <div style={{ padding: "20px 24px", fontSize: "13px", color: "var(--fg-muted)" }}>Labs</div>}
+          {activeTab === "labs" && <LabsTab />}
         </Suspense>
       </div>
     </div>

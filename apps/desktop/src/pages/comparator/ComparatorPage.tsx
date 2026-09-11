@@ -5,7 +5,6 @@ import { invoke } from "@tauri-apps/api/core";
 import { Button, EmptyState } from "@harness-kit/ui";
 import { useComparator } from "../../hooks/useComparator";
 import SetupPhase from "./SetupPhase";
-import ExecutionPhase from "./ExecutionPhase";
 import ResultsPhase from "./ResultsPhase";
 import JudgePhase from "./JudgePhase";
 import RecommendationsPanel, { TaskTypeSelector } from "../../components/comparator/RecommendationsPanel";
@@ -41,11 +40,13 @@ const tokens = {
 
 // ── Phase stepper config ────────────────────────────────────
 
+// The Execution step is intentionally absent: live in-app execution isn't
+// available in this build, and startComparison/loadComparison/endSession
+// never set phase to "execution" — the stepper only shows reachable phases.
 const PHASES: { key: ComparisonPhase; label: string; step: number }[] = [
   { key: "setup", label: "Setup", step: 1 },
-  { key: "execution", label: "Execution", step: 2 },
-  { key: "results", label: "Results", step: 3 },
-  { key: "judge", label: "Judge", step: 4 },
+  { key: "results", label: "Results", step: 2 },
+  { key: "judge", label: "Judge", step: 3 },
 ];
 
 const PHASE_INDEX: Record<ComparisonPhase, number> = {
@@ -488,9 +489,8 @@ function SessionCard({
 
 function PhasePlaceholder({ phase }: { phase: ComparisonPhase }) {
   const labels: Record<string, string> = {
-    execution: "Run a comparison from Setup to see live execution output here.",
     results: "Complete an execution to review file diffs and output side-by-side.",
-    judge: "Complete an execution to score harnesses across evaluation dimensions.",
+    judge: "Pick a comparison with results to score it.",
   };
   return (
     <div
@@ -586,7 +586,6 @@ export default function ComparatorPage() {
     loadComparison,
     deleteSession,
     endSession,
-    updateTitle,
   } = useComparator();
 
   // ── Resizable rail ───────────────────────────────────────────
@@ -715,16 +714,6 @@ export default function ComparatorPage() {
             <SetupPhase onStart={handleStart} />
           </div>
         );
-      case "execution":
-        return active ? (
-          <ExecutionPhase
-            active={active}
-            onEndSession={endSession}
-            onUpdateTitle={updateTitle}
-          />
-        ) : (
-          <PhasePlaceholder phase="execution" />
-        );
       case "results":
         return active ? (
           <ResultsPhase active={active} onStartJudge={() => setPhase("judge")} />
@@ -777,8 +766,8 @@ export default function ComparatorPage() {
                   <path d="M12 3v18" />
                 </svg>
               }
-              title="No sessions yet"
-              description="Click New Comparison to start."
+              title="No comparisons recorded"
+              description="In-app execution is unavailable in this build. Existing results can still be reviewed and voted on."
             />
           ) : (
             sessions.map((session) => (
