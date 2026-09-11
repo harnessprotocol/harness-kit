@@ -22,9 +22,10 @@ import { Toggle } from "@harness-kit/ui";
 // Security surfaces are re-homed under Settings (DESIGN.md §5) — lazy-loaded
 // so the General tab's bundle stays light. Permissions moved out to its own
 // page at /harness/permissions (AC-10) and is no longer a Settings tab.
-// Audit Log is retired in favor of an Activity tab (Task 1.7 builds its
-// real content; this task renders a placeholder — see below).
+// Audit Log is retired in favor of the Activity tab (AC-11, Task 1.7),
+// which also renders the portability reconciliation ledger.
 const SecretsPage = lazy(() => import("./security/SecretsPage"));
+const ActivityTabLazy = lazy(() => import("./settings/ActivityTab").then((m) => ({ default: m.ActivityTab })));
 
 type SettingsTab = "general" | "secrets" | "activity" | "labs";
 
@@ -637,8 +638,7 @@ export default function PreferencesPage() {
         <Suspense fallback={<div style={{ padding: "20px 24px", fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</div>}>
           {activeTab === "general" && <GeneralTab />}
           {activeTab === "secrets" && <SecretsPage />}
-          {/* Placeholder — real content lands in Task 1.7 (ActivityTab) */}
-          {activeTab === "activity" && <div style={{ padding: "20px 24px", fontSize: "13px", color: "var(--fg-muted)" }}>Activity</div>}
+          {activeTab === "activity" && <ActivityTabLazy />}
           {activeTab === "labs" && <LabsTab />}
         </Suspense>
       </div>
