@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { X } from "lucide-react";
 import {
   AreaChart, Area,
@@ -704,8 +705,11 @@ export default function DashboardPage() {
       <div style={{ padding: "20px 24px" }}>
         <div style={{ marginBottom: "16px" }}>
           <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
-            Observatory
+            Usage
           </h1>
+          <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>
+            Claude Code usage on this machine
+          </p>
         </div>
         <div style={{
           background: "var(--bg-surface)",
@@ -737,16 +741,34 @@ export default function DashboardPage() {
           : ""}
       </span>
       {/* Header */}
-      <div style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
-        <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
-          Observatory
-        </h1>
-        {effectiveLastUpdated && (
-          <span style={{ fontSize: "10px", color: "var(--fg-subtle)", marginTop: "1px" }}>
-            last updated {effectiveLastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-          </span>
-        )}
-        <div style={{ marginLeft: "auto" }}>
+      <div style={{ marginBottom: "16px", display: "flex", alignItems: "flex-start", gap: "10px" }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
+              Usage
+            </h1>
+            {effectiveLastUpdated && (
+              <span style={{ fontSize: "10px", color: "var(--fg-subtle)", marginTop: "1px" }}>
+                last updated {effectiveLastUpdated.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </span>
+            )}
+          </div>
+          <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>
+            Claude Code usage on this machine
+          </p>
+        </div>
+        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "10px" }}>
+          <Link
+            to="/observatory/sessions"
+            style={{
+              fontSize: "11px",
+              fontWeight: 500,
+              color: "var(--fg-muted)",
+              textDecoration: "none",
+            }}
+          >
+            Sessions →
+          </Link>
           <button
             onClick={refresh}
             disabled={isRefreshing}

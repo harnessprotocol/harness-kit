@@ -874,7 +874,7 @@ export default function PermissionsPage() {
           Permissions
         </h1>
         <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: 0 }}>
-          Control how much autonomy Claude and other harnesses have when running tasks.
+          Control how much autonomy Claude Code has when running tasks, with per-harness overrides below.
         </p>
       </div>
 

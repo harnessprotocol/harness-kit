@@ -113,7 +113,7 @@ export function DriftView({
         <EmptyState
           icon={<ShieldCheck size={28} strokeWidth={1.5} />}
           title="No drift detected"
-          description="Every deployed config matches harness.yaml across Global and this project. Recompile from Fleet after you next edit harness.yaml to keep it that way."
+          description="Every deployed config matches harness.yaml across Global and this project. Compile from Profile after you next edit harness.yaml to keep it that way."
           action={
             <Button variant="ghost" onClick={onRescan}>
               Re-scan

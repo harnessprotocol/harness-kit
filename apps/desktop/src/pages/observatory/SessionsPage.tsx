@@ -334,7 +334,7 @@ export default function SessionsPage() {
       {/* Header */}
       <div style={{ marginBottom: "16px" }}>
         <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
-          Sessions
+          Sessions · Claude Code
         </h1>
         {!loading && !error && (
           <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>

@@ -52,18 +52,23 @@ test.describe("Navigation smoke tests", () => {
   });
 
   test("Security permissions page renders", async ({ appPage }) => {
-    await appPage.goto("/security/permissions");
+    await appPage.goto("/harness/permissions");
     await appPage.waitForLoadState("networkidle");
     const text = await appPage.locator("body").textContent();
     expect(text).not.toContain("command not found");
   });
 
-  test("Fleet page renders without error", async ({ appPage }) => {
+  test("/fleet redirects to Machine", async ({ appPage }) => {
     await appPage.goto("/fleet");
     await appPage.waitForLoadState("networkidle");
-    const text = await appPage.locator("body").textContent();
-    expect(text).not.toContain("command not found");
-    expect(text).not.toContain("Mock: no response");
+    expect(appPage.url()).toContain("/machine");
+  });
+
+  test("/security/permissions lands under Claude Code", async ({ appPage }) => {
+    await appPage.goto("/security/permissions");
+    await appPage.waitForLoadState("networkidle");
+    expect(appPage.url()).toContain("/harness/permissions");
+    await expect(appPage.getByRole("heading", { name: "Permissions" })).toBeVisible();
   });
 
   // AC-37: /drift redirects into the Machine view's Drift section.
@@ -96,15 +101,6 @@ test.describe("Harness File page — content validation", () => {
       (e) => !e.includes("favicon") && !e.includes("ResizeObserver")
     );
     expect(fatal).toHaveLength(0);
-  });
-});
-
-test.describe("Fleet page — content validation", () => {
-  test("shows page title and Recompile all action", async ({ appPage }) => {
-    await appPage.goto("/fleet");
-    await appPage.waitForLoadState("networkidle");
-    await expect(appPage.getByRole("heading", { name: "Fleet" })).toBeVisible();
-    await expect(appPage.getByRole("button", { name: /recompile all/i })).toBeVisible();
   });
 });
 

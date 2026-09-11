@@ -1,140 +1,33 @@
 import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { open } from "@tauri-apps/plugin-shell";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { NavGroupLabel, NavItem } from "@harness-kit/ui";
+import { NavItem } from "@harness-kit/ui";
 import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
 import { useArrowNavigation } from "../hooks/useArrowNavigation";
 import { useSidebarResize } from "../hooks/useSidebarResize";
 import { initTheme } from "../lib/theme";
-import { initPreferences, getHiddenSections } from "../lib/preferences";
+import { initPreferences, getLabs } from "../lib/preferences";
 import { CommandPalette } from "../components/CommandPalette";
-import FeedbackModal from "../components/FeedbackModal";
 import { useClaudeFileList } from "../hooks/useClaudeFileList";
 import { PageBoundary } from "../components/PageBoundary";
-
-type NavSection = {
-  id: string;
-  label: string;
-  path: string;
-  icon?: React.ReactNode;
-  group?: string;
-  children?: { label: string; path: string }[];
-};
-
-export const NAV_SECTIONS: NavSection[] = [
-  {
-    id: "machine",
-    label: "Machine",
-    group: "WORKSPACE",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
-        <path fillRule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.123.489.804.804A1 1 0 0113 18H7a1 1 0 01-.707-1.707l.804-.804L7.22 15H5a2 2 0 01-2-2V5zm5.771 7H5V5h10v7H8.771z" clipRule="evenodd" />
-      </svg>
-    ),
-    path: "/machine",
-  },
-  {
-    id: "fleet",
-    label: "Fleet",
-    group: "WORKSPACE",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
-        <path d="M4 4a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V4zM4 14a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 4a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V4zM14 14a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
-      </svg>
-    ),
-    path: "/fleet",
-  },
-  {
-    id: "harness",
-    label: "Configure",
-    group: "WORKSPACE",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
-        <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-      </svg>
-    ),
-    path: "/harness/file",
-    children: [
-      { label: "harness.yaml", path: "/harness/file" },
-      { label: "CLAUDE.md", path: "/harness/claude-md" },
-      { label: "Plugins", path: "/harness/plugins" },
-      { label: "MCP Servers", path: "/harness/mcp" },
-      { label: "Hooks", path: "/harness/hooks" },
-    ],
-  },
-  {
-    id: "drift",
-    label: "Drift",
-    group: "WORKSPACE",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
-        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-        <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-      </svg>
-    ),
-    // AC-37: Drift is a section of the Machine view now. Pointing straight at
-    // the section (rather than at /drift, which redirects here anyway) keeps
-    // the sidebar honest about where the user lands.
-    path: "/machine?drift=1",
-  },
-  {
-    id: "comparator",
-    label: "Comparator",
-    group: "WORKSPACE",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
-        <path d="M3 4a1 1 0 000 2h11.586l-2.293 2.293a1 1 0 001.414 1.414l4-4a1 1 0 000-1.414l-4-4a1 1 0 10-1.414 1.414L14.586 4H3zM17 16a1 1 0 000-2H5.414l2.293-2.293a1 1 0 00-1.414-1.414l-4 4a1 1 0 000 1.414l4 4a1 1 0 001.414-1.414L5.414 16H17z" />
-      </svg>
-    ),
-    path: "/comparator",
-    children: [],
-  },
-  {
-    id: "observatory",
-    label: "Observatory",
-    group: "WORKSPACE",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
-        <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-      </svg>
-    ),
-    path: "/observatory",
-    children: [
-      { label: "Dashboard", path: "/observatory" },
-      { label: "Sessions", path: "/observatory/sessions" },
-    ],
-  },
-  {
-    id: "marketplace",
-    label: "Marketplace",
-    group: "WORKSPACE",
-    icon: (
-      <svg width="15" height="15" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.7, flexShrink: 0 }}>
-        <path d="M3 1a1 1 0 000 2h1.22l.305 1.222a.997.997 0 00.01.042l1.358 5.43-.893.892C3.74 11.846 4.632 14 6.414 14H15a1 1 0 000-2H6.414l1-1H14a1 1 0 00.894-.553l3-6A1 1 0 0017 3H6.28l-.31-1.243A1 1 0 005 1H3zM16 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM6.5 18a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" />
-      </svg>
-    ),
-    path: "/marketplace",
-  },
-];
+import { NAV, SETTINGS, visibleNav, type NavEntry } from "../nav";
 
 // Files with dedicated nav items — excluded from the Config Files tree
 const DEDICATED_NAV_FILES = new Set(["harness.yaml", "CLAUDE.md"]);
 
-function HarnessSubnav({ configFiles }: { configFiles: string[] }) {
+/**
+ * Renders a nav entry's static children plus, for Claude Code, the dynamic
+ * "Config Files" list sourced from useClaudeFileList (everything under
+ * ~/.claude/ that doesn't already have a dedicated child link above).
+ */
+function NavChildren({ entry, configFiles }: { entry: NavEntry; configFiles: string[] }) {
   const navigate = useNavigate();
   const [configExpanded, setConfigExpanded] = useState(true);
-  const staticItems = [
-    { label: "harness.yaml", path: "/harness/file" },
-    { label: "CLAUDE.md", path: "/harness/claude-md" },
-    { label: "Plugins", path: "/harness/plugins" },
-    { label: "MCP Servers", path: "/harness/mcp" },
-    { label: "Hooks", path: "/harness/hooks" },
-  ];
-  const visibleConfigFiles = configFiles.filter((f) => !DEDICATED_NAV_FILES.has(f));
-  const syncItem = { label: "Sync", path: "/harness/sync" };
+  const staticItems = entry.children ?? [];
+  const showDynamicFiles = entry.id === "claude-code";
+  const visibleConfigFiles = showDynamicFiles ? configFiles.filter((f) => !DEDICATED_NAV_FILES.has(f)) : [];
   const allItems = [
-    syncItem,
     ...staticItems,
     ...(configExpanded ? visibleConfigFiles.map((f) => ({ label: f, path: `/harness/config/${encodeURIComponent(f)}` })) : []),
   ];
@@ -145,38 +38,21 @@ function HarnessSubnav({ configFiles }: { configFiles: string[] }) {
 
   return (
     <div className="mt-0.5 mb-1" tabIndex={0} onKeyDown={onKeyDown} style={{ outline: "none" }}>
-      {/* Sync — action at top, separated from files below */}
-      <NavLink
-        to="/harness/sync"
-        className={({ isActive }) => `sidebar-subitem${isActive ? " active" : ""}`}
-        style={{
-          display: "flex", alignItems: "center", gap: "5px",
-          ...(focusedIndex === 0 ? { outline: "2px solid var(--accent)", outlineOffset: "-2px", borderRadius: "5px" } : {}),
-        }}
-      >
-        <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style={{ opacity: 0.6, flexShrink: 0 }}>
-          <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
-        </svg>
-        Sync
-      </NavLink>
-
-      <div style={{ margin: "4px 8px 4px", borderTop: "1px solid var(--separator)" }} />
-
-      {/* Static file items */}
+      {/* Static children */}
       {staticItems.map((item, idx) => (
         <NavLink
           key={item.path}
           to={item.path}
           end={item.path === "/harness/plugins" ? false : undefined}
           className={({ isActive }) => `sidebar-subitem${isActive ? " active" : ""}`}
-          style={focusedIndex === idx + 1 ? { outline: "2px solid var(--accent)", outlineOffset: "-2px", borderRadius: "5px" } : undefined}
+          style={focusedIndex === idx ? { outline: "2px solid var(--accent)", outlineOffset: "-2px", borderRadius: "5px" } : undefined}
         >
           {item.label}
         </NavLink>
       ))}
 
-      {/* Config Files section header — collapsible */}
-      {visibleConfigFiles.length > 0 && (
+      {/* Config Files section header — collapsible, Claude Code only */}
+      {showDynamicFiles && visibleConfigFiles.length > 0 && (
         <button
           onClick={() => setConfigExpanded((v) => !v)}
           style={{
@@ -209,9 +85,9 @@ function HarnessSubnav({ configFiles }: { configFiles: string[] }) {
       )}
 
       {/* Dynamic file items */}
-      {configExpanded && visibleConfigFiles.map((file, idx) => {
+      {showDynamicFiles && configExpanded && visibleConfigFiles.map((file, idx) => {
         const path = `/harness/config/${encodeURIComponent(file)}`;
-        const itemIdx = 1 + staticItems.length + idx;
+        const itemIdx = staticItems.length + idx;
         return (
           <NavLink
             key={file}
@@ -230,43 +106,21 @@ function HarnessSubnav({ configFiles }: { configFiles: string[] }) {
   );
 }
 
-function SidebarSubnav({ children }: { children: { label: string; path: string }[] }) {
-  const navigate = useNavigate();
-  const { focusedIndex, onKeyDown } = useArrowNavigation({
-    count: children.length,
-    onActivate: (i) => navigate(children[i].path),
-  });
-
-  return (
-    <div className="mt-0.5 mb-1" tabIndex={0} onKeyDown={onKeyDown} style={{ outline: "none" }}>
-      {children.map((child, idx) => (
-        <NavLink
-          key={child.path}
-          to={child.path}
-          end={child.path === "/harness/plugins" ? false : undefined}
-          className={({ isActive: childActive }) =>
-            `sidebar-subitem${childActive ? " active" : ""}`
-          }
-          style={focusedIndex === idx ? { outline: "2px solid var(--accent)", outlineOffset: "-2px", borderRadius: "5px" } : undefined}
-        >
-          {child.label}
-        </NavLink>
-      ))}
-    </div>
-  );
-}
-
 /**
  * Whether a nav entry is the one the user is on.
  *
  * Compares against the entry's own PATH, not against `/<id>`. Drift's
- * destination became `/machine?drift=1` when Drift moved into the Machine
- * view (AC-37), so an id-based match could never light it up — the item the
- * user had just clicked went dark while Machine lit up instead.
+ * destination is `/machine?drift=1` (a query-qualified entry can share a
+ * pathname with a plain sibling), so an id-based match could never work for
+ * it — the item the user had just clicked would go dark while Machine lit
+ * up instead.
  *
  * Two entries can share a pathname and be told apart by a query marker, so
  * the marker is checked in BOTH directions: present selects the qualified
- * entry, absent selects the plain one.
+ * entry, absent selects the plain one. No current NAV entry carries a query
+ * marker, but the command palette's "Open Drift" command points at
+ * /machine?drift=1, so this stays generic rather than assuming query-free
+ * paths forever.
  */
 export function isSectionActive(
   section: { path: string },
@@ -278,7 +132,7 @@ export function isSectionActive(
   const marker = sectionQuery?.split("=")[0];
   if (marker !== undefined) return params.get(marker) !== null;
   // A plain entry loses to a query-qualified sibling on the same pathname.
-  return !NAV_SECTIONS.some((candidate) => {
+  return !NAV.some((candidate) => {
     const [candidatePath, candidateQuery] = candidate.path.split("?");
     if (candidateQuery === undefined || candidatePath !== sectionPath) return false;
     return params.get(candidateQuery.split("=")[0]) !== null;
@@ -301,23 +155,11 @@ export default function AppLayout() {
     });
   }, []);
 
-  const [harnessExpanded, setHarnessExpanded] = useState(
-    () => location.pathname.startsWith("/harness")
-  );
-  // Auto-expand when navigating into harness from another section
-  const prevPathRef = useRef(location.pathname);
-  useEffect(() => {
-    const wasHarness = prevPathRef.current.startsWith("/harness");
-    const isHarness = location.pathname.startsWith("/harness");
-    if (!wasHarness && isHarness) setHarnessExpanded(true);
-    prevPathRef.current = location.pathname;
-  }, [location.pathname]);
-
   useGlobalShortcuts({ navigate, toggleSidebar });
   const { onMouseDown: onResizeMouseDown } = useSidebarResize();
   const { files: configFiles } = useClaudeFileList();
 
-  const [hiddenSections, setHiddenSectionsState] = useState(getHiddenSections);
+  const [labs, setLabs] = useState(getLabs);
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   useEffect(() => {
@@ -327,7 +169,7 @@ export default function AppLayout() {
 
   useEffect(() => {
     function onPrefsChanged() {
-      setHiddenSectionsState(getHiddenSections());
+      setLabs(getLabs());
     }
     window.addEventListener("harness-kit-prefs-changed", onPrefsChanged);
     return () => window.removeEventListener("harness-kit-prefs-changed", onPrefsChanged);
@@ -345,13 +187,12 @@ export default function AppLayout() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  const visibleSections = NAV_SECTIONS.filter((s) => !hiddenSections.has(s.id));
+  const entries = visibleNav(labs);
 
-  const prefsActive = location.pathname.startsWith("/preferences");
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const prefsActive = location.pathname.startsWith(SETTINGS.path);
 
-  function isActive(section: NavSection) {
-    return isSectionActive(section, location);
+  function isActive(entry: NavEntry) {
+    return isSectionActive(entry, location);
   }
 
   function handleTitlebarMouseDown(e: React.MouseEvent) {
@@ -456,83 +297,43 @@ export default function AppLayout() {
                   <circle cx="22" cy="16" r="3.3" fill="#6BC0F5" />
                 </svg>
                 <span style={{ fontSize: "13px", fontWeight: 600, letterSpacing: "-0.1px", color: "var(--fg-base)" }}>
-                  harness-kit
+                  Harness Kit
                 </span>
               </div>
             </div>
 
-            {/* Nav */}
+            {/* Nav — one flat list, no group header (spec AC-4: single navigation declaration) */}
             <nav className="flex-1 py-2 px-2">
-              {visibleSections.map((section, idx) => {
-                const active = isActive(section);
-                const sectionIndex = NAV_SECTIONS.indexOf(section);
-                const shortcutNum = sectionIndex >= 0 && sectionIndex < 8 ? sectionIndex + 1 : null;
-                // Show group header when group changes
-                const prevSection = idx > 0 ? visibleSections[idx - 1] : null;
-                const showGroupHeader = section.group && section.group !== prevSection?.group;
+              {entries.map((entry) => {
+                const active = isActive(entry);
+                const Icon = entry.icon;
                 return (
-                  <div key={section.id}>
-                    {showGroupHeader && (
-                      <NavGroupLabel>{section.group}</NavGroupLabel>
-                    )}
-                    <div className="mb-0.5">
-                      {section.id === "harness" ? (
-                        <NavItem
-                          active={active}
-                          icon={section.icon}
-                          badge={
-                            <svg
-                              width="10"
-                              height="10"
-                              viewBox="0 0 16 16"
-                              fill="currentColor"
-                              style={{ transform: harnessExpanded ? "rotate(0deg)" : "rotate(-90deg)", transition: "transform 0.15s ease", flexShrink: 0, opacity: 0.6 }}
-                            >
-                              <path d="M8 10.5L2.5 5h11L8 10.5z" />
-                            </svg>
-                          }
-                          onClick={() => {
-                            if (!active) {
-                              navigate(section.path);
-                              setHarnessExpanded(true);
-                            } else {
-                              setHarnessExpanded((v) => !v);
-                            }
-                          }}
-                        >
-                          {section.label}
-                        </NavItem>
-                      ) : (
-                        <NavItem
-                          active={active}
-                          icon={section.icon}
-                          onClick={() => navigate(section.path)}
-                          badge={
-                            shortcutNum && !sidebarCollapsed ? (
-                              <span
-                                style={{
-                                  fontSize: 10,
-                                  fontFamily: 'ui-monospace, monospace',
-                                  color: 'var(--fg-subtle)',
-                                  flexShrink: 0,
-                                }}
-                              >
-                                {'\u2318'}{shortcutNum}
-                              </span>
-                            ) : undefined
-                          }
-                        >
-                          {section.label}
-                        </NavItem>
-                      )}
+                  <div key={entry.id} className="mb-0.5">
+                    <NavItem
+                      active={active}
+                      icon={<Icon size={15} strokeWidth={1.7} />}
+                      onClick={() => navigate(entry.path)}
+                      badge={
+                        entry.shortcut && !sidebarCollapsed ? (
+                          <span
+                            style={{
+                              fontSize: 10,
+                              fontFamily: 'ui-monospace, monospace',
+                              color: 'var(--fg-subtle)',
+                              flexShrink: 0,
+                            }}
+                          >
+                            {'⌘'}{entry.shortcut}
+                          </span>
+                        ) : undefined
+                      }
+                    >
+                      {entry.label}
+                    </NavItem>
 
-                      {active && section.id === "harness" && harnessExpanded && (
-                        <HarnessSubnav configFiles={configFiles} />
-                      )}
-                      {active && section.children && section.children.length > 0 && section.id !== "harness" && (
-                        <SidebarSubnav children={section.children} />
-                      )}
-                    </div>
+                    {active && entry.children && entry.children.length > 0 && (
+                      <NavChildren entry={entry} configFiles={configFiles} />
+                    )}
                   </div>
                 );
               })}
@@ -566,38 +367,15 @@ export default function AppLayout() {
                   <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
                 </svg>
               </button>
-
-              <button
-                onClick={() => setFeedbackOpen(true)}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                  width: "100%",
-                  padding: "6px 8px",
-                  borderRadius: "6px",
-                  border: "none",
-                  background: "transparent",
-                  color: "var(--fg-subtle)",
-                  cursor: "pointer",
-                  fontSize: "11px",
-                  textAlign: "left",
-                }}
-              >
-                <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.434 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zm-4 0H9v2h2V9z" clipRule="evenodd" />
-                </svg>
-                Feedback
-              </button>
             </div>
 
-            {/* Bottom bar: gear button */}
+            {/* Bottom bar: Settings */}
             <div
               className="px-2 py-2"
               style={{ borderTop: "1px solid var(--separator)" }}
             >
               <button
-                onClick={() => navigate("/preferences")}
+                onClick={() => navigate(SETTINGS.path)}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -613,10 +391,8 @@ export default function AppLayout() {
                   textAlign: "left",
                 }}
               >
-                <svg width="13" height="13" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
-                </svg>
-                Settings
+                <SETTINGS.icon size={13} strokeWidth={1.7} />
+                {SETTINGS.label}
               </button>
             </div>
           </aside>
@@ -646,8 +422,7 @@ export default function AppLayout() {
         </main>
       </div>
 
-      <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
-      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} sections={NAV_SECTIONS} />
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} sections={entries} />
     </div>
   );
 }

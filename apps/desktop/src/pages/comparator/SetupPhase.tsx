@@ -611,7 +611,7 @@ export default function SetupPhase({ onStart }: SetupPhaseProps) {
               <line x1="8" y1="7" x2="8" y2="10" />
               <line x1="8" y1="12" x2="8.01" y2="12" />
             </svg>
-            Live in-app execution isn&apos;t available in this build — set up comparisons and record results manually.
+            Live in-app execution isn&apos;t available in this build. Comparisons can be reviewed but not started.
           </div>
         )}
 

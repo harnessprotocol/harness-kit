@@ -104,7 +104,7 @@ describe("SyncPage", () => {
     renderPage();
 
     await waitFor(() => {
-      expect(screen.getByText(/Sync/i)).toBeInTheDocument();
+      expect(screen.getByText(/Compile to project/i)).toBeInTheDocument();
     });
   });
 

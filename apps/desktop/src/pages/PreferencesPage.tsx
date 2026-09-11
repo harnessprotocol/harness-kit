@@ -3,12 +3,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import { open } from "@tauri-apps/plugin-shell";
 import { getVersion } from "@tauri-apps/api/app";
 import { invoke } from "@tauri-apps/api/core";
-import { NAV_SECTIONS } from "../layouts/AppLayout";
+import { visibleNav } from "../nav";
 import {
   getFontSize, setFontSize, FONT_SIZE_MIN, FONT_SIZE_MAX,
   getDensity, setDensity,
   getDefaultSection, setDefaultSection,
-  getHiddenSections, setHiddenSections,
+  getLabs, setLab,
   getMarkdownFont, setMarkdownFont,
   getConfirmSave, setConfirmSave,
   getConfigFilesDetailLevel, setConfigFilesDetailLevel,
@@ -17,21 +17,24 @@ import {
   type ConfigFilesDetailLevel,
 } from "../lib/preferences";
 import { getTheme, setTheme } from "../lib/theme";
+import { Toggle } from "@harness-kit/ui";
+import FeedbackModal from "../components/FeedbackModal";
 
 // Security surfaces are re-homed under Settings (DESIGN.md §5) — lazy-loaded
-// so the General tab's bundle stays light. Routes under /security/* still
-// render these pages directly; the Settings tabs are the primary entry.
-const PermissionsPage = lazy(() => import("./security/PermissionsPage"));
+// so the General tab's bundle stays light. Permissions moved out to its own
+// page at /harness/permissions (AC-10) and is no longer a Settings tab.
+// Audit Log is retired in favor of the Activity tab (AC-11, Task 1.7),
+// which also renders the portability reconciliation ledger.
 const SecretsPage = lazy(() => import("./security/SecretsPage"));
-const AuditLogPage = lazy(() => import("./security/AuditLogPage"));
+const ActivityTabLazy = lazy(() => import("./settings/ActivityTab").then((m) => ({ default: m.ActivityTab })));
 
-type SettingsTab = "general" | "permissions" | "secrets" | "audit";
+type SettingsTab = "general" | "secrets" | "activity" | "labs";
 
 const TABS: { id: SettingsTab; label: string }[] = [
   { id: "general", label: "General" },
-  { id: "permissions", label: "Permissions" },
   { id: "secrets", label: "Secrets" },
-  { id: "audit", label: "Audit Log" },
+  { id: "activity", label: "Activity" },
+  { id: "labs", label: "Labs" },
 ];
 
 interface UpdateStatus {
@@ -131,7 +134,7 @@ function Segmented<T extends string | number | boolean>({
 
 // ── General tab (existing Preferences content) ──────────────────
 
-function GeneralTab() {
+function GeneralTab({ onOpenFeedback }: { onOpenFeedback: () => void }) {
   const [appVersion, setAppVersion] = useState("0.0.0");
   const [updateStatus, setUpdateStatus] = useState<UpdateStatus | null>(null);
   const [updateChecking, setUpdateChecking] = useState(false);
@@ -154,7 +157,6 @@ function GeneralTab() {
   const [fontSize, setFontSizeState] = useState(getFontSize);
   const [density, setDensityState] = useState(getDensity);
   const [defaultSection, setDefaultSectionState] = useState(getDefaultSection);
-  const [hiddenSections, setHiddenSectionsState] = useState(getHiddenSections);
   const [markdownFont, setMarkdownFontState] = useState(getMarkdownFont);
   const [confirmSave, setConfirmSaveState] = useState(getConfirmSave);
   const [configFilesDetail, setConfigFilesDetailState] = useState(getConfigFilesDetailLevel);
@@ -179,25 +181,6 @@ function GeneralTab() {
   function handleDefaultSection(path: string) {
     setDefaultSection(path);
     setDefaultSectionState(path);
-  }
-
-  function handleToggleSection(sectionId: string) {
-    const next = new Set(hiddenSections);
-    if (next.has(sectionId)) {
-      next.delete(sectionId);
-    } else {
-      const visibleCount = NAV_SECTIONS.length - next.size;
-      if (visibleCount <= 1) return;
-      next.add(sectionId);
-      // Reset default section if it was just hidden
-      const hiddenSection = NAV_SECTIONS.find(s => s.id === sectionId);
-      if (hiddenSection && defaultSection === hiddenSection.path) {
-        const firstVisible = NAV_SECTIONS.find(s => !next.has(s.id));
-        if (firstVisible) handleDefaultSection(firstVisible.path);
-      }
-    }
-    setHiddenSections(next);
-    setHiddenSectionsState(next);
   }
 
   function handleSetMarkdownFont(font: MarkdownFont) {
@@ -230,8 +213,7 @@ function GeneralTab() {
     // Don't set rebuilding false on success — the app restarts
   }
 
-  // Compute whether each section pill should be disabled (last visible)
-  const visibleCount = NAV_SECTIONS.filter((s) => !hiddenSections.has(s.id)).length;
+  const navEntries = visibleNav(getLabs());
 
   return (
     <div style={{ padding: "20px 24px", maxWidth: "640px" }}>
@@ -349,45 +331,12 @@ function GeneralTab() {
             onChange={(e) => handleDefaultSection(e.target.value)}
             style={{ width: "auto", minWidth: "140px" }}
           >
-            {NAV_SECTIONS.filter(s => !hiddenSections.has(s.id)).map((s) => (
-              <option key={s.id} value={s.path}>
-                {s.label}
+            {navEntries.map((entry) => (
+              <option key={entry.id} value={entry.path}>
+                {entry.label}
               </option>
             ))}
           </select>
-        </SettingRow>
-
-        <SettingRow label="Visible sections" description="Toggle which sections appear in the sidebar">
-          <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
-            {NAV_SECTIONS.map((s) => {
-              const isHidden = hiddenSections.has(s.id);
-              const isVisible = !isHidden;
-              const isLastVisible = isVisible && visibleCount <= 1;
-              return (
-                <button
-                  key={s.id}
-                  onClick={() => handleToggleSection(s.id)}
-                  disabled={isLastVisible}
-                  aria-pressed={isVisible}
-                  style={{
-                    fontSize: "11px",
-                    fontWeight: isVisible ? 500 : 400,
-                    padding: "3px 10px",
-                    borderRadius: "12px",
-                    border: "1px solid",
-                    borderColor: isVisible ? "var(--accent)" : "var(--border-base)",
-                    background: isVisible ? "var(--accent-light)" : "transparent",
-                    color: isVisible ? "var(--accent-text)" : "var(--fg-muted)",
-                    cursor: isLastVisible ? "not-allowed" : "pointer",
-                    opacity: isLastVisible ? 0.5 : 1,
-                    textDecoration: isHidden ? "line-through" : "none",
-                  }}
-                >
-                  {s.label}
-                </button>
-              );
-            })}
-          </div>
         </SettingRow>
       </div>
 
@@ -407,6 +356,26 @@ function GeneralTab() {
             value={confirmSave}
             onChange={handleSetConfirmSave}
           />
+        </SettingRow>
+
+        <SettingRow
+          label="Send feedback"
+          description="Report a bug or share an idea"
+        >
+          <button
+            onClick={onOpenFeedback}
+            style={{
+              padding: "6px 14px",
+              borderRadius: "6px",
+              border: "1px solid var(--border-base)",
+              background: "transparent",
+              color: "var(--fg-muted)",
+              fontSize: "12px",
+              cursor: "pointer",
+            }}
+          >
+            Send Feedback
+          </button>
         </SettingRow>
       </div>
 
@@ -581,6 +550,50 @@ function GeneralTab() {
   );
 }
 
+// ── Labs tab ─────────────────────────────────────────────────
+
+function LabsTab() {
+  const [labs, setLabsState] = useState(getLabs);
+
+  return (
+    <div style={{ padding: "20px 24px", maxWidth: "640px" }}>
+      <div style={{ marginBottom: "24px" }}>
+        <h1 style={{
+          fontSize: "17px",
+          fontWeight: 600,
+          letterSpacing: "-0.3px",
+          color: "var(--fg-base)",
+          margin: 0,
+        }}>
+          Labs
+        </h1>
+        <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>
+          Experimental features, off by default
+        </p>
+      </div>
+
+      <div>
+        <SectionHeader>Labs</SectionHeader>
+
+        <SettingRow
+          label="Comparator"
+          description="Results and voting only. In-app execution is unavailable in this build."
+        >
+          <Toggle
+            id="lab-comparator"
+            checked={labs.comparator}
+            aria-label="Comparator"
+            onChange={(on) => {
+              setLab("comparator", on);
+              setLabsState(getLabs());
+            }}
+          />
+        </SettingRow>
+      </div>
+    </div>
+  );
+}
+
 // ── Settings shell (tab bar + General/Permissions/Secrets/Audit Log) ────
 // Security surfaces re-home here per DESIGN.md §5 — folded under Settings,
 // removed from top-level nav. Routes under /security/* still render these
@@ -624,15 +637,17 @@ function SettingsTabBar({ active, onChange }: { active: SettingsTab; onChange: (
 
 const TAB_BY_PARAM: Record<string, SettingsTab> = {
   general: "general",
-  permissions: "permissions",
   secrets: "secrets",
-  audit: "audit",
+  activity: "activity",
+  audit: "activity", // legacy param
+  labs: "labs",
 };
 
 export default function PreferencesPage() {
   const navigate = useNavigate();
   const { tab: tabParam } = useParams<{ tab?: string }>();
   const activeTab: SettingsTab = (tabParam && TAB_BY_PARAM[tabParam]) || "general";
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
 
   function handleTabChange(tab: SettingsTab) {
     navigate(tab === "general" ? "/preferences" : `/preferences/${tab}`);
@@ -643,12 +658,13 @@ export default function PreferencesPage() {
       <SettingsTabBar active={activeTab} onChange={handleTabChange} />
       <div style={{ flex: 1, overflowY: "auto" }}>
         <Suspense fallback={<div style={{ padding: "20px 24px", fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</div>}>
-          {activeTab === "general" && <GeneralTab />}
-          {activeTab === "permissions" && <PermissionsPage />}
+          {activeTab === "general" && <GeneralTab onOpenFeedback={() => setFeedbackOpen(true)} />}
           {activeTab === "secrets" && <SecretsPage />}
-          {activeTab === "audit" && <AuditLogPage />}
+          {activeTab === "activity" && <ActivityTabLazy />}
+          {activeTab === "labs" && <LabsTab />}
         </Suspense>
       </div>
+      <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
     </div>
   );
 }

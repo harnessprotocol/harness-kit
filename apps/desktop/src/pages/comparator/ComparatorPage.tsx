@@ -4,8 +4,8 @@ import type { ComparisonPhase, ComparisonSummary, HarnessRecommendation, TaskTyp
 import { invoke } from "@tauri-apps/api/core";
 import { Button, EmptyState } from "@harness-kit/ui";
 import { useComparator } from "../../hooks/useComparator";
+import { PHASES, PHASE_INDEX, getPhaseStepStatuses } from "./phaseStepper";
 import SetupPhase from "./SetupPhase";
-import ExecutionPhase from "./ExecutionPhase";
 import ResultsPhase from "./ResultsPhase";
 import JudgePhase from "./JudgePhase";
 import RecommendationsPanel, { TaskTypeSelector } from "../../components/comparator/RecommendationsPanel";
@@ -40,20 +40,7 @@ const tokens = {
 };
 
 // ── Phase stepper config ────────────────────────────────────
-
-const PHASES: { key: ComparisonPhase; label: string; step: number }[] = [
-  { key: "setup", label: "Setup", step: 1 },
-  { key: "execution", label: "Execution", step: 2 },
-  { key: "results", label: "Results", step: 3 },
-  { key: "judge", label: "Judge", step: 4 },
-];
-
-const PHASE_INDEX: Record<ComparisonPhase, number> = {
-  setup: 0,
-  execution: 1,
-  results: 2,
-  judge: 3,
-};
+// (moved to ./phaseStepper.ts so it can be unit tested without Tauri/React deps)
 
 // ── Inject pulse + scrollbar CSS (once) ─────────────────────
 
@@ -337,13 +324,13 @@ function PhaseStepper({
   currentPhase: ComparisonPhase;
   onPhaseClick: (phase: ComparisonPhase) => void;
 }) {
-  const currentIndex = PHASE_INDEX[currentPhase];
+  const stepStatuses = getPhaseStepStatuses(currentPhase);
 
   return (
     <div style={styles.stepperSection}>
       {PHASES.map((p, i) => {
-        const isDone = i < currentIndex;
-        const isActive = i === currentIndex;
+        const isDone = stepStatuses[i].status === "done";
+        const isActive = stepStatuses[i].status === "active";
 
         // Dot styling
         const dotStyle: React.CSSProperties = {
@@ -488,9 +475,8 @@ function SessionCard({
 
 function PhasePlaceholder({ phase }: { phase: ComparisonPhase }) {
   const labels: Record<string, string> = {
-    execution: "Run a comparison from Setup to see live execution output here.",
-    results: "Complete an execution to review file diffs and output side-by-side.",
-    judge: "Complete an execution to score harnesses across evaluation dimensions.",
+    results: "Pick a comparison to review its file diffs and output side-by-side.",
+    judge: "Pick a comparison with results to score it.",
   };
   return (
     <div
@@ -586,7 +572,6 @@ export default function ComparatorPage() {
     loadComparison,
     deleteSession,
     endSession,
-    updateTitle,
   } = useComparator();
 
   // ── Resizable rail ───────────────────────────────────────────
@@ -715,16 +700,6 @@ export default function ComparatorPage() {
             <SetupPhase onStart={handleStart} />
           </div>
         );
-      case "execution":
-        return active ? (
-          <ExecutionPhase
-            active={active}
-            onEndSession={endSession}
-            onUpdateTitle={updateTitle}
-          />
-        ) : (
-          <PhasePlaceholder phase="execution" />
-        );
       case "results":
         return active ? (
           <ResultsPhase active={active} onStartJudge={() => setPhase("judge")} />
@@ -777,8 +752,8 @@ export default function ComparatorPage() {
                   <path d="M12 3v18" />
                 </svg>
               }
-              title="No sessions yet"
-              description="Click New Comparison to start."
+              title="No comparisons recorded"
+              description="In-app execution is unavailable in this build. Existing results can still be reviewed and voted on."
             />
           ) : (
             sessions.map((session) => (
