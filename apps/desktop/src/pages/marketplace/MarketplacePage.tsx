@@ -574,7 +574,7 @@ function PageHeader() {
         Browse Plugins
       </h1>
       <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>
-        Skills, agents, hooks and scripts from the harness-kit catalog. Generated {formatGeneratedDate(MARKETPLACE_META.generatedAt)}.
+        Skills, agents, hooks, and scripts from the harness-kit catalog. Generated {formatGeneratedDate(MARKETPLACE_META.generatedAt)}.
       </p>
     </div>
   );
