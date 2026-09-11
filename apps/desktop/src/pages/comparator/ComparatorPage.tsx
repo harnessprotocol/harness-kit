@@ -4,6 +4,7 @@ import type { ComparisonPhase, ComparisonSummary, HarnessRecommendation, TaskTyp
 import { invoke } from "@tauri-apps/api/core";
 import { Button, EmptyState } from "@harness-kit/ui";
 import { useComparator } from "../../hooks/useComparator";
+import { PHASES, PHASE_INDEX, getPhaseStepStatuses } from "./phaseStepper";
 import SetupPhase from "./SetupPhase";
 import ResultsPhase from "./ResultsPhase";
 import JudgePhase from "./JudgePhase";
@@ -39,22 +40,7 @@ const tokens = {
 };
 
 // ── Phase stepper config ────────────────────────────────────
-
-// The Execution step is intentionally absent: live in-app execution isn't
-// available in this build, and startComparison/loadComparison/endSession
-// never set phase to "execution" — the stepper only shows reachable phases.
-const PHASES: { key: ComparisonPhase; label: string; step: number }[] = [
-  { key: "setup", label: "Setup", step: 1 },
-  { key: "results", label: "Results", step: 2 },
-  { key: "judge", label: "Judge", step: 3 },
-];
-
-const PHASE_INDEX: Record<ComparisonPhase, number> = {
-  setup: 0,
-  execution: 1,
-  results: 2,
-  judge: 3,
-};
+// (moved to ./phaseStepper.ts so it can be unit tested without Tauri/React deps)
 
 // ── Inject pulse + scrollbar CSS (once) ─────────────────────
 
@@ -338,13 +324,13 @@ function PhaseStepper({
   currentPhase: ComparisonPhase;
   onPhaseClick: (phase: ComparisonPhase) => void;
 }) {
-  const currentIndex = PHASE_INDEX[currentPhase];
+  const stepStatuses = getPhaseStepStatuses(currentPhase);
 
   return (
     <div style={styles.stepperSection}>
       {PHASES.map((p, i) => {
-        const isDone = i < currentIndex;
-        const isActive = i === currentIndex;
+        const isDone = stepStatuses[i].status === "done";
+        const isActive = stepStatuses[i].status === "active";
 
         // Dot styling
         const dotStyle: React.CSSProperties = {
