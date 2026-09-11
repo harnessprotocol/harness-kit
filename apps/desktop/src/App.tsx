@@ -24,10 +24,9 @@ const ComparatorPage = lazy(() => import("./pages/comparator/ComparatorPage"));
 const PermissionsPage = lazy(() => import("./pages/security/PermissionsPage"));
 const MachinePage = lazy(() => import("./pages/machine/MachinePage"));
 
-// Dev-only screenshot fixtures (DESIGN.md §8 verification) — render Fleet/Drift/
+// Dev-only screenshot fixtures (DESIGN.md §8 verification) — render Machine/Drift/
 // Onboarding's presentational views with static data, no Tauri/core backend
 // required. Not linked from any nav; only mounted below when import.meta.env.DEV is true.
-const FleetFixture = lazy(() => import("./pages/__fixtures__/FleetFixture"));
 const MachineFixture = lazy(() => import("./pages/__fixtures__/MachineFixture"));
 const DriftFixture = lazy(() => import("./pages/__fixtures__/DriftFixture"));
 const OnboardingFixture = lazy(() => import("./pages/__fixtures__/OnboardingFixture"));
@@ -75,7 +74,6 @@ export default function App() {
           <Routes>
             {import.meta.env.DEV && (
               <>
-                <Route path="__fixtures__/fleet" element={<FleetFixture />} />
                 <Route path="__fixtures__/machine" element={<MachineFixture />} />
                 <Route path="__fixtures__/drift" element={<DriftFixture />} />
                 <Route path="__fixtures__/onboarding" element={<OnboardingFixture />} />

@@ -17,10 +17,10 @@ export interface OnboardingPageProps {
  * Data-fetching wrapper for the first-run onboarding wizard (DESIGN.md
  * §6.3). Runs the real `importMachine()` scan over the Tauri FsProvider —
  * global config roots (home dir) plus the user's current project dir when
- * one is tracked (same scoping convention as FleetPage) — and feeds the
- * result to the presentational `OnboardingFlow`. Split the same way
- * FleetPage/FleetView is split so the flow can be screenshot-tested with
- * fixture data with no live backend.
+ * one is tracked — and feeds the result to the presentational
+ * `OnboardingFlow`. Split into a data-fetching wrapper and a presentational
+ * view (the same pattern used by Machine) so the flow can be
+ * screenshot-tested with fixture data with no live backend.
  */
 export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
   const [step, setStep] = useState<OnboardingStep>("scan");
@@ -47,7 +47,7 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
         // merges every adapter fragment it finds under a single FsProvider
         // root, so the project dir (when tracked) is scanned as a second,
         // separate pass and its findings are merged in below. This mirrors
-        // Fleet's "Global + tracked project" scoping (DESIGN.md §6.3 Fleet)
+        // Machine's "Global + tracked project" scoping (DESIGN.md §6.3)
         // rather than inventing a new convention for onboarding.
         const globalResult = await importMachine({ fs: new TauriFsProvider(home) });
 
@@ -56,7 +56,7 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
           try {
             // The static Tauri FS capability only lists known harness config
             // roots under $HOME — an arbitrary project dir needs its runtime
-            // scope granted first (same requirement as FleetPage).
+            // scope granted first (same requirement as Machine).
             await grantProjectScope(projectDir);
             const projectResult = await importMachine({ fs: new TauriFsProvider(projectDir) });
             combined = mergeImportResults(globalResult, projectResult);
