@@ -25,18 +25,18 @@ Format: EARS (`WHEN … THE SYSTEM SHALL …`). Each criterion cites the audit f
 
 ### Navigation and information architecture
 
-- [ ] AC-1: WHEN the app opens after onboarding THE SYSTEM SHALL show exactly one home screen, Machine, at `/machine`; `/fleet` SHALL redirect to `/machine`. *(B1, P1, [Q2])*
-- [ ] AC-2: WHEN the sidebar renders THE SYSTEM SHALL show these top-level items in this order and no others: Machine, Profile, Claude Code, Marketplace, then Settings pinned at the bottom. Comparator appears only under AC-8. *(B1, m4, P1)*
-- [ ] AC-3: WHEN a sidebar group contains only screens bound to one surface THE SYSTEM SHALL name the group after that surface ("Claude Code"), and every page in the group SHALL carry the surface name in its title or subtitle. *(B2, P1, [Q5])*
-- [ ] AC-4: WHEN navigation is declared THE SYSTEM SHALL declare it in one module, and the sidebar, the numbered shortcuts, the command palette and the default-section setting SHALL all derive from that declaration. *(M9, m4, P1)*
-- [ ] AC-5: WHEN the user presses ⌘1 through ⌘4 THE SYSTEM SHALL navigate to the four sidebar items in order, ⌘, SHALL open Settings, and the shortcut badge beside each item SHALL name the key that triggers it. *(m4, P1)*
-- [ ] AC-6: WHEN a retired route is opened (`/fleet`, `/drift`, `/agents`, `/harness/settings`, `/security/*`) THE SYSTEM SHALL redirect to the consolidated destination and SHALL preserve any query parameter the destination reads. *(B7, M10, P0/P1)*
-- [ ] AC-7: WHEN Drift is requested with a harness (`/drift?harness=<id>` or `/machine?drift=1&harness=<id>`) THE SYSTEM SHALL open Machine's Drift section filtered to that harness, showing "Showing drift for <name>", and SHALL scroll the section into view. *(B7, P0)*
-- [ ] AC-8: WHEN the Labs setting "Comparator" is off (the default) THE SYSTEM SHALL omit Comparator from the sidebar, the shortcuts and the palette; WHEN it is on THE SYSTEM SHALL show it, and its empty state SHALL NOT tell the user to press a control that cannot start a comparison. *(B4, P1, [Q1])*
-- [ ] AC-9: WHEN the Observatory pages render THE SYSTEM SHALL present them under Claude Code as "Usage" with the subtitle "Claude Code usage on this machine". *(M13, P1)*
-- [ ] AC-10: WHEN Permissions renders THE SYSTEM SHALL present it under Claude Code at `/harness/permissions`; Secrets and Activity SHALL live under Settings; `/security/*` SHALL redirect accordingly. *(M10, P1)*
-- [ ] AC-11: WHEN Settings › Activity renders THE SYSTEM SHALL show the audit log and the reconciliation ledger (rollback points, portability notices, device enrollment) on the same tab. *(M10, P1)*
-- [ ] AC-12: WHEN Settings renders THE SYSTEM SHALL NOT offer "Visible sections" or "Observatory auto-refresh"; WHEN a stored default section points at a retired route THE SYSTEM SHALL open Machine instead. *(M12, P0/P1)*
+- [x] AC-1: WHEN the app opens after onboarding THE SYSTEM SHALL show exactly one home screen, Machine, at `/machine`; `/fleet` SHALL redirect to `/machine`. *(B1, P1, [Q2])*
+- [x] AC-2: WHEN the sidebar renders THE SYSTEM SHALL show these top-level items in this order and no others: Machine, Profile, Claude Code, Marketplace, then Settings pinned at the bottom. Comparator appears only under AC-8. *(B1, m4, P1)*
+- [x] AC-3: WHEN a sidebar group contains only screens bound to one surface THE SYSTEM SHALL name the group after that surface ("Claude Code"), and every page in the group SHALL carry the surface name in its title or subtitle. *(B2, P1, [Q5])*
+- [x] AC-4: WHEN navigation is declared THE SYSTEM SHALL declare it in one module, and the sidebar, the numbered shortcuts, the command palette and the default-section setting SHALL all derive from that declaration. *(M9, m4, P1)*
+- [x] AC-5: WHEN the user presses ⌘1 through ⌘4 THE SYSTEM SHALL navigate to the four sidebar items in order, ⌘, SHALL open Settings, and the shortcut badge beside each item SHALL name the key that triggers it. *(m4, P1)*
+- [x] AC-6: WHEN a retired route is opened (`/fleet`, `/drift`, `/agents`, `/harness/settings`, `/security/*`) THE SYSTEM SHALL redirect to the consolidated destination and SHALL preserve any query parameter the destination reads. *(B7, M10, P0/P1)*
+- [x] AC-7: WHEN Drift is requested with a harness (`/drift?harness=<id>` or `/machine?drift=1&harness=<id>`) THE SYSTEM SHALL open Machine's Drift section filtered to that harness, showing "Showing drift for <name>", and SHALL scroll the section into view. *(B7, P0)*
+- [x] AC-8: WHEN the Labs setting "Comparator" is off (the default) THE SYSTEM SHALL omit Comparator from the sidebar, the shortcuts and the palette; WHEN it is on THE SYSTEM SHALL show it, and its empty state SHALL NOT tell the user to press a control that cannot start a comparison. *(B4, P1, [Q1])*
+- [x] AC-9: WHEN the Observatory pages render THE SYSTEM SHALL present them under Claude Code as "Usage" with the subtitle "Claude Code usage on this machine". *(M13, P1)*
+- [x] AC-10: WHEN Permissions renders THE SYSTEM SHALL present it under Claude Code at `/harness/permissions`; Secrets and Activity SHALL live under Settings; `/security/*` SHALL redirect accordingly. *(M10, P1)*
+- [x] AC-11: WHEN Settings › Activity renders THE SYSTEM SHALL show the audit log and the reconciliation ledger (rollback points, portability notices, device enrollment) on the same tab. *(M10, P1)*
+- [x] AC-12: WHEN Settings renders THE SYSTEM SHALL NOT offer "Visible sections" or "Observatory auto-refresh"; WHEN a stored default section points at a retired route THE SYSTEM SHALL open Machine instead. *(M12, P0/P1)*
 
 ### Machine, the home
 
@@ -61,38 +61,38 @@ Format: EARS (`WHEN … THE SYSTEM SHALL …`). Each criterion cites the audit f
 ### Marketplace, plugins and MCP
 
 - [ ] AC-27: WHEN a marketplace plugin detail renders THE SYSTEM SHALL offer "Install to …" with a surface picker that yields the same three action surfaces as the Machine drawer (direct apply where a driver exists, the CLI command, the agent prompt) and a copy control on the install command. *(B5, P3)*
-- [ ] AC-28: WHEN the marketplace catalog renders THE SYSTEM SHALL state when the catalog was generated and SHALL NOT describe a bundled snapshot as a live registry. *(B5, P1)*
+- [x] AC-28: WHEN the marketplace catalog renders THE SYSTEM SHALL state when the catalog was generated and SHALL NOT describe a bundled snapshot as a live registry. *(B5, P1)*
 - [ ] AC-29: WHEN a folder is dragged over the Plugins page THE SYSTEM SHALL either import it through the Tauri drag-drop event or show no drop overlay at all. *(M14, P2)*
 - [ ] AC-30: WHEN the MCP servers page renders THE SYSTEM SHALL read the store paths from the surface registry, SHALL show the teaching empty state when no store exists, and SHALL offer adding and editing a server through a form rather than only raw JSON. *(B3, P2)*
 
 ### Editors
 
-- [ ] AC-31: WHEN a save is triggered by any control (toolbar Save, the editor's Cmd+S, the window's Cmd+S) THE SYSTEM SHALL route it through the confirmation path for critical files exactly once. *(M8, P0)*
+- [x] AC-31: WHEN a save is triggered by any control (toolbar Save, the editor's Cmd+S, the window's Cmd+S) THE SYSTEM SHALL route it through the confirmation path for critical files exactly once. *(M8, P0)*
 
 ### Onboarding
 
-- [ ] AC-32: WHEN the first-run scan fails THE SYSTEM SHALL show the error and a Retry action on the reveal step; the wizard SHALL never render an empty step. *(B6, P0)*
-- [ ] AC-33: WHEN onboarding shows any step THE SYSTEM SHALL offer "Skip setup", which marks the welcome as seen and lands on Machine. *(B6, P0)*
+- [x] AC-32: WHEN the first-run scan fails THE SYSTEM SHALL show the error and a Retry action on the reveal step; the wizard SHALL never render an empty step. *(B6, P0)*
+- [x] AC-33: WHEN onboarding shows any step THE SYSTEM SHALL offer "Skip setup", which marks the welcome as seen and lands on Machine. *(B6, P0)*
 
 ### Copy, icons and the design system
 
-- [ ] AC-34: WHEN a control is labelled THE SYSTEM SHALL name what happens; no control SHALL be labelled "Recompile" unless it compiles, and no timestamp SHALL be shown for an action that did not occur. *(M6, P1)*
-- [ ] AC-35: WHEN user-facing copy renders THE SYSTEM SHALL contain no exclamation marks, no emoji or text glyphs used as icons, and SHALL use CONTEXT.md vocabulary: "surface" (never "platform" or "target"), "harness" (never "agent" for a harness), one product name. *(m1, m3, P0/P1)*
+- [x] AC-34: WHEN a control is labelled THE SYSTEM SHALL name what happens; no control SHALL be labelled "Recompile" unless it compiles, and no timestamp SHALL be shown for an action that did not occur. *(M6, P1)*
+- [x] AC-35: WHEN user-facing copy renders THE SYSTEM SHALL contain no exclamation marks, no emoji or text glyphs used as icons, and SHALL use CONTEXT.md vocabulary: "surface" (never "platform" or "target"), "harness" (never "agent" for a harness), one product name. *(m1, m3, P0/P1)*
 - [ ] AC-36: WHEN a themed property is set in page code THE SYSTEM SHALL use a token variable, and a lint SHALL fail the build on hex, rgb or hsl literals under `apps/desktop/src/pages` and `apps/desktop/src/components`. *(design-system debt, P4)*
 - [ ] AC-37: WHEN a modal, toast or tooltip is needed THE SYSTEM SHALL use `@harness-kit/ui` Modal, an app-level toast viewport and a `@harness-kit/ui` Tooltip; the seven desktop-local modal implementations SHALL be gone. *(design-system debt, P4)*
-- [ ] AC-38: WHEN the app launches THE SYSTEM SHALL load no webfont. *(design-system debt, P0)*
+- [x] AC-38: WHEN the app launches THE SYSTEM SHALL load no webfont. *(design-system debt, P0)*
 - [ ] AC-39: WHEN CI runs the desktop job THE SYSTEM SHALL screenshot the fixture routes in dark and light at 1440 and 1024 and fail on any console error. *(DESIGN.md §8, P4)*
 - [ ] AC-40: WHEN the app runs on macOS THE SYSTEM SHALL provide a menu bar whose View and Help menus list every keyboard shortcut and the Docs link. *(m8, P4, [Q6])*
-- [ ] AC-41: WHEN the release ships THE SYSTEM SHALL contain none of: the Agents page, Harness Resilience Profiles, FirstRunPermissionModal, ConfirmDialog, HarnessEditorModal, PluginExplorerModal, FileViewerPage, the `/harness/settings` page, `apps/desktop/src/components/ui/*`, the Board-era tokens, `--card-glass`, `--cat-purple`. *(M11, P0/P1)*
-- [ ] AC-42: WHEN the Comparator results phase renders THE SYSTEM SHALL NOT show a rating derived from an exit code, and no copy SHALL promise "record results manually" unless a results form exists. *(B4, P1)*
+- [x] AC-41: WHEN the release ships THE SYSTEM SHALL contain none of: the Agents page, Harness Resilience Profiles, FirstRunPermissionModal, ConfirmDialog, HarnessEditorModal, PluginExplorerModal, FileViewerPage, the `/harness/settings` page, `apps/desktop/src/components/ui/*`, the Board-era tokens, `--card-glass`, `--cat-purple`. *(M11, P0/P1)*
+- [x] AC-42: WHEN the Comparator results phase renders THE SYSTEM SHALL NOT show a rating derived from an exit code, and no copy SHALL promise "record results manually" unless a results form exists. *(B4, P1)*
 
 ### Unchanged behavior
 
-- [ ] AC-43: WHEN Drift acknowledge or fix runs THE SYSTEM SHALL CONTINUE TO use the shared `harness.db` acknowledgements and the dry-run preview modal. *(cross-harness AC-37)*
-- [ ] AC-44: WHEN a direct apply runs from the drawer THE SYSTEM SHALL CONTINUE TO route through the transaction engine with preimage verification and a rollback point. *(cross-harness AC-16, AC-31, AC-36)*
-- [ ] AC-45: WHEN existing routes `/machine`, `/harness/*`, `/marketplace/*`, `/observatory*`, `/preferences/*` and `/comparator` are opened THE SYSTEM SHALL CONTINUE TO resolve them; this spec regroups and relabels, it does not rename paths.
-- [ ] AC-46: WHEN the CLI runs THE SYSTEM SHALL CONTINUE TO behave as specified; this spec adds no CLI verbs and changes none.
-- [ ] AC-47: WHEN the `__fixtures__/machine`, `__fixtures__/drift` and `__fixtures__/onboarding` routes render in DEV THE SYSTEM SHALL CONTINUE TO render their presentational views with static data.
+- [x] AC-43: WHEN Drift acknowledge or fix runs THE SYSTEM SHALL CONTINUE TO use the shared `harness.db` acknowledgements and the dry-run preview modal. *(cross-harness AC-37)*
+- [x] AC-44: WHEN a direct apply runs from the drawer THE SYSTEM SHALL CONTINUE TO route through the transaction engine with preimage verification and a rollback point. *(cross-harness AC-16, AC-31, AC-36)*
+- [x] AC-45: WHEN existing routes `/machine`, `/harness/*`, `/marketplace/*`, `/observatory*`, `/preferences/*` and `/comparator` are opened THE SYSTEM SHALL CONTINUE TO resolve them; this spec regroups and relabels, it does not rename paths.
+- [x] AC-46: WHEN the CLI runs THE SYSTEM SHALL CONTINUE TO behave as specified; this spec adds no CLI verbs and changes none.
+- [x] AC-47: WHEN the `__fixtures__/machine`, `__fixtures__/drift` and `__fixtures__/onboarding` routes render in DEV THE SYSTEM SHALL CONTINUE TO render their presentational views with static data.
 
 ### Traceability
 
