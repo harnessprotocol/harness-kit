@@ -12,9 +12,9 @@ desktop app. Press `Cmd+K` from anywhere to open it, type to filter, and press
 
 The palette groups commands into:
 
-- **Navigate** — jump to any section or sub-page (Harness, Marketplace,
-  Observatory, Comparator, Security, Harness Parity, and so on). This
-  replaces hunting through the sidebar.
+- **Navigate** — jump to any section or sub-page (Machine, Profile, Claude
+  Code, Marketplace, Settings, and so on). Comparator only appears here once
+  it's enabled in Settings › Labs. This replaces hunting through the sidebar.
 - **Actions** — operate the app, including **Toggle light / dark theme**.
 
 ## Keyboard Shortcuts
