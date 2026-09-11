@@ -1,3 +1,5 @@
+import { NAV, type LabsFlags, type LabsKey } from "../nav";
+
 // ── Constants ────────────────────────────────────────────────
 
 export const FONT_SIZE_MIN = 11;
@@ -13,7 +15,6 @@ export const SIDEBAR_WIDTH_DEFAULT = 208;
 const KEY_FONT_SIZE = "harness-kit-font-size";
 const KEY_DENSITY = "harness-kit-density";
 const KEY_DEFAULT_SECTION = "harness-kit-default-section";
-const KEY_HIDDEN_SECTIONS = "harness-kit-hidden-sections";
 const KEY_MARKDOWN_FONT = "harness-kit-markdown-font";
 const KEY_SIDEBAR_WIDTH = "harness-kit-sidebar-width";
 const KEY_CONFIRM_SAVE = "harness-kit-confirm-save";
@@ -65,29 +66,20 @@ export function setDensity(density: Density) {
 // ── Default Section ──────────────────────────────────────────
 
 export function getDefaultSection(): string {
-  return localStorage.getItem(KEY_DEFAULT_SECTION) ?? "/machine";
+  const stored = localStorage.getItem(KEY_DEFAULT_SECTION);
+  if (!stored) return "/machine";
+  // NAV.some(entry => entry.path === stored) alone only checks top-level
+  // paths. A previously-valid deep-linked default (e.g. /harness/mcp, a
+  // Claude Code child) would otherwise silently reset to /machine just
+  // because it isn't a top-level entry — check children too so it sticks.
+  const isKnownPath = NAV.some(
+    (entry) => entry.path === stored || entry.children?.some((child) => child.path === stored),
+  );
+  return isKnownPath ? stored : "/machine";
 }
 
 export function setDefaultSection(path: string) {
   localStorage.setItem(KEY_DEFAULT_SECTION, path);
-}
-
-// ── Hidden Sections ──────────────────────────────────────────
-
-export function getHiddenSections(): Set<string> {
-  const raw = localStorage.getItem(KEY_HIDDEN_SECTIONS);
-  if (!raw) return new Set();
-  try {
-    const arr = JSON.parse(raw);
-    return new Set(arr);
-  } catch {
-    return new Set();
-  }
-}
-
-export function setHiddenSections(sections: Set<string>) {
-  localStorage.setItem(KEY_HIDDEN_SECTIONS, JSON.stringify([...sections]));
-  window.dispatchEvent(new CustomEvent("harness-kit-prefs-changed"));
 }
 
 // ── Markdown Font ────────────────────────────────────────────
@@ -158,6 +150,24 @@ export function getConfigFilesDetailLevel(): ConfigFilesDetailLevel {
 
 export function setConfigFilesDetailLevel(level: ConfigFilesDetailLevel) {
   localStorage.setItem(KEY_CONFIG_FILES_DETAIL, level);
+}
+
+// ── Labs ─────────────────────────────────────────────────────
+
+const KEY_LABS_PREFIX = "harness-kit-labs-";
+const LABS_DEFAULTS: LabsFlags = { comparator: false };
+
+export function getLabs(): LabsFlags {
+  const flags = { ...LABS_DEFAULTS };
+  for (const key of Object.keys(flags) as LabsKey[]) {
+    flags[key] = localStorage.getItem(KEY_LABS_PREFIX + key) === "true";
+  }
+  return flags;
+}
+
+export function setLab(key: LabsKey, on: boolean) {
+  localStorage.setItem(KEY_LABS_PREFIX + key, String(on));
+  window.dispatchEvent(new CustomEvent("harness-kit-prefs-changed"));
 }
 
 // ── Permission Mode ───────────────────────────────────────────

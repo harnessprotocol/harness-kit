@@ -253,17 +253,33 @@ export default function HarnessFilePage() {
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       {/* Standardized toolbar */}
       {found && !loading && (
-        <EditorToolbar
-          filePath="harness.yaml"
-          subtitle={filePath ?? undefined}
-          isDirty={saveable}
-          saving={saving}
-          viewMode={view}
-          availableModes={viewModes}
-          onViewModeChange={handleViewModeChange}
-          onSave={handleSave}
-          actions={toolbarActions}
-        />
+        <>
+          {/* Eyebrow — a full shared PageHeader arrives in a later phase; this
+              small-caps kicker follows the same convention as SectionLabel
+              in SyncPage.tsx until then. */}
+          <div style={{ padding: "6px 12px 0 36px", flexShrink: 0 }}>
+            <span style={{
+              fontSize: "10px",
+              fontWeight: 600,
+              color: "var(--fg-subtle)",
+              textTransform: "uppercase",
+              letterSpacing: "0.5px",
+            }}>
+              Profile
+            </span>
+          </div>
+          <EditorToolbar
+            filePath="harness.yaml"
+            subtitle={filePath ?? undefined}
+            isDirty={saveable}
+            saving={saving}
+            viewMode={view}
+            availableModes={viewModes}
+            onViewModeChange={handleViewModeChange}
+            onSave={handleSave}
+            actions={toolbarActions}
+          />
+        </>
       )}
 
       {/* Save error (editor view) */}

@@ -86,6 +86,12 @@ vi.mock("../../../lib/marketplace/data", () => ({
   getCategoryName: (slug: string) => mockCategories.find((c) => c.slug === slug)?.name ?? slug,
   getAllTags: () => [...new Set(mockPlugins.flatMap((p) => p.tags))].sort(),
   getPlugin: (slug: string) => mockPlugins.find((p) => p.slug === slug),
+  getMarketplaceMeta: () => ({
+    marketplaceName: "harness-kit",
+    owner: "harnessprotocol",
+    generatedAt: "2026-07-01T00:00:00.000Z",
+    repoStars: 0,
+  }),
   pluginRepoUrl: (p: MarketplacePlugin) => `https://github.com/harnessprotocol/harness-kit/tree/main/${p.repoPath.replace(/^\.\//, "")}`,
   relatedPlugins: (p: MarketplacePlugin, limit = 5) =>
     mockPlugins.filter((c) => c.slug !== p.slug && c.category === p.category).slice(0, limit),

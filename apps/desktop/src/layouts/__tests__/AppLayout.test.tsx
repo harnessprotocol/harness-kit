@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MemoryRouter, useLocation } from "react-router-dom";
-import AppLayout, { NAV_SECTIONS } from "../AppLayout";
-import { NAV_PATHS } from "../../hooks/useGlobalShortcuts";
+import AppLayout from "../AppLayout";
+import { NAV, visibleNav } from "../../nav";
 
 // ── Mocks ─────────────────────────────────────────────────────
 
@@ -23,7 +23,6 @@ vi.mock("../../lib/preferences", async (importOriginal) => {
   return {
     ...actual,
     initPreferences: vi.fn(),
-    getHiddenSections: vi.fn(() => new Set()),
   };
 });
 
@@ -73,17 +72,31 @@ describe("sidebar layout — vibrancy regression guard", () => {
   });
 });
 
-describe("NAV alignment", () => {
-  it("NAV_SECTIONS and NAV_PATHS have matching lengths", () => {
-    expect(NAV_SECTIONS.length).toBe(NAV_PATHS.length);
-  });
-});
-
 describe("sidebar renders all nav sections", () => {
   it("renders every section label", () => {
     renderLayout();
-    for (const section of NAV_SECTIONS) {
-      expect(screen.getByText(section.label)).toBeInTheDocument();
+    for (const entry of visibleNav({ comparator: false })) {
+      expect(screen.getByText(entry.label)).toBeInTheDocument();
+    }
+  });
+
+  it("shows the shortcut badge that matches the key", () => {
+    renderLayout();
+    for (const entry of visibleNav({ comparator: false })) {
+      if (!entry.shortcut) continue;
+      expect(screen.getByText(`⌘${entry.shortcut}`)).toBeInTheDocument();
+    }
+  });
+
+  it("omits Comparator until the lab is on", () => {
+    renderLayout();
+    expect(screen.queryByText("Comparator")).not.toBeInTheDocument();
+  });
+
+  it("does not render retired top-level sections", () => {
+    renderLayout();
+    for (const label of ["Fleet", "Drift", "Observatory", "Configure"]) {
+      expect(screen.queryByText(label)).not.toBeInTheDocument();
     }
   });
 });
@@ -99,38 +112,31 @@ describe("keyboard navigation", () => {
 
   it("activates a top-level nav item with Enter", () => {
     render(
-      <MemoryRouter initialEntries={["/fleet"]}>
+      <MemoryRouter initialEntries={["/harness/plugins"]}>
         <AppLayout />
         <LocationSpy />
       </MemoryRouter>,
     );
-    const drift = screen.getByText("Drift").closest('[role="link"]');
-    expect(drift).not.toBeNull();
-    fireEvent.keyDown(drift!, { key: "Enter" });
-    // AC-37: Drift is a section of the Machine view. The nav points straight
-    // at the open section rather than at /drift, which only redirects here.
+    const marketplace = screen.getByText("Marketplace").closest('[role="link"]');
+    expect(marketplace).not.toBeNull();
+    fireEvent.keyDown(marketplace!, { key: "Enter" });
+    expect(screen.getByTestId("loc").textContent).toBe("/marketplace");
+  });
+
+  it("activates a top-level nav item with Space", () => {
+    render(
+      <MemoryRouter initialEntries={["/harness/plugins"]}>
+        <AppLayout />
+        <LocationSpy />
+      </MemoryRouter>,
+    );
+    const machine = screen.getByText("Machine").closest('[role="link"]');
+    expect(machine).not.toBeNull();
+    fireEvent.keyDown(machine!, { key: " " });
     expect(screen.getByTestId("loc").textContent).toBe("/machine");
   });
 
-  it("highlights Drift, not Machine, when Drift is the destination", () => {
-    // Drift's path became /machine?drift=1 (AC-37). An id-based active match
-    // (`pathname.startsWith("/" + id)`) can never match "drift" again, so the
-    // item the user clicked went dark while Machine lit up instead.
-    render(
-      <MemoryRouter initialEntries={["/machine?drift=1"]}>
-        <AppLayout />
-      </MemoryRouter>,
-    );
-    const current = Object.fromEntries(
-      ["Drift", "Machine"].map((label) => [
-        label,
-        screen.getByText(label).closest('[role="link"]')?.getAttribute("aria-current") ?? null,
-      ]),
-    );
-    expect(current).toEqual({ Drift: "page", Machine: null });
-  });
-
-  it("still highlights Machine on the plain /machine route", () => {
+  it("highlights the active top-level entry via aria-current", () => {
     render(
       <MemoryRouter initialEntries={["/machine"]}>
         <AppLayout />
@@ -140,21 +146,20 @@ describe("keyboard navigation", () => {
       screen.getByText("Machine").closest('[role="link"]')?.getAttribute("aria-current"),
     ).toBe("page");
     expect(
-      screen.getByText("Drift").closest('[role="link"]')?.getAttribute("aria-current"),
+      screen.getByText("Marketplace").closest('[role="link"]')?.getAttribute("aria-current"),
     ).toBeNull();
   });
 
-  it("activates a top-level nav item with Space", () => {
+  it("expands a section's children while it is active", () => {
     render(
-      <MemoryRouter initialEntries={["/fleet"]}>
+      <MemoryRouter initialEntries={["/harness/file"]}>
         <AppLayout />
-        <LocationSpy />
       </MemoryRouter>,
     );
-    const observatory = screen.getByText("Observatory").closest('[role="link"]');
-    expect(observatory).not.toBeNull();
-    fireEvent.keyDown(observatory!, { key: " " });
-    expect(screen.getByTestId("loc").textContent).toBe("/observatory");
+    const profile = NAV.find((e) => e.id === "profile")!;
+    for (const child of profile.children ?? []) {
+      expect(screen.getByText(child.label)).toBeInTheDocument();
+    }
   });
 });
 

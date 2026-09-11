@@ -27,7 +27,7 @@ function CellContent({ cell, kind }: { cell: GridCell; kind: GridRow["kind"] }) 
     // reads or writes here, so nothing can be copied in either direction.
     return (
       <span
-        title={`${KIND_LABELS[kind] ?? kind} are not managed locally on this surface — HarnessKit reads no store for them here, so this is not a gap.`}
+        title={`${KIND_LABELS[kind] ?? kind} are not managed locally on this surface — Harness Kit reads no store for them here, so this is not a gap.`}
         aria-label="unmanaged locally"
         style={{ color: "var(--fg-subtle)", opacity: 0.4, fontSize: 11 }}
       >

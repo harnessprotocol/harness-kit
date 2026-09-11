@@ -340,7 +340,7 @@ export default function HooksPage() {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       <EditorToolbar
-        filePath="Hooks"
+        filePath="Hooks · Claude Code"
         subtitle="~/.claude/settings.json"
         isDirty={editor.isDirty}
         saving={editor.saving}
