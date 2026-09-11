@@ -124,25 +124,28 @@ Headings get `text-wrap: balance`. Running prose (rare in-app) stays ≤ ~65ch.
 - **Interaction:** `cursor:pointer` on everything clickable. Hover = background tint (`--hover-bg` or `--accent-light` on rows), **never a scale transform that shifts layout**. Visible focus ring: `2px solid --accent` (or `--accent-glow` box-shadow), offset 2px. Cmd+K command palette with a **central command registry** (adding a page auto-registers its command — no hardcoded palette list).
 - **Empty states teach:** every empty surface states what it's for + why it's empty + one action button. Never a blank pane.
 - **Copy voice:** plain, specific, count-forward ("5 harnesses, 5 drifted", "Drift 3"). Buttons say what happens ("Recompile all" → toast "Recompiled 4 configs"). Errors: what broke + how to fix. No exclamation marks.
+- **Labs:** entries carrying a `labs` key in `apps/desktop/src/nav.ts` (Comparator today) are hidden from the sidebar, the ⌘-number shortcuts and the command palette until enabled in Settings › Labs. The route itself stays mounted, so a direct navigation still renders it (ux-consolidation spec AC-8, design D4).
 
 ---
 
 ## 5. Information architecture
 
-Sidebar, top→bottom, grouped:
+Sidebar, top→bottom, declared once in `apps/desktop/src/nav.ts` — the sidebar, the ⌘-number shortcuts, the command palette and the default-section setting all derive from that one module (ux-consolidation spec AC-2, AC-4; design D2):
 ```
 [logo] Harness Kit
-WORKSPACE
-  Fleet          (home)
-  Configure
-  Drift          (badge = drift count, --danger-light chip)
-  Comparator
-  Observatory
-  Marketplace
+  Machine        (home; ⌘1)   cross-surface grid + an embedded Drift section
+  Profile        (⌘2)         harness.yaml · Compile to project
+  Claude Code    (⌘3)         Instructions · MCP servers · Plugins · Hooks · Permissions · Usage
+  Marketplace    (⌘4)
+  Comparator     (Labs only — hidden until enabled, see §4)
   ─────
-  Settings       (pinned bottom)
+  Settings       (pinned bottom; ⌘,)
 ```
-No Labs. No Services. No Board/Roadmap/Chat/Memory/Terminals. Nothing else.
+No "Configure" group (retired — spec AC-3, design D5). No Fleet. No Drift or Observatory as top-level items — Drift is a section embedded inside Machine, not a destination of its own, and Observatory's pages render as "Usage" inside Claude Code (spec AC-9; see §6). No Services/Board/Roadmap/Chat/Memory/Terminals. Nothing else.
+
+`/fleet` and `/drift` (and the other retired routes: `/agents`, `/harness/settings`, `/security/*`) redirect to their consolidated destination and preserve any query parameter the destination reads (spec AC-6). `/machine?drift=1&harness=<id>` opens Machine's Drift section pre-filtered and scrolls it into view (spec AC-7).
+
+Two groups grow further capability in later phases without changing this shape: Machine's grid gains a persistent legend and clickable Gaps/Diffs filtering in P2 (spec AC-13, AC-14), and Profile gains "Share" and a team-baseline column in P3 (spec AC-25, AC-26). Neither is built yet — see the Machine contract in §6 and the Profile note there for what ships today.
 
 Active nav item: `--accent-light` background + a 2.5px inset azure rail on the left (`--accent`), `font-weight:550`. Inactive: `--fg-muted`, hover → `--bg-elevated` + `--fg-base`.
 
@@ -150,18 +153,22 @@ Active nav item: `--accent-light` background + a 2.5px inset azure rail on the l
 
 ## 6. Screen contracts
 
-Reference implementation of the visual language: the signed-off mock (Fleet + Onboarding, Direction A). Match its structure and token usage.
+Reference implementation of the visual language: the signed-off mock (Fleet — now shipped as Machine, see D1 in [ux-consolidation/design.md](../../specs/ux-consolidation/design.md) — + Onboarding, Direction A). Match its structure and token usage.
 
-### Fleet (home) — this screen IS the product pitch
-1. **Page head:** title "Fleet" + one-line subtitle ("Every harness on this machine, and how far each has drifted from your source of truth.") + primary action "Recompile all" (right).
-2. **Summary strip:** a single elevated bar, cells divided by hairline inset, showing: Harnesses (n) · Projects tracked (n) · Drifted (n configs, `--warning`) · Coverage (%) · Last compiled (relative). Big-metric type, tabular-nums, uppercase micro-labels.
-3. **Matrix table:** rows = harnesses (mono monogram tile + name + mono version), columns = scopes (Global, then each tracked project). Cells = status chip: `In sync` (success) / `Drift N` (warning) / `Not configured` (subtle) / `Not installed` (subtle, dimmed). Row hover = `--accent-light`. Row click → Drift filtered to that harness; cell click → Configure at that scope.
+### Machine (home) — this screen IS the product pitch
+1. **Page head:** title "Machine" + one-line subtitle ("Every AI-harness resource on this machine, across all supported surfaces — read-only.") + primary action "Refresh" (right; reads "Scanning…" while a scan is in flight).
+2. **Project directory:** an optional monospace text input + "Browse…" (native picker) + "Clear" (shown once a directory is set). The scan is machine-only by default; picking a directory adds project-scope stores to it. A `--warning`-toned notice ("Project directory could not be scanned — showing machine-only results") appears if the chosen directory degrades.
+3. **Summary strip:** a single elevated bar — Resources (n) · Gaps (n, `--warning` when > 0) · Diffs (n, `--warning` when > 0) · Surfaces detected (n/total). Big-metric type, tabular-nums, uppercase micro-labels. The persistent legend and clickable Gaps/Diffs filtering described in spec AC-13/AC-14 (design D7) have not shipped yet — today these are static counts, not controls.
+4. **Grid:** rows = resources grouped by kind (uppercase group header), columns = surfaces grouped by product family (grouped header row); an undetected surface's column is dimmed and labelled "not installed". Cells: `—` = no such concept on this surface, a dimmed `·` = has the concept but keeps no store here (unmanaged locally, not a gap), `?` = unknown (surface installed, store may be hidden), an azure dot + mono `u`/`p` = present (tooltip lists every entry's digest, file and scope), blank = absent. Surface headers carry a skipped-entries count badge and, where readable, a marketplace-count badge. Row click opens the drawer; selected/hovered row = `--bg-elevated`.
+5. **Row drawer:** a 380px right-side panel — "Where it lives" (per-surface entries: scope, file path, short digest) and, when the row has cross-surface differences, "Differences" (each delta's path, kind, and left→right values). Below that, the copy action: a target-surface select, the resolved CLI command, a capability-loss or overwrite-confirmation checkbox when the plan requires one, a secret-value notice when applicable, and Apply / Copy CLI command / Copy prompt buttons. The source side of this is fixed today (the effective-digest winner, or the first present surface); the selectable *source* control design D8 describes has not shipped.
+6. **Drift section:** an embedded, collapsed-by-default disclosure below the grid ("Drift from harness.yaml") that mounts the existing Drift page in place when opened. The redirected `/drift` route and `/machine?drift=1&harness=<id>` expand it and scroll it into view automatically (spec AC-6, AC-7). Its own summary-strip cell and the view-toggle redesign in design D6 are P2 work; today it stays a manually-expandable section, not a `view=drift` query state.
+7. **Skipped diagnostics:** a collapsible disclosure listing, per surface, each skipped file and the reason it was skipped.
 
-### Drift — actionable, never a dead-end
+### Drift (embedded in Machine) — actionable, never a dead-end
 Items grouped by project → harness. Each item shows: classification badge (repairable-inside-markers / user-edited-outside / missing / orphaned), an inline **mono diff viewer** (syntax-highlighted, red/green gutters using `--danger`/`--success` tints), and a per-item **Fix** button that previews the exact plan before applying. Header offers **Fix all** (dry-run preview first). User-content drift offers only Acknowledge / Review — never silent overwrite. Every row has an action.
 
-### Configure
-Monaco YAML editor (left/main) + a structured side panel (plugins, MCP servers, instruction slots, permissions) that round-trips to the YAML. Empty state = the **import flow** entry point ("Scan this machine"), not a blank template.
+### Profile and Claude Code (editors)
+The generic "Configure" group is retired — no group by that name returns (spec AC-3, design D5). Editors now live under two sidebar groups: **Claude Code** (Instructions, MCP servers, Plugins, Hooks, Permissions, Usage — each edits that one surface's own files) and **Profile** (harness.yaml). Today Profile's `/harness/file` is a single editor whose empty state offers "Save harness.yaml" over a blank template. Its planned end state (P3, spec AC-22–AC-25, design D11) is a Monaco YAML editor (left/main) + a structured side panel (plugins, MCP servers, instruction slots, permissions) that round-trips to the YAML, with the empty state replaced by the **import flow** ("Scan this machine") — not built yet.
 
 ### Onboarding (first run) — the highest-craft screen
 Full-bleed within the window (no app sidebar yet — it's a wizard). Sequence:
@@ -171,8 +178,8 @@ Full-bleed within the window (no app sidebar yet — it's a wizard). Sequence:
 4. **Conflicts list:** concrete, specific rows in warning tint ("'Run tests before commit' appears in 3 tools with 2 wordings"; "MCP server `github` points at two commands"; "Copilot allows `rm -rf` where Claude Code denies it").
 5. **CTA:** "Preview harness.yaml" (primary) + "Explore read-only" (ghost) + note "Nothing is written until you confirm." Declining leaves a fully usable read-only app. Every step carries a "Skip setup" ghost action top-right; a failed scan renders its error with "Retry scan" instead of an empty frame (ux-consolidation AC-32, AC-33).
 
-### Comparator / Observatory / Marketplace / Settings
-Re-skin existing data behavior onto `packages/ui` + these tokens. Security folds into Settings. No new features, no external-service affordances.
+### Comparator / Marketplace / Settings
+Re-skin existing data behavior onto `packages/ui` + these tokens. No new features, no external-service affordances. Permissions lives under Claude Code; Secrets and Activity live under Settings (spec AC-10, AC-11). Observatory's pages render as "Usage" inside Claude Code, not as a standalone sidebar item (spec AC-9; see §5).
 
 ---
 
