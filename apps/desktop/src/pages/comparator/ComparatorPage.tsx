@@ -489,7 +489,7 @@ function SessionCard({
 
 function PhasePlaceholder({ phase }: { phase: ComparisonPhase }) {
   const labels: Record<string, string> = {
-    results: "Complete an execution to review file diffs and output side-by-side.",
+    results: "Pick a comparison to review its file diffs and output side-by-side.",
     judge: "Pick a comparison with results to score it.",
   };
   return (
