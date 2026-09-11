@@ -12,6 +12,7 @@ export default function ClaudeMdPage() {
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       <EditorPane
         filePath={FILE_PATH}
+        displayName="Instructions · Claude Code"
         editor={editor}
         viewMode={viewMode}
         availableModes={getAvailableViewModes(FILE_PATH)}

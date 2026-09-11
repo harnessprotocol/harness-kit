@@ -45,6 +45,10 @@ export interface EditorPaneProps {
   toolbarActions?: React.ReactNode;
   /** Smaller text below filename in toolbar */
   toolbarSubtitle?: string;
+  /** Overrides the toolbar's displayed name without affecting the real path
+   *  used for loading/saving/language detection (e.g. "Instructions · Claude Code"
+   *  instead of the raw "~/.claude/CLAUDE.md"). */
+  displayName?: string;
 }
 
 // ── Component ─────────────────────────────────────────────────
@@ -58,11 +62,12 @@ export default function EditorPane({
   formattedContent,
   toolbarActions,
   toolbarSubtitle,
+  displayName,
 }: EditorPaneProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
       <EditorToolbar
-        filePath={filePath}
+        filePath={displayName ?? filePath}
         isDirty={editor.isDirty}
         saving={editor.saving}
         viewMode={viewMode}

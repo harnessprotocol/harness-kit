@@ -7,6 +7,7 @@ import {
   getAllPlugins,
   getCategories,
   getCategoryName,
+  getMarketplaceMeta,
   getPlugin,
   pluginRepoUrl,
   relatedPlugins,
@@ -16,6 +17,9 @@ import { TrustBadge, CategoryBadge } from "./components/PluginBadges";
 
 const ALL_PLUGINS = getAllPlugins();
 const ALL_CATEGORIES = getCategories();
+// Build-time generated alongside the catalog itself (marketplace.generated.json,
+// not fetched) — see src/lib/marketplace/data.ts.
+const MARKETPLACE_META = getMarketplaceMeta();
 
 export default function MarketplacePage() {
   const navigate = useNavigate();
@@ -570,10 +574,15 @@ function PageHeader() {
         Browse Plugins
       </h1>
       <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>
-        Skills, agents, hooks, and scripts from the harness-kit registry.
+        Skills, agents, hooks and scripts from the harness-kit catalog. Generated {formatGeneratedDate(MARKETPLACE_META.generatedAt)}.
       </p>
     </div>
   );
+}
+
+/** ISO timestamp → "Sep 8, 2026", for the catalog's "Generated {date}" line. */
+function formatGeneratedDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 }
 
 function GitHubIcon() {

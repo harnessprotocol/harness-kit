@@ -300,7 +300,7 @@ export default function McpServersPage() {
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       <EditorToolbar
-        filePath="MCP Servers"
+        filePath="MCP Servers · Claude Code"
         subtitle="~/.claude/mcp.json"
         isDirty={editor.isDirty}
         saving={editor.saving}

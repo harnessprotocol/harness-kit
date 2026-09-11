@@ -203,10 +203,10 @@ export default function SyncPage() {
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
           <div>
             <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
-              Sync
+              Compile to project
             </h1>
             <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>
-              Compile your harness.yaml to platform-native config files.
+              Compile harness.yaml into each surface's native config files.
             </p>
           </div>
 
@@ -307,7 +307,7 @@ export default function SyncPage() {
 
             {/* Platform targets */}
             <div>
-              <SectionLabel>Target Platforms</SectionLabel>
+              <SectionLabel>Surfaces</SectionLabel>
               <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
                 {ALL_PLATFORMS.map((platform) => {
                   const detected = detectedPlatforms.find((d) => d.platform === platform);

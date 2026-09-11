@@ -299,7 +299,7 @@ export default function AppLayout() {
                   <circle cx="22" cy="16" r="3.3" fill="#6BC0F5" />
                 </svg>
                 <span style={{ fontSize: "13px", fontWeight: 600, letterSpacing: "-0.1px", color: "var(--fg-base)" }}>
-                  harness-kit
+                  Harness Kit
                 </span>
               </div>
             </div>
