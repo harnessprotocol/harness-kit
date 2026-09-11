@@ -4,6 +4,7 @@ import AppLayout from "./layouts/AppLayout";
 import { getDefaultSection, getWelcomeSeen, setWelcomeSeen } from "./lib/preferences";
 import { ObservatoryProvider } from "./hooks/useObservatoryData";
 import { DriftRedirect } from "./routes/DriftRedirect";
+import { FleetRedirect } from "./routes/FleetRedirect";
 
 // Lazy-load all pages so the initial bundle only includes the shell + router
 const PreferencesPage = lazy(() => import("./pages/PreferencesPage"));
@@ -86,7 +87,7 @@ export default function App() {
             <Route path="machine" element={<MachinePage />} />
             {/* Retired route — Fleet itself is retired in Task 1.6; this just
                 closes the direct-URL path (AC-6). */}
-            <Route path="fleet" element={<Navigate to="/machine" replace />} />
+            <Route path="fleet" element={<FleetRedirect />} />
 
             {/* Harness Manager */}
             <Route path="harness/file" element={<HarnessFilePage />} />
