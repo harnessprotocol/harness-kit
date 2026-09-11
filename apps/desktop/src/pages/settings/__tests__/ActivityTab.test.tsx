@@ -70,4 +70,30 @@ describe("ActivityTab", () => {
     await screen.findByText("Reconciliation ledger");
     expect(mockGrantProjectScope).not.toHaveBeenCalled();
   });
+
+  it("shows a degraded notice when a project is tracked but its scope grant fails", async () => {
+    localStorage.setItem("harness-kit-sync-recent-dirs", JSON.stringify(["/repo/gone"]));
+    mockGrantProjectScope.mockRejectedValue(new Error("forbidden"));
+
+    render(<ActivityTab />);
+
+    // The ledger still renders machine-only (personal-scope) results — a
+    // failed grant drops the project layer rather than failing the ledger.
+    await screen.findByText("Reconciliation ledger");
+    expect(await screen.findByTestId("project-degraded-notice")).toHaveTextContent(
+      "Project directory could not be scanned — showing personal-scope results only.",
+    );
+    expect(mockGrantProjectScope).toHaveBeenCalledWith("/repo/gone");
+    expect(mockBuildDesktopPortabilitySnapshot).toHaveBeenCalledWith("/home/user", null, expect.any(String));
+  });
+
+  it("shows an error notice when the snapshot build itself fails outright", async () => {
+    mockBuildDesktopPortabilitySnapshot.mockRejectedValue(new Error("boom"));
+
+    render(<ActivityTab />);
+
+    expect(await screen.findByText(/Ledger failed to build: Error: boom/)).toBeInTheDocument();
+    expect(screen.queryByTestId("project-degraded-notice")).not.toBeInTheDocument();
+    expect(screen.queryByText("Reconciliation ledger")).not.toBeInTheDocument();
+  });
 });

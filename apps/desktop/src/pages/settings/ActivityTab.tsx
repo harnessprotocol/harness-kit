@@ -17,6 +17,13 @@ const AuditLogPage = lazy(() => import("../security/AuditLogPage"));
  */
 export function ActivityTab() {
   const [snapshot, setSnapshot] = useState<DesktopPortabilitySnapshot | null>(null);
+  // Two distinct failure shapes, both previously collapsed into
+  // `snapshot === null` — indistinguishable from "still loading" or
+  // "nothing to show". `projectDegraded` mirrors MachinePage: a project is
+  // tracked but its scope grant failed, so the ledger silently fell back to
+  // personal-scope only. `error` is the snapshot build itself throwing.
+  const [projectDegraded, setProjectDegraded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,10 +45,18 @@ export function ActivityTab() {
         projectDir && scopeReady ? projectDir : null,
         installationId(),
       );
-      if (!cancelled) setSnapshot(result);
+      if (!cancelled) {
+        setSnapshot(result);
+        setProjectDegraded(Boolean(projectDir) && !scopeReady);
+        setError(null);
+      }
     }
-    load().catch(() => {
-      if (!cancelled) setSnapshot(null);
+    load().catch((err) => {
+      if (!cancelled) {
+        setSnapshot(null);
+        setProjectDegraded(false);
+        setError(String(err));
+      }
     });
     return () => {
       cancelled = true;
@@ -53,6 +68,24 @@ export function ActivityTab() {
       <Suspense fallback={null}>
         <AuditLogPage />
       </Suspense>
+
+      {error && <div className="hk-page-error">Ledger failed to build: {error}</div>}
+
+      {projectDegraded && (
+        <div
+          data-testid="project-degraded-notice"
+          style={{
+            padding: "6px 10px",
+            borderRadius: 6,
+            background: "var(--warning-light)",
+            color: "var(--warning)",
+            fontSize: 11.5,
+          }}
+        >
+          Project directory could not be scanned — showing personal-scope results only.
+        </div>
+      )}
+
       <PortabilityPanel snapshot={snapshot} />
     </div>
   );
