@@ -2301,12 +2301,6 @@
           "markdownDescription": "Enables the delete_pairwise_vote command without any pre-configured scope."
         },
         {
-          "description": "Enables the detect_agents command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-detect-agents",
-          "markdownDescription": "Enables the detect_agents command without any pre-configured scope."
-        },
-        {
           "description": "Enables the detect_claude_account command without any pre-configured scope.",
           "type": "string",
           "const": "allow-detect-claude-account",
@@ -2389,12 +2383,6 @@
           "type": "string",
           "const": "allow-get-evaluations",
           "markdownDescription": "Enables the get_evaluations command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the get_harness_health command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-get-harness-health",
-          "markdownDescription": "Enables the get_harness_health command without any pre-configured scope."
         },
         {
           "description": "Enables the get_harness_recommendations command without any pre-configured scope.",
@@ -2623,12 +2611,6 @@
           "type": "string",
           "const": "allow-record-bundle-number",
           "markdownDescription": "Enables the record_bundle_number command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the record_harness_launch_result command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-record-harness-launch-result",
-          "markdownDescription": "Enables the record_harness_launch_result command without any pre-configured scope."
         },
         {
           "description": "Enables the record_transaction command without any pre-configured scope.",
@@ -2931,12 +2913,6 @@
           "markdownDescription": "Denies the delete_pairwise_vote command without any pre-configured scope."
         },
         {
-          "description": "Denies the detect_agents command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-detect-agents",
-          "markdownDescription": "Denies the detect_agents command without any pre-configured scope."
-        },
-        {
           "description": "Denies the detect_claude_account command without any pre-configured scope.",
           "type": "string",
           "const": "deny-detect-claude-account",
@@ -3019,12 +2995,6 @@
           "type": "string",
           "const": "deny-get-evaluations",
           "markdownDescription": "Denies the get_evaluations command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the get_harness_health command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-get-harness-health",
-          "markdownDescription": "Denies the get_harness_health command without any pre-configured scope."
         },
         {
           "description": "Denies the get_harness_recommendations command without any pre-configured scope.",
@@ -3253,12 +3223,6 @@
           "type": "string",
           "const": "deny-record-bundle-number",
           "markdownDescription": "Denies the record_bundle_number command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the record_harness_launch_result command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-record-harness-launch-result",
-          "markdownDescription": "Denies the record_harness_launch_result command without any pre-configured scope."
         },
         {
           "description": "Denies the record_transaction command without any pre-configured scope.",
