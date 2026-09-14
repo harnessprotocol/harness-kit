@@ -9,6 +9,10 @@ export default defineConfig({
   clean: false,
   sourcemap: false,
   noExternal: [/.*/],
+  target: "node24",
+  // Keep `node:` prefixes: node:sqlite only resolves with the prefix.
+  // See tsup.config.ts for the full story.
+  removeNodeProtocol: false,
   banner: {
     js: "#!/usr/bin/env node",
   },
