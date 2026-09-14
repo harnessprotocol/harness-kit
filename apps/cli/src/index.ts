@@ -586,4 +586,7 @@ async function main(): Promise<void> {
   }
 }
 
-await main();
+// Not top-level await: the standalone bundle is CJS (Node SEA requires it),
+// and esbuild rejects TLA in CJS output. A rethrown CommanderError still
+// surfaces as an unhandled rejection with a non-zero exit.
+void main();
