@@ -55,7 +55,6 @@ export type {
   FileDiffRow,
   TaskType,
   HarnessRecommendation,
-  HarnessHealthRecord,
   Organization,
   OrgMember,
   OrgComponent,

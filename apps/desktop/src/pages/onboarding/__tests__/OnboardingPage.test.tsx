@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import OnboardingPage from "../OnboardingPage";
 import { ONBOARDING_FIXTURE_RESULT, ONBOARDING_FIXTURE_LOW_COUNT } from "../../__fixtures__/onboarding-fixture-data";
@@ -57,6 +57,7 @@ describe("OnboardingPage", () => {
     // Scan step shows first.
     expect(screen.getByText(/scanning your machine/i)).toBeInTheDocument();
 
+    // The `.` stands in for the curly apostrophe in "They don’t agree."
     await waitFor(
       () => expect(screen.getByText(/They don.t agree\./)).toBeInTheDocument(),
       { timeout: 3000 },
@@ -117,6 +118,48 @@ describe("OnboardingPage", () => {
 
     expect(mockWriteHarnessFile).not.toHaveBeenCalled();
     expect(onFinish).toHaveBeenCalled();
+  });
+
+  it("shows the scan error with Retry and Skip instead of a blank step", async () => {
+    mockImportMachine.mockRejectedValueOnce(new Error("EACCES: ~/.codex"));
+    const { onFinish } = renderPage();
+
+    // The scan step no longer renders the error; the failed step is the
+    // only place it appears, alongside the actions.
+    expect(await screen.findByText(/machine scan did not finish/i)).toBeInTheDocument();
+    expect(screen.getByText("EACCES: ~/.codex")).toBeInTheDocument(); // no "Error:" prefix
+    expect(screen.queryByText(/scanning your machine/i)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retry scan" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Skip setup" })).toBeInTheDocument();
+    expect(onFinish).not.toHaveBeenCalled();
+  });
+
+  it("Retry scan runs the scan again and reaches the reveal", async () => {
+    mockImportMachine.mockResolvedValue(ONBOARDING_FIXTURE_RESULT);
+    mockImportMachine.mockRejectedValueOnce(new Error("EACCES: ~/.codex"));
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Retry scan" }));
+
+    // Retry goes back through the scan step, not straight to the reveal.
+    expect(screen.getByText(/scanning your machine/i)).toBeInTheDocument();
+    expect(screen.queryByText(/machine scan did not finish/i)).not.toBeInTheDocument();
+
+    await waitFor(() => expect(screen.getByText(/They don.t agree\./)).toBeInTheDocument(), {
+      timeout: 3000,
+    });
+    expect(screen.queryByText(/EACCES/)).not.toBeInTheDocument();
+    expect(mockImportMachine).toHaveBeenCalledTimes(2);
+  });
+
+  it("Skip setup finishes onboarding without writing", async () => {
+    mockImportMachine.mockResolvedValue(ONBOARDING_FIXTURE_RESULT);
+    const { onFinish } = renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Skip setup" }));
+
+    expect(onFinish).toHaveBeenCalledTimes(1);
+    expect(mockWriteHarnessFile).not.toHaveBeenCalled();
   });
 
   it("surfaces a scan error without crashing", async () => {

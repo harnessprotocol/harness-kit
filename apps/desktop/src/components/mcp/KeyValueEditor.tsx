@@ -1,3 +1,5 @@
+import { X } from "lucide-react";
+
 export interface KeyValuePair {
   id?: string;
   key: string;
@@ -90,7 +92,6 @@ export default function KeyValueEditor({
               background: "transparent",
               color: "var(--fg-subtle)",
               cursor: disabled ? "not-allowed" : "pointer",
-              fontSize: 14,
               lineHeight: 1,
               opacity: disabled ? 0.5 : 1,
               transition: "color 0.15s, background 0.15s",
@@ -110,7 +111,7 @@ export default function KeyValueEditor({
                 "transparent";
             }}
           >
-            ×
+            <X size={13} strokeWidth={1.7} aria-hidden="true" />
           </button>
         </div>
       ))}

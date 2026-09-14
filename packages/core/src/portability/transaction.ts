@@ -48,7 +48,16 @@ function assertRelativeSafePath(path: string): void {
   }
 }
 
-async function assertNoSymlinkBoundary(fs: FsProvider, root: string, path: string): Promise<void> {
+/**
+ * Refuse a path that reaches its target through a symlink at ANY component.
+ *
+ * Exported because the unpack driver (plugins/unpack.ts) writes outside the
+ * transaction engine and needs the identical check: without it, one symlink
+ * planted inside a skills directory turns "unpack a plugin" into a write to
+ * any path the user can reach. Shared rather than reimplemented so the two
+ * cannot drift.
+ */
+export async function assertNoSymlinkBoundary(fs: FsProvider, root: string, path: string): Promise<void> {
   if (!fs.isSymlink) return;
   const parts = path.split(/[\\/]+/).filter(Boolean);
   for (let index = 1; index <= parts.length; index += 1) {

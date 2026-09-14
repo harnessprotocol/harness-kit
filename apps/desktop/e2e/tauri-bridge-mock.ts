@@ -99,9 +99,16 @@ export const MOCK_RESPONSES: Record<string, unknown> = {
   sync_list_backups: [],
   // Drift (acknowledgement persistence — drift itself is computed by
   // @harness-kit/core against the mocked FsProvider, not IPC)
+  // The three below are the RETIRED commands against the desktop's own
+  // comparator.db; they are kept only until parity.rs is removed.
   acknowledge_drift_item: null,
   unacknowledge_drift_item: null,
   get_acknowledged_drift_items: [],
+  // AC-37: acknowledgements now live in the shared harness.db.
+  migrate_drift_acknowledgements: 0,
+  acknowledge_drift: null,
+  unacknowledge_drift: null,
+  list_drift_acknowledgements: [],
   // Chat
   chat_save_room: null,
   chat_leave_room: null,

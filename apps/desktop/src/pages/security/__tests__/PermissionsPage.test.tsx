@@ -17,7 +17,6 @@ vi.mock("../../../lib/tauri", () => ({
   listSecurityPresets: () => mockListSecurityPresets(),
   applySecurityPreset: (...args: unknown[]) => mockApplySecurityPreset(...args),
   detectClaudeAccount: () => Promise.resolve({ logged_in: false, subscription_type: null, auto_mode_available: false }),
-  getHarnessHealth: () => Promise.resolve([]),
 }));
 
 vi.mock("../../../lib/preferences", () => ({
@@ -33,8 +32,6 @@ vi.mock("../../../lib/preferences", () => ({
   DEFAULT_ALLOWED_TOOLS: ["Read", "Grep", "Glob"],
   getBudgetGuard: () => ({ enabled: false }),
   setBudgetGuard: vi.fn(),
-  getResilienceConfig: () => ({}),
-  setResilienceConfig: vi.fn(),
 }));
 
 // ── Fixtures ──────────────────────────────────────────────────

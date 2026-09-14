@@ -62,6 +62,28 @@ const SURFACE_TABLE: Record<SurfaceId, Omit<SurfaceDescriptor, "id">> = {
     marketplaces: [
       { scope: "user", formatId: "json-claude-marketplaces", path: ".claude/plugins/known_marketplaces.json" },
     ],
+    // Verbs and flags read from `claude plugin --help`, not assumed.
+    // `--scope` takes user/project/local; HarnessKit's project scope maps to
+    // `project` (the committed settings file) rather than `local`, because a
+    // sync between machines should land somewhere a team shares.
+    pluginInstall: {
+      kind: "native",
+      binary: "claude",
+      installArgs: ["plugin", "install"],
+      uninstallArgs: ["plugin", "uninstall"],
+      installSelector: "identity",
+      uninstallSelector: "identity",
+      // `--scope` takes user/project/local. HarnessKit's two scopes map to
+      // user/project, but `nativeValues` lets a copy REPRODUCE the scope the
+      // source actually used: reproducing a `local` install (private, in
+      // settings.local.json) as `project` (committed, team-shared) would
+      // escalate it from private to shared without the user asking.
+      scope: {
+        flag: "--scope",
+        values: { user: "user", project: "project" },
+        nativeValues: ["user", "project", "local"],
+      },
+    },
   },
   "claude-desktop": {
     label: "Claude Desktop",
@@ -153,6 +175,24 @@ const SURFACE_TABLE: Record<SurfaceId, Omit<SurfaceDescriptor, "id">> = {
       { kind: "instructions", scope: "project", formatId: "markdown-instructions", path: "AGENTS.md" },
     ],
     notApplicable: [],
+    // `copilot plugin uninstall --help` documents its argument as
+    // "plugin-name or plugin-name@marketplace-name" and its own example uses
+    // the qualified form. An earlier reading of the TOP-LEVEL help saw only
+    // `<name>` and recorded a selector asymmetry that does not exist; dropping
+    // the marketplace also drops the disambiguator when two marketplaces
+    // provide the same plugin name.
+    //
+    // No plugin STORE is declared: `copilot plugin list` has no machine
+    // -readable output and nothing on disk was verifiable, so this surface can
+    // be written to but not yet enumerated.
+    pluginInstall: {
+      kind: "native",
+      binary: "copilot",
+      installArgs: ["plugin", "install"],
+      uninstallArgs: ["plugin", "uninstall"],
+      installSelector: "identity",
+      uninstallSelector: "identity",
+    },
   },
   codex: {
     label: "OpenAI Codex",
@@ -181,6 +221,17 @@ const SURFACE_TABLE: Record<SurfaceId, Omit<SurfaceDescriptor, "id">> = {
       { scope: "user", formatId: "toml-codex-marketplaces", path: ".codex/config.toml" },
       { scope: "project", formatId: "toml-codex-marketplaces", path: ".codex/config.toml" },
     ],
+    // `codex plugin add|remove` with no scope option, and `--json` — the only
+    // machine-readable install result of the three.
+    pluginInstall: {
+      kind: "native",
+      binary: "codex",
+      installArgs: ["plugin", "add"],
+      uninstallArgs: ["plugin", "remove"],
+      installSelector: "identity",
+      uninstallSelector: "identity",
+      jsonFlag: "--json",
+    },
   },
   cursor: {
     label: "Cursor",
@@ -227,7 +278,14 @@ const SURFACE_TABLE: Record<SurfaceId, Omit<SurfaceDescriptor, "id">> = {
       { kind: "skill", scope: "project", formatId: "skills-dir", path: ".pi/skills" },
       { kind: "instructions", scope: "project", formatId: "markdown-instructions", path: ".pi/APPEND_SYSTEM.md" },
     ],
+    // `plugin` STAYS not-applicable: pi has no plugin concept, and the cell
+    // status describes the harness, not what HarnessKit can do to it. AC-19's
+    // unpack is a separate question — an explicit "put this plugin's contents
+    // into pi's native skill and instruction locations", never a gap to be
+    // closed by a copy. Conflating the two would make a not-applicable cell
+    // start appearing in gap lists.
     notApplicable: ["mcp-server", "plugin"],
+    pluginInstall: { kind: "unpack" },
   },
   opencode: {
     label: "OpenCode",
@@ -246,6 +304,7 @@ const SURFACE_TABLE: Record<SurfaceId, Omit<SurfaceDescriptor, "id">> = {
       { kind: "instructions", scope: "project", formatId: "markdown-instructions", path: "AGENTS.md" },
     ],
     notApplicable: [],
+    pluginInstall: { kind: "unpack" },
   },
   // ── Legacy surfaces retained at current fidelity (data carried over ──
   // from adapters/target-metadata.ts TARGETS).

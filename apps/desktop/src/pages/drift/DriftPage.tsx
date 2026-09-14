@@ -7,12 +7,14 @@ import { FixPreviewModal } from "./FixPreviewModal";
 import { DriftView } from "./DriftView";
 import {
   acknowledgeDriftItem,
+  migrateDriftAcknowledgements,
   unacknowledgeDriftItem,
   getAcknowledgedDriftItems,
 } from "../../lib/tauri";
+import { appDataDir, join as joinPath } from "@tauri-apps/api/path";
 import { buildDesktopPortabilitySnapshot, type DesktopPortabilitySnapshot } from "../fleet/portability-data";
 
-export default function DriftPage() {
+export default function DriftPage({ embedded = false }: { embedded?: boolean } = {}) {
   const [searchParams] = useSearchParams();
   const harnessFilter = searchParams.get("harness");
 
@@ -38,6 +40,15 @@ export default function DriftPage() {
       const scopes = await buildDriftScopes();
       const home = scopes.find((scope) => scope.kind === "global")?.root;
       const project = scopes.find((scope) => scope.kind === "project")?.root;
+      // AC-37: acknowledgements moved to the shared harness.db. Copy anything
+      // the desktop's own database still holds BEFORE reading, so a user who
+      // acknowledged items before the move does not see them all resurface.
+      // Idempotent, never deletes the source, and a failure here must not
+      // stop drift from rendering — worst case some items reappear.
+      await appDataDir()
+        .then((dir) => joinPath(dir, "comparator.db"))
+        .then((legacy) => migrateDriftAcknowledgements(legacy))
+        .catch(() => 0);
       const [collected, ackRows, portabilitySnapshot] = await Promise.all([
         collectDrift(scopes),
         getAcknowledgedDriftItems().catch(() => []),
@@ -109,7 +120,8 @@ export default function DriftPage() {
   return (
     <>
       <DriftView
-        entries={entries}
+      embedded={embedded}
+             entries={entries}
         filteredEntries={filtered}
         acknowledged={acknowledged}
         loading={loading}

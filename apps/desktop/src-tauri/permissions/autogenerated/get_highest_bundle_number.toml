@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-get-highest-bundle-number"
+description = "Enables the get_highest_bundle_number command without any pre-configured scope."
+commands.allow = ["get_highest_bundle_number"]
+
+[[permission]]
+identifier = "deny-get-highest-bundle-number"
+description = "Denies the get_highest_bundle_number command without any pre-configured scope."
+commands.deny = ["get_highest_bundle_number"]

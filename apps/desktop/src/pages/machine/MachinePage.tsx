@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Input, SummaryStrip, EmptyState, type SummaryCell } from "@harness-kit/ui";
-import { ScanSearch } from "lucide-react";
+import { ChevronRight, ScanSearch } from "lucide-react";
 import type { GridRow, MachineInventory } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
 import { loadMachineInventory } from "./machine-data";
 import { MachineGrid } from "./MachineGrid";
 import { RowDrawer } from "./RowDrawer";
+import DriftPage from "../drift/DriftPage";
 
 /**
  * Machine view (Task 14): read-only cross-surface inventory of this
@@ -17,6 +19,44 @@ export default function MachinePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [projectDir, setProjectDir] = useState("");
+  // Arriving from the retired /drift route (or the sidebar's Drift entry)
+  // opens the section: redirecting someone to a collapsed accordion is the
+  // same as losing the page they asked for.
+  //
+  // An effect, NOT a useState initializer. React Router does not remount this
+  // component when only the search string changes, so an initializer opened
+  // the section on a cold load of /machine?drift=1 and did nothing on the
+  // common path — clicking Drift in the sidebar while already on Machine.
+  const [searchParams] = useSearchParams();
+  const driftRequested = searchParams.get("drift") === "1";
+  const harnessParam = searchParams.get("harness");
+  const [driftOpen, setDriftOpen] = useState(driftRequested);
+  const driftSectionRef = useRef<HTMLElement | null>(null);
+  const driftScrollPending = useRef(false);
+  useEffect(() => {
+    // Opens on request; never force-closes, so a user who opened the section
+    // by hand does not lose it by navigating within Machine. Keyed on the
+    // harness too: a Fleet row click while already viewing Drift changes
+    // only that param, and is still a new request.
+    if (driftRequested) {
+      setDriftOpen(true);
+      driftScrollPending.current = true;
+    }
+  }, [driftRequested, harnessParam]);
+  useEffect(() => {
+    // Consumes the request once the scan is not loading: immediately when the
+    // user is already on Machine, after the first scan on a cold mount. The
+    // layout signal is `loading`, which flips in the same batch that renders
+    // the grid; scrolling before that lands on a layout the grid then pushes
+    // below the fold. Keyed on the request params as well: a ref write
+    // schedules nothing, so the effect must run on the render the request
+    // arrived in. Consumed once, so a later Refresh does not yank the page
+    // back here. On a failed scan the section still scrolls: the user asked
+    // for Drift.
+    if (!driftScrollPending.current || loading) return;
+    driftScrollPending.current = false;
+    driftSectionRef.current?.scrollIntoView?.({ block: "start" });
+  }, [driftRequested, harnessParam, loading]);
   const [selectedRow, setSelectedRow] = useState<GridRow | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
   const [projectDegraded, setProjectDegraded] = useState(false);
@@ -202,17 +242,12 @@ export default function MachinePage() {
                   cursor: "pointer",
                 }}
               >
-                <span
+                <ChevronRight
+                  size={10}
+                  strokeWidth={1.7}
                   aria-hidden="true"
-                  style={{
-                    display: "inline-block",
-                    transform: showSkipped ? "rotate(90deg)" : "none",
-                    transition: "transform 0.15s ease",
-                    fontSize: 9,
-                  }}
-                >
-                  ▶
-                </span>
+                  style={{ transform: showSkipped ? "rotate(90deg)" : "none", transition: "transform 0.15s ease" }}
+                />
                 Skipped diagnostics
                 <span
                   style={{
@@ -267,12 +302,59 @@ export default function MachinePage() {
         </>
       )}
 
+      {/*
+        AC-37: Drift lives here now. Rendered as the existing page rather than
+        reimplemented — the M2 attempt to "absorb" Drift routed /drift at this
+        view and DELETED the acknowledge/fix workflow, which is why it was
+        reverted. Drift compares harness.yaml against compiled output; the grid
+        above compares surfaces against each other. Two different questions, one
+        screen.
+      */}
+      <section ref={driftSectionRef} style={{ marginTop: 28 }} data-testid="machine-drift-section">
+        <button
+          type="button"
+          onClick={() => setDriftOpen((open) => !open)}
+          aria-expanded={driftOpen}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            background: "none",
+            border: "none",
+            padding: 0,
+            cursor: "pointer",
+            font: "inherit",
+            fontSize: 13,
+            fontWeight: 650,
+            color: "var(--fg-base)",
+          }}
+        >
+          <ChevronRight
+            size={12}
+            strokeWidth={1.7}
+            aria-hidden="true"
+            style={{ transform: driftOpen ? "rotate(90deg)" : "none", transition: "transform 0.15s ease" }}
+          />
+          Drift from harness.yaml
+        </button>
+        {/*
+          Mounted only when opened, and that is behavioural rather than
+          cosmetic: Drift scans project scopes on mount and asks Tauri to grant
+          access to the project directory. The Machine view runs machine-only
+          by default and must not trigger a directory-permission request the
+          user did not ask for, so its own load behaviour stays unchanged
+          until someone opens this.
+        */}
+        {driftOpen && <DriftPage embedded />}
+      </section>
+
       {selectedRow && (
         <RowDrawer
           row={selectedRow}
           diffs={rowDiffs}
           gaps={inventory?.gaps ?? []}
           onClose={() => setSelectedRow(null)}
+          onApplied={() => load(projectDir)}
         />
       )}
     </div>

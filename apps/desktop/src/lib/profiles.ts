@@ -1,8 +1,11 @@
+import type { LucideIcon } from "lucide-react";
+import { ChartColumn, ClipboardList, Keyboard, PenLine, TrendingUp, Wrench } from "lucide-react";
+
 export interface HarnessProfile {
   id: string;
   name: string;
   description: string;
-  icon: string;
+  icon: LucideIcon;
   tags: string[];
   yaml: string;
 }
@@ -12,7 +15,7 @@ export const PROFILES: HarnessProfile[] = [
     id: "software-engineer",
     name: "Software Engineer",
     description: "Full-stack development, code review, and debugging. Full tool access with read/write/bash.",
-    icon: "⌨️",
+    icon: Keyboard,
     tags: ["code", "bash", "git"],
     yaml: `version: "1"
 metadata:
@@ -46,7 +49,7 @@ permissions:
     id: "data-engineer",
     name: "Data Engineer",
     description: "Data pipelines, analytics, SQL, and Python. Focus on correctness and reproducibility.",
-    icon: "📊",
+    icon: ChartColumn,
     tags: ["data", "sql", "python", "pipelines"],
     yaml: `version: "1"
 metadata:
@@ -79,7 +82,7 @@ permissions:
     id: "product-manager",
     name: "Product Manager",
     description: "Specs, research synthesis, roadmaps, and stakeholder comms. Writing-focused.",
-    icon: "📋",
+    icon: ClipboardList,
     tags: ["writing", "research", "specs"],
     yaml: `version: "1"
 metadata:
@@ -112,7 +115,7 @@ permissions:
     id: "devops",
     name: "DevOps / SRE",
     description: "Infrastructure, CI/CD, observability, and incident response. Shell-heavy.",
-    icon: "🔧",
+    icon: Wrench,
     tags: ["infra", "shell", "ci/cd", "reliability"],
     yaml: `version: "1"
 metadata:
@@ -145,7 +148,7 @@ permissions:
     id: "content-creator",
     name: "Content Creator",
     description: "Writing, editing, and long-form content. Minimal tool access, strong writing focus.",
-    icon: "✍️",
+    icon: PenLine,
     tags: ["writing", "editing", "content"],
     yaml: `version: "1"
 metadata:
@@ -178,7 +181,7 @@ permissions:
     id: "finance-analyst",
     name: "Finance / Analyst",
     description: "Financial analysis, modelling, and reporting. Spreadsheet and data focused.",
-    icon: "💹",
+    icon: TrendingUp,
     tags: ["finance", "analysis", "reporting"],
     yaml: `version: "1"
 metadata:

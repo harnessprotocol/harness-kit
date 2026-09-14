@@ -39,6 +39,8 @@ export default function OnboardingFixture() {
       onAdvance={() => {}}
       onWriteAndFinish={() => {}}
       onExploreReadOnly={() => {}}
+      onSkip={() => {}}
+      onRetry={() => {}}
     />
   );
 }

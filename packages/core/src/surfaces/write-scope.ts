@@ -1,6 +1,6 @@
 import type { TransactionRoot } from "../portability/transaction.js";
 import { SURFACES } from "./registry.js";
-import type { ConfigStore, PlatformPathOverrides } from "./types.js";
+import type { ConfigStore, PlatformPathOverrides, SurfaceDescriptor } from "./types.js";
 import { isWritableFormat } from "../write/write-store.js";
 
 type Platform = keyof PlatformPathOverrides;
@@ -41,11 +41,24 @@ function normalize(path: string): string {
   return slashed.slice(0, end);
 }
 
-/** Build the write scope for a platform from every surface's user-scope stores. */
-export function homeWriteScope(platform: Platform): HomeWriteScope {
+/**
+ * Build the write scope for a platform from every surface's user-scope stores.
+ *
+ * `registry` is the registry IN FORCE, which may have come from a verified
+ * definitions bundle (AC-26). Passing the compiled-in table while observation
+ * reads a bundle's is not a security hole — the allowlist only ever gets
+ * narrower that way — but it breaks the feature: the tool can then SEE a
+ * moved config file and never write it, because the moved path is not in the
+ * scope. Callers holding a resolved registry must pass the same one they
+ * observed with.
+ */
+export function homeWriteScope(
+  platform: Platform,
+  registry: readonly SurfaceDescriptor[] = SURFACES,
+): HomeWriteScope {
   const files = new Set<string>();
   const directories = new Set<string>();
-  for (const surface of SURFACES) {
+  for (const surface of registry) {
     for (const store of surface.stores) {
       if (store.scope !== "user") continue;
       if (!isWritableFormat(store.formatId)) continue;
@@ -83,8 +96,10 @@ export function isWritableHomePath(path: string, scope: HomeWriteScope): boolean
 export function createHomeTransactionRoot(
   absolutePath: string,
   platform: Platform,
+  /** The registry in force (AC-26) — see `homeWriteScope`. */
+  registry: readonly SurfaceDescriptor[] = SURFACES,
 ): TransactionRoot {
-  const scope = homeWriteScope(platform);
+  const scope = homeWriteScope(platform, registry);
   return {
     absolutePath,
     allowPath: (path) => isWritableHomePath(path, scope),

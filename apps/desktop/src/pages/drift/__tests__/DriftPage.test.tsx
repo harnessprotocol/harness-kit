@@ -25,6 +25,10 @@ vi.mock("../../fleet/portability-data", () => ({
 
 vi.mock("@tauri-apps/api/path", () => ({
   homeDir: vi.fn(() => Promise.resolve("/home/user")),
+  // Used to locate the legacy comparator.db for the AC-37 acknowledgement
+  // migration, which runs before acknowledgements are read.
+  appDataDir: vi.fn(() => Promise.resolve("/home/user/Library/harness-kit")),
+  join: vi.fn((...segments: string[]) => Promise.resolve(segments.join("/"))),
 }));
 
 function makeFsProvider(cwd: string) {
@@ -47,6 +51,7 @@ vi.mock("../../../lib/tauri", () => ({
   acknowledgeDriftItem: vi.fn(),
   unacknowledgeDriftItem: vi.fn(),
   getAcknowledgedDriftItems: () => mockGetAcknowledgedDriftItems(),
+  migrateDriftAcknowledgements: vi.fn(() => Promise.resolve(0)),
 }));
 
 function renderPage() {

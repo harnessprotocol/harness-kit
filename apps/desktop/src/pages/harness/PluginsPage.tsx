@@ -292,7 +292,7 @@ export default function PluginsPage() {
       {/* Page header */}
       <div className="hk-page-head">
         <div>
-          <h1 className="hk-page-title">Installed Plugins</h1>
+          <h1 className="hk-page-title">Plugins · Claude Code</h1>
           <p className="hk-page-subtitle">
             Plugins in your <code style={{ fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>~/.claude/</code> environment.
           </p>

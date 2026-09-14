@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { X } from "lucide-react";
 import type { CSSProperties } from "react";
 import type { ClaudeMcpServer } from "../../lib/mcp-types";
 import { inferTransport, isNetworkServer } from "../../lib/mcp-types";
@@ -134,7 +135,7 @@ export default function McpServerCard({
           tabIndex={0}
           aria-label={`Delete ${name}`}
         >
-          ×
+          <X size={13} strokeWidth={1.7} aria-hidden="true" />
         </button>
       </div>
     </div>

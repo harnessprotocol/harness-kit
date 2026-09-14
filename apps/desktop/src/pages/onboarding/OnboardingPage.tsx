@@ -17,10 +17,10 @@ export interface OnboardingPageProps {
  * Data-fetching wrapper for the first-run onboarding wizard (DESIGN.md
  * §6.3). Runs the real `importMachine()` scan over the Tauri FsProvider —
  * global config roots (home dir) plus the user's current project dir when
- * one is tracked (same scoping convention as FleetPage) — and feeds the
- * result to the presentational `OnboardingFlow`. Split the same way
- * FleetPage/FleetView is split so the flow can be screenshot-tested with
- * fixture data with no live backend.
+ * one is tracked — and feeds the result to the presentational
+ * `OnboardingFlow`. Split into a data-fetching wrapper and a presentational
+ * view (the same pattern used by Machine) so the flow can be
+ * screenshot-tested with fixture data with no live backend.
  */
 export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
   const [step, setStep] = useState<OnboardingStep>("scan");
@@ -31,6 +31,9 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
   const [writing, setWriting] = useState(false);
   const [writeError, setWriteError] = useState<string | null>(null);
   const startedAt = useRef<number>(Date.now());
+  // Bumped by Retry; the scan effect is keyed on it so a rerun goes back
+  // through the scan step (AC-32). handleRetry resets the scan state.
+  const [scanRun, setScanRun] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,9 +46,11 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
         // Scan the global config root first — importProject's synthesizer
         // merges every adapter fragment it finds under a single FsProvider
         // root, so the project dir (when tracked) is scanned as a second,
-        // separate pass and its findings are merged in below. This mirrors
-        // Fleet's "Global + tracked project" scoping (DESIGN.md §6.3 Fleet)
-        // rather than inventing a new convention for onboarding.
+        // separate pass and its findings are merged in below. The tracked
+        // project dir comes from lib/project-dir.ts (getCurrentProjectDir),
+        // the same store other consumers use. Machine still tracks its own
+        // page-local project dir and moves onto this store in a later phase
+        // (specs/ux-consolidation/design.md D9).
         const globalResult = await importMachine({ fs: new TauriFsProvider(home) });
 
         let combined = globalResult;
@@ -53,7 +58,7 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
           try {
             // The static Tauri FS capability only lists known harness config
             // roots under $HOME — an arbitrary project dir needs its runtime
-            // scope granted first (same requirement as FleetPage).
+            // scope granted first (same requirement as Machine).
             await grantProjectScope(projectDir);
             const projectResult = await importMachine({ fs: new TauriFsProvider(projectDir) });
             combined = mergeImportResults(globalResult, projectResult);
@@ -69,7 +74,9 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
         setResult(combined);
         setReveal(buildSprawlReveal(combined));
       } catch (err) {
-        if (!cancelled) setScanError(String(err));
+        // err.message, not String(err): the failed step prints this verbatim
+        // and "Error: EACCES…" reads as a stack line, not a sentence.
+        if (!cancelled) setScanError(err instanceof Error ? err.message : String(err));
       }
     }
 
@@ -77,7 +84,7 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [scanRun]);
 
   // Auto-advance from the scan step once it completes (success or error) —
   // the error is still shown, just on the reveal-adjacent step so the user
@@ -107,6 +114,18 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
     }
   }, [result, onFinish]);
 
+  const handleRetry = useCallback(() => {
+    setScanError(null);
+    setScanSeconds(null);
+    setStep("scan");
+    setScanRun((n) => n + 1);
+  }, []);
+
+  const handleSkip = useCallback(() => {
+    // Nothing is written; the caller marks the welcome as seen (AC-33).
+    onFinish();
+  }, [onFinish]);
+
   const handleExploreReadOnly = useCallback(() => {
     // Nothing is written — see DESIGN.md §6.3 CTA copy. Just dismiss.
     onFinish();
@@ -124,6 +143,8 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
       onAdvance={handleAdvance}
       onWriteAndFinish={handleWriteAndFinish}
       onExploreReadOnly={handleExploreReadOnly}
+      onSkip={handleSkip}
+      onRetry={handleRetry}
     />
   );
 }

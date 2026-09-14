@@ -1,8 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { renderHook } from "@testing-library/react";
 import { fireEvent } from "@testing-library/react";
-import { NAV_PATHS } from "../useGlobalShortcuts";
-import { NAV_SECTIONS } from "../../layouts/AppLayout";
+import { shortcutPaths, visibleNav } from "../../nav";
 import { useGlobalShortcuts } from "../useGlobalShortcuts";
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -25,16 +24,15 @@ function renderShortcuts(overrides?: { navigate?: AnyMock }) {
   return { navigate };
 }
 
+// localStorage is cleared before every test (src/test-setup.ts), so the
+// comparator lab is off and this reflects the same set useGlobalShortcuts
+// computes internally via getLabs().
+const paths = shortcutPaths(visibleNav({ comparator: false }));
+
 // ── Tests ─────────────────────────────────────────────────────
 
-describe("NAV_PATHS coverage", () => {
-  it("covers every NAV_SECTION — lengths must match", () => {
-    expect(NAV_PATHS.length).toBe(NAV_SECTIONS.length);
-  });
-});
-
 describe("⌘1–⌘N navigation", () => {
-  NAV_PATHS.forEach((path, idx) => {
+  paths.forEach((path, idx) => {
     const num = idx + 1;
     it(`⌘${num} navigates to ${path}`, () => {
       const { navigate } = renderShortcuts();
@@ -45,15 +43,23 @@ describe("⌘1–⌘N navigation", () => {
 });
 
 describe("out-of-bounds key does nothing", () => {
-  it(`⌘${NAV_PATHS.length + 1} does not call navigate`, () => {
+  it(`⌘${paths.length + 1} does not call navigate`, () => {
     const { navigate } = renderShortcuts();
-    fireEvent.keyDown(document, metaKey(String(NAV_PATHS.length + 1)));
+    fireEvent.keyDown(document, metaKey(String(paths.length + 1)));
     expect(navigate).not.toHaveBeenCalled();
   });
 
   it("⌘0 does not call navigate", () => {
     const { navigate } = renderShortcuts();
     fireEvent.keyDown(document, metaKey("0"));
+    expect(navigate).not.toHaveBeenCalled();
+  });
+});
+
+describe("labs-gated shortcuts", () => {
+  it("⌘5 does nothing while the comparator lab is off", () => {
+    const { navigate } = renderShortcuts();
+    fireEvent.keyDown(document, metaKey("5"));
     expect(navigate).not.toHaveBeenCalled();
   });
 });

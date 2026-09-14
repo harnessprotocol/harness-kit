@@ -1,3 +1,4 @@
+pub mod definitions;
 pub mod plugins;
 pub mod plugin_explorer;
 pub mod hooks;
@@ -21,7 +22,6 @@ pub mod parity;
 pub mod pairwise;
 pub mod comparator;
 pub mod comparator_panels;
-pub mod agents;
 pub mod harnesses;
 pub mod feedback;
 pub mod fs_scope;

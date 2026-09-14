@@ -271,31 +271,6 @@ function statusLabel(status: string, exitCode?: number): { text: string; color: 
   return { text: status, color: tokens.fgMuted };
 }
 
-/** Render star rating: filled stars in warning color, empty in subtle */
-function renderRating(exitCode: number | undefined): React.ReactNode {
-  // Heuristic: exit 0 = 4 stars, exit -1 (force-stopped) = 3 stars, other = 2 stars
-  let filled = 3;
-  if (exitCode === 0) filled = 4;
-  else if (exitCode != null && exitCode > 0) filled = 2;
-
-  const stars: React.ReactNode[] = [];
-  for (let i = 0; i < 5; i++) {
-    stars.push(
-      <span
-        key={i}
-        style={{
-          color: i < filled ? tokens.warning : tokens.fgPlaceholder,
-          fontSize: 13,
-          lineHeight: 1,
-        }}
-      >
-        {i < filled ? "\u2605" : "\u2606"}
-      </span>,
-    );
-  }
-  return <span style={{ display: "inline-flex", gap: 1 }}>{stars}</span>;
-}
-
 /** Find the panel with the best (shortest) duration */
 function bestDurationIdx(panels: ComparisonState["panels"]): number {
   let best = -1;
@@ -584,31 +559,18 @@ export default function ResultsPhase({ active, onStartJudge }: ResultsPhaseProps
                 onMouseLeave={() => setHoveredRow(null)}
                 style={hoveredRow === "exit" ? { background: tokens.hoverBg } : undefined}
               >
-                <td style={styles.tdMetric}>Exit Code</td>
+                <td style={{ ...styles.tdMetric, borderBottom: "none" }}>Exit Code</td>
                 {panels.map((p) => (
                   <td
                     key={p.id}
                     style={{
                       ...styles.tdMono,
+                      borderBottom: "none",
                       color: p.exitCode === 0 ? tokens.success : p.exitCode != null ? tokens.danger : tokens.fgMuted,
                       fontWeight: 500,
                     }}
                   >
                     {p.exitCode != null ? p.exitCode : "--"}
-                  </td>
-                ))}
-              </tr>
-
-              {/* Rating row */}
-              <tr
-                onMouseEnter={() => setHoveredRow("rating")}
-                onMouseLeave={() => setHoveredRow(null)}
-                style={hoveredRow === "rating" ? { background: tokens.hoverBg } : undefined}
-              >
-                <td style={{ ...styles.tdMetric, borderBottom: "none" }}>Rating</td>
-                {panels.map((p) => (
-                  <td key={p.id} style={{ ...styles.td, borderBottom: "none" }}>
-                    {renderRating(p.exitCode)}
                   </td>
                 ))}
               </tr>

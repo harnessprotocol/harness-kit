@@ -6,17 +6,12 @@ import {
   SIDEBAR_WIDTH_MIN,
   SIDEBAR_WIDTH_MAX,
   SIDEBAR_WIDTH_DEFAULT,
-  OBSERVATORY_REFRESH_DEFAULT,
   getFontSize,
   setFontSize,
   getDensity,
   setDensity,
   getDefaultSection,
   setDefaultSection,
-  getHiddenSections,
-  setHiddenSections,
-  getObservatoryRefresh,
-  setObservatoryRefresh,
   getMarkdownFont,
   setMarkdownFont,
   getSidebarWidth,
@@ -26,6 +21,8 @@ import {
   initPreferences,
   getConfigFilesDetailLevel,
   setConfigFilesDetailLevel,
+  getLabs,
+  setLab,
 } from "../preferences";
 
 beforeEach(() => {
@@ -104,52 +101,15 @@ describe("getDefaultSection / setDefaultSection", () => {
   });
 
   it("stores and retrieves a value", () => {
+    // /observatory is a child path (Claude Code > Usage), not a top-level
+    // NAV path — exercises the "check children too" branch of getDefaultSection.
     setDefaultSection("/observatory");
     expect(getDefaultSection()).toBe("/observatory");
   });
-});
 
-// ── Hidden Sections ──────────────────────────────────────────
-
-describe("getHiddenSections / setHiddenSections", () => {
-  it("returns empty Set when unset", () => {
-    const result = getHiddenSections();
-    expect(result).toBeInstanceOf(Set);
-    expect(result.size).toBe(0);
-  });
-
-  it("round-trips a Set of strings", () => {
-    const sections = new Set(["/observatory", "/harness/skills"]);
-    setHiddenSections(sections);
-    const result = getHiddenSections();
-    expect(result).toBeInstanceOf(Set);
-    expect(result.size).toBe(2);
-    expect(result.has("/observatory")).toBe(true);
-    expect(result.has("/harness/skills")).toBe(true);
-  });
-
-  it("round-trips an empty Set", () => {
-    setHiddenSections(new Set(["something"]));
-    setHiddenSections(new Set());
-    expect(getHiddenSections().size).toBe(0);
-  });
-});
-
-// ── Observatory Refresh ──────────────────────────────────────
-
-describe("getObservatoryRefresh / setObservatoryRefresh", () => {
-  it("returns 60000 when unset", () => {
-    expect(getObservatoryRefresh()).toBe(60_000);
-  });
-
-  it("stores and retrieves a value", () => {
-    setObservatoryRefresh(30_000);
-    expect(getObservatoryRefresh()).toBe(30_000);
-  });
-
-  it("stores 0 for off", () => {
-    setObservatoryRefresh(0);
-    expect(getObservatoryRefresh()).toBe(0);
+  it("falls back to /machine when the stored default section is not a nav path", () => {
+    localStorage.setItem("harness-kit-default-section", "/fleet");
+    expect(getDefaultSection()).toBe("/machine");
   });
 });
 
@@ -238,16 +198,6 @@ describe("corrupted localStorage resilience", () => {
     expect(getSidebarWidth()).toBe(SIDEBAR_WIDTH_MIN);
   });
 
-  it("getObservatoryRefresh falls back to default for non-numeric garbage", () => {
-    localStorage.setItem("harness-kit-observatory-refresh", "abc");
-    expect(getObservatoryRefresh()).toBe(OBSERVATORY_REFRESH_DEFAULT);
-  });
-
-  it("getObservatoryRefresh falls back to default for negative values", () => {
-    localStorage.setItem("harness-kit-observatory-refresh", "-500");
-    expect(getObservatoryRefresh()).toBe(OBSERVATORY_REFRESH_DEFAULT);
-  });
-
   it("getDensity falls back to 'comfortable' for invalid string", () => {
     localStorage.setItem("harness-kit-density", "foo");
     expect(getDensity()).toBe("comfortable");
@@ -277,6 +227,16 @@ describe("configFilesDetailLevel", () => {
   it("falls back to 'text-files' for unknown stored values", () => {
     localStorage.setItem("harness-kit-config-files-detail", "garbage");
     expect(getConfigFilesDetailLevel()).toBe("text-files");
+  });
+});
+
+// ── labs flags ───────────────────────────────────────────────
+
+describe("labs flags", () => {
+  it("defaults every lab to off and persists a change", () => {
+    expect(getLabs()).toEqual({ comparator: false });
+    setLab("comparator", true);
+    expect(getLabs().comparator).toBe(true);
   });
 });
 

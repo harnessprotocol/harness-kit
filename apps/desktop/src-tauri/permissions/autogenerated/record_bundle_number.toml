@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-record-bundle-number"
+description = "Enables the record_bundle_number command without any pre-configured scope."
+commands.allow = ["record_bundle_number"]
+
+[[permission]]
+identifier = "deny-record-bundle-number"
+description = "Denies the record_bundle_number command without any pre-configured scope."
+commands.deny = ["record_bundle_number"]

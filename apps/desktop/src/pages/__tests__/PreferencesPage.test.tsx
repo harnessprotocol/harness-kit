@@ -1,6 +1,6 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { describe, it, expect, beforeEach, vi } from "vitest";
 
 // ── Mocks ────────────────────────────────────────────────────
@@ -94,5 +94,18 @@ describe("PreferencesPage", () => {
     render(<MemoryRouter><PreferencesPage /></MemoryRouter>);
     expect(screen.getByText("Config File Explorer")).toBeInTheDocument();
     expect(screen.getByText("File visibility")).toBeInTheDocument();
+  });
+
+  it("Labs tab toggles Comparator", async () => {
+    render(
+      <MemoryRouter initialEntries={["/preferences/labs"]}>
+        <Routes>
+          <Route path="/preferences/:tab" element={<PreferencesPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    const toggle = await screen.findByRole("switch", { name: /Comparator/ });
+    fireEvent.click(toggle);
+    expect(localStorage.getItem("harness-kit-labs-comparator")).toBe("true");
   });
 });

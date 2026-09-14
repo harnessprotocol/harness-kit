@@ -1,5 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
+import { resolveDefinitions } from "../definitions/resolve-definitions.js";
+import { defaultStatePath, SqliteStateStore } from "../state/sqlite-store.js";
 import { resolve } from "node:path";
 import chalk from "chalk";
 import {
@@ -160,7 +162,29 @@ async function crossSurfaceDiff(flags: DiffFlags): Promise<void> {
     homeRoot: homedir(),
     platform: currentPlatform(),
   };
-  const inventory = await buildMachineInventory(fs, observeOpts);
+  // AC-26: the registry may come from a verified definitions bundle, so a
+  // moved config path is picked up without a release.
+  //
+  // The store is opened for this, and passing it is NOT optional. An earlier
+  // version passed `undefined` on the grounds that `diff` is read-only and
+  // needs no cache — which silently dropped ANTI-ROLLBACK too, because the
+  // floor is read from the same store. `diff` then accepted a
+  // genuinely-signed older bundle that `sync` refused on the same machine.
+  // Without the store there is also no `fetchedAt`, so the 24h TTL could
+  // never apply and every invocation would fetch.
+  let store: SqliteStateStore | undefined;
+  try {
+    store = await SqliteStateStore.open(defaultStatePath());
+  } catch {
+    store = undefined; // Best-effort: no database must not stop `diff`.
+  }
+  let inventory;
+  try {
+    const definitions = await resolveDefinitions(store);
+    inventory = await buildMachineInventory(fs, observeOpts, definitions.surfaces);
+  } finally {
+    await store?.close();
+  }
 
   const pairRows: PairRow[] = [];
   for (const row of inventory.rows) {

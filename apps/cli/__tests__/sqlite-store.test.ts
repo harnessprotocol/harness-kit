@@ -3,6 +3,9 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+// Tracks the constant rather than a literal: pinning a number here means every
+// additive migration fails a test that was never about that migration.
+import { STATE_SCHEMA_VERSION } from "@harness-kit/core";
 import type {
   ObservationSnapshotMeta,
   StoredResource,
@@ -79,7 +82,7 @@ describe("SqliteStateStore", () => {
     },
   );
 
-  it("migrates v0 -> v2: schema_version is 2 and all six tables exist", async () => {
+  it("migrates v0 -> current: schema_version and every table exist", async () => {
     // Touch the store so migration has run.
     expect(await store.latestObservation()).toBeNull();
 
@@ -88,7 +91,7 @@ describe("SqliteStateStore", () => {
       const version = raw.prepare("SELECT schema_version FROM meta").get() as {
         schema_version: number;
       };
-      expect(version.schema_version).toBe(2);
+      expect(version.schema_version).toBe(STATE_SCHEMA_VERSION);
 
       const tables = raw
         .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
@@ -100,6 +103,7 @@ describe("SqliteStateStore", () => {
         "observed_resources",
         "fingerprints",
         "transactions",
+        "drift_acknowledgements",
         "plugin_installs",
         "definitions_cache",
       ]) {
@@ -229,7 +233,7 @@ describe("SqliteStateStore", () => {
         const version = raw.prepare("SELECT schema_version FROM meta").get() as {
           schema_version: number;
         };
-        expect(version.schema_version).toBe(2);
+        expect(version.schema_version).toBe(STATE_SCHEMA_VERSION);
         const metaRows = raw.prepare("SELECT COUNT(*) AS n FROM meta").get() as { n: number };
         expect(metaRows.n).toBe(1);
       } finally {

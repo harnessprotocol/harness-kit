@@ -44,13 +44,13 @@ export default function PluginExplorerPage() {
     }
   }, [explorer.selectedPath]);
 
-  // Keyboard shortcuts
+  // In-editor Cmd+S is handled by Monaco's registered action (which stops
+  // propagation); this listener covers focus outside the editor.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
-        e.preventDefault();
-        explorer.requestSave();
-      }
+      if (!(e.metaKey || e.ctrlKey) || e.key !== "s") return;
+      e.preventDefault();
+      explorer.requestSave();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -66,7 +66,8 @@ export default function PluginExplorerPage() {
     error: explorer.error,
     isDirty: explorer.dirty,
     updateContent: explorer.updateContent,
-    saveFile: explorer.saveFile,
+    // Toolbar Save and Monaco's Cmd+S both go through the confirmation path.
+    saveFile: async () => { explorer.requestSave(); },
     revertFile: explorer.revertFile,
     reload: () => {},
   }), [explorer]);
@@ -137,7 +138,7 @@ export default function PluginExplorerPage() {
         <svg width="10" height="10" viewBox="0 0 20 20" fill="currentColor">
           <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
         </svg>
-        Installed Plugins
+        Back to Plugins
       </button>
 
       {/* Plugin metadata */}
@@ -195,7 +196,7 @@ export default function PluginExplorerPage() {
           Plugin "{pluginName}" not found.
         </p>
         <Button variant="ghost" size="sm" onClick={() => navigate("/harness/plugins")}>
-          Back to Installed Plugins
+          Back to Plugins
         </Button>
       </div>
     );

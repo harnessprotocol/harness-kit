@@ -70,10 +70,6 @@ fn main() {
                 "delete_comparison",
                 "tag_comparison_task_type",
                 "get_harness_recommendations",
-                // Agents
-                "detect_agents",
-                "record_harness_launch_result",
-                "get_harness_health",
                 // Comparator — panels
                 "save_panel",
                 "update_panel_result",
@@ -104,6 +100,10 @@ fn main() {
                 "sync_write_files",
                 "apply_surface_transaction",
                 "record_transaction",
+                "migrate_drift_acknowledgements",
+                "acknowledge_drift",
+                "unacknowledge_drift",
+                "list_drift_acknowledgements",
                 "sync_create_backup",
                 "sync_list_backups",
                 "sync_restore_backup",
@@ -119,6 +119,13 @@ fn main() {
                 "acknowledge_drift_item",
                 "unacknowledge_drift_item",
                 "get_acknowledged_drift_items",
+                // Definitions feed: Ed25519 verification (the webview cannot
+                // use node:crypto, which is what this replaces).
+                "verify_definitions_signature",
+                "get_cached_definitions",
+                "put_cached_definitions",
+                "get_highest_bundle_number",
+                "record_bundle_number",
                 // Feedback
                 "get_system_info",
                 "submit_feedback",

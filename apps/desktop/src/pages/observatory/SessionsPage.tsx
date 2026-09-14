@@ -77,7 +77,7 @@ function ProjectPill({ name }: { name: string }) {
 // ── Role colors ────────────────────────────────────────────────
 
 const ROLE_COLORS: Record<string, string> = {
-  user: "var(--status-in-progress)",
+  user: "var(--cat-blue)",
   assistant: "var(--accent)",
   system: "var(--fg-subtle)",
   result: "var(--success)",
@@ -334,7 +334,7 @@ export default function SessionsPage() {
       {/* Header */}
       <div style={{ marginBottom: "16px" }}>
         <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
-          Sessions
+          Sessions · Claude Code
         </h1>
         {!loading && !error && (
           <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>

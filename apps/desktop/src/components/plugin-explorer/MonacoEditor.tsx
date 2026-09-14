@@ -68,7 +68,14 @@ interface MonacoEditorProps {
   filePath: string;
   content: string;
   onChange: (value: string) => void;
-  onSave: () => void;
+  /**
+   * When omitted at mount, no Cmd+S action is registered, so the keystroke bubbles
+   * to the page's own window listener (Monaco swallows any chord that resolves to
+   * a registered action, even one that no-ops). When provided, the latest handler
+   * is called: @monaco-editor/react captures onMount once, so the action reads
+   * through a ref rather than the closure from the first render.
+   */
+  onSave?: () => void;
   readOnly?: boolean;
 }
 
@@ -77,21 +84,29 @@ export default function MonacoEditor({ filePath, content, onChange, onSave, read
   const monacoRef = useRef<Monaco | null>(null);
   const themeRef = useRef(getMonacoTheme());
 
+  const onSaveRef = useRef(onSave);
+  useEffect(() => {
+    onSaveRef.current = onSave;
+  }, [onSave]);
+
   const handleMount: OnMount = useCallback((editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // Register Cmd+S save action
-    editor.addAction({
-      id: "harness-kit-save",
-      label: "Save File",
-      keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
-      run: () => onSave(),
-    });
+    // Pages that omit `onSave` handle Cmd+S with their own window listener;
+    // registering an action here would swallow the chord.
+    if (onSaveRef.current) {
+      editor.addAction({
+        id: "harness-kit-save",
+        label: "Save File",
+        keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS],
+        run: () => onSaveRef.current?.(),
+      });
+    }
 
     // Set initial theme
     monaco.editor.setTheme(getMonacoTheme());
-  }, [onSave]);
+  }, []);
 
   // Watch for dark/light mode changes via MutationObserver
   useEffect(() => {

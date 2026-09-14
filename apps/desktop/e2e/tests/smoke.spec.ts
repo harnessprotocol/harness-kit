@@ -52,26 +52,33 @@ test.describe("Navigation smoke tests", () => {
   });
 
   test("Security permissions page renders", async ({ appPage }) => {
-    await appPage.goto("/security/permissions");
+    await appPage.goto("/harness/permissions");
     await appPage.waitForLoadState("networkidle");
     const text = await appPage.locator("body").textContent();
     expect(text).not.toContain("command not found");
   });
 
-  test("Fleet page renders without error", async ({ appPage }) => {
+  test("/fleet redirects to Machine", async ({ appPage }) => {
     await appPage.goto("/fleet");
     await appPage.waitForLoadState("networkidle");
-    const text = await appPage.locator("body").textContent();
-    expect(text).not.toContain("command not found");
-    expect(text).not.toContain("Mock: no response");
+    expect(appPage.url()).toContain("/machine");
   });
 
-  test("Drift page renders without error", async ({ appPage }) => {
+  test("/security/permissions lands under Claude Code", async ({ appPage }) => {
+    await appPage.goto("/security/permissions");
+    await appPage.waitForLoadState("networkidle");
+    expect(appPage.url()).toContain("/harness/permissions");
+    await expect(appPage.getByRole("heading", { name: "Permissions" })).toBeVisible();
+  });
+
+  // AC-37: /drift redirects into the Machine view's Drift section.
+  test("legacy /drift route lands on Machine with Drift open", async ({ appPage }) => {
     await appPage.goto("/drift");
     await appPage.waitForLoadState("networkidle");
+    expect(appPage.url()).toContain("/machine");
+    await expect(appPage.getByTestId("drift-view")).toBeVisible();
     const text = await appPage.locator("body").textContent();
     expect(text).not.toContain("command not found");
-    expect(text).not.toContain("Mock: no response");
   });
 });
 
@@ -97,20 +104,23 @@ test.describe("Harness File page — content validation", () => {
   });
 });
 
-test.describe("Fleet page — content validation", () => {
-  test("shows page title and Recompile all action", async ({ appPage }) => {
-    await appPage.goto("/fleet");
-    await appPage.waitForLoadState("networkidle");
-    await expect(appPage.getByRole("heading", { name: "Fleet" })).toBeVisible();
-    await expect(appPage.getByRole("button", { name: /recompile all/i })).toBeVisible();
-  });
-});
-
-test.describe("Drift page — content validation", () => {
-  test("shows page title", async ({ appPage }) => {
+test.describe("Drift inside the Machine view — content validation", () => {
+  test("renders the drift section, with Machine keeping the only page heading", async ({
+    appPage,
+  }) => {
     await appPage.goto("/drift");
     await appPage.waitForLoadState("networkidle");
-    await expect(appPage.getByRole("heading", { name: "Drift" })).toBeVisible();
+    await expect(appPage.getByTestId("machine-drift-section")).toBeVisible();
+    await expect(appPage.getByTestId("drift-view")).toBeVisible();
+    // Embedded: Drift contributes no second document-level heading.
+    await expect(appPage.getByRole("heading", { level: 1 })).toHaveCount(1);
+  });
+
+  test("the section stays closed when Machine is opened directly", async ({ appPage }) => {
+    await appPage.goto("/machine");
+    await appPage.waitForLoadState("networkidle");
+    await expect(appPage.getByTestId("machine-drift-section")).toBeVisible();
+    await expect(appPage.getByTestId("drift-view")).toHaveCount(0);
   });
 });
 

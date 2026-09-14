@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
+import { X } from "lucide-react";
 import type { InstalledPlugin } from "@harness-kit/shared";
 import type { HistoryEntry } from "../../lib/tauri";
 import ExportMenu from "./ExportMenu";
@@ -136,11 +137,11 @@ export default function PluginExplorerHeader({
             border: "1px solid var(--border-base)",
             background: "var(--bg-elevated)", color: "var(--fg-muted)",
             cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: "14px",
           }}
           title="Close"
+          aria-label="Close"
         >
-          ×
+          <X size={13} strokeWidth={1.7} aria-hidden="true" />
         </button>
       </div>
     </div>

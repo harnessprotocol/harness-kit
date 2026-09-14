@@ -8,8 +8,12 @@ import {
   stateSchemaStatements,
 } from "@harness-kit/core";
 import type {
+  CachedDefinitions,
+  DriftAcknowledgement,
+  DriftAcknowledgementKey,
   ObservationSnapshot,
   ObservationSnapshotMeta,
+  PluginInstallRecord,
   StateStore,
   StoredResource,
   SurfaceId,
@@ -85,6 +89,16 @@ interface ResourceRow {
   provenance_file: string;
   provenance_format: string;
   needs_confirmation: number;
+}
+
+/** Decode a recorded file list, degrading to empty rather than throwing. */
+function parseFileList(raw: string): string[] {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
+  } catch {
+    return [];
+  }
 }
 
 export class SqliteStateStore implements StateStore {
@@ -258,6 +272,67 @@ export class SqliteStateStore implements StateStore {
     };
   }
 
+  async getCachedDefinitions(): Promise<CachedDefinitions | null> {
+    const row = this.db
+      .prepare(
+        "SELECT bundle_number, fetched_at, payload_b64, signature_b64 FROM definitions_cache WHERE id = 1",
+      )
+      .get() as
+      | { bundle_number: number; fetched_at: string; payload_b64: string; signature_b64: string }
+      | undefined;
+    if (!row) return null;
+    try {
+      return {
+        bundleNumber: row.bundle_number,
+        fetchedAt: row.fetched_at,
+        payload: fromBase64(row.payload_b64),
+        signature: fromBase64(row.signature_b64),
+      };
+    } catch {
+      // Undecodable base64 means a corrupt row, which is exactly what the
+      // re-verification step would reject anyway. Report "no cache" rather
+      // than throwing on a path whose whole purpose is degrading.
+      return null;
+    }
+  }
+
+  async putCachedDefinitions(entry: CachedDefinitions): Promise<void> {
+    this.db
+      .prepare(
+        `INSERT INTO definitions_cache (id, bundle_number, fetched_at, payload_b64, signature_b64)
+         VALUES (1, ?, ?, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+           bundle_number = excluded.bundle_number,
+           fetched_at = excluded.fetched_at,
+           payload_b64 = excluded.payload_b64,
+           signature_b64 = excluded.signature_b64`,
+      )
+      .run(entry.bundleNumber, entry.fetchedAt, toBase64(entry.payload), toBase64(entry.signature));
+  }
+
+  async getHighestBundleNumber(): Promise<number | null> {
+    const row = this.db
+      .prepare("SELECT highest_bundle_number FROM definitions_history WHERE id = 1")
+      .get() as { highest_bundle_number: number } | undefined;
+    return row?.highest_bundle_number ?? null;
+  }
+
+  async recordBundleNumber(bundleNumber: number, at: string): Promise<void> {
+    // MAX in the UPDATE, so a lower number can never lower the floor — an
+    // anti-rollback floor that a later write can walk backwards is not a
+    // floor. The guard lives in SQL rather than in a read-then-write so two
+    // concurrent processes cannot interleave past it.
+    this.db
+      .prepare(
+        `INSERT INTO definitions_history (id, highest_bundle_number, updated_at)
+         VALUES (1, ?, ?)
+         ON CONFLICT(id) DO UPDATE SET
+           highest_bundle_number = MAX(definitions_history.highest_bundle_number, excluded.highest_bundle_number),
+           updated_at = excluded.updated_at`,
+      )
+      .run(bundleNumber, at);
+  }
+
   async getFingerprint(surface: SurfaceId, scope: SurfaceScope): Promise<string | null> {
     const row = this.db
       .prepare("SELECT digest FROM fingerprints WHERE surface = ? AND scope = ?")
@@ -275,6 +350,98 @@ export class SqliteStateStore implements StateStore {
            updated_at = excluded.updated_at`,
       )
       .run(surface, scope, digest, new Date().toISOString());
+  }
+
+  async recordPluginInstall(record: PluginInstallRecord): Promise<void> {
+    this.db
+      .prepare(
+        `INSERT INTO plugin_installs (surface, plugin, manifest_digest, files, installed_at)
+         VALUES (?, ?, ?, ?, ?)`,
+      )
+      .run(
+        record.surface,
+        record.plugin,
+        record.manifestDigest,
+        JSON.stringify(record.files),
+        record.installedAt,
+      );
+  }
+
+  async listPluginInstalls(surface: SurfaceId): Promise<PluginInstallRecord[]> {
+    const rows = this.db
+      .prepare(
+        `SELECT surface, plugin, manifest_digest, files, installed_at
+         FROM plugin_installs WHERE surface = ? ORDER BY id DESC`,
+      )
+      .all(surface) as Array<{
+      surface: string;
+      plugin: string;
+      manifest_digest: string;
+      files: string;
+      installed_at: string;
+    }>;
+    return rows.map((row) => ({
+      surface: row.surface as SurfaceId,
+      plugin: row.plugin,
+      manifestDigest: row.manifest_digest,
+      // A row whose files column is not a JSON array is a corrupt record, not
+      // a reason to fail the read — an empty list means "we know of no files
+      // to remove", which is the safe answer for an uninstall to act on.
+      files: parseFileList(row.files),
+      installedAt: row.installed_at,
+    }));
+  }
+
+  async acknowledgeDrift(record: DriftAcknowledgement): Promise<void> {
+    this.db
+      .prepare(
+        `INSERT INTO drift_acknowledgements
+           (scope_root, adapter, path, harness_name, slot, acknowledged_at)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(scope_root, adapter, path, harness_name, slot)
+         DO UPDATE SET acknowledged_at = excluded.acknowledged_at`,
+      )
+      .run(
+        record.scopeRoot,
+        record.adapter,
+        record.path,
+        record.harnessName,
+        record.slot,
+        record.acknowledgedAt,
+      );
+  }
+
+  async unacknowledgeDrift(key: DriftAcknowledgementKey): Promise<void> {
+    this.db
+      .prepare(
+        `DELETE FROM drift_acknowledgements
+         WHERE scope_root = ? AND adapter = ? AND path = ? AND harness_name = ? AND slot = ?`,
+      )
+      .run(key.scopeRoot, key.adapter, key.path, key.harnessName, key.slot);
+  }
+
+  async listDriftAcknowledgements(): Promise<DriftAcknowledgement[]> {
+    const rows = this.db
+      .prepare(
+        `SELECT scope_root, adapter, path, harness_name, slot, acknowledged_at
+         FROM drift_acknowledgements ORDER BY acknowledged_at DESC`,
+      )
+      .all() as Array<{
+      scope_root: string;
+      adapter: string;
+      path: string;
+      harness_name: string;
+      slot: string;
+      acknowledged_at: string;
+    }>;
+    return rows.map((row) => ({
+      scopeRoot: row.scope_root,
+      adapter: row.adapter,
+      path: row.path,
+      harnessName: row.harness_name,
+      slot: row.slot,
+      acknowledgedAt: row.acknowledged_at,
+    }));
   }
 
   async recordTransaction(record: TransactionRecord): Promise<void> {
@@ -345,4 +512,20 @@ export class SqliteStateStore implements StateStore {
   async close(): Promise<void> {
     this.db.close();
   }
+}
+
+/** Bytes ↔ base64 for the definitions cache columns (see schema v4). */
+function toBase64(bytes: Uint8Array): string {
+  return Buffer.from(bytes).toString("base64");
+}
+
+function fromBase64(value: string): Uint8Array {
+  const bytes = new Uint8Array(Buffer.from(value, "base64"));
+  // Buffer.from is lenient: it silently drops invalid characters instead of
+  // throwing, so a corrupt row would decode to the wrong bytes rather than
+  // failing. Re-encoding and comparing is what actually detects that.
+  if (Buffer.from(bytes).toString("base64") !== value) {
+    throw new Error("definitions cache column is not valid base64");
+  }
+  return bytes;
 }

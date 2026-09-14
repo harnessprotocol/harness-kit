@@ -1,13 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { toggleTheme } from "../lib/theme";
-
-interface NavLike {
-  id: string;
-  label: string;
-  path: string;
-  children?: { label: string; path: string }[];
-}
+import { SETTINGS, type NavEntry } from "../nav";
 
 interface Command {
   id: string;
@@ -20,7 +14,7 @@ interface Command {
 interface CommandPaletteProps {
   open: boolean;
   onClose: () => void;
-  sections: NavLike[];
+  sections: NavEntry[];
 }
 
 /**
@@ -39,6 +33,8 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
     };
     const list: Command[] = [];
     list.push({ id: "toggle-theme", label: "Toggle light / dark theme", group: "Actions", run: () => { toggleTheme(); onClose(); } });
+    list.push({ id: "nav-settings", label: "Go to Settings", group: "Navigate", run: go(SETTINGS.path) });
+    list.push({ id: "open-drift", label: "Open Drift vs harness.yaml", group: "Navigate", run: go("/machine?drift=1") });
     for (const s of sections) {
       list.push({ id: `nav-${s.id}`, label: `Go to ${s.label}`, group: "Navigate", run: go(s.path) });
       for (const c of s.children ?? []) {

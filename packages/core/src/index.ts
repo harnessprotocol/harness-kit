@@ -220,6 +220,56 @@ export type {
 } from "./observe/read-store.js";
 export { readStore, readMarketplaceStore, relativizeHome } from "./observe/read-store.js";
 
+// ── Process execution (design.md §4, D3) ─────────────────────
+//
+// The second injected effect beside FsProvider. Core never imports
+// node:child_process; NodeProcessRunner is exported from the `node` entry
+// only, so the webview bundle cannot pull it in. `assertSafeArgs` guards the
+// values that reach argv — plugin identities come from files other tools
+// write, and a name beginning `-` would be read as an option.
+export type {
+  ProcessRunner,
+  ProcessCommand,
+  ProcessResult,
+} from "./process-runner.js";
+export { assertSafeArgs, isFlagLike, UnsafeArgumentError } from "./process-runner.js";
+
+// ── PluginBroker (AC-18/19/20) ───────────────────────────────
+//
+// Native drivers shell out to each surface's own installer through
+// ProcessRunner; the unpack driver places a plugin's skills into surfaces
+// with no plugin model. Planning is pure and separate from execution so the
+// exact invocation can be displayed (AC-28) and --dry-run is the same path.
+export type {
+  NativePluginInstaller,
+  PluginActionPlan,
+  PluginActionRequest,
+  PluginSelector,
+} from "./plugins/installer.js";
+export { planNativePluginAction } from "./plugins/installer.js";
+export type { UnpackPlan } from "./plugins/unpack.js";
+export { planUnpackAction } from "./plugins/unpack.js";
+export type {
+  BrokerPlan,
+  ExecuteOptions,
+  PluginActionOutcome,
+  PluginBrokerRequest,
+} from "./plugins/broker.js";
+export { executePluginAction, planPluginAction } from "./plugins/broker.js";
+
+// ── Recommendations (AC-10) ──────────────────────────────────
+//
+// Two deterministic sources only: machine gaps (read from the inventory, so
+// they can never propose what the grid calls unreachable) and baseline gaps
+// (a git-hosted harness.yaml the team extends). Pure — the caller loads and
+// parses the baseline.
+export type {
+  Recommendation,
+  RecommendationSource,
+  RecommendOptions,
+} from "./observe/recommendations.js";
+export { recommend } from "./observe/recommendations.js";
+
 // ── Observe (Task 8): descriptor-driven surface observation ───
 //
 // Walks each SurfaceDescriptor's detect probes and config stores, resolves
@@ -261,7 +311,11 @@ export { computeMachineInventory, buildMachineInventory } from "./observe/machin
 export type {
   ObservationSnapshotMeta,
   StoredResource,
+  PluginInstallRecord,
+  DriftAcknowledgement,
+  DriftAcknowledgementKey,
   ObservationSnapshot,
+  CachedDefinitions,
   StateStore,
   TransactionLedger,
   TransactionRecorder,
@@ -279,7 +333,7 @@ export type { CodexMcpValue, CodexMcpReadResult, CodexMcpWrite } from "./codecs/
 export { writeCodexMcp } from "./codecs/toml-codex.js";
 export { planStoreWrite, unsupportedKindReason } from "./write/write-store.js";
 export { planCellAction, syncCliCommand } from "./write/plan-cell-action.js";
-export { applyCellAction, CellActionError } from "./write/apply-cell-action.js";
+export { applyCellAction, applyPluginCellAction, CellActionError } from "./write/apply-cell-action.js";
 export { buildAgentPrompt } from "./write/agent-prompt.js";
 export type { AgentPromptOptions } from "./write/agent-prompt.js";
 export type { ApplyCellActionOptions, CellActionErrorCode } from "./write/apply-cell-action.js";
@@ -370,12 +424,23 @@ export type {
   MarketplaceFormatId,
   MarketplaceStore,
   PlatformPathOverrides,
+  PluginInstallModel,
   ConfigStore,
   DetectProbe,
   SurfaceDescriptor,
 } from "./surfaces/types.js";
 export { SURFACE_IDS, COMPILE_SURFACE_IDS, PRODUCT_FAMILIES, isCompileSurface } from "./surfaces/types.js";
 export { SURFACES, PRIORITY_SURFACES, getSurface } from "./surfaces/registry.js";
+export { resolveSurfaces, getSurfaceFrom } from "./surfaces/resolve.js";
+export { PUBLISHER_KEYS, releaseSnapshot } from "./definitions/publisher-keys.js";
+export { HttpsFetcher } from "./definitions/fetcher.js";
+export { resolveDefinitions, DEFAULT_TTL_MS } from "./definitions/resolve.js";
+export type {
+  CachedDefinitions as CachedDefinitionsEntry,
+  DefinitionsStore,
+  ResolveDefinitionsOptions,
+  ResolvedDefinitions,
+} from "./definitions/resolve.js";
 
 // ── Definitions bundle (cross-harness config management, D7) ─────
 //
@@ -385,6 +450,28 @@ export { SURFACES, PRIORITY_SURFACES, getSurface } from "./surfaces/registry.js"
 // M1 loads the bundle from disk or memory.
 export type { DefinitionsBundle } from "./definitions/bundle.js";
 export { BUNDLE_FORMAT_VERSION, BundleError, toBundle, fromBundle } from "./definitions/bundle.js";
+
+// ── Definitions feed (AC-25/AC-26, ADR 0004) ─────────────────
+//
+// Remote, signature-verified surface definitions with a release-bundled
+// snapshot as fallback. Verification precedes parsing, a valid signature is
+// not sufficient (anti-rollback), and every fallback states its reason. The
+// Fetcher and SignatureVerifier are injected — core imports no crypto or
+// network driver, which is why a bare node:crypto import once broke four
+// packaged desktop routes.
+export type {
+  Fetcher,
+  FetchResult,
+  SignatureVerifier,
+} from "./definitions/providers.js";
+export type {
+  DefinitionsSource,
+  FeedOptions,
+  LoadedDefinitions,
+  PublisherKey,
+  SignedArtifact,
+} from "./definitions/feed.js";
+export { loadDefinitions } from "./definitions/feed.js";
 
 // ── Whole-harness portability (Protocol v2) ──────────────────
 export type {
@@ -443,6 +530,7 @@ export { mergePolicyCeilings, evaluatePolicy, resolveProfileLayers, layerFingerp
 export {
   PORTABLE_RESOURCE_KINDS,
   TARGET_CAPABILITY_MATRIX,
+  buildCapabilityMatrix,
   getTargetCapability,
   capabilityForResource,
   buildLossReport,

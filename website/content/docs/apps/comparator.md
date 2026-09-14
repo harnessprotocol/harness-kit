@@ -7,6 +7,9 @@ title: Comparator
 The Comparator is a four-phase evaluation workbench for comparing AI harnesses
 side-by-side on the same task.
 
+> Comparator lives behind **Settings › Labs** and is off by default. Enable it
+> there to add it to the sidebar and the `Cmd+K` command palette.
+
 ## When to Use It
 
 Use the comparator when you want data-driven answers to: "Does Claude Code with my

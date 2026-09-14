@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import AppLayout from "./layouts/AppLayout";
 import { getDefaultSection, getWelcomeSeen, setWelcomeSeen } from "./lib/preferences";
 import { ObservatoryProvider } from "./hooks/useObservatoryData";
+import { DriftRedirect } from "./routes/DriftRedirect";
+import { FleetRedirect } from "./routes/FleetRedirect";
 
 // Lazy-load all pages so the initial bundle only includes the shell + router
 const PreferencesPage = lazy(() => import("./pages/PreferencesPage"));
@@ -11,7 +13,6 @@ const HarnessFilePage = lazy(() => import("./pages/harness/HarnessFilePage"));
 const PluginsPage = lazy(() => import("./pages/harness/PluginsPage"));
 const HooksPage = lazy(() => import("./pages/harness/HooksPage"));
 const McpServersPage = lazy(() => import("./pages/harness/McpServersPage"));
-const SettingsPage = lazy(() => import("./pages/harness/SettingsPage"));
 const PluginExplorerPage = lazy(() => import("./pages/harness/PluginExplorerPage"));
 const ClaudeMdPage = lazy(() => import("./pages/harness/ClaudeMdPage"));
 const ConfigFilePage = lazy(() => import("./pages/harness/ConfigFilePage"));
@@ -21,17 +22,11 @@ const DashboardPage = lazy(() => import("./pages/observatory/DashboardPage"));
 const SessionsPage = lazy(() => import("./pages/observatory/SessionsPage"));
 const ComparatorPage = lazy(() => import("./pages/comparator/ComparatorPage"));
 const PermissionsPage = lazy(() => import("./pages/security/PermissionsPage"));
-const SecretsPage = lazy(() => import("./pages/security/SecretsPage"));
-const AuditLogPage = lazy(() => import("./pages/security/AuditLogPage"));
 const MachinePage = lazy(() => import("./pages/machine/MachinePage"));
-const DriftPage = lazy(() => import("./pages/drift/DriftPage"));
-const FleetPage = lazy(() => import("./pages/fleet/FleetPage"));
-const AgentsPage = lazy(() => import("./pages/agents/AgentsPage"));
 
-// Dev-only screenshot fixtures (DESIGN.md §8 verification) — render Fleet/Drift/
+// Dev-only screenshot fixtures (DESIGN.md §8 verification) — render Machine/Drift/
 // Onboarding's presentational views with static data, no Tauri/core backend
 // required. Not linked from any nav; only mounted below when import.meta.env.DEV is true.
-const FleetFixture = lazy(() => import("./pages/__fixtures__/FleetFixture"));
 const MachineFixture = lazy(() => import("./pages/__fixtures__/MachineFixture"));
 const DriftFixture = lazy(() => import("./pages/__fixtures__/DriftFixture"));
 const OnboardingFixture = lazy(() => import("./pages/__fixtures__/OnboardingFixture"));
@@ -79,7 +74,6 @@ export default function App() {
           <Routes>
             {import.meta.env.DEV && (
               <>
-                <Route path="__fixtures__/fleet" element={<FleetFixture />} />
                 <Route path="__fixtures__/machine" element={<MachineFixture />} />
                 <Route path="__fixtures__/drift" element={<DriftFixture />} />
                 <Route path="__fixtures__/onboarding" element={<OnboardingFixture />} />
@@ -89,7 +83,9 @@ export default function App() {
             {/* Machine — home (default section; user-overridable in preferences) */}
             <Route index element={<DefaultRedirect />} />
             <Route path="machine" element={<MachinePage />} />
-            <Route path="fleet" element={<FleetPage />} />
+            {/* Retired route — Fleet itself is retired in Task 1.6; this just
+                closes the direct-URL path (AC-6). */}
+            <Route path="fleet" element={<FleetRedirect />} />
 
             {/* Harness Manager */}
             <Route path="harness/file" element={<HarnessFilePage />} />
@@ -99,27 +95,33 @@ export default function App() {
             <Route path="harness/hooks" element={<HooksPage />} />
             <Route path="harness/claude-md" element={<ClaudeMdPage />} />
             <Route path="harness/sync" element={<SyncPage />} />
-            <Route path="harness/settings" element={<SettingsPage />} />
+            {/* Retired route (AC-41) */}
+            <Route path="harness/settings" element={<Navigate to="/harness/file" replace />} />
             <Route path="harness/config/:filename" element={<ConfigFilePage />} />
+            {/* Permissions — now under the Claude Code nav group (AC-10) */}
+            <Route path="harness/permissions" element={<PermissionsPage />} />
 
             {/* Marketplace */}
             <Route path="marketplace/:slug?" element={<MarketplacePage />} />
             <Route path="observatory" element={<DashboardPage />} />
             <Route path="observatory/sessions" element={<SessionsPage />} />
 
-            {/* Agents */}
-            <Route path="agents" element={<AgentsPage />} />
+            {/* Retired route */}
+            <Route path="agents" element={<Navigate to="/machine" replace />} />
 
             {/* Comparator */}
             <Route path="comparator" element={<ComparatorPage />} />
 
-            {/* Security */}
-            <Route path="security/permissions" element={<PermissionsPage />} />
-            <Route path="security/secrets" element={<SecretsPage />} />
-            <Route path="security/audit" element={<AuditLogPage />} />
+            {/* Security — retired routes (AC-10); Permissions moved under
+                Claude Code, Secrets/Activity moved under Settings. */}
+            <Route path="security/permissions" element={<Navigate to="/harness/permissions" replace />} />
+            <Route path="security/secrets" element={<Navigate to="/preferences/secrets" replace />} />
+            <Route path="security/audit" element={<Navigate to="/preferences/activity" replace />} />
 
             {/* Drift */}
-            <Route path="drift" element={<DriftPage />} />
+            {/* AC-37: Drift is presented inside the Machine view; the legacy
+                route redirects rather than 404ing anyone's bookmark. */}
+            <Route path="drift" element={<DriftRedirect />} />
 
             {/* Preferences / Settings (Security folds in here as tabs — DESIGN.md §5) */}
             <Route path="preferences" element={<PreferencesPage />} />
