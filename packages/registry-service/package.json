@@ -14,12 +14,12 @@
     "test:contract": "tsx scripts/contract.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1132.0",
+    "@aws-sdk/client-s3": "^3.1133.0",
     "@harness-kit/core": "workspace:*",
     "pg": "^8.16.3"
   },
   "devDependencies": {
-    "@types/node": "^22.20.2",
+    "@types/node": "^22.20.3",
     "@types/pg": "^8.15.5",
     "tsup": "^8.5.1",
     "tsx": "^4.23.13",
