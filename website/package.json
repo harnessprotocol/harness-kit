@@ -9,9 +9,9 @@
     "start": "next start"
   },
   "dependencies": {
-    "fumadocs-core": "^16.15.11",
+    "fumadocs-core": "^16.15.12",
     "fumadocs-mdx": "^14.3.2",
-    "fumadocs-ui": "^16.15.11",
+    "fumadocs-ui": "^16.15.12",
     "mdast-util-from-markdown": "^2.0.3",
     "next": "^16.3.5",
     "react": "^19.3.0",
@@ -22,7 +22,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",
-    "@types/node": "^22.20.3",
+    "@types/node": "^22.20.4",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "postcss": "^8.5.28",
