@@ -10,7 +10,7 @@
     "@harness-kit/core": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^22.20.3",
+    "@types/node": "^22.20.4",
     "tsx": "^4.23.13",
     "typescript": "^5"
   }
