@@ -687,7 +687,10 @@ button.hk-summary-cell[data-active="true"] .hk-summary-label { color: var(--acce
    and an inline error banner. Not a "component" per se, but themed purely
    via tokens so pages never inline hex/spacing literals (DESIGN.md §1). */
 .hk-page {
-  padding: 24px 28px 28px;
+  /* The side gutter, named so a page that insets its right edge (the
+     desktop's Machine drawer) can add to it rather than copy it. */
+  --hk-page-gutter: 28px;
+  padding: 24px var(--hk-page-gutter) 28px;
   max-width: 100%;
 }
 .hk-page-head {

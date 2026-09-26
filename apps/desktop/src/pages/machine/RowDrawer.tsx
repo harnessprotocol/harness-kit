@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import { Button } from "@harness-kit/ui";
 import { ArrowRight, X } from "lucide-react";
 import type { GridRow, MachineDiff, MachineGap, SurfaceId } from "@harness-kit/core";
@@ -270,8 +270,7 @@ function inSurfaceOrder(ids: SurfaceId[], order: SurfaceId[]): SurfaceId[] {
   return [...ids].sort((a, b) => rank(a) - rank(b));
 }
 
-const captionStyle = { opacity: 0.7 } as const;
-const selectStyle = { width: "100%", minWidth: 0 } as const;
+const selectStyle = { minWidth: 0 } as const;
 
 /**
  * The three action surfaces for one row (AC-11, AC-28). The displayed CLI
@@ -319,6 +318,8 @@ function RowActions({
   const anyTargets =
     gapTargets.length > 0 || sources.some((id) => divergentTargets(row, id).length > 0);
   const [view, setView] = useState<CellActionView | null>(null);
+  const sourceId = useId();
+  const targetId = useId();
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmedLoss, setConfirmedLoss] = useState(false);
@@ -326,10 +327,10 @@ function RowActions({
   useEffect(() => {
     setConfirmedLoss(false);
     setStatus(null);
-    if (!source || !target) {
-      setView(null);
-      return;
-    }
+    // Drop the old plan first: planning does file I/O, and until it resolves
+    // Apply must not run the previous from → to pair under the new selects.
+    setView(null);
+    if (!source || !target) return;
     let cancelled = false;
     buildCellAction(row, source, target as SurfaceId)
       .then((next) => {
@@ -372,6 +373,10 @@ function RowActions({
             }
           : { title, variant: "success" },
       );
+      // Spent: the drawer stays open through the rescan, and a second click
+      // on this plan would write again. The rescanned row rebuilds it.
+      setView(null);
+      setConfirmedLoss(false);
       onApplied?.();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : String(error));
@@ -412,13 +417,16 @@ function RowActions({
           fontSize: 12,
         }}
       >
-        <label style={{ display: "grid", gap: 4, minWidth: 0 }}>
-          <span style={captionStyle}>From</span>
+        <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
+          <label className="hk-label" htmlFor={sourceId}>
+            From
+          </label>
           <select
+            id={sourceId}
             value={source}
             onChange={(event) => setSource(event.target.value as SurfaceId)}
             disabled={sources.length < 2}
-            aria-label="Source surface"
+            className="hk-select"
             style={selectStyle}
           >
             {sources.map((id) => (
@@ -427,20 +435,23 @@ function RowActions({
               </option>
             ))}
           </select>
-        </label>
+        </div>
         <ArrowRight
           size={13}
           strokeWidth={1.7}
           aria-hidden="true"
-          style={{ color: "var(--fg-subtle)", marginBottom: 3 }}
+          style={{ color: "var(--fg-subtle)", marginBottom: 10 }}
         />
-        <label style={{ display: "grid", gap: 4, minWidth: 0 }}>
-          <span style={captionStyle}>To</span>
+        <div style={{ display: "grid", gap: 4, minWidth: 0 }}>
+          <label className="hk-label" htmlFor={targetId}>
+            To
+          </label>
           <select
+            id={targetId}
             value={target}
             onChange={(event) => setTarget(event.target.value as SurfaceId)}
             disabled={targets.length === 0}
-            aria-label="Target surface"
+            className="hk-select"
             style={selectStyle}
           >
             {targets.length === 0 && <option value="">Nothing differs from this source</option>}
@@ -470,7 +481,7 @@ function RowActions({
               ))
             )}
           </select>
-        </label>
+        </div>
       </div>
 
       {view?.plan.carriesSecret && (

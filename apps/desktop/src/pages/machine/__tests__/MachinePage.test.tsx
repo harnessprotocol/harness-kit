@@ -668,6 +668,9 @@ describe("MachinePage", () => {
       await screen.findByTestId("machine-grid");
       expect(stripCell("Gaps")).toHaveTextContent("Gaps1");
       expect(stripCell("Differs")).toHaveTextContent("Differs1");
+      // The accessible name separates label and count.
+      expect(screen.getByRole("button", { name: "Gaps 1" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Differs 1" })).toBeInTheDocument();
       expect(screen.queryByText("Diffs")).not.toBeInTheDocument();
     });
 
@@ -709,7 +712,9 @@ describe("MachinePage", () => {
       expect(screen.getByTestId("machine-filter-status")).toHaveTextContent(
         "Showing 1 of 3 resources whose content differs",
       );
-      fireEvent.click(screen.getByRole("button", { name: "Show all" }));
+      const showAll = screen.getByRole("button", { name: "Show all" });
+      showAll.focus();
+      fireEvent.click(showAll);
       await waitFor(() => expect(gridRowKeys()).toHaveLength(3));
       const differs = screen.getByRole("button", { name: /Differs/ });
       expect(differs).toHaveAttribute("aria-pressed", "false");
@@ -775,11 +780,14 @@ describe("MachinePage", () => {
       expect(screen.getByTestId("machine-filter-status")).toHaveTextContent(
         "Showing 0 of 3 resources with a closable gap",
       );
-      const gaps = screen.getByRole("button", { name: /Gaps/ });
+      const gaps = screen.getByRole("button", { name: "Gaps 0" });
       expect(gaps).toHaveAttribute("aria-pressed", "true");
+      gaps.focus();
       fireEvent.click(gaps);
       await waitFor(() => expect(gridRowKeys()).toHaveLength(3));
       expect(screen.queryByRole("button", { name: /Gaps/ })).not.toBeInTheDocument();
+      // The pressed cell became plain text; focus falls back to the strip.
+      expect(screen.getByRole("group", { name: "Summary" })).toHaveFocus();
     });
 
     it("renders a zero-count cell as plain text, not a button", async () => {
@@ -952,7 +960,7 @@ describe("MachinePage", () => {
     expect(screen.getByTestId("machine-row-drawer")).toHaveAttribute("aria-label", "postgres details");
     await waitFor(() =>
       expect(
-        Array.from((screen.getByLabelText("Target surface") as HTMLSelectElement).options).map(
+        Array.from((screen.getByLabelText("To") as HTMLSelectElement).options).map(
           (option) => option.value,
         ),
       ).toEqual(["cursor"]),
@@ -996,6 +1004,40 @@ describe("MachinePage", () => {
       expect(toast).toHaveAttribute("data-variant", "warning");
       expect(toast).toHaveTextContent("Not added to the rollback list (state db locked)");
     });
+  });
+
+  it("ignores an older scan that resolves after a newer one", async () => {
+    // The apply's rescan hangs; meanwhile the user starts a fresh scan
+    // (Enter in the directory field), which clears the selection and lands.
+    let resolveStale!: (value: unknown) => void;
+    const newer = makeInventory();
+    newer.rows = newer.rows.filter((row) => row.key !== "skill:reviewer");
+    vi.mocked(buildMachineInventory)
+      .mockResolvedValueOnce(makeInventory() as never)
+      .mockImplementationOnce(() => new Promise((resolve) => (resolveStale = resolve)) as never)
+      .mockResolvedValueOnce(newer as never);
+
+    renderPage();
+    await screen.findByTestId("machine-grid");
+    fireEvent.click(screen.getByTestId("machine-row-mcp-server:postgres"));
+    const drawer = await screen.findByTestId("machine-row-drawer");
+    const apply = within(drawer).getByRole("button", { name: "Apply" });
+    await waitFor(() => expect(apply).toBeEnabled());
+    fireEvent.click(apply);
+    await waitFor(() => expect(vi.mocked(buildMachineInventory)).toHaveBeenCalledTimes(2));
+
+    fireEvent.keyDown(screen.getByPlaceholderText(/Project directory/), { key: "Enter" });
+    await waitFor(() => expect(vi.mocked(buildMachineInventory)).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(gridRowKeys()).not.toContain("skill:reviewer"));
+    expect(screen.queryByTestId("machine-row-drawer")).not.toBeInTheDocument();
+
+    // The stale apply rescan lands last: it must not repopulate the grid or
+    // reopen the drawer on postgres.
+    resolveStale(makeInventory());
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(gridRowKeys()).not.toContain("skill:reviewer");
+    expect(screen.queryByTestId("machine-row-drawer")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Refresh" })).toBeEnabled();
   });
 
   it("closes the drawer after an apply when the rescan no longer has the row", async () => {

@@ -67,21 +67,27 @@ export default function MachinePage() {
    * selection moves to the new inventory's row with that key, or closes if the
    * row is gone. Every other caller starts over with nothing selected.
    */
+  // Only the latest scan may land. Scans can overlap (Enter, Browse and Clear
+  // are live while one runs, and an apply starts its own), and a slow older
+  // one must not overwrite a newer result or reopen a drawer the user closed.
+  const loadSeq = useRef(0);
   const load = useCallback(async (dir: string, keepRowKey?: string) => {
+    const seq = ++loadSeq.current;
     setLoading(true);
     setError(null);
     if (keepRowKey === undefined) setSelectedRow(null);
     try {
       const result = await loadMachineInventory(dir.trim() ? dir.trim() : null);
+      if (seq !== loadSeq.current) return;
       setInventory(result.inventory);
       setProjectDegraded(result.projectDegraded);
       if (keepRowKey !== undefined) {
         setSelectedRow(result.inventory.rows.find((row) => row.key === keepRowKey) ?? null);
       }
     } catch (err) {
-      setError(String(err));
+      if (seq === loadSeq.current) setError(String(err));
     } finally {
-      setLoading(false);
+      if (seq === loadSeq.current) setLoading(false);
     }
   }, []);
 

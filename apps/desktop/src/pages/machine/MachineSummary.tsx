@@ -73,24 +73,52 @@ export function MachineSummary({
   onFilterChange,
 }: MachineSummaryProps) {
   const stripRef = useRef<HTMLDivElement>(null);
-  // "Show all" unmounts itself. Hand focus to the strip cell it un-presses,
-  // which stays mounted while its count is above zero, instead of <body>.
-  function showAll() {
-    const pressed = stripRef.current?.querySelector<HTMLElement>('[aria-pressed="true"]');
-    onFilterChange("all");
-    pressed?.focus();
-  }
+  // A filter change can unmount the control that had focus: "Show all"
+  // always removes itself, and a pressed zero-count cell turns back into
+  // plain text. When that happens, hand focus to the cell that was pressed,
+  // or else to the strip, rather than let it fall to <body>. A mouse click
+  // in WebKit does not focus a button, so with nothing focused there is
+  // nothing to hand off.
+  const handoff = useRef<{ from: Element; pressed: HTMLElement | null } | null>(null);
+  const changeFilter = useCallback(
+    (next: MachineFilter) => {
+      const from = document.activeElement;
+      handoff.current =
+        from && from !== document.body
+          ? {
+              from,
+              pressed:
+                stripRef.current?.querySelector<HTMLElement>('[aria-pressed="true"]') ?? null,
+            }
+          : null;
+      onFilterChange(next);
+    },
+    [onFilterChange],
+  );
+  useEffect(() => {
+    const pending = handoff.current;
+    handoff.current = null;
+    if (!pending || pending.from.isConnected) return;
+    if (pending.pressed?.isConnected && pending.pressed.tagName === "BUTTON") pending.pressed.focus();
+    else stripRef.current?.focus();
+  }, [filter]);
   return (
     <>
-      <div ref={stripRef}>
-        <SummaryStrip cells={machineSummaryCells(inventory, variants, filter, onFilterChange)} />
+      <div
+        ref={stripRef}
+        className="hk-machine-summary"
+        role="group"
+        aria-label="Summary"
+        tabIndex={-1}
+      >
+        <SummaryStrip cells={machineSummaryCells(inventory, variants, filter, changeFilter)} />
       </div>
       {filter !== "all" && (
         <div className="hk-machine-filter-status" data-testid="machine-filter-status">
           <span>
             Showing {shownCount} of {inventory.rows.length} resources {FILTER_WORDING[filter]}
           </span>
-          <Button variant="ghost" size="sm" onClick={showAll}>
+          <Button variant="ghost" size="sm" onClick={() => changeFilter("all")}>
             Show all
           </Button>
         </div>

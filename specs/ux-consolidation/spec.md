@@ -139,7 +139,7 @@ Format: EARS (`WHEN … THE SYSTEM SHALL …`). Each criterion cites the audit f
 
 Defaults are what the plan assumes until answered. Criteria tagged with the question stay implementable under the default.
 
-- Q1 (resolved). Comparator stays behind Settings › Labs; it is not deleted with Agents and the resilience profiles. Shipped in Phase 1.
+- Q1 (resolved). Comparator is kept, not deleted with Agents and the resilience profiles; its nav entry shows only with Settings › Labs on. The /comparator route itself is not guarded. Shipped in Phase 1.
 - Q2 (resolved). Fleet retires into Machine; /fleet redirects. Shipped in Phase 1.
 - [NEEDS CLARIFICATION: Q3. Keep the name "Machine" for the home (default) or rename it ("This computer", "Overview")? Default: keep, with the subtitle doing the explaining.]
 - [NEEDS CLARIFICATION: Q4. Team baseline: git-only, a committed harness.yaml read from a local path first (default), with URL fetch waiting on the signed-definitions transport? Default: yes.]

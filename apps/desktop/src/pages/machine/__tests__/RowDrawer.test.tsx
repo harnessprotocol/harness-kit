@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { GridRow, MachineGap, SurfaceId } from "@harness-kit/core";
 import { RowDrawer } from "../RowDrawer";
-import { buildCellAction } from "../cell-actions";
+import { applyCellActionViaTauri, buildCellAction } from "../cell-actions";
 
 // The selectors (presentSources, missingTargets, divergentTargets) stay real;
 // only planning through core's engine and the Tauri write are replaced.
@@ -58,11 +58,11 @@ function renderDrawer(gaps: MachineGap[] = []) {
 }
 
 function sourceSelect() {
-  return screen.getByLabelText("Source surface") as HTMLSelectElement;
+  return screen.getByLabelText("From") as HTMLSelectElement;
 }
 
 function targetSelect() {
-  return screen.getByLabelText("Target surface") as HTMLSelectElement;
+  return screen.getByLabelText("To") as HTMLSelectElement;
 }
 
 function groupValues(label: string): string[] {
@@ -122,8 +122,52 @@ describe("RowDrawer from → to (AC-15)", () => {
       <RowDrawer row={row} diffs={[]} gaps={GEMINI_GAP} surfaceOrder={SURFACE_ORDER} onClose={vi.fn()} />,
     );
     const drawer = screen.getByTestId("machine-row-drawer");
-    expect(within(drawer).getByLabelText("Source surface")).toBeDisabled();
+    expect(within(drawer).getByLabelText("From")).toBeDisabled();
     expect(sourceSelect().value).toBe("claude-code");
     expect(targetSelect().value).toBe("gemini");
+  });
+});
+
+describe("RowDrawer apply never runs a stale plan", () => {
+  beforeEach(() => {
+    vi.mocked(buildCellAction).mockClear();
+    vi.mocked(applyCellActionViaTauri).mockClear();
+  });
+
+  it("disables Apply while the plan for a new source is still being built", async () => {
+    renderDrawer();
+    const apply = screen.getByRole("button", { name: "Apply" });
+    await waitFor(() => expect(apply).toBeEnabled());
+
+    // Planning the new pair hangs, as core's file I/O can.
+    vi.mocked(buildCellAction).mockImplementationOnce(() => new Promise(() => {}));
+    fireEvent.change(sourceSelect(), { target: { value: "claude-code" } });
+
+    expect(apply).toBeDisabled();
+    fireEvent.click(apply);
+    expect(applyCellActionViaTauri).not.toHaveBeenCalled();
+  });
+
+  it("spends the plan on a successful apply, so a second click cannot write again", async () => {
+    const onApplied = vi.fn();
+    render(
+      <RowDrawer
+        row={makeRow()}
+        diffs={[]}
+        gaps={GEMINI_GAP}
+        surfaceOrder={SURFACE_ORDER}
+        onClose={vi.fn()}
+        onApplied={onApplied}
+      />,
+    );
+    const apply = screen.getByRole("button", { name: "Apply" });
+    await waitFor(() => expect(apply).toBeEnabled());
+    fireEvent.click(apply);
+    await waitFor(() => expect(onApplied).toHaveBeenCalledTimes(1));
+
+    // The page's rescan has not replaced the row yet.
+    expect(apply).toBeDisabled();
+    fireEvent.click(apply);
+    expect(applyCellActionViaTauri).toHaveBeenCalledTimes(1);
   });
 });

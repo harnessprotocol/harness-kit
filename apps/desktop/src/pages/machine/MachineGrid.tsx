@@ -58,7 +58,6 @@ function CellChip({
   );
 }
 
-/** Key to the chips, under the grid (AC-14). */
 // Surface-header badges. Shared with the legend, which shows a sample of each.
 const HEADER_BADGE_STYLE: CSSProperties = {
   display: "inline-flex",
@@ -82,6 +81,7 @@ const MARKETPLACE_BADGE_STYLE: CSSProperties = {
   color: "var(--fg-muted)",
 };
 
+/** Key to the chips and the header badges, under the grid (AC-13). */
 function GridLegend() {
   return (
     <div className="hk-grid-legend" data-testid="machine-grid-legend">

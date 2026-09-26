@@ -313,9 +313,9 @@
 /* Machine row drawer open (AC-19): the page insets by the drawer's width so no
    grid column sits under the fixed drawer; the grid's own scroller takes the
    overflow. AppLayout's <main> runs to the window's right edge, so this clears
-   it. 28px is .hk-page's normal right padding (packages/ui styles.css). */
+   it. */
 .hk-page[data-drawer-open] {
-  padding-right: calc(var(--hk-drawer-width) + 28px);
+  padding-right: calc(var(--hk-drawer-width) + var(--hk-page-gutter));
 }
 /* Toasts sit bottom-right, over the drawer's Apply row; move them beside it. */
 :root:has(.hk-page[data-drawer-open]) .hk-toast-viewport {
@@ -371,6 +371,11 @@
 .hk-grid-legend .hk-cell { min-width: 0; height: 18px; }
 
 /* One line under the summary strip while a Gaps/Differs filter is on. */
+/* Focus lands here only as a fallback, when a filter change unmounts the
+   focused control; the cells inside carry their own focus ring. */
+.hk-machine-summary:focus {
+  outline: none;
+}
 .hk-machine-filter-status {
   display: flex;
   align-items: center;

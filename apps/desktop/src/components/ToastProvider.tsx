@@ -20,8 +20,9 @@ function autoDismisses(toast: Omit<ToastItem, "id">): boolean {
 const ToastContext = createContext<PushToast>(() => {});
 
 /**
- * One toast stack for the app (design D15). Mounted once in AppLayout; pages
- * call `useToast()` rather than keeping their own toast state.
+ * The app's toast stack (design D15), mounted once in AppLayout. New pages
+ * call `useToast()`. Drift still keeps its own state and viewport until
+ * Phase 4 migrates it, so on Machine the two stacks share the corner.
  */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
