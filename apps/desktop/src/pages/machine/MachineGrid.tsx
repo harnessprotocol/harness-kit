@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, type CSSProperties } from "react";
 import { Store } from "lucide-react";
 import type { GridCell, GridRow, MachineInventory, SurfaceId } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
@@ -59,6 +59,29 @@ function CellChip({
 }
 
 /** Key to the chips, under the grid (AC-14). */
+// Surface-header badges. Shared with the legend, which shows a sample of each.
+const HEADER_BADGE_STYLE: CSSProperties = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minWidth: 14,
+  height: 14,
+  padding: "0 3px",
+  borderRadius: 7,
+  background: "var(--bg-elevated)",
+  fontSize: 9,
+  fontWeight: 650,
+};
+const SKIPPED_BADGE_STYLE: CSSProperties = {
+  ...HEADER_BADGE_STYLE,
+  color: "var(--warning, var(--fg-muted))",
+};
+const MARKETPLACE_BADGE_STYLE: CSSProperties = {
+  ...HEADER_BADGE_STYLE,
+  gap: 2,
+  color: "var(--fg-muted)",
+};
+
 function GridLegend() {
   return (
     <div className="hk-grid-legend" data-testid="machine-grid-legend">
@@ -70,6 +93,18 @@ function GridLegend() {
           {CELL_VARIANTS[variant].label}
         </span>
       ))}
+      <span className="hk-grid-legend-item">
+        <span style={SKIPPED_BADGE_STYLE} aria-hidden="true">
+          n
+        </span>
+        entries skipped, see diagnostics
+      </span>
+      <span className="hk-grid-legend-item">
+        <span style={MARKETPLACE_BADGE_STYLE} aria-hidden="true">
+          <Store size={11} strokeWidth={1.7} />n
+        </span>
+        plugin marketplaces registered
+      </span>
     </div>
   );
 }
@@ -173,19 +208,7 @@ export function MachineGrid({
                       {skipped > 0 && (
                         <span
                           title={`${skipped} skipped ${skipped === 1 ? "entry" : "entries"} — see diagnostics below`}
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            minWidth: 14,
-                            height: 14,
-                            padding: "0 3px",
-                            borderRadius: 7,
-                            background: "var(--bg-elevated)",
-                            color: "var(--warning, var(--fg-muted))",
-                            fontSize: 9,
-                            fontWeight: 650,
-                          }}
+                          style={SKIPPED_BADGE_STYLE}
                         >
                           {skipped}
                         </span>
@@ -198,20 +221,7 @@ export function MachineGrid({
                               ? "no plugin marketplaces registered"
                               : `${marketplaces.length} plugin ${marketplaces.length === 1 ? "marketplace" : "marketplaces"}: ${marketplaces.join(", ")}`
                           }
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            minWidth: 14,
-                            height: 14,
-                            gap: 2,
-                            padding: "0 3px",
-                            borderRadius: 7,
-                            background: "var(--bg-elevated)",
-                            color: "var(--fg-muted)",
-                            fontSize: 9,
-                            fontWeight: 650,
-                          }}
+                          style={MARKETPLACE_BADGE_STYLE}
                         >
                           <Store size={11} strokeWidth={1.7} aria-hidden="true" />
                           {marketplaces.length}

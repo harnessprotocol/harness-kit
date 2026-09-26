@@ -51,7 +51,15 @@ describe("MachineGrid cell chips (AC-13)", () => {
   });
 });
 
-describe("MachineGrid legend (AC-14)", () => {
+describe("MachineGrid legend (AC-13)", () => {
+  it("names both surface-header badges", () => {
+    renderGrid();
+    const legend = screen.getByTestId("machine-grid-legend");
+    expect(within(legend).getByText("entries skipped, see diagnostics")).toBeInTheDocument();
+    expect(within(legend).getByText("plugin marketplaces registered")).toBeInTheDocument();
+  });
+
+
   it("lists every legend variant's label exactly once, each with its chip", () => {
     renderGrid();
     const legend = screen.getByTestId("machine-grid-legend");
