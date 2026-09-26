@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { Blocks } from "lucide-react";
+import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { Button, Card, EmptyState } from "@harness-kit/ui";
 import {
   listInstalledPlugins, checkPluginUpdates, uninstallPlugin,
-  importPluginFromPath, importPluginFromZip,
+  importPluginFromPath,
   exportPluginAsZip, exportPluginToFolder,
   isTauriRuntimeAvailable,
 } from "../../lib/tauri";
@@ -15,6 +16,7 @@ import PluginFilters from "./plugins/PluginFilters";
 import PluginRow from "./plugins/PluginRow";
 import ImportOverlay from "./plugins/ImportOverlay";
 import ImportBanner, { type ImportStatus } from "./plugins/ImportBanner";
+import { describeImportError, folderName } from "./plugins/import-errors";
 import UninstallDialog from "./plugins/UninstallDialog";
 
 const PREVIEW_PLUGINS: InstalledPlugin[] = [
@@ -57,7 +59,7 @@ export default function PluginsPage() {
   const [category, setCategory] = useState("");
 
   // Import state
-  const [dragCount, setDragCount] = useState(0);
+  const [dropActive, setDropActive] = useState(false);
   const [importStatus, setImportStatus] = useState<ImportStatus | null>(null);
 
   // Uninstall state
@@ -121,59 +123,74 @@ export default function PluginsPage() {
 
   const hasUpdates = Object.keys(updates).length > 0;
 
-  // ── Drag-and-drop ────────────────────────────────────────
+  // ── Import ───────────────────────────────────────────────
 
-  const dragRef = useRef(0);
-
-  function handleDragEnter(e: React.DragEvent) {
-    e.preventDefault();
-    dragRef.current++;
-    setDragCount(dragRef.current);
-  }
-
-  function handleDragLeave(e: React.DragEvent) {
-    e.preventDefault();
-    dragRef.current--;
-    setDragCount(dragRef.current);
-  }
-
-  function handleDragOver(e: React.DragEvent) {
-    e.preventDefault();
-  }
-
-  async function handleDrop(e: React.DragEvent) {
-    e.preventDefault();
-    dragRef.current = 0;
-    setDragCount(0);
-
-    if (!tauriAvailable) {
-      showDesktopOnlyNotice();
+  // The one import path for plugin folders, shared by the folder picker and a
+  // native drop. The Rust command does the validation (is it a directory, does
+  // it carry .claude-plugin/plugin.json, is it already installed).
+  const importFolders = useCallback(async (paths: string[]) => {
+    const imported: string[] = [];
+    const failures: string[] = [];
+    for (const path of paths) {
+      const name = folderName(path);
+      setImportStatus({ state: "importing", name });
+      try {
+        await importPluginFromPath(path);
+        imported.push(name);
+      } catch (err) {
+        failures.push(describeImportError(err, name));
+      }
+    }
+    if (imported.length > 0) loadPlugins();
+    if (failures.length === 0) {
+      if (imported.length > 0) setImportStatus({ state: "success", name: imported.join(", ") });
       return;
     }
+    let message = failures[0];
+    if (failures.length > 1) message += ` ${failures.length - 1} more failed.`;
+    if (imported.length > 0) message += ` Imported ${imported.join(", ")}.`;
+    setImportStatus({ state: "error", message });
+  }, [loadPlugins]);
 
-    const files = e.dataTransfer.files;
-    if (files.length === 0) return;
+  // ── Drag-and-drop ────────────────────────────────────────
+  // Tauri's native layer owns file drops (dragDropEnabled defaults to true), so
+  // HTML5 drop events never carry paths. Listen to the webview's drag-drop
+  // event instead, only while this page is mounted.
 
-    const file = files[0];
-    const path = (file as File & { path?: string }).path;
-    if (!path) return;
+  useEffect(() => {
+    if (!tauriAvailable) return;
+    let disposed = false;
+    let unlisten: (() => void) | null = null;
+    const hide = () => setDropActive(false);
+    window.addEventListener("blur", hide);
 
-    const isZip = path.endsWith(".zip");
-    const name = path.split("/").pop() || "plugin";
+    getCurrentWebview()
+      .onDragDropEvent((event) => {
+        if (disposed) return;
+        const payload = event.payload;
+        if (payload.type === "enter" || payload.type === "over") {
+          setDropActive(true);
+        } else if (payload.type === "leave") {
+          setDropActive(false);
+        } else if (payload.type === "drop") {
+          setDropActive(false);
+          if (payload.paths.length > 0) void importFolders(payload.paths);
+        }
+      })
+      .then((fn) => {
+        if (disposed) fn();
+        else unlisten = fn;
+      })
+      .catch(() => {
+        // No listener means no overlay, which is the honest fallback.
+      });
 
-    setImportStatus({ state: "importing", name });
-    try {
-      if (isZip) {
-        await importPluginFromZip(path);
-      } else {
-        await importPluginFromPath(path);
-      }
-      setImportStatus({ state: "success", name });
-      loadPlugins();
-    } catch (err) {
-      setImportStatus({ state: "error", message: String(err) });
-    }
-  }
+    return () => {
+      disposed = true;
+      window.removeEventListener("blur", hide);
+      unlisten?.();
+    };
+  }, [tauriAvailable, importFolders]);
 
   // ── Import from folder picker ────────────────────────────
 
@@ -183,25 +200,15 @@ export default function PluginsPage() {
       return;
     }
 
+    let selected: string | null;
     try {
       const { open } = await import("@tauri-apps/plugin-dialog");
-      const selected = await open({ directory: true, title: "Select plugin folder" });
-      if (!selected) return;
-
-      const path = typeof selected === "string" ? selected : selected;
-      const name = path.split("/").pop() || "plugin";
-
-      setImportStatus({ state: "importing", name });
-      try {
-        await importPluginFromPath(path);
-        setImportStatus({ state: "success", name });
-        loadPlugins();
-      } catch (err) {
-        setImportStatus({ state: "error", message: String(err) });
-      }
+      selected = await open({ directory: true, title: "Select plugin folder" });
     } catch {
-      // Dialog plugin not available or cancelled
+      return; // Dialog plugin not available or cancelled
     }
+    if (!selected) return;
+    await importFolders([selected]);
   }
 
   // ── Uninstall ────────────────────────────────────────────
@@ -284,10 +291,6 @@ export default function PluginsPage() {
     <div
       className="hk-page"
       style={{ height: "100%", display: "flex", flexDirection: "column" }}
-      onDragEnter={handleDragEnter}
-      onDragLeave={handleDragLeave}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
     >
       {/* Page header */}
       <div className="hk-page-head">
@@ -404,7 +407,7 @@ export default function PluginsPage() {
       )}
 
       {/* Drag overlay */}
-      <ImportOverlay visible={dragCount > 0} />
+      <ImportOverlay visible={dropActive} />
 
       {/* Uninstall dialog */}
       <UninstallDialog
