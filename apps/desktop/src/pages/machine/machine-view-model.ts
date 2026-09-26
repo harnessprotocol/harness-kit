@@ -1,5 +1,8 @@
 import { getSurface } from "@harness-kit/core";
+import type { SummaryCell } from "@harness-kit/ui";
+import type { CellVariant } from "./cell-state";
 import type {
+  GridRow,
   HarnessResourceKind,
   MachineInventory,
   ProductFamily,
@@ -51,4 +54,74 @@ export function familyGroups(surfaces: MachineInventory["surfaces"]): FamilyGrou
     }
   }
   return groups;
+}
+
+/** Which rows the grid shows, from the summary strip (AC-14). */
+export type MachineFilter = "all" | "gaps" | "differs";
+
+/** The chip a filter selects rows by. */
+const FILTER_VARIANT: Record<Exclude<MachineFilter, "all">, CellVariant> = {
+  gaps: "gap",
+  differs: "differs",
+};
+
+/** `?filter=gaps|differs`; anything else, including no param, is "all". */
+export function filterOf(searchParams: URLSearchParams): MachineFilter {
+  const value = searchParams.get("filter");
+  return value === "gaps" || value === "differs" ? value : "all";
+}
+
+/** A copy of `searchParams` with the filter set, or removed for "all". Other params are kept. */
+export function withFilter(searchParams: URLSearchParams, filter: MachineFilter): URLSearchParams {
+  const next = new URLSearchParams(searchParams);
+  if (filter === "all") next.delete("filter");
+  else next.set("filter", filter);
+  return next;
+}
+
+/** The rows the filter keeps: those with at least one cell of the filter's variant. */
+export function filterRows(
+  rows: GridRow[],
+  variants: Map<string, Record<SurfaceId, CellVariant>>,
+  filter: MachineFilter,
+): GridRow[] {
+  if (filter === "all") return rows;
+  const wanted = FILTER_VARIANT[filter];
+  return rows.filter((row) => Object.values(variants.get(row.key) ?? {}).includes(wanted));
+}
+
+/**
+ * The Machine summary strip. Gaps and Differs count ROWS with at least one
+ * such chip, the unit the filter reveals; `inventory.diffs` is pairwise and
+ * would overcount. A non-zero Gaps or Differs cell toggles its filter.
+ */
+export function machineSummaryCells(
+  inventory: MachineInventory,
+  variants: Map<string, Record<SurfaceId, CellVariant>>,
+  filter: MachineFilter,
+  onFilterChange: (filter: MachineFilter) => void,
+): SummaryCell[] {
+  const filterCell = (id: "gaps" | "differs", label: string): SummaryCell => {
+    const count = filterRows(inventory.rows, variants, id).length;
+    return {
+      id,
+      label,
+      value: String(count),
+      tone: count > 0 ? "warning" : "default",
+      ...(count > 0 && {
+        active: filter === id,
+        onSelect: () => onFilterChange(filter === id ? "all" : id),
+      }),
+    };
+  };
+  return [
+    { id: "rows", label: "Resources", value: String(inventory.rows.length) },
+    filterCell("gaps", "Gaps"),
+    filterCell("differs", "Differs"),
+    {
+      id: "detected",
+      label: "Surfaces detected",
+      value: `${inventory.surfaces.filter((surface) => surface.detected).length}/${inventory.surfaces.length}`,
+    },
+  ];
 }

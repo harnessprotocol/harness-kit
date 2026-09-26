@@ -1,11 +1,12 @@
 import { useSearchParams } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Input, SummaryStrip, EmptyState, type SummaryCell } from "@harness-kit/ui";
+import { Button, Input, EmptyState } from "@harness-kit/ui";
 import { ChevronRight, ScanSearch } from "lucide-react";
 import type { GridRow, MachineInventory } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
 import { loadMachineInventory } from "./machine-data";
 import { MachineGrid } from "./MachineGrid";
+import { MachineSummary, useMachineFilter } from "./MachineSummary";
 import { RowDrawer } from "./RowDrawer";
 import DriftPage from "../drift/DriftPage";
 
@@ -100,28 +101,12 @@ export default function MachinePage() {
   );
   const totalSkipped = skippedSurfaces.reduce((total, surface) => total + surface.skipped.length, 0);
 
-  const summaryCells: SummaryCell[] = inventory
-    ? [
-        { id: "rows", label: "Resources", value: String(inventory.rows.length) },
-        {
-          id: "gaps",
-          label: "Gaps",
-          value: String(inventory.gaps.length),
-          tone: inventory.gaps.length > 0 ? "warning" : "default",
-        },
-        {
-          id: "diffs",
-          label: "Diffs",
-          value: String(inventory.diffs.length),
-          tone: inventory.diffs.length > 0 ? "warning" : "default",
-        },
-        {
-          id: "detected",
-          label: "Surfaces detected",
-          value: `${inventory.surfaces.filter((surface) => surface.detected).length}/${inventory.surfaces.length}`,
-        },
-      ]
-    : [];
+  const clearSelection = useCallback(() => setSelectedRow(null), []);
+  const { filter, setFilter, variants, shownRows } = useMachineFilter(
+    inventory,
+    selectedRow?.key ?? null,
+    clearSelection,
+  );
 
   const rowDiffs = useMemo(
     () =>
@@ -201,7 +186,13 @@ export default function MachinePage() {
 
       {inventory && (
         <>
-          <SummaryStrip cells={summaryCells} />
+          <MachineSummary
+            inventory={inventory}
+            variants={variants}
+            filter={filter}
+            shownCount={shownRows.length}
+            onFilterChange={setFilter}
+          />
 
           {inventory.rows.length === 0 ? (
             <div style={{ marginTop: 20 }}>
@@ -214,7 +205,8 @@ export default function MachinePage() {
           ) : (
             <div style={{ marginTop: 20 }}>
               <MachineGrid
-                inventory={inventory}
+                inventory={{ ...inventory, rows: shownRows }}
+                variants={variants}
                 selectedRowKey={selectedRow?.key ?? null}
                 onRowClick={(row) => setSelectedRow(row)}
               />

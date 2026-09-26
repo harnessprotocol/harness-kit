@@ -78,9 +78,16 @@ export interface MachineGridProps {
   inventory: MachineInventory;
   selectedRowKey: string | null;
   onRowClick: (row: GridRow) => void;
+  /** Precomputed variants by row key (see `inventoryVariants`). Computed per row when omitted. */
+  variants?: Map<string, Record<SurfaceId, CellVariant>>;
 }
 
-export function MachineGrid({ inventory, selectedRowKey, onRowClick }: MachineGridProps) {
+export function MachineGrid({
+  inventory,
+  selectedRowKey,
+  onRowClick,
+  variants: variantsByRow,
+}: MachineGridProps) {
   const groups = familyGroups(inventory.surfaces);
   const surfaceOrder: SurfaceId[] = inventory.surfaces.map((surface) => surface.id);
   const detectedById = new Map(inventory.surfaces.map((surface) => [surface.id, surface.detected]));
@@ -233,7 +240,8 @@ export function MachineGrid({ inventory, selectedRowKey, onRowClick }: MachineGr
               const previous = index > 0 ? inventory.rows[index - 1] : null;
               const newKind = !previous || previous.kind !== row.kind;
               const selected = row.key === selectedRowKey;
-              const variants = rowCellVariants(row, inventory.gaps, surfaceOrder);
+              const variants =
+                variantsByRow?.get(row.key) ?? rowCellVariants(row, inventory.gaps, surfaceOrder);
               return (
                 <Fragment key={row.key}>
                   {newKind && (

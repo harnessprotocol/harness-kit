@@ -1,4 +1,4 @@
-import type { GridCell, GridRow, MachineGap, SurfaceId } from "@harness-kit/core";
+import type { GridCell, GridRow, MachineGap, MachineInventory, SurfaceId } from "@harness-kit/core";
 
 /**
  * Which chip each Machine grid cell shows (AC-13, AC-14). Pure: no React,
@@ -122,4 +122,14 @@ export function rowCellVariants(
     }
   }
   return variants;
+}
+
+/** Every row's variants, keyed by row key, in `inventory.surfaces` order. */
+export function inventoryVariants(
+  inventory: MachineInventory,
+): Map<string, Record<SurfaceId, CellVariant>> {
+  const surfaceOrder = inventory.surfaces.map((surface) => surface.id);
+  return new Map(
+    inventory.rows.map((row) => [row.key, rowCellVariants(row, inventory.gaps, surfaceOrder)]),
+  );
 }

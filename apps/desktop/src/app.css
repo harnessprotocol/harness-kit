@@ -355,6 +355,16 @@
 .hk-grid-legend-item { display: inline-flex; align-items: center; gap: 6px; }
 .hk-grid-legend .hk-cell { min-width: 0; height: 18px; }
 
+/* One line under the summary strip while a Gaps/Differs filter is on. */
+.hk-machine-filter-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 2px 0;
+  font-size: 10.5px;
+  color: var(--fg-muted);
+}
+
 .dark {
   /* design-tokens:dark:start */
   /* generated — edit packages/design-tokens/src/tokens.ts, then run generate */

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
-import { MemoryRouter, useNavigate } from "react-router-dom";
+import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { buildMachineInventory } from "@harness-kit/core";
 import MachinePage from "../MachinePage";
@@ -316,6 +316,22 @@ function NavigateOnClick({ to }: { to: string }) {
   );
 }
 
+/** Renders the current search string so a test can assert on the URL. */
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location-search">{location.search}</div>;
+}
+
+function gridRowKeys(): string[] {
+  return screen
+    .getAllByTestId(/^machine-row-/)
+    .map((row) => row.getAttribute("data-testid")!.replace("machine-row-", ""));
+}
+
+function stripCell(label: string): HTMLElement {
+  return screen.getByText(label).parentElement!;
+}
+
 function renderPage() {
   return render(
     <MemoryRouter>
@@ -625,9 +641,117 @@ describe("MachinePage", () => {
     // resourceCount is 99 on every surface — if totals used it, these fail.
     expect(screen.getByText("Resources").parentElement).toHaveTextContent("Resources3");
     expect(screen.getByText("Gaps").parentElement).toHaveTextContent("Gaps1");
-    expect(screen.getByText("Diffs").parentElement).toHaveTextContent("Diffs1");
+    expect(screen.getByText("Differs").parentElement).toHaveTextContent("Differs1");
     expect(screen.getByText("Surfaces detected").parentElement).toHaveTextContent("4/11");
     expect(screen.queryByText("99")).not.toBeInTheDocument();
+  });
+
+  describe("summary strip filters (AC-14)", () => {
+    // In this file's inventory, postgres is the only row with a gap chip
+    // (codex) and the only row with a differs chip (cursor departs from
+    // claude-code's baseline). board and reviewer have neither.
+    it("counts rows with a gap chip and rows with a differs chip", async () => {
+      // Two pairwise diffs on the same row: the strip still counts one row,
+      // because the filter reveals rows, not pairs.
+      const inventory = makeInventory();
+      inventory.diffs.push({
+        row: "mcp-server:postgres",
+        surfaces: ["cursor", "claude-code"],
+        delta: [{ path: "env.HOST", kind: "changed", left: "a", right: "b" }],
+      });
+      vi.mocked(buildMachineInventory).mockResolvedValue(inventory as never);
+      renderPage();
+      await screen.findByTestId("machine-grid");
+      expect(stripCell("Gaps")).toHaveTextContent("Gaps1");
+      expect(stripCell("Differs")).toHaveTextContent("Differs1");
+      expect(screen.queryByText("Diffs")).not.toBeInTheDocument();
+    });
+
+    it("filters the grid to the rows with a gap chip, and toggles back", async () => {
+      renderPage();
+      await screen.findByTestId("machine-grid");
+      expect(gridRowKeys()).toHaveLength(3);
+      const gaps = screen.getByRole("button", { name: /Gaps/ });
+      expect(gaps).toHaveAttribute("aria-pressed", "false");
+
+      fireEvent.click(gaps);
+      await waitFor(() => expect(gridRowKeys()).toEqual(["mcp-server:postgres"]));
+      expect(screen.getByRole("button", { name: /Gaps/ })).toHaveAttribute("aria-pressed", "true");
+      for (const key of gridRowKeys()) {
+        expect(
+          within(screen.getByTestId(`machine-row-${key}`)).queryAllByText("+ copy").length,
+        ).toBeGreaterThan(0);
+      }
+      expect(screen.getByTestId("machine-filter-status")).toHaveTextContent(
+        "Showing 1 of 3 resources with a closable gap",
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: /Gaps/ }));
+      await waitFor(() => expect(gridRowKeys()).toHaveLength(3));
+      expect(screen.getByRole("button", { name: /Gaps/ })).toHaveAttribute("aria-pressed", "false");
+      expect(screen.queryByTestId("machine-filter-status")).not.toBeInTheDocument();
+    });
+
+    it("filters to differing rows, and Show all restores every row", async () => {
+      renderPage();
+      await screen.findByTestId("machine-grid");
+      fireEvent.click(screen.getByRole("button", { name: /Differs/ }));
+      await waitFor(() => expect(gridRowKeys()).toEqual(["mcp-server:postgres"]));
+      expect(screen.getByTestId("machine-filter-status")).toHaveTextContent(
+        "Showing 1 of 3 resources whose content differs",
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Show all" }));
+      await waitFor(() => expect(gridRowKeys()).toHaveLength(3));
+      expect(screen.getByRole("button", { name: /Differs/ })).toHaveAttribute("aria-pressed", "false");
+    });
+
+    it("reads the filter from the URL and keeps other params when toggling", async () => {
+      render(
+        <MemoryRouter initialEntries={["/machine?drift=1&filter=gaps"]}>
+          <MachinePage />
+          <LocationProbe />
+        </MemoryRouter>,
+      );
+      await screen.findByTestId("machine-grid");
+      expect(gridRowKeys()).toEqual(["mcp-server:postgres"]);
+      expect(screen.getByRole("button", { name: /Gaps/ })).toHaveAttribute("aria-pressed", "true");
+
+      fireEvent.click(screen.getByRole("button", { name: /Gaps/ }));
+      await waitFor(() => expect(gridRowKeys()).toHaveLength(3));
+      let search = new URLSearchParams(screen.getByTestId("location-search").textContent ?? "");
+      expect(search.get("drift")).toBe("1");
+      expect(search.has("filter")).toBe(false);
+
+      fireEvent.click(screen.getByRole("button", { name: /Differs/ }));
+      await waitFor(() => {
+        search = new URLSearchParams(screen.getByTestId("location-search").textContent ?? "");
+        expect(search.get("filter")).toBe("differs");
+      });
+      expect(search.get("drift")).toBe("1");
+    });
+
+    it("closes the drawer when its row is filtered out", async () => {
+      renderPage();
+      await screen.findByTestId("machine-grid");
+      fireEvent.click(screen.getByTestId("machine-row-skill:reviewer"));
+      expect(await screen.findByTestId("machine-row-drawer")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: /Gaps/ }));
+      await waitFor(() => expect(screen.queryByTestId("machine-row-drawer")).not.toBeInTheDocument());
+    });
+
+    it("renders a zero-count cell as plain text, not a button", async () => {
+      const inventory = makeInventory();
+      inventory.gaps = [];
+      vi.mocked(buildMachineInventory).mockResolvedValue(inventory as never);
+      renderPage();
+      await screen.findByTestId("machine-grid");
+      expect(stripCell("Gaps")).toHaveTextContent("Gaps0");
+      expect(screen.queryByRole("button", { name: /Gaps/ })).not.toBeInTheDocument();
+      expect(stripCell("Gaps").tagName).toBe("DIV");
+      // Resources and Surfaces detected are never filters.
+      expect(screen.queryByRole("button", { name: /Resources/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Surfaces detected/ })).not.toBeInTheDocument();
+    });
   });
 
   it("runs machine-only (projectRoot null) by default without error", async () => {

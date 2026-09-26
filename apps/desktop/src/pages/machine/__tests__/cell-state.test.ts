@@ -4,6 +4,7 @@ import { MACHINE_FIXTURE_INVENTORY } from "../../__fixtures__/machine-fixture-da
 import {
   CELL_VARIANTS,
   LEGEND_VARIANTS,
+  inventoryVariants,
   rowBaselineDigest,
   rowBaselineSource,
   rowCellVariants,
@@ -154,5 +155,15 @@ describe("CELL_VARIANTS table", () => {
   it("lists every other variant in the legend exactly once", () => {
     const others = (Object.keys(CELL_VARIANTS) as Array<keyof typeof CELL_VARIANTS>).filter((v) => v !== "absent");
     expect([...LEGEND_VARIANTS].sort()).toEqual(others.sort());
+  });
+});
+
+describe("inventoryVariants", () => {
+  it("returns one entry per row, each matching rowCellVariants", () => {
+    const variants = inventoryVariants(inventory);
+    expect([...variants.keys()]).toEqual(inventory.rows.map((row) => row.key));
+    for (const row of inventory.rows) {
+      expect(variants.get(row.key)).toEqual(rowCellVariants(row, inventory.gaps, surfaceOrder));
+    }
   });
 });
