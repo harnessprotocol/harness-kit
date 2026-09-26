@@ -11,6 +11,7 @@ import { initPreferences, getLabs } from "../lib/preferences";
 import { CommandPalette } from "../components/CommandPalette";
 import { useClaudeFileList } from "../hooks/useClaudeFileList";
 import { PageBoundary } from "../components/PageBoundary";
+import { ToastProvider } from "../components/ToastProvider";
 import { NAV, SETTINGS, visibleNav, type NavEntry } from "../nav";
 
 // Files with dedicated nav items — excluded from the Config Files tree
@@ -139,7 +140,16 @@ export function isSectionActive(
   });
 }
 
+/** The app shell, inside the one toast stack every page pushes to (design D15). */
 export default function AppLayout() {
+  return (
+    <ToastProvider>
+      <AppShell />
+    </ToastProvider>
+  );
+}
+
+function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
 
