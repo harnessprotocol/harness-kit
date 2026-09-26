@@ -32,7 +32,9 @@ export interface UseMachineViewOptions<Row> {
  * - `view` is read from the URL on every render, never copied into state:
  *   React Router does not remount the page when only the search string
  *   changes, so a sidebar or palette link to Drift while already on Machine
- *   must still switch views. `setView` keeps every other param.
+ *   must still switch views. `setView` keeps every other param and pushes
+ *   a history entry, so Back returns to the other view; re-selecting the
+ *   current tab adds no entry, since the toggle does not call it then.
  * - `drift` is the strip's Drift cell, counting what the Drift list shows
  *   under `harness=` from the summary Drift last reported (`onDriftSummary`).
  * - Switching to Drift closes the row drawer; `drawerRow` is null outside the
@@ -42,7 +44,10 @@ export interface UseMachineViewOptions<Row> {
  *   and the start of Drift) is brought on screen. The app's scroll container
  *   keeps its offset across routes and views, so without this a user who was
  *   scrolled down lands below the thing they asked for. It scrolls only when
- *   that top is not already visible, so someone looking at it is not moved.
+ *   that top is not already visible, so someone looking at it is not moved,
+ *   and not at all if the page scrolled between the request and the moment
+ *   it could be served (the first scan), so a late jump never undoes a
+ *   scroll the user made.
  *   Attach `regionRef` to the element holding the tabs and the view.
  */
 export function useMachineView<Row>({
@@ -75,18 +80,26 @@ export function useMachineView<Row>({
   const drawerRow = view === "grid" ? selectedRow : null;
 
   const regionRef = useRef<HTMLDivElement>(null);
-  const revealPending = useRef(false);
+  // The scroll offset when the request was made, or null for no request.
+  const revealFrom = useRef<number | null>(null);
   useEffect(() => {
-    revealPending.current = view === "drift";
+    const region = regionRef.current;
+    revealFrom.current = view === "drift" && region ? scrollOffsetOf(region) : null;
   }, [view, harness]);
   useEffect(() => {
     // Keyed on the request as well as on layoutSettled: a ref write schedules
     // nothing, so this must run on the render the request arrived in.
     // Consumed once, so a later Refresh does not pull the page back here.
-    if (!revealPending.current || !layoutSettled) return;
-    revealPending.current = false;
+    const from = revealFrom.current;
+    if (from === null || !layoutSettled) return;
+    revealFrom.current = null;
     const region = regionRef.current;
-    if (region && !viewTopVisible(region)) region.scrollIntoView?.({ block: "start" });
+    if (!region) return;
+    // On a cold load Drift renders before the first scan lands. Someone who
+    // scrolled in the meantime has found what they wanted: a late jump would
+    // pull them away from it.
+    if (scrollOffsetOf(region) !== from) return;
+    if (!viewTopVisible(region)) region.scrollIntoView?.({ block: "start" });
   }, [view, harness, layoutSettled]);
 
   return { view, setView, harness, drift, onDriftSummary: setDriftSummary, drawerRow, regionRef };
@@ -104,6 +117,12 @@ function viewTopVisible(element: HTMLElement): boolean {
     bottom = Math.min(bottom, bounds.bottom);
   }
   return rect.top >= top && rect.top + Math.min(rect.height, VIEW_TOP_PX) <= bottom;
+}
+
+/** How far `element`'s scroll container (or the document) is scrolled. */
+function scrollOffsetOf(element: HTMLElement): number {
+  const container = scrollContainerOf(element);
+  return container ? container.scrollTop : window.scrollY;
 }
 
 function scrollContainerOf(element: HTMLElement): HTMLElement | null {

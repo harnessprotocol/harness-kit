@@ -3,6 +3,7 @@ import { render, screen, waitFor, fireEvent, act } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom";
 import PluginsPage from "../PluginsPage";
 import { describeImportError } from "../plugins/import-errors";
+import { resetImportQueueForTests } from "../plugins/import-queue";
 
 // ── Tauri seams ─────────────────────────────────────────────────
 
@@ -98,6 +99,7 @@ describe("PluginsPage drag-to-import (Tauri drag-drop event)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     held.clear();
+    resetImportQueueForTests();
     dragDropHandler = null;
     (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {};
   });
@@ -250,6 +252,29 @@ describe("PluginsPage drag-to-import (Tauri drag-drop event)", () => {
     expect(importCalls().map(([, args]) => args?.sourcePath)).toEqual([
       "/Users/me/research", "/Users/me/harness-share",
     ]);
+    expect(importButton()).toBeEnabled();
+  });
+
+  it("keeps one queue across leaving and returning to the page mid-batch", async () => {
+    // Rust checks "already installed" and then copies: a second loop importing
+    // the same folder alongside the first would race it.
+    const view = await renderPage();
+    const release = holdImport("/Users/me/research");
+    drop("/Users/me/research");
+    await waitFor(() => expect(screen.getByText("Importing research...")).toBeInTheDocument());
+
+    view.unmount();
+    render(<MemoryRouter><PluginsPage /></MemoryRouter>);
+    await waitFor(() => expect(mockOnDragDropEvent).toHaveBeenCalledTimes(2));
+    // The returning page shows the batch still running.
+    expect(screen.getByText("Importing research...")).toBeInTheDocument();
+    expect(importButton()).toBeDisabled();
+
+    drop("/Users/me/research");
+    await release();
+
+    expect(await screen.findByText("Successfully imported research")).toBeInTheDocument();
+    expect(importCalls()).toHaveLength(1);
     expect(importButton()).toBeEnabled();
   });
 

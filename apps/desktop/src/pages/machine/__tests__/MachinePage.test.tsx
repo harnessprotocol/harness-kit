@@ -681,7 +681,7 @@ describe("MachinePage", () => {
       );
     });
 
-    it("is a tab list whose panel is labelled by the selected tab, driven by arrow keys", async () => {
+    it("is a tab list whose panel is labelled by the selected tab; arrows move focus, Enter selects", async () => {
       renderAt("/machine");
       await screen.findByTestId("machine-grid");
       const resources = within(viewToggle()).getByRole("tab", { name: "Resources" });
@@ -689,36 +689,71 @@ describe("MachinePage", () => {
       const panel = screen.getByRole("tabpanel", { name: "Resources" });
       expect(panel).toContainElement(screen.getByTestId("machine-grid"));
       for (const tab of [resources, drift]) expect(tab).toHaveAttribute("aria-controls", panel.id);
-      // Roving tabindex: only the selected tab is in the Tab order.
+      // Roving tabindex: only one tab is in the Tab order.
       expect(resources).toHaveAttribute("tabindex", "0");
       expect(drift).toHaveAttribute("tabindex", "-1");
 
+      // Manual activation: the arrow moves focus and the roving stop, nothing else.
       resources.focus();
       fireEvent.keyDown(resources, { key: "ArrowRight" });
+      expect(drift).toHaveFocus();
+      expect(drift).toHaveAttribute("tabindex", "0");
+      expect(resources).toHaveAttribute("tabindex", "-1");
+      expect(drift).toHaveAttribute("aria-selected", "false");
+      expect(screen.getByTestId("machine-grid")).toBeInTheDocument();
+      expect(urlParams().has("view")).toBe(false);
+
+      // Enter on a button is its click.
+      fireEvent.keyDown(drift, { key: "Enter" });
+      fireEvent.click(drift);
       expect(await screen.findByTestId("drift-view")).toBeInTheDocument();
       expect(drift).toHaveFocus();
       expect(drift).toHaveAttribute("aria-selected", "true");
-      expect(drift).toHaveAttribute("tabindex", "0");
-      expect(resources).toHaveAttribute("tabindex", "-1");
       expect(screen.getByRole("tabpanel", { name: "Drift vs harness.yaml" })).toContainElement(
         screen.getByTestId("drift-view"),
       );
       expect(urlParams().get("view")).toBe("drift");
 
-      // Wraps at both ends.
+      // Wraps at both ends, still without selecting.
       fireEvent.keyDown(drift, { key: "ArrowRight" });
-      expect(await screen.findByTestId("machine-grid")).toBeInTheDocument();
       expect(resources).toHaveFocus();
       fireEvent.keyDown(resources, { key: "ArrowLeft" });
-      expect(await screen.findByTestId("drift-view")).toBeInTheDocument();
       expect(drift).toHaveFocus();
-
       fireEvent.keyDown(drift, { key: "Home" });
-      expect(await screen.findByTestId("machine-grid")).toBeInTheDocument();
       expect(resources).toHaveFocus();
+      expect(resources).toHaveAttribute("tabindex", "0");
       fireEvent.keyDown(resources, { key: "End" });
-      expect(await screen.findByTestId("drift-view")).toBeInTheDocument();
       expect(drift).toHaveFocus();
+      expect(screen.getByTestId("drift-view")).toBeInTheDocument();
+      expect(urlParams().get("view")).toBe("drift");
+
+      // Leaving the list returns the Tab stop to the selected tab.
+      fireEvent.keyDown(drift, { key: "Home" });
+      expect(resources).toHaveAttribute("tabindex", "0");
+      act(() => resources.blur());
+      expect(drift).toHaveAttribute("tabindex", "0");
+      expect(resources).toHaveAttribute("tabindex", "-1");
+    });
+
+    it("does not mount Drift or scan when the arrow keys only pass over its tab", async () => {
+      // Drift migrates acknowledgements, grants project scope and scans on
+      // mount. Moving focus is not choosing the view.
+      renderAt("/machine");
+      await screen.findByTestId("machine-grid");
+      const resources = within(viewToggle()).getByRole("tab", { name: "Resources" });
+      const drift = within(viewToggle()).getByRole("tab", { name: "Drift vs harness.yaml" });
+      resources.focus();
+      fireEvent.keyDown(resources, { key: "ArrowRight" });
+      expect(drift).toHaveFocus();
+      fireEvent.keyDown(drift, { key: "End" });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(screen.queryByTestId("machine-drift-view")).not.toBeInTheDocument();
+      expect(buildDriftScopes).not.toHaveBeenCalled();
+      expect(mockGrantProjectScope).not.toHaveBeenCalled();
+
+      fireEvent.click(drift); // Enter / Space on the focused tab
+      expect(await screen.findByTestId("drift-view")).toBeInTheDocument();
+      await waitFor(() => expect(buildDriftScopes).toHaveBeenCalled());
     });
 
     it("adds no history entry when the selected tab is chosen again", async () => {
@@ -831,6 +866,39 @@ describe("MachinePage", () => {
         fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
         await waitFor(() => expect(screen.getByRole("button", { name: "Refresh" })).toBeEnabled());
         expect(scrollIntoView).toHaveBeenCalledTimes(1);
+      });
+
+      it("not on arrival if the page was scrolled while the first scan ran", async () => {
+        // Drift renders before the scan lands; someone who scrolled into it
+        // meanwhile must not be pulled back to the top of the view.
+        let resolve!: (value: unknown) => void;
+        vi.mocked(buildMachineInventory).mockReturnValueOnce(
+          new Promise((r) => { resolve = r; }) as never,
+        );
+        render(
+          <div data-testid="scroller" style={{ overflowY: "auto" }}>
+            <MemoryRouter initialEntries={["/machine?view=drift"]}>
+              <MachinePage />
+            </MemoryRouter>
+          </div>,
+        );
+        const scroller = screen.getByTestId("scroller");
+        let scrollTop = 0;
+        Object.defineProperty(scroller, "scrollTop", { configurable: true, get: () => scrollTop });
+        await screen.findByTestId("drift-view");
+        await new Promise((r) => setTimeout(r, 0));
+        scrollTop = 250;
+
+        resolve(makeInventory());
+        await screen.findByRole("group", { name: "Summary" });
+        await new Promise((r) => setTimeout(r, 0));
+        expect(scrollIntoView).not.toHaveBeenCalled();
+
+        // The next request is a new one and is served.
+        fireEvent.click(within(viewToggle()).getByRole("tab", { name: "Resources" }));
+        await screen.findByTestId("machine-grid");
+        fireEvent.click(within(viewToggle()).getByRole("tab", { name: "Drift vs harness.yaml" }));
+        await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
       });
 
       it("on a switch from the grid, by the strip cell or a link, but not back to the grid", async () => {
