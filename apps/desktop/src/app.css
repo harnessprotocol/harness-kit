@@ -307,6 +307,52 @@
   .hk-conflict-choices { justify-content: start; }
 }
 
+/* Machine grid cell chips (AC-13) and their legend (AC-14). Variants come from
+   src/pages/machine/cell-state.ts. */
+.hk-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 46px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 6px;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.hk-cell[data-variant="present-user"] { background: var(--bg-elevated); color: var(--fg-base); }
+.hk-cell[data-variant="present-project"] {
+  background: var(--bg-elevated);
+  color: var(--fg-base);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+/* The dashed outline marks a state, not a boundary between regions, so the
+   borderless rule does not apply to it. */
+.hk-cell[data-variant="gap"] {
+  background: transparent;
+  border: 1px dashed color-mix(in srgb, var(--fg-muted) 45%, transparent);
+  color: var(--fg-muted);
+}
+.hk-cell[data-variant="differs"] { background: var(--warning-light); color: var(--warning); }
+.hk-cell[data-variant="none"],
+.hk-cell[data-variant="unmanaged"] { color: var(--fg-subtle); opacity: 0.55; }
+.hk-cell[data-variant="unknown"] { background: var(--bg-elevated); color: var(--fg-muted); }
+
+.hk-grid-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  align-items: center;
+  padding: 12px 8px 0;
+  font-size: 10.5px;
+  color: var(--fg-muted);
+}
+.hk-grid-legend-item { display: inline-flex; align-items: center; gap: 6px; }
+.hk-grid-legend .hk-cell { min-width: 0; height: 18px; }
+
 .dark {
   /* design-tokens:dark:start */
   /* generated — edit packages/design-tokens/src/tokens.ts, then run generate */

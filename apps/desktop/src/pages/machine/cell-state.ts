@@ -34,7 +34,7 @@ export const CELL_VARIANTS: Record<CellVariant, CellVariantInfo> = {
 };
 
 /** Variants shown in the legend, in display order (absent is the blank cell and is not listed). */
-export const LEGEND_VARIANTS: CellVariant[] = [
+export const LEGEND_VARIANTS: readonly CellVariant[] = [
   "present-user",
   "present-project",
   "gap",
@@ -65,8 +65,7 @@ function presentDigests(row: GridRow, surfaceOrder: SurfaceId[]): Array<[Surface
 /**
  * The row's reference content: the most frequent effective digest among its
  * present cells. A tie goes to the digest held by the earliest surface in
- * `surfaceOrder`, so on an even two-way split the first surface in registry
- * order is the reference. Undefined when no present cell has a digest.
+ * `surfaceOrder`. Undefined when no present cell has a digest.
  */
 export function rowBaselineDigest(row: GridRow, surfaceOrder: SurfaceId[]): string | undefined {
   const digests = presentDigests(row, surfaceOrder);

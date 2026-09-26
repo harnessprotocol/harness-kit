@@ -2,9 +2,11 @@ import type { MachineInventory } from "@harness-kit/core";
 
 /**
  * Static MachineInventory for the dev-only Machine screenshot fixture —
- * exercises every cell state (present u/p, absent, not-applicable, unknown),
- * an undetected column, skipped diagnostics, one cross-surface diff, and the
- * two marketplace states (registered, and not readable at all).
+ * exercises every cell chip (user, project, + copy, differs, absent, —, ·, ?),
+ * an undetected column, skipped diagnostics, the three pairwise diffs the
+ * engine emits for the github row (codex differs from the other three
+ * copies), and the two marketplace states (registered, and not readable at
+ * all).
  */
 /**
  * Surfaces whose descriptors declare no marketplace store: an empty list
@@ -259,6 +261,22 @@ export const MACHINE_FIXTURE_INVENTORY: MachineInventory = {
       delta: [
         { path: "env.GITHUB_TOKEN", kind: "changed", left: "«secret»", right: "«secret-2»" },
         { path: "args[1]", kind: "added", right: "--readonly" },
+      ],
+    },
+    {
+      row: "mcp-server:github",
+      surfaces: ["claude-desktop", "codex"],
+      delta: [
+        { path: "env.GITHUB_TOKEN", kind: "changed", left: "«secret»", right: "«secret-2»" },
+        { path: "args[1]", kind: "added", right: "--readonly" },
+      ],
+    },
+    {
+      row: "mcp-server:github",
+      surfaces: ["codex", "cursor"],
+      delta: [
+        { path: "env.GITHUB_TOKEN", kind: "changed", left: "«secret-2»", right: "«secret»" },
+        { path: "args[1]", kind: "removed", left: "--readonly" },
       ],
     },
   ],
