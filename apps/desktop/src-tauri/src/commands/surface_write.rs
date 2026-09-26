@@ -38,22 +38,39 @@ fn current_platform() -> &'static str {
     }
 }
 
+/// HarnessKit's own state directory: preimage backups and transaction
+/// manifests. Backups are verbatim copies of config stores, and ~/.claude.json
+/// carries MCP env values (tokens), so everything written here is private to
+/// the user regardless of umask. Unix only: on Windows the modes are not
+/// applied and privacy rests on the profile directory's ACL.
+fn is_state_path(normalized: &str) -> bool {
+    normalized.starts_with(".harness/")
+}
+
 /// Whether a home-relative path is a config store the registry declares.
 /// Segment-aware in both directions: ".claude.json.bak" is not ".claude.json",
 /// and ".claude/skillsets/x" is not inside ".claude/skills".
 pub(crate) fn is_declared_store(relative: &str) -> bool {
     let normalized = relative.replace('\\', "/");
+    // Every segment must be a real name. This one check rejects the empty
+    // path, an absolute path (leading "/"), "//", traversal, and a trailing "/"
+    // or "." — the last two matter because ".claude/skills/" and ".harness/."
+    // pass the prefix checks below yet name the DIRECTORY, and the write would
+    // create a regular file where the directory belongs.
+    if normalized
+        .split('/')
+        .any(|segment| segment.is_empty() || segment == "." || segment == "..")
+    {
+        return false;
+    }
     // HarnessKit's own state directory. The transaction engine writes preimage
     // backups and its manifest here before touching any config file, so a
     // command that refused them would make rollback impossible — which is the
     // whole point of routing desktop writes through the engine.
-    if normalized.starts_with(".harness/") {
-        return !normalized.split('/').any(|segment| segment == "..");
+    if is_state_path(&normalized) {
+        return true;
     }
-    if normalized.is_empty() || normalized.starts_with('/') || normalized.starts_with('~') {
-        return false;
-    }
-    if normalized.split('/').any(|segment| segment == "..") {
+    if normalized.starts_with('~') {
         return false;
     }
     let Some(platform) = scope().get(current_platform()) else {
@@ -128,7 +145,12 @@ fn apply_surface_transaction_in(
                 file.relative_path
             ));
         }
-        let dest = canonical_home.join(&file.relative_path);
+        // Validation, the symlink walk, and the write must all see the SAME
+        // string. is_declared_store normalizes "\\" to "/", so joining the raw
+        // path would let ".claude\\skills\\x" pass validation and then be
+        // created as a single oddly named file in home on unix.
+        let relative = file.relative_path.replace('\\', "/");
+        let dest = canonical_home.join(&relative);
 
         // Walk EVERY component, the final one included. Canonicalizing only
         // the parent let a symlink at the leaf redirect the write anywhere the
@@ -137,7 +159,7 @@ fn apply_surface_transaction_in(
         // precondition. This mirrors the TS engine's assertNoSymlinkBoundary,
         // which already walks the full path.
         let mut walked = canonical_home.clone();
-        for segment in Path::new(&file.relative_path).components() {
+        for segment in Path::new(&relative).components() {
             walked = walked.join(segment);
             match std::fs::symlink_metadata(&walked) {
                 Ok(meta) if meta.file_type().is_symlink() => {
@@ -168,7 +190,7 @@ fn apply_surface_transaction_in(
             }
         }
         targets.push(Target {
-            relative: file.relative_path,
+            relative,
             dest,
             content: file.content,
             expected: file.expected_sha256,
@@ -239,21 +261,22 @@ fn check_unchanged(dest: &Path, expected: &str, relative: &str) -> Result<(), St
     Ok(())
 }
 
-/// Create a fresh temp file beside `dest`. The name comes from the
-/// destination plus a random suffix, never from the caller, and the file is
+/// Create a fresh temp file beside `dest`. The name is fixed-length and comes
+/// from a random suffix, never from the caller or the destination: embedding
+/// the destination's name pushed a long store name past NAME_MAX (255) that a
+/// plain write handled. The file is
 /// created exclusively so an existing file or planted symlink is never
 /// opened. Owner-only from the first byte on unix.
 fn create_temp(dest: &Path) -> Result<(PathBuf, fs::File), String> {
     let parent = dest
         .parent()
         .ok_or_else(|| format!("{} has no parent directory", dest.display()))?;
-    let name = dest
-        .file_name()
-        .ok_or_else(|| format!("{} has no file name", dest.display()))?
-        .to_string_lossy();
+    if dest.file_name().is_none() {
+        return Err(format!("{} has no file name", dest.display()));
+    }
     let mut last_error = None;
     for _ in 0..8 {
-        let temp = parent.join(format!("{}.hk-tmp-{}", name, uuid::Uuid::new_v4().simple()));
+        let temp = parent.join(format!(".hk-tmp-{}", uuid::Uuid::new_v4().simple()));
         let mut options = fs::OpenOptions::new();
         options.write(true).create_new(true);
         #[cfg(unix)]
@@ -289,6 +312,16 @@ fn create_temp(dest: &Path) -> Result<(PathBuf, fs::File), String> {
 /// 5. rename the temp over the destination
 /// 6. fsync the directory so the rename itself is durable (unix)
 ///
+/// Rename replaces the directory entry rather than writing through the inode.
+/// So a hardlink to `dest` is severed (which also defuses a planted one),
+/// ownership, ACLs and xattrs are reset to the current user's, and the
+/// containing directory must be writable, which an in-place write did not
+/// need. That last point is why an owner-read-only destination is refused up
+/// front: rename would otherwise quietly override a deliberate chmod 0400.
+///
+/// Files under `.harness/` are always 0600 and the directories created for
+/// them 0700. Existing directories are left as they are.
+///
 /// Any failure in 1–5 removes the temp file and leaves the destination as it
 /// was. The precondition check in 4 is not a lock: a writer that lands
 /// between the check and the rename is still overwritten. That window is
@@ -303,7 +336,8 @@ fn write_atomically(
     let parent = dest
         .parent()
         .ok_or_else(|| format!("{} has no parent directory", dest.display()))?;
-    fs::create_dir_all(parent).map_err(|e| format!("Failed to create directory: {}", e))?;
+    create_parent_dirs(parent, is_state_path(relative))
+        .map_err(|e| format!("Failed to create directory: {}", e))?;
 
     // Read the replaced file's mode before anything is written. The path was
     // checked for symlinks during validation; symlink_metadata keeps it that
@@ -312,7 +346,17 @@ fn write_atomically(
     let mode = {
         use std::os::unix::fs::PermissionsExt;
         match fs::symlink_metadata(dest) {
-            Ok(meta) if meta.is_file() => meta.permissions().mode() & 0o777,
+            _ if is_state_path(relative) => 0o600,
+            Ok(meta) if meta.is_file() => {
+                let mode = meta.permissions().mode() & 0o777;
+                if mode & 0o200 == 0 {
+                    return Err(format!(
+                        "Refusing to write '{}': the file is read-only",
+                        relative
+                    ));
+                }
+                mode
+            }
             _ => 0o600,
         }
     };
@@ -360,6 +404,21 @@ fn sync_directory(directory: &Path) -> std::io::Result<()> {
 #[cfg(not(unix))]
 fn sync_directory(_directory: &Path) -> std::io::Result<()> {
     Ok(())
+}
+
+/// Create `dir` and any missing ancestors; when `private`, the ones this call
+/// creates are 0700. Existing directories are left as they are.
+fn create_parent_dirs(dir: &Path, private: bool) -> std::io::Result<()> {
+    let mut builder = fs::DirBuilder::new();
+    builder.recursive(true);
+    #[cfg(unix)]
+    if private {
+        use std::os::unix::fs::DirBuilderExt;
+        builder.mode(0o700);
+    }
+    #[cfg(not(unix))]
+    let _ = private;
+    builder.create(dir)
 }
 
 fn remove_if_present(dest: &Path, expected: Option<&str>, relative: &str) -> Result<(), String> {
@@ -436,6 +495,16 @@ mod tests {
         }
     }
 
+    #[test]
+    fn a_directory_shaped_path_is_refused_not_written_as_a_file() {
+        let home = tempfile::TempDir::new().unwrap();
+        for path in [".claude/skills/", ".harness/", ".harness/.", ".claude//skills/x", ".claude/./skills/x"] {
+            assert!(!is_declared_store(path), "{} should be rejected", path);
+            assert!(apply_surface_transaction_in(home.path(), vec![write_plain(path)]).is_err());
+        }
+        assert!(fs::read_dir(home.path()).unwrap().next().is_none());
+    }
+
     // ── Write path, against a tempdir home ────────────────────────────
 
     use tempfile::TempDir;
@@ -446,6 +515,10 @@ mod tests {
             content: Some(content.to_string()),
             expected_sha256: None,
         }
+    }
+
+    fn write_plain(relative: &str) -> SurfaceFileWrite {
+        write(relative, "x")
     }
 
     fn write_expecting(relative: &str, content: &str, expected: &str) -> SurfaceFileWrite {
@@ -722,5 +795,106 @@ mod tests {
         assert!(!home.path().join(".zshrc").exists());
         assert!(!home.path().join(".claude.json").exists());
     }
-}
 
+    #[test]
+    fn a_caller_supplied_temp_path_is_still_refused() {
+        // The webview must never need, or get, an allowance for temp paths.
+        let home = TempDir::new().unwrap();
+        for path in [".claude.json.harness-tmp-2026-09-26-0", ".claude.json.hk-tmp-abc"] {
+            let err = apply_surface_transaction_in(home.path(), vec![write(path, "x")]).unwrap_err();
+            assert!(err.contains("not a config store"), "got: {}", err);
+        }
+        assert!(fs::read_dir(home.path()).unwrap().next().is_none());
+    }
+
+    #[test]
+    fn a_backslash_path_is_written_where_it_was_validated() {
+        let home = TempDir::new().unwrap();
+        apply_surface_transaction_in(home.path(), vec![write(".claude\\skills\\x\\SKILL.md", "ok")])
+            .unwrap();
+        assert_eq!(
+            fs::read_to_string(home.path().join(".claude/skills/x/SKILL.md")).unwrap(),
+            "ok"
+        );
+        assert!(!home.path().join(".claude\\skills\\x\\SKILL.md").exists());
+    }
+
+    #[test]
+    fn a_long_store_name_is_still_writable() {
+        // The temp name must not grow with the destination's name.
+        let home = TempDir::new().unwrap();
+        let name = format!(".claude/skills/x/{}.md", "a".repeat(240));
+        apply_surface_transaction_in(home.path(), vec![write(&name, "ok")]).unwrap();
+        assert_eq!(fs::read_to_string(home.path().join(&name)).unwrap(), "ok");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_read_only_store_is_refused_not_overridden() {
+        use std::os::unix::fs::PermissionsExt;
+        let home = TempDir::new().unwrap();
+        let store = home.path().join(".claude.json");
+        fs::write(&store, "locked").unwrap();
+        fs::set_permissions(&store, fs::Permissions::from_mode(0o400)).unwrap();
+        let err =
+            apply_surface_transaction_in(home.path(), vec![write(".claude.json", "{}")]).unwrap_err();
+        assert!(err.contains("read-only"), "got: {}", err);
+        assert_eq!(fs::read_to_string(&store).unwrap(), "locked");
+        assert!(temp_files_in(home.path()).is_empty());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn backups_and_manifests_under_the_state_dir_are_0600_in_0700_dirs() {
+        // A backup is a verbatim copy of ~/.claude.json, MCP env tokens
+        // included. The engine asks for 0600 through setFileMode, which the
+        // Tauri provider cannot do, so this command does it.
+        let home = TempDir::new().unwrap();
+        let backup = ".harness/backups/2026-09-26-app/.claude.json";
+        let manifest = ".harness/backups/2026-09-26-app/transaction.json";
+        apply_surface_transaction_in(
+            home.path(),
+            vec![write(backup, "{\"token\":\"secret\"}"), write(manifest, "{}")],
+        )
+        .unwrap();
+        assert_eq!(mode_of(&home.path().join(backup)), 0o600);
+        assert_eq!(mode_of(&home.path().join(manifest)), 0o600);
+        for dir in [".harness", ".harness/backups", ".harness/backups/2026-09-26-app"] {
+            assert_eq!(mode_of(&home.path().join(dir)), 0o700, "{} should be 0700", dir);
+        }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_rewritten_state_file_is_tightened_to_0600() {
+        // The manifest is written twice (prepared, then committed); one left
+        // 0644 by an older build must not stay that way.
+        use std::os::unix::fs::PermissionsExt;
+        let home = TempDir::new().unwrap();
+        let manifest = home.path().join(".harness/backups/t/transaction.json");
+        fs::create_dir_all(manifest.parent().unwrap()).unwrap();
+        fs::write(&manifest, "{}").unwrap();
+        fs::set_permissions(&manifest, fs::Permissions::from_mode(0o644)).unwrap();
+        apply_surface_transaction_in(
+            home.path(),
+            vec![write(".harness/backups/t/transaction.json", "{\"status\":\"committed\"}")],
+        )
+        .unwrap();
+        assert_eq!(mode_of(&manifest), 0o600);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_symlinked_state_dir_is_refused() {
+        let home = TempDir::new().unwrap();
+        let outside = TempDir::new().unwrap();
+        std::os::unix::fs::symlink(outside.path(), home.path().join(".harness")).unwrap();
+        let err = apply_surface_transaction_in(
+            home.path(),
+            vec![write(".harness/backups/t/transaction.json", "{}")],
+        )
+        .unwrap_err();
+        assert!(err.contains("symbolic link"), "got: {}", err);
+        assert!(fs::read_dir(outside.path()).unwrap().next().is_none());
+    }
+}
