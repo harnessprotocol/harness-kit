@@ -120,19 +120,19 @@ test.describe("Drift as a view of Machine — content validation", () => {
   test("Machine opened directly shows the grid view and does not mount Drift", async ({ appPage }) => {
     await appPage.goto("/machine");
     await appPage.waitForLoadState("networkidle");
-    const toggle = appPage.getByRole("group", { name: "Machine view" });
-    await expect(toggle.getByRole("button", { name: "Resources" })).toHaveAttribute("aria-pressed", "true");
+    const toggle = appPage.getByRole("tablist", { name: "Machine view" });
+    await expect(toggle.getByRole("tab", { name: "Resources" })).toHaveAttribute("aria-selected", "true");
     await expect(appPage.getByTestId("drift-view")).toHaveCount(0);
   });
 
   test("the view toggle switches between the grid and Drift", async ({ appPage }) => {
     await appPage.goto("/machine");
     await appPage.waitForLoadState("networkidle");
-    const toggle = appPage.getByRole("group", { name: "Machine view" });
-    await toggle.getByRole("button", { name: "Drift vs harness.yaml" }).click();
+    const toggle = appPage.getByRole("tablist", { name: "Machine view" });
+    await toggle.getByRole("tab", { name: "Drift vs harness.yaml" }).click();
     await expect(appPage.getByTestId("drift-view")).toBeVisible();
     expect(appPage.url()).toContain("view=drift");
-    await toggle.getByRole("button", { name: "Resources" }).click();
+    await toggle.getByRole("tab", { name: "Resources" }).click();
     await expect(appPage.getByTestId("drift-view")).toHaveCount(0);
     expect(appPage.url()).not.toContain("view=drift");
   });

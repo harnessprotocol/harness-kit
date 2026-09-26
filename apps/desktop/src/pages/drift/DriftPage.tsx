@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { ToastItem } from "@harness-kit/ui";
-import { buildDriftScopes, collectDrift, driftItemKey, type ScopedDriftItem } from "./drift-data";
+import {
+  buildDriftScopes,
+  collectDrift,
+  driftItemKey,
+  summarizeDrift,
+  type DriftSummary,
+  type ScopedDriftItem,
+} from "./drift-data";
 import { isRepairable } from "./classification";
 import { FixPreviewModal } from "./FixPreviewModal";
 import { DriftView } from "./DriftView";
@@ -14,14 +21,7 @@ import {
 import { appDataDir, join as joinPath } from "@tauri-apps/api/path";
 import { buildDesktopPortabilitySnapshot, type DesktopPortabilitySnapshot } from "../fleet/portability-data";
 
-/** What Drift reports to an embedding page after it has scanned. */
-export interface DriftSummary {
-  /**
-   * Drift items the last successful scan found, across every harness (the
-   * `harness=` filter narrows the list, not this), less the acknowledged ones.
-   */
-  count: number;
-}
+export type { DriftSummary };
 
 export interface DriftPageProps {
   /** Rendered inside the Machine view (AC-18) rather than as a page. */
@@ -94,9 +94,7 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
 
   useEffect(() => {
     if (!scanned || !onSummary) return;
-    onSummary({
-      count: entries.filter((entry) => !acknowledged.has(driftItemKey(entry.scope, entry.item))).length,
-    });
+    onSummary(summarizeDrift(entries, acknowledged));
   }, [scanned, entries, acknowledged, onSummary]);
 
   const filtered = useMemo(

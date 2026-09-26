@@ -1,4 +1,3 @@
-import { useSearchParams } from "react-router-dom";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, Input, EmptyState } from "@harness-kit/ui";
 import { ChevronRight, ScanSearch } from "lucide-react";
@@ -6,41 +5,32 @@ import type { GridRow, MachineInventory } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
 import { loadMachineInventory } from "./machine-data";
 import { MachineGrid } from "./MachineGrid";
-import { MachineSummary, useMachineFilter } from "./MachineSummary";
-import { MachineViewToggle } from "./MachineViewToggle";
-import { viewOf, withView, type MachineView } from "./machine-view-model";
+import {
+  MachineFilterStatus,
+  MachineSummary,
+  useFilterFocusHandoff,
+  useMachineFilter,
+} from "./MachineSummary";
+import { MACHINE_VIEW_PANEL_ID, MachineViewToggle, machineViewTabId } from "./MachineViewToggle";
+import { useMachineView } from "./useMachineView";
 import { RowDrawer } from "./RowDrawer";
-import DriftPage, { type DriftSummary } from "../drift/DriftPage";
+import DriftPage from "../drift/DriftPage";
 
 /**
- * Machine view (Task 14): read-only cross-surface inventory of this
- * machine. Defaults to machine-only observation (no project directory) —
- * picking a directory adds project-scope stores to the scan.
+ * Machine (Task 14): cross-surface inventory of this machine, whose row
+ * drawer applies changes between surfaces. Defaults to machine-only
+ * observation (no project directory) — picking a directory adds
+ * project-scope stores to the scan.
  *
  * Two views share the page head and summary strip (spec AC-18, design D6):
  * the surface grid and Drift against harness.yaml, chosen by `?view=`
- * (legacy `?drift=1` still selects Drift).
+ * (legacy `?drift=1` still selects Drift). See useMachineView.
  */
 export default function MachinePage() {
   const [inventory, setInventory] = useState<MachineInventory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [projectDir, setProjectDir] = useState("");
-  // Read from the URL on every render, never copied into state: React Router
-  // does not remount this component when only the search string changes, so
-  // a sidebar or palette link to Drift while already on Machine must still
-  // switch views.
-  const [searchParams, setSearchParams] = useSearchParams();
-  const view = viewOf(searchParams);
-  const setView = useCallback(
-    (next: MachineView) => setSearchParams((current) => withView(current, next)),
-    [setSearchParams],
-  );
-  // Drift's count for the strip, as Drift last reported it. Null until Drift
-  // has scanned: Machine never scans for drift itself (see the Drift view
-  // below for why).
-  const [driftCount, setDriftCount] = useState<number | null>(null);
-  const handleDriftSummary = useCallback((summary: DriftSummary) => setDriftCount(summary.count), []);
   const [selectedRow, setSelectedRow] = useState<GridRow | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
   const [projectDegraded, setProjectDegraded] = useState(false);
@@ -103,19 +93,23 @@ export default function MachinePage() {
   );
   const totalSkipped = skippedSurfaces.reduce((total, surface) => total + surface.skipped.length, 0);
 
-  // The drawer belongs to the grid: switching to Drift closes it, so coming
-  // back does not reopen a drawer for a row picked before.
-  useEffect(() => {
-    if (view === "drift") setSelectedRow(null);
-  }, [view]);
-  const drawerRow = view === "grid" ? selectedRow : null;
-
   const clearSelection = useCallback(() => setSelectedRow(null), []);
+  const { view, setView, drift, onDriftSummary, drawerRow, regionRef } = useMachineView({
+    selectedRow,
+    clearSelection,
+    // The strip arrives with the first scan, above the view region.
+    layoutSettled: !(loading && !inventory),
+  });
   const { filter, setFilter, variants, shownRows } = useMachineFilter(
     inventory,
     selectedRow?.key ?? null,
     clearSelection,
   );
+  // The grid's filter is not in force while Drift shows: no cell reads as
+  // pressed, no status line claims a filter, and choosing Gaps or Differs
+  // returns to the grid with that filter (useMachineFilter) in one URL update.
+  const shownFilter = view === "grid" ? filter : "all";
+  const { stripRef, changeFilter } = useFilterFocusHandoff(shownFilter, setFilter);
 
   const rowDiffs = useMemo(
     () =>
@@ -133,7 +127,7 @@ export default function MachinePage() {
         <div>
           <h1 className="hk-page-title">Machine</h1>
           <p className="hk-page-subtitle">
-            Every AI-harness resource on this machine, across all supported surfaces — read-only.
+            Every AI-harness resource on this machine, across all supported surfaces.
           </p>
         </div>
         <Button variant="primary" onClick={() => load(projectDir)} disabled={loading}>
@@ -193,155 +187,164 @@ export default function MachinePage() {
         <MachineSummary
           inventory={inventory}
           variants={variants}
-          // The grid's filter is not in force while Drift shows: no cell
-          // reads as pressed, and choosing Gaps or Differs returns to the
-          // grid with that filter (useMachineFilter) in one URL update.
-          filter={view === "grid" ? filter : "all"}
-          shownCount={shownRows.length}
-          onFilterChange={setFilter}
-          drift={{
-            active: view === "drift",
-            count: driftCount,
-            onSelect: () => setView(view === "drift" ? "grid" : "drift"),
-          }}
-        >
-          <MachineViewToggle view={view} onChange={setView} />
-        </MachineSummary>
+          filter={shownFilter}
+          onFilterChange={changeFilter}
+          stripRef={stripRef}
+          drift={drift}
+        />
       )}
-      {/* No strip before the first scan lands, or after it fails; the toggle
-          still offers both views, since Drift does not need the inventory. */}
-      {!inventory && <MachineViewToggle view={view} onChange={setView} />}
 
-      {view === "drift" ? (
-        /*
-          AC-37 / AC-18: Drift is a view of Machine, rendered as the existing
-          page rather than reimplemented. The M2 attempt to "absorb" Drift
-          routed /drift at this view and DELETED the acknowledge/fix workflow,
-          which is why it was reverted. Drift compares harness.yaml against
-          compiled output; the grid compares surfaces against each other. Two
-          different questions, one screen.
+      {/* The tabs render here whether or not the strip has: before the first
+          scan lands, after it fails (Drift does not need the inventory), and
+          after. One tree position, so focus on them survives the strip
+          arriving. */}
+      <div ref={regionRef} data-testid="machine-view-region">
+        <MachineViewToggle view={view} onChange={setView} />
+        <section
+          role="tabpanel"
+          id={MACHINE_VIEW_PANEL_ID}
+          aria-labelledby={machineViewTabId(view)}
+        >
+          {view === "drift" ? (
+            /*
+              AC-37 / AC-18: Drift is a view of Machine, rendered as the existing
+              page rather than reimplemented. The M2 attempt to "absorb" Drift
+              routed /drift at this view and DELETED the acknowledge/fix workflow,
+              which is why it was reverted. Drift compares harness.yaml against
+              compiled output; the grid compares surfaces against each other. Two
+              different questions, one screen.
 
-          Mounted only in this view, and that is behavioural rather than
-          cosmetic: Drift scans project scopes on mount and asks Tauri to grant
-          access to the project directory. The grid runs machine-only by
-          default and must not trigger a directory-permission request the user
-          did not ask for, so nothing about drift runs until someone picks this
-          view.
-        */
-        <section style={{ marginTop: 20 }} data-testid="machine-drift-view" aria-label="Drift vs harness.yaml">
-          <DriftPage embedded onSummary={handleDriftSummary} />
-        </section>
-      ) : (
-        <>
-          {loading && !inventory && (
-            <div style={{ padding: "40px 0", textAlign: "center", color: "var(--fg-subtle)", fontSize: 12.5 }}>
-              Scanning this machine…
+              Mounted only in this view, and that is behavioural rather than
+              cosmetic: Drift scans project scopes on mount and asks Tauri to grant
+              access to the project directory. The grid runs machine-only by
+              default and must not trigger a directory-permission request the user
+              did not ask for, so nothing about drift runs until someone picks this
+              view.
+            */
+            <div style={{ marginTop: 20 }} data-testid="machine-drift-view">
+              <DriftPage embedded onSummary={onDriftSummary} />
             </div>
-          )}
-
-          {inventory && (
+          ) : (
             <>
-              {inventory.rows.length === 0 ? (
-                <div style={{ marginTop: 20 }}>
-                  <EmptyState
-                    icon={<ScanSearch size={28} strokeWidth={1.5} />}
-                    title="Nothing observed"
-                    description="No harness resources were found in this machine's config stores. Pick a project directory to include project-scope stores in the scan."
-                  />
-                </div>
-              ) : (
-                <div style={{ marginTop: 20 }}>
-                  <MachineGrid
-                    inventory={{ ...inventory, rows: shownRows }}
-                    variants={variants}
-                    selectedRowKey={selectedRow?.key ?? null}
-                    onRowClick={(row) => setSelectedRow(row)}
-                  />
+              {inventory && (
+                <MachineFilterStatus
+                  filter={shownFilter}
+                  shownCount={shownRows.length}
+                  totalCount={inventory.rows.length}
+                  onFilterChange={changeFilter}
+                />
+              )}
+              {loading && !inventory && (
+                <div style={{ padding: "40px 0", textAlign: "center", color: "var(--fg-subtle)", fontSize: 12.5 }}>
+                  Scanning this machine…
                 </div>
               )}
 
-              {/* Skipped diagnostics — collapsible per-surface list */}
-              {totalSkipped > 0 && (
-                <div style={{ marginTop: 24 }}>
-                  <button
-                    type="button"
-                    className="hk-reset-btn"
-                    data-testid="skipped-toggle"
-                    onClick={() => setShowSkipped((visible) => !visible)}
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      padding: "5px 10px",
-                      borderRadius: 6,
-                      background: "var(--bg-elevated)",
-                      color: "var(--fg-muted)",
-                      fontSize: 11,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    <ChevronRight
-                      size={10}
-                      strokeWidth={1.7}
-                      aria-hidden="true"
-                      style={{ transform: showSkipped ? "rotate(90deg)" : "none", transition: "transform 0.15s ease" }}
-                    />
-                    Skipped diagnostics
-                    <span
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        minWidth: 16,
-                        height: 16,
-                        padding: "0 4px",
-                        borderRadius: 8,
-                        background: "var(--bg-base)",
-                        color: "var(--warning, var(--fg-muted))",
-                        fontSize: 9.5,
-                        fontWeight: 650,
-                      }}
-                    >
-                      {totalSkipped}
-                    </span>
-                  </button>
+              {inventory && (
+                <>
+                  {inventory.rows.length === 0 ? (
+                    <div style={{ marginTop: 20 }}>
+                      <EmptyState
+                        icon={<ScanSearch size={28} strokeWidth={1.5} />}
+                        title="Nothing observed"
+                        description="No harness resources were found in this machine's config stores. Pick a project directory to include project-scope stores in the scan."
+                      />
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: 20 }}>
+                      <MachineGrid
+                        inventory={{ ...inventory, rows: shownRows }}
+                        variants={variants}
+                        selectedRowKey={selectedRow?.key ?? null}
+                        onRowClick={(row) => setSelectedRow(row)}
+                      />
+                    </div>
+                  )}
 
-                  {showSkipped && (
-                    <div
-                      data-testid="skipped-list"
-                      style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}
-                    >
-                      {skippedSurfaces.map((surface) => (
-                        <div
-                          key={surface.id}
-                          style={{ padding: "8px 12px", borderRadius: 8, background: "var(--bg-elevated)" }}
+                  {/* Skipped diagnostics — collapsible per-surface list */}
+                  {totalSkipped > 0 && (
+                    <div style={{ marginTop: 24 }}>
+                      <button
+                        type="button"
+                        className="hk-reset-btn"
+                        data-testid="skipped-toggle"
+                        onClick={() => setShowSkipped((visible) => !visible)}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          padding: "5px 10px",
+                          borderRadius: 6,
+                          background: "var(--bg-elevated)",
+                          color: "var(--fg-muted)",
+                          fontSize: 11,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                        }}
+                      >
+                        <ChevronRight
+                          size={10}
+                          strokeWidth={1.7}
+                          aria-hidden="true"
+                          style={{ transform: showSkipped ? "rotate(90deg)" : "none", transition: "transform 0.15s ease" }}
+                        />
+                        Skipped diagnostics
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            minWidth: 16,
+                            height: 16,
+                            padding: "0 4px",
+                            borderRadius: 8,
+                            background: "var(--bg-base)",
+                            color: "var(--warning, var(--fg-muted))",
+                            fontSize: 9.5,
+                            fontWeight: 650,
+                          }}
                         >
-                          <div style={{ fontSize: 11.5, fontWeight: 600, color: "var(--fg-base)" }}>
-                            {surfaceLabel(surface.id)}
-                          </div>
-                          {surface.skipped.map((entry, entryIndex) => (
+                          {totalSkipped}
+                        </span>
+                      </button>
+
+                      {showSkipped && (
+                        <div
+                          data-testid="skipped-list"
+                          style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 8 }}
+                        >
+                          {skippedSurfaces.map((surface) => (
                             <div
-                              key={entryIndex}
-                              style={{ marginTop: 3, fontSize: 10.5, color: "var(--fg-muted)" }}
+                              key={surface.id}
+                              style={{ padding: "8px 12px", borderRadius: 8, background: "var(--bg-elevated)" }}
                             >
-                              <span className="hk-table-mono" style={{ overflowWrap: "anywhere" }}>
-                                {entry.file}
-                              </span>
-                              {" — "}
-                              {entry.reason}
+                              <div style={{ fontSize: 11.5, fontWeight: 600, color: "var(--fg-base)" }}>
+                                {surfaceLabel(surface.id)}
+                              </div>
+                              {surface.skipped.map((entry, entryIndex) => (
+                                <div
+                                  key={entryIndex}
+                                  style={{ marginTop: 3, fontSize: 10.5, color: "var(--fg-muted)" }}
+                                >
+                                  <span className="hk-table-mono" style={{ overflowWrap: "anywhere" }}>
+                                    {entry.file}
+                                  </span>
+                                  {" — "}
+                                  {entry.reason}
+                                </div>
+                              ))}
                             </div>
                           ))}
                         </div>
-                      ))}
+                      )}
                     </div>
                   )}
-                </div>
+                </>
               )}
             </>
           )}
-        </>
-      )}
+        </section>
+      </div>
 
       {drawerRow && (
         <RowDrawer

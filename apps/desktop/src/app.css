@@ -375,8 +375,8 @@
 .hk-machine-summary:focus {
   outline: none;
 }
-/* Resources | Drift vs harness.yaml, under the summary strip (AC-18). The
-   pressed option matches a pressed strip cell. */
+/* Resources | Drift vs harness.yaml tabs, under the summary strip (AC-18).
+   The selected tab matches a pressed strip cell. */
 .hk-machine-view-toggle {
   display: inline-flex;
   gap: 2px;

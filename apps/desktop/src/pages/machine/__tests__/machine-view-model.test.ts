@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { MACHINE_FIXTURE_INVENTORY } from "../../__fixtures__/machine-fixture-data";
 import { inventoryVariants } from "../cell-state";
 import {
+  driftCountFor,
   filterOf,
   filterRows,
   machineSummaryCells,
@@ -153,6 +154,7 @@ describe("machineSummaryCells", () => {
     const cells = machineSummaryCells(inventory, variants, "all", vi.fn(), {
       active: false,
       count: null,
+      harness: null,
       onSelect,
     });
     expect(cells.map((cell) => cell.id)).toEqual(["rows", "gaps", "differs", "drift", "detected"]);
@@ -168,7 +170,7 @@ describe("machineSummaryCells", () => {
 
   it("shows Drift's count, warning above zero, pressed while the view shows", () => {
     const withCount = (count: number, active: boolean) =>
-      machineSummaryCells(inventory, variants, "all", vi.fn(), { active, count, onSelect: vi.fn() }).find(
+      machineSummaryCells(inventory, variants, "all", vi.fn(), { active, count, harness: null, onSelect: vi.fn() }).find(
         (cell) => cell.id === "drift",
       )!;
     expect(withCount(3, true)).toMatchObject({ value: "3", tone: "warning", active: true, valueLabel: undefined });
@@ -177,5 +179,32 @@ describe("machineSummaryCells", () => {
     const zero = withCount(0, false);
     expect(zero).toMatchObject({ value: "0", tone: "default", active: false });
     expect(zero.onSelect).toBeDefined();
+  });
+
+  it("names the harness in the accessible value when harness= narrows the count", () => {
+    const cell = (count: number | null) =>
+      machineSummaryCells(inventory, variants, "all", vi.fn(), {
+        active: true,
+        count,
+        harness: "Cursor",
+        onSelect: vi.fn(),
+      }).find((c) => c.id === "drift")!;
+    expect(cell(3)).toMatchObject({ value: "3", valueLabel: "3 for Cursor" });
+    expect(cell(null)).toMatchObject({ value: "—", valueLabel: "not scanned" });
+  });
+});
+
+describe("driftCountFor", () => {
+  const summary = { byHarness: { "claude-code": 2, cursor: 1 }, total: 3 };
+
+  it("is null until Drift has scanned", () => {
+    expect(driftCountFor(null, null)).toBeNull();
+    expect(driftCountFor(null, "cursor")).toBeNull();
+  });
+
+  it("counts every harness without harness=, and only that harness with it", () => {
+    expect(driftCountFor(summary, null)).toBe(3);
+    expect(driftCountFor(summary, "cursor")).toBe(1);
+    expect(driftCountFor(summary, "codex")).toBe(0);
   });
 });

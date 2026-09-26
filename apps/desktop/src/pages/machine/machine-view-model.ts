@@ -1,6 +1,7 @@
 import { getSurface } from "@harness-kit/core";
 import type { SummaryCell } from "@harness-kit/ui";
 import type { CellVariant } from "./cell-state";
+import type { DriftSummary } from "../drift/drift-data";
 import type {
   GridRow,
   HarnessResourceKind,
@@ -126,12 +127,26 @@ export function filterRows(
 export interface DriftCellState {
   active: boolean;
   /**
-   * Drift items from the last scan Drift itself ran in this visit to Machine,
-   * or null before one. Machine never scans for drift on its own: the scan
-   * asks for project-directory access, which only opening Drift may do.
+   * The drift items the Drift list shows, as of the last scan Drift itself
+   * ran in this visit to Machine, or null before one. Under `harness=` that
+   * is the count for that harness only, so the cell and the list agree.
+   * Machine never scans for drift on its own: the scan asks for
+   * project-directory access, which only opening Drift may do.
    */
   count: number | null;
+  /** Display name of the harness `harness=` narrows Drift to, or null for all. */
+  harness: string | null;
   onSelect: () => void;
+}
+
+/**
+ * What the strip's Drift cell counts: the unacknowledged items for the
+ * `harness=` adapter when the list is filtered to one, every item otherwise.
+ * Null until Drift has scanned.
+ */
+export function driftCountFor(summary: DriftSummary | null, harness: string | null): number | null {
+  if (!summary) return null;
+  return harness ? (summary.byHarness[harness] ?? 0) : summary.total;
 }
 
 /**
@@ -145,6 +160,8 @@ export interface DriftCellState {
  * With `drift`, a "Drift vs harness.yaml" cell selects the Drift view. It is
  * always a button, since Drift is reachable whatever its count, and reads "—"
  * until Drift has scanned: not "…", which would claim a scan is running.
+ * Under `harness=` it counts that harness only, and its accessible name says
+ * so ("3 for Cursor"): the bare number would read as a machine-wide total.
  */
 export function machineSummaryCells(
   inventory: MachineInventory,
@@ -176,7 +193,12 @@ export function machineSummaryCells(
             id: "drift",
             label: "Drift vs harness.yaml",
             value: drift.count === null ? "—" : String(drift.count),
-            valueLabel: drift.count === null ? "not scanned" : undefined,
+            valueLabel:
+              drift.count === null
+                ? "not scanned"
+                : drift.harness
+                  ? `${drift.count} for ${drift.harness}`
+                  : undefined,
             tone: drift.count !== null && drift.count > 0 ? ("warning" as const) : ("default" as const),
             active: drift.active,
             onSelect: drift.onSelect,

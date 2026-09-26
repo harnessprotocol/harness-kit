@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
@@ -310,6 +310,15 @@ function NavigateOnClick({ to }: { to: string }) {
   );
 }
 
+/** Records every location it sees, so a test can count history entries. */
+function LocationLog({ log }: { log: string[] }) {
+  const location = useLocation();
+  useEffect(() => {
+    log.push(location.search);
+  }, [location, log]);
+  return null;
+}
+
 /** Renders the current search string so a test can assert on the URL. */
 function LocationProbe() {
   const location = useLocation();
@@ -325,19 +334,19 @@ function gridRowKeys(): string[] {
 }
 
 function stripCell(label: string): HTMLElement {
-  // Scoped to the strip: the view toggle has a "Resources" option too.
+  // Scoped to the strip: the view tabs have a "Resources" tab too.
   return within(screen.getByRole("group", { name: "Summary" })).getByText(label).parentElement!;
 }
 
-/** One drift item for the claude-code adapter in the global scope. */
-function driftEntry(cls: string, path: string) {
+/** One drift item in the global scope, for claude-code unless `adapter` says otherwise. */
+function driftEntry(cls: string, path: string, adapter = "claude-code") {
   return {
     scope: { kind: "global", root: "/home/user", label: "Global", fs: {} as never },
     item: {
       class: cls,
       path,
-      adapter: "claude-code",
-      target: "claude-code",
+      adapter,
+      target: adapter,
       harnessName: "test",
       slot: "operational",
       detail: `${path} drifted.`,
@@ -483,7 +492,7 @@ describe("MachinePage", () => {
     }
 
     function viewToggle(): HTMLElement {
-      return screen.getByRole("group", { name: "Machine view" });
+      return screen.getByRole("tablist", { name: "Machine view" });
     }
 
     function driftCell(value: string): HTMLElement {
@@ -534,8 +543,8 @@ describe("MachinePage", () => {
       expect(await screen.findByText("Showing drift for Claude Code.")).toBeInTheDocument();
       await screen.findByRole("group", { name: "Summary" });
       expect(screen.queryByTestId("machine-grid")).not.toBeInTheDocument();
-      expect(within(viewToggle()).getByRole("button", { name: "Drift vs harness.yaml" })).toHaveAttribute(
-        "aria-pressed",
+      expect(within(viewToggle()).getByRole("tab", { name: "Drift vs harness.yaml" })).toHaveAttribute(
+        "aria-selected",
         "true",
       );
     });
@@ -559,23 +568,23 @@ describe("MachinePage", () => {
     it("has an accessible view toggle that reflects and sets the view", async () => {
       renderAt("/machine?harness=cursor");
       await screen.findByTestId("machine-grid");
-      const resources = within(viewToggle()).getByRole("button", { name: "Resources" });
-      const drift = within(viewToggle()).getByRole("button", { name: "Drift vs harness.yaml" });
-      expect(resources).toHaveAttribute("aria-pressed", "true");
-      expect(drift).toHaveAttribute("aria-pressed", "false");
+      const resources = within(viewToggle()).getByRole("tab", { name: "Resources" });
+      const drift = within(viewToggle()).getByRole("tab", { name: "Drift vs harness.yaml" });
+      expect(resources).toHaveAttribute("aria-selected", "true");
+      expect(drift).toHaveAttribute("aria-selected", "false");
 
       fireEvent.click(drift);
       expect(await screen.findByTestId("drift-view")).toBeInTheDocument();
       expect(screen.queryByTestId("machine-grid")).not.toBeInTheDocument();
-      expect(resources).toHaveAttribute("aria-pressed", "false");
-      expect(drift).toHaveAttribute("aria-pressed", "true");
+      expect(resources).toHaveAttribute("aria-selected", "false");
+      expect(drift).toHaveAttribute("aria-selected", "true");
       expect(urlParams().get("view")).toBe("drift");
       expect(urlParams().get("harness")).toBe("cursor");
 
       fireEvent.click(resources);
       expect(await screen.findByTestId("machine-grid")).toBeInTheDocument();
       expect(screen.queryByTestId("drift-view")).not.toBeInTheDocument();
-      expect(resources).toHaveAttribute("aria-pressed", "true");
+      expect(resources).toHaveAttribute("aria-selected", "true");
       expect(urlParams().has("view")).toBe(false);
       expect(urlParams().get("harness")).toBe("cursor");
     });
@@ -600,7 +609,7 @@ describe("MachinePage", () => {
       expect(screen.queryByTestId("machine-grid")).not.toBeInTheDocument();
 
       // Back on the grid the count stays, without Drift scanning again.
-      fireEvent.click(within(viewToggle()).getByRole("button", { name: "Resources" }));
+      fireEvent.click(within(viewToggle()).getByRole("tab", { name: "Resources" }));
       await screen.findByTestId("machine-grid");
       expect(driftCell("2")).toHaveAttribute("aria-pressed", "false");
       expect(collectDrift).toHaveBeenCalledTimes(1);
@@ -619,17 +628,10 @@ describe("MachinePage", () => {
 
     it("choosing Gaps from the Drift view shows the grid filtered, in one URL update", async () => {
       const locations: string[] = [];
-      function LocationLog() {
-        const location = useLocation();
-        useEffect(() => {
-          locations.push(location.search);
-        }, [location]);
-        return null;
-      }
       render(
         <MemoryRouter initialEntries={["/machine?view=drift&filter=differs&harness=claude-code"]}>
           <MachinePage />
-          <LocationLog />
+          <LocationLog log={locations} />
         </MemoryRouter>,
       );
       await screen.findByTestId("drift-view");
@@ -657,12 +659,12 @@ describe("MachinePage", () => {
       fireEvent.click(screen.getByTestId("machine-row-mcp-server:postgres"));
       expect(await screen.findByTestId("machine-row-drawer")).toBeInTheDocument();
 
-      fireEvent.click(within(viewToggle()).getByRole("button", { name: "Drift vs harness.yaml" }));
+      fireEvent.click(within(viewToggle()).getByRole("tab", { name: "Drift vs harness.yaml" }));
       await screen.findByTestId("drift-view");
       expect(screen.queryByTestId("machine-row-drawer")).not.toBeInTheDocument();
 
       // Coming back does not reopen it.
-      fireEvent.click(within(viewToggle()).getByRole("button", { name: "Resources" }));
+      fireEvent.click(within(viewToggle()).getByRole("tab", { name: "Resources" }));
       await screen.findByTestId("machine-grid");
       expect(screen.queryByTestId("machine-row-drawer")).not.toBeInTheDocument();
     });
@@ -672,10 +674,228 @@ describe("MachinePage", () => {
       renderAt("/machine?view=drift");
       expect(await screen.findByTestId("drift-view")).toBeInTheDocument();
       await screen.findByText(/Scan failed/);
-      expect(within(viewToggle()).getByRole("button", { name: "Drift vs harness.yaml" })).toHaveAttribute(
-        "aria-pressed",
+      expect(within(viewToggle()).getByRole("tab", { name: "Drift vs harness.yaml" })).toHaveAttribute(
+        "aria-selected",
         "true",
       );
+    });
+
+    it("is a tab list whose panel is labelled by the selected tab, driven by arrow keys", async () => {
+      renderAt("/machine");
+      await screen.findByTestId("machine-grid");
+      const resources = within(viewToggle()).getByRole("tab", { name: "Resources" });
+      const drift = within(viewToggle()).getByRole("tab", { name: "Drift vs harness.yaml" });
+      const panel = screen.getByRole("tabpanel", { name: "Resources" });
+      expect(panel).toContainElement(screen.getByTestId("machine-grid"));
+      for (const tab of [resources, drift]) expect(tab).toHaveAttribute("aria-controls", panel.id);
+      // Roving tabindex: only the selected tab is in the Tab order.
+      expect(resources).toHaveAttribute("tabindex", "0");
+      expect(drift).toHaveAttribute("tabindex", "-1");
+
+      resources.focus();
+      fireEvent.keyDown(resources, { key: "ArrowRight" });
+      expect(await screen.findByTestId("drift-view")).toBeInTheDocument();
+      expect(drift).toHaveFocus();
+      expect(drift).toHaveAttribute("aria-selected", "true");
+      expect(drift).toHaveAttribute("tabindex", "0");
+      expect(resources).toHaveAttribute("tabindex", "-1");
+      expect(screen.getByRole("tabpanel", { name: "Drift vs harness.yaml" })).toContainElement(
+        screen.getByTestId("drift-view"),
+      );
+      expect(urlParams().get("view")).toBe("drift");
+
+      // Wraps at both ends.
+      fireEvent.keyDown(drift, { key: "ArrowRight" });
+      expect(await screen.findByTestId("machine-grid")).toBeInTheDocument();
+      expect(resources).toHaveFocus();
+      fireEvent.keyDown(resources, { key: "ArrowLeft" });
+      expect(await screen.findByTestId("drift-view")).toBeInTheDocument();
+      expect(drift).toHaveFocus();
+
+      fireEvent.keyDown(drift, { key: "Home" });
+      expect(await screen.findByTestId("machine-grid")).toBeInTheDocument();
+      expect(resources).toHaveFocus();
+      fireEvent.keyDown(resources, { key: "End" });
+      expect(await screen.findByTestId("drift-view")).toBeInTheDocument();
+      expect(drift).toHaveFocus();
+    });
+
+    it("adds no history entry when the selected tab is chosen again", async () => {
+      const locations: string[] = [];
+      render(
+        <MemoryRouter initialEntries={["/machine?view=drift"]}>
+          <MachinePage />
+          <LocationLog log={locations} />
+        </MemoryRouter>,
+      );
+      await screen.findByTestId("drift-view");
+      await screen.findByRole("group", { name: "Summary" });
+      const drift = within(viewToggle()).getByRole("tab", { name: "Drift vs harness.yaml" });
+      fireEvent.click(drift);
+      drift.focus();
+      fireEvent.keyDown(drift, { key: "End" });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(locations).toEqual(["?view=drift"]);
+      expect(drift).toHaveFocus();
+    });
+
+    it("keeps focus on the tabs when the first scan lands and the strip appears above them", async () => {
+      let resolve!: (value: unknown) => void;
+      vi.mocked(buildMachineInventory).mockReturnValueOnce(
+        new Promise((r) => { resolve = r; }) as never,
+      );
+      renderAt("/machine");
+      expect(screen.getByText(/Scanning this machine/)).toBeInTheDocument();
+      const resources = within(viewToggle()).getByRole("tab", { name: "Resources" });
+      resources.focus();
+
+      resolve(makeInventory());
+      await screen.findByTestId("machine-grid");
+      expect(screen.getByRole("group", { name: "Summary" })).toBeInTheDocument();
+      expect(within(viewToggle()).getByRole("tab", { name: "Resources" })).toBe(resources);
+      expect(resources).toHaveFocus();
+    });
+
+    it("counts the drift the list shows under harness=, and says whose it is", async () => {
+      vi.mocked(collectDrift).mockResolvedValue([
+        driftEntry("user-modified-outside", "CLAUDE.md"),
+        driftEntry("user-modified-outside", "AGENTS.md"),
+        driftEntry("user-modified-outside", ".cursor/rules/main.mdc", "cursor"),
+      ]);
+      render(
+        <MemoryRouter initialEntries={["/machine?view=drift&harness=cursor"]}>
+          <NavigateOnClick to="/machine?view=drift" />
+          <MachinePage />
+        </MemoryRouter>,
+      );
+      expect(await screen.findByText("Showing drift for Cursor.")).toBeInTheDocument();
+      await waitFor(() => expect(driftCell("1 for Cursor")).toHaveTextContent("1"));
+      expect(screen.getAllByRole("button", { name: "Acknowledge" })).toHaveLength(1);
+
+      // Unfiltered, the same scan counts every harness: no rescan needed.
+      fireEvent.click(screen.getByRole("button", { name: "go to drift" }));
+      await waitFor(() => expect(driftCell("3")).toBeInTheDocument());
+      expect(screen.getAllByRole("button", { name: "Acknowledge" })).toHaveLength(3);
+      expect(collectDrift).toHaveBeenCalledTimes(1);
+    });
+
+    describe("bringing Drift on screen (AC-7)", () => {
+      // AppLayout's scroll container keeps its offset across routes and
+      // views, so a user scrolled down the grid would land below Drift. jsdom
+      // lays nothing out: the view region's position is set by hand.
+      let scrollIntoView: ReturnType<typeof vi.fn<(arg?: boolean | ScrollIntoViewOptions) => void>>;
+      let regionTop: number;
+      let rectSpy: { mockRestore: () => void };
+      beforeEach(() => {
+        scrollIntoView = vi.fn();
+        Element.prototype.scrollIntoView = scrollIntoView;
+        regionTop = -400; // scrolled past, above the viewport (768px tall in jsdom)
+        rectSpy = vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(function (
+          this: Element,
+        ) {
+          const inRegion = (this as HTMLElement).dataset?.testid === "machine-view-region";
+          const top = inRegion ? regionTop : 0;
+          const height = inRegion ? 900 : 0;
+          return { top, bottom: top + height, left: 0, right: 0, width: 0, height, x: 0, y: top, toJSON: () => ({}) };
+        });
+      });
+      afterEach(() => {
+        rectSpy.mockRestore();
+        // jsdom has no scrollIntoView of its own, so deleting is the restore.
+        delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+      });
+
+      function region(): HTMLElement {
+        return screen.getByTestId("machine-view-region");
+      }
+
+      it("on arrival, once the first scan has put the strip above it, and only once", async () => {
+        let resolve!: (value: unknown) => void;
+        vi.mocked(buildMachineInventory).mockReturnValueOnce(
+          new Promise((r) => { resolve = r; }) as never,
+        );
+        renderAt("/machine?drift=1&harness=cursor");
+        await screen.findByTestId("drift-view");
+        await new Promise((r) => setTimeout(r, 0));
+        // The strip is still to arrive above the view and would push it down.
+        expect(scrollIntoView).not.toHaveBeenCalled();
+
+        resolve(makeInventory());
+        await screen.findByRole("group", { name: "Summary" });
+        await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
+        expect(scrollIntoView.mock.contexts[0]).toBe(region());
+        expect(scrollIntoView).toHaveBeenLastCalledWith({ block: "start" });
+
+        // A Refresh is not a new request: the page stays where the user put it.
+        fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+        await waitFor(() => expect(screen.getByRole("button", { name: "Refresh" })).toBeEnabled());
+        expect(scrollIntoView).toHaveBeenCalledTimes(1);
+      });
+
+      it("on a switch from the grid, by the strip cell or a link, but not back to the grid", async () => {
+        render(
+          <MemoryRouter initialEntries={["/machine"]}>
+            <NavigateOnClick to="/machine?view=drift" />
+            <MachinePage />
+          </MemoryRouter>,
+        );
+        await screen.findByTestId("machine-grid");
+        expect(scrollIntoView).not.toHaveBeenCalled();
+
+        fireEvent.click(driftCell("not scanned"));
+        await screen.findByTestId("drift-view");
+        await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
+        expect(scrollIntoView.mock.contexts[0]).toBe(region());
+
+        fireEvent.click(within(viewToggle()).getByRole("tab", { name: "Resources" }));
+        await screen.findByTestId("machine-grid");
+        expect(scrollIntoView).toHaveBeenCalledTimes(1);
+
+        // The palette's Open Drift while already on Machine.
+        fireEvent.click(screen.getByRole("button", { name: "go to drift" }));
+        await screen.findByTestId("drift-view");
+        await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(2));
+      });
+
+      it("again when harness= changes while Drift shows", async () => {
+        // Fleet's row click while already on Drift: the view does not change,
+        // only the harness, and that is still a new request.
+        render(
+          <MemoryRouter initialEntries={["/machine?view=drift"]}>
+            <NavigateOnClick to="/machine?view=drift&harness=cursor" />
+            <MachinePage />
+          </MemoryRouter>,
+        );
+        await screen.findByRole("group", { name: "Summary" });
+        await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
+
+        fireEvent.click(screen.getByRole("button", { name: "go to drift" }));
+        await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(2));
+        expect(scrollIntoView.mock.contexts[1]).toBe(region());
+      });
+
+      it("not when the top of the view is already on screen", async () => {
+        regionTop = 200;
+        render(
+          <MemoryRouter initialEntries={["/machine"]}>
+            <NavigateOnClick to="/machine?view=drift&harness=cursor" />
+            <MachinePage />
+          </MemoryRouter>,
+        );
+        await screen.findByTestId("machine-grid");
+        fireEvent.click(driftCell("not scanned"));
+        await screen.findByTestId("drift-view");
+        fireEvent.click(screen.getByRole("button", { name: "go to drift" }));
+        await new Promise((r) => setTimeout(r, 0));
+        expect(scrollIntoView).not.toHaveBeenCalled();
+
+        // Visible only in part (the tabs, not the start of Drift) counts as not visible.
+        regionTop = 700;
+        fireEvent.click(within(viewToggle()).getByRole("tab", { name: "Resources" }));
+        await screen.findByTestId("machine-grid");
+        fireEvent.click(within(viewToggle()).getByRole("tab", { name: "Drift vs harness.yaml" }));
+        await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
+      });
     });
   });
 
@@ -840,8 +1060,8 @@ describe("MachinePage", () => {
       expect(stripCell("Gaps")).toHaveTextContent("Gaps0");
       expect(screen.queryByRole("button", { name: /Gaps/ })).not.toBeInTheDocument();
       expect(stripCell("Gaps").tagName).toBe("DIV");
-      // Resources and Surfaces detected are never filters. (The view
-      // toggle's "Resources" option is a button, outside the strip.)
+      // Resources and Surfaces detected are never filters. (The view tabs'
+      // "Resources" tab sits outside the strip.)
       const strip = screen.getByRole("group", { name: "Summary" });
       expect(within(strip).queryByRole("button", { name: /Resources/ })).not.toBeInTheDocument();
       expect(within(strip).queryByRole("button", { name: /Surfaces detected/ })).not.toBeInTheDocument();
