@@ -91,9 +91,6 @@ pub fn run() {
             commands::harness_file::read_harness_file,
             commands::harness_file::write_harness_file,
             commands::harness_file::scan_claude_config,
-            // MCP
-            commands::mcp::read_mcp_config,
-            commands::mcp::write_mcp_config,
             // Custom Profiles
             commands::profiles::list_custom_profiles,
             commands::profiles::get_custom_profile,

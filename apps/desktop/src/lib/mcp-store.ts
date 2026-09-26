@@ -12,7 +12,13 @@ import { detectDesktopPlatform } from "../pages/machine/machine-data";
  * The MCP page used to read a hard-coded ~/.claude/mcp.json while the Machine
  * view read ~/.claude.json, so the two screens disagreed about which servers
  * existed. The path now comes from the same resolved registry the Machine view
- * uses (AC-26), so a definitions bundle that moves the file moves both.
+ * uses (AC-26), so both screens name the same file.
+ *
+ * A definitions bundle cannot move where this page may read or write, though:
+ * the fs plugin's read scope (capabilities/default.json) and the Rust write
+ * allowlist (generated/write-scope.json) are both fixed at build time. A
+ * bundle that points the store somewhere outside them gets a read or write
+ * refusal, not an editor for the new path.
  */
 
 export type McpServerEntries = Record<string, Record<string, unknown>>;
@@ -31,8 +37,27 @@ export interface McpStoreSnapshot {
   location: McpStoreLocation;
   /** False when the file does not exist yet. */
   found: boolean;
+  /** Entries whose value is an object: what the page shows and edits. */
   servers: McpServerEntries;
+  /** Entries whose value is not an object. Not shown or edited here, and
+   *  every save carries them over unchanged. */
+  otherEntries: Record<string, unknown>;
+  /** The whole servers object as read, both kinds of entry, in file order.
+   *  A save refuses if the file's copy no longer matches it. */
+  entries: Record<string, unknown>;
 }
+
+/** `expectedSha256` value that tells the Rust write the file must not exist. */
+export const ABSENT_SHA256 = "absent";
+
+/** Lowercase hex SHA-256 of a string's UTF-8 bytes. */
+export async function sha256Hex(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+/** The phrase apply_surface_transaction uses when a precondition fails. */
+const CHANGED_ON_DISK = "changed on disk since it was read";
 
 /**
  * A failure the page can explain: `summary` says what failed in plain words,
@@ -41,7 +66,8 @@ export interface McpStoreSnapshot {
 export class McpStoreError extends Error {
   constructor(
     readonly summary: string,
-    readonly kind: "registry" | "read" | "invalid" | "conflict" | "write",
+    /** "draft" is a problem with what the user typed, not with the file. */
+    readonly kind: "registry" | "read" | "invalid" | "conflict" | "write" | "draft",
     readonly detail?: string,
   ) {
     super(summary);
@@ -131,24 +157,41 @@ function parseDocument(location: McpStoreLocation, raw: string): Record<string, 
   return doc;
 }
 
-function serversOf(doc: Record<string, unknown>, rootKey: string): McpServerEntries {
-  const value = doc[rootKey];
-  if (!isRecord(value)) return {};
+/**
+ * The servers object, split into editable entries and everything else.
+ *
+ * A root value that is not an object (an array, a string) is refused, not
+ * read as "no servers": that reading would let the first Add replace it.
+ */
+function entriesOf(
+  location: McpStoreLocation,
+  doc: Record<string, unknown>,
+): Pick<McpStoreSnapshot, "servers" | "otherEntries" | "entries"> {
+  const value = doc[location.rootKey];
+  if (value === undefined) return { servers: {}, otherEntries: {}, entries: {} };
+  if (!isRecord(value)) {
+    throw new McpStoreError(
+      `${location.rootKey} in ${location.displayPath} is not a JSON object, so its MCP servers can't be shown or edited here.`,
+      "invalid",
+    );
+  }
   const servers: McpServerEntries = {};
+  const otherEntries: Record<string, unknown> = {};
   for (const [name, entry] of Object.entries(value)) {
     if (isRecord(entry)) servers[name] = entry;
+    else otherEntries[name] = entry;
   }
-  return servers;
+  return { servers, otherEntries, entries: value };
 }
 
 export async function readMcpStore(location: McpStoreLocation): Promise<McpStoreSnapshot> {
   const raw = await readRaw(location);
-  if (raw === null) return { location, found: false, servers: {} };
-  return { location, found: true, servers: serversOf(parseDocument(location, raw), location.rootKey) };
+  if (raw === null) return { location, found: false, servers: {}, otherEntries: {}, entries: {} };
+  return { location, found: true, ...entriesOf(location, parseDocument(location, raw)) };
 }
 
 /**
- * Replace the servers object, leaving every other key in the file alone.
+ * Replace the servers object, leaving every other key's value alone.
  *
  * ~/.claude.json is Claude Code's whole state file (projects, onboarding,
  * caches), and Claude Code rewrites it while running. So the write re-reads
@@ -156,6 +199,22 @@ export async function readMcpStore(location: McpStoreLocation): Promise<McpStore
  * keys Claude Code changed in the meantime survive. The servers object itself
  * is the one thing that must not have moved — if it did, someone else edited
  * MCP servers since the page loaded, and saving would silently undo that.
+ * The file is re-serialized with two-space indentation, so formatting outside
+ * the servers object can change even though no other value does.
+ *
+ * What the Rust side guarantees: the write is atomic (temp file, fsync,
+ * rename), so nothing ever reads a half-written file, and it carries the
+ * SHA-256 of the exact text re-read here as `expectedSha256`, so a write that
+ * lands between this re-read and the rename is refused rather than
+ * overwritten. Two gaps remain. Rust's own check-then-rename is not a lock,
+ * so a writer landing in that microsecond window still loses. And a running
+ * Claude Code that later saves from a copy it read before this write will
+ * undo it; nothing on this side can see or prevent that.
+ *
+ * The hash is of the text as the fs plugin decoded it, re-encoded as UTF-8.
+ * For a UTF-8 file without a byte-order mark those are the bytes on disk;
+ * for anything else the hashes differ and the save is refused, never
+ * forced.
  *
  * The write goes through apply_surface_transaction, which re-checks the path
  * against the registry allowlist compiled into the Rust side. Not core's
@@ -165,27 +224,38 @@ export async function readMcpStore(location: McpStoreLocation): Promise<McpStore
  */
 export async function writeMcpServers(
   location: McpStoreLocation,
-  expected: McpServerEntries,
+  /** The whole servers object as the page loaded it (snapshot.entries). */
+  expected: Record<string, unknown>,
   /** Receives the file's current servers object and returns the new one. */
   update: (current: Record<string, unknown>) => Record<string, unknown>,
 ): Promise<void> {
   const raw = await readRaw(location);
   const doc = raw === null ? {} : parseDocument(location, raw);
-  if (JSON.stringify(serversOf(doc, location.rootKey)) !== JSON.stringify(expected)) {
+  const { entries: current } = entriesOf(location, doc);
+  if (JSON.stringify(current) !== JSON.stringify(expected)) {
     throw new McpStoreError(
       `The MCP servers in ${location.displayPath} changed since this page loaded.`,
       "conflict",
     );
   }
-  const current = isRecord(doc[location.rootKey]) ? (doc[location.rootKey] as Record<string, unknown>) : {};
+  // Keep the file's trailing-newline choice; a new file gets one.
   const content = `${JSON.stringify({ ...doc, [location.rootKey]: update({ ...current }) }, null, 2)}${
     raw === null || raw.endsWith("\n") ? "\n" : ""
   }`;
+  const expectedSha256 = raw === null ? ABSENT_SHA256 : await sha256Hex(raw);
   try {
     await invoke("apply_surface_transaction", {
-      files: [{ relativePath: location.relativePath, content }],
+      files: [{ relativePath: location.relativePath, content, expectedSha256 }],
     });
   } catch (error) {
-    throw new McpStoreError(`Couldn't save ${location.displayPath}.`, "write", rawMessage(error));
+    const detail = rawMessage(error);
+    if (detail.includes(CHANGED_ON_DISK)) {
+      throw new McpStoreError(
+        `${location.displayPath} changed while you were editing. Reload and try again.`,
+        "conflict",
+        detail,
+      );
+    }
+    throw new McpStoreError(`Couldn't save ${location.displayPath}.`, "write", detail);
   }
 }

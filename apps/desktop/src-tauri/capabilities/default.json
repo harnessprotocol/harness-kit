@@ -126,8 +126,6 @@
     "allow-read-harness-file",
     "allow-write-harness-file",
     "allow-scan-claude-config",
-    "allow-read-mcp-config",
-    "allow-write-mcp-config",
     "allow-list-custom-profiles",
     "allow-get-custom-profile",
     "allow-save-custom-profile",

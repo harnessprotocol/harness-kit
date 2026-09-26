@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Button, Input, Modal, Select } from "@harness-kit/ui";
 import type { ClaudeMcpServer, ClaudeMcpStdio, ClaudeMcpNetwork } from "../../lib/mcp-types";
 import { inferTransport, isNetworkServer } from "../../lib/mcp-types";
-import KeyValueEditor, { type KeyValuePair } from "./KeyValueEditor";
+import KeyValueEditor, { duplicateKeys, type KeyValuePair } from "./KeyValueEditor";
 
 const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
 
@@ -85,7 +85,11 @@ export default function McpServerForm({
         : !/^https?:\/\//i.test(url.trim())
           ? "The URL must start with http:// or https://."
           : null;
-  const valid = !nameError && !commandError && !urlError;
+  // KeyValueEditor shows the duplicate-name error inline; here it only blocks
+  // the save, so no value is silently dropped for another with the same name.
+  const hasDuplicates =
+    type === "stdio" ? duplicateKeys(envPairs).length > 0 : duplicateKeys(headerPairs).length > 0;
+  const valid = !nameError && !commandError && !urlError && !hasDuplicates;
 
   function handleSave() {
     setSubmitted(true);
@@ -168,6 +172,7 @@ export default function McpServerForm({
               <label className="hk-label" htmlFor="mcp-args">Arguments</label>
               <textarea
                 id="mcp-args"
+                aria-describedby="mcp-args-helper"
                 className="hk-input"
                 value={argsText}
                 onChange={(e) => setArgsText(e.target.value)}
@@ -175,7 +180,7 @@ export default function McpServerForm({
                 spellCheck={false}
                 style={{ height: 80, resize: "vertical", fontFamily: MONO }}
               />
-              <div className="hk-helper-text">One argument per line.</div>
+              <div id="mcp-args-helper" className="hk-helper-text">One argument per line.</div>
             </div>
             <div className="hk-field">
               <span className="hk-label">Environment</span>

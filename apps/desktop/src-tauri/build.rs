@@ -20,9 +20,6 @@ fn main() {
                 // Claude.md
                 "read_claude_md",
                 "write_config_file",
-                // MCP
-                "read_mcp_config",
-                "write_mcp_config",
                 // Custom Profiles
                 "list_custom_profiles",
                 "get_custom_profile",

@@ -13,7 +13,6 @@ pub mod export;
 pub mod types;
 pub mod history;
 pub mod harness_file;
-pub mod mcp;
 pub mod profiles;
 pub mod harness_state;
 pub mod surface_write;

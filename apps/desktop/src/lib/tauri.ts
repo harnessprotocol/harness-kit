@@ -126,22 +126,6 @@ export async function scanClaudeConfig(): Promise<ClaudeConfigScan> {
   return invoke<ClaudeConfigScan>("scan_claude_config");
 }
 
-// ── MCP commands ─────────────────────────────────────────────
-
-export interface McpConfigResult {
-  found: boolean;
-  serversJson: string | null;
-  source: string | null;
-}
-
-export async function readMcpConfig(): Promise<McpConfigResult> {
-  return invoke<McpConfigResult>("read_mcp_config");
-}
-
-export async function writeMcpConfig(serversJson: string): Promise<string> {
-  return invoke<string>("write_mcp_config", { serversJson });
-}
-
 // ── Custom Profile commands ───────────────────────────────────
 
 export interface CustomProfile {

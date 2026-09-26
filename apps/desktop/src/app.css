@@ -29,6 +29,9 @@
   --cat-cyan:   #06b6d4;
   --cat-green:  #10b981;
 
+  /* Text on a saturated fill (brand avatars), same in both themes */
+  --fg-on-fill: #FFFFFF;
+
   /* Status — fixed semantic identity (distinct from periwinkle brand) */
   --success: #3fb07a;
   --success-light: rgba(63, 176, 122, 0.10);

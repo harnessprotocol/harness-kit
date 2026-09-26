@@ -1,5 +1,6 @@
+import { createHash } from "node:crypto";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
+import { act, render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import McpServersPage from "../McpServersPage";
 
@@ -9,8 +10,22 @@ const HOME = "/home/user";
 const files = new Map<string, string>();
 let storePath = ".claude.json";
 
-const mockInvoke = vi.fn(async (command: string, args: { files: Array<{ relativePath: string; content: string | null }> }) => {
+type WriteArgs = { files: Array<{ relativePath: string; content: string | null; expectedSha256?: string }> };
+
+const sha256 = (text: string) => createHash("sha256").update(text, "utf8").digest("hex");
+
+// Behaves like the Rust command, precondition included: a stale
+// expectedSha256 is refused with the same phrase the Rust error uses.
+const mockInvoke = vi.fn(async (command: string, args: WriteArgs) => {
   if (command !== "apply_surface_transaction") throw new Error(`unexpected command ${command}`);
+  for (const file of args.files) {
+    if (file.expectedSha256 === undefined) continue;
+    const current = files.get(`${HOME}/${file.relativePath}`);
+    const actual = current === undefined ? "absent" : sha256(current);
+    if (actual !== file.expectedSha256) {
+      throw `Refusing to write '${file.relativePath}': it changed on disk since it was read (expected ${file.expectedSha256}, found ${actual})`;
+    }
+  }
   for (const file of args.files) {
     if (file.content === null) files.delete(`${HOME}/${file.relativePath}`);
     else files.set(`${HOME}/${file.relativePath}`, file.content);
@@ -56,7 +71,9 @@ vi.mock("../../../lib/definitions", () => ({
 vi.mock("../../machine/machine-data", () => ({ detectDesktopPlatform: () => "darwin" }));
 
 vi.mock("../../../components/plugin-explorer/MonacoEditor", () => ({
-  default: ({ content }: { content: string }) => <div data-testid="monaco-editor">{content}</div>,
+  default: ({ content, onChange }: { content: string; onChange: (value: string) => void }) => (
+    <textarea data-testid="monaco-editor" value={content} onChange={(e) => onChange(e.target.value)} />
+  ),
 }));
 
 function renderPage() {
@@ -201,8 +218,213 @@ describe("McpServersPage", () => {
 
     await screen.findByText("GitHub");
     fireEvent.click(screen.getByRole("button", { name: "Raw JSON" }));
-    const editor = await screen.findByTestId("monaco-editor");
-    expect(editor).toHaveTextContent('"github"');
-    expect(editor).not.toHaveTextContent("userID");
+    const editor = (await screen.findByTestId("monaco-editor")) as HTMLTextAreaElement;
+    expect(editor.value).toContain('"github"');
+    expect(editor.value).not.toContain("userID");
+  });
+
+  // ── Refusing to write what it can't read safely ──────────────────
+
+  it("refuses to show or write a file that isn't valid JSON", async () => {
+    files.set(`${HOME}/.claude.json`, '{ "mcpServers": { "github": ');
+    renderPage();
+
+    expect(await screen.findByText(/is not valid JSON/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /add server/i })).not.toBeInTheDocument();
+    expect(screen.queryByText("No MCP servers yet")).not.toBeInTheDocument();
+    expect(mockInvoke).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["an array", []],
+    ["a string", "github"],
+    ["a number", 3],
+  ])("treats mcpServers as %s as invalid, never as empty, so Add can't replace it", async (_label, value) => {
+    files.set(`${HOME}/.claude.json`, JSON.stringify({ mcpServers: value }));
+    renderPage();
+
+    expect(await screen.findByText(/mcpServers in ~\/\.claude\.json is not a JSON object/)).toBeInTheDocument();
+    expect(screen.queryByText("No MCP servers yet")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /add server/i })).not.toBeInTheDocument();
+    expect(mockInvoke).not.toHaveBeenCalled();
+  });
+
+  // ── What a save writes ────────────────────────────────────────────
+
+  it("switching stdio to http drops command, args and env and writes type and url", async () => {
+    files.set(`${HOME}/.claude.json`, JSON.stringify({ mcpServers: { github: STDIO } }));
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit github" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Type"), { target: { value: "http" } });
+    fireEvent.change(within(dialog).getByLabelText("URL"), { target: { value: "https://api.example.test/mcp" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledTimes(1));
+    // timeout is not a form key, so it rides along; the stdio keys do not.
+    expect(writtenJson().mcpServers.github).toEqual({ timeout: 30, type: "http", url: "https://api.example.test/mcp" });
+  });
+
+  it.each([
+    ["keeps a trailing newline the file had", `${JSON.stringify({ mcpServers: {} })}\n`, true],
+    ["adds none the file didn't have", JSON.stringify({ mcpServers: {} }), false],
+  ])("%s", async (_label, original, endsWithNewline) => {
+    files.set(`${HOME}/.claude.json`, original);
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: /add server/i }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Name"), { target: { value: "x" } });
+    fireEvent.change(within(dialog).getByLabelText("Command"), { target: { value: "x" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledTimes(1));
+    expect(files.get(`${HOME}/.claude.json`)!.endsWith("\n")).toBe(endsWithNewline);
+  });
+
+  it("gives a new file a trailing newline", async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: /add server/i }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Name"), { target: { value: "x" } });
+    fireEvent.change(within(dialog).getByLabelText("Command"), { target: { value: "x" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledTimes(1));
+    expect(files.get(`${HOME}/.claude.json`)!.endsWith("}\n")).toBe(true);
+    expect(mockInvoke.mock.calls[0][1].files[0].expectedSha256).toBe("absent");
+  });
+
+  it("keeps entries that aren't server objects through a form save", async () => {
+    files.set(`${HOME}/.claude.json`, JSON.stringify({ mcpServers: { github: STDIO, legacy: "disabled" } }));
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit github" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.change(within(dialog).getByLabelText("Command"), { target: { value: "bunx" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledTimes(1));
+    expect(writtenJson().mcpServers.legacy).toBe("disabled");
+  });
+
+  it("keeps entries that aren't server objects through a Raw JSON save, and says so", async () => {
+    files.set(`${HOME}/.claude.json`, JSON.stringify({ mcpServers: { github: STDIO, legacy: "disabled" } }));
+    renderPage();
+
+    await screen.findByText("GitHub");
+    fireEvent.click(screen.getByRole("button", { name: "Raw JSON" }));
+    const editor = (await screen.findByTestId("monaco-editor")) as HTMLTextAreaElement;
+    expect(editor.value).not.toContain("legacy");
+    expect(screen.getByRole("note")).toHaveTextContent(/Not shown: legacy/);
+
+    const next = JSON.parse(editor.value);
+    next.github.command = "bunx";
+    fireEvent.change(editor, { target: { value: JSON.stringify(next, null, 2) } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledTimes(1));
+    const doc = writtenJson();
+    expect(doc.mcpServers.github.command).toBe("bunx");
+    expect(doc.mcpServers.legacy).toBe("disabled");
+  });
+
+  it("a Raw JSON parse error keeps the draft and offers Back to editing, not Reload", async () => {
+    files.set(`${HOME}/.claude.json`, JSON.stringify({ mcpServers: { github: STDIO } }));
+    renderPage();
+
+    await screen.findByText("GitHub");
+    fireEvent.click(screen.getByRole("button", { name: "Raw JSON" }));
+    const editor = (await screen.findByTestId("monaco-editor")) as HTMLTextAreaElement;
+    fireEvent.change(editor, { target: { value: '{ "github": ' } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByText("That JSON doesn't parse, so nothing was saved.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reload" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Back to editing" }));
+
+    expect(screen.queryByText("That JSON doesn't parse, so nothing was saved.")).not.toBeInTheDocument();
+    expect((screen.getByTestId("monaco-editor") as HTMLTextAreaElement).value).toBe('{ "github": ');
+    expect(mockInvoke).not.toHaveBeenCalled();
+  });
+
+  // ── The on-disk precondition ──────────────────────────────────────
+
+  it("sends the sha256 of the exact text it re-read at save time", async () => {
+    files.set(`${HOME}/.claude.json`, JSON.stringify({ numStartups: 1, mcpServers: { github: STDIO } }));
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit github" }));
+    const dialog = await screen.findByRole("dialog");
+    // Claude Code rewrites another key after the page loaded: the save must
+    // hash THIS text, not the one it loaded.
+    const rewritten = `${JSON.stringify({ numStartups: 2, mcpServers: { github: STDIO } }, null, 2)}\n`;
+    files.set(`${HOME}/.claude.json`, rewritten);
+    fireEvent.change(within(dialog).getByLabelText("Command"), { target: { value: "bunx" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledTimes(1));
+    expect(mockInvoke.mock.calls[0][1].files[0].expectedSha256).toBe(sha256(rewritten));
+    expect(writtenJson().numStartups).toBe(2);
+  });
+
+  it("says the file changed while editing when the Rust precondition refuses", async () => {
+    files.set(`${HOME}/.claude.json`, JSON.stringify({ mcpServers: { github: STDIO } }));
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit github" }));
+    const dialog = await screen.findByRole("dialog");
+    // Claude Code writes between the page's re-read and the rename.
+    mockInvoke.mockImplementationOnce(async () => {
+      throw "Refusing to write '.claude.json': it changed on disk since it was read (expected aa, found bb)";
+    });
+    fireEvent.change(within(dialog).getByLabelText("Command"), { target: { value: "bunx" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+    expect(await within(dialog).findByText("~/.claude.json changed while you were editing. Reload and try again."))
+      .toBeInTheDocument();
+    const reloads = within(dialog).getAllByRole("button", { name: "Reload" });
+    expect(reloads).toHaveLength(1);
+  });
+
+  // ── Form fields ──────────────────────────────────────────────────
+
+  it("masks env values until revealed, per row", async () => {
+    files.set(`${HOME}/.claude.json`, JSON.stringify({ mcpServers: { github: { ...STDIO, env: { A: "1", B: "2" } } } }));
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit github" }));
+    const dialog = await screen.findByRole("dialog");
+    const first = within(dialog).getByLabelText("Environment variable 1 value");
+    const second = within(dialog).getByLabelText("Environment variable 2 value");
+    expect(first).toHaveAttribute("type", "password");
+    expect(second).toHaveAttribute("type", "password");
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Show environment variable 1 value" }));
+    expect(first).toHaveAttribute("type", "text");
+    expect(second).toHaveAttribute("type", "password");
+    expect(within(dialog).getByRole("button", { name: "Hide environment variable 1 value" }))
+      .toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("flags a duplicate env name inline and does not save", async () => {
+    files.set(`${HOME}/.claude.json`, JSON.stringify({ mcpServers: { github: { ...STDIO, env: { TOKEN: "a" } } } }));
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Edit github" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add environment variable" }));
+    fireEvent.change(within(dialog).getByLabelText("Environment variable 2 name"), { target: { value: "TOKEN" } });
+
+    const secondName = within(dialog).getByLabelText("Environment variable 2 name");
+    expect(secondName).toHaveAttribute("aria-invalid", "true");
+    expect(secondName).toHaveAccessibleDescription("TOKEN is used more than once. Each name can appear once.");
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+    // A save that got through would re-read the file first; give it the time.
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(mockInvoke).not.toHaveBeenCalled();
+    expect(mockReadTextFile).toHaveBeenCalledTimes(1);
   });
 });
