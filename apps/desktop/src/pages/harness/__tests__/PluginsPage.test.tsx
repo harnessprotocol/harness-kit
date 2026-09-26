@@ -285,6 +285,22 @@ describe("PluginsPage drag-to-import (Tauri drag-drop event)", () => {
     await waitFor(() => expect(warn).toHaveBeenCalledWith(expect.stringContaining("drag-and-drop"), failure));
   });
 
+  it("keeps the page up when the webview throws synchronously", async () => {
+    // getCurrentWebview() throws before returning a promise when Tauri's window
+    // metadata is missing (the e2e bridge does this); that must not reach the
+    // error boundary.
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const failure = new TypeError("Cannot read properties of undefined (reading 'currentWindow')");
+    mockOnDragDropEvent.mockImplementationOnce(() => {
+      throw failure;
+    });
+
+    await renderPage();
+
+    expect(importButton()).toBeEnabled();
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("drag-and-drop"), failure);
+  });
+
   it("renders the browser preview without touching the Tauri webview", async () => {
     delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
     render(<MemoryRouter><PluginsPage /></MemoryRouter>);

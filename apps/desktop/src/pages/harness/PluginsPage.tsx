@@ -214,8 +214,19 @@ export default function PluginsPage() {
     window.addEventListener("blur", hide);
     window.addEventListener("keydown", onKeyDown);
 
-    getCurrentWebview()
-      .onDragDropEvent((event) => {
+    const cleanup = () => {
+      disposed = true;
+      window.removeEventListener("blur", hide);
+      window.removeEventListener("keydown", onKeyDown);
+      unlisten?.();
+    };
+
+    // getCurrentWebview() reads the window metadata Tauri injects and throws
+    // synchronously when it is missing (a partial runtime, the e2e bridge).
+    // Treat that like a rejected listen: no drop import, the picker still works.
+    let listening: Promise<() => void>;
+    try {
+      listening = getCurrentWebview().onDragDropEvent((event) => {
         if (disposed) return;
         const payload = event.payload;
         if (payload.type === "enter" || payload.type === "over") {
@@ -226,7 +237,12 @@ export default function PluginsPage() {
           setDropActive(false);
           if (payload.paths.length > 0) void importFolders(payload.paths);
         }
-      })
+      });
+    } catch (err) {
+      console.warn("Plugins: could not listen for drag-and-drop", err);
+      return cleanup;
+    }
+    listening
       .then((fn) => {
         if (disposed) fn();
         else unlisten = fn;
@@ -236,12 +252,7 @@ export default function PluginsPage() {
         console.warn("Plugins: could not listen for drag-and-drop", err);
       });
 
-    return () => {
-      disposed = true;
-      window.removeEventListener("blur", hide);
-      window.removeEventListener("keydown", onKeyDown);
-      unlisten?.();
-    };
+    return cleanup;
   }, [tauriAvailable, importFolders]);
 
   // ── Import from folder picker ────────────────────────────
