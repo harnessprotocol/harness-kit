@@ -39,7 +39,7 @@ export default function ImportOverlay({ visible }: ImportOverlayProps) {
           }}>
             <FolderDown size={32} strokeWidth={1.5} style={{ color: "var(--accent)" }} aria-hidden />
             <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--accent-text)" }}>
-              Drop a plugin folder to import it
+              Drop a plugin folder or .zip to import it
             </span>
           </div>
         </motion.div>

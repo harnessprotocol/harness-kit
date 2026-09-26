@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { Blocks } from "lucide-react";
@@ -6,7 +6,7 @@ import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { Button, Card, EmptyState } from "@harness-kit/ui";
 import {
   listInstalledPlugins, checkPluginUpdates, uninstallPlugin,
-  importPluginFromPath,
+  importPluginFromPath, importPluginFromZip,
   exportPluginAsZip, exportPluginToFolder,
   isTauriRuntimeAvailable,
 } from "../../lib/tauri";
@@ -16,7 +16,7 @@ import PluginFilters from "./plugins/PluginFilters";
 import PluginRow from "./plugins/PluginRow";
 import ImportOverlay from "./plugins/ImportOverlay";
 import ImportBanner, { type ImportStatus } from "./plugins/ImportBanner";
-import { describeImportError, folderName } from "./plugins/import-errors";
+import { describeImportError, folderName, isZipPath, type ImportError } from "./plugins/import-errors";
 import UninstallDialog from "./plugins/UninstallDialog";
 
 const PREVIEW_PLUGINS: InstalledPlugin[] = [
@@ -42,6 +42,35 @@ const PREVIEW_PLUGINS: InstalledPlugin[] = [
   },
 ];
 
+interface ImportBatch {
+  seen: Set<string>;
+  queue: string[];
+  imported: string[];
+  failures: { name: string; error: ImportError }[];
+}
+
+/** One banner for a finished batch; null when nothing was imported or failed. */
+function batchResult({ imported, failures }: ImportBatch): ImportStatus | null {
+  if (failures.length === 0) {
+    return imported.length > 0 ? { state: "success", name: imported.join(", ") } : null;
+  }
+  const alsoImported = imported.length > 0 ? ` Imported ${imported.join(", ")}.` : "";
+  if (failures.length === 1) {
+    const { error } = failures[0];
+    return { state: "error", ...error, title: error.title + alsoImported };
+  }
+  const actions = new Set(failures.map((f) => f.error.action));
+  return {
+    state: "error",
+    title: `${failures.length} failed: ${failures.map((f) => f.name).join(", ")}.${alsoImported}`,
+    action: actions.size === 1 ? failures[0].error.action : "Open Details for each reason.",
+    details: failures
+      .map(({ name, error }) =>
+        [`${name}: ${error.title}${error.action ? ` ${error.action}` : ""}`, error.details].filter(Boolean).join("\n"))
+      .join("\n\n"),
+  };
+}
+
 const DESKTOP_RUNTIME_MESSAGE = "Browser preview mode: plugin filesystem actions require the Harness Kit desktop runtime.";
 
 export default function PluginsPage() {
@@ -61,6 +90,10 @@ export default function PluginsPage() {
   // Import state
   const [dropActive, setDropActive] = useState(false);
   const [importStatus, setImportStatus] = useState<ImportStatus | null>(null);
+  const [importing, setImporting] = useState(false);
+  // The running batch, if any. Paths that arrive while it runs join its queue
+  // instead of starting a second loop that would fight over importStatus.
+  const batchRef = useRef<ImportBatch | null>(null);
 
   // Uninstall state
   const [uninstallTarget, setUninstallTarget] = useState<InstalledPlugin | null>(null);
@@ -125,31 +158,40 @@ export default function PluginsPage() {
 
   // ── Import ───────────────────────────────────────────────
 
-  // The one import path for plugin folders, shared by the folder picker and a
-  // native drop. The Rust command does the validation (is it a directory, does
-  // it carry .claude-plugin/plugin.json, is it already installed).
+  // The one import path, shared by the folder picker and a native drop. The
+  // Rust commands do the validation (is it a directory, does it carry
+  // .claude-plugin/plugin.json, is it already installed). Imports run one at a
+  // time; a call while a batch runs queues its paths into that batch.
   const importFolders = useCallback(async (paths: string[]) => {
-    const imported: string[] = [];
-    const failures: string[] = [];
+    const running = batchRef.current;
+    const batch: ImportBatch = running ?? { seen: new Set<string>(), queue: [], imported: [], failures: [] };
     for (const path of paths) {
-      const name = folderName(path);
-      setImportStatus({ state: "importing", name });
-      try {
-        await importPluginFromPath(path);
-        imported.push(name);
-      } catch (err) {
-        failures.push(describeImportError(err, name));
+      if (batch.seen.has(path)) continue;
+      batch.seen.add(path);
+      batch.queue.push(path);
+    }
+    if (running) return;
+
+    batchRef.current = batch;
+    setImporting(true);
+    try {
+      for (let path = batch.queue.shift(); path !== undefined; path = batch.queue.shift()) {
+        const name = folderName(path);
+        setImportStatus({ state: "importing", name });
+        try {
+          const plugin = await (isZipPath(path) ? importPluginFromZip(path) : importPluginFromPath(path));
+          batch.imported.push(plugin?.name || name);
+        } catch (err) {
+          batch.failures.push({ name, error: describeImportError(err, name) });
+        }
       }
+    } finally {
+      batchRef.current = null;
+      setImporting(false);
     }
-    if (imported.length > 0) loadPlugins();
-    if (failures.length === 0) {
-      if (imported.length > 0) setImportStatus({ state: "success", name: imported.join(", ") });
-      return;
-    }
-    let message = failures[0];
-    if (failures.length > 1) message += ` ${failures.length - 1} more failed.`;
-    if (imported.length > 0) message += ` Imported ${imported.join(", ")}.`;
-    setImportStatus({ state: "error", message });
+
+    if (batch.imported.length > 0) loadPlugins();
+    setImportStatus(batchResult(batch));
   }, [loadPlugins]);
 
   // ── Drag-and-drop ────────────────────────────────────────
@@ -161,8 +203,16 @@ export default function PluginsPage() {
     if (!tauriAvailable) return;
     let disposed = false;
     let unlisten: (() => void) | null = null;
+    // Safety nets for an overlay left up by a lost "leave" event. A drag from
+    // Finder starts while this window is unfocused, so blur rarely fires
+    // mid-drag; it only helps when focus moves away after the fact. Escape is
+    // the user's own way out.
     const hide = () => setDropActive(false);
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") hide();
+    };
     window.addEventListener("blur", hide);
+    window.addEventListener("keydown", onKeyDown);
 
     getCurrentWebview()
       .onDragDropEvent((event) => {
@@ -181,13 +231,15 @@ export default function PluginsPage() {
         if (disposed) fn();
         else unlisten = fn;
       })
-      .catch(() => {
-        // No listener means no overlay, which is the honest fallback.
+      .catch((err) => {
+        // No listener means no overlay and no drop import; the picker still works.
+        console.warn("Plugins: could not listen for drag-and-drop", err);
       });
 
     return () => {
       disposed = true;
       window.removeEventListener("blur", hide);
+      window.removeEventListener("keydown", onKeyDown);
       unlisten?.();
     };
   }, [tauriAvailable, importFolders]);
@@ -304,8 +356,12 @@ export default function PluginsPage() {
           <Button
             variant="ghost"
             onClick={handleImportFolder}
-            disabled={!tauriAvailable}
-            title={tauriAvailable ? "Import a plugin folder" : DESKTOP_RUNTIME_MESSAGE}
+            disabled={!tauriAvailable || importing}
+            title={
+              !tauriAvailable ? DESKTOP_RUNTIME_MESSAGE
+                : importing ? "An import is running"
+                  : "Import a plugin folder"
+            }
           >
             Import Plugin
           </Button>
