@@ -41,12 +41,12 @@ Format: EARS (`WHEN … THE SYSTEM SHALL …`). Each criterion cites the audit f
 ### Machine, the home
 
 - [ ] AC-13: WHEN the grid renders THE SYSTEM SHALL show a persistent legend naming every cell state in use (present at user scope, present in project, closable gap, differs, drift, no such concept, not managed locally, unknown) and both header badges (skipped entries, marketplaces). *(M1, P2)*
-- [ ] AC-14: WHEN the inventory contains gaps or diffs THE SYSTEM SHALL mark closable-gap cells and divergent cells distinctly from plain absent and plain present cells, and selecting the Gaps or Diffs cell of the summary strip SHALL filter the grid to the matching rows. *(M2, P2)*
-- [ ] AC-15: WHEN the drawer offers a copy THE SYSTEM SHALL show the source surface and the target surface as two selectable controls, defaulting the source to the effective-digest winner and the target to the first closable gap. *(M3, P2)*
-- [ ] AC-16: WHEN a direct apply succeeds THE SYSTEM SHALL rescan, update the grid, and show a toast naming the resource and the target surface. *(M4, P0 for the rescan, P2 for the toast)*
+- [x] AC-14: WHEN the inventory contains gaps or diffs THE SYSTEM SHALL mark closable-gap cells and divergent cells distinctly from plain absent and plain present cells, and selecting the Gaps or Diffs cell of the summary strip SHALL filter the grid to the matching rows. *(M2, P2)*
+- [x] AC-15: WHEN the drawer offers a copy THE SYSTEM SHALL show the source surface and the target surface as two selectable controls, defaulting the source to the effective-digest winner and the target to the first closable gap. *(M3, P2)*
+- [x] AC-16: WHEN a direct apply succeeds THE SYSTEM SHALL rescan, update the grid, and show a toast naming the resource and the target surface. *(M4, P0 for the rescan, P2 for the toast)*
 - [ ] AC-17: WHEN a project directory is chosen THE SYSTEM SHALL offer one selector in the title bar, and Machine, the Drift section and Profile › Compile SHALL read the same value. *(M5, P2)*
 - [ ] AC-18: WHEN Drift is shown THE SYSTEM SHALL present it as a view of Machine reached from a "Drift vs harness.yaml" strip cell and a view toggle, not a collapsed accordion, and acknowledge and fix SHALL continue to work as specified by cross-harness-config-management AC-37. *(P2)*
-- [ ] AC-19: WHEN the drawer is open THE SYSTEM SHALL keep every grid column reachable (the content insets or the grid scrolls beside the drawer); the drawer SHALL NOT cover columns. *(m5, P2)*
+- [x] AC-19: WHEN the drawer is open THE SYSTEM SHALL keep every grid column reachable (the content insets or the grid scrolls beside the drawer); the drawer SHALL NOT cover columns. *(m5, P2)*
 - [ ] AC-20: WHEN a scan or load fails THE SYSTEM SHALL say what failed and offer one action, with the raw error behind a "Details" disclosure; no page SHALL render a bare `String(err)`. *(m2, P2)*
 - [ ] AC-21: WHEN a page has actions THE SYSTEM SHALL register them in the command registry so ⌘K lists them while that page is open, and the title bar SHALL show a ⌘K affordance. *(M9, P2)*
 
