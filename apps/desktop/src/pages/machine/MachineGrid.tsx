@@ -267,7 +267,7 @@ export function MachineGrid({ inventory, selectedRowKey, onRowClick }: MachineGr
                     }}
                     style={{
                       cursor: "pointer",
-                      background: selected ? "var(--bg-elevated)" : "transparent",
+                      background: selected ? "var(--accent-light)" : "transparent",
                       borderRadius: 6,
                     }}
                   >

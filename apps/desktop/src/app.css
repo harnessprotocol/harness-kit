@@ -336,7 +336,9 @@
   border: 1px dashed color-mix(in srgb, var(--fg-muted) 45%, transparent);
   color: var(--fg-muted);
 }
-.hk-cell[data-variant="differs"] { background: var(--warning-light); color: var(--warning); }
+/* Light theme: --warning on its own tint is ~2:1 at 10.5px; mix toward the body colour for ~4.8:1. */
+.hk-cell[data-variant="differs"] { background: var(--warning-light); color: color-mix(in srgb, var(--warning) 50%, var(--fg-base)); }
+.dark .hk-cell[data-variant="differs"] { color: var(--warning); }
 .hk-cell[data-variant="none"],
 .hk-cell[data-variant="unmanaged"] { color: var(--fg-subtle); opacity: 0.55; }
 .hk-cell[data-variant="unknown"] { background: var(--bg-elevated); color: var(--fg-muted); }
