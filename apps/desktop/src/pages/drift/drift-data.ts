@@ -8,8 +8,7 @@ import {
   type FsProvider,
 } from "@harness-kit/core";
 import { TauriFsProvider } from "../../lib/harness-fs";
-import { getCurrentProjectDir, projectDirLabel } from "../../lib/project-dir";
-import { grantProjectScope } from "../../lib/tauri";
+import { grantProjectDir, projectDirLabel } from "../../lib/project-dir";
 
 export interface DriftScope {
   kind: "global" | "project";
@@ -71,11 +70,11 @@ async function readScopeConfig(fs: FsProvider): Promise<HarnessConfig | null> {
   }
 }
 
-/** Build the list of scopes Drift honestly has: Global + the currently open
- *  project, if any. There is no tracked-projects registry yet. */
-export async function buildDriftScopes(): Promise<DriftScope[]> {
+/** Build the list of scopes Drift honestly has: Global + `projectDir`, the
+ *  title bar's current project (lib/project-dir.ts), if any. There is no
+ *  tracked-projects registry yet. */
+export async function buildDriftScopes(projectDir: string | null): Promise<DriftScope[]> {
   const home = await homeDir();
-  const projectDir = getCurrentProjectDir();
   const scopes: DriftScope[] = [
     { kind: "global", root: home, label: "Global", fs: new TauriFsProvider(home) },
   ];
@@ -84,10 +83,7 @@ export async function buildDriftScopes(): Promise<DriftScope[]> {
     // $HOME — grant runtime access to this arbitrary project dir before
     // scanning it. A stale/deleted dir just drops the project scope rather
     // than failing the whole Drift scan.
-    const granted = await grantProjectScope(projectDir).then(
-      () => true,
-      () => false,
-    );
+    const granted = await grantProjectDir(projectDir);
     if (granted) {
       scopes.push({
         kind: "project",

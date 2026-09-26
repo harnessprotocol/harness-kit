@@ -1,14 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { open as openDialog } from "@tauri-apps/plugin-dialog";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import AppLayout from "../AppLayout";
 import { NAV, visibleNav } from "../../nav";
+import { getCurrentProjectDir, getRecentProjectDirs } from "../../lib/project-dir";
 
 // ── Mocks ─────────────────────────────────────────────────────
 
 const mockStartDragging = vi.fn().mockResolvedValue(undefined);
 vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: vi.fn(() => ({ startDragging: mockStartDragging })),
+}));
+
+vi.mock("@tauri-apps/plugin-dialog", () => ({ open: vi.fn() }));
+
+const mockGrantProjectScope = vi.fn().mockResolvedValue(undefined);
+vi.mock("../../lib/tauri", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../lib/tauri")>()),
+  grantProjectScope: (...args: unknown[]) => mockGrantProjectScope(...args),
 }));
 
 // Tauri APIs used by theme lib must not throw in jsdom
@@ -177,6 +187,125 @@ describe("titlebar drag", () => {
     renderLayout();
     const buttons = document.querySelectorAll(".titlebar-btn");
     fireEvent.mouseDown(buttons[0]);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mockStartDragging).not.toHaveBeenCalled();
+  });
+});
+
+describe("title-bar project selector (AC-17)", () => {
+  function selector() {
+    return screen.getByRole("button", { name: /^Project:/ });
+  }
+
+  beforeEach(() => {
+    mockStartDragging.mockClear();
+    mockGrantProjectScope.mockClear();
+    vi.mocked(openDialog).mockReset();
+  });
+
+  it("says No project when none is set, and grants nothing", () => {
+    renderLayout();
+    expect(selector()).toHaveTextContent("No project");
+    expect(selector()).toHaveAttribute("aria-haspopup", "menu");
+    expect(selector()).toHaveAttribute("aria-expanded", "false");
+    expect(mockGrantProjectScope).not.toHaveBeenCalled();
+  });
+
+  it("shows the restored project's folder name, full path in the tooltip, and grants it at launch", () => {
+    localStorage.setItem("harness-kit-sync-recent-dirs", JSON.stringify(["/Users/me/repos/app"]));
+    renderLayout();
+    expect(selector()).toHaveTextContent("app");
+    expect(selector()).toHaveAttribute("title", "/Users/me/repos/app");
+    expect(mockGrantProjectScope).toHaveBeenCalledWith("/Users/me/repos/app");
+  });
+
+  it("Choose folder… sets the project through lib/project-dir.ts", async () => {
+    vi.mocked(openDialog).mockResolvedValue("/Users/me/repos/picked");
+    renderLayout();
+    fireEvent.click(selector());
+    fireEvent.click(screen.getByRole("menuitem", { name: "Choose folder…" }));
+
+    await waitFor(() => expect(selector()).toHaveTextContent("picked"));
+    expect(openDialog).toHaveBeenCalledWith(expect.objectContaining({ directory: true }));
+    expect(getCurrentProjectDir()).toBe("/Users/me/repos/picked");
+    expect(getRecentProjectDirs()[0]).toBe("/Users/me/repos/picked");
+    expect(mockGrantProjectScope).toHaveBeenCalledWith("/Users/me/repos/picked");
+  });
+
+  it("a cancelled dialog changes nothing", async () => {
+    vi.mocked(openDialog).mockResolvedValue(null);
+    renderLayout();
+    fireEvent.click(selector());
+    fireEvent.click(screen.getByRole("menuitem", { name: "Choose folder…" }));
+    await waitFor(() => expect(openDialog).toHaveBeenCalled());
+    expect(selector()).toHaveTextContent("No project");
+    expect(getCurrentProjectDir()).toBeNull();
+  });
+
+  it("lists recent projects, and picking one makes it current", () => {
+    localStorage.setItem("harness-kit-sync-recent-dirs", JSON.stringify(["/r/current", "/r/older"]));
+    renderLayout();
+    fireEvent.click(selector());
+    const recent = screen.getByRole("group", { name: "Recent projects" });
+    // The current project is not offered again.
+    expect(recent).not.toHaveTextContent("/r/current");
+    fireEvent.click(screen.getByRole("menuitem", { name: "older, /r/older" }));
+    expect(getCurrentProjectDir()).toBe("/r/older");
+    expect(selector()).toHaveTextContent("older");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("Clear resets to No project and keeps the recent list", () => {
+    localStorage.setItem("harness-kit-sync-recent-dirs", JSON.stringify(["/r/current"]));
+    renderLayout();
+    fireEvent.click(selector());
+    fireEvent.click(screen.getByRole("menuitem", { name: "Clear" }));
+    expect(selector()).toHaveTextContent("No project");
+    expect(getCurrentProjectDir()).toBeNull();
+    expect(getRecentProjectDirs()).toEqual(["/r/current"]);
+    // No Clear to offer once there is nothing to clear.
+    fireEvent.click(selector());
+    expect(screen.queryByRole("menuitem", { name: "Clear" })).not.toBeInTheDocument();
+  });
+
+  it("opens on the first item, moves with arrows, and Escape closes and returns focus", () => {
+    localStorage.setItem("harness-kit-sync-recent-dirs", JSON.stringify(["/r/current", "/r/older"]));
+    renderLayout();
+    fireEvent.click(selector());
+    expect(selector()).toHaveAttribute("aria-expanded", "true");
+    const items = screen.getAllByRole("menuitem");
+    expect(items.map((item) => item.getAttribute("aria-label") ?? item.textContent)).toEqual([
+      "Choose folder…",
+      "older, /r/older",
+      "Clear",
+    ]);
+    expect(items[0]).toHaveFocus();
+    fireEvent.keyDown(items[0], { key: "ArrowDown" });
+    expect(items[1]).toHaveFocus();
+    fireEvent.keyDown(items[1], { key: "ArrowUp" });
+    fireEvent.keyDown(items[0], { key: "ArrowUp" });
+    expect(items[2]).toHaveFocus();
+
+    fireEvent.keyDown(items[2], { key: "Escape" });
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    expect(selector()).toHaveAttribute("aria-expanded", "false");
+    expect(selector()).toHaveFocus();
+  });
+
+  it("closes on a click outside", () => {
+    renderLayout();
+    fireEvent.click(selector());
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+    fireEvent.mouseDown(document.body);
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+  });
+
+  it("pressing the selector or its menu never starts a window drag", async () => {
+    renderLayout();
+    fireEvent.mouseDown(selector());
+    fireEvent.click(selector());
+    fireEvent.mouseDown(screen.getByRole("menu"));
+    fireEvent.mouseDown(screen.getByRole("menuitem", { name: "Choose folder…" }));
     await new Promise((r) => setTimeout(r, 0));
     expect(mockStartDragging).not.toHaveBeenCalled();
   });

@@ -3,7 +3,7 @@ import { buildMachineInventory } from "@harness-kit/core";
 import { resolveDesktopDefinitions } from "../../lib/definitions.js";
 import type { MachineInventory } from "@harness-kit/core";
 import { TauriFsProvider } from "../../lib/harness-fs";
-import { grantProjectScope } from "../../lib/tauri";
+import { grantProjectDir } from "../../lib/project-dir";
 
 /**
  * Map the webview's platform to the ObserveOptions platform id. Core NEVER
@@ -41,10 +41,7 @@ export async function loadMachineInventory(scanRoot: string | null): Promise<Mac
   const home = await homeDir();
   let projectRoot: string | null = null;
   if (scanRoot) {
-    projectRoot = await grantProjectScope(scanRoot).then(
-      () => scanRoot,
-      () => null,
-    );
+    projectRoot = (await grantProjectDir(scanRoot)) ? scanRoot : null;
   }
   const fs = new TauriFsProvider(home);
   // AC-26: the registry may come from a verified definitions bundle, so a

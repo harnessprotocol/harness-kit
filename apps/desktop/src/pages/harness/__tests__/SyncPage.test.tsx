@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { compile, detectPlatforms } from "@harness-kit/core";
 import SyncPage from "../SyncPage";
+import { setCurrentProjectDir } from "../../../lib/project-dir";
 
 // ── Mocks ──────────────────────────────────────────────────────
 
@@ -10,12 +11,14 @@ const mockReadHarnessFile = vi.fn();
 const mockScanClaudeConfig = vi.fn();
 const mockSyncFileExists = vi.fn();
 const mockSyncListBackups = vi.fn();
+const mockGrantProjectScope = vi.fn();
 
 vi.mock("../../../lib/tauri", () => ({
   readHarnessFile: () => mockReadHarnessFile(),
   scanClaudeConfig: () => mockScanClaudeConfig(),
   syncFileExists: (...args: unknown[]) => mockSyncFileExists(...args),
   syncListBackups: (...args: unknown[]) => mockSyncListBackups(...args),
+  grantProjectScope: (...args: unknown[]) => mockGrantProjectScope(...args),
   syncWriteFiles: vi.fn(),
   syncCreateBackup: vi.fn(),
   writeHarnessFile: vi.fn(),
@@ -65,7 +68,7 @@ vi.mock("@tauri-apps/api/path", () => ({
   homeDir: vi.fn(() => Promise.resolve("/home/user")),
 }));
 
-// Tauri dialog used by openDirectoryPicker (dynamic import — mock the module)
+// Tauri dialog used by chooseProjectDir (dynamic import — mock the module)
 vi.mock("@tauri-apps/plugin-dialog", () => ({
   open: vi.fn(),
 }));
@@ -88,6 +91,7 @@ describe("SyncPage", () => {
     mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null });
     mockSyncFileExists.mockResolvedValue(false);
     mockSyncListBackups.mockResolvedValue([]);
+    mockGrantProjectScope.mockResolvedValue(undefined);
   });
 
   it("renders without crashing", async () => {
@@ -136,12 +140,9 @@ describe("SyncPage", () => {
       warnings: [],
     } as never);
 
+    setCurrentProjectDir("/repo/with-pi");
     renderPage();
 
-    const dirInput = await screen.findByPlaceholderText("~/repos/my-project");
-    fireEvent.change(dirInput, { target: { value: "/repo/with-pi" } });
-
-    // Debounced (300ms) validation + detection
     await waitFor(() => {
       expect(screen.getByText(/Directory found/i)).toBeInTheDocument();
     }, { timeout: 3000 });
@@ -154,5 +155,45 @@ describe("SyncPage", () => {
     const targets = vi.mocked(compile).mock.calls[0][1] as string[];
     expect(targets).toContain("cursor");
     expect(targets).not.toContain("pi");
+  });
+
+  describe("project directory (AC-17)", () => {
+    beforeEach(() => {
+      mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.claude/harness.yaml" });
+      mockSyncFileExists.mockResolvedValue(true);
+    });
+
+    it("has no directory field of its own", async () => {
+      renderPage();
+      await screen.findByTestId("compile-project-dir");
+      expect(screen.queryByPlaceholderText("~/repos/my-project")).not.toBeInTheDocument();
+      expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+      expect(screen.getByTestId("compile-project-dir")).toHaveTextContent(/No project chosen/);
+    });
+
+    it("reads the project restored at launch, granting it before the bridge checks it", async () => {
+      // Seeded as a previous session left it: nothing in this session has
+      // granted the directory, so Compile must grant it itself.
+      localStorage.setItem("harness-kit-sync-recent-dirs", JSON.stringify(["/repo/restored"]));
+      renderPage();
+
+      await screen.findByText(/Directory found/i);
+      expect(screen.getByTestId("compile-project-dir")).toHaveTextContent("/repo/restored");
+      expect(mockGrantProjectScope).toHaveBeenCalledWith("/repo/restored");
+      expect(mockSyncFileExists).toHaveBeenCalledWith("/repo/restored", ".");
+      expect(mockGrantProjectScope.mock.invocationCallOrder[0]).toBeLessThan(
+        mockSyncFileExists.mock.invocationCallOrder[0],
+      );
+    });
+
+    it("rechecks when the title bar's project changes", async () => {
+      setCurrentProjectDir("/repo/one");
+      renderPage();
+      await screen.findByText(/Directory found/i);
+
+      act(() => setCurrentProjectDir("/repo/two"));
+      await waitFor(() => expect(mockSyncFileExists).toHaveBeenCalledWith("/repo/two", "."));
+      expect(screen.getByTestId("compile-project-dir")).toHaveTextContent("/repo/two");
+    });
   });
 });

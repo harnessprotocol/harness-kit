@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Wrench, Pencil, Check, X as XIcon } from "lucide-react";
-import { Button, Card, EmptyState, Input } from "@harness-kit/ui";
+import { Wrench, Pencil, Check, X as XIcon, FolderOpen } from "lucide-react";
+import { Button, Card, EmptyState } from "@harness-kit/ui";
 import { COMPILE_SURFACE_IDS, compile, detectPlatforms, isCompileSurface, parseHarness } from "@harness-kit/core";
 import type { CompileResult, DetectedPlatform, SurfaceId } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
@@ -14,23 +14,13 @@ import {
 } from "../../lib/tauri";
 import type { BackupManifest } from "../../lib/tauri";
 import { SyncFsProvider } from "../../lib/sync-fs";
+import { chooseProjectDir, grantProjectDir, useProjectDir } from "../../lib/project-dir";
 import SyncPreview from "./sync/SyncPreview";
 import BackupHistory from "./sync/BackupHistory";
 
 const ALL_PLATFORMS: readonly SurfaceId[] = COMPILE_SURFACE_IDS;
-const RECENT_DIRS_KEY = "harness-kit-sync-recent-dirs";
-const MAX_RECENT = 10;
 
 type Phase = "idle" | "previewing" | "previewed" | "applying" | "applied";
-
-function getRecentDirs(): string[] {
-  try { return JSON.parse(localStorage.getItem(RECENT_DIRS_KEY) ?? "[]"); } catch { return []; }
-}
-function saveRecentDir(dir: string) {
-  const dirs = getRecentDirs().filter((d) => d !== dir);
-  dirs.unshift(dir);
-  try { localStorage.setItem(RECENT_DIRS_KEY, JSON.stringify(dirs.slice(0, MAX_RECENT))); } catch {}
-}
 
 // ── Small helpers ─────────────────────────────────────────────
 
@@ -53,9 +43,9 @@ export default function SyncPage() {
   const [harnessDescription, setHarnessDescription] = useState<string | null>(null);
   const [harnessLoading, setHarnessLoading] = useState(true);
 
-  // Project dir
-  const [projectDir, setProjectDir] = useState("");
-  const [recentDirs] = useState<string[]>(getRecentDirs);
+  // Project dir: the title bar's project (AC-17, lib/project-dir.ts)
+  const [currentProject] = useProjectDir();
+  const projectDir = currentProject ?? "";
   const [dirValid, setDirValid] = useState(false);
   const [dirChecking, setDirChecking] = useState(false);
 
@@ -72,8 +62,6 @@ export default function SyncPage() {
 
   // Backups
   const [backups, setBackups] = useState<BackupManifest[]>([]);
-
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load harness file
   const loadHarness = useCallback(() => {
@@ -100,26 +88,31 @@ export default function SyncPage() {
   useEffect(() => { loadHarness(); }, [loadHarness]);
   useEffect(() => { syncListBackups().then(setBackups).catch(() => {}); }, []);
 
-  // Debounced dir validation + platform detection
-  const handleDirChange = useCallback((dir: string) => {
-    setProjectDir(dir);
+  // Validate the project and detect its platforms whenever it changes. The
+  // grant comes first: the sync bridge refuses a directory not granted this
+  // session, so Compile must not depend on another page having granted it.
+  useEffect(() => {
+    let cancelled = false;
     setDirValid(false);
     setDetectedPlatforms([]);
     setSelectedTargets(new Set());
     setPhase("idle");
     setPreviewResult(null);
     setPreviewError(null);
-    if (!dir.trim()) return;
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      setDirChecking(true);
+    if (!projectDir) {
+      setDirChecking(false);
+      return;
+    }
+    setDirChecking(true);
+    (async () => {
       try {
-        const exists = await syncFileExists(dir, ".");
-        if (!exists) { setDirValid(false); return; }
+        await grantProjectDir(projectDir);
+        const exists = await syncFileExists(projectDir, ".");
+        if (cancelled || !exists) return;
         setDirValid(true);
-        saveRecentDir(dir);
-        const fs = new SyncFsProvider(dir);
+        const fs = new SyncFsProvider(projectDir);
         const detected = await detectPlatforms(fs);
+        if (cancelled) return;
         setDetectedPlatforms(detected);
         // Detection can report surfaces that aren't compile targets (e.g. pi).
         // The chip UI only renders COMPILE_SURFACE_IDS, so an unfiltered seed
@@ -128,18 +121,16 @@ export default function SyncPage() {
         // so Preview would fail with an error the user can't clear from the
         // chips. Seed the selection with compile surfaces only.
         setSelectedTargets(new Set(detected.map((d) => d.platform).filter(isCompileSurface)));
-      } catch { setDirValid(false); }
-      finally { setDirChecking(false); }
-    }, 300);
-  }, []);
-
-  async function openDirectoryPicker() {
-    try {
-      const { open } = await import("@tauri-apps/plugin-dialog");
-      const selected = await open({ directory: true, title: "Select project directory" });
-      if (selected && typeof selected === "string") handleDirChange(selected);
-    } catch {}
-  }
+      } catch {
+        if (!cancelled) setDirValid(false);
+      } finally {
+        if (!cancelled) setDirChecking(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectDir]);
 
   function toggleTarget(platform: SurfaceId) {
     setSelectedTargets((prev) => {
@@ -256,22 +247,27 @@ export default function SyncPage() {
             {/* Project directory */}
             <div>
               <SectionLabel>Project Directory</SectionLabel>
-              <div style={{ display: "flex", gap: "6px" }}>
-                <div style={{ flex: 1 }}>
-                  <Input
-                    type="text"
-                    value={projectDir}
-                    onChange={(e) => handleDirChange(e.target.value)}
-                    placeholder="~/repos/my-project"
-                    style={{ fontFamily: "ui-monospace, monospace" }}
-                  />
+              <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
+                <div
+                  data-testid="compile-project-dir"
+                  title={projectDir || undefined}
+                  style={{
+                    flex: 1, minWidth: 0, padding: "7px 10px", borderRadius: "6px",
+                    background: "var(--bg-elevated)", fontSize: "12px",
+                    fontFamily: projectDir ? "ui-monospace, monospace" : undefined,
+                    color: projectDir ? "var(--fg-base)" : "var(--fg-subtle)",
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}
+                >
+                  {projectDir || "No project chosen. Choose one here or in the title bar."}
                 </div>
-                <Button variant="ghost" onClick={openDirectoryPicker}>
-                  Browse…
+                <Button variant="ghost" onClick={() => void chooseProjectDir()}>
+                  <FolderOpen size={12} strokeWidth={1.7} style={{ marginRight: 5 }} />
+                  Choose folder…
                 </Button>
               </div>
 
-              {/* Status / recent */}
+              {/* Status */}
               {projectDir && !dirChecking && (
                 <p style={{
                   margin: "5px 0 0", fontSize: "11px", display: "flex", alignItems: "center", gap: "4px",
@@ -283,25 +279,6 @@ export default function SyncPage() {
               )}
               {dirChecking && (
                 <p style={{ margin: "5px 0 0", fontSize: "11px", color: "var(--fg-subtle)" }}>Checking…</p>
-              )}
-              {!projectDir && recentDirs.length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "6px" }}>
-                  {recentDirs.slice(0, 5).map((d) => (
-                    <button
-                      key={d}
-                      className="hk-reset-btn"
-                      onClick={() => handleDirChange(d)}
-                      style={{
-                        padding: "2px 8px", borderRadius: "4px",
-                        background: "var(--bg-elevated)", color: "var(--fg-subtle)",
-                        fontSize: "10px", fontFamily: "ui-monospace, monospace", cursor: "pointer",
-                        maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                      }}
-                    >
-                      {d}
-                    </button>
-                  ))}
-                </div>
               )}
             </div>
 

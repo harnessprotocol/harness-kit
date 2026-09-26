@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, within, act } from "@testing-library/react";
 import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { buildMachineInventory } from "@harness-kit/core";
@@ -8,6 +8,7 @@ import { applyCellActionViaTauri } from "../cell-actions";
 import { ToastProvider } from "../../../components/ToastProvider";
 import { buildDriftScopes, collectDrift } from "../../drift/drift-data";
 import { acknowledgeDriftItem } from "../../../lib/tauri";
+import { setCurrentProjectDir } from "../../../lib/project-dir";
 
 // ── Mocks ──────────────────────────────────────────────────────
 
@@ -1088,6 +1089,49 @@ describe("MachinePage", () => {
     expect(screen.queryByText(/Scan failed/)).not.toBeInTheDocument();
   });
 
+  describe("project directory from the title bar (AC-17)", () => {
+    function projectRoots(): Array<string | null> {
+      return vi
+        .mocked(buildMachineInventory)
+        .mock.calls.map((call) => (call[1] as { projectRoot: string | null }).projectRoot);
+    }
+
+    it("has no project-directory field of its own", async () => {
+      renderPage();
+      await screen.findByTestId("machine-grid");
+      expect(screen.queryByPlaceholderText(/Project directory/)).not.toBeInTheDocument();
+      expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Browse/ })).not.toBeInTheDocument();
+    });
+
+    it("rescans with the new projectRoot and nothing selected when the project changes", async () => {
+      renderPage();
+      await screen.findByTestId("machine-grid");
+      fireEvent.click(screen.getByTestId("machine-row-mcp-server:postgres"));
+      await screen.findByTestId("machine-row-drawer");
+
+      act(() => setCurrentProjectDir("/repo/app"));
+      await waitFor(() => expect(projectRoots()).toEqual([null, "/repo/app"]));
+      expect(mockGrantProjectScope).toHaveBeenCalledWith("/repo/app");
+      await waitFor(() => expect(screen.queryByTestId("machine-row-drawer")).not.toBeInTheDocument());
+
+      // Clear in the title bar goes back to machine-only.
+      act(() => setCurrentProjectDir(null));
+      await waitFor(() => expect(projectRoots()).toEqual([null, "/repo/app", null]));
+    });
+
+    it("scans the project restored from the last session, and Refresh keeps it", async () => {
+      localStorage.setItem("harness-kit-sync-recent-dirs", JSON.stringify(["/repo/last", "/repo/older"]));
+      renderPage();
+      await screen.findByTestId("machine-grid");
+      expect(projectRoots()).toEqual(["/repo/last"]);
+
+      await waitFor(() => expect(screen.getByRole("button", { name: "Refresh" })).toBeEnabled());
+      fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+      await waitFor(() => expect(projectRoots()).toEqual(["/repo/last", "/repo/last"]));
+    });
+  });
+
   it("renders skipped diagnostics with a count and expands on toggle", async () => {
     renderPage();
     await screen.findByTestId("machine-grid");
@@ -1111,11 +1155,7 @@ describe("MachinePage", () => {
     await screen.findByTestId("machine-grid");
     expect(screen.queryByTestId("project-degraded-notice")).not.toBeInTheDocument();
 
-    fireEvent.change(
-      screen.getByPlaceholderText(/Project directory/),
-      { target: { value: "/repo/gone" } },
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    act(() => setCurrentProjectDir("/repo/gone"));
 
     await screen.findByTestId("project-degraded-notice");
     expect(
@@ -1293,7 +1333,7 @@ describe("MachinePage", () => {
 
   it("ignores an older scan that resolves after a newer one", async () => {
     // The apply's rescan hangs; meanwhile the user starts a fresh scan
-    // (Enter in the directory field), which clears the selection and lands.
+    // (choosing a project in the title bar), which clears the selection and lands.
     let resolveStale!: (value: unknown) => void;
     const newer = makeInventory();
     newer.rows = newer.rows.filter((row) => row.key !== "skill:reviewer");
@@ -1311,7 +1351,7 @@ describe("MachinePage", () => {
     fireEvent.click(apply);
     await waitFor(() => expect(vi.mocked(buildMachineInventory)).toHaveBeenCalledTimes(2));
 
-    fireEvent.keyDown(screen.getByPlaceholderText(/Project directory/), { key: "Enter" });
+    act(() => setCurrentProjectDir("/repo"));
     await waitFor(() => expect(vi.mocked(buildMachineInventory)).toHaveBeenCalledTimes(3));
     await waitFor(() => expect(gridRowKeys()).not.toContain("skill:reviewer"));
     expect(screen.queryByTestId("machine-row-drawer")).not.toBeInTheDocument();

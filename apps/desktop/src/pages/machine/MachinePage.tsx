@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Input, EmptyState } from "@harness-kit/ui";
+import { Button, EmptyState } from "@harness-kit/ui";
 import { ChevronRight, ScanSearch } from "lucide-react";
 import type { GridRow, MachineInventory } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
+import { useProjectDir } from "../../lib/project-dir";
 import { loadMachineInventory } from "./machine-data";
 import { MachineGrid } from "./MachineGrid";
 import {
@@ -19,8 +20,10 @@ import DriftPage from "../drift/DriftPage";
 /**
  * Machine (Task 14): cross-surface inventory of this machine, whose row
  * drawer applies changes between surfaces. Defaults to machine-only
- * observation (no project directory) — picking a directory adds
- * project-scope stores to the scan.
+ * observation (no project directory). The project comes from the title bar's
+ * selector (AC-17, lib/project-dir.ts): choosing one adds project-scope
+ * stores to the scan, and every change starts a new scan with nothing
+ * selected.
  *
  * Two views share the page head and summary strip (spec AC-18, design D6):
  * the surface grid and Drift against harness.yaml, chosen by `?view=`
@@ -30,7 +33,7 @@ export default function MachinePage() {
   const [inventory, setInventory] = useState<MachineInventory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [projectDir, setProjectDir] = useState("");
+  const [projectDir] = useProjectDir();
   const [selectedRow, setSelectedRow] = useState<GridRow | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
   const [projectDegraded, setProjectDegraded] = useState(false);
@@ -42,18 +45,18 @@ export default function MachinePage() {
    * have closed the drawer or picked another row while the scan ran. Every
    * other caller starts over with nothing selected.
    *
-   * Only the latest scan lands. Scans can overlap (Enter, Browse and Clear are
-   * live while one runs, and an apply starts its own), and a slow older one
-   * must not overwrite a newer result.
+   * Only the latest scan lands. Scans can overlap (the title bar's project
+   * selector is live while one runs, and an apply starts its own), and a slow
+   * older one must not overwrite a newer result.
    */
   const loadSeq = useRef(0);
-  const load = useCallback(async (dir: string, keepSelection = false) => {
+  const load = useCallback(async (dir: string | null, keepSelection = false) => {
     const seq = ++loadSeq.current;
     setLoading(true);
     setError(null);
     if (!keepSelection) setSelectedRow(null);
     try {
-      const result = await loadMachineInventory(dir.trim() ? dir.trim() : null);
+      const result = await loadMachineInventory(dir);
       if (seq !== loadSeq.current) return;
       setInventory(result.inventory);
       setProjectDegraded(result.projectDegraded);
@@ -69,23 +72,10 @@ export default function MachinePage() {
     }
   }, []);
 
+  // The first scan, and a new one whenever the project changes.
   useEffect(() => {
-    load("");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  async function openDirectoryPicker() {
-    try {
-      const { open } = await import("@tauri-apps/plugin-dialog");
-      const selected = await open({ directory: true, title: "Select project directory" });
-      if (selected && typeof selected === "string") {
-        setProjectDir(selected);
-        load(selected);
-      }
-    } catch {
-      // dialog unavailable — typed path + Rescan still works
-    }
-  }
+    load(projectDir);
+  }, [projectDir, load]);
 
   const skippedSurfaces = useMemo(
     () => (inventory ? inventory.surfaces.filter((surface) => surface.skipped.length > 0) : []),
@@ -133,36 +123,6 @@ export default function MachinePage() {
         <Button variant="primary" onClick={() => load(projectDir)} disabled={loading}>
           {loading ? "Scanning…" : "Refresh"}
         </Button>
-      </div>
-
-      {/* Project-directory picker — none by default (machine-only observation) */}
-      <div style={{ display: "flex", gap: 6, alignItems: "center", maxWidth: 560, marginBottom: 14 }}>
-        <div style={{ flex: 1 }}>
-          <Input
-            type="text"
-            value={projectDir}
-            onChange={(event) => setProjectDir(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") load(projectDir);
-            }}
-            placeholder="Project directory (optional — machine-only without one)"
-            style={{ fontFamily: "ui-monospace, monospace" }}
-          />
-        </div>
-        <Button variant="ghost" onClick={openDirectoryPicker}>
-          Browse…
-        </Button>
-        {projectDir && (
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setProjectDir("");
-              load("");
-            }}
-          >
-            Clear
-          </Button>
-        )}
       </div>
 
       {error && <div className="hk-page-error">Scan failed: {error}</div>}
@@ -215,11 +175,10 @@ export default function MachinePage() {
               different questions, one screen.
 
               Mounted only in this view, and that is behavioural rather than
-              cosmetic: Drift scans project scopes on mount and asks Tauri to grant
-              access to the project directory. The grid runs machine-only by
-              default and must not trigger a directory-permission request the user
-              did not ask for, so nothing about drift runs until someone picks this
-              view.
+              cosmetic: Drift scans every scope's harness.yaml and compiled output
+              on mount. The grid reads only the stores for the title bar's project
+              (none by default), so nothing about drift runs until someone picks
+              this view.
             */
             <div style={{ marginTop: 20 }} data-testid="machine-drift-view">
               <DriftPage embedded onSummary={onDriftSummary} />
@@ -247,7 +206,7 @@ export default function MachinePage() {
                       <EmptyState
                         icon={<ScanSearch size={28} strokeWidth={1.5} />}
                         title="Nothing observed"
-                        description="No harness resources were found in this machine's config stores. Pick a project directory to include project-scope stores in the scan."
+                        description="No harness resources were found in this machine's config stores. Choose a project in the title bar to include project-scope stores in the scan."
                       />
                     </div>
                   ) : (

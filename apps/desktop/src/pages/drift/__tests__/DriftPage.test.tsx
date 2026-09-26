@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import DriftPage from "../DriftPage";
+import { setCurrentProjectDir } from "../../../lib/project-dir";
 
 // ── Mocks ──────────────────────────────────────────────────────
 
@@ -47,7 +48,9 @@ vi.mock("../../../lib/harness-fs", () => ({
 }));
 
 const mockGetAcknowledgedDriftItems = vi.fn();
+const mockGrantProjectScope = vi.fn();
 vi.mock("../../../lib/tauri", () => ({
+  grantProjectScope: (...args: unknown[]) => mockGrantProjectScope(...args),
   acknowledgeDriftItem: vi.fn(),
   unacknowledgeDriftItem: vi.fn(),
   getAcknowledgedDriftItems: () => mockGetAcknowledgedDriftItems(),
@@ -69,6 +72,7 @@ describe("DriftPage", () => {
     mockParseHarness.mockReturnValue({ config: { metadata: { name: "test-harness" } } });
     mockValidateHarness.mockReturnValue({ valid: true });
     mockGetAcknowledgedDriftItems.mockResolvedValue([]);
+    mockGrantProjectScope.mockResolvedValue(undefined);
   });
 
   it("shows the empty state when there is no drift", async () => {
@@ -123,5 +127,19 @@ describe("DriftPage", () => {
     await waitFor(() => expect(screen.getByText("User-edited")).toBeInTheDocument());
     expect(screen.getByRole("button", { name: "Acknowledge" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Fix" })).not.toBeInTheDocument();
+  });
+
+  it("scans the title bar's project, and rescans when it changes (AC-17)", async () => {
+    mockDetectDrift.mockResolvedValue({ items: [], hasDrift: false, byClass: {} });
+    const scannedRoots = () =>
+      mockDetectDrift.mock.calls.map((call) => (call[1] as { projectRoot: string }).projectRoot);
+
+    setCurrentProjectDir("/repo/first");
+    renderPage();
+    await waitFor(() => expect(scannedRoots()).toEqual(["/home/user", "/repo/first"]));
+
+    act(() => setCurrentProjectDir("/repo/second"));
+    await waitFor(() => expect(scannedRoots()).toContain("/repo/second"));
+    expect(mockGrantProjectScope).toHaveBeenCalledWith("/repo/second");
   });
 });
