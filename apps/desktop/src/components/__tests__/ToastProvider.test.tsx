@@ -2,10 +2,16 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TOAST_TIMEOUT_MS, ToastProvider, useToast } from "../ToastProvider";
 
-function Pusher({ title = "Copied github to Codex" }: { title?: string }) {
+function Pusher({
+  title = "Copied github to Codex",
+  variant = "success",
+}: {
+  title?: string;
+  variant?: "success" | "warning";
+}) {
   const toast = useToast();
   return (
-    <button type="button" onClick={() => toast({ title, variant: "success" })}>
+    <button type="button" onClick={() => toast({ title, variant })}>
       push
     </button>
   );
@@ -27,6 +33,19 @@ describe("ToastProvider", () => {
     act(() => vi.advanceTimersByTime(TOAST_TIMEOUT_MS - 1));
     expect(screen.queryByRole("status")).toBeInTheDocument();
     act(() => vi.advanceTimersByTime(1));
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("keeps a warning until it is dismissed", () => {
+    render(
+      <ToastProvider>
+        <Pusher variant="warning" />
+      </ToastProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "push" }));
+    act(() => vi.advanceTimersByTime(TOAST_TIMEOUT_MS * 3));
+    expect(screen.getByRole("status")).toHaveTextContent("Copied github to Codex");
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss notification" }));
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 
@@ -55,6 +74,19 @@ describe("ToastProvider", () => {
     fireEvent.click(screen.getAllByRole("button", { name: "Dismiss notification" })[0]);
     expect(screen.getAllByRole("status")).toHaveLength(1);
     expect(screen.getByRole("status")).toHaveTextContent("second");
+  });
+
+  it("shows the newest three when more are stacked", () => {
+    render(
+      <ToastProvider>
+        {["one", "two", "three", "four"].map((title) => (
+          <Pusher key={title} title={title} variant="warning" />
+        ))}
+      </ToastProvider>,
+    );
+    for (const button of screen.getAllByRole("button", { name: "push" })) fireEvent.click(button);
+    const shown = screen.getAllByRole("status").map((toast) => toast.textContent);
+    expect(shown).toEqual(["two", "three", "four"]);
   });
 
   it("is a no-op outside a provider", () => {

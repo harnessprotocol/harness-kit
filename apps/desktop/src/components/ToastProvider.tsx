@@ -5,8 +5,15 @@ import type { ToastItem } from "@harness-kit/ui";
 
 export type PushToast = (toast: Omit<ToastItem, "id">) => void;
 
-/** How long a toast stays before it dismisses itself. */
+/** How long a success or info toast stays before it dismisses itself. */
 export const TOAST_TIMEOUT_MS = 4000;
+
+// A warning or danger toast reports something the user has to act on or
+// know (a failed write, a change missing from the rollback list); it stays
+// until dismissed rather than vanishing while they read it.
+function autoDismisses(toast: Omit<ToastItem, "id">): boolean {
+  return toast.variant !== "warning" && toast.variant !== "danger";
+}
 
 // The default is a no-op, not a throw: a page rendered outside AppLayout (a
 // unit test, a dev fixture) still works and simply shows no toast.
@@ -32,10 +39,12 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       nextId.current += 1;
       const id = `toast-${nextId.current}`;
       setToasts((current) => [...current, { ...toast, id }]);
-      timers.current.set(
-        id,
-        setTimeout(() => dismiss(id), TOAST_TIMEOUT_MS),
-      );
+      if (autoDismisses(toast)) {
+        timers.current.set(
+          id,
+          setTimeout(() => dismiss(id), TOAST_TIMEOUT_MS),
+        );
+      }
     },
     [dismiss],
   );

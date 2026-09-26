@@ -4,6 +4,8 @@ import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { buildMachineInventory } from "@harness-kit/core";
 import MachinePage from "../MachinePage";
+import { applyCellActionViaTauri } from "../cell-actions";
+import { ToastProvider } from "../../../components/ToastProvider";
 import { collectDrift } from "../../drift/drift-data";
 
 // ── Mocks ──────────────────────────────────────────────────────
@@ -955,6 +957,45 @@ describe("MachinePage", () => {
         ),
       ).toEqual(["cursor"]),
     );
+  });
+
+  describe("apply toast (AC-16)", () => {
+    function renderWithToasts() {
+      return render(
+        <ToastProvider>
+          <MemoryRouter>
+            <MachinePage />
+          </MemoryRouter>
+        </ToastProvider>,
+      );
+    }
+
+    async function applyPostgres() {
+      renderWithToasts();
+      await screen.findByTestId("machine-grid");
+      fireEvent.click(screen.getByTestId("machine-row-mcp-server:postgres"));
+      const drawer = await screen.findByTestId("machine-row-drawer");
+      const apply = within(drawer).getByRole("button", { name: "Apply" });
+      await waitFor(() => expect(apply).toBeEnabled());
+      fireEvent.click(apply);
+    }
+
+    it("names the resource and the target surface", async () => {
+      await applyPostgres();
+      const toast = await screen.findByText("Copied postgres to Codex");
+      expect(toast.closest(".hk-toast")).toHaveAttribute("data-variant", "success");
+    });
+
+    it("warns, and keeps the reason, when the rollback point was not recorded", async () => {
+      vi.mocked(applyCellActionViaTauri).mockResolvedValueOnce({
+        written: [],
+        ledgerError: "state db locked",
+      });
+      await applyPostgres();
+      const toast = (await screen.findByText("Copied postgres to Codex")).closest(".hk-toast");
+      expect(toast).toHaveAttribute("data-variant", "warning");
+      expect(toast).toHaveTextContent("Not added to the rollback list (state db locked)");
+    });
   });
 
   it("closes the drawer after an apply when the rescan no longer has the row", async () => {

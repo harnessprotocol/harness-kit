@@ -3,6 +3,7 @@ import { Button } from "@harness-kit/ui";
 import { ArrowRight, X } from "lucide-react";
 import type { GridRow, MachineDiff, MachineGap, SurfaceId } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
+import { useToast } from "../../components/ToastProvider";
 import { KIND_LABELS, shortDigest } from "./machine-view-model";
 import {
   applyCellActionViaTauri,
@@ -347,6 +348,7 @@ function RowActions({
     setStatus(`${label} copied.`);
   }, []);
 
+  const toast = useToast();
   const apply = useCallback(async () => {
     if (!view) return;
     setBusy(true);
@@ -357,13 +359,26 @@ function RowActions({
           ? `Applied, but this change was not added to the rollback list (${applied.ledgerError}). The backup is still on disk.`
           : "Applied.",
       );
+      // The rescan below replaces this row and clears the status line, so
+      // the toast is what the user sees (AC-16). Named from the request that
+      // ran, not the selects, which the rescan may re-default.
+      const title = `Copied ${view.request.name} to ${surfaceLabel(view.request.to)}`;
+      toast(
+        applied.ledgerError
+          ? {
+              title,
+              message: `Not added to the rollback list (${applied.ledgerError}). The backup is still on disk.`,
+              variant: "warning",
+            }
+          : { title, variant: "success" },
+      );
       onApplied?.();
     } catch (error) {
       setStatus(error instanceof Error ? error.message : String(error));
     } finally {
       setBusy(false);
     }
-  }, [view, onApplied, confirmedLoss]);
+  }, [view, onApplied, confirmedLoss, toast]);
 
   if (!anyTargets || !source) {
     return (

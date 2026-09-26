@@ -317,6 +317,10 @@
 .hk-page[data-drawer-open] {
   padding-right: calc(var(--hk-drawer-width) + 28px);
 }
+/* Toasts sit bottom-right, over the drawer's Apply row; move them beside it. */
+:root:has(.hk-page[data-drawer-open]) .hk-toast-viewport {
+  right: calc(var(--hk-drawer-width) + 16px);
+}
 
 /* Machine grid cell chips (AC-13) and their legend (AC-14). Variants come from
    src/pages/machine/cell-state.ts. */
