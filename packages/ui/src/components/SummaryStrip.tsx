@@ -6,6 +6,11 @@ export interface SummaryCell {
   id: string;
   label: string;
   value: ReactNode;
+  /**
+   * What a selectable cell's accessible name says in place of `value`, for a
+   * value that reads badly aloud (a "—" placeholder, say).
+   */
+  valueLabel?: string;
   tone?: SummaryTone;
   /** Makes the cell a toggle button, e.g. a filter. Omit for a plain cell. */
   onSelect?: () => void;
@@ -54,9 +59,11 @@ export function SummaryStrip({ cells, className = "" }: SummaryStripProps) {
             // The label and value are adjacent spans with no text between
             // them, so the computed name would read "Gaps1".
             aria-label={
-              typeof cell.value === "string" || typeof cell.value === "number"
-                ? `${cell.label} ${cell.value}`
-                : undefined
+              cell.valueLabel !== undefined
+                ? `${cell.label} ${cell.valueLabel}`
+                : typeof cell.value === "string" || typeof cell.value === "number"
+                  ? `${cell.label} ${cell.value}`
+                  : undefined
             }
             data-active={active ? "true" : undefined}
             onClick={cell.onSelect}

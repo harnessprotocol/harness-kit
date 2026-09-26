@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Button, SummaryStrip } from "@harness-kit/ui";
 import type { GridRow, MachineInventory, SurfaceId } from "@harness-kit/core";
@@ -8,6 +8,8 @@ import {
   filterRows,
   machineSummaryCells,
   withFilter,
+  withView,
+  type DriftCellState,
   type MachineFilter,
 } from "./machine-view-model";
 
@@ -17,10 +19,11 @@ const NO_ROWS: GridRow[] = [];
 /**
  * The grid filter behind the summary strip. It lives in the URL (?filter=),
  * so it survives a reload and back/forward; a sidebar link to /machine drops
- * it. Setting it copies every other param: dropping harness= would unfilter
- * the embedded Drift section. Clears the selection when the selected row is
- * filtered out: a drawer for a row the grid no longer shows describes
- * something the user can't see.
+ * it. Setting it copies every other param (dropping harness= would unfilter
+ * Drift the next time it is shown) and selects the grid view in the same URL
+ * update: a filter is a request to see the grid. Clears the selection when
+ * the selected row is filtered out: a drawer for a row the grid no longer
+ * shows describes something the user can't see.
  */
 export function useMachineFilter(
   inventory: MachineInventory | null,
@@ -30,7 +33,8 @@ export function useMachineFilter(
   const [searchParams, setSearchParams] = useSearchParams();
   const filter = filterOf(searchParams);
   const setFilter = useCallback(
-    (next: MachineFilter) => setSearchParams((current) => withFilter(current, next)),
+    (next: MachineFilter) =>
+      setSearchParams((current) => withFilter(withView(current, "grid"), next)),
     [setSearchParams],
   );
   const variants = useMemo(
@@ -62,15 +66,24 @@ export interface MachineSummaryProps {
   /** Rows the grid is showing under `filter`. */
   shownCount: number;
   onFilterChange: (filter: MachineFilter) => void;
+  /** The "Drift vs harness.yaml" cell (AC-18); omitted, the strip has none. */
+  drift?: DriftCellState;
+  /** Rendered between the strip and the filter status line: the view toggle. */
+  children?: ReactNode;
 }
 
-/** The Machine summary strip, whose Gaps and Differs cells filter the grid (AC-14). */
+/**
+ * The Machine summary strip, whose Gaps and Differs cells filter the grid
+ * (AC-14) and whose Drift cell selects the Drift view (AC-18).
+ */
 export function MachineSummary({
   inventory,
   variants,
   filter,
   shownCount,
   onFilterChange,
+  drift,
+  children,
 }: MachineSummaryProps) {
   const stripRef = useRef<HTMLDivElement>(null);
   // A filter change can unmount the control that had focus: "Show all"
@@ -112,8 +125,9 @@ export function MachineSummary({
         aria-label="Summary"
         tabIndex={-1}
       >
-        <SummaryStrip cells={machineSummaryCells(inventory, variants, filter, changeFilter)} />
+        <SummaryStrip cells={machineSummaryCells(inventory, variants, filter, changeFilter, drift)} />
       </div>
+      {children}
       {filter !== "all" && (
         <div className="hk-machine-filter-status" data-testid="machine-filter-status">
           <span>

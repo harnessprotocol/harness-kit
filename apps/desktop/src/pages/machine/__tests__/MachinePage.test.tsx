@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
@@ -6,7 +6,8 @@ import { buildMachineInventory } from "@harness-kit/core";
 import MachinePage from "../MachinePage";
 import { applyCellActionViaTauri } from "../cell-actions";
 import { ToastProvider } from "../../../components/ToastProvider";
-import { collectDrift } from "../../drift/drift-data";
+import { buildDriftScopes, collectDrift } from "../../drift/drift-data";
+import { acknowledgeDriftItem } from "../../../lib/tauri";
 
 // ── Mocks ──────────────────────────────────────────────────────
 
@@ -38,7 +39,7 @@ const FAMILY_BY_ID: Record<string, string> = {
   junie: "junie",
 };
 
-// MachinePage now renders the Drift section (AC-37), so this mock must also
+// MachinePage renders the Drift view (AC-18, AC-37), so this mock must also
 // satisfy what Drift's module tree imports from core. `importOriginal` would
 // be tidier, but core pulls node builtins the jsdom environment cannot
 // resolve — the reason this mock is exhaustive in the first place.
@@ -62,7 +63,7 @@ vi.mock("@harness-kit/core", async () => ({
     notApplicable: [],
     stores: [],
   })),
-  // Pulled in by the Drift section's module tree (AC-37).
+  // Pulled in by the Drift view's module tree (AC-37).
   COMPILE_SURFACE_IDS: [
     "claude-code",
     "cursor",
@@ -298,15 +299,6 @@ function makeInventory() {
 
 // ── Helpers ────────────────────────────────────────────────────
 
-/** Pushes a route change after mount, without remounting the page. */
-function NavigateTo({ to }: { to: string }) {
-  const navigate = useNavigate();
-  useEffect(() => {
-    navigate(to);
-  }, [navigate, to]);
-  return null;
-}
-
 // A sidebar stand-in: navigates only when clicked, so the test controls
 // whether the grid is already on screen when the request arrives.
 function NavigateOnClick({ to }: { to: string }) {
@@ -333,7 +325,24 @@ function gridRowKeys(): string[] {
 }
 
 function stripCell(label: string): HTMLElement {
-  return screen.getByText(label).parentElement!;
+  // Scoped to the strip: the view toggle has a "Resources" option too.
+  return within(screen.getByRole("group", { name: "Summary" })).getByText(label).parentElement!;
+}
+
+/** One drift item for the claude-code adapter in the global scope. */
+function driftEntry(cls: string, path: string) {
+  return {
+    scope: { kind: "global", root: "/home/user", label: "Global", fs: {} as never },
+    item: {
+      class: cls,
+      path,
+      adapter: "claude-code",
+      target: "claude-code",
+      harnessName: "test",
+      slot: "operational",
+      detail: `${path} drifted.`,
+    } as never,
+  } as never;
 }
 
 function renderPage() {
@@ -459,183 +468,215 @@ describe("MachinePage", () => {
     expect(cell).not.toHaveTextContent("—");
   });
 
-  it("presents Drift inside the Machine view (AC-37)", async () => {
-    // The M2 attempt at this routed /drift here and deleted the acknowledge
-    // and fix workflow, so it was reverted. Absorption means the workflow
-    // moves, not that it disappears — Drift compares harness.yaml against
-    // compiled output, which the surface grid never did.
-    renderPage();
-    await screen.findByTestId("machine-grid");
-
-    expect(screen.getByTestId("machine-drift-section")).toBeInTheDocument();
-    expect(screen.getByText("Drift from harness.yaml")).toBeInTheDocument();
-  });
-
-  it("does not run Drift's scans until the section is opened", async () => {
-    // Not cosmetic. Drift asks Tauri to grant access to the project directory
-    // on mount; the Machine view runs machine-only by default and must not
-    // trigger a permission request nobody asked for. Mounting Drift eagerly
-    // made this fire on every Machine load — caught only because a serial CI
-    // run was slow enough for the async grant to land before the assertion.
-    renderPage();
-    await screen.findByTestId("machine-grid");
-
-    // Structural, not timing-based: Drift's own heading is absent because the
-    // component never mounted. Asserting "grantProjectScope was not called"
-    // alone races the grant's own promise — which is exactly why the eager
-    // version looked green locally and failed on a slower serial run.
-    const toggle = screen.getByRole("button", { name: /Drift from harness.yaml/ });
-    expect(toggle).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByTestId("drift-view")).not.toBeInTheDocument();
-    expect(mockGrantProjectScope).not.toHaveBeenCalled();
-  });
-
-  it("opens the section on ?drift=1, cold AND on navigation", async () => {
-    // The sidebar and cmd-4 point at /machine?drift=1. React Router does not
-    // remount MachinePage when only the search string changes, so reading the
-    // param in a useState initializer worked on a cold load and did nothing on
-    // the common path — arriving from anywhere the user had already seen
-    // Machine. Both are asserted here.
-    const { unmount } = render(
-      <MemoryRouter initialEntries={["/machine?drift=1"]}>
-        <MachinePage />
-      </MemoryRouter>,
-    );
-    await screen.findByTestId("machine-grid");
-    expect(
-      screen.getByRole("button", { name: /Drift from harness.yaml/ }),
-    ).toHaveAttribute("aria-expanded", "true");
-    unmount();
-
-    // Navigating within an already-mounted Machine route.
-    render(
-      <MemoryRouter initialEntries={["/machine", "/machine?drift=1"]} initialIndex={0}>
-        <NavigateTo to="/machine?drift=1" />
-        <MachinePage />
-      </MemoryRouter>,
-    );
-    await screen.findByTestId("machine-grid");
-    await waitFor(() =>
-      expect(
-        screen.getByRole("button", { name: /Drift from harness.yaml/ }),
-      ).toHaveAttribute("aria-expanded", "true"),
-    );
-  });
-
-  describe("Drift scroll", () => {
-    let scrollIntoView: ReturnType<typeof vi.fn<(arg?: boolean | ScrollIntoViewOptions) => void>>;
-    beforeEach(() => {
-      scrollIntoView = vi.fn();
-      Element.prototype.scrollIntoView = scrollIntoView;
-    });
-    afterEach(() => {
-      // jsdom has no scrollIntoView of its own, so deleting is the restore.
-      delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
-    });
-
-    it("scrolls the Drift section into view once the scan above it has rendered", async () => {
-      // The section sits below the summary strip and the grid. Scrolling on
-      // first commit, while the page still reads "Scanning this machine…",
-      // lands on a layout the grid then pushes below the fold.
-      let resolve!: (value: unknown) => void;
-      vi.mocked(buildMachineInventory).mockReturnValueOnce(
-        new Promise((r) => { resolve = r; }) as never,
-      );
-      render(
-        <MemoryRouter initialEntries={["/machine?drift=1"]}>
+  describe("Drift view (AC-18)", () => {
+    function renderAt(url: string) {
+      return render(
+        <MemoryRouter initialEntries={[url]}>
           <MachinePage />
+          <LocationProbe />
         </MemoryRouter>,
       );
-      expect(screen.getByText(/Scanning this machine/)).toBeInTheDocument();
-      expect(scrollIntoView).not.toHaveBeenCalled();
+    }
 
-      resolve(makeInventory());
+    function urlParams(): URLSearchParams {
+      return new URLSearchParams(screen.getByTestId("location-search").textContent ?? "");
+    }
+
+    function viewToggle(): HTMLElement {
+      return screen.getByRole("group", { name: "Machine view" });
+    }
+
+    function driftCell(value: string): HTMLElement {
+      return within(screen.getByRole("group", { name: "Summary" })).getByRole("button", {
+        name: `Drift vs harness.yaml ${value}`,
+      });
+    }
+
+    it("does not scan for drift on a plain /machine load", async () => {
+      // Not cosmetic. Drift asks Tauri to grant access to the project
+      // directory when it scans; the grid runs machine-only by default and
+      // must not trigger a permission request nobody asked for.
+      renderAt("/machine");
       await screen.findByTestId("machine-grid");
-      await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
-      expect(scrollIntoView.mock.contexts[0]).toBe(screen.getByTestId("machine-drift-section"));
-
-      // One scroll per request: a manual rescan must not yank the page back.
-      fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
-      await waitFor(() => expect(screen.getByRole("button", { name: "Refresh" })).toBeEnabled());
-      expect(scrollIntoView).toHaveBeenCalledTimes(1);
+      // Structural first: Drift never mounted. The mock assertions alone would
+      // race Drift's async load, which is how an eager mount once looked green
+      // locally and failed on a slower serial CI run.
+      expect(screen.queryByTestId("machine-drift-view")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("drift-view")).not.toBeInTheDocument();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(buildDriftScopes).not.toHaveBeenCalled();
+      expect(collectDrift).not.toHaveBeenCalled();
+      expect(mockGrantProjectScope).not.toHaveBeenCalled();
     });
 
-    it("scrolls the Drift section into view when requested after the scan has already rendered", async () => {
-      // The sidebar path: the user is on Machine, the scan is done, and clicks
-      // Drift (or presses ⌘4). `loading` does not change here, so the scroll
-      // must key on the request itself.
+    it("view=drift renders the Drift view only (no grid)", async () => {
+      renderAt("/machine?view=drift");
+      expect(await screen.findByTestId("drift-view")).toBeInTheDocument();
+      // The strip lands with the inventory; only then is a missing grid meaningful.
+      await screen.findByRole("group", { name: "Summary" });
+      expect(screen.getByTestId("machine-drift-view")).toBeInTheDocument();
+      expect(screen.queryByTestId("machine-grid")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("machine-grid-legend")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("skipped-toggle")).not.toBeInTheDocument();
+      // Embedded: no second <h1>, no page container nested in the page.
+      expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
+      expect(document.querySelectorAll(".hk-page .hk-page")).toHaveLength(0);
+      // No accordion left behind.
+      expect(screen.queryByRole("button", { expanded: false })).not.toBeInTheDocument();
+      expect(screen.queryByTestId("machine-drift-section")).not.toBeInTheDocument();
+    });
+
+    it("drift=1 still lands on the drift view, filtered by harness=", async () => {
+      // Links and redirects from before the view existed, and Fleet's row
+      // click via /drift?harness=<adapter>.
+      vi.mocked(collectDrift).mockResolvedValue([driftEntry("missing", "CLAUDE.md")]);
+      renderAt("/machine?drift=1&harness=claude-code");
+      expect(await screen.findByText("Showing drift for Claude Code.")).toBeInTheDocument();
+      await screen.findByRole("group", { name: "Summary" });
+      expect(screen.queryByTestId("machine-grid")).not.toBeInTheDocument();
+      expect(within(viewToggle()).getByRole("button", { name: "Drift vs harness.yaml" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+    });
+
+    it("switches to Drift when the URL changes without a remount", async () => {
+      // The palette's Open Drift while already on Machine: React Router keeps
+      // MachinePage mounted, so the view must follow the URL, not state
+      // copied from it on mount.
       render(
         <MemoryRouter initialEntries={["/machine"]}>
-          <NavigateOnClick to="/machine?drift=1" />
+          <NavigateOnClick to="/machine?view=drift" />
           <MachinePage />
         </MemoryRouter>,
       );
       await screen.findByTestId("machine-grid");
-      expect(scrollIntoView).not.toHaveBeenCalled();
-
       fireEvent.click(screen.getByRole("button", { name: "go to drift" }));
-      await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
-      expect(scrollIntoView.mock.contexts[0]).toBe(screen.getByTestId("machine-drift-section"));
-
-      // Consumed once: a later Refresh must not scroll again.
-      fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
-      await waitFor(() => expect(screen.getByRole("button", { name: "Refresh" })).toBeEnabled());
-      expect(scrollIntoView).toHaveBeenCalledTimes(1);
+      expect(await screen.findByTestId("drift-view")).toBeInTheDocument();
+      expect(screen.queryByTestId("machine-grid")).not.toBeInTheDocument();
     });
 
-    it("re-arms the scroll when the harness changes while Drift is already requested", async () => {
-      // Fleet's row click while already viewing Drift: ?drift=1 stays true, so
-      // only the harness param changes. The request is still a new one.
+    it("has an accessible view toggle that reflects and sets the view", async () => {
+      renderAt("/machine?harness=cursor");
+      await screen.findByTestId("machine-grid");
+      const resources = within(viewToggle()).getByRole("button", { name: "Resources" });
+      const drift = within(viewToggle()).getByRole("button", { name: "Drift vs harness.yaml" });
+      expect(resources).toHaveAttribute("aria-pressed", "true");
+      expect(drift).toHaveAttribute("aria-pressed", "false");
+
+      fireEvent.click(drift);
+      expect(await screen.findByTestId("drift-view")).toBeInTheDocument();
+      expect(screen.queryByTestId("machine-grid")).not.toBeInTheDocument();
+      expect(resources).toHaveAttribute("aria-pressed", "false");
+      expect(drift).toHaveAttribute("aria-pressed", "true");
+      expect(urlParams().get("view")).toBe("drift");
+      expect(urlParams().get("harness")).toBe("cursor");
+
+      fireEvent.click(resources);
+      expect(await screen.findByTestId("machine-grid")).toBeInTheDocument();
+      expect(screen.queryByTestId("drift-view")).not.toBeInTheDocument();
+      expect(resources).toHaveAttribute("aria-pressed", "true");
+      expect(urlParams().has("view")).toBe(false);
+      expect(urlParams().get("harness")).toBe("cursor");
+    });
+
+    it("shows — in the strip's Drift cell before any scan, and Drift's count after", async () => {
+      vi.mocked(collectDrift).mockResolvedValue([
+        driftEntry("missing", "CLAUDE.md"),
+        driftEntry("missing", "AGENTS.md"),
+      ]);
+      renderAt("/machine");
+      await screen.findByTestId("machine-grid");
+      const before = driftCell("not scanned");
+      expect(before).toHaveTextContent("—");
+      expect(before).not.toHaveTextContent("…");
+      expect(before).toHaveAttribute("aria-pressed", "false");
+
+      // The cell is a way into Drift, and Drift's scan fills it in.
+      fireEvent.click(before);
+      await waitFor(() => expect(driftCell("2")).toBeInTheDocument());
+      expect(driftCell("2")).toHaveAttribute("aria-pressed", "true");
+      expect(driftCell("2").querySelector(".hk-summary-value")).toHaveAttribute("data-tone", "warning");
+      expect(screen.queryByTestId("machine-grid")).not.toBeInTheDocument();
+
+      // Back on the grid the count stays, without Drift scanning again.
+      fireEvent.click(within(viewToggle()).getByRole("button", { name: "Resources" }));
+      await screen.findByTestId("machine-grid");
+      expect(driftCell("2")).toHaveAttribute("aria-pressed", "false");
+      expect(collectDrift).toHaveBeenCalledTimes(1);
+    });
+
+    it("keeps acknowledge working in the view, and the count drops with it (AC-37)", async () => {
+      vi.mocked(collectDrift).mockResolvedValue([driftEntry("user-modified-outside", "CLAUDE.md")]);
+      renderAt("/machine?view=drift");
+      await waitFor(() => expect(driftCell("1")).toBeInTheDocument());
+
+      fireEvent.click(await screen.findByRole("button", { name: "Acknowledge" }));
+      await waitFor(() => expect(driftCell("0")).toBeInTheDocument());
+      expect(acknowledgeDriftItem).toHaveBeenCalledTimes(1);
+      expect(driftCell("0").querySelector(".hk-summary-value")).toHaveAttribute("data-tone", "default");
+    });
+
+    it("choosing Gaps from the Drift view shows the grid filtered, in one URL update", async () => {
+      const locations: string[] = [];
+      function LocationLog() {
+        const location = useLocation();
+        useEffect(() => {
+          locations.push(location.search);
+        }, [location]);
+        return null;
+      }
       render(
-        <MemoryRouter initialEntries={["/machine?drift=1"]}>
-          <NavigateOnClick to="/machine?drift=1&harness=claude-code" />
+        <MemoryRouter initialEntries={["/machine?view=drift&filter=differs&harness=claude-code"]}>
           <MachinePage />
+          <LocationLog />
         </MemoryRouter>,
       );
+      await screen.findByTestId("drift-view");
+      const strip = await screen.findByRole("group", { name: "Summary" });
+      // The grid's filter (differs, left in the URL) is not in force here, so
+      // no filter cell reads as pressed and no status line claims a filter.
+      expect(within(strip).getByRole("button", { name: /^Gaps/ })).toHaveAttribute("aria-pressed", "false");
+      expect(within(strip).getByRole("button", { name: /^Differs/ })).toHaveAttribute("aria-pressed", "false");
+      expect(screen.queryByTestId("machine-filter-status")).not.toBeInTheDocument();
+
+      fireEvent.click(within(strip).getByRole("button", { name: /^Gaps/ }));
       await screen.findByTestId("machine-grid");
-      await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
-
-      fireEvent.click(screen.getByRole("button", { name: "go to drift" }));
-      await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(2));
-      expect(scrollIntoView.mock.contexts[1]).toBe(screen.getByTestId("machine-drift-section"));
+      expect(gridRowKeys()).toEqual(["mcp-server:postgres"]);
+      expect(within(strip).getByRole("button", { name: /^Gaps/ })).toHaveAttribute("aria-pressed", "true");
+      expect(locations).toHaveLength(2);
+      const search = new URLSearchParams(locations[1]);
+      expect(search.get("filter")).toBe("gaps");
+      expect(search.has("view")).toBe(false);
+      expect(search.get("harness")).toBe("claude-code");
     });
-  });
 
-  it("filters the Drift section to the harness named in the URL", async () => {
-    // Fleet's row click goes to /drift?harness=<adapter>; the redirect keeps
-    // the query (src/routes/DriftRedirect.tsx), so this is what Machine sees.
-    vi.mocked(collectDrift).mockResolvedValue([
-      {
-        scope: { kind: "global", root: "/home/user", label: "Global", fs: {} as never },
-        item: {
-          class: "missing",
-          path: "CLAUDE.md",
-          adapter: "claude-code",
-          target: "claude-code",
-          harnessName: "test",
-          slot: "operational",
-          detail: "CLAUDE.md is missing.",
-        } as never,
-      },
-    ]);
-    render(
-      <MemoryRouter initialEntries={["/machine?drift=1&harness=claude-code"]}>
-        <MachinePage />
-      </MemoryRouter>,
-    );
-    await screen.findByTestId("drift-view");
-    expect(await screen.findByText("Showing drift for Claude Code.")).toBeInTheDocument();
-  });
+    it("closes the row drawer when switching to Drift", async () => {
+      renderAt("/machine");
+      await screen.findByTestId("machine-grid");
+      fireEvent.click(screen.getByTestId("machine-row-mcp-server:postgres"));
+      expect(await screen.findByTestId("machine-row-drawer")).toBeInTheDocument();
 
-  it("mounts Drift when the section is opened", async () => {
-    renderPage();
-    await screen.findByTestId("machine-grid");
-    fireEvent.click(screen.getByRole("button", { name: /Drift from harness.yaml/ }));
-    // Embedded, so Drift contributes no second <h1> and no nested page
-    // container — its subtitle is what identifies it here.
-    expect(await screen.findByTestId("drift-view")).toBeInTheDocument();
-    expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
-    expect(document.querySelectorAll(".hk-page .hk-page")).toHaveLength(0);
+      fireEvent.click(within(viewToggle()).getByRole("button", { name: "Drift vs harness.yaml" }));
+      await screen.findByTestId("drift-view");
+      expect(screen.queryByTestId("machine-row-drawer")).not.toBeInTheDocument();
+
+      // Coming back does not reopen it.
+      fireEvent.click(within(viewToggle()).getByRole("button", { name: "Resources" }));
+      await screen.findByTestId("machine-grid");
+      expect(screen.queryByTestId("machine-row-drawer")).not.toBeInTheDocument();
+    });
+
+    it("offers Drift when the machine scan fails", async () => {
+      vi.mocked(buildMachineInventory).mockRejectedValue(new Error("boom"));
+      renderAt("/machine?view=drift");
+      expect(await screen.findByTestId("drift-view")).toBeInTheDocument();
+      await screen.findByText(/Scan failed/);
+      expect(within(viewToggle()).getByRole("button", { name: "Drift vs harness.yaml" })).toHaveAttribute(
+        "aria-pressed",
+        "true",
+      );
+    });
   });
 
   it("derives totals from the inventory rows/gaps/diffs, not resourceCount", async () => {
@@ -643,10 +684,10 @@ describe("MachinePage", () => {
     await screen.findByTestId("machine-grid");
 
     // resourceCount is 99 on every surface — if totals used it, these fail.
-    expect(screen.getByText("Resources").parentElement).toHaveTextContent("Resources3");
-    expect(screen.getByText("Gaps").parentElement).toHaveTextContent("Gaps1");
-    expect(screen.getByText("Differs").parentElement).toHaveTextContent("Differs1");
-    expect(screen.getByText("Surfaces detected").parentElement).toHaveTextContent("4/11");
+    expect(stripCell("Resources")).toHaveTextContent("Resources3");
+    expect(stripCell("Gaps")).toHaveTextContent("Gaps1");
+    expect(stripCell("Differs")).toHaveTextContent("Differs1");
+    expect(stripCell("Surfaces detected")).toHaveTextContent("4/11");
     expect(screen.queryByText("99")).not.toBeInTheDocument();
   });
 
@@ -724,7 +765,7 @@ describe("MachinePage", () => {
 
     it("reads the filter from the URL and keeps other params when toggling", async () => {
       render(
-        <MemoryRouter initialEntries={["/machine?drift=1&filter=gaps"]}>
+        <MemoryRouter initialEntries={["/machine?harness=claude-code&filter=gaps"]}>
           <MachinePage />
           <LocationProbe />
         </MemoryRouter>,
@@ -736,7 +777,7 @@ describe("MachinePage", () => {
       fireEvent.click(screen.getByRole("button", { name: /Gaps/ }));
       await waitFor(() => expect(gridRowKeys()).toHaveLength(3));
       let search = new URLSearchParams(screen.getByTestId("location-search").textContent ?? "");
-      expect(search.get("drift")).toBe("1");
+      expect(search.get("harness")).toBe("claude-code");
       expect(search.has("filter")).toBe(false);
 
       fireEvent.click(screen.getByRole("button", { name: /Differs/ }));
@@ -744,7 +785,7 @@ describe("MachinePage", () => {
         search = new URLSearchParams(screen.getByTestId("location-search").textContent ?? "");
         expect(search.get("filter")).toBe("differs");
       });
-      expect(search.get("drift")).toBe("1");
+      expect(search.get("harness")).toBe("claude-code");
     });
 
     it("closes the drawer when its row is filtered out", async () => {
@@ -799,9 +840,11 @@ describe("MachinePage", () => {
       expect(stripCell("Gaps")).toHaveTextContent("Gaps0");
       expect(screen.queryByRole("button", { name: /Gaps/ })).not.toBeInTheDocument();
       expect(stripCell("Gaps").tagName).toBe("DIV");
-      // Resources and Surfaces detected are never filters.
-      expect(screen.queryByRole("button", { name: /Resources/ })).not.toBeInTheDocument();
-      expect(screen.queryByRole("button", { name: /Surfaces detected/ })).not.toBeInTheDocument();
+      // Resources and Surfaces detected are never filters. (The view
+      // toggle's "Resources" option is a button, outside the strip.)
+      const strip = screen.getByRole("group", { name: "Summary" });
+      expect(within(strip).queryByRole("button", { name: /Resources/ })).not.toBeInTheDocument();
+      expect(within(strip).queryByRole("button", { name: /Surfaces detected/ })).not.toBeInTheDocument();
     });
   });
 

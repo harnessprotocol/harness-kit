@@ -79,6 +79,38 @@ export function withFilter(searchParams: URLSearchParams, filter: MachineFilter)
   return next;
 }
 
+/**
+ * What Machine shows under the strip (spec AC-18, design D6): the surface
+ * grid, or Drift against harness.yaml.
+ */
+export type MachineView = "grid" | "drift";
+
+/**
+ * `?view=drift` selects Drift; `?view=grid`, no param or anything else is the
+ * grid. The legacy `?drift=1` (links and redirects from before the view
+ * existed) still selects Drift unless an explicit `view` says otherwise.
+ */
+export function viewOf(searchParams: URLSearchParams): MachineView {
+  const value = searchParams.get("view");
+  if (value === "drift") return "drift";
+  if (value === "grid") return "grid";
+  return searchParams.get("drift") === "1" ? "drift" : "grid";
+}
+
+/**
+ * A copy of `searchParams` with the view set, or removed for the default
+ * grid. Every other param is kept (`harness=` filters Drift, `filter=` the
+ * grid), except the legacy `drift=1`, which `view` replaces: left behind it
+ * would select Drift again once `view` is removed.
+ */
+export function withView(searchParams: URLSearchParams, view: MachineView): URLSearchParams {
+  const next = new URLSearchParams(searchParams);
+  next.delete("drift");
+  if (view === "grid") next.delete("view");
+  else next.set("view", view);
+  return next;
+}
+
 /** The rows the filter keeps: those with at least one cell of the filter's variant. */
 export function filterRows(
   rows: GridRow[],
@@ -90,6 +122,18 @@ export function filterRows(
   return rows.filter((row) => Object.values(variants.get(row.key) ?? {}).includes(wanted));
 }
 
+/** The strip's Drift cell: whether the Drift view is showing, and its last count. */
+export interface DriftCellState {
+  active: boolean;
+  /**
+   * Drift items from the last scan Drift itself ran in this visit to Machine,
+   * or null before one. Machine never scans for drift on its own: the scan
+   * asks for project-directory access, which only opening Drift may do.
+   */
+  count: number | null;
+  onSelect: () => void;
+}
+
 /**
  * The Machine summary strip. Gaps and Differs count ROWS with at least one
  * such chip, the unit the filter reveals; `inventory.diffs` is pairwise and
@@ -97,12 +141,17 @@ export function filterRows(
  * active cell stays a pressed button even at zero (a stale ?filter= link, or
  * a rescan that closed every gap), so the empty grid has a visible cause and
  * a way back.
+ *
+ * With `drift`, a "Drift vs harness.yaml" cell selects the Drift view. It is
+ * always a button, since Drift is reachable whatever its count, and reads "—"
+ * until Drift has scanned: not "…", which would claim a scan is running.
  */
 export function machineSummaryCells(
   inventory: MachineInventory,
   variants: Map<string, Record<SurfaceId, CellVariant>>,
   filter: MachineFilter,
   onFilterChange: (filter: MachineFilter) => void,
+  drift?: DriftCellState,
 ): SummaryCell[] {
   const filterCell = (id: "gaps" | "differs", label: string): SummaryCell => {
     const count = filterRows(inventory.rows, variants, id).length;
@@ -121,6 +170,19 @@ export function machineSummaryCells(
     { id: "rows", label: "Resources", value: String(inventory.rows.length) },
     filterCell("gaps", "Gaps"),
     filterCell("differs", "Differs"),
+    ...(drift
+      ? [
+          {
+            id: "drift",
+            label: "Drift vs harness.yaml",
+            value: drift.count === null ? "—" : String(drift.count),
+            valueLabel: drift.count === null ? "not scanned" : undefined,
+            tone: drift.count !== null && drift.count > 0 ? ("warning" as const) : ("default" as const),
+            active: drift.active,
+            onSelect: drift.onSelect,
+          },
+        ]
+      : []),
     {
       id: "detected",
       label: "Surfaces detected",

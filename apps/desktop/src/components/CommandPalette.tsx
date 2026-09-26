@@ -34,7 +34,7 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
     const list: Command[] = [];
     list.push({ id: "toggle-theme", label: "Toggle light / dark theme", group: "Actions", run: () => { toggleTheme(); onClose(); } });
     list.push({ id: "nav-settings", label: "Go to Settings", group: "Navigate", run: go(SETTINGS.path) });
-    list.push({ id: "open-drift", label: "Open Drift vs harness.yaml", group: "Navigate", run: go("/machine?drift=1") });
+    list.push({ id: "open-drift", label: "Open Drift vs harness.yaml", group: "Navigate", run: go("/machine?view=drift") });
     for (const s of sections) {
       list.push({ id: `nav-${s.id}`, label: `Go to ${s.label}`, group: "Navigate", run: go(s.path) });
       for (const c of s.children ?? []) {

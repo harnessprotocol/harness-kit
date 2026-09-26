@@ -9,7 +9,7 @@ function Probe() {
 }
 
 describe("DriftRedirect", () => {
-  it("lands on Machine with drift=1 and keeps the harness filter", () => {
+  it("lands on Machine's Drift view and keeps the harness filter", () => {
     render(
       <MemoryRouter initialEntries={["/drift?harness=claude-code"]}>
         <Routes>
@@ -18,10 +18,10 @@ describe("DriftRedirect", () => {
         </Routes>
       </MemoryRouter>,
     );
-    expect(screen.getByTestId("probe").textContent).toBe("/machine?harness=claude-code&drift=1");
+    expect(screen.getByTestId("probe").textContent).toBe("/machine?harness=claude-code&view=drift");
   });
 
-  it("adds drift=1 when there is no query at all", () => {
+  it("selects the Drift view when there is no query at all", () => {
     render(
       <MemoryRouter initialEntries={["/drift"]}>
         <Routes>
@@ -30,6 +30,6 @@ describe("DriftRedirect", () => {
         </Routes>
       </MemoryRouter>,
     );
-    expect(screen.getByTestId("probe").textContent).toBe("/machine?drift=1");
+    expect(screen.getByTestId("probe").textContent).toBe("/machine?view=drift");
   });
 });

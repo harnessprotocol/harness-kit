@@ -71,11 +71,11 @@ test.describe("Navigation smoke tests", () => {
     await expect(appPage.getByRole("heading", { name: "Permissions" })).toBeVisible();
   });
 
-  // AC-37: /drift redirects into the Machine view's Drift section.
-  test("legacy /drift route lands on Machine with Drift open", async ({ appPage }) => {
+  // AC-37 / AC-18: /drift redirects to Machine's Drift view.
+  test("legacy /drift route lands on Machine's Drift view", async ({ appPage }) => {
     await appPage.goto("/drift");
     await appPage.waitForLoadState("networkidle");
-    expect(appPage.url()).toContain("/machine");
+    expect(appPage.url()).toContain("/machine?view=drift");
     await expect(appPage.getByTestId("drift-view")).toBeVisible();
     const text = await appPage.locator("body").textContent();
     expect(text).not.toContain("command not found");
@@ -104,23 +104,43 @@ test.describe("Harness File page — content validation", () => {
   });
 });
 
-test.describe("Drift inside the Machine view — content validation", () => {
-  test("renders the drift section, with Machine keeping the only page heading", async ({
+test.describe("Drift as a view of Machine — content validation", () => {
+  test("renders the Drift view in place of the grid, with Machine keeping the only page heading", async ({
     appPage,
   }) => {
     await appPage.goto("/drift");
     await appPage.waitForLoadState("networkidle");
-    await expect(appPage.getByTestId("machine-drift-section")).toBeVisible();
+    await expect(appPage.getByTestId("machine-drift-view")).toBeVisible();
     await expect(appPage.getByTestId("drift-view")).toBeVisible();
+    await expect(appPage.getByTestId("machine-grid")).toHaveCount(0);
     // Embedded: Drift contributes no second document-level heading.
     await expect(appPage.getByRole("heading", { level: 1 })).toHaveCount(1);
   });
 
-  test("the section stays closed when Machine is opened directly", async ({ appPage }) => {
+  test("Machine opened directly shows the grid view and does not mount Drift", async ({ appPage }) => {
     await appPage.goto("/machine");
     await appPage.waitForLoadState("networkidle");
-    await expect(appPage.getByTestId("machine-drift-section")).toBeVisible();
+    const toggle = appPage.getByRole("group", { name: "Machine view" });
+    await expect(toggle.getByRole("button", { name: "Resources" })).toHaveAttribute("aria-pressed", "true");
     await expect(appPage.getByTestId("drift-view")).toHaveCount(0);
+  });
+
+  test("the view toggle switches between the grid and Drift", async ({ appPage }) => {
+    await appPage.goto("/machine");
+    await appPage.waitForLoadState("networkidle");
+    const toggle = appPage.getByRole("group", { name: "Machine view" });
+    await toggle.getByRole("button", { name: "Drift vs harness.yaml" }).click();
+    await expect(appPage.getByTestId("drift-view")).toBeVisible();
+    expect(appPage.url()).toContain("view=drift");
+    await toggle.getByRole("button", { name: "Resources" }).click();
+    await expect(appPage.getByTestId("drift-view")).toHaveCount(0);
+    expect(appPage.url()).not.toContain("view=drift");
+  });
+
+  test("the legacy ?drift=1 still lands on the Drift view", async ({ appPage }) => {
+    await appPage.goto("/machine?drift=1");
+    await appPage.waitForLoadState("networkidle");
+    await expect(appPage.getByTestId("drift-view")).toBeVisible();
   });
 });
 

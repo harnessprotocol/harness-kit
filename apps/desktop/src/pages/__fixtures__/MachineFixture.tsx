@@ -1,21 +1,38 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import type { GridRow } from "@harness-kit/core";
 import { MachineGrid } from "../machine/MachineGrid";
 import { MachineSummary, useMachineFilter } from "../machine/MachineSummary";
+import { MachineViewToggle } from "../machine/MachineViewToggle";
+import { viewOf, withView, type MachineView } from "../machine/machine-view-model";
 import { RowDrawer } from "../machine/RowDrawer";
+import { DriftView } from "../drift/DriftView";
+import { DRIFT_FIXTURE_ENTRIES } from "./drift-fixture-data";
 import { MACHINE_FIXTURE_INVENTORY } from "./machine-fixture-data";
 
 /**
  * Dev-only screenshot harness for the Machine grid — renders the grid,
  * totals strip, and row drawer with static fixture data so Playwright can
- * capture layout/CSS without a live Tauri/core backend. Not linked from any
- * nav; reachable only by direct URL, and only in dev builds (see App.tsx).
+ * capture layout/CSS without a live Tauri/core backend. `?view=drift` shows
+ * the Drift view instead, from the Drift fixture's entries (the strip's
+ * Drift cell counts them, as if Drift had scanned). Not linked from any nav;
+ * reachable only by direct URL, and only in dev builds (see App.tsx).
  */
 export default function MachineFixture() {
   const inventory = MACHINE_FIXTURE_INVENTORY;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const view = viewOf(searchParams);
+  const setView = useCallback(
+    (next: MachineView) => setSearchParams((current) => withView(current, next)),
+    [setSearchParams],
+  );
   const [selectedRow, setSelectedRow] = useState<GridRow | null>(
     inventory.rows.find((row) => row.key === "mcp-server:github") ?? null,
   );
+  useEffect(() => {
+    if (view === "drift") setSelectedRow(null);
+  }, [view]);
+  const drawerRow = view === "grid" ? selectedRow : null;
 
   const clearSelection = useCallback(() => setSelectedRow(null), []);
   const { filter, setFilter, variants, shownRows } = useMachineFilter(
@@ -25,7 +42,7 @@ export default function MachineFixture() {
   );
 
   return (
-    <div className="hk-page" data-drawer-open={selectedRow ? "" : undefined}>
+    <div className="hk-page" data-drawer-open={drawerRow ? "" : undefined}>
       <div className="hk-page-head">
         <div>
           <h1 className="hk-page-title">Machine</h1>
@@ -37,22 +54,52 @@ export default function MachineFixture() {
       <MachineSummary
         inventory={inventory}
         variants={variants}
-        filter={filter}
+        filter={view === "grid" ? filter : "all"}
         shownCount={shownRows.length}
         onFilterChange={setFilter}
-      />
-      <div style={{ marginTop: 20 }}>
-        <MachineGrid
-          inventory={{ ...inventory, rows: shownRows }}
-          variants={variants}
-          selectedRowKey={selectedRow?.key ?? null}
-          onRowClick={(row) => setSelectedRow(row)}
-        />
-      </div>
-      {selectedRow && (
+        drift={{
+          active: view === "drift",
+          count: DRIFT_FIXTURE_ENTRIES.length,
+          onSelect: () => setView(view === "drift" ? "grid" : "drift"),
+        }}
+      >
+        <MachineViewToggle view={view} onChange={setView} />
+      </MachineSummary>
+      {view === "drift" ? (
+        <section style={{ marginTop: 20 }} data-testid="machine-drift-view" aria-label="Drift vs harness.yaml">
+          <DriftView
+            embedded
+            entries={DRIFT_FIXTURE_ENTRIES}
+            filteredEntries={DRIFT_FIXTURE_ENTRIES}
+            acknowledged={new Set()}
+            loading={false}
+            error={null}
+            harnessFilter={null}
+            showAcknowledged={false}
+            toasts={[]}
+            onToggleShowAcknowledged={() => {}}
+            onFixAll={() => {}}
+            onFixOne={() => {}}
+            onAcknowledge={() => {}}
+            onUnacknowledge={() => {}}
+            onRescan={() => {}}
+            onDismissToast={() => {}}
+          />
+        </section>
+      ) : (
+        <div style={{ marginTop: 20 }}>
+          <MachineGrid
+            inventory={{ ...inventory, rows: shownRows }}
+            variants={variants}
+            selectedRowKey={selectedRow?.key ?? null}
+            onRowClick={(row) => setSelectedRow(row)}
+          />
+        </div>
+      )}
+      {drawerRow && (
         <RowDrawer
-          row={selectedRow}
-          diffs={inventory.diffs.filter((diff) => diff.row === selectedRow.key)}
+          row={drawerRow}
+          diffs={inventory.diffs.filter((diff) => diff.row === drawerRow.key)}
           gaps={inventory.gaps}
           surfaceOrder={inventory.surfaces.map((surface) => surface.id)}
           onClose={() => setSelectedRow(null)}
