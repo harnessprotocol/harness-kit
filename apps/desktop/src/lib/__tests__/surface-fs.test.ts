@@ -39,17 +39,30 @@ const { TauriSurfaceFsProvider } = await import("../surface-fs");
 
 const HOME = "/home/user";
 
+const sha256 = async (text: string) =>
+  Array.from(
+    new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text))),
+    (byte) => byte.toString(16).padStart(2, "0"),
+  ).join("");
+
 /** The Rust command's rule, reduced: an exact declared file, or under .harness/. */
 function fakeRust(declared: string[]) {
   invoke.mockImplementation(
     async (
       command: string,
-      args: { files: { relativePath: string; content: string | null }[] },
+      args: { files: { relativePath: string; content: string | null; expectedSha256?: string }[] },
     ) => {
       if (command !== "apply_surface_transaction") throw new Error(`unexpected command ${command}`);
       for (const file of args.files) {
         const allowed = declared.includes(file.relativePath) || file.relativePath.startsWith(".harness/");
         if (!allowed) throw new Error(`Refusing to write '${file.relativePath}': not a config store`);
+        if (file.expectedSha256 !== undefined) {
+          const current = files.get(`${HOME}/${file.relativePath}`);
+          const actual = current === undefined ? "absent" : await sha256(current);
+          if (actual !== file.expectedSha256) {
+            throw new Error(`Refusing to write '${file.relativePath}': it changed on disk since it was read`);
+          }
+        }
       }
       for (const file of args.files) {
         if (file.content === null) files.delete(`${HOME}/${file.relativePath}`);
@@ -115,19 +128,17 @@ describe("TauriSurfaceFsProvider", () => {
     );
 
     expect(result.committed).toBe(false);
+    expect(result.error).not.toContain("rollback failures");
     expect(result.rolledBack).toContain(".claude.json");
     expect(files.get(`${HOME}/.claude.json`)).toBe("before");
     expect(files.get(`${HOME}/.cursor/mcp.json`)).toBe("cursor-before");
   });
 
   it("turns the engine's `replaces` into the command's expectedSha256", async () => {
-    fakeRust([".claude.json"]);
+    // Only what is SENT is under test here, so no fake enforcing it.
+    invoke.mockResolvedValue([]);
     const provider = new TauriSurfaceFsProvider(HOME);
-    const sha = async (text: string) =>
-      Array.from(
-        new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text))),
-        (byte) => byte.toString(16).padStart(2, "0"),
-      ).join("");
+    const sha = sha256;
 
     await provider.atomicWriteFile(`${HOME}/.claude.json`, "new", { replaces: "old" });
     await provider.atomicWriteFile(`${HOME}/.claude.json`, "new", { replaces: null });
@@ -135,6 +146,41 @@ describe("TauriSurfaceFsProvider", () => {
 
     const sent = invoke.mock.calls.map(([, args]) => args.files[0].expectedSha256);
     expect(sent).toEqual([await sha("old"), "absent", undefined]);
+  });
+
+  it("does not roll back over a file that changed after the forward write", async () => {
+    // The rollback carries `replaces: after`, so Claude Code rewriting the
+    // store between the forward write and a later failure is refused, not
+    // overwritten. The engine reports it instead of clobbering.
+    files.set(`${HOME}/.claude.json`, "before");
+    files.set(`${HOME}/.cursor/mcp.json`, "cursor-before");
+    fakeRust([".claude.json", ".cursor/mcp.json"]);
+    const rust = invoke.getMockImplementation()!;
+    invoke.mockImplementation(async (command: string, args: { files: { relativePath: string; content: string | null }[] }) => {
+      const [file] = args.files;
+      if (file?.relativePath === ".cursor/mcp.json" && file.content === "cursor-after") {
+        // Someone else edits the first store, then this write fails.
+        files.set(`${HOME}/.claude.json`, "edited by someone else");
+        throw new Error("disk full");
+      }
+      return rust(command, args);
+    });
+
+    const result = await applyFileTransaction(
+      [
+        { root: "home", path: ".claude.json", before: "before", after: "after" },
+        { root: "home", path: ".cursor/mcp.json", before: "cursor-before", after: "cursor-after" },
+      ],
+      {
+        fs: new TauriSurfaceFsProvider(HOME),
+        timestamp: "2026-09-26T00-00-02-000Z-app",
+        roots: { home: { absolutePath: HOME } },
+      },
+    );
+
+    expect(result.committed).toBe(false);
+    expect(result.error).toContain("rollback failures");
+    expect(files.get(`${HOME}/.claude.json`)).toBe("edited by someone else");
   });
 
   it("refuses to emulate a rename", async () => {

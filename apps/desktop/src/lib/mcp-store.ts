@@ -246,6 +246,9 @@ export async function writeMcpServers(
     );
   }
   const next = update({ ...current });
+  // Nothing to change (a Raw JSON save with no edits): no backup, manifest or
+  // rollback entry for a write that would leave the file as it is.
+  if (raw !== null && JSON.stringify(next) === JSON.stringify(current)) return {};
   // Keep the file's trailing-newline choice; a new file gets one.
   const content = `${JSON.stringify({ ...doc, [location.rootKey]: next }, null, 2)}${
     raw === null || raw.endsWith("\n") ? "\n" : ""
@@ -269,11 +272,11 @@ export async function writeMcpServers(
     });
   } catch (error) {
     // The engine refuses before touching anything (path, precondition).
-    throw classifyWriteFailure(location, rawMessage(error));
+    throw await classifyWriteFailure(location, raw, rawMessage(error));
   }
   if (!result.committed) {
-    // Already rolled back by the engine; the message says why it stopped.
-    throw classifyWriteFailure(location, result.error ?? "the transaction did not commit");
+    // The engine rolled back (or tried to); the message says why it stopped.
+    throw await classifyWriteFailure(location, raw, result.error ?? "the transaction did not commit");
   }
 
   const changed = Object.keys({ ...current, ...next }).filter(
@@ -295,9 +298,41 @@ export async function writeMcpServers(
   return outcome.error ? { ledgerError: outcome.error } : {};
 }
 
-/** A stale file is a conflict the user can retry; anything else is a failed save. */
-function classifyWriteFailure(location: McpStoreLocation, detail: string): McpStoreError {
+/**
+ * Say what actually went wrong. A stale file is a conflict the user can
+ * retry; anything else is a failed save. Two lookalikes are not conflicts:
+ *
+ * - The engine could not put the file back after a failed write ("rollback
+ *   failures"). The file may hold the new content, and "reload and try
+ *   again" would hide that. The backup is on disk.
+ * - Rust refused the hash although the file has not changed since it was
+ *   read: the fs plugin decodes text (dropping a byte-order mark, replacing
+ *   invalid bytes), so the hash of the decoded text never matches those
+ *   bytes, and every retry would fail the same way.
+ */
+async function classifyWriteFailure(
+  location: McpStoreLocation,
+  readText: string | null,
+  detail: string,
+): Promise<McpStoreError> {
+  if (detail.includes("rollback failures")) {
+    return new McpStoreError(
+      `Saving ${location.displayPath} failed partway and the previous version could not be restored automatically. Check the file; a copy of it is in ~/.harness/backups.`,
+      "write",
+      detail,
+    );
+  }
   if (detail.includes(CHANGED_ON_DISK) || detail.includes("transaction precondition failed")) {
+    if (detail.includes(CHANGED_ON_DISK)) {
+      const unchanged = await readRaw(location).then((now) => now === readText, () => false);
+      if (unchanged) {
+        return new McpStoreError(
+          `${location.displayPath} isn't plain UTF-8 text (it may start with a byte-order mark or hold invalid bytes), so it can't be saved from here.`,
+          "write",
+          detail,
+        );
+      }
+    }
     return new McpStoreError(
       `${location.displayPath} changed while you were editing. Reload and try again.`,
       "conflict",

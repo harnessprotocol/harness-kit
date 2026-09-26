@@ -54,12 +54,14 @@ pub(crate) fn is_declared_store(relative: &str) -> bool {
     let normalized = relative.replace('\\', "/");
     // Every segment must be a real name. This one check rejects the empty
     // path, an absolute path (leading "/"), "//", traversal, and a trailing "/"
-    // or "." — the last two matter because ".claude/skills/" and ".harness/."
+    // or "." (and a NUL byte, which no real path holds) — the trailing two
+    // matter because ".claude/skills/" and ".harness/."
     // pass the prefix checks below yet name the DIRECTORY, and the write would
     // create a regular file where the directory belongs.
     if normalized
         .split('/')
         .any(|segment| segment.is_empty() || segment == "." || segment == "..")
+        || normalized.contains('\0')
     {
         return false;
     }
@@ -205,6 +207,15 @@ fn apply_surface_transaction_in(
         }
     }
 
+    // A file the owner cannot write is one the user locked. An in-place write
+    // failed on it; rename and unlink only need the directory to be writable,
+    // so without this both would override the lock. Checked here, with the
+    // other refusals, so a locked file anywhere in a batch writes nothing and
+    // creates no directories.
+    for target in &targets {
+        refuse_read_only(&target.dest, &target.relative)?;
+    }
+
     let mut written: Vec<String> = Vec::new();
     for target in targets {
         let outcome = match &target.content {
@@ -241,6 +252,14 @@ fn sha256_hex(bytes: &[u8]) -> String {
 
 /// The file's current digest, or the absent sentinel when there is no file.
 fn current_digest(dest: &Path) -> Result<String, String> {
+    // Only a regular file is hashed. Reading a FIFO planted at a store path
+    // would block the command forever.
+    match fs::symlink_metadata(dest) {
+        Ok(meta) if !meta.is_file() => {
+            return Err(format!("{} is not a regular file", dest.display()));
+        }
+        _ => {}
+    }
     match fs::read(dest) {
         Ok(bytes) => Ok(sha256_hex(&bytes)),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
@@ -316,8 +335,9 @@ fn create_temp(dest: &Path) -> Result<(PathBuf, fs::File), String> {
 /// So a hardlink to `dest` is severed (which also defuses a planted one),
 /// ownership, ACLs and xattrs are reset to the current user's, and the
 /// containing directory must be writable, which an in-place write did not
-/// need. That last point is why an owner-read-only destination is refused up
-/// front: rename would otherwise quietly override a deliberate chmod 0400.
+/// need. That last point is why an owner-read-only destination is refused
+/// (`refuse_read_only`, in the validation pass, before anything is written):
+/// rename would otherwise quietly override a deliberate chmod 0400.
 ///
 /// Files under `.harness/` are always 0600 and the directories created for
 /// them 0700. Existing directories are left as they are.
@@ -346,17 +366,11 @@ fn write_atomically(
     let mode = {
         use std::os::unix::fs::PermissionsExt;
         match fs::symlink_metadata(dest) {
+            // HarnessKit's own files: always private, even when replacing an
+            // older backup or manifest that an earlier build left looser (or
+            // read-only). The read-only refusal does not apply to them.
             _ if is_state_path(relative) => 0o600,
-            Ok(meta) if meta.is_file() => {
-                let mode = meta.permissions().mode() & 0o777;
-                if mode & 0o200 == 0 {
-                    return Err(format!(
-                        "Refusing to write '{}': the file is read-only",
-                        relative
-                    ));
-                }
-                mode
-            }
+            Ok(meta) if meta.is_file() => meta.permissions().mode() & 0o777,
             _ => 0o600,
         }
     };
@@ -403,6 +417,26 @@ fn sync_directory(directory: &Path) -> std::io::Result<()> {
 
 #[cfg(not(unix))]
 fn sync_directory(_directory: &Path) -> std::io::Result<()> {
+    Ok(())
+}
+
+fn refuse_read_only(dest: &Path, relative: &str) -> Result<(), String> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if !is_state_path(relative) {
+            if let Ok(meta) = fs::symlink_metadata(dest) {
+                if meta.is_file() && meta.permissions().mode() & 0o200 == 0 {
+                    return Err(format!(
+                        "Refusing to write '{}': the file is read-only",
+                        relative
+                    ));
+                }
+            }
+        }
+    }
+    #[cfg(not(unix))]
+    let _ = (dest, relative);
     Ok(())
 }
 
@@ -498,7 +532,18 @@ mod tests {
     #[test]
     fn a_directory_shaped_path_is_refused_not_written_as_a_file() {
         let home = tempfile::TempDir::new().unwrap();
-        for path in [".claude/skills/", ".harness/", ".harness/.", ".claude//skills/x", ".claude/./skills/x"] {
+        for path in [
+            ".claude/skills/",
+            ".harness/",
+            ".harness/.",
+            ".claude//skills/x",
+            ".claude/./skills/x",
+            ".harness//x",
+            ".harness/./x",
+            ".harness/a/./b",
+            ".claude.json/",
+            ".claude/skills/x\0y",
+        ] {
             assert!(!is_declared_store(path), "{} should be rejected", path);
             assert!(apply_surface_transaction_in(home.path(), vec![write_plain(path)]).is_err());
         }
@@ -798,7 +843,9 @@ mod tests {
 
     #[test]
     fn a_caller_supplied_temp_path_is_still_refused() {
-        // The webview must never need, or get, an allowance for temp paths.
+        // A temp-shaped suffix on a declared store is not the store. (A path
+        // BENEATH a declared directory is allowed whatever it is called, so
+        // this says nothing about names inside skills directories.)
         let home = TempDir::new().unwrap();
         for path in [".claude.json.harness-tmp-2026-09-26-0", ".claude.json.hk-tmp-abc"] {
             let err = apply_surface_transaction_in(home.path(), vec![write(path, "x")]).unwrap_err();
@@ -896,5 +943,60 @@ mod tests {
         .unwrap_err();
         assert!(err.contains("symbolic link"), "got: {}", err);
         assert!(fs::read_dir(outside.path()).unwrap().next().is_none());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_locked_file_anywhere_in_a_batch_writes_nothing_and_creates_no_directory() {
+        use std::os::unix::fs::PermissionsExt;
+        let home = TempDir::new().unwrap();
+        let locked = home.path().join(".claude.json");
+        fs::write(&locked, "locked").unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o400)).unwrap();
+
+        let err = apply_surface_transaction_in(
+            home.path(),
+            vec![write(".codex/config.toml", "x = 1\n"), write(".claude.json", "{}")],
+        )
+        .unwrap_err();
+        assert!(err.contains("read-only"), "got: {}", err);
+        assert!(!home.path().join(".codex").exists(), "the good file must not be written");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_locked_file_is_not_deleted_either() {
+        use std::os::unix::fs::PermissionsExt;
+        let home = TempDir::new().unwrap();
+        let locked = home.path().join(".claude.json");
+        fs::write(&locked, "locked").unwrap();
+        fs::set_permissions(&locked, fs::Permissions::from_mode(0o400)).unwrap();
+        let err = apply_surface_transaction_in(
+            home.path(),
+            vec![SurfaceFileWrite {
+                relative_path: ".claude.json".to_string(),
+                content: None,
+                expected_sha256: None,
+            }],
+        )
+        .unwrap_err();
+        assert!(err.contains("read-only"), "got: {}", err);
+        assert!(locked.exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_precondition_on_a_non_regular_file_errors_instead_of_hanging() {
+        // A FIFO at a store path would block fs::read forever; any non-regular
+        // file must be refused before the read. A directory stands in for it
+        // here, since creating a FIFO needs libc.
+        let home = TempDir::new().unwrap();
+        fs::create_dir(home.path().join(".claude.json")).unwrap();
+        let err = apply_surface_transaction_in(
+            home.path(),
+            vec![write_expecting(".claude.json", "{}", ABSENT_SENTINEL)],
+        )
+        .unwrap_err();
+        assert!(err.contains("not a regular file"), "got: {}", err);
     }
 }

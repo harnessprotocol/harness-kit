@@ -413,6 +413,9 @@ describe("McpServersPage", () => {
     const rust = rustCommand;
     mockInvoke.mockImplementation(async (command: string, args: WriteArgs) => {
       if (args.files?.some((file) => file.relativePath === ".claude.json")) {
+        // ...and it really did change, so this is a conflict and not a file
+        // the page can never save.
+        files.set(`${HOME}/.claude.json`, JSON.stringify({ numStartups: 9, mcpServers: { github: STDIO } }));
         throw "Refusing to write '.claude.json': it changed on disk since it was read (expected aa, found bb)";
       }
       return rust(command, args);
@@ -538,6 +541,50 @@ describe("writeMcpServers on the transaction engine", () => {
 
     await expect(save((current) => ({ ...current, extra: {} }))).rejects.toMatchObject({ kind: "write" });
     expect(files.get(`${HOME}/.claude.json`)).toBe(original);
+    expect(recorded).toEqual([]);
+  });
+
+  it("writes nothing for a save that changes nothing", async () => {
+    files.set(`${HOME}/.claude.json`, original);
+    const outcome = await save((current) => current);
+    expect(outcome).toEqual({});
+    expect(mockInvoke).not.toHaveBeenCalled();
+    expect(recorded).toEqual([]);
+    expect(files.get(`${HOME}/.claude.json`)).toBe(original);
+  });
+
+  it("does not call an unsaveable file a conflict", async () => {
+    // The plugin's decoded text hashes differently from the bytes on disk
+    // (a BOM, invalid UTF-8), so Rust refuses although nothing moved.
+    files.set(`${HOME}/.claude.json`, original);
+    mockInvoke.mockImplementation(async (command: string, args: WriteArgs) => {
+      if (args.files?.some((file) => file.relativePath === ".claude.json")) {
+        throw "Refusing to write '.claude.json': it changed on disk since it was read (expected aa, found bb)";
+      }
+      return rustCommand(command, args);
+    });
+    await expect(save((current) => ({ ...current, extra: {} }))).rejects.toMatchObject({
+      kind: "write",
+      summary: expect.stringContaining("isn't plain UTF-8"),
+    });
+  });
+
+  it("says so when a failed save could not be undone", async () => {
+    files.set(`${HOME}/.claude.json`, original);
+    // The destination lands, then finalizing fails while another writer has
+    // already replaced the file, so the engine's rollback is refused.
+    mockInvoke.mockImplementation(async (command: string, args: WriteArgs) => {
+      const manifest = args.files?.find((file) => file.relativePath.endsWith("/transaction.json"));
+      if (manifest?.content?.includes('"committed"')) {
+        files.set(`${HOME}/.claude.json`, "someone else's write");
+        throw "disk full";
+      }
+      return rustCommand(command, args);
+    });
+    await expect(save((current) => ({ ...current, extra: {} }))).rejects.toMatchObject({
+      kind: "write",
+      summary: expect.stringContaining("could not be restored automatically"),
+    });
     expect(recorded).toEqual([]);
   });
 });
