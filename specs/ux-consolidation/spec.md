@@ -139,11 +139,11 @@ Format: EARS (`WHEN … THE SYSTEM SHALL …`). Each criterion cites the audit f
 
 Defaults are what the plan assumes until answered. Criteria tagged with the question stay implementable under the default.
 
-- [NEEDS CLARIFICATION: Q1. Comparator: keep it behind Settings › Labs (default) or delete it together with Agents and the resilience profiles? Default: Labs, because the results and voting UI is real.]
-- [NEEDS CLARIFICATION: Q2. Fleet: retire it into Machine (default) or keep it under Profile as a compliance view? Default: retire; its unit (adapter) predates ADR 0002 and both of its click flows are broken.]
+- Q1 (resolved). Comparator stays behind Settings › Labs; it is not deleted with Agents and the resilience profiles. Shipped in Phase 1.
+- Q2 (resolved). Fleet retires into Machine; /fleet redirects. Shipped in Phase 1.
 - [NEEDS CLARIFICATION: Q3. Keep the name "Machine" for the home (default) or rename it ("This computer", "Overview")? Default: keep, with the subtitle doing the explaining.]
 - [NEEDS CLARIFICATION: Q4. Team baseline: git-only, a committed harness.yaml read from a local path first (default), with URL fetch waiting on the signed-definitions transport? Default: yes.]
-- [NEEDS CLARIFICATION: Q5. Should Codex and Cursor get file editors like Claude Code, or is the Machine drawer the only write path to them? Default: drawer only; the group is named "Claude Code" and future surfaces become sibling groups.]
+- Q5 (resolved). The Machine drawer is the only write path to Codex and Cursor. The editor group is named "Claude Code"; future surfaces become sibling groups.
 - [NEEDS CLARIFICATION: Q6. Native menu bar in Phase 4 (default) or earlier?]
 
 ## Dependencies
