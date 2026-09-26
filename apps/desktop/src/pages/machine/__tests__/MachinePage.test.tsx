@@ -927,4 +927,68 @@ describe("MachinePage", () => {
       ),
     );
   });
+
+  it("keeps the row selected after an apply rescans", async () => {
+    const after = makeInventory();
+    after.gaps = [];
+    vi.mocked(buildMachineInventory)
+      .mockResolvedValueOnce(makeInventory() as never)
+      .mockResolvedValueOnce(after as never);
+
+    renderPage();
+    await screen.findByTestId("machine-grid");
+    fireEvent.click(screen.getByTestId("machine-row-mcp-server:postgres"));
+    const drawer = await screen.findByTestId("machine-row-drawer");
+    const apply = within(drawer).getByRole("button", { name: "Apply" });
+    await waitFor(() => expect(apply).toBeEnabled());
+    fireEvent.click(apply);
+
+    await waitFor(() => expect(vi.mocked(buildMachineInventory)).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Refresh" })).toBeEnabled());
+    // Still open, on the same row, now showing the rescanned row: with the
+    // gap gone the drawer offers only the diff target.
+    expect(screen.getByTestId("machine-row-drawer")).toHaveAttribute("aria-label", "postgres details");
+    await waitFor(() =>
+      expect(
+        Array.from((screen.getByLabelText("Target surface") as HTMLSelectElement).options).map(
+          (option) => option.value,
+        ),
+      ).toEqual(["cursor"]),
+    );
+  });
+
+  it("closes the drawer after an apply when the rescan no longer has the row", async () => {
+    const after = makeInventory();
+    after.rows = after.rows.filter((row) => row.key !== "mcp-server:postgres");
+    after.gaps = [];
+    after.diffs = [];
+    vi.mocked(buildMachineInventory)
+      .mockResolvedValueOnce(makeInventory() as never)
+      .mockResolvedValueOnce(after as never);
+
+    renderPage();
+    await screen.findByTestId("machine-grid");
+    fireEvent.click(screen.getByTestId("machine-row-mcp-server:postgres"));
+    const drawer = await screen.findByTestId("machine-row-drawer");
+    const apply = within(drawer).getByRole("button", { name: "Apply" });
+    await waitFor(() => expect(apply).toBeEnabled());
+    fireEvent.click(apply);
+
+    await waitFor(() => expect(vi.mocked(buildMachineInventory)).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByTestId("machine-row-drawer")).not.toBeInTheDocument());
+  });
+
+  it("reserves the drawer's width on the page while a row is selected (AC-19)", async () => {
+    const { container } = renderPage();
+    await screen.findByTestId("machine-grid");
+    const page = container.querySelector(".hk-page")!;
+    expect(page).not.toHaveAttribute("data-drawer-open");
+
+    fireEvent.click(screen.getByTestId("machine-row-skill:reviewer"));
+    await screen.findByTestId("machine-row-drawer");
+    expect(page).toHaveAttribute("data-drawer-open");
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => expect(page).not.toHaveAttribute("data-drawer-open"));
+  });
 });

@@ -25,7 +25,7 @@ export default function MachineFixture() {
   );
 
   return (
-    <div className="hk-page">
+    <div className="hk-page" data-drawer-open={selectedRow ? "" : undefined}>
       <div className="hk-page-head">
         <div>
           <h1 className="hk-page-title">Machine</h1>
@@ -54,6 +54,7 @@ export default function MachineFixture() {
           row={selectedRow}
           diffs={inventory.diffs.filter((diff) => diff.row === selectedRow.key)}
           gaps={inventory.gaps}
+          surfaceOrder={inventory.surfaces.map((surface) => surface.id)}
           onClose={() => setSelectedRow(null)}
         />
       )}

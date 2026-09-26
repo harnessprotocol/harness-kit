@@ -62,14 +62,22 @@ export default function MachinePage() {
   const [showSkipped, setShowSkipped] = useState(false);
   const [projectDegraded, setProjectDegraded] = useState(false);
 
-  const load = useCallback(async (dir: string) => {
+  /**
+   * `keepRowKey` keeps the drawer open across the scan (after an apply): the
+   * selection moves to the new inventory's row with that key, or closes if the
+   * row is gone. Every other caller starts over with nothing selected.
+   */
+  const load = useCallback(async (dir: string, keepRowKey?: string) => {
     setLoading(true);
     setError(null);
-    setSelectedRow(null);
+    if (keepRowKey === undefined) setSelectedRow(null);
     try {
       const result = await loadMachineInventory(dir.trim() ? dir.trim() : null);
       setInventory(result.inventory);
       setProjectDegraded(result.projectDegraded);
+      if (keepRowKey !== undefined) {
+        setSelectedRow(result.inventory.rows.find((row) => row.key === keepRowKey) ?? null);
+      }
     } catch (err) {
       setError(String(err));
     } finally {
@@ -117,7 +125,9 @@ export default function MachinePage() {
   );
 
   return (
-    <div className="hk-page">
+    // AC-19: while the drawer is open the page reserves its width (app.css),
+    // so no grid column sits under it; the grid scrolls instead.
+    <div className="hk-page" data-drawer-open={selectedRow ? "" : undefined}>
       <div className="hk-page-head">
         <div>
           <h1 className="hk-page-title">Machine</h1>
@@ -345,8 +355,9 @@ export default function MachinePage() {
           row={selectedRow}
           diffs={rowDiffs}
           gaps={inventory?.gaps ?? []}
+          surfaceOrder={inventory?.surfaces.map((surface) => surface.id) ?? []}
           onClose={() => setSelectedRow(null)}
-          onApplied={() => load(projectDir)}
+          onApplied={() => load(projectDir, selectedRow.key)}
         />
       )}
     </div>
