@@ -1,8 +1,14 @@
-import { invoke } from "@tauri-apps/api/core";
 import { homeDir } from "@tauri-apps/api/path";
 import { exists, readTextFile } from "@tauri-apps/plugin-fs";
+import {
+  applyFileTransaction,
+  createHomeTransactionRoot,
+  recordAppliedTransaction,
+} from "@harness-kit/core";
 import type { SurfaceDescriptor } from "@harness-kit/core";
 import { resolveDesktopDefinitions } from "./definitions";
+import { TauriSurfaceFsProvider } from "./surface-fs";
+import { TauriTransactionLedger } from "./state-ledger";
 import { detectDesktopPlatform } from "../pages/machine/machine-data";
 
 /**
@@ -45,15 +51,6 @@ export interface McpStoreSnapshot {
   /** The whole servers object as read, both kinds of entry, in file order.
    *  A save refuses if the file's copy no longer matches it. */
   entries: Record<string, unknown>;
-}
-
-/** `expectedSha256` value that tells the Rust write the file must not exist. */
-export const ABSENT_SHA256 = "absent";
-
-/** Lowercase hex SHA-256 of a string's UTF-8 bytes. */
-export async function sha256Hex(text: string): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
-  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 /** The phrase apply_surface_transaction uses when a precondition fails. */
@@ -202,33 +199,43 @@ export async function readMcpStore(location: McpStoreLocation): Promise<McpStore
  * The file is re-serialized with two-space indentation, so formatting outside
  * the servers object can change even though no other value does.
  *
- * What the Rust side guarantees: the write is atomic (temp file, fsync,
- * rename), so nothing ever reads a half-written file, and it carries the
- * SHA-256 of the exact text re-read here as `expectedSha256`, so a write that
- * lands between this re-read and the rename is refused rather than
- * overwritten. Two gaps remain. Rust's own check-then-rename is not a lock,
- * so a writer landing in that microsecond window still loses. And a running
- * Claude Code that later saves from a copy it read before this write will
- * undo it; nothing on this side can see or prevent that.
+ * The write goes through core's transaction engine, like the Machine drawer:
+ * the engine re-verifies the file against what was just read, copies it to
+ * ~/.harness/backups, writes a manifest, and the change is recorded as a
+ * rollback point. The backup is a verbatim copy of ~/.claude.json, MCP env
+ * values included, so the desktop's write command makes it owner-only.
+ *
+ * What the Rust side guarantees: each write is atomic (temp file, fsync,
+ * rename), so nothing ever reads a half-written file, and the write carries
+ * the SHA-256 of the exact text read here (`replaces` on the engine's
+ * provider hook), so a write that lands between that read and the rename is
+ * refused rather than overwritten. Two gaps remain. Rust's own
+ * check-then-rename is not a lock, so a writer landing in that microsecond
+ * window still loses. And a running Claude Code that later saves from a copy
+ * it read before this write will undo it; nothing on this side can see or
+ * prevent that.
  *
  * The hash is of the text as the fs plugin decoded it, re-encoded as UTF-8.
  * For a UTF-8 file without a byte-order mark those are the bytes on disk;
  * for anything else the hashes differ and the save is refused, never
  * forced.
  *
- * The write goes through apply_surface_transaction, which re-checks the path
- * against the registry allowlist compiled into the Rust side. Not core's
- * transaction engine: its temp-file-then-rename step writes
- * `.claude.json.harness-tmp-*`, which that allowlist refuses, and its preimage
- * backup would copy this file (MCP env values included) into a new location.
+ * Every path is still re-checked against the registry allowlist compiled into
+ * the Rust side (apply_surface_transaction), which is the boundary.
  */
+export interface McpWriteOutcome {
+  /** Set when the change applied but could not be recorded as a rollback
+   *  point. The backup is still on disk. */
+  ledgerError?: string;
+}
+
 export async function writeMcpServers(
   location: McpStoreLocation,
   /** The whole servers object as the page loaded it (snapshot.entries). */
   expected: Record<string, unknown>,
   /** Receives the file's current servers object and returns the new one. */
   update: (current: Record<string, unknown>) => Record<string, unknown>,
-): Promise<void> {
+): Promise<McpWriteOutcome> {
   const raw = await readRaw(location);
   const doc = raw === null ? {} : parseDocument(location, raw);
   const { entries: current } = entriesOf(location, doc);
@@ -238,24 +245,64 @@ export async function writeMcpServers(
       "conflict",
     );
   }
+  const next = update({ ...current });
   // Keep the file's trailing-newline choice; a new file gets one.
-  const content = `${JSON.stringify({ ...doc, [location.rootKey]: update({ ...current }) }, null, 2)}${
+  const content = `${JSON.stringify({ ...doc, [location.rootKey]: next }, null, 2)}${
     raw === null || raw.endsWith("\n") ? "\n" : ""
   }`;
-  const expectedSha256 = raw === null ? ABSENT_SHA256 : await sha256Hex(raw);
+
+  const [home, { surfaces }] = await Promise.all([homeDir(), resolveDesktopDefinitions()]);
+  // Namespaced like the drawer's: the CLI mints ids from the same clock and
+  // format, and the ledger upserts on the id.
+  const timestamp = `${new Date().toISOString().replace(/[:.]/g, "-")}-app`;
+  const changes = [
+    { root: "home" as const, path: location.relativePath, before: raw, after: content },
+  ];
+  let result;
   try {
-    await invoke("apply_surface_transaction", {
-      files: [{ relativePath: location.relativePath, content, expectedSha256 }],
+    result = await applyFileTransaction(changes, {
+      fs: new TauriSurfaceFsProvider(home),
+      timestamp,
+      // The allowlist comes from the registry in force, so it admits the path
+      // this page just resolved from that same registry.
+      roots: { home: createHomeTransactionRoot(home, detectDesktopPlatform(), surfaces) },
     });
   } catch (error) {
-    const detail = rawMessage(error);
-    if (detail.includes(CHANGED_ON_DISK)) {
-      throw new McpStoreError(
-        `${location.displayPath} changed while you were editing. Reload and try again.`,
-        "conflict",
-        detail,
-      );
-    }
-    throw new McpStoreError(`Couldn't save ${location.displayPath}.`, "write", detail);
+    // The engine refuses before touching anything (path, precondition).
+    throw classifyWriteFailure(location, rawMessage(error));
   }
+  if (!result.committed) {
+    // Already rolled back by the engine; the message says why it stopped.
+    throw classifyWriteFailure(location, result.error ?? "the transaction did not commit");
+  }
+
+  const changed = Object.keys({ ...current, ...next }).filter(
+    (name) => JSON.stringify(current[name]) !== JSON.stringify(next[name]),
+  );
+  const outcome = await recordAppliedTransaction(
+    result,
+    changes,
+    {
+      transactionId: timestamp,
+      appliedAt: new Date().toISOString(),
+      manifestRoot: home,
+      surfaces: ["claude-code"],
+      kinds: ["mcp-server"],
+      identityKeys: changed.map((name) => `mcp-server:${name.toLowerCase()}`),
+    },
+    new TauriTransactionLedger(),
+  );
+  return outcome.error ? { ledgerError: outcome.error } : {};
+}
+
+/** A stale file is a conflict the user can retry; anything else is a failed save. */
+function classifyWriteFailure(location: McpStoreLocation, detail: string): McpStoreError {
+  if (detail.includes(CHANGED_ON_DISK) || detail.includes("transaction precondition failed")) {
+    return new McpStoreError(
+      `${location.displayPath} changed while you were editing. Reload and try again.`,
+      "conflict",
+      detail,
+    );
+  }
+  return new McpStoreError(`Couldn't save ${location.displayPath}.`, "write", detail);
 }
