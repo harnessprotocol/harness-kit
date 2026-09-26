@@ -1,13 +1,17 @@
 import type { McpServer, McpServerNetwork } from "@harness-kit/core";
 
-// Claude Code's native mcp.json server format (no explicit transport field)
+// Claude Code's native server format. `type` is optional on read (older files
+// omit it) but `claude mcp add` always writes it, and a url entry without it
+// is read as stdio, so the form always writes it.
 export interface ClaudeMcpStdio {
+  type?: "stdio";
   command: string;
   args?: string[];
   env?: Record<string, string>;
 }
 
 export interface ClaudeMcpNetwork {
+  type?: "http" | "sse";
   url: string;
   headers?: Record<string, string>;
 }
@@ -27,6 +31,8 @@ export function isNetworkServer(s: ClaudeMcpServer): s is ClaudeMcpNetwork {
 
 export function inferTransport(server: ClaudeMcpServer): McpTransport {
   if (isNetworkServer(server)) {
+    // An explicit type wins: an SSE endpoint is an https:// URL too.
+    if (server.type === "sse" || server.type === "http") return server.type;
     const url = server.url.toLowerCase();
     if (url.startsWith("http://") || url.startsWith("https://")) return "http";
     return "sse";

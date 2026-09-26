@@ -1,15 +1,27 @@
-import { Suspense, lazy, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
-import { PlugZap } from "lucide-react";
-import { Button, Card, EmptyState } from "@harness-kit/ui";
-import { useFileEditor } from "../../hooks/useFileEditor";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
+import { PlugZap, Pencil, Plus, Trash2 } from "lucide-react";
+import { Button, Card, EmptyState, Modal } from "@harness-kit/ui";
 import EditorToolbar from "../../components/file-explorer/EditorToolbar";
-import { type ClaudeMcpConfig, type ClaudeMcpServer, isNetworkServer, inferTransport } from "../../lib/mcp-types";
+import McpServerForm from "../../components/mcp/McpServerForm";
+import { type ClaudeMcpServer, isNetworkServer, inferTransport } from "../../lib/mcp-types";
 import { lookupMcpServer, getAvatarColor, type McpServerMeta } from "../../lib/mcp-registry";
+import {
+  locateClaudeMcpStore,
+  readMcpStore,
+  writeMcpServers,
+  McpStoreError,
+  type McpStoreLocation,
+  type McpStoreSnapshot,
+} from "../../lib/mcp-store";
 
 const MonacoEditor = lazy(() => import("../../components/plugin-explorer/MonacoEditor"));
 
-const FILE_PATH = "~/.claude/mcp.json";
+const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
+
+/** Keys the form owns. Anything else on an entry (oauth, timeouts, fields a
+ *  newer Claude Code adds) is carried over untouched when the form saves. */
+const FORM_KEYS = ["type", "command", "args", "env", "url", "headers"];
+
 
 // ── Server icon ───────────────────────────────────────────────
 
@@ -132,7 +144,17 @@ function EnvRow({ name, value }: { name: string; value: string }) {
 
 // ── Server card ───────────────────────────────────────────────
 
-function ServerCard({ name, config }: { name: string; config: ClaudeMcpServer }) {
+function ServerCard({
+  name,
+  config,
+  onEdit,
+  onDelete,
+}: {
+  name: string;
+  config: ClaudeMcpServer;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
   const meta = lookupMcpServer(name, config);
   const transport = inferTransport(config);
   const isNetwork = isNetworkServer(config);
@@ -177,6 +199,12 @@ function ServerCard({ name, config }: { name: string; config: ClaudeMcpServer })
           {meta?.sourceUrl && meta.sourceUrl !== meta.docsUrl && (
             <ExternalLink href={meta.sourceUrl}>Source</ExternalLink>
           )}
+          <Button size="sm" onClick={onEdit} aria-label={`Edit ${name}`} title="Edit">
+            <Pencil size={13} strokeWidth={1.7} aria-hidden="true" />
+          </Button>
+          <Button size="sm" onClick={onDelete} aria-label={`Delete ${name}`} title="Delete">
+            <Trash2 size={13} strokeWidth={1.7} aria-hidden="true" />
+          </Button>
         </div>
       </div>
 
@@ -228,131 +256,304 @@ function ServerCard({ name, config }: { name: string; config: ClaudeMcpServer })
   );
 }
 
-// ── Formatted view ────────────────────────────────────────────
 
-function McpFormattedView({ content }: { content: string }) {
-  const { servers, parseError } = useMemo(() => {
-    try {
-      const parsed: ClaudeMcpConfig = JSON.parse(content);
-      return { servers: parsed.mcpServers ?? {}, parseError: null };
-    } catch (e) {
-      return { servers: {}, parseError: String(e) };
-    }
-  }, [content]);
+// ── Error notice (AC-20) ──────────────────────────────────────
 
-  if (parseError) {
-    return (
-      <div style={{ padding: "20px 24px" }}>
-        <Card padding="sm" style={{ color: "var(--danger)", fontSize: "12px" }}>
-          {parseError}
-        </Card>
-      </div>
-    );
-  }
+function toStoreError(error: unknown, fallback: string): McpStoreError {
+  if (error instanceof McpStoreError) return error;
+  return new McpStoreError(fallback, "write", error instanceof Error ? error.message : String(error));
+}
 
-  const entries = Object.entries(servers);
-
-  if (entries.length === 0) {
-    return (
-      <div style={{ padding: "32px 24px" }}>
-        <EmptyState
-          icon={<PlugZap size={28} strokeWidth={1.5} />}
-          title="No MCP servers configured"
-          description="Add servers to ~/.claude/mcp.json under the mcpServers key."
-        />
-      </div>
-    );
-  }
-
+/** What failed, one action, and the raw error behind a Details disclosure. */
+function ErrorNotice({
+  error,
+  actionLabel,
+  onAction,
+}: {
+  error: McpStoreError;
+  actionLabel: string;
+  onAction: () => void;
+}) {
   return (
-    <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: "10px" }}>
-      <div style={{ fontSize: "11px", color: "var(--fg-subtle)", marginBottom: "2px" }}>
-        {entries.length} server{entries.length !== 1 ? "s" : ""} configured
+    <Card padding="sm" role="alert" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <span style={{ flex: 1, fontSize: 12, color: "var(--danger)" }}>{error.summary}</span>
+        <Button size="sm" onClick={onAction}>{actionLabel}</Button>
       </div>
-      {entries.map(([name, config]) => (
-        <ServerCard key={name} name={name} config={config} />
-      ))}
-    </div>
+      {error.detail && (
+        <details style={{ fontSize: 11, color: "var(--fg-subtle)" }}>
+          <summary style={{ cursor: "pointer" }}>Details</summary>
+          <code style={{ fontFamily: MONO, wordBreak: "break-all" }}>{error.detail}</code>
+        </details>
+      )}
+    </Card>
   );
 }
 
 // ── Page ──────────────────────────────────────────────────────
 
-export default function McpServersPage() {
-  const navigate = useNavigate();
-  const editor = useFileEditor(FILE_PATH);
-  const [viewMode, setViewMode] = useState<"formatted" | "editor">("formatted");
+type FormState = { mode: "add" } | { mode: "edit"; name: string };
+type LoadState =
+  | { status: "loading" }
+  | { status: "error"; error: McpStoreError }
+  | { status: "ready"; snapshot: McpStoreSnapshot };
 
-  const toolbarActions = (
-    <Button
-      variant="ghost"
-      size="sm"
-      onClick={() => navigate(`/harness/config/${encodeURIComponent("mcp.json")}`)}
-      title="Open mcp.json in the editor"
-    >
-      <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style={{ marginRight: 4 }}>
-        <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-      </svg>
-      mcp.json
+export default function McpServersPage() {
+  const [load, setLoad] = useState<LoadState>({ status: "loading" });
+  const [location, setLocation] = useState<McpStoreLocation | null>(null);
+  const [viewMode, setViewMode] = useState<"servers" | "json">("servers");
+  const [form, setForm] = useState<FormState | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [mutationError, setMutationError] = useState<McpStoreError | null>(null);
+  const [rawDraft, setRawDraft] = useState<string | null>(null);
+
+  const reload = useCallback(async () => {
+    setLoad({ status: "loading" });
+    try {
+      const where = await locateClaudeMcpStore();
+      setLocation(where);
+      const snapshot = await readMcpStore(where);
+      setLoad({ status: "ready", snapshot });
+      setRawDraft(null);
+    } catch (error) {
+      setLoad({ status: "error", error: toStoreError(error, "Couldn't load Claude Code's MCP servers.") });
+    }
+  }, []);
+
+  useEffect(() => { void reload(); }, [reload]);
+
+  const snapshot = load.status === "ready" ? load.snapshot : null;
+  const entries = useMemo(
+    () => (snapshot ? Object.entries(snapshot.servers).sort(([a], [b]) => a.localeCompare(b)) : []),
+    [snapshot],
+  );
+  const rawOriginal = useMemo(
+    () => (snapshot ? JSON.stringify(snapshot.servers, null, 2) : ""),
+    [snapshot],
+  );
+
+  /** Every write: fresh read, merge onto the current file, then reload. */
+  async function commit(update: (current: Record<string, unknown>) => Record<string, unknown>): Promise<boolean> {
+    if (!snapshot) return false;
+    setSaving(true);
+    setMutationError(null);
+    try {
+      await writeMcpServers(snapshot.location, snapshot.servers, update);
+      await reload();
+      return true;
+    } catch (error) {
+      setMutationError(toStoreError(error, `Couldn't save ${snapshot.location.displayPath}.`));
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleFormSave(name: string, server: ClaudeMcpServer) {
+    const editing = form?.mode === "edit" ? form.name : null;
+    const ok = await commit((current) => {
+      const previous = editing ? current[editing] : undefined;
+      const kept: Record<string, unknown> = {};
+      if (previous && typeof previous === "object") {
+        for (const [key, value] of Object.entries(previous)) if (!FORM_KEYS.includes(key)) kept[key] = value;
+      }
+      return { ...current, [name]: { ...kept, ...server } };
+    });
+    if (ok) setForm(null);
+  }
+
+  async function handleDelete() {
+    const name = pendingDelete;
+    if (!name) return;
+    const ok = await commit((current) => {
+      const next = { ...current };
+      delete next[name];
+      return next;
+    });
+    if (ok) setPendingDelete(null);
+  }
+
+  async function handleRawSave() {
+    if (rawDraft === null || !snapshot) return;
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(rawDraft);
+    } catch (error) {
+      setMutationError(new McpStoreError(
+        "That JSON doesn't parse, so nothing was saved.",
+        "invalid",
+        error instanceof Error ? error.message : String(error),
+      ));
+      return;
+    }
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)
+      || Object.values(parsed).some((v) => typeof v !== "object" || v === null || Array.isArray(v))) {
+      setMutationError(new McpStoreError(
+        "The servers must be a JSON object of name → server settings, so nothing was saved.",
+        "invalid",
+      ));
+      return;
+    }
+    await commit(() => parsed as Record<string, unknown>);
+  }
+
+  function openForm(next: FormState) {
+    setMutationError(null);
+    setForm(next);
+  }
+
+  const displayPath = location?.displayPath ?? "…";
+  const editingServer = form?.mode === "edit" && snapshot
+    ? (snapshot.servers[form.name] as unknown as ClaudeMcpServer | undefined)
+    : undefined;
+  const addButton = (
+    <Button variant="primary" size="sm" onClick={() => openForm({ mode: "add" })}>
+      <Plus size={13} strokeWidth={1.7} aria-hidden="true" style={{ marginRight: 4 }} />
+      Add server
     </Button>
   );
+  const rawDirty = rawDraft !== null && rawDraft !== rawOriginal;
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       <EditorToolbar
-        filePath="MCP Servers · Claude Code"
-        subtitle="~/.claude/mcp.json"
-        isDirty={editor.isDirty}
-        saving={editor.saving}
+        filePath="MCP servers"
+        subtitle="Claude Code · user scope"
+        isDirty={viewMode === "json" && rawDirty}
+        saving={saving}
         viewMode={viewMode}
         availableModes={[
-          { key: "formatted", label: "Formatted" },
-          { key: "editor", label: "Editor" },
+          { key: "servers", label: "Servers" },
+          { key: "json", label: "Raw JSON" },
         ]}
-        onViewModeChange={(m) => setViewMode(m as "formatted" | "editor")}
-        onSave={viewMode === "editor" ? editor.saveFile : undefined}
-        actions={toolbarActions}
+        onViewModeChange={(m) => { setMutationError(null); setViewMode(m as "servers" | "json"); }}
+        onSave={viewMode === "json" ? () => void handleRawSave() : undefined}
+        actions={snapshot && entries.length > 0 && viewMode === "servers" ? addButton : undefined}
       />
 
-      {viewMode === "formatted" && (
+      <div style={{ padding: "8px 24px 0", fontSize: 11, color: "var(--fg-subtle)" }}>
+        Reading{" "}
+        <code data-testid="mcp-store-path" style={{ fontFamily: MONO, color: "var(--fg-muted)" }}>
+          {displayPath}
+        </code>
+        {viewMode === "json" && " · the mcpServers key only; the rest of the file is left as it is"}
+      </div>
+
+      {load.status === "loading" && (
+        <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: 10 }} aria-busy="true">
+          {[1, 2, 3].map((i) => (
+            <div key={i} style={{
+              height: 100, borderRadius: 10, background: "var(--bg-elevated)",
+              animation: "shimmer 1.5s ease-in-out infinite", animationDelay: `${i * 0.1}s`, opacity: 0.5,
+            }} />
+          ))}
+        </div>
+      )}
+
+      {load.status === "error" && (
+        <div style={{ padding: "16px 24px" }}>
+          <ErrorNotice error={load.error} actionLabel="Try again" onAction={() => void reload()} />
+        </div>
+      )}
+
+      {snapshot && viewMode === "servers" && (
         <div style={{ flex: 1, overflow: "auto" }}>
-          {editor.loading && (
-            <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "10px" }}>
-              {[1, 2, 3].map((i) => (
-                <div key={i} style={{
-                  height: "100px", borderRadius: "10px",
-                  background: "var(--bg-elevated)",
-                  animation: "shimmer 1.5s ease-in-out infinite",
-                  animationDelay: `${i * 0.1}s`, opacity: 0.5,
-                }} />
+          {mutationError && !form && !pendingDelete && (
+            <div style={{ padding: "16px 24px 0" }}>
+              <ErrorNotice error={mutationError} actionLabel="Reload" onAction={() => void reload()} />
+            </div>
+          )}
+          {entries.length === 0 ? (
+            <div style={{ padding: "32px 24px" }}>
+              <EmptyState
+                icon={<PlugZap size={28} strokeWidth={1.5} />}
+                title="No MCP servers yet"
+                description={
+                  "An MCP server gives Claude Code extra tools, like reading a database or searching the web. " +
+                  (snapshot.found
+                    ? `None are set up in ${snapshot.location.displayPath}.`
+                    : `${snapshot.location.displayPath} doesn't exist yet; adding a server creates it.`)
+                }
+                action={addButton}
+              />
+            </div>
+          ) : (
+            <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ fontSize: 11, color: "var(--fg-subtle)" }}>
+                {entries.length} server{entries.length !== 1 ? "s" : ""} configured
+              </div>
+              {entries.map(([name, config]) => (
+                <ServerCard
+                  key={name}
+                  name={name}
+                  config={config as unknown as ClaudeMcpServer}
+                  onEdit={() => openForm({ mode: "edit", name })}
+                  onDelete={() => { setMutationError(null); setPendingDelete(name); }}
+                />
               ))}
             </div>
           )}
-          {editor.error && (
-            <div style={{ padding: "20px 24px" }}>
-              <Card padding="sm" style={{ color: "var(--danger)", fontSize: "12px" }}>
-                {editor.error}
-              </Card>
-            </div>
-          )}
-          {!editor.loading && !editor.error && editor.content !== null && (
-            <McpFormattedView content={editor.content} />
-          )}
         </div>
       )}
 
-      {viewMode === "editor" && !editor.loading && editor.content !== null && (
-        <div style={{ flex: 1, minHeight: 0 }}>
-          <Suspense fallback={null}>
-            <MonacoEditor
-              filePath={FILE_PATH}
-              content={editor.content}
-              onChange={editor.updateContent}
-              onSave={editor.saveFile}
-            />
-          </Suspense>
+      {snapshot && viewMode === "json" && (
+        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+          {mutationError && (
+            <div style={{ padding: "8px 24px" }}>
+              <ErrorNotice error={mutationError} actionLabel="Reload" onAction={() => void reload()} />
+            </div>
+          )}
+          <div style={{ flex: 1, minHeight: 0 }}>
+            <Suspense fallback={null}>
+              <MonacoEditor
+                filePath="mcpServers.json"
+                content={rawDraft ?? rawOriginal}
+                onChange={setRawDraft}
+                onSave={() => void handleRawSave()}
+              />
+            </Suspense>
+          </div>
         </div>
       )}
+
+      <McpServerForm
+        open={form !== null}
+        mode={form?.mode ?? "add"}
+        initialName={form?.mode === "edit" ? form.name : undefined}
+        initialServer={editingServer}
+        existingNames={entries.map(([name]) => name)}
+        saving={saving}
+        error={mutationError && form ? (
+          <ErrorNotice error={mutationError} actionLabel="Reload" onAction={() => { setForm(null); void reload(); }} />
+        ) : undefined}
+        onSave={(name, server) => void handleFormSave(name, server)}
+        onCancel={() => { setForm(null); setMutationError(null); }}
+      />
+
+      <Modal
+        open={pendingDelete !== null}
+        onClose={() => { setPendingDelete(null); setMutationError(null); }}
+        title={`Delete ${pendingDelete ?? ""}?`}
+        footer={
+          <>
+            <Button size="sm" onClick={() => { setPendingDelete(null); setMutationError(null); }}>Cancel</Button>
+            <Button size="sm" variant="danger" onClick={() => void handleDelete()} disabled={saving}>
+              {saving ? "Deleting…" : "Delete server"}
+            </Button>
+          </>
+        }
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 12, color: "var(--fg-muted)" }}>
+          <span>
+            Claude Code stops loading this server. It is removed from{" "}
+            <code style={{ fontFamily: MONO }}>{displayPath}</code>; nothing else in the file changes.
+          </span>
+          {mutationError && pendingDelete && (
+            <ErrorNotice error={mutationError} actionLabel="Reload" onAction={() => { setPendingDelete(null); void reload(); }} />
+          )}
+        </div>
+      </Modal>
     </div>
   );
 }
