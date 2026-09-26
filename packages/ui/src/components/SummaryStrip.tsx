@@ -28,12 +28,14 @@ export function SummaryStrip({ cells, className = "" }: SummaryStripProps) {
   return (
     <div className={["hk-summary-strip", className].filter(Boolean).join(" ")}>
       {cells.map((cell) => {
+        // Spans, not divs: a selectable cell renders as a <button>, which may
+        // only hold phrasing content. The classes set display: block.
         const content = (
           <>
-            <div className="hk-summary-label">{cell.label}</div>
-            <div className="hk-summary-value" data-tone={cell.tone ?? "default"}>
+            <span className="hk-summary-label">{cell.label}</span>
+            <span className="hk-summary-value" data-tone={cell.tone ?? "default"}>
               {cell.value}
-            </div>
+            </span>
           </>
         );
         if (!cell.onSelect) {
