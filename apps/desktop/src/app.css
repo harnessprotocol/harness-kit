@@ -370,12 +370,12 @@
 .hk-grid-legend-item { display: inline-flex; align-items: center; gap: 6px; }
 .hk-grid-legend .hk-cell { min-width: 0; height: 18px; }
 
-/* One line under the summary strip while a Gaps/Differs filter is on. */
 /* Focus lands here only as a fallback, when a filter change unmounts the
    focused control; the cells inside carry their own focus ring. */
 .hk-machine-summary:focus {
   outline: none;
 }
+/* One line under the summary strip while a Gaps/Differs filter is on. */
 .hk-machine-filter-status {
   display: flex;
   align-items: center;
