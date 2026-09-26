@@ -323,6 +323,7 @@ function RowActions({
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmedLoss, setConfirmedLoss] = useState(false);
+  const [spent, setSpent] = useState(false);
 
   useEffect(() => {
     setConfirmedLoss(false);
@@ -330,6 +331,7 @@ function RowActions({
     // Drop the old plan first: planning does file I/O, and until it resolves
     // Apply must not run the previous from → to pair under the new selects.
     setView(null);
+    setSpent(false);
     if (!source || !target) return;
     let cancelled = false;
     buildCellAction(row, source, target as SurfaceId)
@@ -374,8 +376,10 @@ function RowActions({
           : { title, variant: "success" },
       );
       // Spent: the drawer stays open through the rescan, and a second click
-      // on this plan would write again. The rescanned row rebuilds it.
-      setView(null);
+      // on this plan would write again. Apply stays off until the rescanned
+      // row rebuilds the plan; the CLI and prompt stay usable, including when
+      // the rescan fails and the row never changes.
+      setSpent(true);
       setConfirmedLoss(false);
       onApplied?.();
     } catch (error) {
@@ -543,7 +547,13 @@ function RowActions({
           variant="primary"
           size="sm"
           disabled={
-            !view || !view.plan.supported || view.plan.noop || lossBlocked || busy || appCannotRun
+            !view ||
+            !view.plan.supported ||
+            view.plan.noop ||
+            lossBlocked ||
+            busy ||
+            spent ||
+            appCannotRun
           }
           onClick={apply}
         >

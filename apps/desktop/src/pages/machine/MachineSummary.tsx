@@ -76,9 +76,10 @@ export function MachineSummary({
   // A filter change can unmount the control that had focus: "Show all"
   // always removes itself, and a pressed zero-count cell turns back into
   // plain text. When that happens, hand focus to the cell that was pressed,
-  // or else to the strip, rather than let it fall to <body>. A mouse click
-  // in WebKit does not focus a button, so with nothing focused there is
-  // nothing to hand off.
+  // or else to the strip, rather than let it fall to <body>. Focus that is
+  // still connected (a cell that stays a button, or the strip itself, which
+  // WebKit focuses on a mouse click since it does not focus buttons) is left
+  // alone, and with nothing focused there is nothing to hand off.
   const handoff = useRef<{ from: Element; pressed: HTMLElement | null } | null>(null);
   const changeFilter = useCallback(
     (next: MachineFilter) => {

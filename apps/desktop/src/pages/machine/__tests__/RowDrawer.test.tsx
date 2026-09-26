@@ -165,9 +165,12 @@ describe("RowDrawer apply never runs a stale plan", () => {
     fireEvent.click(apply);
     await waitFor(() => expect(onApplied).toHaveBeenCalledTimes(1));
 
-    // The page's rescan has not replaced the row yet.
+    // The page's rescan has not replaced the row yet (or failed and never
+    // will): Apply is off, but the CLI command is still there to copy.
     expect(apply).toBeDisabled();
     fireEvent.click(apply);
     expect(applyCellActionViaTauri).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("harness-kit sync --from codex --to gemini")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copy CLI command" })).toBeEnabled();
   });
 });

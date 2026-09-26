@@ -63,26 +63,31 @@ export default function MachinePage() {
   const [projectDegraded, setProjectDegraded] = useState(false);
 
   /**
-   * `keepRowKey` keeps the drawer open across the scan (after an apply): the
-   * selection moves to the new inventory's row with that key, or closes if the
-   * row is gone. Every other caller starts over with nothing selected.
+   * `keepSelection` (after an apply) refreshes whatever row is selected WHEN
+   * THE SCAN LANDS to the new inventory's row with the same key, closing the
+   * drawer if that row is gone. Read at landing, not at the call: the user may
+   * have closed the drawer or picked another row while the scan ran. Every
+   * other caller starts over with nothing selected.
+   *
+   * Only the latest scan lands. Scans can overlap (Enter, Browse and Clear are
+   * live while one runs, and an apply starts its own), and a slow older one
+   * must not overwrite a newer result.
    */
-  // Only the latest scan may land. Scans can overlap (Enter, Browse and Clear
-  // are live while one runs, and an apply starts its own), and a slow older
-  // one must not overwrite a newer result or reopen a drawer the user closed.
   const loadSeq = useRef(0);
-  const load = useCallback(async (dir: string, keepRowKey?: string) => {
+  const load = useCallback(async (dir: string, keepSelection = false) => {
     const seq = ++loadSeq.current;
     setLoading(true);
     setError(null);
-    if (keepRowKey === undefined) setSelectedRow(null);
+    if (!keepSelection) setSelectedRow(null);
     try {
       const result = await loadMachineInventory(dir.trim() ? dir.trim() : null);
       if (seq !== loadSeq.current) return;
       setInventory(result.inventory);
       setProjectDegraded(result.projectDegraded);
-      if (keepRowKey !== undefined) {
-        setSelectedRow(result.inventory.rows.find((row) => row.key === keepRowKey) ?? null);
+      if (keepSelection) {
+        setSelectedRow((current) =>
+          current ? (result.inventory.rows.find((row) => row.key === current.key) ?? null) : null,
+        );
       }
     } catch (err) {
       if (seq === loadSeq.current) setError(String(err));
@@ -363,7 +368,7 @@ export default function MachinePage() {
           gaps={inventory?.gaps ?? []}
           surfaceOrder={inventory?.surfaces.map((surface) => surface.id) ?? []}
           onClose={() => setSelectedRow(null)}
-          onApplied={() => load(projectDir, selectedRow.key)}
+          onApplied={() => load(projectDir, true)}
         />
       )}
     </div>

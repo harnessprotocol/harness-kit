@@ -1006,6 +1006,28 @@ describe("MachinePage", () => {
     });
   });
 
+  it("does not reopen a drawer closed while the apply's rescan ran", async () => {
+    let resolveRescan!: (value: unknown) => void;
+    vi.mocked(buildMachineInventory)
+      .mockResolvedValueOnce(makeInventory() as never)
+      .mockImplementationOnce(() => new Promise((resolve) => (resolveRescan = resolve)) as never);
+
+    renderPage();
+    await screen.findByTestId("machine-grid");
+    fireEvent.click(screen.getByTestId("machine-row-mcp-server:postgres"));
+    const drawer = await screen.findByTestId("machine-row-drawer");
+    const apply = within(drawer).getByRole("button", { name: "Apply" });
+    await waitFor(() => expect(apply).toBeEnabled());
+    fireEvent.click(apply);
+    await waitFor(() => expect(vi.mocked(buildMachineInventory)).toHaveBeenCalledTimes(2));
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByTestId("machine-row-drawer")).not.toBeInTheDocument());
+    resolveRescan(makeInventory());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Refresh" })).toBeEnabled());
+    expect(screen.queryByTestId("machine-row-drawer")).not.toBeInTheDocument();
+  });
+
   it("ignores an older scan that resolves after a newer one", async () => {
     // The apply's rescan hangs; meanwhile the user starts a fresh scan
     // (Enter in the directory field), which clears the selection and lands.
