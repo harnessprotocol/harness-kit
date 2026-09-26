@@ -20,9 +20,8 @@ export interface SummaryStripProps {
 
 /**
  * A single elevated bar, cells divided by a hairline inset. Used for the
- * Fleet page head (Harnesses / Projects / Drifted / Coverage / Last compiled)
- * — DESIGN.md §6. A cell with `onSelect` renders as a toggle button with the
- * same inner markup; every other cell is a plain div.
+ * Machine page head (DESIGN.md §6). A cell with `onSelect` renders as a
+ * toggle button with the same inner markup; every other cell is a plain div.
  */
 export function SummaryStrip({ cells, className = "" }: SummaryStripProps) {
   return (
@@ -52,6 +51,13 @@ export function SummaryStrip({ cells, className = "" }: SummaryStripProps) {
             type="button"
             className="hk-summary-cell"
             aria-pressed={active}
+            // The label and value are adjacent spans with no text between
+            // them, so the computed name would read "Gaps1".
+            aria-label={
+              typeof cell.value === "string" || typeof cell.value === "number"
+                ? `${cell.label} ${cell.value}`
+                : undefined
+            }
             data-active={active ? "true" : undefined}
             onClick={cell.onSelect}
           >

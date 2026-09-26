@@ -93,7 +93,10 @@ export function filterRows(
 /**
  * The Machine summary strip. Gaps and Differs count ROWS with at least one
  * such chip, the unit the filter reveals; `inventory.diffs` is pairwise and
- * would overcount. A non-zero Gaps or Differs cell toggles its filter.
+ * would overcount. A non-zero Gaps or Differs cell toggles its filter. The
+ * active cell stays a pressed button even at zero (a stale ?filter= link, or
+ * a rescan that closed every gap), so the empty grid has a visible cause and
+ * a way back.
  */
 export function machineSummaryCells(
   inventory: MachineInventory,
@@ -108,7 +111,7 @@ export function machineSummaryCells(
       label,
       value: String(count),
       tone: count > 0 ? "warning" : "default",
-      ...(count > 0 && {
+      ...((count > 0 || filter === id) && {
         active: filter === id,
         onSelect: () => onFilterChange(filter === id ? "all" : id),
       }),

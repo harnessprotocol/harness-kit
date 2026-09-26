@@ -6,11 +6,11 @@ import { filterOf, filterRows, machineSummaryCells, withFilter } from "../machin
 const inventory = MACHINE_FIXTURE_INVENTORY;
 const variants = inventoryVariants(inventory);
 
-function rowsWith(variant: string): string[] {
-  return inventory.rows
-    .filter((row) => Object.values(variants.get(row.key) ?? {}).includes(variant as never))
-    .map((row) => row.key);
-}
+// Read off the fixture's gaps and diffs by hand, not recomputed: github is
+// missing on gemini and codex departs from its baseline; code-review is
+// missing on codex and gemini, with one copy everywhere else.
+const GAP_ROWS = ["mcp-server:github", "skill:code-review"];
+const DIFFERS_ROWS = ["mcp-server:github"];
 
 describe("filterOf", () => {
   it("reads gaps and differs", () => {
@@ -48,10 +48,8 @@ describe("filterRows", () => {
   });
 
   it("keeps rows with a gap chip for gaps, and rows with a differs chip for differs", () => {
-    expect(filterRows(inventory.rows, variants, "gaps").map((row) => row.key)).toEqual(rowsWith("gap"));
-    expect(filterRows(inventory.rows, variants, "differs").map((row) => row.key)).toEqual(
-      rowsWith("differs"),
-    );
+    expect(filterRows(inventory.rows, variants, "gaps").map((row) => row.key)).toEqual(GAP_ROWS);
+    expect(filterRows(inventory.rows, variants, "differs").map((row) => row.key)).toEqual(DIFFERS_ROWS);
   });
 });
 
@@ -59,9 +57,9 @@ describe("machineSummaryCells", () => {
   it("counts rows, not pairwise diffs, and labels the cell Differs", () => {
     const cells = machineSummaryCells(inventory, variants, "all", vi.fn());
     const byId = Object.fromEntries(cells.map((cell) => [cell.id, cell]));
-    expect(byId.gaps.value).toBe(String(rowsWith("gap").length));
+    expect(byId.gaps.value).toBe(String(GAP_ROWS.length));
     expect(byId.differs.label).toBe("Differs");
-    expect(byId.differs.value).toBe(String(rowsWith("differs").length));
+    expect(byId.differs.value).toBe(String(DIFFERS_ROWS.length));
     expect(byId.rows.value).toBe(String(inventory.rows.length));
     expect(byId.rows.onSelect).toBeUndefined();
     expect(byId.detected.onSelect).toBeUndefined();
@@ -81,10 +79,21 @@ describe("machineSummaryCells", () => {
   });
 
   it("gives a zero-count cell no onSelect", () => {
-    const empty = { ...inventory, rows: inventory.rows.filter((row) => !rowsWith("gap").includes(row.key)), gaps: [] };
+    const empty = { ...inventory, rows: inventory.rows.filter((row) => !GAP_ROWS.includes(row.key)), gaps: [] };
     const cells = machineSummaryCells(empty, inventoryVariants(empty), "all", vi.fn());
     const gaps = cells.find((cell) => cell.id === "gaps")!;
     expect(gaps.value).toBe("0");
     expect(gaps.onSelect).toBeUndefined();
+  });
+
+  it("keeps the active cell a pressed toggle at zero, so the filter can be cleared", () => {
+    const onChange = vi.fn();
+    const empty = { ...inventory, rows: inventory.rows.filter((row) => !GAP_ROWS.includes(row.key)), gaps: [] };
+    const cells = machineSummaryCells(empty, inventoryVariants(empty), "gaps", onChange);
+    const gaps = cells.find((cell) => cell.id === "gaps")!;
+    expect(gaps.value).toBe("0");
+    expect(gaps.active).toBe(true);
+    gaps.onSelect!();
+    expect(onChange).toHaveBeenLastCalledWith("all");
   });
 });

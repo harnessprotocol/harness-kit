@@ -323,8 +323,10 @@ function LocationProbe() {
 }
 
 function gridRowKeys(): string[] {
+  // queryAll: a filter can leave the grid empty. The drawer's test id shares
+  // the prefix, so it is excluded.
   return screen
-    .getAllByTestId(/^machine-row-/)
+    .queryAllByTestId(/^machine-row-(?!drawer$)/)
     .map((row) => row.getAttribute("data-testid")!.replace("machine-row-", ""));
 }
 
@@ -697,12 +699,20 @@ describe("MachinePage", () => {
       await screen.findByTestId("machine-grid");
       fireEvent.click(screen.getByRole("button", { name: /Differs/ }));
       await waitFor(() => expect(gridRowKeys()).toEqual(["mcp-server:postgres"]));
+      for (const key of gridRowKeys()) {
+        expect(
+          within(screen.getByTestId(`machine-row-${key}`)).queryAllByText("differs").length,
+        ).toBeGreaterThan(0);
+      }
       expect(screen.getByTestId("machine-filter-status")).toHaveTextContent(
         "Showing 1 of 3 resources whose content differs",
       );
       fireEvent.click(screen.getByRole("button", { name: "Show all" }));
       await waitFor(() => expect(gridRowKeys()).toHaveLength(3));
-      expect(screen.getByRole("button", { name: /Differs/ })).toHaveAttribute("aria-pressed", "false");
+      const differs = screen.getByRole("button", { name: /Differs/ });
+      expect(differs).toHaveAttribute("aria-pressed", "false");
+      // Show all unmounts itself; focus lands on the cell it un-pressed.
+      expect(differs).toHaveFocus();
     });
 
     it("reads the filter from the URL and keeps other params when toggling", async () => {
@@ -737,6 +747,37 @@ describe("MachinePage", () => {
       expect(await screen.findByTestId("machine-row-drawer")).toBeInTheDocument();
       fireEvent.click(screen.getByRole("button", { name: /Gaps/ }));
       await waitFor(() => expect(screen.queryByTestId("machine-row-drawer")).not.toBeInTheDocument());
+    });
+
+    it("keeps the drawer open when its row survives the filter", async () => {
+      renderPage();
+      await screen.findByTestId("machine-grid");
+      fireEvent.click(screen.getByTestId("machine-row-mcp-server:postgres"));
+      expect(await screen.findByTestId("machine-row-drawer")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: /Gaps/ }));
+      await waitFor(() => expect(gridRowKeys()).toEqual(["mcp-server:postgres"]));
+      expect(screen.getByTestId("machine-row-drawer")).toBeInTheDocument();
+    });
+
+    it("keeps a URL filter with no matches as a pressed cell that clears it", async () => {
+      const inventory = makeInventory();
+      inventory.gaps = [];
+      vi.mocked(buildMachineInventory).mockResolvedValue(inventory as never);
+      render(
+        <MemoryRouter initialEntries={["/machine?filter=gaps"]}>
+          <MachinePage />
+        </MemoryRouter>,
+      );
+      await screen.findByTestId("machine-grid");
+      expect(gridRowKeys()).toEqual([]);
+      expect(screen.getByTestId("machine-filter-status")).toHaveTextContent(
+        "Showing 0 of 3 resources with a closable gap",
+      );
+      const gaps = screen.getByRole("button", { name: /Gaps/ });
+      expect(gaps).toHaveAttribute("aria-pressed", "true");
+      fireEvent.click(gaps);
+      await waitFor(() => expect(gridRowKeys()).toHaveLength(3));
+      expect(screen.queryByRole("button", { name: /Gaps/ })).not.toBeInTheDocument();
     });
 
     it("renders a zero-count cell as plain text, not a button", async () => {
