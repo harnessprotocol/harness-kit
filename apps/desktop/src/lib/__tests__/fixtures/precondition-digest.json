@@ -1,0 +1,40 @@
+{
+  "//": "Precondition digest for apply_surface_transaction (expectedSha256): SHA-256 of the file text as the webview reads it. Bytes -> strip one leading UTF-8 BOM -> decode UTF-8 replacing each maximal invalid subpart with U+FFFD (WHATWG TextDecoder, Rust String::from_utf8_lossy) -> re-encode UTF-8 -> SHA-256, lowercase hex. Checked by surface_write.rs tests (Rust rule) and McpServersPage tests (webview side).",
+  "cases": [
+    {
+      "name": "bom",
+      "note": "UTF-8 byte-order mark: TextDecoder drops it",
+      "bytesHex": "efbbbf7b0a2020226d637053657276657273223a207b7d0a7d0a",
+      "text": "{\n  \"mcpServers\": {}\n}\n",
+      "sha256": "d8e397af03b5b032f21d0aa967086f0c78b33c87b76f2e9898ae0a144df7de02"
+    },
+    {
+      "name": "invalid-utf8",
+      "note": "lone continuation-less lead byte (C3 28), a byte that never appears in UTF-8 (FF), and a three-byte sequence cut short (E2 82) inside a JSON string",
+      "bytesHex": "7b0a2020226d637053657276657273223a207b7d2c0a2020226e6f7465223a2022c328ffe282220a7d0a",
+      "text": "{\n  \"mcpServers\": {},\n  \"note\": \"\ufffd(\ufffd\ufffd\"\n}\n",
+      "sha256": "63859806f31a9c61b892811a825be18eea6f2ec0d9954c60602a54c055b4d890"
+    },
+    {
+      "name": "truncated-at-end",
+      "note": "four-byte sequence cut short by end of file (F0 9F 98)",
+      "bytesHex": "7b7df09f98",
+      "text": "{}\ufffd",
+      "sha256": "5b14cb473f4c7f273ce3e126d75045c02129e5afb845bf8434110f9c066cdcb8"
+    },
+    {
+      "name": "surrogate-and-overlong",
+      "note": "encoded surrogate (ED A0 80) and overlong forms (C0 AF, E0 80 AF): one U+FFFD per byte",
+      "bytesHex": "eda08041c0afe080af",
+      "text": "\ufffd\ufffd\ufffdA\ufffd\ufffd\ufffd\ufffd\ufffd",
+      "sha256": "03f0c9719b6e03620739092b6ff20fcedcc836b81f0038b09257b3060744d0b1"
+    },
+    {
+      "name": "bom-twice",
+      "note": "only the first BOM is dropped; the second decodes to U+FEFF",
+      "bytesHex": "efbbbfefbbbf41",
+      "text": "\ufeffA",
+      "sha256": "4d91bc408f19af2e9483a216ae71673e0ee456ece7a12998dd207e504f4f19a6"
+    }
+  ]
+}

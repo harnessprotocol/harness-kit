@@ -78,9 +78,26 @@ pub struct SurfaceFileWrite {
     pub relative_path: String,
     /// New content, or null to delete the file.
     pub content: Option<String>,
-    /// Optional precondition: the lowercase hex SHA-256 of the file's bytes as
-    /// the caller last read them, or `"absent"` if it read no file. When set,
-    /// the write is refused if the file on disk no longer matches.
+    /// Optional precondition: the file as the caller last read it, or
+    /// `"absent"` if it read no file. When set, the write is refused if the
+    /// file on disk no longer matches.
+    ///
+    /// The digest is over the file's TEXT as the webview reads it, not its
+    /// raw bytes, because the webview can only read text (the capability
+    /// grants `fs:allow-read-text-file`, whose TextDecoder drops a BOM and
+    /// replaces invalid UTF-8). Precisely, lowercase hex of
+    /// SHA-256(UTF-8(decode(strip_bom(bytes)))), where `strip_bom` removes one
+    /// leading EF BB BF and `decode` is UTF-8 with each maximal invalid
+    /// subpart replaced by U+FFFD (WHATWG TextDecoder; Rust
+    /// `String::from_utf8_lossy`). See [`precondition_digest`]. Case is
+    /// ignored on comparison.
+    ///
+    /// So two files that decode to the same text match: a BOM added or
+    /// removed, or one invalid byte swapped for another, is not seen as a
+    /// change. The write stores `content` exactly as given, so a BOM present
+    /// before a save is gone after it. Both are acceptable for the JSON
+    /// stores this guards: RFC 8259 §8.1 says JSON must be UTF-8 and writers
+    /// must not add a BOM.
     #[serde(default)]
     pub expected_sha256: Option<String>,
 }
@@ -105,6 +122,9 @@ struct Target {
 /// file 1 stays replaced, file 2 is untouched, and file 3 is not attempted.
 /// The error names the files already written. Rollback across files is the
 /// caller's job (the TS transaction engine keeps preimage backups for that).
+/// A file whose rename landed but whose directory fsync failed counts as
+/// written: the batch stops there with an error that says it was replaced,
+/// and lists it among the files already written.
 #[tauri::command]
 pub fn apply_surface_transaction(files: Vec<SurfaceFileWrite>) -> Result<Vec<String>, String> {
     let home = dirs::home_dir().ok_or("Could not resolve home directory")?;
@@ -116,6 +136,15 @@ pub fn apply_surface_transaction(files: Vec<SurfaceFileWrite>) -> Result<Vec<Str
 fn apply_surface_transaction_in(
     home: &Path,
     files: Vec<SurfaceFileWrite>,
+) -> Result<Vec<String>, String> {
+    apply_surface_transaction_with(home, files, sync_directory)
+}
+
+/// As above, with the directory fsync injected so tests can make it fail.
+fn apply_surface_transaction_with(
+    home: &Path,
+    files: Vec<SurfaceFileWrite>,
+    sync: fn(&Path) -> std::io::Result<()>,
 ) -> Result<Vec<String>, String> {
     let canonical_home = home.canonicalize().unwrap_or_else(|_| home.to_path_buf());
 
@@ -191,10 +220,19 @@ fn apply_surface_transaction_in(
                 text.as_bytes(),
                 target.expected.as_deref(),
                 &target.relative,
+                sync,
             ),
-            None => remove_if_present(&target.dest, target.expected.as_deref(), &target.relative),
+            None => remove_if_present(&target.dest, target.expected.as_deref(), &target.relative)
+                .map_err(WriteFailure::Unchanged),
         };
-        if let Err(error) = outcome {
+        if let Err(failure) = outcome {
+            let error = match failure {
+                WriteFailure::Unchanged(error) => error,
+                WriteFailure::ReplacedNotDurable(error) => {
+                    written.push(target.dest.to_string_lossy().into_owned());
+                    error
+                }
+            };
             if written.is_empty() {
                 return Err(error);
             }
@@ -217,10 +255,20 @@ fn sha256_hex(bytes: &[u8]) -> String {
         .collect()
 }
 
-/// The file's current digest, or the absent sentinel when there is no file.
+/// The `expectedSha256` digest of a file's bytes: SHA-256 of its text as the
+/// webview's `readTextFile` returns it. That is a WHATWG TextDecoder("utf-8"):
+/// it drops one leading BOM and replaces each maximal invalid subpart with
+/// U+FFFD, which is what `from_utf8_lossy` does too.
+fn precondition_digest(bytes: &[u8]) -> String {
+    let body = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(bytes);
+    sha256_hex(String::from_utf8_lossy(body).as_bytes())
+}
+
+/// The file's current precondition digest, or the absent sentinel when there
+/// is no file.
 fn current_digest(dest: &Path) -> Result<String, String> {
     match fs::read(dest) {
-        Ok(bytes) => Ok(sha256_hex(&bytes)),
+        Ok(bytes) => Ok(precondition_digest(&bytes)),
         Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
             Ok(ABSENT_SENTINEL.to_string())
         }
@@ -284,13 +332,14 @@ fn create_temp(dest: &Path) -> Result<(PathBuf, fs::File), String> {
 /// 1. create an exclusive temp file in the destination's directory
 /// 2. set its mode: the replaced file's mode, or 0600 for a new file (unix)
 /// 3. write the bytes and fsync the temp file
-/// 4. if a precondition was given, re-hash the destination and refuse on a
-///    mismatch
+/// 4. if a precondition was given, re-digest the destination (see
+///    [`precondition_digest`]) and refuse on a mismatch
 /// 5. rename the temp over the destination
 /// 6. fsync the directory so the rename itself is durable (unix)
 ///
 /// Any failure in 1–5 removes the temp file and leaves the destination as it
-/// was. The precondition check in 4 is not a lock: a writer that lands
+/// was ([`WriteFailure::Unchanged`]). A failure in 6 comes after the file was
+/// replaced ([`WriteFailure::ReplacedNotDurable`]). The precondition check in 4 is not a lock: a writer that lands
 /// between the check and the rename is still overwritten. That window is
 /// microseconds, against the minutes a page may sit open between read and
 /// save, which is the race this closes.
@@ -299,7 +348,8 @@ fn write_atomically(
     bytes: &[u8],
     expected: Option<&str>,
     relative: &str,
-) -> Result<(), String> {
+    sync: fn(&Path) -> std::io::Result<()>,
+) -> Result<(), WriteFailure> {
     let parent = dest
         .parent()
         .ok_or_else(|| format!("{} has no parent directory", dest.display()))?;
@@ -340,16 +390,33 @@ fn write_atomically(
     })();
     if let Err(error) = staged {
         let _ = fs::remove_file(&temp);
-        return Err(error);
+        return Err(WriteFailure::Unchanged(error));
     }
 
-    sync_directory(parent).map_err(|e| {
-        format!(
+    sync(parent).map_err(|e| {
+        WriteFailure::ReplacedNotDurable(format!(
             "{} was replaced, but syncing its directory failed, so the change may not survive a crash: {}",
             dest.display(),
             e
-        )
+        ))
     })
+}
+
+/// Why a single-file write failed, split by whether the file was replaced.
+#[derive(Debug)]
+enum WriteFailure {
+    /// The destination is as it was.
+    Unchanged(String),
+    /// The rename landed, so the new content is in place, but the directory
+    /// fsync failed: the replacement may not survive a crash. The batch must
+    /// still count the file as written, or rollback would skip it.
+    ReplacedNotDurable(String),
+}
+
+impl From<String> for WriteFailure {
+    fn from(message: String) -> Self {
+        WriteFailure::Unchanged(message)
+    }
 }
 
 #[cfg(unix)]
@@ -589,11 +656,207 @@ mod tests {
         let store = home.path().join(".claude.json");
         fs::write(&store, "{\"moved\":true}").unwrap();
 
-        let err = write_atomically(&store, b"{}", Some(&sha256_hex(b"{}")), ".claude.json")
-            .unwrap_err();
+        let failure = write_atomically(
+            &store,
+            b"{}",
+            Some(&sha256_hex(b"{}")),
+            ".claude.json",
+            sync_directory,
+        )
+        .unwrap_err();
+        let WriteFailure::Unchanged(err) = failure else {
+            panic!("expected Unchanged, got {:?}", failure);
+        };
         assert!(err.contains("changed on disk since it was read"), "got: {}", err);
         assert_eq!(fs::read_to_string(&store).unwrap(), "{\"moved\":true}");
         assert!(temp_files_in(home.path()).is_empty());
+    }
+
+    // ── Precondition digest: the text the webview reads ───────────────
+
+    /// Shared with the McpServersPage tests, which check the webview sends
+    /// the same digest for the same bytes.
+    const DIGEST_FIXTURE: &str =
+        include_str!("../../../src/lib/__tests__/fixtures/precondition-digest.json");
+
+    struct DigestCase {
+        name: String,
+        bytes: Vec<u8>,
+        text: String,
+        sha256: String,
+    }
+
+    fn digest_cases() -> Vec<DigestCase> {
+        let fixture: serde_json::Value = serde_json::from_str(DIGEST_FIXTURE).unwrap();
+        fixture["cases"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|case| {
+                let hex = case["bytesHex"].as_str().unwrap();
+                DigestCase {
+                    name: case["name"].as_str().unwrap().to_string(),
+                    bytes: (0..hex.len())
+                        .step_by(2)
+                        .map(|i| u8::from_str_radix(&hex[i..i + 2], 16).unwrap())
+                        .collect(),
+                    text: case["text"].as_str().unwrap().to_string(),
+                    sha256: case["sha256"].as_str().unwrap().to_string(),
+                }
+            })
+            .collect()
+    }
+
+    fn digest_case(name: &str) -> DigestCase {
+        digest_cases().into_iter().find(|case| case.name == name).unwrap()
+    }
+
+    #[test]
+    fn the_digest_is_over_the_text_a_textdecoder_would_produce() {
+        // Each fixture's `text` is what WHATWG TextDecoder("utf-8") returns
+        // for its bytes: BOM dropped, one U+FFFD per maximal invalid subpart
+        // (invalid bytes, a truncated sequence mid-file and at end of file,
+        // encoded surrogates, overlong forms).
+        let cases = digest_cases();
+        assert!(cases.len() >= 5);
+        for case in cases {
+            let body = case.bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&case.bytes);
+            assert_eq!(String::from_utf8_lossy(body), case.text, "decode of {}", case.name);
+            assert_eq!(sha256_hex(case.text.as_bytes()), case.sha256, "fixture {}", case.name);
+            assert_eq!(precondition_digest(&case.bytes), case.sha256, "digest of {}", case.name);
+        }
+    }
+
+    #[test]
+    fn a_bom_prefixed_file_saves_against_the_webview_digest() {
+        let home = TempDir::new().unwrap();
+        let store = home.path().join(".claude.json");
+        let case = digest_case("bom");
+        fs::write(&store, &case.bytes).unwrap();
+
+        apply_surface_transaction_in(
+            home.path(),
+            vec![write_expecting(".claude.json", "{\"mcpServers\":{\"a\":{}}}\n", &case.sha256)],
+        )
+        .unwrap();
+        // Written exactly as given: the BOM is not carried over.
+        assert_eq!(fs::read(&store).unwrap(), b"{\"mcpServers\":{\"a\":{}}}\n");
+    }
+
+    #[test]
+    fn an_invalid_utf8_file_saves_against_the_webview_digest() {
+        let home = TempDir::new().unwrap();
+        let store = home.path().join(".claude.json");
+        let case = digest_case("invalid-utf8");
+        fs::write(&store, &case.bytes).unwrap();
+
+        apply_surface_transaction_in(
+            home.path(),
+            vec![write_expecting(".claude.json", "{}\n", &case.sha256)],
+        )
+        .unwrap();
+        assert_eq!(fs::read_to_string(&store).unwrap(), "{}\n");
+    }
+
+    #[test]
+    fn a_real_change_to_a_bom_file_still_refuses() {
+        let home = TempDir::new().unwrap();
+        let store = home.path().join(".claude.json");
+        let case = digest_case("bom");
+        // Same BOM, different text after it.
+        let mut changed = case.bytes.clone();
+        changed.extend_from_slice(b" ");
+        fs::write(&store, &changed).unwrap();
+
+        let err = apply_surface_transaction_in(
+            home.path(),
+            vec![write_expecting(".claude.json", "{}\n", &case.sha256)],
+        )
+        .unwrap_err();
+        assert!(err.contains("changed on disk since it was read"), "got: {}", err);
+        assert_eq!(fs::read(&store).unwrap(), changed);
+    }
+
+    #[test]
+    fn a_digest_of_the_raw_bom_bytes_no_longer_matches() {
+        // The precondition is defined on the decoded text, so the raw-byte
+        // hash of a BOM file is a different (stale) value.
+        let home = TempDir::new().unwrap();
+        let store = home.path().join(".claude.json");
+        let case = digest_case("bom");
+        fs::write(&store, &case.bytes).unwrap();
+
+        let err = apply_surface_transaction_in(
+            home.path(),
+            vec![write_expecting(".claude.json", "{}\n", &sha256_hex(&case.bytes))],
+        )
+        .unwrap_err();
+        assert!(err.contains("changed on disk since it was read"), "got: {}", err);
+    }
+
+    #[test]
+    fn absent_still_refuses_an_empty_or_bom_only_file() {
+        // An existing file never digests to "absent", however little it holds.
+        for bytes in [&b""[..], &b"\xEF\xBB\xBF"[..]] {
+            let home = TempDir::new().unwrap();
+            let store = home.path().join(".claude.json");
+            fs::write(&store, bytes).unwrap();
+            let err = apply_surface_transaction_in(
+                home.path(),
+                vec![write_expecting(".claude.json", "{}\n", ABSENT_SENTINEL)],
+            )
+            .unwrap_err();
+            assert!(err.contains("changed on disk since it was read"), "got: {}", err);
+            assert_eq!(fs::read(&store).unwrap(), bytes);
+        }
+    }
+
+    // ── A failed directory fsync after the rename ─────────────────────
+
+    fn failing_sync(_directory: &Path) -> std::io::Result<()> {
+        Err(std::io::Error::other("injected fsync failure"))
+    }
+
+    #[test]
+    fn a_failed_directory_sync_counts_the_file_as_written() {
+        let home = TempDir::new().unwrap();
+        let store = home.path().join(".claude.json");
+
+        let err = apply_surface_transaction_with(
+            home.path(),
+            vec![write(".claude.json", "{}\n")],
+            failing_sync,
+        )
+        .unwrap_err();
+
+        // Replaced, and the error says so and lists it as written.
+        assert_eq!(fs::read_to_string(&store).unwrap(), "{}\n");
+        assert!(err.contains("was replaced, but syncing its directory failed"), "got: {}", err);
+        assert!(err.contains("already written and not rolled back"), "got: {}", err);
+        assert!(err.contains(".claude.json"), "got: {}", err);
+        assert!(temp_files_in(home.path()).is_empty());
+    }
+
+    #[test]
+    fn a_failed_directory_sync_mid_batch_lists_every_replaced_file_and_stops() {
+        // The first file's sync failure stops the batch: the second file is
+        // not attempted, and the first is named as written.
+        let home = TempDir::new().unwrap();
+
+        let err = apply_surface_transaction_with(
+            home.path(),
+            vec![write(".codex/config.toml", "x = 1\n"), write(".claude.json", "{}\n")],
+            failing_sync,
+        )
+        .unwrap_err();
+
+        assert!(err.contains("already written and not rolled back"), "got: {}", err);
+        assert!(err.contains("config.toml"), "got: {}", err);
+        assert_eq!(
+            fs::read_to_string(home.path().join(".codex/config.toml")).unwrap(),
+            "x = 1\n"
+        );
+        assert!(!home.path().join(".claude.json").exists());
     }
 
     #[test]

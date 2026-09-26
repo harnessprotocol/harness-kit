@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import McpServersPage from "../McpServersPage";
+import digestFixture from "../../../lib/__tests__/fixtures/precondition-digest.json";
 
 // ── In-memory home directory behind the Tauri calls ─────────────
 
@@ -330,6 +331,35 @@ describe("McpServersPage", () => {
     expect(doc.mcpServers.legacy).toBe("disabled");
   });
 
+  it("keeps non-server entries named toString and __proto__ through a Raw JSON save", async () => {
+    // Written as text: an object literal can't carry an own "__proto__" key.
+    files.set(
+      `${HOME}/.claude.json`,
+      `{"mcpServers":{"github":${JSON.stringify(STDIO)},"toString":"x","__proto__":"y","constructor":1}}`,
+    );
+    renderPage();
+
+    await screen.findByText("GitHub");
+    fireEvent.click(screen.getByRole("button", { name: "Raw JSON" }));
+    const editor = (await screen.findByTestId("monaco-editor")) as HTMLTextAreaElement;
+    expect(screen.getByRole("note")).toHaveTextContent(/toString/);
+    expect(screen.getByRole("note")).toHaveTextContent(/__proto__/);
+
+    const next = JSON.parse(editor.value);
+    next.github.command = "bunx";
+    fireEvent.change(editor, { target: { value: JSON.stringify(next, null, 2) } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(mockInvoke).toHaveBeenCalledTimes(1));
+    // Own entries only: doc.mcpServers.__proto__ would read the prototype.
+    const servers: Record<string, any> = Object.fromEntries(Object.entries(writtenJson().mcpServers));
+    expect(Object.keys(servers).sort()).toEqual(["__proto__", "constructor", "github", "toString"]);
+    expect(Object.getOwnPropertyDescriptor(servers, "__proto__")?.value).toBe("y");
+    expect(servers.toString).toBe("x");
+    expect(servers.constructor).toBe(1);
+    expect(servers.github.command).toBe("bunx");
+  });
+
   it("a Raw JSON parse error keeps the draft and offers Back to editing, not Reload", async () => {
     files.set(`${HOME}/.claude.json`, JSON.stringify({ mcpServers: { github: STDIO } }));
     renderPage();
@@ -368,6 +398,31 @@ describe("McpServersPage", () => {
     expect(mockInvoke.mock.calls[0][1].files[0].expectedSha256).toBe(sha256(rewritten));
     expect(writtenJson().numStartups).toBe(2);
   });
+
+  // readTextFile is TextDecoder("utf-8") over the bytes, so the page only
+  // ever sees decoded text. The fixture's sha256 is what the Rust rule
+  // computes for the same bytes (checked in surface_write.rs).
+  it.each(["bom", "invalid-utf8"])(
+    "sends the digest the Rust rule computes for the %s fixture",
+    async (name) => {
+      const fixture = digestFixture.cases.find((c) => c.name === name)!;
+      const bytes = Uint8Array.from(fixture.bytesHex.match(/../g)!, (h) => parseInt(h, 16));
+      const decoded = new TextDecoder("utf-8").decode(bytes);
+      expect(decoded).toBe(fixture.text);
+      files.set(`${HOME}/.claude.json`, decoded);
+      renderPage();
+
+      fireEvent.click(await screen.findByRole("button", { name: /add server/i }));
+      const dialog = await screen.findByRole("dialog");
+      fireEvent.change(within(dialog).getByLabelText("Name"), { target: { value: "github" } });
+      fireEvent.change(within(dialog).getByLabelText("Command"), { target: { value: "npx" } });
+      fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+      await waitFor(() => expect(mockInvoke).toHaveBeenCalledTimes(1));
+      expect(mockInvoke.mock.calls[0][1].files[0].expectedSha256).toBe(fixture.sha256);
+      expect(writtenJson().mcpServers.github.command).toBe("npx");
+    },
+  );
 
   it("says the file changed while editing when the Rust precondition refuses", async () => {
     files.set(`${HOME}/.claude.json`, JSON.stringify({ mcpServers: { github: STDIO } }));

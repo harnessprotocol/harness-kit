@@ -398,12 +398,16 @@ export default function McpServersPage() {
     const edited = parsed;
     // Entries that aren't objects are not in the draft (the editor shows
     // server objects only), so carry them over rather than drop them.
+    // A Map, not `name in next` / `next[name] = value`: `in` sees inherited
+    // names (toString, constructor, __proto__) and assigning "__proto__"
+    // sets the prototype, so either would drop an entry with such a name.
+    // Object.fromEntries defines own properties, which JSON.stringify emits.
     await commit((current) => {
-      const next: Record<string, unknown> = { ...edited };
+      const next = new Map<string, unknown>(Object.entries(edited));
       for (const [name, value] of Object.entries(current)) {
-        if (!isRecord(value) && !(name in next)) next[name] = value;
+        if (!isRecord(value) && !next.has(name)) next.set(name, value);
       }
-      return next;
+      return Object.fromEntries(next);
     });
   }
 

@@ -47,7 +47,11 @@ export interface McpStoreSnapshot {
   entries: Record<string, unknown>;
 }
 
-/** `expectedSha256` value that tells the Rust write the file must not exist. */
+/**
+ * `expectedSha256` value that tells the Rust write the file must not exist.
+ * Any other value is sha256Hex of the text readTextFile returned; see
+ * writeMcpServers for why that is text, not bytes on disk.
+ */
 export const ABSENT_SHA256 = "absent";
 
 /** Lowercase hex SHA-256 of a string's UTF-8 bytes. */
@@ -175,12 +179,11 @@ function entriesOf(
       "invalid",
     );
   }
-  const servers: McpServerEntries = {};
-  const otherEntries: Record<string, unknown> = {};
-  for (const [name, entry] of Object.entries(value)) {
-    if (isRecord(entry)) servers[name] = entry;
-    else otherEntries[name] = entry;
-  }
+  // Object.fromEntries defines own properties, so an entry named "__proto__"
+  // stays an entry; `obj[name] = entry` would set the prototype instead.
+  const all = Object.entries(value);
+  const servers = Object.fromEntries(all.filter(([, entry]) => isRecord(entry))) as McpServerEntries;
+  const otherEntries = Object.fromEntries(all.filter(([, entry]) => !isRecord(entry)));
   return { servers, otherEntries, entries: value };
 }
 
@@ -211,10 +214,17 @@ export async function readMcpStore(location: McpStoreLocation): Promise<McpStore
  * Claude Code that later saves from a copy it read before this write will
  * undo it; nothing on this side can see or prevent that.
  *
- * The hash is of the text as the fs plugin decoded it, re-encoded as UTF-8.
- * For a UTF-8 file without a byte-order mark those are the bytes on disk;
- * for anything else the hashes differ and the save is refused, never
- * forced.
+ * The precondition is over TEXT, not bytes on disk: this side can only read
+ * text (the capability grants fs:allow-read-text-file, and readTextFile runs
+ * the bytes through TextDecoder("utf-8")). Both sides compute lowercase hex
+ * SHA-256(UTF-8(decode(strip_bom(bytes)))): one leading UTF-8 BOM dropped,
+ * each maximal invalid UTF-8 subpart replaced by U+FFFD (TextDecoder here,
+ * String::from_utf8_lossy in Rust), re-encoded as UTF-8. So a file with a
+ * BOM or invalid bytes can be saved, and a BOM added or removed by someone
+ * else is not seen as a change. The save writes `content` as given, so a
+ * BOM the file had is dropped; RFC 8259 §8.1 says JSON writers must not add
+ * one, so that is acceptable here. The fixture src/lib/__tests__/fixtures/precondition-
+ * digest.json pins the rule on both sides.
  *
  * The write goes through apply_surface_transaction, which re-checks the path
  * against the registry allowlist compiled into the Rust side. Not core's
