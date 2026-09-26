@@ -175,6 +175,7 @@
   background: var(--border-base);
 }
 .hk-summary-label {
+  display: block;
   font-size: 10.5px;
   font-weight: 650;
   letter-spacing: 0.07em;
@@ -183,6 +184,7 @@
   margin-bottom: 4px;
 }
 .hk-summary-value {
+  display: block;
   font-size: 23px;
   font-weight: 660;
   letter-spacing: -0.02em;
@@ -194,6 +196,26 @@
 .hk-summary-value[data-tone="danger"] { color: var(--danger); }
 .hk-summary-value[data-tone="success"] { color: var(--success); }
 .hk-summary-value[data-tone="accent"] { color: var(--accent-text); }
+/* A cell with onSelect is a toggle button (e.g. a grid filter). */
+button.hk-summary-cell {
+  appearance: none;
+  border: none;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+button.hk-summary-cell:hover { background: var(--hover-bg); }
+button.hk-summary-cell:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+button.hk-summary-cell[data-active="true"] {
+  background: var(--accent-light);
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+button.hk-summary-cell[data-active="true"] .hk-summary-label { color: var(--accent-text); }
 
 /* ── Table / Matrix ── */
 .hk-table {
@@ -665,7 +687,10 @@
    and an inline error banner. Not a "component" per se, but themed purely
    via tokens so pages never inline hex/spacing literals (DESIGN.md §1). */
 .hk-page {
-  padding: 24px 28px 28px;
+  /* The side gutter, named so a page that insets its right edge (the
+     desktop's Machine drawer) can add to it rather than copy it. */
+  --hk-page-gutter: 28px;
+  padding: 24px var(--hk-page-gutter) 28px;
   max-width: 100%;
 }
 .hk-page-head {

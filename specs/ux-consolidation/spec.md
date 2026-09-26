@@ -41,12 +41,12 @@ Format: EARS (`WHEN … THE SYSTEM SHALL …`). Each criterion cites the audit f
 ### Machine, the home
 
 - [ ] AC-13: WHEN the grid renders THE SYSTEM SHALL show a persistent legend naming every cell state in use (present at user scope, present in project, closable gap, differs, drift, no such concept, not managed locally, unknown) and both header badges (skipped entries, marketplaces). *(M1, P2)*
-- [ ] AC-14: WHEN the inventory contains gaps or diffs THE SYSTEM SHALL mark closable-gap cells and divergent cells distinctly from plain absent and plain present cells, and selecting the Gaps or Diffs cell of the summary strip SHALL filter the grid to the matching rows. *(M2, P2)*
-- [ ] AC-15: WHEN the drawer offers a copy THE SYSTEM SHALL show the source surface and the target surface as two selectable controls, defaulting the source to the effective-digest winner and the target to the first closable gap. *(M3, P2)*
-- [ ] AC-16: WHEN a direct apply succeeds THE SYSTEM SHALL rescan, update the grid, and show a toast naming the resource and the target surface. *(M4, P0 for the rescan, P2 for the toast)*
+- [x] AC-14: WHEN the inventory contains gaps or diffs THE SYSTEM SHALL mark closable-gap cells and divergent cells distinctly from plain absent and plain present cells, and selecting the Gaps or Diffs cell of the summary strip SHALL filter the grid to the matching rows. *(M2, P2)*
+- [x] AC-15: WHEN the drawer offers a copy THE SYSTEM SHALL show the source surface and the target surface as two selectable controls, defaulting the source to the effective-digest winner and the target to the first closable gap. *(M3, P2)*
+- [x] AC-16: WHEN a direct apply succeeds THE SYSTEM SHALL rescan, update the grid, and show a toast naming the resource and the target surface. *(M4, P0 for the rescan, P2 for the toast)*
 - [ ] AC-17: WHEN a project directory is chosen THE SYSTEM SHALL offer one selector in the title bar, and Machine, the Drift section and Profile › Compile SHALL read the same value. *(M5, P2)*
 - [ ] AC-18: WHEN Drift is shown THE SYSTEM SHALL present it as a view of Machine reached from a "Drift vs harness.yaml" strip cell and a view toggle, not a collapsed accordion, and acknowledge and fix SHALL continue to work as specified by cross-harness-config-management AC-37. *(P2)*
-- [ ] AC-19: WHEN the drawer is open THE SYSTEM SHALL keep every grid column reachable (the content insets or the grid scrolls beside the drawer); the drawer SHALL NOT cover columns. *(m5, P2)*
+- [x] AC-19: WHEN the drawer is open THE SYSTEM SHALL keep every grid column reachable (the content insets or the grid scrolls beside the drawer); the drawer SHALL NOT cover columns. *(m5, P2)*
 - [ ] AC-20: WHEN a scan or load fails THE SYSTEM SHALL say what failed and offer one action, with the raw error behind a "Details" disclosure; no page SHALL render a bare `String(err)`. *(m2, P2)*
 - [ ] AC-21: WHEN a page has actions THE SYSTEM SHALL register them in the command registry so ⌘K lists them while that page is open, and the title bar SHALL show a ⌘K affordance. *(M9, P2)*
 
@@ -139,11 +139,11 @@ Format: EARS (`WHEN … THE SYSTEM SHALL …`). Each criterion cites the audit f
 
 Defaults are what the plan assumes until answered. Criteria tagged with the question stay implementable under the default.
 
-- [NEEDS CLARIFICATION: Q1. Comparator: keep it behind Settings › Labs (default) or delete it together with Agents and the resilience profiles? Default: Labs, because the results and voting UI is real.]
-- [NEEDS CLARIFICATION: Q2. Fleet: retire it into Machine (default) or keep it under Profile as a compliance view? Default: retire; its unit (adapter) predates ADR 0002 and both of its click flows are broken.]
+- Q1 (resolved). Comparator is kept, not deleted with Agents and the resilience profiles; its nav entry shows only with Settings › Labs on. The /comparator route itself is not guarded. Shipped in Phase 1.
+- Q2 (resolved). Fleet retires into Machine; /fleet redirects. Shipped in Phase 1.
 - [NEEDS CLARIFICATION: Q3. Keep the name "Machine" for the home (default) or rename it ("This computer", "Overview")? Default: keep, with the subtitle doing the explaining.]
 - [NEEDS CLARIFICATION: Q4. Team baseline: git-only, a committed harness.yaml read from a local path first (default), with URL fetch waiting on the signed-definitions transport? Default: yes.]
-- [NEEDS CLARIFICATION: Q5. Should Codex and Cursor get file editors like Claude Code, or is the Machine drawer the only write path to them? Default: drawer only; the group is named "Claude Code" and future surfaces become sibling groups.]
+- Q5 (resolved). The Machine drawer is the only write path to Codex and Cursor. The editor group is named "Claude Code"; future surfaces become sibling groups.
 - [NEEDS CLARIFICATION: Q6. Native menu bar in Phase 4 (default) or earlier?]
 
 ## Dependencies

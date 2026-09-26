@@ -58,7 +58,9 @@ export function ToastViewport({ toasts, onDismiss }: ToastViewportProps) {
   if (toasts.length === 0) return null;
   return (
     <div className="hk-toast-viewport">
-      {toasts.slice(0, 3).map((t) => (
+      {/* The newest three: a warning stays until dismissed, and must not
+          hide a fresh toast behind it. */}
+      {toasts.slice(-3).map((t) => (
         <Toast key={t.id} toast={t} onDismiss={onDismiss} />
       ))}
     </div>

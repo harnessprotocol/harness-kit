@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
-import { MemoryRouter, useNavigate } from "react-router-dom";
+import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { buildMachineInventory } from "@harness-kit/core";
 import MachinePage from "../MachinePage";
+import { applyCellActionViaTauri } from "../cell-actions";
+import { ToastProvider } from "../../../components/ToastProvider";
 import { collectDrift } from "../../drift/drift-data";
 
 // ── Mocks ──────────────────────────────────────────────────────
@@ -316,6 +318,24 @@ function NavigateOnClick({ to }: { to: string }) {
   );
 }
 
+/** Renders the current search string so a test can assert on the URL. */
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location-search">{location.search}</div>;
+}
+
+function gridRowKeys(): string[] {
+  // queryAll: a filter can leave the grid empty. The drawer's test id shares
+  // the prefix, so it is excluded.
+  return screen
+    .queryAllByTestId(/^machine-row-(?!drawer$)/)
+    .map((row) => row.getAttribute("data-testid")!.replace("machine-row-", ""));
+}
+
+function stripCell(label: string): HTMLElement {
+  return screen.getByText(label).parentElement!;
+}
+
 function renderPage() {
   return render(
     <MemoryRouter>
@@ -625,9 +645,164 @@ describe("MachinePage", () => {
     // resourceCount is 99 on every surface — if totals used it, these fail.
     expect(screen.getByText("Resources").parentElement).toHaveTextContent("Resources3");
     expect(screen.getByText("Gaps").parentElement).toHaveTextContent("Gaps1");
-    expect(screen.getByText("Diffs").parentElement).toHaveTextContent("Diffs1");
+    expect(screen.getByText("Differs").parentElement).toHaveTextContent("Differs1");
     expect(screen.getByText("Surfaces detected").parentElement).toHaveTextContent("4/11");
     expect(screen.queryByText("99")).not.toBeInTheDocument();
+  });
+
+  describe("summary strip filters (AC-14)", () => {
+    // In this file's inventory, postgres is the only row with a gap chip
+    // (codex) and the only row with a differs chip (cursor departs from
+    // claude-code's baseline). board and reviewer have neither.
+    it("counts rows with a gap chip and rows with a differs chip", async () => {
+      // Two pairwise diffs on the same row: the strip still counts one row,
+      // because the filter reveals rows, not pairs.
+      const inventory = makeInventory();
+      inventory.diffs.push({
+        row: "mcp-server:postgres",
+        surfaces: ["cursor", "claude-code"],
+        delta: [{ path: "env.HOST", kind: "changed", left: "a", right: "b" }],
+      });
+      vi.mocked(buildMachineInventory).mockResolvedValue(inventory as never);
+      renderPage();
+      await screen.findByTestId("machine-grid");
+      expect(stripCell("Gaps")).toHaveTextContent("Gaps1");
+      expect(stripCell("Differs")).toHaveTextContent("Differs1");
+      // The accessible name separates label and count.
+      expect(screen.getByRole("button", { name: "Gaps 1" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Differs 1" })).toBeInTheDocument();
+      expect(screen.queryByText("Diffs")).not.toBeInTheDocument();
+    });
+
+    it("filters the grid to the rows with a gap chip, and toggles back", async () => {
+      renderPage();
+      await screen.findByTestId("machine-grid");
+      expect(gridRowKeys()).toHaveLength(3);
+      const gaps = screen.getByRole("button", { name: /Gaps/ });
+      expect(gaps).toHaveAttribute("aria-pressed", "false");
+
+      fireEvent.click(gaps);
+      await waitFor(() => expect(gridRowKeys()).toEqual(["mcp-server:postgres"]));
+      expect(screen.getByRole("button", { name: /Gaps/ })).toHaveAttribute("aria-pressed", "true");
+      for (const key of gridRowKeys()) {
+        expect(
+          within(screen.getByTestId(`machine-row-${key}`)).queryAllByText("+ copy").length,
+        ).toBeGreaterThan(0);
+      }
+      expect(screen.getByTestId("machine-filter-status")).toHaveTextContent(
+        "Showing 1 of 3 resources with a closable gap",
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: /Gaps/ }));
+      await waitFor(() => expect(gridRowKeys()).toHaveLength(3));
+      expect(screen.getByRole("button", { name: /Gaps/ })).toHaveAttribute("aria-pressed", "false");
+      expect(screen.queryByTestId("machine-filter-status")).not.toBeInTheDocument();
+    });
+
+    it("filters to differing rows, and Show all restores every row", async () => {
+      renderPage();
+      await screen.findByTestId("machine-grid");
+      fireEvent.click(screen.getByRole("button", { name: /Differs/ }));
+      await waitFor(() => expect(gridRowKeys()).toEqual(["mcp-server:postgres"]));
+      for (const key of gridRowKeys()) {
+        expect(
+          within(screen.getByTestId(`machine-row-${key}`)).queryAllByText("differs").length,
+        ).toBeGreaterThan(0);
+      }
+      expect(screen.getByTestId("machine-filter-status")).toHaveTextContent(
+        "Showing 1 of 3 resources whose content differs",
+      );
+      const showAll = screen.getByRole("button", { name: "Show all" });
+      showAll.focus();
+      fireEvent.click(showAll);
+      await waitFor(() => expect(gridRowKeys()).toHaveLength(3));
+      const differs = screen.getByRole("button", { name: /Differs/ });
+      expect(differs).toHaveAttribute("aria-pressed", "false");
+      // Show all unmounts itself; focus lands on the cell it un-pressed.
+      expect(differs).toHaveFocus();
+    });
+
+    it("reads the filter from the URL and keeps other params when toggling", async () => {
+      render(
+        <MemoryRouter initialEntries={["/machine?drift=1&filter=gaps"]}>
+          <MachinePage />
+          <LocationProbe />
+        </MemoryRouter>,
+      );
+      await screen.findByTestId("machine-grid");
+      expect(gridRowKeys()).toEqual(["mcp-server:postgres"]);
+      expect(screen.getByRole("button", { name: /Gaps/ })).toHaveAttribute("aria-pressed", "true");
+
+      fireEvent.click(screen.getByRole("button", { name: /Gaps/ }));
+      await waitFor(() => expect(gridRowKeys()).toHaveLength(3));
+      let search = new URLSearchParams(screen.getByTestId("location-search").textContent ?? "");
+      expect(search.get("drift")).toBe("1");
+      expect(search.has("filter")).toBe(false);
+
+      fireEvent.click(screen.getByRole("button", { name: /Differs/ }));
+      await waitFor(() => {
+        search = new URLSearchParams(screen.getByTestId("location-search").textContent ?? "");
+        expect(search.get("filter")).toBe("differs");
+      });
+      expect(search.get("drift")).toBe("1");
+    });
+
+    it("closes the drawer when its row is filtered out", async () => {
+      renderPage();
+      await screen.findByTestId("machine-grid");
+      fireEvent.click(screen.getByTestId("machine-row-skill:reviewer"));
+      expect(await screen.findByTestId("machine-row-drawer")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: /Gaps/ }));
+      await waitFor(() => expect(screen.queryByTestId("machine-row-drawer")).not.toBeInTheDocument());
+    });
+
+    it("keeps the drawer open when its row survives the filter", async () => {
+      renderPage();
+      await screen.findByTestId("machine-grid");
+      fireEvent.click(screen.getByTestId("machine-row-mcp-server:postgres"));
+      expect(await screen.findByTestId("machine-row-drawer")).toBeInTheDocument();
+      fireEvent.click(screen.getByRole("button", { name: /Gaps/ }));
+      await waitFor(() => expect(gridRowKeys()).toEqual(["mcp-server:postgres"]));
+      expect(screen.getByTestId("machine-row-drawer")).toBeInTheDocument();
+    });
+
+    it("keeps a URL filter with no matches as a pressed cell that clears it", async () => {
+      const inventory = makeInventory();
+      inventory.gaps = [];
+      vi.mocked(buildMachineInventory).mockResolvedValue(inventory as never);
+      render(
+        <MemoryRouter initialEntries={["/machine?filter=gaps"]}>
+          <MachinePage />
+        </MemoryRouter>,
+      );
+      await screen.findByTestId("machine-grid");
+      expect(gridRowKeys()).toEqual([]);
+      expect(screen.getByTestId("machine-filter-status")).toHaveTextContent(
+        "Showing 0 of 3 resources with a closable gap",
+      );
+      const gaps = screen.getByRole("button", { name: "Gaps 0" });
+      expect(gaps).toHaveAttribute("aria-pressed", "true");
+      gaps.focus();
+      fireEvent.click(gaps);
+      await waitFor(() => expect(gridRowKeys()).toHaveLength(3));
+      expect(screen.queryByRole("button", { name: /Gaps/ })).not.toBeInTheDocument();
+      // The pressed cell became plain text; focus falls back to the strip.
+      expect(screen.getByRole("group", { name: "Summary" })).toHaveFocus();
+    });
+
+    it("renders a zero-count cell as plain text, not a button", async () => {
+      const inventory = makeInventory();
+      inventory.gaps = [];
+      vi.mocked(buildMachineInventory).mockResolvedValue(inventory as never);
+      renderPage();
+      await screen.findByTestId("machine-grid");
+      expect(stripCell("Gaps")).toHaveTextContent("Gaps0");
+      expect(screen.queryByRole("button", { name: /Gaps/ })).not.toBeInTheDocument();
+      expect(stripCell("Gaps").tagName).toBe("DIV");
+      // Resources and Surfaces detected are never filters.
+      expect(screen.queryByRole("button", { name: /Resources/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Surfaces detected/ })).not.toBeInTheDocument();
+    });
   });
 
   it("runs machine-only (projectRoot null) by default without error", async () => {
@@ -761,5 +936,164 @@ describe("MachinePage", () => {
         "present",
       ),
     );
+  });
+
+  it("keeps the row selected after an apply rescans", async () => {
+    const after = makeInventory();
+    after.gaps = [];
+    vi.mocked(buildMachineInventory)
+      .mockResolvedValueOnce(makeInventory() as never)
+      .mockResolvedValueOnce(after as never);
+
+    renderPage();
+    await screen.findByTestId("machine-grid");
+    fireEvent.click(screen.getByTestId("machine-row-mcp-server:postgres"));
+    const drawer = await screen.findByTestId("machine-row-drawer");
+    const apply = within(drawer).getByRole("button", { name: "Apply" });
+    await waitFor(() => expect(apply).toBeEnabled());
+    fireEvent.click(apply);
+
+    await waitFor(() => expect(vi.mocked(buildMachineInventory)).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Refresh" })).toBeEnabled());
+    // Still open, on the same row, now showing the rescanned row: with the
+    // gap gone the drawer offers only the diff target.
+    expect(screen.getByTestId("machine-row-drawer")).toHaveAttribute("aria-label", "postgres details");
+    await waitFor(() =>
+      expect(
+        Array.from((screen.getByLabelText("To") as HTMLSelectElement).options).map(
+          (option) => option.value,
+        ),
+      ).toEqual(["cursor"]),
+    );
+  });
+
+  describe("apply toast (AC-16)", () => {
+    function renderWithToasts() {
+      return render(
+        <ToastProvider>
+          <MemoryRouter>
+            <MachinePage />
+          </MemoryRouter>
+        </ToastProvider>,
+      );
+    }
+
+    async function applyPostgres() {
+      renderWithToasts();
+      await screen.findByTestId("machine-grid");
+      fireEvent.click(screen.getByTestId("machine-row-mcp-server:postgres"));
+      const drawer = await screen.findByTestId("machine-row-drawer");
+      const apply = within(drawer).getByRole("button", { name: "Apply" });
+      await waitFor(() => expect(apply).toBeEnabled());
+      fireEvent.click(apply);
+    }
+
+    it("names the resource and the target surface", async () => {
+      await applyPostgres();
+      const toast = await screen.findByText("Copied postgres to Codex");
+      expect(toast.closest(".hk-toast")).toHaveAttribute("data-variant", "success");
+    });
+
+    it("warns, and keeps the reason, when the rollback point was not recorded", async () => {
+      vi.mocked(applyCellActionViaTauri).mockResolvedValueOnce({
+        written: [],
+        ledgerError: "state db locked",
+      });
+      await applyPostgres();
+      const toast = (await screen.findByText("Copied postgres to Codex")).closest(".hk-toast");
+      expect(toast).toHaveAttribute("data-variant", "warning");
+      expect(toast).toHaveTextContent("Not added to the rollback list (state db locked)");
+    });
+  });
+
+  it("does not reopen a drawer closed while the apply's rescan ran", async () => {
+    let resolveRescan!: (value: unknown) => void;
+    vi.mocked(buildMachineInventory)
+      .mockResolvedValueOnce(makeInventory() as never)
+      .mockImplementationOnce(() => new Promise((resolve) => (resolveRescan = resolve)) as never);
+
+    renderPage();
+    await screen.findByTestId("machine-grid");
+    fireEvent.click(screen.getByTestId("machine-row-mcp-server:postgres"));
+    const drawer = await screen.findByTestId("machine-row-drawer");
+    const apply = within(drawer).getByRole("button", { name: "Apply" });
+    await waitFor(() => expect(apply).toBeEnabled());
+    fireEvent.click(apply);
+    await waitFor(() => expect(vi.mocked(buildMachineInventory)).toHaveBeenCalledTimes(2));
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => expect(screen.queryByTestId("machine-row-drawer")).not.toBeInTheDocument());
+    resolveRescan(makeInventory());
+    await waitFor(() => expect(screen.getByRole("button", { name: "Refresh" })).toBeEnabled());
+    expect(screen.queryByTestId("machine-row-drawer")).not.toBeInTheDocument();
+  });
+
+  it("ignores an older scan that resolves after a newer one", async () => {
+    // The apply's rescan hangs; meanwhile the user starts a fresh scan
+    // (Enter in the directory field), which clears the selection and lands.
+    let resolveStale!: (value: unknown) => void;
+    const newer = makeInventory();
+    newer.rows = newer.rows.filter((row) => row.key !== "skill:reviewer");
+    vi.mocked(buildMachineInventory)
+      .mockResolvedValueOnce(makeInventory() as never)
+      .mockImplementationOnce(() => new Promise((resolve) => (resolveStale = resolve)) as never)
+      .mockResolvedValueOnce(newer as never);
+
+    renderPage();
+    await screen.findByTestId("machine-grid");
+    fireEvent.click(screen.getByTestId("machine-row-mcp-server:postgres"));
+    const drawer = await screen.findByTestId("machine-row-drawer");
+    const apply = within(drawer).getByRole("button", { name: "Apply" });
+    await waitFor(() => expect(apply).toBeEnabled());
+    fireEvent.click(apply);
+    await waitFor(() => expect(vi.mocked(buildMachineInventory)).toHaveBeenCalledTimes(2));
+
+    fireEvent.keyDown(screen.getByPlaceholderText(/Project directory/), { key: "Enter" });
+    await waitFor(() => expect(vi.mocked(buildMachineInventory)).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(gridRowKeys()).not.toContain("skill:reviewer"));
+    expect(screen.queryByTestId("machine-row-drawer")).not.toBeInTheDocument();
+
+    // The stale apply rescan lands last: it must not repopulate the grid or
+    // reopen the drawer on postgres.
+    resolveStale(makeInventory());
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(gridRowKeys()).not.toContain("skill:reviewer");
+    expect(screen.queryByTestId("machine-row-drawer")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Refresh" })).toBeEnabled();
+  });
+
+  it("closes the drawer after an apply when the rescan no longer has the row", async () => {
+    const after = makeInventory();
+    after.rows = after.rows.filter((row) => row.key !== "mcp-server:postgres");
+    after.gaps = [];
+    after.diffs = [];
+    vi.mocked(buildMachineInventory)
+      .mockResolvedValueOnce(makeInventory() as never)
+      .mockResolvedValueOnce(after as never);
+
+    renderPage();
+    await screen.findByTestId("machine-grid");
+    fireEvent.click(screen.getByTestId("machine-row-mcp-server:postgres"));
+    const drawer = await screen.findByTestId("machine-row-drawer");
+    const apply = within(drawer).getByRole("button", { name: "Apply" });
+    await waitFor(() => expect(apply).toBeEnabled());
+    fireEvent.click(apply);
+
+    await waitFor(() => expect(vi.mocked(buildMachineInventory)).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByTestId("machine-row-drawer")).not.toBeInTheDocument());
+  });
+
+  it("reserves the drawer's width on the page while a row is selected (AC-19)", async () => {
+    const { container } = renderPage();
+    await screen.findByTestId("machine-grid");
+    const page = container.querySelector(".hk-page")!;
+    expect(page).not.toHaveAttribute("data-drawer-open");
+
+    fireEvent.click(screen.getByTestId("machine-row-skill:reviewer"));
+    await screen.findByTestId("machine-row-drawer");
+    expect(page).toHaveAttribute("data-drawer-open");
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => expect(page).not.toHaveAttribute("data-drawer-open"));
   });
 });
