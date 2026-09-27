@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { Blocks } from "lucide-react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { Button, Card, EmptyState } from "@harness-kit/ui";
+import { Button, Card, EmptyState, ErrorNotice } from "@harness-kit/ui";
 import {
   listInstalledPlugins, checkPluginUpdates, uninstallPlugin,
   exportPluginAsZip, exportPluginToFolder,
@@ -18,6 +18,7 @@ import ImportBanner from "./plugins/ImportBanner";
 import { dismissImportStatus, enqueueImports, onPluginsImported, useImportQueue } from "./plugins/import-queue";
 import UninstallDialog from "./plugins/UninstallDialog";
 import { useRegisterCommands } from "../../lib/commands";
+import { errorDetails } from "../../lib/error-details";
 
 const PREVIEW_PLUGINS: InstalledPlugin[] = [
   {
@@ -49,7 +50,7 @@ export default function PluginsPage() {
   const [plugins, setPlugins] = useState<InstalledPlugin[]>([]);
   const [updates, setUpdates] = useState<Record<string, PluginUpdateInfo>>({});
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ title: string; details: string } | null>(null);
   const [runtimeNotice, setRuntimeNotice] = useState<string | null>(null);
   const [tauriAvailable] = useState(isTauriRuntimeAvailable);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; plugin: InstalledPlugin } | null>(null);
@@ -81,7 +82,7 @@ export default function PluginsPage() {
     setRuntimeNotice(null);
     listInstalledPlugins()
       .then(setPlugins)
-      .catch((e) => setError(String(e)))
+      .catch((e) => setError({ title: "Couldn't load installed plugins", details: errorDetails(e) }))
       .finally(() => setLoading(false));
 
     checkPluginUpdates()
@@ -242,7 +243,7 @@ export default function PluginsPage() {
       setUninstallTarget(null);
       loadPlugins();
     } catch (err) {
-      setError(String(err));
+      setError({ title: `Couldn't uninstall ${pluginName}`, details: errorDetails(err) });
       setUninstallTarget(null);
     }
   }
@@ -350,9 +351,11 @@ export default function PluginsPage() {
       )}
 
       {error && (
-        <Card padding="sm" style={{ fontSize: "13px", color: "var(--danger)", marginBottom: "12px" }}>
-          {error}
-        </Card>
+        <ErrorNotice
+          title={error.title}
+          details={error.details}
+          action={{ label: "Retry", onClick: () => { setError(null); loadPlugins(); } }}
+        />
       )}
 
       {!loading && !error && plugins.length === 0 && (

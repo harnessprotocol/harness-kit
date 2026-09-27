@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useEffect, type ReactNode } from "react";
+import { ErrorNotice } from "@harness-kit/ui";
 import type { ImportError } from "./import-errors";
 
 export type ImportStatus =
@@ -12,8 +13,6 @@ interface ImportBannerProps {
   onDismiss: () => void;
 }
 
-const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
-
 export default function ImportBanner({ status, onDismiss }: ImportBannerProps) {
   useEffect(() => {
     if (status?.state === "success") {
@@ -25,8 +24,12 @@ export default function ImportBanner({ status, onDismiss }: ImportBannerProps) {
   const progress = status && status.state !== "error" ? status : null;
   const failure = status?.state === "error" ? status : null;
 
-  // Both live regions stay mounted so screen readers see content arrive in an
-  // existing region; a region inserted together with its text is often missed.
+  // The progress region stays mounted so screen readers see its text arrive
+  // in an existing region; a polite region inserted with its text is often
+  // missed. A failure is an ErrorNotice, whose title is role="alert": the
+  // one live region that is announced when inserted with its content. It
+  // stays outside any wrapping region so opening Details does not
+  // re-announce the notice.
   return (
     <>
       <div role="status" aria-live="polite">
@@ -42,39 +45,17 @@ export default function ImportBanner({ status, onDismiss }: ImportBannerProps) {
           )}
         </AnimatePresence>
       </div>
-      <div role="alert">
-        <AnimatePresence>
-          {failure && (
-            <Banner key="error" tone="danger">
-              <div style={{ display: "flex", flexDirection: "column", gap: "4px", minWidth: 0 }}>
-                <span>
-                  {failure.title}
-                  {failure.action && ` ${failure.action}`}
-                </span>
-                {failure.details && (
-                  <details style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>
-                    <summary style={{ cursor: "pointer" }}>Details</summary>
-                    <pre style={{
-                      margin: "4px 0 0", fontFamily: MONO, whiteSpace: "pre-wrap", wordBreak: "break-all",
-                    }}>
-                      {failure.details}
-                    </pre>
-                  </details>
-                )}
-              </div>
-              <button
-                onClick={onDismiss}
-                style={{
-                  fontSize: "11px", border: "none", background: "none", alignSelf: "flex-start",
-                  color: "var(--danger)", cursor: "pointer", padding: "2px 6px",
-                }}
-              >
-                Dismiss
-              </button>
-            </Banner>
-          )}
-        </AnimatePresence>
-      </div>
+      <AnimatePresence>
+        {failure && (
+          <Reveal key="error">
+            <ErrorNotice
+              title={failure.action ? `${failure.title} ${failure.action}` : failure.title}
+              details={failure.details}
+              action={{ label: "Dismiss", onClick: onDismiss }}
+            />
+          </Reveal>
+        )}
+      </AnimatePresence>
     </>
   );
 }
@@ -82,10 +63,9 @@ export default function ImportBanner({ status, onDismiss }: ImportBannerProps) {
 const TONES = {
   accent: { background: "var(--accent-light)", color: "var(--accent-text)" },
   success: { background: "var(--success-light)", color: "var(--success)" },
-  danger: { background: "var(--danger-light)", color: "var(--danger)" },
 } as const;
 
-function Banner({ tone, children }: { tone: keyof typeof TONES; children: ReactNode }) {
+function Reveal({ children }: { children: ReactNode }) {
   return (
     <motion.div
       initial={{ height: 0, opacity: 0 }}
@@ -94,6 +74,14 @@ function Banner({ tone, children }: { tone: keyof typeof TONES; children: ReactN
       transition={{ type: "spring", stiffness: 420, damping: 36 }}
       style={{ overflow: "hidden", marginBottom: "12px" }}
     >
+      {children}
+    </motion.div>
+  );
+}
+
+function Banner({ tone, children }: { tone: keyof typeof TONES; children: ReactNode }) {
+  return (
+    <Reveal>
       <div style={{
         padding: "8px 14px",
         borderRadius: "6px",
@@ -106,6 +94,6 @@ function Banner({ tone, children }: { tone: keyof typeof TONES; children: ReactN
       }}>
         {children}
       </div>
-    </motion.div>
+    </Reveal>
   );
 }

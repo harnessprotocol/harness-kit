@@ -179,7 +179,12 @@ describe("PluginsPage drag-to-import (Tauri drag-drop event)", () => {
     );
     const raw = screen.getByText("Not a directory: /Users/me/notes.md");
     expect(raw.closest("details")).not.toBeNull();
+    expect(raw).not.toBeVisible();
+    expect(alert).not.toHaveTextContent("Not a directory");
     expect(screen.getByText("Details").tagName).toBe("SUMMARY");
+    // Its one action is Dismiss. (The exit animation never completes in jsdom,
+    // so removal itself is not asserted here.)
+    expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
   });
 
   it("says what failed and what to do when a folder is not a plugin", async () => {
@@ -215,7 +220,7 @@ describe("PluginsPage drag-to-import (Tauri drag-drop event)", () => {
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("2 failed: notes.md, not-a-plugin. Imported research.");
     // Each folder's reason and raw error stay available behind Details.
-    const details = alert.querySelector("details")!;
+    const details = screen.getByText("Details").closest("details")!;
     expect(details).toHaveTextContent("Not a directory: /Users/me/notes.md");
     expect(details).toHaveTextContent("Invalid plugin: missing .claude-plugin/plugin.json");
   });
@@ -362,6 +367,37 @@ describe("PluginsPage drag-to-import (Tauri drag-drop event)", () => {
     expect(importButton()).toBeDisabled();
     expect(importButton()).toHaveAttribute("title", expect.stringMatching(/desktop runtime/));
     expect(mockOnDragDropEvent).not.toHaveBeenCalled();
+  });
+});
+
+describe("PluginsPage load failure (AC-20)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetImportQueueForTests();
+    (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {};
+  });
+
+  afterEach(() => {
+    delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
+    vi.restoreAllMocks();
+  });
+
+  it("says the list couldn't load, keeps the raw error behind Details, and Retry reloads", async () => {
+    const raw = "Failed to read ~/.claude/plugins/installed_plugins.json: Permission denied (os error 13)";
+    const fallback = mockInvoke.getMockImplementation()!;
+    mockInvoke.mockImplementation(async (command, args) => {
+      if (command === "list_installed_plugins") throw raw;
+      return fallback(command, args);
+    });
+    render(<MemoryRouter><PluginsPage /></MemoryRouter>);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't load installed plugins");
+    expect(screen.getByText(raw)).not.toBeVisible();
+
+    mockInvoke.mockImplementation(fallback);
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(await screen.findByText("No plugins installed")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
 
