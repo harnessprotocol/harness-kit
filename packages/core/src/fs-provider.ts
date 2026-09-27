@@ -20,6 +20,22 @@ export interface FsProvider {
   readDirAll?(path: string): Promise<string[]>;
   isDirectory(path: string): Promise<boolean>;
   renameFile(from: string, to: string): Promise<void>;
+  /**
+   * Optional: replace `path` atomically in one step. A provider whose backend
+   * can do the write-temp-then-rename itself (the desktop's Rust command)
+   * implements this so the engine never stages a temp path through it.
+   *
+   * `mode` is the permission to leave on the file, when the engine has an
+   * opinion. `replaces` is the exact content the engine last saw at `path`
+   * (`null`: the file must not exist); a provider that can check it at the
+   * moment of the swap should refuse when the file has changed, closing the
+   * window between the engine's own verify and this write.
+   */
+  atomicWriteFile?(
+    path: string,
+    content: string,
+    options?: { mode?: number; replaces?: string | null },
+  ): Promise<void>;
   /** Optional for providers that support transactional delete/rollback. */
   removeFile?(path: string): Promise<void>;
   /** Optional lstat-based safety signal used by capsule validation. */

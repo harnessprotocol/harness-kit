@@ -1,4 +1,8 @@
-import { X } from "lucide-react";
+import { useId, useState } from "react";
+import { Eye, EyeOff, Plus, X } from "lucide-react";
+import { Button, Input } from "@harness-kit/ui";
+
+const MONO = "ui-monospace, SFMono-Regular, Menlo, monospace";
 
 export interface KeyValuePair {
   id?: string;
@@ -9,121 +13,130 @@ export interface KeyValuePair {
 interface KeyValueEditorProps {
   pairs: KeyValuePair[];
   onChange: (pairs: KeyValuePair[]) => void;
+  /** Singular noun for one row, used in accessible labels ("Environment variable 1 name"). */
+  rowLabel: string;
   keyPlaceholder?: string;
   valuePlaceholder?: string;
   disabled?: boolean;
 }
 
+/** Names used by more than one row, trimmed, in first-seen order. */
+export function duplicateKeys(pairs: readonly KeyValuePair[]): string[] {
+  const seen = new Set<string>();
+  const repeated = new Set<string>();
+  for (const { key } of pairs) {
+    const name = key.trim();
+    if (!name) continue;
+    if (seen.has(name)) repeated.add(name);
+    seen.add(name);
+  }
+  return [...repeated];
+}
+
+/**
+ * Rows of name/value pairs. Values are masked by default (env vars and
+ * headers are where tokens live), with a per-row reveal.
+ */
 export default function KeyValueEditor({
   pairs,
   onChange,
+  rowLabel,
   keyPlaceholder = "KEY",
   valuePlaceholder = "value",
   disabled = false,
 }: KeyValueEditorProps) {
-  function handleKeyChange(index: number, newKey: string) {
-    const updated = pairs.map((p, i) => (i === index ? { ...p, key: newKey } : p));
-    onChange(updated);
+  const [revealed, setRevealed] = useState<ReadonlySet<string>>(new Set());
+  const duplicateErrorId = useId();
+  const duplicates = duplicateKeys(pairs);
+  const noun = rowLabel.toLowerCase();
+
+  function update(index: number, patch: Partial<KeyValuePair>) {
+    onChange(pairs.map((pair, i) => (i === index ? { ...pair, ...patch } : pair)));
   }
 
-  function handleValueChange(index: number, newValue: string) {
-    const updated = pairs.map((p, i) => (i === index ? { ...p, value: newValue } : p));
-    onChange(updated);
-  }
-
-  function handleDelete(index: number) {
-    onChange(pairs.filter((_, i) => i !== index));
-  }
-
-  function handleAdd() {
-    onChange([...pairs, { id: crypto.randomUUID(), key: "", value: "" }]);
+  function toggleReveal(rowKey: string) {
+    setRevealed((current) => {
+      const next = new Set(current);
+      if (next.has(rowKey)) next.delete(rowKey);
+      else next.add(rowKey);
+      return next;
+    });
   }
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      {pairs.map((pair, index) => (
-        <div
-          key={pair.id ?? String(index)}
-          style={{ display: "flex", alignItems: "center", gap: 6 }}
-        >
-          <input
-            className="form-input"
-            style={{ flex: "0 0 35%", minWidth: 0 }}
-            value={pair.key}
-            onChange={(e) => handleKeyChange(index, e.target.value)}
-            placeholder={keyPlaceholder}
-            disabled={disabled}
-            spellCheck={false}
-          />
-          <span
-            style={{
-              fontSize: 12,
-              color: "var(--fg-subtle)",
-              userSelect: "none",
-              flexShrink: 0,
-            }}
-          >
-            =
-          </span>
-          <input
-            className="form-input"
-            style={{ flex: 1, minWidth: 0 }}
-            value={pair.value}
-            onChange={(e) => handleValueChange(index, e.target.value)}
-            placeholder={valuePlaceholder}
-            disabled={disabled}
-            spellCheck={false}
-          />
-          <button
-            type="button"
-            onClick={() => handleDelete(index)}
-            disabled={disabled}
-            aria-label="Remove row"
-            style={{
-              flexShrink: 0,
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: 22,
-              height: 22,
-              padding: 0,
-              border: "none",
-              borderRadius: 4,
-              background: "transparent",
-              color: "var(--fg-subtle)",
-              cursor: disabled ? "not-allowed" : "pointer",
-              lineHeight: 1,
-              opacity: disabled ? 0.5 : 1,
-              transition: "color 0.15s, background 0.15s",
-            }}
-            onMouseEnter={(e) => {
-              if (!disabled) {
-                (e.currentTarget as HTMLButtonElement).style.color =
-                  "var(--danger)";
-                (e.currentTarget as HTMLButtonElement).style.background =
-                  "var(--hover-bg)";
-              }
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.color =
-                "var(--fg-subtle)";
-              (e.currentTarget as HTMLButtonElement).style.background =
-                "transparent";
-            }}
-          >
-            <X size={13} strokeWidth={1.7} aria-hidden="true" />
-          </button>
+      {pairs.map((pair, index) => {
+        const rowKey = pair.id ?? String(index);
+        const shown = revealed.has(rowKey);
+        const duplicated = duplicates.includes(pair.key.trim());
+        return (
+          <div key={rowKey} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ flex: "0 0 38%", minWidth: 0 }}>
+              <Input
+                aria-label={`${rowLabel} ${index + 1} name`}
+                value={pair.key}
+                onChange={(e) => update(index, { key: e.target.value })}
+                placeholder={keyPlaceholder}
+                disabled={disabled}
+                spellCheck={false}
+                error={duplicated}
+                aria-describedby={duplicated ? duplicateErrorId : undefined}
+                style={{ fontFamily: MONO }}
+              />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <Input
+                aria-label={`${rowLabel} ${index + 1} value`}
+                type={shown ? "text" : "password"}
+                autoComplete="off"
+                value={pair.value}
+                onChange={(e) => update(index, { value: e.target.value })}
+                placeholder={valuePlaceholder}
+                disabled={disabled}
+                spellCheck={false}
+                style={{ fontFamily: MONO }}
+              />
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => toggleReveal(rowKey)}
+              disabled={disabled}
+              aria-label={`${shown ? "Hide" : "Show"} ${noun} ${index + 1} value`}
+              aria-pressed={shown}
+            >
+              {shown
+                ? <EyeOff size={13} strokeWidth={1.7} aria-hidden="true" />
+                : <Eye size={13} strokeWidth={1.7} aria-hidden="true" />}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={() => onChange(pairs.filter((_, i) => i !== index))}
+              disabled={disabled}
+              aria-label={`Remove ${noun} ${index + 1}`}
+            >
+              <X size={13} strokeWidth={1.7} aria-hidden="true" />
+            </Button>
+          </div>
+        );
+      })}
+      {duplicates.length > 0 && (
+        <div id={duplicateErrorId} className="hk-helper-text" data-error="true">
+          {duplicates.join(", ")} {duplicates.length === 1 ? "is" : "are"} used more than once. Each name
+          can appear once.
         </div>
-      ))}
+      )}
       <div>
-        <button
+        <Button
           type="button"
-          className="btn btn-secondary btn-sm"
-          onClick={handleAdd}
+          size="sm"
+          onClick={() => onChange([...pairs, { id: crypto.randomUUID(), key: "", value: "" }])}
           disabled={disabled}
         >
-          + Add
-        </button>
+          <Plus size={13} strokeWidth={1.7} aria-hidden="true" style={{ marginRight: 4 }} />
+          Add {noun}
+        </Button>
       </div>
     </div>
   );

@@ -446,6 +446,39 @@ describe("file transactions", () => {
     expect(fs.getFile("/project/conf.json")).toBe("a");
   });
 
+  it("delegates each write to a provider's atomicWriteFile and stages no temp file", async () => {
+    // The desktop's provider cannot accept a temp path (its backend allowlists
+    // exact stores), so a provider that can do the swap itself must be trusted
+    // to, and the engine must not stage one through it.
+    const seen: string[] = [];
+    class AtomicFs extends MockFsProvider {
+      async atomicWriteFile(
+        path: string,
+        content: string,
+        options?: { mode?: number; replaces?: string | null },
+      ): Promise<void> {
+        seen.push(`${path}:${options?.mode ?? "-"}:${options?.replaces === undefined ? "-" : options.replaces}`);
+        await this.writeFile(path, content);
+      }
+      override async renameFile(): Promise<void> {
+        throw new Error("engine must not rename when atomicWriteFile exists");
+      }
+    }
+    const fs = new AtomicFs({ "/project/a.txt": "a0" });
+    const result = await applyFileTransaction([{ path: "a.txt", before: "a0", after: "a1" }], {
+      fs,
+      timestamp: "atomic",
+    });
+    expect(result.committed).toBe(true);
+    expect(fs.getFile("/project/a.txt")).toBe("a1");
+    expect(seen.some((entry) => entry.includes("harness-tmp"))).toBe(false);
+    // Backup and manifest still ask for 0600, and say nothing about content
+    // they replace. The change itself names the preimage it expects to swap.
+    expect(seen).toContain("/project/.harness/backups/atomic/a.txt:384:-");
+    expect(seen).toContain("/project/.harness/backups/atomic/transaction.json:384:-");
+    expect(seen).toContain("/project/a.txt:-:a0");
+  });
+
   it("round-trips a v1 (rootless) manifest as project-rooted", async () => {
     const fs = new MockFsProvider({ "/project/a.txt": "a0" });
     await applyFileTransaction([{ path: "a.txt", before: "a0", after: "a1" }], {

@@ -29,6 +29,9 @@
   --cat-cyan:   #06b6d4;
   --cat-green:  #10b981;
 
+  /* Text on a saturated fill (brand avatars), same in both themes */
+  --fg-on-fill: #FFFFFF;
+
   /* Status — fixed semantic identity (distinct from periwinkle brand) */
   --success: #3fb07a;
   --success-light: rgba(63, 176, 122, 0.10);
@@ -374,6 +377,39 @@
    focused control; the cells inside carry their own focus ring. */
 .hk-machine-summary:focus {
   outline: none;
+}
+/* Resources | Drift vs harness.yaml tabs, under the summary strip (AC-18).
+   The selected tab matches a pressed strip cell. */
+.hk-machine-view-toggle {
+  display: inline-flex;
+  gap: 2px;
+  margin-top: 14px;
+  padding: 2px;
+  border-radius: 8px;
+  background: var(--bg-elevated);
+}
+.hk-machine-view-option {
+  appearance: none;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--fg-muted);
+  padding: 5px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.hk-machine-view-option:hover { background: var(--hover-bg); color: var(--fg-base); }
+.hk-machine-view-option:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+.hk-machine-view-option[data-active="true"] {
+  background: var(--accent-light);
+  color: var(--accent-text);
+  box-shadow: inset 0 -2px 0 var(--accent);
+  cursor: default;
 }
 /* One line under the summary strip while a Gaps/Differs filter is on. */
 .hk-machine-filter-status {

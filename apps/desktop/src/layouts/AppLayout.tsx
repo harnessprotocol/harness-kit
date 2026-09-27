@@ -111,7 +111,7 @@ function NavChildren({ entry, configFiles }: { entry: NavEntry; configFiles: str
  * Whether a nav entry is the one the user is on.
  *
  * Compares against the entry's own PATH, not against `/<id>`. Drift's
- * destination is `/machine?drift=1` (a query-qualified entry can share a
+ * destination is `/machine?view=drift` (a query-qualified entry can share a
  * pathname with a plain sibling), so an id-based match could never work for
  * it — the item the user had just clicked would go dark while Machine lit
  * up instead.
@@ -120,7 +120,7 @@ function NavChildren({ entry, configFiles }: { entry: NavEntry; configFiles: str
  * the marker is checked in BOTH directions: present selects the qualified
  * entry, absent selects the plain one. No current NAV entry carries a query
  * marker, but the command palette's "Open Drift" command points at
- * /machine?drift=1, so this stays generic rather than assuming query-free
+ * /machine?view=drift, so this stays generic rather than assuming query-free
  * paths forever.
  */
 export function isSectionActive(

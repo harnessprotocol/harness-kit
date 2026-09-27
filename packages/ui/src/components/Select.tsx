@@ -13,9 +13,23 @@ export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement
   options: SelectOption[];
 }
 
-export function Select({ label, helperText, error, options, id, className = "", ...rest }: SelectProps) {
+export function Select({
+  label,
+  helperText,
+  error,
+  options,
+  id,
+  className = "",
+  "aria-describedby": describedBy,
+  ...rest
+}: SelectProps) {
   const generatedId = useId();
   const selectId = id ?? generatedId;
+  // The helper text is the control's description, so a screen reader hears
+  // an error message with the field it belongs to.
+  const helperId = `${selectId}-helper`;
+  const ariaDescribedBy =
+    [describedBy, helperText ? helperId : undefined].filter(Boolean).join(" ") || undefined;
   return (
     <div className="hk-field">
       {label && (
@@ -28,6 +42,7 @@ export function Select({ label, helperText, error, options, id, className = "", 
         className={["hk-select", className].filter(Boolean).join(" ")}
         data-error={error ? "true" : undefined}
         aria-invalid={error || undefined}
+        aria-describedby={ariaDescribedBy}
         {...rest}
       >
         {options.map((opt) => (
@@ -37,7 +52,7 @@ export function Select({ label, helperText, error, options, id, className = "", 
         ))}
       </select>
       {helperText && (
-        <div className="hk-helper-text" data-error={error ? "true" : undefined}>
+        <div id={helperId} className="hk-helper-text" data-error={error ? "true" : undefined}>
           {helperText}
         </div>
       )}

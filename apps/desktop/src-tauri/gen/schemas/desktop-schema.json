@@ -2565,12 +2565,6 @@
           "markdownDescription": "Enables the read_live_activity command without any pre-configured scope."
         },
         {
-          "description": "Enables the read_mcp_config command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-read-mcp-config",
-          "markdownDescription": "Enables the read_mcp_config command without any pre-configured scope."
-        },
-        {
           "description": "Enables the read_permissions command without any pre-configured scope.",
           "type": "string",
           "const": "allow-read-permissions",
@@ -2809,12 +2803,6 @@
           "type": "string",
           "const": "allow-write-harness-file",
           "markdownDescription": "Enables the write_harness_file command without any pre-configured scope."
-        },
-        {
-          "description": "Enables the write_mcp_config command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-write-mcp-config",
-          "markdownDescription": "Enables the write_mcp_config command without any pre-configured scope."
         },
         {
           "description": "Enables the write_plugin_file command without any pre-configured scope.",
@@ -3177,12 +3165,6 @@
           "markdownDescription": "Denies the read_live_activity command without any pre-configured scope."
         },
         {
-          "description": "Denies the read_mcp_config command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-read-mcp-config",
-          "markdownDescription": "Denies the read_mcp_config command without any pre-configured scope."
-        },
-        {
           "description": "Denies the read_permissions command without any pre-configured scope.",
           "type": "string",
           "const": "deny-read-permissions",
@@ -3421,12 +3403,6 @@
           "type": "string",
           "const": "deny-write-harness-file",
           "markdownDescription": "Denies the write_harness_file command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the write_mcp_config command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-write-mcp-config",
-          "markdownDescription": "Denies the write_mcp_config command without any pre-configured scope."
         },
         {
           "description": "Denies the write_plugin_file command without any pre-configured scope.",

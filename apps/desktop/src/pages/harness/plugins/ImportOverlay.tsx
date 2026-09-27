@@ -1,14 +1,17 @@
 import { AnimatePresence, motion } from "framer-motion";
+import { FolderDown } from "lucide-react";
 
 interface ImportOverlayProps {
   visible: boolean;
 }
 
+/** Shown while the native drag-drop layer reports files over the window. */
 export default function ImportOverlay({ visible }: ImportOverlayProps) {
   return (
     <AnimatePresence>
       {visible && (
         <motion.div
+          data-testid="plugin-import-overlay"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -17,6 +20,7 @@ export default function ImportOverlay({ visible }: ImportOverlayProps) {
             position: "fixed",
             inset: 0,
             zIndex: 100,
+            pointerEvents: "none",
             background: "var(--accent-light)",
             display: "flex",
             alignItems: "center",
@@ -24,22 +28,18 @@ export default function ImportOverlay({ visible }: ImportOverlayProps) {
           }}
         >
           <div style={{
-            position: "absolute",
-            inset: "20px",
-            border: "2px dashed var(--accent)",
+            padding: "24px 32px",
             borderRadius: "12px",
+            background: "var(--bg-surface)",
+            boxShadow: "var(--shadow-lg)",
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
             flexDirection: "column",
             gap: "8px",
           }}>
-            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" style={{ color: "var(--accent)" }}>
-              <path d="M12 16V4m0 0l-4 4m4-4l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-              <path d="M20 16v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--accent)" }}>
-              Drop plugin to import
+            <FolderDown size={32} strokeWidth={1.5} style={{ color: "var(--accent)" }} aria-hidden />
+            <span style={{ fontSize: "14px", fontWeight: 500, color: "var(--accent-text)" }}>
+              Drop a plugin folder or .zip to import it
             </span>
           </div>
         </motion.div>

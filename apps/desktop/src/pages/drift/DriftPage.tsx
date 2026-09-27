@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { ToastItem } from "@harness-kit/ui";
-import { buildDriftScopes, collectDrift, driftItemKey, type ScopedDriftItem } from "./drift-data";
+import {
+  buildDriftScopes,
+  collectDrift,
+  driftItemKey,
+  summarizeDrift,
+  type DriftSummary,
+  type ScopedDriftItem,
+} from "./drift-data";
 import { isRepairable } from "./classification";
 import { FixPreviewModal } from "./FixPreviewModal";
 import { DriftView } from "./DriftView";
@@ -14,7 +21,20 @@ import {
 import { appDataDir, join as joinPath } from "@tauri-apps/api/path";
 import { buildDesktopPortabilitySnapshot, type DesktopPortabilitySnapshot } from "../fleet/portability-data";
 
-export default function DriftPage({ embedded = false }: { embedded?: boolean } = {}) {
+export type { DriftSummary };
+
+export interface DriftPageProps {
+  /** Rendered inside the Machine view (AC-18) rather than as a page. */
+  embedded?: boolean;
+  /**
+   * Called after each successful scan and on every acknowledgement change.
+   * Never before the first scan lands, and a failed scan does not report, so
+   * a caller holding no summary knows Drift has not scanned.
+   */
+  onSummary?: (summary: DriftSummary) => void;
+}
+
+export default function DriftPage({ embedded = false, onSummary }: DriftPageProps = {}) {
   const [searchParams] = useSearchParams();
   const harnessFilter = searchParams.get("harness");
 
@@ -26,6 +46,7 @@ export default function DriftPage({ embedded = false }: { embedded?: boolean } =
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [showAcknowledged, setShowAcknowledged] = useState(false);
   const [portability, setPortability] = useState<DesktopPortabilitySnapshot | null>(null);
+  const [scanned, setScanned] = useState(false);
 
   const pushToast = useCallback((toast: Omit<ToastItem, "id">) => {
     const id = `${Date.now()}-${Math.random()}`;
@@ -59,6 +80,7 @@ export default function DriftPage({ embedded = false }: { embedded?: boolean } =
       setAcknowledged(
         new Set(ackRows.map((a) => [a.scopeRoot, a.adapter, a.path, a.harnessName, a.slot].join("::"))),
       );
+      setScanned(true);
     } catch (err) {
       setError(String(err));
     } finally {
@@ -69,6 +91,11 @@ export default function DriftPage({ embedded = false }: { embedded?: boolean } =
   useEffect(() => {
     load();
   }, [load]);
+
+  useEffect(() => {
+    if (!scanned || !onSummary) return;
+    onSummary(summarizeDrift(entries, acknowledged));
+  }, [scanned, entries, acknowledged, onSummary]);
 
   const filtered = useMemo(
     () => (harnessFilter ? entries.filter((e) => e.item.adapter === harnessFilter) : entries),

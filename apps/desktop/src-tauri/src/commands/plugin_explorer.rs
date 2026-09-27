@@ -190,9 +190,23 @@ pub fn write_plugin_file(file_path: String, content: String) -> Result<(), Strin
         .map_err(|e| format!("Failed to write file: {}", e))
 }
 
+/// Error text from `import_plugin_from_path` / `import_plugin_from_zip` is
+/// matched by prefix in apps/desktop/src/pages/harness/plugins/import-errors.ts
+/// to reword it for the Plugins page. Changing any of these strings breaks
+/// that rewording; `tests::import_error_prefixes_match_import_errors_ts` pins them.
 #[tauri::command]
 pub fn import_plugin_from_path(source_path: String) -> Result<super::plugins::InstalledPlugin, String> {
-    let source = Path::new(&source_path);
+    let plugins_dir = dirs::home_dir()
+        .ok_or("Could not resolve home directory")?
+        .join(".claude")
+        .join("plugins");
+    import_plugin_into(&source_path, &plugins_dir)
+}
+
+/// `import_plugin_from_path` with the destination `~/.claude/plugins` passed
+/// in, so tests can use a tempdir instead of mutating the process-global HOME.
+fn import_plugin_into(source_path: &str, plugins_dir: &Path) -> Result<super::plugins::InstalledPlugin, String> {
+    let source = Path::new(source_path);
     if !source.is_dir() {
         return Err(format!("Not a directory: {}", source_path));
     }
@@ -227,11 +241,6 @@ pub fn import_plugin_from_path(source_path: String) -> Result<super::plugins::In
         return Err("Invalid plugin name: must be a simple directory name".to_string());
     }
 
-    let plugins_dir = dirs::home_dir()
-        .ok_or("Could not resolve home directory")?
-        .join(".claude")
-        .join("plugins");
-
     let dest = plugins_dir.join(&manifest.name);
 
     // Prevent silently overwriting an existing plugin
@@ -246,7 +255,7 @@ pub fn import_plugin_from_path(source_path: String) -> Result<super::plugins::In
     copy_dir_recursive(source, &dest)?;
 
     // Update installed_plugins.json
-    update_installed_plugins_json(&manifest.name, &manifest.version, dest.to_string_lossy().as_ref())?;
+    update_installed_plugins_json(plugins_dir, &manifest.name, &manifest.version, dest.to_string_lossy().as_ref())?;
 
     Ok(super::plugins::InstalledPlugin {
         name: manifest.name,
@@ -458,12 +467,8 @@ fn find_plugin_root(dir: &Path) -> Result<std::path::PathBuf, String> {
     Err("Could not find .claude-plugin/plugin.json in extracted archive".to_string())
 }
 
-fn update_installed_plugins_json(name: &str, version: &str, install_path: &str) -> Result<(), String> {
-    let path = dirs::home_dir()
-        .ok_or("Could not resolve home directory")?
-        .join(".claude")
-        .join("plugins")
-        .join("installed_plugins.json");
+fn update_installed_plugins_json(plugins_dir: &Path, name: &str, version: &str, install_path: &str) -> Result<(), String> {
+    let path = plugins_dir.join("installed_plugins.json");
 
     let mut data: serde_json::Value = if path.exists() {
         let contents = fs::read_to_string(&path)
@@ -503,4 +508,93 @@ fn update_installed_plugins_json(name: &str, version: &str, install_path: &str) 
         .map_err(|e| format!("Failed to finalize installed_plugins.json: {}", e))?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    fn write_manifest(dir: &Path, json: &str) {
+        fs::create_dir_all(dir.join(".claude-plugin")).unwrap();
+        fs::write(dir.join(".claude-plugin").join("plugin.json"), json).unwrap();
+    }
+
+    /// apps/desktop/src/pages/harness/plugins/import-errors.ts matches these
+    /// prefixes to reword import failures. If one changes here, update the
+    /// matching regex there (and this test) in the same commit.
+    #[test]
+    fn import_error_prefixes_match_import_errors_ts() {
+        let tmp = TempDir::new().unwrap();
+        let plugins_dir = tmp.path().join("plugins");
+        let err = |p: &Path| import_plugin_into(p.to_str().unwrap(), &plugins_dir).unwrap_err();
+
+        // /^Not a directory/
+        let file = tmp.path().join("notes.md");
+        fs::write(&file, "x").unwrap();
+        assert!(err(&file).starts_with("Not a directory: "), "{}", err(&file));
+
+        // /missing \.claude-plugin\/plugin\.json/
+        let empty = tmp.path().join("empty");
+        fs::create_dir_all(&empty).unwrap();
+        assert_eq!(err(&empty), "Invalid plugin: missing .claude-plugin/plugin.json");
+
+        // /^Failed to read plugin manifest/ (plugin.json is a directory: exists, unreadable as a file)
+        let unreadable = tmp.path().join("unreadable");
+        fs::create_dir_all(unreadable.join(".claude-plugin").join("plugin.json")).unwrap();
+        assert!(err(&unreadable).starts_with("Failed to read plugin manifest: "), "{}", err(&unreadable));
+
+        // /^Failed to parse plugin manifest/
+        let bad_json = tmp.path().join("bad-json");
+        write_manifest(&bad_json, "{ not json");
+        assert!(err(&bad_json).starts_with("Failed to parse plugin manifest: "), "{}", err(&bad_json));
+
+        // /^Invalid plugin name/
+        let bad_name = tmp.path().join("bad-name");
+        write_manifest(&bad_name, r#"{"name":"../escape","version":"1.0.0"}"#);
+        assert_eq!(err(&bad_name), "Invalid plugin name: must be a simple directory name");
+
+        // /Plugin '([^']+)' is already installed/
+        let good = tmp.path().join("research");
+        write_manifest(&good, r#"{"name":"research","version":"1.0.0"}"#);
+        import_plugin_into(good.to_str().unwrap(), &plugins_dir).unwrap();
+        assert_eq!(
+            err(&good),
+            "Plugin 'research' is already installed. Uninstall it first before reimporting."
+        );
+
+        // /^Could not find \.claude-plugin\/plugin\.json in extracted archive/
+        let extracted = tmp.path().join("extracted");
+        fs::create_dir_all(&extracted).unwrap();
+        assert_eq!(
+            find_plugin_root(&extracted).unwrap_err(),
+            "Could not find .claude-plugin/plugin.json in extracted archive"
+        );
+
+        // /^Failed to (open|read) zip/
+        let missing_zip = tmp.path().join("missing.zip");
+        assert!(import_plugin_from_zip(missing_zip.to_string_lossy().to_string())
+            .unwrap_err()
+            .starts_with("Failed to open zip: "));
+        let not_zip = tmp.path().join("not.zip");
+        fs::write(&not_zip, "not a zip").unwrap();
+        assert!(import_plugin_from_zip(not_zip.to_string_lossy().to_string())
+            .unwrap_err()
+            .starts_with("Failed to read zip archive: "));
+    }
+
+    #[test]
+    fn import_plugin_into_copies_and_records_the_plugin() {
+        let tmp = TempDir::new().unwrap();
+        let plugins_dir = tmp.path().join("plugins");
+        let src = tmp.path().join("research");
+        write_manifest(&src, r#"{"name":"research","version":"1.2.3"}"#);
+
+        let installed = import_plugin_into(src.to_str().unwrap(), &plugins_dir).unwrap();
+        assert_eq!(installed.name, "research");
+        assert!(plugins_dir.join("research/.claude-plugin/plugin.json").exists());
+        let record = fs::read_to_string(plugins_dir.join("installed_plugins.json")).unwrap();
+        assert!(record.contains("\"research\""), "{}", record);
+        assert!(record.contains("1.2.3"), "{}", record);
+    }
 }
