@@ -38,8 +38,8 @@ describe("HooksPage", () => {
   it("shows error message when file load fails", async () => {
     mockReadClaudeMd.mockRejectedValue(new Error("permission denied"));
     renderPage();
-    await waitFor(() => {
-      expect(screen.getByText(/permission denied/i)).toBeInTheDocument();
-    });
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't read settings.json");
+    // The raw error waits behind Details (AC-20).
+    expect(screen.getByText("permission denied")).not.toBeVisible();
   });
 });

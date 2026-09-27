@@ -64,6 +64,7 @@ export default function PluginExplorerPage() {
     saving: explorer.saving,
     savedRecently: explorer.savedRecently,
     error: explorer.error,
+    errorTitle: explorer.errorTitle,
     isDirty: explorer.dirty,
     updateContent: explorer.updateContent,
     // Toolbar Save and Monaco's Cmd+S both go through the confirmation path.

@@ -7,11 +7,15 @@ import {
 } from "../lib/tauri";
 import { isCriticalFile } from "../lib/criticalFiles";
 import { getConfirmSave } from "../lib/preferences";
+import { errorDetails } from "../lib/error-details";
 
 export interface PluginExplorerState {
   tree: FileTreeNode | null;
   loading: boolean;
+  /** The raw error, for an ErrorNotice's Details (AC-20). */
   error: string | null;
+  /** What failed, in plain words; set whenever `error` is. */
+  errorTitle: string | null;
   selectedPath: string | null;
   fileContent: string | null;
   fileLoading: boolean;
@@ -33,11 +37,21 @@ export interface PluginExplorerState {
   restoreVersion: (content: string) => void;
 }
 
+/** The file's name for a notice title: the last path segment. */
+function fileLabel(path: string): string {
+  return path.split(/[\\/]/).filter(Boolean).pop() ?? path;
+}
+
 export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean): PluginExplorerState {
   const pluginName = plugin?.name ?? "";
   const [tree, setTree] = useState<FileTreeNode | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorTitle, setErrorTitle] = useState<string | null>(null);
+  const fail = useCallback((title: string, e: unknown) => {
+    setErrorTitle(title);
+    setError(errorDetails(e));
+  }, []);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState<string | null>(null);
   const [originalContent, setOriginalContent] = useState<string | null>(null);
@@ -72,7 +86,7 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
     setError(null);
     readPluginTree(plugin.source)
       .then(setTree)
-      .catch((e) => setError(String(e)))
+      .catch((e) => fail(`Couldn't read the files in ${pluginName || "this plugin"}`, e))
       .finally(() => setLoading(false));
   }, [open, plugin?.source]);
 
@@ -108,11 +122,11 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
     } catch (e) {
       setFileContent(null);
       setOriginalContent(null);
-      setError(String(e));
+      fail(`Couldn't read ${fileLabel(path)}`, e);
     } finally {
       setFileLoading(false);
     }
-  }, [saveCurrent]);
+  }, [saveCurrent, fail]);
 
   // Load history when file changes
   useEffect(() => {
@@ -151,11 +165,11 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
           .catch(() => {});
       }
     } catch (e) {
-      setError(String(e));
+      fail(`Couldn't save ${fileLabel(selectedPath)}`, e);
     } finally {
       setSaving(false);
     }
-  }, [selectedPath, fileContent, originalContent, pluginName]);
+  }, [selectedPath, fileContent, originalContent, pluginName, fail]);
 
   const requestSave = useCallback(() => {
     if (!selectedPath || fileContent === null || !dirty) return;
@@ -217,7 +231,7 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
   }, []);
 
   return {
-    tree, loading, error,
+    tree, loading, error, errorTitle,
     selectedPath, fileContent, fileLoading,
     dirty, saving, savedRecently,
     confirmState, requestSave, confirmSave, cancelSave,

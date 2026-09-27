@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import ClaudeMdPage from "../ClaudeMdPage";
 
@@ -42,11 +42,14 @@ describe("ClaudeMdPage", () => {
     });
   });
 
-  it("shows error message when file load fails", async () => {
-    mockReadClaudeMd.mockRejectedValue(new Error("file not found"));
+  it("says the file couldn't be read, raw error behind Details, and Reload reads it again (AC-20)", async () => {
+    mockReadClaudeMd.mockRejectedValueOnce(new Error("file not found")).mockResolvedValue("# Hello");
     renderPage();
-    await waitFor(() => {
-      expect(screen.getByText(/file not found/i)).toBeInTheDocument();
-    });
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't read CLAUDE.md");
+    expect(screen.getByText("file not found")).not.toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Reload" }));
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+    expect(mockReadClaudeMd).toHaveBeenCalledTimes(2);
   });
 });

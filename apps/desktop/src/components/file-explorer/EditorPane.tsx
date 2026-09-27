@@ -1,4 +1,5 @@
 import { Suspense, lazy } from "react";
+import { ErrorNotice } from "@harness-kit/ui";
 import type { FileEditorState } from "../../hooks/useFileEditor";
 import EditorToolbar from "./EditorToolbar";
 
@@ -95,18 +96,11 @@ export default function EditorPane({
         {/* Error */}
         {filePath && editor.error && (
           <div style={{ padding: "20px 24px" }}>
-            <div style={{ fontSize: "13px", color: "var(--danger)", marginBottom: "8px" }}>
-              {editor.error}
-            </div>
-            <button
-              onClick={editor.reload}
-              style={{
-                fontSize: "12px", color: "var(--accent-text)", background: "none",
-                border: "none", padding: 0, cursor: "pointer", textDecoration: "underline",
-              }}
-            >
-              Reload
-            </button>
+            <ErrorNotice
+              title={editor.errorTitle ?? "Couldn't open this file"}
+              details={editor.error}
+              action={{ label: "Reload", onClick: editor.reload }}
+            />
           </div>
         )}
 

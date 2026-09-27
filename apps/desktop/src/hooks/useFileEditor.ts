@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { readClaudeMd, writeConfigFile } from "../lib/tauri";
+import { errorDetails } from "../lib/error-details";
 
 export interface FileEditorState {
   content: string | null;
@@ -7,12 +8,20 @@ export interface FileEditorState {
   loading: boolean;
   saving: boolean;
   savedRecently: boolean;
+  /** The raw error, for an ErrorNotice's Details (AC-20). */
   error: string | null;
+  /** What failed, in plain words; set whenever `error` is. */
+  errorTitle?: string | null;
   isDirty: boolean;
   updateContent: (content: string) => void;
   saveFile: () => Promise<void>;
   revertFile: () => void;
   reload: () => void;
+}
+
+/** The file's name for a notice title: the last path segment. */
+function fileLabel(path: string): string {
+  return path.split(/[\\/]/).filter(Boolean).pop() ?? path;
 }
 
 export function useFileEditor(filePath: string | null): FileEditorState {
@@ -22,6 +31,7 @@ export function useFileEditor(filePath: string | null): FileEditorState {
   const [saving, setSaving] = useState(false);
   const [savedRecently, setSavedRecently] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorTitle, setErrorTitle] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -41,7 +51,10 @@ export function useFileEditor(filePath: string | null): FileEditorState {
         setContent(c);
         setOriginalContent(c);
       })
-      .catch((e) => setError(String(e)))
+      .catch((e) => {
+        setErrorTitle(`Couldn't read ${fileLabel(filePath)}`);
+        setError(errorDetails(e));
+      })
       .finally(() => setLoading(false));
   }, [filePath, reloadKey]);
 
@@ -59,7 +72,8 @@ export function useFileEditor(filePath: string | null): FileEditorState {
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
       savedTimerRef.current = setTimeout(() => setSavedRecently(false), 2000);
     } catch (e) {
-      setError(String(e));
+      setErrorTitle(`Couldn't save ${fileLabel(filePath)}`);
+      setError(errorDetails(e));
     } finally {
       setSaving(false);
     }
@@ -86,6 +100,7 @@ export function useFileEditor(filePath: string | null): FileEditorState {
     saving,
     savedRecently,
     error,
+    errorTitle,
     isDirty,
     updateContent,
     saveFile,
