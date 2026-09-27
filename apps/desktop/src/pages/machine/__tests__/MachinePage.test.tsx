@@ -675,7 +675,7 @@ describe("MachinePage", () => {
       vi.mocked(buildMachineInventory).mockRejectedValue(new Error("boom"));
       renderAt("/machine?view=drift");
       expect(await screen.findByTestId("drift-view")).toBeInTheDocument();
-      await screen.findByText(/Scan failed/);
+      await screen.findByText("Couldn't scan this machine");
       expect(within(viewToggle()).getByRole("tab", { name: "Drift vs harness.yaml" })).toHaveAttribute(
         "aria-selected",
         "true",
@@ -1155,7 +1155,25 @@ describe("MachinePage", () => {
     expect(mockGrantProjectScope).not.toHaveBeenCalled();
     // User-scope data renders
     expect(screen.getByText("postgres")).toBeInTheDocument();
-    expect(screen.queryByText(/Scan failed/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Couldn't scan this machine")).not.toBeInTheDocument();
+  });
+
+  it("scan failure shows a titled notice with Retry, raw error behind Details, Retry rescans (AC-20)", async () => {
+    const raw = "EACCES: permission denied, open '/home/user/.claude.json'";
+    vi.mocked(buildMachineInventory).mockRejectedValueOnce(new Error(raw));
+    renderPage();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't scan this machine");
+    // The raw error is not the message: no "Error:" prefix, and hidden until asked for.
+    expect(screen.queryByText(/Error: EACCES/)).not.toBeInTheDocument();
+    expect(screen.getByText(raw)).not.toBeVisible();
+    fireEvent.click(screen.getByText("Details"));
+    expect(screen.getByText(raw)).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await screen.findByTestId("machine-grid");
+    expect(buildMachineInventory).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText("Couldn't scan this machine")).not.toBeInTheDocument();
   });
 
   describe("project directory from the title bar (AC-17)", () => {

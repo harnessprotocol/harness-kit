@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, EmptyState } from "@harness-kit/ui";
+import { Button, EmptyState, ErrorNotice } from "@harness-kit/ui";
 import { ChevronRight, ScanSearch } from "lucide-react";
 import type { GridRow, MachineInventory } from "@harness-kit/core";
+import { errorDetails } from "../../lib/error-details";
 import { surfaceLabel } from "../../lib/surface-labels";
 import { useProjectDir } from "../../lib/project-dir";
 import { useRegisterCommands } from "../../lib/commands";
@@ -68,7 +69,7 @@ export default function MachinePage() {
         );
       }
     } catch (err) {
-      if (seq === loadSeq.current) setError(String(err));
+      if (seq === loadSeq.current) setError(errorDetails(err));
     } finally {
       if (seq === loadSeq.current) setLoading(false);
     }
@@ -197,7 +198,13 @@ export default function MachinePage() {
         </Button>
       </div>
 
-      {error && <div className="hk-page-error">Scan failed: {error}</div>}
+      {error && (
+        <ErrorNotice
+          title="Couldn't scan this machine"
+          details={error}
+          action={{ label: "Retry", onClick: () => load(projectDir) }}
+        />
+      )}
 
       {projectDegraded && (
         <div
