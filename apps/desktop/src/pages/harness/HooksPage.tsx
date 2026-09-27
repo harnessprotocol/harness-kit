@@ -382,6 +382,16 @@ export default function HooksPage() {
         </div>
       )}
 
+      {viewMode === "editor" && editor.saveError && (
+        <div style={{ padding: "8px 16px 0", flexShrink: 0 }}>
+          <ErrorNotice
+            title={editor.saveErrorTitle ?? "Couldn't save settings.json"}
+            details={editor.saveError}
+            action={{ label: "Retry save", onClick: () => void editor.saveFile() }}
+          />
+        </div>
+      )}
+
       {viewMode === "editor" && !editor.loading && editor.content !== null && (
         <div style={{ flex: 1, minHeight: 0 }}>
           <Suspense fallback={null}>

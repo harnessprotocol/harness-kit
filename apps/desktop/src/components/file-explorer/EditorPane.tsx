@@ -79,6 +79,18 @@ export default function EditorPane({
         subtitle={toolbarSubtitle}
       />
 
+      {/* Save error: the editor stays below with the unsaved content. Reload
+          here would re-read the file and throw the edits away. */}
+      {filePath && editor.saveError && (
+        <div style={{ padding: "8px 16px 0", flexShrink: 0 }}>
+          <ErrorNotice
+            title={editor.saveErrorTitle ?? "Couldn't save this file"}
+            details={editor.saveError}
+            action={{ label: "Retry save", onClick: () => void editor.saveFile() }}
+          />
+        </div>
+      )}
+
       <div style={{ flex: 1, minHeight: 0, position: "relative" }}>
         {/* Empty state */}
         {!filePath && (
@@ -93,7 +105,7 @@ export default function EditorPane({
         {/* Loading */}
         {filePath && editor.loading && <ShimmerSkeleton />}
 
-        {/* Error */}
+        {/* Load error: nothing to edit, so the notice takes the editor's place */}
         {filePath && editor.error && (
           <div style={{ padding: "20px 24px" }}>
             <ErrorNotice

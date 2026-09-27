@@ -8,10 +8,16 @@ export interface FileEditorState {
   loading: boolean;
   saving: boolean;
   savedRecently: boolean;
-  /** The raw error, for an ErrorNotice's Details (AC-20). */
+  /** A failed load, raw, for an ErrorNotice's Details (AC-20). There is no
+   *  content to show, so the notice replaces the editor and offers Reload. */
   error: string | null;
   /** What failed, in plain words; set whenever `error` is. */
   errorTitle?: string | null;
+  /** A failed save, raw. The editor stays up with the unsaved content and the
+   *  notice offers "Retry save"; Reload would throw the edits away. */
+  saveError?: string | null;
+  /** What failed, in plain words; set whenever `saveError` is. */
+  saveErrorTitle?: string | null;
   isDirty: boolean;
   updateContent: (content: string) => void;
   saveFile: () => Promise<void>;
@@ -32,12 +38,15 @@ export function useFileEditor(filePath: string | null): FileEditorState {
   const [savedRecently, setSavedRecently] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errorTitle, setErrorTitle] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveErrorTitle, setSaveErrorTitle] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isDirty = content !== null && originalContent !== null && content !== originalContent;
 
   useEffect(() => {
+    setSaveError(null);
     if (!filePath) {
       setContent(null);
       setOriginalContent(null);
@@ -65,6 +74,7 @@ export function useFileEditor(filePath: string | null): FileEditorState {
   const saveFile = useCallback(async () => {
     if (!filePath || content === null) return;
     setSaving(true);
+    setSaveError(null);
     try {
       await writeConfigFile(filePath, content);
       setOriginalContent(content);
@@ -72,8 +82,8 @@ export function useFileEditor(filePath: string | null): FileEditorState {
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
       savedTimerRef.current = setTimeout(() => setSavedRecently(false), 2000);
     } catch (e) {
-      setErrorTitle(`Couldn't save ${fileLabel(filePath)}`);
-      setError(errorDetails(e));
+      setSaveErrorTitle(`Couldn't save ${fileLabel(filePath)}`);
+      setSaveError(errorDetails(e));
     } finally {
       setSaving(false);
     }
@@ -101,6 +111,8 @@ export function useFileEditor(filePath: string | null): FileEditorState {
     savedRecently,
     error,
     errorTitle,
+    saveError,
+    saveErrorTitle,
     isDirty,
     updateContent,
     saveFile,
