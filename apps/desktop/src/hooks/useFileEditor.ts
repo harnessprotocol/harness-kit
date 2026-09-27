@@ -42,6 +42,9 @@ export function useFileEditor(filePath: string | null): FileEditorState {
   const [saveErrorTitle, setSaveErrorTitle] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The file on screen now, read when a save settles.
+  const filePathRef = useRef(filePath);
+  filePathRef.current = filePath;
 
   const isDirty = content !== null && originalContent !== null && content !== originalContent;
 
@@ -75,13 +78,18 @@ export function useFileEditor(filePath: string | null): FileEditorState {
     if (!filePath || content === null) return;
     setSaving(true);
     setSaveError(null);
+    // A save that settles after the editor moved to another file belongs to
+    // the old file: its outcome must not land on the new one.
+    const stillCurrent = () => filePathRef.current === filePath;
     try {
       await writeConfigFile(filePath, content);
+      if (!stillCurrent()) return;
       setOriginalContent(content);
       setSavedRecently(true);
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
       savedTimerRef.current = setTimeout(() => setSavedRecently(false), 2000);
     } catch (e) {
+      if (!stillCurrent()) return;
       setSaveErrorTitle(`Couldn't save ${fileLabel(filePath)}`);
       setSaveError(errorDetails(e));
     } finally {
