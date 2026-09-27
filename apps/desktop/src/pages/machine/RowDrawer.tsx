@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useId, useState } from "react";
-import { Button } from "@harness-kit/ui";
+import { Button, ErrorNotice } from "@harness-kit/ui";
 import { ArrowRight, X } from "lucide-react";
 import type { GridRow, MachineDiff, MachineGap, SurfaceId } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
+import { errorDetails } from "../../lib/error-details";
 import { useToast } from "../../components/ToastProvider";
 import { useRegisterCommands } from "../../lib/commands";
 import { KIND_LABELS, shortDigest } from "./machine-view-model";
@@ -326,6 +327,9 @@ function RowActions({
   const sourceId = useId();
   const targetId = useId();
   const [status, setStatus] = useState<string | null>(null);
+  // A failed plan or apply (AC-20). No action of its own: changing the
+  // selects plans again, and Apply is right above it.
+  const [failure, setFailure] = useState<{ title: string; details: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmedLoss, setConfirmedLoss] = useState(false);
   const [spent, setSpent] = useState(false);
@@ -333,6 +337,7 @@ function RowActions({
   useEffect(() => {
     setConfirmedLoss(false);
     setStatus(null);
+    setFailure(null);
     // Drop the old plan first: planning does file I/O, and until it resolves
     // Apply must not run the previous from → to pair under the new selects.
     setView(null);
@@ -344,7 +349,7 @@ function RowActions({
         if (!cancelled) setView(next);
       })
       .catch((error: unknown) => {
-        if (!cancelled) setStatus(error instanceof Error ? error.message : String(error));
+        if (!cancelled) setFailure({ title: "Couldn't plan this change", details: errorDetails(error) });
       });
     return () => {
       cancelled = true;
@@ -360,6 +365,7 @@ function RowActions({
   const apply = useCallback(async () => {
     if (!view) return;
     setBusy(true);
+    setFailure(null);
     try {
       const applied = await applyCellActionViaTauri(view, confirmedLoss);
       setStatus(
@@ -388,7 +394,8 @@ function RowActions({
       setConfirmedLoss(false);
       onApplied?.();
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : String(error));
+      setStatus(null);
+      setFailure({ title: `Couldn't copy ${view.request.name} to ${surfaceLabel(view.request.to)}`, details: errorDetails(error) });
     } finally {
       setBusy(false);
     }
@@ -596,6 +603,8 @@ function RowActions({
           Copy prompt
         </Button>
       </div>
+
+      {failure && <ErrorNotice title={failure.title} details={failure.details} />}
 
       {status && (
         <p style={{ fontSize: 12, margin: 0 }} role="status">

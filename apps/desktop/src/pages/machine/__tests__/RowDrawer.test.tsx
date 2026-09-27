@@ -175,6 +175,35 @@ describe("RowDrawer apply never runs a stale plan", () => {
   });
 });
 
+describe("RowDrawer failures (AC-20)", () => {
+  beforeEach(() => {
+    vi.mocked(buildCellAction).mockClear();
+    vi.mocked(applyCellActionViaTauri).mockClear();
+  });
+
+  it("a failed apply names what it tried, with the raw error behind Details", async () => {
+    const raw = "surface write refused: ~/.gemini/settings.json is outside the allowlist";
+    vi.mocked(applyCellActionViaTauri).mockRejectedValueOnce(new Error(raw));
+    renderDrawer(GEMINI_GAP);
+    const apply = screen.getByRole("button", { name: "Apply" });
+    await waitFor(() => expect(apply).toBeEnabled());
+    fireEvent.click(apply);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/^Couldn't copy postgres to /);
+    expect(screen.getByText(raw)).not.toBeVisible();
+    // Not also printed on the status line.
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("a failed plan says so instead of printing the raw error", async () => {
+    vi.mocked(buildCellAction).mockRejectedValueOnce("unsupported kind for this surface");
+    renderDrawer();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't plan this change");
+    expect(screen.getByText("unsupported kind for this surface")).not.toBeVisible();
+  });
+});
+
 describe("RowDrawer Escape", () => {
   it("closes on Escape, but not on an Escape something above it already handled", () => {
     const onClose = vi.fn();
