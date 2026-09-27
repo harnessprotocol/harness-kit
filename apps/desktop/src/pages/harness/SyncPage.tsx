@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Wrench, Pencil, Check, X as XIcon } from "lucide-react";
 import { Button, Card, EmptyState, ErrorNotice } from "@harness-kit/ui";
@@ -57,7 +57,13 @@ export default function SyncPage() {
 
   // Sync flow
   const [phase, setPhase] = useState<Phase>("idle");
-  const [previewResult, setPreviewResult] = useState<CompileResult | null>(null);
+  // A preview holds the targets it was compiled for, so the backup that Apply
+  // takes names exactly the surfaces whose files it writes.
+  const [preview, setPreview] = useState<{ result: CompileResult; targets: SurfaceId[] } | null>(null);
+  const previewResult = preview?.result ?? null;
+  // Bumped whenever a preview's inputs change, so a compile still in flight
+  // for the old inputs is dropped instead of shown.
+  const previewGeneration = useRef(0);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [appliedBackupId, setAppliedBackupId] = useState<string | null>(null);
   const [applyError, setApplyError] = useState<string | null>(null);
@@ -95,11 +101,12 @@ export default function SyncPage() {
   // session, so Compile must not depend on another page having granted it.
   useEffect(() => {
     let cancelled = false;
+    previewGeneration.current += 1;
     setDirValid(false);
     setDetectedPlatforms([]);
     setSelectedTargets(new Set());
     setPhase("idle");
-    setPreviewResult(null);
+    setPreview(null);
     setPreviewError(null);
     if (!projectDir) {
       setDirChecking(false);
@@ -135,6 +142,14 @@ export default function SyncPage() {
   }, [projectDir]);
 
   function toggleTarget(platform: SurfaceId) {
+    // A preview stands for the surfaces it was compiled for. Changing them
+    // drops it: Apply goes away and "Preview Changes" is needed again.
+    if (phase === "previewed") {
+      previewGeneration.current += 1;
+      setPhase("idle");
+      setPreview(null);
+      setApplyError(null);
+    }
     setSelectedTargets((prev) => {
       const next = new Set(prev);
       if (next.has(platform)) next.delete(platform); else next.add(platform);
@@ -144,28 +159,33 @@ export default function SyncPage() {
 
   async function handlePreview() {
     if (!harnessContent || selectedTargets.size === 0 || !dirValid) return;
+    const generation = previewGeneration.current;
+    const targets = [...selectedTargets];
     setPhase("previewing");
     setPreviewError(null);
     try {
       const fs = new SyncFsProvider(projectDir);
-      const result = await compile(harnessContent, [...selectedTargets], fs, { dryRun: true });
-      setPreviewResult(result);
+      const result = await compile(harnessContent, targets, fs, { dryRun: true });
+      if (generation !== previewGeneration.current) return;
+      setPreview({ result, targets });
       setPhase("previewed");
     } catch (e) {
+      if (generation !== previewGeneration.current) return;
       setPreviewError(errorDetails(e));
       setPhase("idle");
     }
   }
 
   async function handleApply() {
-    if (!previewResult || !harnessContent) return;
+    if (!preview || !harnessContent) return;
+    const { result, targets } = preview;
     setPhase("applying");
     setApplyError(null);
     try {
-      const overwritePaths = previewResult.files.filter((f) => f.action === "update").map((f) => f.path);
-      const backup = await syncCreateBackup(projectDir, harnessName, [...selectedTargets], overwritePaths);
+      const overwritePaths = result.files.filter((f) => f.action === "update").map((f) => f.path);
+      const backup = await syncCreateBackup(projectDir, harnessName, targets, overwritePaths);
       setAppliedBackupId(backup.id);
-      const writes = previewResult.files
+      const writes = result.files
         .filter((f) => f.action === "create" || f.action === "update")
         .map((f) => ({ relativePath: f.path, content: f.content }));
       await syncWriteFiles(projectDir, writes);
@@ -180,7 +200,7 @@ export default function SyncPage() {
 
   function handleReset() {
     setPhase("idle");
-    setPreviewResult(null);
+    setPreview(null);
     setPreviewError(null);
     setAppliedBackupId(null);
     setApplyError(null);
@@ -326,6 +346,10 @@ export default function SyncPage() {
                     <button
                       key={platform}
                       className="hk-reset-btn"
+                      aria-pressed={checked}
+                      // Locked while a compile or write is in flight: the
+                      // result must match the surfaces it was started for.
+                      disabled={phase === "previewing" || phase === "applying"}
                       onClick={() => toggleTarget(platform)}
                       style={{
                         display: "flex", alignItems: "center", gap: "5px",

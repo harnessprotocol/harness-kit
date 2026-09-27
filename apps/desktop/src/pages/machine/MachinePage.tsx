@@ -105,8 +105,9 @@ export default function MachinePage() {
   const { stripRef, changeFilter } = useFilterFocusHandoff(shownFilter, setFilter);
 
   // ⌘K (spec AC-21): the page's own controls, in step with their disabled
-  // states. Gaps and Differs are offered only while the strip's cell is a
-  // button (a non-zero count), and set rather than toggle the filter.
+  // states. The filter commands are listed once the inventory loads; Gaps and
+  // Differs stay listed but disabled while their count is 0 (the strip shows
+  // no button then), and all three set rather than toggle the filter.
   const filterCounts = useMemo(
     () =>
       inventory

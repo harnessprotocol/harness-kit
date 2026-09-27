@@ -5,6 +5,7 @@ import { compile, detectPlatforms } from "@harness-kit/core";
 import SyncPage from "../SyncPage";
 import { CommandPalette } from "../../../components/CommandPalette";
 import { setCurrentProjectDir } from "../../../lib/project-dir";
+import { syncCreateBackup, syncWriteFiles } from "../../../lib/tauri";
 
 // ── Mocks ──────────────────────────────────────────────────────
 
@@ -209,6 +210,99 @@ describe("SyncPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     await waitFor(() => expect(compile).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+  });
+
+  describe("a preview stands for the inputs it was compiled from", () => {
+    beforeEach(() => {
+      mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.claude/harness.yaml" });
+      mockSyncFileExists.mockResolvedValue(true);
+      vi.mocked(syncCreateBackup).mockResolvedValue({ id: "backup-1" } as never);
+      vi.mocked(syncWriteFiles).mockResolvedValue(undefined as never);
+    });
+
+    it("toggling a surface drops the preview, and a fresh preview applies the new set with a matching backup", async () => {
+      vi.mocked(detectPlatforms).mockResolvedValueOnce([
+        { platform: "claude-code", indicators: [".claude"], needsConfirmation: false },
+        { platform: "cursor", indicators: [".cursor"], needsConfirmation: false },
+      ]);
+      vi.mocked(compile)
+        .mockResolvedValueOnce({
+          harnessName: "default",
+          targets: ["claude-code", "cursor"],
+          files: [
+            { platform: "claude-code", path: ".mcp.json", action: "update", content: "{\"a\":1}" },
+            { platform: "cursor", path: ".cursor/mcp.json", action: "create", content: "{}" },
+          ],
+          warnings: [],
+        } as never)
+        .mockResolvedValueOnce({
+          harnessName: "default",
+          targets: ["cursor"],
+          files: [{ platform: "cursor", path: ".cursor/mcp.json", action: "create", content: "{}" }],
+          warnings: [],
+        } as never);
+      setCurrentProjectDir("/repo/stale");
+      render(
+        <MemoryRouter>
+          <SyncPage />
+          <CommandPalette open onClose={() => {}} sections={[]} />
+        </MemoryRouter>,
+      );
+      const palette = () => within(screen.getByRole("dialog", { name: "Command palette" }));
+      await screen.findByText(/Directory found/i);
+      const previewButton = screen.getByRole("button", { name: "Preview Changes" });
+      await waitFor(() => expect(previewButton).toBeEnabled());
+      fireEvent.click(previewButton);
+      expect(await screen.findByRole("button", { name: "Apply 2 files" })).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: /^claude-code/ }));
+
+      // The old preview is gone, button and command alike, and nothing was written.
+      expect(screen.queryByRole("button", { name: /^Apply/ })).not.toBeInTheDocument();
+      expect(palette().queryByRole("button", { name: /^Apply/ })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Preview Changes" })).toBeEnabled();
+      expect(syncCreateBackup).not.toHaveBeenCalled();
+      expect(syncWriteFiles).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole("button", { name: "Preview Changes" }));
+      await waitFor(() => expect(compile).toHaveBeenCalledTimes(2));
+      expect(vi.mocked(compile).mock.calls[1][1]).toEqual(["cursor"]);
+      fireEvent.click(await screen.findByRole("button", { name: "Apply 1 file" }));
+
+      await screen.findByText("Sync complete");
+      expect(syncCreateBackup).toHaveBeenCalledTimes(1);
+      expect(syncCreateBackup).toHaveBeenCalledWith("/repo/stale", "default", ["cursor"], []);
+      expect(syncWriteFiles).toHaveBeenCalledTimes(1);
+      expect(syncWriteFiles).toHaveBeenCalledWith("/repo/stale", [{ relativePath: ".cursor/mcp.json", content: "{}" }]);
+    });
+
+    it("drops a preview that finishes after the project changed", async () => {
+      const cursorOnly = [{ platform: "cursor" as const, indicators: [".cursor"], needsConfirmation: false }];
+      vi.mocked(detectPlatforms).mockResolvedValueOnce(cursorOnly).mockResolvedValueOnce(cursorOnly);
+      let finish: (value: unknown) => void = () => {};
+      vi.mocked(compile).mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }) as never);
+      setCurrentProjectDir("/repo/first");
+      renderPage();
+      await screen.findByText(/Directory found/i);
+      const previewButton = screen.getByRole("button", { name: "Preview Changes" });
+      await waitFor(() => expect(previewButton).toBeEnabled());
+      fireEvent.click(previewButton);
+      await waitFor(() => expect(compile).toHaveBeenCalledTimes(1));
+
+      act(() => setCurrentProjectDir("/repo/second"));
+      await waitFor(() => expect(mockSyncFileExists).toHaveBeenCalledWith("/repo/second", "."));
+      await act(async () => {
+        finish({
+          harnessName: "default",
+          targets: ["cursor"],
+          files: [{ platform: "cursor", path: ".cursor/mcp.json", action: "create", content: "{}" }],
+          warnings: [],
+        });
+      });
+
+      expect(screen.queryByRole("button", { name: /^Apply/ })).not.toBeInTheDocument();
+      await waitFor(() => expect(screen.getByRole("button", { name: "Preview Changes" })).toBeEnabled());
+    });
   });
 
   describe("project directory (AC-17)", () => {
