@@ -61,8 +61,10 @@ export function RowDrawer({ row, diffs, gaps, surfaceOrder, onClose, onApplied }
       data-testid="machine-row-drawer"
       aria-label={`${row.name} details`}
       style={{
+        // Starts below the title bar so its project selector stays visible
+        // and clickable while the drawer is open.
         position: "fixed",
-        top: 0,
+        top: "var(--titlebar-height)",
         right: 0,
         bottom: 0,
         width: "var(--hk-drawer-width)",

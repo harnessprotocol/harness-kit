@@ -156,3 +156,56 @@ test.describe("Sync page — regression: harness loaded from mock", () => {
     await expect(btn).toBeVisible();
   });
 });
+
+test.describe("Machine row drawer and the title bar (AC-17, AC-19)", () => {
+  test("an open drawer leaves the project selector visible and clickable", async ({ appPage }) => {
+    // The shared mock has no home dir or plugin-fs commands, so Machine would
+    // scan nothing. Serve a home dir and one Claude Code MCP server, enough
+    // for the grid to show a row to open.
+    await appPage.addInitScript(() => {
+      const files: Record<string, string> = {
+        "/home/mock/.claude.json": JSON.stringify({ mcpServers: { github: { command: "gh-mcp" } } }),
+      };
+      const internals = (window as unknown as { __TAURI_INTERNALS__: { invoke: (cmd: string, args?: { path?: string }) => Promise<unknown> } }).__TAURI_INTERNALS__;
+      const base = internals.invoke;
+      internals.invoke = (cmd, args) => {
+        const path = args?.path ?? "";
+        if (cmd === "plugin:path|resolve_directory") return Promise.resolve("/home/mock");
+        if (cmd === "plugin:fs|exists") return Promise.resolve(path in files);
+        if (cmd === "plugin:fs|read_text_file") {
+          return path in files
+            ? Promise.resolve(Array.from(new TextEncoder().encode(files[path])))
+            : Promise.reject(`not found: ${path}`);
+        }
+        return base(cmd, args);
+      };
+    });
+
+    await appPage.goto("/machine");
+    await appPage.getByRole("button", { name: "github details" }).click();
+    await expect(appPage.getByTestId("machine-row-drawer")).toBeVisible();
+
+    // The drawer starts where the title bar ends.
+    const drawerTop = await appPage.getByTestId("machine-row-drawer").evaluate((el) => el.getBoundingClientRect().top);
+    const titlebarBottom = await appPage.locator(".titlebar").evaluate((el) => el.getBoundingClientRect().bottom);
+    expect(drawerTop).toBe(titlebarBottom);
+
+    const selector = appPage.getByRole("button", { name: /^Project:/ });
+    const uncovered = await selector.evaluate((button) => {
+      const box = button.getBoundingClientRect();
+      const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+      return hit !== null && button.contains(hit);
+    });
+    expect(uncovered).toBe(true);
+
+    // Its menu opens over the drawer, not under it.
+    await selector.click();
+    const choose = appPage.getByRole("menuitem", { name: "Choose folder…" });
+    const menuUncovered = await choose.evaluate((item) => {
+      const box = item.getBoundingClientRect();
+      const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+      return hit !== null && item.contains(hit);
+    });
+    expect(menuUncovered).toBe(true);
+  });
+});

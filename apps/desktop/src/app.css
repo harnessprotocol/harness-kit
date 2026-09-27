@@ -43,6 +43,10 @@
   /* Sidebar */
   --sidebar-width: 240px;
 
+  /* Title bar (border-box, its bottom separator included). Fixed layers that
+     must leave the title bar's controls reachable start below it. */
+  --titlebar-height: 38px;
+
   /* Machine row drawer (fixed to the window's right edge) */
   --hk-drawer-width: 380px;
 
@@ -1007,7 +1011,11 @@ body {
 
 /* ── Title bar ── */
 .titlebar {
-  height: 38px;
+  height: var(--titlebar-height);
+  /* Its own layer above the Machine row drawer (z 60), so the project menu
+     opens over an open drawer; still below overlays and modals (100+). */
+  position: relative;
+  z-index: 61;
   display: flex;
   align-items: center;
   flex-shrink: 0;
