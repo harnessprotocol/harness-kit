@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, act, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { compile, detectPlatforms } from "@harness-kit/core";
 import SyncPage from "../SyncPage";
+import { CommandPalette } from "../../../components/CommandPalette";
 import { setCurrentProjectDir } from "../../../lib/project-dir";
 
 // ── Mocks ──────────────────────────────────────────────────────
@@ -150,6 +151,39 @@ describe("SyncPage", () => {
     const targets = vi.mocked(compile).mock.calls[0][1] as string[];
     expect(targets).toContain("cursor");
     expect(targets).not.toContain("pi");
+  });
+
+  it("offers Preview, then Apply, in the palette in step with their buttons (AC-21)", async () => {
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.claude/harness.yaml" });
+    mockSyncFileExists.mockResolvedValue(true);
+    vi.mocked(detectPlatforms).mockResolvedValueOnce([
+      { platform: "cursor", indicators: [".cursor"], needsConfirmation: false },
+    ]);
+    vi.mocked(compile).mockResolvedValueOnce({
+      harnessName: "default",
+      targets: ["cursor"],
+      files: [{ platform: "cursor", path: ".cursor/mcp.json", action: "create", content: "{}" }],
+      warnings: [],
+    } as never);
+    setCurrentProjectDir("/repo/palette");
+    render(
+      <MemoryRouter>
+        <SyncPage />
+        <CommandPalette open onClose={() => {}} sections={[]} />
+      </MemoryRouter>,
+    );
+    const palette = () => within(screen.getByRole("dialog", { name: "Command palette" }));
+    await screen.findByText(/Directory found/i);
+    const preview = palette().getByRole("button", { name: "Preview compile changes" });
+    await waitFor(() => expect(preview).not.toHaveAttribute("aria-disabled"));
+    expect(palette().queryByRole("button", { name: /Apply/ })).not.toBeInTheDocument();
+
+    fireEvent.click(preview);
+    await waitFor(() => expect(compile).toHaveBeenCalledTimes(1));
+    expect(await screen.findByRole("button", { name: "Apply 1 file" })).toBeInTheDocument();
+    expect(palette().getByRole("button", { name: "Apply 1 compiled file" })).not.toHaveAttribute("aria-disabled");
+    // Preview is off outside the idle phase, button and command alike.
+    expect(palette().getByRole("button", { name: "Preview compile changes" })).toHaveAttribute("aria-disabled", "true");
   });
 
   describe("project directory (AC-17)", () => {

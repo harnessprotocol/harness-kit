@@ -9,6 +9,7 @@ import { ToastProvider } from "../../../components/ToastProvider";
 import { buildDriftScopes, collectDrift } from "../../drift/drift-data";
 import { acknowledgeDriftItem } from "../../../lib/tauri";
 import { PROJECT_CHANGED_EVENT, setCurrentProjectDir } from "../../../lib/project-dir";
+import { CommandPalette } from "../../../components/CommandPalette";
 
 // ── Mocks ──────────────────────────────────────────────────────
 
@@ -1471,5 +1472,87 @@ describe("MachinePage", () => {
 
     fireEvent.keyDown(window, { key: "Escape" });
     await waitFor(() => expect(page).not.toHaveAttribute("data-drawer-open"));
+  });
+});
+
+describe("MachinePage commands in the palette (AC-21)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(buildMachineInventory).mockReset();
+    vi.mocked(buildMachineInventory).mockResolvedValue(makeInventory() as never);
+    mockGrantProjectScope.mockResolvedValue(undefined);
+    vi.mocked(collectDrift).mockReset();
+    vi.mocked(collectDrift).mockResolvedValue([]);
+  });
+
+  function renderWithPalette() {
+    return render(
+      <MemoryRouter>
+        <MachinePage />
+        <LocationProbe />
+        <CommandPalette open onClose={() => {}} sections={[]} />
+      </MemoryRouter>,
+    );
+  }
+
+  function paletteOption(name: string | RegExp) {
+    return within(screen.getByRole("dialog", { name: "Command palette" })).getByRole("button", { name });
+  }
+
+  function queryPaletteOption(name: string | RegExp) {
+    return within(screen.getByRole("dialog", { name: "Command palette" })).queryByRole("button", { name });
+  }
+
+  it("Rescan runs the page's own scan again", async () => {
+    renderWithPalette();
+    await screen.findByTestId("machine-grid");
+    expect(vi.mocked(buildMachineInventory)).toHaveBeenCalledTimes(1);
+
+    const rescan = paletteOption("Rescan this machine");
+    await waitFor(() => expect(rescan).not.toHaveAttribute("aria-disabled"));
+    fireEvent.click(rescan);
+    await waitFor(() => expect(vi.mocked(buildMachineInventory)).toHaveBeenCalledTimes(2));
+  });
+
+  it("switches views and filters through the page's own handlers", async () => {
+    renderWithPalette();
+    await screen.findByTestId("machine-grid");
+    // Already on the grid, and no filter is on.
+    expect(paletteOption("Show resources")).toHaveAttribute("aria-disabled", "true");
+    expect(paletteOption("Filter: show all")).toHaveAttribute("aria-disabled", "true");
+
+    fireEvent.click(paletteOption("Filter: gaps"));
+    await waitFor(() => expect(screen.getByTestId("location-search")).toHaveTextContent("filter=gaps"));
+    expect(gridRowKeys()).toEqual(["mcp-server:postgres"]);
+    expect(paletteOption("Filter: gaps")).toHaveAttribute("aria-disabled", "true");
+
+    fireEvent.click(paletteOption("Filter: show all"));
+    await waitFor(() => expect(screen.getByTestId("location-search")).not.toHaveTextContent("filter="));
+
+    fireEvent.click(paletteOption("Show drift vs harness.yaml"));
+    expect(await screen.findByTestId("machine-drift-view")).toBeInTheDocument();
+    expect(paletteOption("Show drift vs harness.yaml")).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("offers Copy CLI command only while a row with a plan is selected", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    renderWithPalette();
+    await screen.findByTestId("machine-grid");
+    expect(queryPaletteOption(/Copy CLI command/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("machine-row-mcp-server:postgres"));
+    const copy = await waitFor(() => {
+      const option = paletteOption("Copy CLI command for postgres");
+      expect(option).not.toHaveAttribute("aria-disabled");
+      return option;
+    });
+    fireEvent.click(copy);
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith(expect.stringMatching(/^harness-kit sync --from .* --only mcp-server\/postgres$/)),
+    );
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => expect(queryPaletteOption(/Copy CLI command/)).not.toBeInTheDocument());
   });
 });

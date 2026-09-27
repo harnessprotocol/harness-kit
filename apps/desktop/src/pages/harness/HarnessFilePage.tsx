@@ -7,6 +7,7 @@ import type { HarnessConfig, ValidationResult } from "@harness-kit/core";
 import { generateHarnessYaml, HARNESS_TEMPLATE } from "../../lib/harness-generator";
 import type { HarnessProfile } from "../../lib/profiles";
 import { getAvailableViewModes } from "../../lib/viewModes";
+import { useRegisterCommands } from "../../lib/commands";
 import EditorToolbar from "../../components/file-explorer/EditorToolbar";
 import ValidationBanner from "./harness-file/ValidationBanner";
 import MetadataSection from "./harness-file/MetadataSection";
@@ -113,6 +114,25 @@ export default function HarnessFilePage() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [view, handleSave]);
+
+  // ⌘K (spec AC-21): Save while the editor is open, disabled when the
+  // Save buttons are (nothing changed, or a save is running).
+  useRegisterCommands(
+    view === "editor"
+      ? [
+          {
+            id: "profile.save",
+            title: "Save harness.yaml",
+            group: "Profile",
+            keywords: ["write"],
+            shortcut: "⌘S",
+            disabled: !saveable || saving,
+            run: handleSave,
+          },
+        ]
+      : [],
+    [view, saveable, saving],
+  );
 
   // ── Empty state actions ───────────────────────────────────────
 

@@ -4,6 +4,7 @@ import { ArrowRight, X } from "lucide-react";
 import type { GridRow, MachineDiff, MachineGap, SurfaceId } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
 import { useToast } from "../../components/ToastProvider";
+import { useRegisterCommands } from "../../lib/commands";
 import { KIND_LABELS, shortDigest } from "./machine-view-model";
 import {
   applyCellActionViaTauri,
@@ -392,6 +393,26 @@ function RowActions({
       setBusy(false);
     }
   }, [view, onApplied, confirmedLoss, toast]);
+
+  // ⌘K (spec AC-21): the drawer's "Copy CLI command", disabled while the
+  // plan is still being built, as the button is. Absent when the drawer
+  // offers no actions.
+  const hasActions = anyTargets && source !== undefined;
+  useRegisterCommands(
+    hasActions
+      ? [
+          {
+            id: "machine.row.copy-cli",
+            title: `Copy CLI command for ${row.name}`,
+            group: "Machine",
+            keywords: ["cli", "copy", "sync"],
+            disabled: !view,
+            run: () => (view ? copy(view.cli, "CLI command") : undefined),
+          },
+        ]
+      : [],
+    [hasActions, view === null, row.name],
+  );
 
   if (!anyTargets || !source) {
     return (

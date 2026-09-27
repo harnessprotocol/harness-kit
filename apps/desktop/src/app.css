@@ -1044,6 +1044,49 @@ body {
   color: var(--fg-base);
 }
 
+/* ⌘K affordance (spec AC-21), right of the project selector. */
+.hk-titlebar-cmdk {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  margin-right: 10px;
+  padding: 0 7px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--fg-subtle);
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+  transition: background-color 0.15s ease-out, color 0.15s ease-out;
+}
+
+.hk-titlebar-cmdk:hover,
+.hk-titlebar-cmdk[aria-expanded="true"] {
+  background: var(--hover-bg);
+  color: var(--fg-base);
+}
+
+.hk-titlebar-cmdk:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.hk-titlebar-cmdk-key {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 550;
+  letter-spacing: 0.02em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hk-titlebar-cmdk {
+    transition: none;
+  }
+}
+
 /* ── Form elements ── */
 .form-input {
   width: 100%;

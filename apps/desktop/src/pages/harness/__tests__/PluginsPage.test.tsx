@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, act, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import PluginsPage from "../PluginsPage";
 import { describeImportError } from "../plugins/import-errors";
 import { resetImportQueueForTests } from "../plugins/import-queue";
+import { CommandPalette } from "../../../components/CommandPalette";
 
 // ── Tauri seams ─────────────────────────────────────────────────
 
@@ -324,6 +325,31 @@ describe("PluginsPage drag-to-import (Tauri drag-drop event)", () => {
 
     expect(importButton()).toBeEnabled();
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("drag-and-drop"), failure);
+  });
+
+  it("Import plugin from the palette runs the folder picker import, disabled in step with the button (AC-21)", async () => {
+    render(
+      <MemoryRouter>
+        <PluginsPage />
+        <CommandPalette open onClose={() => {}} sections={[]} />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
+    const option = () =>
+      within(screen.getByRole("dialog", { name: "Command palette" })).getByRole("button", {
+        name: "Import plugin from folder…",
+      });
+    expect(option()).not.toHaveAttribute("aria-disabled");
+
+    const release = holdImport("/Users/me/picked");
+    mockDialogOpen.mockResolvedValueOnce("/Users/me/picked");
+    fireEvent.click(option());
+    await waitFor(() => expect(importCalls()).toEqual([["import_plugin_from_path", { sourcePath: "/Users/me/picked" }]]));
+    // While the import runs the button is off, and so is the command.
+    expect(importButton()).toBeDisabled();
+    expect(option()).toHaveAttribute("aria-disabled", "true");
+    await release();
+    await waitFor(() => expect(option()).not.toHaveAttribute("aria-disabled"));
   });
 
   it("renders the browser preview without touching the Tauri webview", async () => {

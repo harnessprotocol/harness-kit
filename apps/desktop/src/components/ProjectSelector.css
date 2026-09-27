@@ -4,7 +4,8 @@
 .hk-project-selector {
   position: relative;
   margin-left: auto;
-  margin-right: 10px;
+  /* The ⌘K button follows; the title bar's 4px gap plus this separates them. */
+  margin-right: 2px;
   -webkit-app-region: no-drag;
 }
 

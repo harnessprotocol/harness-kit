@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { open } from "@tauri-apps/plugin-shell";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { NavItem } from "@harness-kit/ui";
+import { Search } from "lucide-react";
 import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
 import { useArrowNavigation } from "../hooks/useArrowNavigation";
 import { useSidebarResize } from "../hooks/useSidebarResize";
@@ -263,6 +264,21 @@ function AppShell() {
         </button>
         {/* The one project-directory selector (spec AC-17): Machine, Drift and Compile read it */}
         <ProjectSelector />
+        {/* ⌘K affordance (spec AC-21): the palette lists the open page's commands first */}
+        <button
+          type="button"
+          className="hk-titlebar-cmdk"
+          data-no-drag=""
+          onClick={() => setPaletteOpen(true)}
+          aria-label="Command palette"
+          aria-keyshortcuts="Meta+K"
+          aria-haspopup="dialog"
+          aria-expanded={paletteOpen}
+          title="Command palette (⌘K)"
+        >
+          <Search size={12} strokeWidth={1.7} aria-hidden="true" />
+          <kbd className="hk-titlebar-cmdk-key">⌘K</kbd>
+        </button>
       </div>
 
       {/* Content area: sidebar + main */}

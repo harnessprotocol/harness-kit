@@ -309,3 +309,29 @@ describe("title-bar project selector (AC-17)", () => {
     expect(mockStartDragging).not.toHaveBeenCalled();
   });
 });
+
+describe("title-bar ⌘K affordance (AC-21)", () => {
+  function commandButton() {
+    return screen.getByRole("button", { name: "Command palette" });
+  }
+
+  it("names its shortcut and opens the palette", () => {
+    renderLayout();
+    expect(commandButton()).toHaveAttribute("aria-keyshortcuts", "Meta+K");
+    expect(commandButton()).toHaveTextContent("⌘K");
+    expect(screen.queryByRole("dialog", { name: "Command palette" })).not.toBeInTheDocument();
+
+    fireEvent.click(commandButton());
+    expect(screen.getByRole("dialog", { name: "Command palette" })).toBeInTheDocument();
+    expect(commandButton()).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("pressing it never starts a window drag", async () => {
+    mockStartDragging.mockClear();
+    renderLayout();
+    fireEvent.mouseDown(commandButton());
+    fireEvent.mouseDown(commandButton().querySelector("kbd")!);
+    await new Promise((r) => setTimeout(r, 0));
+    expect(mockStartDragging).not.toHaveBeenCalled();
+  });
+});

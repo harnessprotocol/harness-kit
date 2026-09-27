@@ -209,3 +209,32 @@ test.describe("Machine row drawer and the title bar (AC-17, AC-19)", () => {
     expect(menuUncovered).toBe(true);
   });
 });
+
+test.describe("⌘K affordance and page commands (AC-21)", () => {
+  test("the title bar's ⌘K button opens the palette with Machine's commands first", async ({ appPage }) => {
+    await appPage.setViewportSize({ width: 1024, height: 700 });
+    await appPage.goto("/machine");
+    await expect(appPage.getByRole("heading", { name: "Machine" })).toBeVisible();
+
+    const cmdk = appPage.getByRole("button", { name: "Command palette" });
+    const selector = appPage.getByRole("button", { name: /^Project:/ });
+    // Side by side at the narrowest supported width, not overlapping.
+    const [a, b] = await Promise.all([selector.boundingBox(), cmdk.boundingBox()]);
+    expect(a && b).toBeTruthy();
+    expect(a!.x + a!.width).toBeLessThanOrEqual(b!.x);
+    expect(b!.x + b!.width).toBeLessThanOrEqual(1024);
+
+    await cmdk.click();
+    const palette = appPage.getByRole("dialog", { name: "Command palette" });
+    await expect(palette).toBeVisible();
+    await expect(palette.getByRole("button").first()).toHaveText("Rescan this machine");
+    await expect(palette.getByText("This page")).toBeVisible();
+
+    await appPage.keyboard.press("Escape");
+    await appPage.goto("/marketplace");
+    await expect(appPage.getByRole("heading", { name: "Browse Plugins" })).toBeVisible();
+    await appPage.keyboard.press("Meta+k");
+    await expect(palette).toBeVisible();
+    await expect(palette.getByText("This page")).toHaveCount(0);
+  });
+});

@@ -4,6 +4,8 @@ import { ChevronRight, ScanSearch } from "lucide-react";
 import type { GridRow, MachineInventory } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
 import { useProjectDir } from "../../lib/project-dir";
+import { useRegisterCommands } from "../../lib/commands";
+import { filterRows } from "./machine-view-model";
 import { loadMachineInventory } from "./machine-data";
 import { MachineGrid } from "./MachineGrid";
 import {
@@ -100,6 +102,76 @@ export default function MachinePage() {
   // returns to the grid with that filter (useMachineFilter) in one URL update.
   const shownFilter = view === "grid" ? filter : "all";
   const { stripRef, changeFilter } = useFilterFocusHandoff(shownFilter, setFilter);
+
+  // ⌘K (spec AC-21): the page's own controls, in step with their disabled
+  // states. Gaps and Differs are offered only while the strip's cell is a
+  // button (a non-zero count), and set rather than toggle the filter.
+  const filterCounts = useMemo(
+    () =>
+      inventory
+        ? {
+            gaps: filterRows(inventory.rows, variants, "gaps").length,
+            differs: filterRows(inventory.rows, variants, "differs").length,
+          }
+        : null,
+    [inventory, variants],
+  );
+  useRegisterCommands(
+    [
+      {
+        id: "machine.rescan",
+        title: "Rescan this machine",
+        group: "Machine",
+        keywords: ["refresh", "scan"],
+        disabled: loading,
+        run: () => load(projectDir),
+      },
+      {
+        id: "machine.view.grid",
+        title: "Show resources",
+        group: "Machine",
+        keywords: ["grid", "view"],
+        disabled: view === "grid",
+        run: () => setView("grid"),
+      },
+      {
+        // The palette's app-wide "Open Drift" navigates to /machine?view=drift;
+        // on Machine this switches the tab instead, keeping the other params.
+        id: "open-drift",
+        title: "Show drift vs harness.yaml",
+        group: "Machine",
+        keywords: ["drift", "view"],
+        disabled: view === "drift",
+        run: () => setView("drift"),
+      },
+      ...(filterCounts
+        ? [
+            {
+              id: "machine.filter.gaps",
+              title: "Filter: gaps",
+              group: "Machine",
+              disabled: filterCounts.gaps === 0 || shownFilter === "gaps",
+              run: () => changeFilter("gaps"),
+            },
+            {
+              id: "machine.filter.differs",
+              title: "Filter: differs",
+              group: "Machine",
+              disabled: filterCounts.differs === 0 || shownFilter === "differs",
+              run: () => changeFilter("differs"),
+            },
+            {
+              id: "machine.filter.all",
+              title: "Filter: show all",
+              group: "Machine",
+              disabled: shownFilter === "all",
+              run: () => changeFilter("all"),
+            },
+          ]
+        : []),
+    ],
+    [loading, view, filterCounts, shownFilter],
+  );
 
   const rowDiffs = useMemo(
     () =>

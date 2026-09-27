@@ -32,10 +32,15 @@ export function setTheme(theme: Theme) {
   applyTheme(theme);
 }
 
-export function toggleTheme() {
+/** The theme toggleTheme would switch to: the opposite of what shows now. */
+export function toggledTheme(): "light" | "dark" {
   const current = getTheme();
   const resolved = current === "system" ? getSystemTheme() : current;
-  setTheme(resolved === "dark" ? "light" : "dark");
+  return resolved === "dark" ? "light" : "dark";
+}
+
+export function toggleTheme() {
+  setTheme(toggledTheme());
 }
 
 // Accent color is defined statically in app.css (the Iris identity), not chosen

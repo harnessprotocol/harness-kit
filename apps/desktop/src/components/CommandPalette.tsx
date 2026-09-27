@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { toggleTheme } from "../lib/theme";
+import { useCommands } from "../lib/commands";
 import { SETTINGS, type NavEntry } from "../nav";
 
 interface Command {
@@ -8,7 +9,17 @@ interface Command {
   label: string;
   group: string;
   hint?: string;
+  /** Lower-cased text the search matches: the label plus a page command's group and keywords. */
+  search: string;
+  disabled?: boolean;
   run: () => void;
+}
+
+/** The section registered page commands appear under, ahead of everything else. */
+export const PAGE_GROUP = "This page";
+
+function reportFailure(error: unknown) {
+  console.error("[command palette] command failed:", error);
 }
 
 interface CommandPaletteProps {
@@ -18,7 +29,11 @@ interface CommandPaletteProps {
 }
 
 /**
- * VS-Code-style command palette. Navigate anywhere and run a few actions.
+ * VS-Code-style command palette (spec AC-21). Lists, in order: the actions the
+ * open page registered through lib/commands.ts ("This page"), the app-wide
+ * actions, and navigation derived from nav.ts. A page command with the id of
+ * an app-wide one replaces it while that page is open. A disabled page
+ * command is listed but does not run, like the button it mirrors.
  */
 export function CommandPalette({ open, onClose, sections }: CommandPaletteProps) {
   const navigate = useNavigate();
@@ -26,28 +41,57 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
   const [selected, setSelected] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const registered = useCommands();
+
   const commands = useMemo<Command[]>(() => {
     const go = (path: string) => () => {
       navigate(path);
       onClose();
     };
-    const list: Command[] = [];
-    list.push({ id: "toggle-theme", label: "Toggle light / dark theme", group: "Actions", run: () => { toggleTheme(); onClose(); } });
-    list.push({ id: "nav-settings", label: "Go to Settings", group: "Navigate", run: go(SETTINGS.path) });
-    list.push({ id: "open-drift", label: "Open Drift vs harness.yaml", group: "Navigate", run: go("/machine?view=drift") });
+    const builtIn = (id: string, label: string, group: string, run: () => void): Command => ({
+      id,
+      label,
+      group,
+      search: label.toLowerCase(),
+      run,
+    });
+    const list: Command[] = registered.map((command) => ({
+      id: command.id,
+      label: command.title,
+      group: PAGE_GROUP,
+      hint: command.shortcut,
+      search: [command.title, command.group ?? "", ...(command.keywords ?? [])].join(" ").toLowerCase(),
+      disabled: command.disabled,
+      run: () => {
+        // Close first, so a command that moves focus (a folder picker, a
+        // filter) is not undone by the palette unmounting afterwards.
+        onClose();
+        try {
+          const result = command.run();
+          if (result instanceof Promise) result.catch(reportFailure);
+        } catch (error) {
+          reportFailure(error);
+        }
+      },
+    }));
+    const pageIds = new Set(registered.map((command) => command.id));
+    const rest: Command[] = [];
+    rest.push(builtIn("toggle-theme", "Toggle light / dark theme", "Actions", () => { toggleTheme(); onClose(); }));
+    rest.push(builtIn("nav-settings", "Go to Settings", "Navigate", go(SETTINGS.path)));
+    rest.push(builtIn("open-drift", "Open Drift vs harness.yaml", "Navigate", go("/machine?view=drift")));
     for (const s of sections) {
-      list.push({ id: `nav-${s.id}`, label: `Go to ${s.label}`, group: "Navigate", run: go(s.path) });
+      rest.push(builtIn(`nav-${s.id}`, `Go to ${s.label}`, "Navigate", go(s.path)));
       for (const c of s.children ?? []) {
-        list.push({ id: `nav-${s.id}-${c.path}`, label: `${s.label}: ${c.label}`, group: "Navigate", run: go(c.path) });
+        rest.push(builtIn(`nav-${s.id}-${c.path}`, `${s.label}: ${c.label}`, "Navigate", go(c.path)));
       }
     }
-    return list;
-  }, [sections, navigate, onClose]);
+    return [...list, ...rest.filter((command) => !pageIds.has(command.id))];
+  }, [registered, sections, navigate, onClose]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return commands;
-    return commands.filter((c) => c.label.toLowerCase().includes(q));
+    return commands.filter((c) => c.search.includes(q));
   }, [commands, query]);
 
   useEffect(() => {
@@ -77,7 +121,8 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
       setSelected((i) => Math.max(i - 1, 0));
     } else if (e.key === "Enter") {
       e.preventDefault();
-      filtered[selected]?.run();
+      const command = filtered[selected];
+      if (command && !command.disabled) command.run();
     }
   }
 
@@ -157,8 +202,12 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
                   </div>
                 )}
                 <button
+                  type="button"
+                  aria-disabled={cmd.disabled ? "true" : undefined}
                   onMouseEnter={() => setSelected(i)}
-                  onClick={() => cmd.run()}
+                  onClick={() => {
+                    if (!cmd.disabled) cmd.run();
+                  }}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -167,12 +216,12 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
                     width: "100%",
                     textAlign: "left",
                     border: "none",
-                    cursor: "pointer",
+                    cursor: cmd.disabled ? "default" : "pointer",
                     borderRadius: "7px",
                     padding: "8px 10px",
                     fontSize: "13px",
                     background: isSel ? "var(--accent-light)" : "transparent",
-                    color: isSel ? "var(--accent-text)" : "var(--fg-base)",
+                    color: cmd.disabled ? "var(--fg-subtle)" : isSel ? "var(--accent-text)" : "var(--fg-base)",
                   }}
                 >
                   <span>{cmd.label}</span>

@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, act, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import HarnessFilePage from "../HarnessFilePage";
+import { CommandPalette } from "../../../components/CommandPalette";
 
 // ── Mocks ──────────────────────────────────────────────────────
 
@@ -95,6 +96,35 @@ describe("HarnessFilePage", () => {
     await act(async () => {});
     expect(mockWriteHarnessFile).toHaveBeenCalledTimes(1);
     expect(mockWriteHarnessFile).toHaveBeenCalledWith('version: "1"\nmetadata:\n  name: edited\n');
+  });
+
+  it("offers Save harness.yaml in the palette while editing, saving the latest content (AC-21)", async () => {
+    mockReadHarnessFile.mockResolvedValue({
+      found: true,
+      content: 'version: "1"\n',
+      path: "~/.claude/harness.yaml",
+    });
+    mockWriteHarnessFile.mockResolvedValue("~/.claude/harness.yaml");
+    render(
+      <MemoryRouter>
+        <HarnessFilePage />
+        <CommandPalette open onClose={() => {}} sections={[]} />
+      </MemoryRouter>,
+    );
+    const palette = () => within(screen.getByRole("dialog", { name: "Command palette" }));
+    fireEvent.click(await screen.findByText("Editor"));
+    const editor = await screen.findByTestId("fake-editor");
+    // Nothing changed yet: listed, but off like the Save button.
+    expect(palette().getByRole("button", { name: /Save harness\.yaml/ })).toHaveAttribute("aria-disabled", "true");
+
+    fireEvent.change(editor, { target: { value: 'version: "1"\nmetadata:\n  name: first\n' } });
+    fireEvent.change(editor, { target: { value: 'version: "1"\nmetadata:\n  name: second\n' } });
+    const save = palette().getByRole("button", { name: /Save harness\.yaml/ });
+    expect(save).not.toHaveAttribute("aria-disabled");
+    fireEvent.click(save);
+
+    await waitFor(() => expect(mockWriteHarnessFile).toHaveBeenCalledTimes(1));
+    expect(mockWriteHarnessFile).toHaveBeenCalledWith('version: "1"\nmetadata:\n  name: second\n');
   });
 
   it("shows error when readHarnessFile throws", async () => {

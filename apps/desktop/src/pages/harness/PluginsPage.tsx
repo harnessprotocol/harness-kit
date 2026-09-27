@@ -17,6 +17,7 @@ import ImportOverlay from "./plugins/ImportOverlay";
 import ImportBanner from "./plugins/ImportBanner";
 import { dismissImportStatus, enqueueImports, onPluginsImported, useImportQueue } from "./plugins/import-queue";
 import UninstallDialog from "./plugins/UninstallDialog";
+import { useRegisterCommands } from "../../lib/commands";
 
 const PREVIEW_PLUGINS: InstalledPlugin[] = [
   {
@@ -209,6 +210,21 @@ export default function PluginsPage() {
     if (!selected) return;
     await enqueueImports([selected]);
   }
+
+  // ⌘K (spec AC-21): Import Plugin, disabled when the button is.
+  useRegisterCommands(
+    [
+      {
+        id: "plugins.import",
+        title: "Import plugin from folder…",
+        group: "Plugins",
+        keywords: ["import plugin", "folder", "add"],
+        disabled: !tauriAvailable || importing,
+        run: handleImportFolder,
+      },
+    ],
+    [tauriAvailable, importing],
+  );
 
   // ── Uninstall ────────────────────────────────────────────
 

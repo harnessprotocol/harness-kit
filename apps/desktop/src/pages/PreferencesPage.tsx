@@ -16,7 +16,8 @@ import {
   type MarkdownFont,
   type ConfigFilesDetailLevel,
 } from "../lib/preferences";
-import { getTheme, setTheme } from "../lib/theme";
+import { getTheme, setTheme, toggledTheme } from "../lib/theme";
+import { useRegisterCommands } from "../lib/commands";
 import { Toggle } from "@harness-kit/ui";
 import FeedbackModal from "../components/FeedbackModal";
 
@@ -165,6 +166,22 @@ function GeneralTab({ onOpenFeedback }: { onOpenFeedback: () => void }) {
     setTheme(t);
     setThemeState(t);
   }
+
+  // ⌘K (spec AC-21): while this tab is open, "Toggle theme" goes through the
+  // Theme control's own handler (taking over the palette's app-wide command
+  // of the same id), so the control shows the theme it switched to.
+  useRegisterCommands(
+    [
+      {
+        id: "toggle-theme",
+        title: "Toggle light / dark theme",
+        group: "Settings",
+        keywords: ["theme", "appearance", "dark mode"],
+        run: () => handleSetTheme(toggledTheme()),
+      },
+    ],
+    [],
+  );
 
   function handleFontSizeChange(delta: number) {
     const next = fontSize + delta;

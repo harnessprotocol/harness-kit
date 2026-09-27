@@ -16,6 +16,7 @@ import type { BackupManifest } from "../../lib/tauri";
 import { SyncFsProvider } from "../../lib/sync-fs";
 import { grantProjectDir, useProjectDir } from "../../lib/project-dir";
 import SyncPreview from "./sync/SyncPreview";
+import { useRegisterCommands } from "../../lib/commands";
 import BackupHistory from "./sync/BackupHistory";
 
 const ALL_PLATFORMS: readonly SurfaceId[] = COMPILE_SURFACE_IDS;
@@ -185,6 +186,42 @@ export default function SyncPage() {
   }
 
   const canPreview = dirValid && selectedTargets.size > 0 && !!harnessContent && phase === "idle";
+
+  // ⌘K (spec AC-21): Preview and Apply, offered when their buttons are on
+  // screen and disabled when those are.
+  const writeCount = previewResult
+    ? previewResult.files.filter((f) => f.action === "create" || f.action === "update").length
+    : 0;
+  const applyShown = (phase === "previewed" || phase === "applying") && writeCount > 0;
+  useRegisterCommands(
+    [
+      ...(harnessContent
+        ? [
+            {
+              id: "compile.preview",
+              title: "Preview compile changes",
+              group: "Compile to project",
+              keywords: ["compile", "sync", "dry run"],
+              disabled: !canPreview,
+              run: handlePreview,
+            },
+          ]
+        : []),
+      ...(applyShown
+        ? [
+            {
+              id: "compile.apply",
+              title: `Apply ${writeCount} compiled file${writeCount !== 1 ? "s" : ""}`,
+              group: "Compile to project",
+              keywords: ["compile", "sync", "write"],
+              disabled: phase === "applying",
+              run: handleApply,
+            },
+          ]
+        : []),
+    ],
+    [!!harnessContent, canPreview, applyShown, writeCount, phase],
+  );
 
   return (
     <>
