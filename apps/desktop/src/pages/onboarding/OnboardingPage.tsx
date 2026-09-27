@@ -48,9 +48,8 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
         // root, so the project dir (when tracked) is scanned as a second,
         // separate pass and its findings are merged in below. The tracked
         // project dir comes from lib/project-dir.ts (getCurrentProjectDir),
-        // the same store other consumers use. Machine still tracks its own
-        // page-local project dir and moves onto this store in a later phase
-        // (specs/ux-consolidation/design.md D9).
+        // the store behind the title-bar selector that Machine, Drift and
+        // Compile also read (specs/ux-consolidation/design.md D9).
         const globalResult = await importMachine({ fs: new TauriFsProvider(home) });
 
         let combined = globalResult;
