@@ -447,4 +447,32 @@ describe("AuditLogPage — error state", () => {
     await waitFor(() => expect(mockListAuditEntries.mock.calls.length).toBe(calls + 1));
     await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
   });
+
+  it("does not say the log is empty when it couldn't be read", async () => {
+    mockListAuditEntries.mockRejectedValueOnce(new Error("Database error"));
+    renderPage();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't load the audit log");
+    expect(screen.queryByText("No audit entries found")).not.toBeInTheDocument();
+  });
+
+  it("keeps the entries up when a clear fails, and Retry clear runs the clear again (AC-20)", async () => {
+    mockListAuditEntries.mockResolvedValue([PERM_ENTRY]);
+    mockClearAuditEntries.mockRejectedValueOnce(new Error("database is locked")).mockResolvedValue(undefined);
+    renderPage();
+    await screen.findByText("Added Bash to deny list");
+
+    fireEvent.click(screen.getByRole("button", { name: "Clear old entries" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Confirm" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't clear old audit entries");
+    expect(screen.getByText("database is locked")).not.toBeVisible();
+    expect(screen.getByText("Added Bash to deny list")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
+
+    const listCalls = mockListAuditEntries.mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: "Retry clear" }));
+    await waitFor(() => expect(mockClearAuditEntries).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(mockListAuditEntries.mock.calls.length).toBe(listCalls + 1));
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+  });
 });

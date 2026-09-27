@@ -62,7 +62,9 @@ function formatTimestamp(ts: string): string {
 export default function AuditLogPage() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<{ title: string; details: string } | null>(null);
+  // A failed load replaces the table; a failed clear sits above it.
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [clearError, setClearError] = useState<string | null>(null);
   const [filter, setFilter] = useState<CategoryFilter>("all");
   const [page, setPage] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -79,12 +81,15 @@ export default function AuditLogPage() {
 
   const fetchEntries = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const category = filter === "all" ? undefined : filter;
       const result = await listAuditEntries(PAGE_SIZE, page * PAGE_SIZE, category);
       setEntries(result);
     } catch (e) {
-      setError({ title: "Couldn't load the audit log", details: errorDetails(e) });
+      // Old rows under a new filter or page would be a false statement.
+      setEntries([]);
+      setLoadError(errorDetails(e));
     } finally {
       setLoading(false);
     }
@@ -99,17 +104,20 @@ export default function AuditLogPage() {
     setPage(0);
   }
 
+  // Also the failure notice's Retry: the user already confirmed the clear.
   async function handleClear() {
+    setClearError(null);
+    setConfirmClear(false);
     try {
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       await clearAuditEntries(thirtyDaysAgo.toISOString());
-      setConfirmClear(false);
-      setPage(0);
-      await fetchEntries();
     } catch (e) {
-      setError({ title: "Couldn't clear old audit entries", details: errorDetails(e) });
+      setClearError(errorDetails(e));
+      return;
     }
+    setPage(0);
+    await fetchEntries();
   }
 
   return (
@@ -124,11 +132,19 @@ export default function AuditLogPage() {
         </p>
       </div>
 
-      {error && (
+      {loadError && (
         <ErrorNotice
-          title={error.title}
-          details={error.details}
-          action={{ label: "Retry", onClick: () => { setError(null); void fetchEntries(); } }}
+          title="Couldn't load the audit log"
+          details={loadError}
+          action={{ label: "Retry", onClick: () => void fetchEntries() }}
+        />
+      )}
+
+      {clearError && (
+        <ErrorNotice
+          title="Couldn't clear old audit entries"
+          details={clearError}
+          action={{ label: "Retry clear", onClick: () => void handleClear() }}
         />
       )}
 
@@ -159,93 +175,96 @@ export default function AuditLogPage() {
         )}
       </div>
 
-      {/* Table */}
-      <Card
-        padding="none"
-        tabIndex={0}
-        onKeyDown={onAuditKeyDown}
-        style={{ overflow: "hidden" }}
-      >
-        {/* Header row */}
-        <div style={{
-          display: "grid", gridTemplateColumns: "140px 130px 1fr 80px",
-          padding: "6px 16px", borderBottom: "1px solid var(--separator)",
-          fontSize: "10px", fontWeight: 600, textTransform: "uppercase",
-          letterSpacing: "0.05em", color: "var(--fg-subtle)",
-        }}>
-          <span>Timestamp</span>
-          <span>Event</span>
-          <span>Summary</span>
-          <span>Source</span>
-        </div>
-
-        {loading ? (
-          <div style={{ padding: "20px 16px", textAlign: "center" }}>
-            <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>Loading...</p>
+      {/* Table: a failed load replaces it, so "No audit entries found" never
+          stands in for a read that didn't happen. */}
+      {!(loadError && !loading) && (
+        <Card
+          padding="none"
+          tabIndex={0}
+          onKeyDown={onAuditKeyDown}
+          style={{ overflow: "hidden" }}
+        >
+          {/* Header row */}
+          <div style={{
+            display: "grid", gridTemplateColumns: "140px 130px 1fr 80px",
+            padding: "6px 16px", borderBottom: "1px solid var(--separator)",
+            fontSize: "10px", fontWeight: 600, textTransform: "uppercase",
+            letterSpacing: "0.05em", color: "var(--fg-subtle)",
+          }}>
+            <span>Timestamp</span>
+            <span>Event</span>
+            <span>Summary</span>
+            <span>Source</span>
           </div>
-        ) : entries.length === 0 ? (
-          <EmptyState
-            icon={<ScrollText size={28} strokeWidth={1.5} />}
-            title="No audit entries found"
-            description="Entries are created when permissions or secrets are modified."
-          />
-        ) : (
-          entries.map((entry, idx) => (
-            <div key={entry.id}>
-              <div
-                onClick={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  setContextMenu({ x: e.clientX, y: e.clientY, entry });
-                }}
-                style={{
-                  display: "grid", gridTemplateColumns: "140px 130px 1fr 80px",
-                  padding: "7px 16px", borderBottom: "1px solid var(--separator)",
-                  cursor: entry.details ? "pointer" : "default",
-                  transition: "background 0.1s",
-                  outline: auditFocusedIndex === idx ? "2px solid var(--accent)" : "none",
-                  outlineOffset: "-2px",
-                }}
-                onMouseEnter={(e) => { if (entry.details) e.currentTarget.style.background = "var(--hover-bg)"; }}
-                onMouseLeave={(e) => { if (entry.details) e.currentTarget.style.background = "transparent"; }}
-              >
-                <span style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>
-                  {formatTimestamp(entry.timestamp)}
-                </span>
-                <EventBadge eventType={entry.eventType} />
-                <span style={{ fontSize: "12px", color: "var(--fg-base)" }}>
-                  {entry.summary}
-                </span>
-                <span style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>
-                  {entry.source}
-                </span>
-              </div>
 
-              {/* Expanded details */}
-              {expandedId === entry.id && entry.details && (
-                <div style={{
-                  padding: "10px 16px", borderBottom: "1px solid var(--separator)",
-                  background: "var(--bg-base)",
-                }}>
-                  <pre style={{
-                    fontSize: "11px", fontFamily: "ui-monospace, monospace",
-                    color: "var(--fg-muted)", margin: 0, whiteSpace: "pre-wrap",
-                    wordBreak: "break-word", lineHeight: 1.5,
-                  }}>
-                    {(() => {
-                      try {
-                        return JSON.stringify(JSON.parse(entry.details!), null, 2);
-                      } catch {
-                        return entry.details;
-                      }
-                    })()}
-                  </pre>
-                </div>
-              )}
+          {loading ? (
+            <div style={{ padding: "20px 16px", textAlign: "center" }}>
+              <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>Loading...</p>
             </div>
-          ))
-        )}
-      </Card>
+          ) : entries.length === 0 ? (
+            <EmptyState
+              icon={<ScrollText size={28} strokeWidth={1.5} />}
+              title="No audit entries found"
+              description="Entries are created when permissions or secrets are modified."
+            />
+          ) : (
+            entries.map((entry, idx) => (
+              <div key={entry.id}>
+                <div
+                  onClick={() => setExpandedId(expandedId === entry.id ? null : entry.id)}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    setContextMenu({ x: e.clientX, y: e.clientY, entry });
+                  }}
+                  style={{
+                    display: "grid", gridTemplateColumns: "140px 130px 1fr 80px",
+                    padding: "7px 16px", borderBottom: "1px solid var(--separator)",
+                    cursor: entry.details ? "pointer" : "default",
+                    transition: "background 0.1s",
+                    outline: auditFocusedIndex === idx ? "2px solid var(--accent)" : "none",
+                    outlineOffset: "-2px",
+                  }}
+                  onMouseEnter={(e) => { if (entry.details) e.currentTarget.style.background = "var(--hover-bg)"; }}
+                  onMouseLeave={(e) => { if (entry.details) e.currentTarget.style.background = "transparent"; }}
+                >
+                  <span style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>
+                    {formatTimestamp(entry.timestamp)}
+                  </span>
+                  <EventBadge eventType={entry.eventType} />
+                  <span style={{ fontSize: "12px", color: "var(--fg-base)" }}>
+                    {entry.summary}
+                  </span>
+                  <span style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>
+                    {entry.source}
+                  </span>
+                </div>
+
+                {/* Expanded details */}
+                {expandedId === entry.id && entry.details && (
+                  <div style={{
+                    padding: "10px 16px", borderBottom: "1px solid var(--separator)",
+                    background: "var(--bg-base)",
+                  }}>
+                    <pre style={{
+                      fontSize: "11px", fontFamily: "ui-monospace, monospace",
+                      color: "var(--fg-muted)", margin: 0, whiteSpace: "pre-wrap",
+                      wordBreak: "break-word", lineHeight: 1.5,
+                    }}>
+                      {(() => {
+                        try {
+                          return JSON.stringify(JSON.parse(entry.details!), null, 2);
+                        } catch {
+                          return entry.details;
+                        }
+                      })()}
+                    </pre>
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </Card>
+      )}
 
       {/* Pagination */}
       {!loading && entries.length > 0 && (
