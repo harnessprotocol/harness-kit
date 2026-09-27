@@ -399,6 +399,41 @@ describe("PluginsPage load failure (AC-20)", () => {
     expect(await screen.findByText("No plugins installed")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
+
+  it("keeps the list up when an uninstall fails, and Retry uninstall runs the same uninstall again", async () => {
+    const raw = "Failed to remove ~/.claude/plugins/demo: Operation not permitted (os error 1)";
+    const fallback = mockInvoke.getMockImplementation()!;
+    let installed = [{ name: "demo", version: "1.0.0", source: "/plugins/demo" }];
+    let uninstallCalls = 0;
+    mockInvoke.mockImplementation(async (command, args) => {
+      if (command === "list_installed_plugins") return installed;
+      if (command === "uninstall_plugin") {
+        uninstallCalls += 1;
+        if (uninstallCalls === 1) throw raw;
+        installed = [];
+        return undefined;
+      }
+      return fallback(command, args);
+    });
+    render(<MemoryRouter><PluginsPage /></MemoryRouter>);
+
+    fireEvent.contextMenu(await screen.findByText("demo"));
+    fireEvent.click(screen.getByText("Uninstall"));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Uninstall" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't uninstall demo");
+    expect(screen.getByText(raw)).not.toBeVisible();
+    // An operation failure does not replace the list.
+    expect(screen.getByText("demo")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry uninstall" }));
+    await waitFor(() => expect(uninstallCalls).toBe(2));
+    expect(mockInvoke.mock.calls.filter(([c]) => c === "uninstall_plugin").map(([, a]) => a))
+      .toEqual([{ name: "demo" }, { name: "demo" }]);
+    expect(await screen.findByText("No plugins installed")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
 });
 
 describe("describeImportError", () => {

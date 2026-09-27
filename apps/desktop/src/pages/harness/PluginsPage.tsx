@@ -50,7 +50,9 @@ export default function PluginsPage() {
   const [plugins, setPlugins] = useState<InstalledPlugin[]>([]);
   const [updates, setUpdates] = useState<Record<string, PluginUpdateInfo>>({});
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<{ title: string; details: string } | null>(null);
+  // A failed load replaces the list; a failed uninstall sits above it.
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [uninstallError, setUninstallError] = useState<{ pluginName: string; details: string } | null>(null);
   const [runtimeNotice, setRuntimeNotice] = useState<string | null>(null);
   const [tauriAvailable] = useState(isTauriRuntimeAvailable);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; plugin: InstalledPlugin } | null>(null);
@@ -72,17 +74,18 @@ export default function PluginsPage() {
     if (!tauriAvailable) {
       setPlugins(PREVIEW_PLUGINS);
       setUpdates({});
-      setError(null);
+      setLoadError(null);
       setRuntimeNotice(DESKTOP_RUNTIME_MESSAGE);
       setLoading(false);
       return;
     }
 
     setLoading(true);
+    setLoadError(null);
     setRuntimeNotice(null);
     listInstalledPlugins()
       .then(setPlugins)
-      .catch((e) => setError({ title: "Couldn't load installed plugins", details: errorDetails(e) }))
+      .catch((e) => setLoadError(errorDetails(e)))
       .finally(() => setLoading(false));
 
     checkPluginUpdates()
@@ -238,13 +241,18 @@ export default function PluginsPage() {
     }
 
     const pluginName = uninstallTarget.name;
+    setUninstallTarget(null);
+    await runUninstall(pluginName);
+  }
+
+  // Also the failure notice's Retry: the user already confirmed this uninstall.
+  async function runUninstall(pluginName: string) {
+    setUninstallError(null);
     try {
       await uninstallPlugin(pluginName);
-      setUninstallTarget(null);
       loadPlugins();
     } catch (err) {
-      setError({ title: `Couldn't uninstall ${pluginName}`, details: errorDetails(err) });
-      setUninstallTarget(null);
+      setUninstallError({ pluginName, details: errorDetails(err) });
     }
   }
 
@@ -350,15 +358,23 @@ export default function PluginsPage() {
         <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</p>
       )}
 
-      {error && (
+      {loadError && (
         <ErrorNotice
-          title={error.title}
-          details={error.details}
-          action={{ label: "Retry", onClick: () => { setError(null); loadPlugins(); } }}
+          title="Couldn't load installed plugins"
+          details={loadError}
+          action={{ label: "Retry", onClick: loadPlugins }}
         />
       )}
 
-      {!loading && !error && plugins.length === 0 && (
+      {uninstallError && (
+        <ErrorNotice
+          title={`Couldn't uninstall ${uninstallError.pluginName}`}
+          details={uninstallError.details}
+          action={{ label: "Retry uninstall", onClick: () => void runUninstall(uninstallError.pluginName) }}
+        />
+      )}
+
+      {!loading && !loadError && plugins.length === 0 && (
         <EmptyState
           icon={<Blocks size={28} strokeWidth={1.5} />}
           title="No plugins installed"
@@ -371,7 +387,7 @@ export default function PluginsPage() {
         />
       )}
 
-      {!loading && !error && plugins.length > 0 && (
+      {!loading && !loadError && plugins.length > 0 && (
         <>
           <PluginFilters
             search={search}
