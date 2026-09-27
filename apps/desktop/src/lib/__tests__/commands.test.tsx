@@ -132,6 +132,31 @@ describe("useRegisterCommands", () => {
     expect(onRun).not.toHaveBeenCalled();
   });
 
+  it("a deps change replaces a page's commands in place, keeping its order and its precedence", () => {
+    function Registers({ id, title }: { id: string; title: string }) {
+      useRegisterCommands(
+        [
+          { id, title, run: () => {} },
+          { id: "shared", title: `shared from ${id}`, run: () => {} },
+        ],
+        [id, title],
+      );
+      return null;
+    }
+    render(<Listing />);
+    const first = render(<Registers id="a" title="A" />);
+    render(<Registers id="b" title="B" />);
+    // "b" mounted later, so it owns "shared".
+    expect(listing()).toBe("a:A|b:B|shared:shared from b");
+
+    first.rerender(<Registers id="a" title="A again" />);
+    // "a" stays first, and its re-registration does not take "shared" over.
+    expect(listing()).toBe("a:A again|b:B|shared:shared from b");
+
+    first.unmount();
+    expect(listing()).toBe("b:B|shared:shared from b");
+  });
+
   it("a later-mounted page takes over a shared id until it unmounts", () => {
     function Registers({ title }: { title: string }) {
       useRegisterCommands([{ id: "shared", title, run: () => {} }], [title]);

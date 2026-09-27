@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { useState } from "react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { FileCode, Monitor } from "lucide-react";
 import { CommandPalette, PAGE_GROUP } from "../CommandPalette";
@@ -106,5 +107,91 @@ describe("CommandPalette page commands (AC-21)", () => {
 
     fireEvent.click(option("Go to Beta"));
     expect(option("Toggle light / dark theme")).toBeInTheDocument();
+  });
+});
+
+describe("CommandPalette highlight", () => {
+  it("keeps the highlighted command when commands are registered above it while open", () => {
+    const onGrown = vi.fn();
+    // Mounted before the page, so its commands list above the page's.
+    function Grows({ grown }: { grown: boolean }) {
+      useRegisterCommands(grown ? [{ id: "grown", title: "Grown alpha thing", run: onGrown }] : [], [grown]);
+      return null;
+    }
+    function Tree({ grown }: { grown: boolean }) {
+      return (
+        <MemoryRouter initialEntries={["/alpha"]}>
+          <Grows grown={grown} />
+          <Routes>
+            <Route path="/alpha" element={<AlphaPage />} />
+          </Routes>
+          <CommandPalette open onClose={() => {}} sections={SECTIONS} />
+        </MemoryRouter>
+      );
+    }
+    onAlphaAction.mockClear();
+    const view = render(<Tree grown={false} />);
+    const input = screen.getByRole("textbox", { name: "Command palette search" });
+    fireEvent.change(input, { target: { value: "alpha thing" } });
+    // Highlight "Do the alpha thing" explicitly (down to "Blocked…", back up).
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    fireEvent.keyDown(input, { key: "ArrowUp" });
+
+    view.rerender(<Tree grown />);
+    expect(within(screen.getByRole("dialog")).getAllByRole("button")[0]).toHaveTextContent("Grown alpha thing");
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onGrown).not.toHaveBeenCalled();
+    expect(onAlphaAction).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("CommandPalette focus", () => {
+  const TARGET_FOCUS = "focus the notes field";
+
+  function FocusPage() {
+    useRegisterCommands(
+      [{ id: "focus.notes", title: TARGET_FOCUS, run: () => document.getElementById("notes")?.focus() }],
+      [],
+    );
+    return <textarea id="notes" aria-label="Notes" />;
+  }
+
+  function Harness() {
+    const [open, setOpen] = useState(false);
+    return (
+      <MemoryRouter>
+        <FocusPage />
+        <button type="button" onClick={() => setOpen(true)}>
+          open palette
+        </button>
+        <CommandPalette open={open} onClose={() => setOpen(false)} sections={SECTIONS} />
+      </MemoryRouter>
+    );
+  }
+
+  async function openFromTrigger() {
+    const trigger = screen.getByRole("button", { name: "open palette" });
+    trigger.focus();
+    fireEvent.click(trigger);
+    const input = screen.getByRole("textbox", { name: "Command palette search" });
+    await waitFor(() => expect(input).toHaveFocus());
+    return { trigger, input };
+  }
+
+  it("Escape returns focus to what had it before the palette opened", async () => {
+    render(<Harness />);
+    const { trigger, input } = await openFromTrigger();
+    fireEvent.keyDown(input, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
+  it("a command that moves focus keeps it", async () => {
+    render(<Harness />);
+    const { input } = await openFromTrigger();
+    fireEvent.change(input, { target: { value: "notes field" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Notes" })).toHaveFocus();
   });
 });

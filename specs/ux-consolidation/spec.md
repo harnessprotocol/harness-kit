@@ -48,7 +48,7 @@ Format: EARS (`WHEN … THE SYSTEM SHALL …`). Each criterion cites the audit f
 - [x] AC-18: WHEN Drift is shown THE SYSTEM SHALL present it as a view of Machine reached from a "Drift vs harness.yaml" strip cell and a view toggle, not a collapsed accordion, and acknowledge and fix SHALL continue to work as specified by cross-harness-config-management AC-37. *(P2)*
 - [x] AC-19: WHEN the drawer is open THE SYSTEM SHALL keep every grid column reachable (the content insets or the grid scrolls beside the drawer); the drawer SHALL NOT cover columns. *(m5, P2)*
 - [ ] AC-20: WHEN a scan or load fails THE SYSTEM SHALL say what failed and offer one action, with the raw error behind a "Details" disclosure; no page SHALL render a bare `String(err)`. *(m2, P2)*
-- [ ] AC-21: WHEN a page has actions THE SYSTEM SHALL register them in the command registry so ⌘K lists them while that page is open, and the title bar SHALL show a ⌘K affordance. *(M9, P2)*
+- [ ] AC-21: WHEN a page has actions THE SYSTEM SHALL register them in the command registry so ⌘K lists them while that page is open, and the title bar SHALL show a ⌘K affordance. *(M9, P2)* *Amended 2026-09-27: Phase 2b registers commands on Machine, Profile, Profile › Compile, Plugins and Settings, and adds the title-bar ⌘K button. The remaining pages (Drift acknowledge and fix, MCP servers, Hooks, Secrets, Profile "Save as profile") register in Phase 4, so AC-21 stays open until then.*
 
 ### Profile (harness.yaml)
 

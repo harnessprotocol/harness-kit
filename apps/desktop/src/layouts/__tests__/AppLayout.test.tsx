@@ -312,7 +312,7 @@ describe("title-bar project selector (AC-17)", () => {
 
 describe("title-bar ⌘K affordance (AC-21)", () => {
   function commandButton() {
-    return screen.getByRole("button", { name: "Command palette" });
+    return screen.getByRole("button", { name: "Command palette ⌘K" });
   }
 
   it("names its shortcut and opens the palette", () => {
@@ -324,6 +324,23 @@ describe("title-bar ⌘K affordance (AC-21)", () => {
     fireEvent.click(commandButton());
     expect(screen.getByRole("dialog", { name: "Command palette" })).toBeInTheDocument();
     expect(commandButton()).toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("the accessible name contains the visible ⌘K text (WCAG 2.5.3)", () => {
+    renderLayout();
+    const button = commandButton();
+    expect(button.getAttribute("aria-label")).toContain(button.textContent!.trim());
+  });
+
+  it("closing the palette with Escape returns focus to the button", async () => {
+    renderLayout();
+    commandButton().focus();
+    fireEvent.click(commandButton());
+    const input = screen.getByRole("textbox", { name: "Command palette search" });
+    await waitFor(() => expect(input).toHaveFocus());
+    fireEvent.keyDown(input, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Command palette" })).not.toBeInTheDocument();
+    expect(commandButton()).toHaveFocus();
   });
 
   it("pressing it never starts a window drag", async () => {

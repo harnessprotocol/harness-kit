@@ -38,8 +38,12 @@ interface CommandPaletteProps {
 export function CommandPalette({ open, onClose, sections }: CommandPaletteProps) {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState(0);
+  // The highlighted command, by id, so it stays put when the list around it
+  // changes (a page registering commands while the palette is open). null,
+  // or an id no longer listed, highlights the first command.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const registered = useCommands();
 
@@ -63,8 +67,9 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
       search: [command.title, command.group ?? "", ...(command.keywords ?? [])].join(" ").toLowerCase(),
       disabled: command.disabled,
       run: () => {
-        // Close first, so a command that moves focus (a folder picker, a
-        // filter) is not undone by the palette unmounting afterwards.
+        // Ask to close before running, so a command that throws still closes
+        // the palette. onClose only queues the state update; focus is settled
+        // when the palette actually closes (see the effect on `open`).
         onClose();
         try {
           const result = command.run();
@@ -94,18 +99,27 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
     return commands.filter((c) => c.search.includes(q));
   }, [commands, query]);
 
-  useEffect(() => {
-    if (open) {
-      setQuery("");
-      setSelected(0);
-      // focus after paint
-      requestAnimationFrame(() => inputRef.current?.focus());
-    }
-  }, [open]);
+  const found = filtered.findIndex((command) => command.id === selectedId);
+  const selected = found === -1 ? 0 : found;
 
   useEffect(() => {
-    setSelected(0);
-  }, [query]);
+    if (!open) return;
+    // Focus returns here on close, e.g. to the title bar's ⌘K button.
+    const returnTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const dialog = dialogRef.current;
+    setQuery("");
+    setSelectedId(null);
+    // focus after paint
+    const frame = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => {
+      cancelAnimationFrame(frame);
+      // Only if focus was left on the palette (now gone, so on <body>): a
+      // command that moved focus elsewhere, a filter or a field, keeps it.
+      const active = document.activeElement;
+      const leftOnPalette = !active || active === document.body || (dialog?.contains(active) ?? false);
+      if (leftOnPalette && returnTo?.isConnected) returnTo.focus();
+    };
+  }, [open]);
 
   if (!open) return null;
 
@@ -115,10 +129,12 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
       onClose();
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
-      setSelected((i) => Math.min(i + 1, filtered.length - 1));
+      const next = filtered[Math.min(selected + 1, filtered.length - 1)];
+      if (next) setSelectedId(next.id);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setSelected((i) => Math.max(i - 1, 0));
+      const previous = filtered[Math.max(selected - 1, 0)];
+      if (previous) setSelectedId(previous.id);
     } else if (e.key === "Enter") {
       e.preventDefault();
       const command = filtered[selected];
@@ -130,6 +146,7 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
 
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-label="Command palette"
@@ -162,7 +179,10 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
         <input
           ref={inputRef}
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setSelectedId(null);
+          }}
           placeholder="Type a command or search…"
           aria-label="Command palette search"
           style={{
@@ -204,7 +224,7 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
                 <button
                   type="button"
                   aria-disabled={cmd.disabled ? "true" : undefined}
-                  onMouseEnter={() => setSelected(i)}
+                  onMouseEnter={() => setSelectedId(cmd.id)}
                   onClick={() => {
                     if (!cmd.disabled) cmd.run();
                   }}

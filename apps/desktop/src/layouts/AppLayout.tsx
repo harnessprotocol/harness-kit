@@ -264,13 +264,14 @@ function AppShell() {
         </button>
         {/* The one project-directory selector (spec AC-17): Machine, Drift and Compile read it */}
         <ProjectSelector />
-        {/* ⌘K affordance (spec AC-21): the palette lists the open page's commands first */}
+        {/* ⌘K affordance (spec AC-21): the palette lists the open page's commands first.
+            The name includes the visible "⌘K" so a spoken label matches (WCAG 2.5.3). */}
         <button
           type="button"
           className="hk-titlebar-cmdk"
           data-no-drag=""
           onClick={() => setPaletteOpen(true)}
-          aria-label="Command palette"
+          aria-label="Command palette ⌘K"
           aria-keyshortcuts="Meta+K"
           aria-haspopup="dialog"
           aria-expanded={paletteOpen}
