@@ -18,13 +18,18 @@ describe("PageBoundary", () => {
     expect(screen.getByText("Safe content")).toBeInTheDocument();
   });
 
-  it("catches render errors and shows error UI", () => {
+  it("catches render errors and shows a notice with Reload page, raw error behind Details (AC-20)", async () => {
+    const user = userEvent.setup();
     render(<PageBoundary><Bomb shouldThrow /></PageBoundary>);
     expect(screen.getByTestId("page-boundary-error")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("This page hit an error");
+    expect(screen.getByRole("button", { name: "Reload page" })).toBeInTheDocument();
+    expect(screen.getByText("test explosion")).not.toBeVisible();
+    await user.click(screen.getByText("Details"));
+    expect(screen.getByText("test explosion")).toBeVisible();
   });
 
-  it("retry button resets the boundary", async () => {
+  it("Reload page resets the boundary", async () => {
     const user = userEvent.setup();
     let shouldThrow = true;
     function DynamicBomb() {
@@ -34,9 +39,9 @@ describe("PageBoundary", () => {
     render(<PageBoundary><DynamicBomb /></PageBoundary>);
     expect(screen.getByTestId("page-boundary-error")).toBeInTheDocument();
 
-    // Simulate the underlying problem resolving, then user clicks Retry
+    // Simulate the underlying problem resolving, then the user reloads the page
     shouldThrow = false;
-    await user.click(screen.getByRole("button", { name: /retry/i }));
+    await user.click(screen.getByRole("button", { name: "Reload page" }));
     expect(screen.getByText("Safe content")).toBeInTheDocument();
   });
 

@@ -1,4 +1,6 @@
 import React, { Suspense } from "react";
+import { ErrorNotice } from "@harness-kit/ui";
+import { errorDetails } from "../lib/error-details";
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -26,51 +28,14 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
   render() {
     if (this.state.error) {
+      // "Reload page" clears the boundary, which mounts the page afresh.
       return (
-        <div
-          data-testid="page-boundary-error"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            height: "100%",
-            gap: 12,
-            color: "var(--fg-muted)",
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif',
-          }}
-        >
-          <span style={{ fontSize: 13 }}>Something went wrong loading this page.</span>
-          {import.meta.env.DEV && (
-            <code style={{
-              fontSize: 11,
-              color: "var(--danger)",
-              background: "var(--bg-elevated)",
-              padding: "6px 12px",
-              borderRadius: 6,
-              maxWidth: 480,
-              textAlign: "center",
-            }}>
-              {this.state.error.message}
-            </code>
-          )}
-          <button
-            onClick={() => {
-              this.setState({ error: null });
-            }}
-            style={{
-              padding: "6px 16px",
-              fontSize: 12,
-              fontWeight: 600,
-              border: "1px solid var(--border-base)",
-              borderRadius: 6,
-              background: "var(--bg-elevated)",
-              color: "var(--fg-base)",
-              cursor: "pointer",
-            }}
-          >
-            Retry
-          </button>
+        <div data-testid="page-boundary-error" className="hk-page">
+          <ErrorNotice
+            title="This page hit an error"
+            details={errorDetails(this.state.error)}
+            action={{ label: "Reload page", onClick: () => this.setState({ error: null }) }}
+          />
         </div>
       );
     }
