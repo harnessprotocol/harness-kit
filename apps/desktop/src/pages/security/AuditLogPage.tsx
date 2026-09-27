@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
-import { Button, Card, EmptyState, StatusChip, type StatusChipVariant } from "@harness-kit/ui";
+import { Button, Card, EmptyState, ErrorNotice, StatusChip, type StatusChipVariant } from "@harness-kit/ui";
 import { ScrollText } from "lucide-react";
 import { listAuditEntries, clearAuditEntries } from "../../lib/tauri";
+import { errorDetails } from "../../lib/error-details";
 import type { AuditEntry } from "@harness-kit/shared";
 import { useArrowNavigation } from "../../hooks/useArrowNavigation";
 import ContextMenu from "../../components/ContextMenu";
@@ -61,7 +62,7 @@ function formatTimestamp(ts: string): string {
 export default function AuditLogPage() {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ title: string; details: string } | null>(null);
   const [filter, setFilter] = useState<CategoryFilter>("all");
   const [page, setPage] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -83,7 +84,7 @@ export default function AuditLogPage() {
       const result = await listAuditEntries(PAGE_SIZE, page * PAGE_SIZE, category);
       setEntries(result);
     } catch (e) {
-      setError(String(e));
+      setError({ title: "Couldn't load the audit log", details: errorDetails(e) });
     } finally {
       setLoading(false);
     }
@@ -107,7 +108,7 @@ export default function AuditLogPage() {
       setPage(0);
       await fetchEntries();
     } catch (e) {
-      setError(String(e));
+      setError({ title: "Couldn't clear old audit entries", details: errorDetails(e) });
     }
   }
 
@@ -124,9 +125,11 @@ export default function AuditLogPage() {
       </div>
 
       {error && (
-        <Card padding="sm" style={{ fontSize: "13px", color: "var(--danger)", marginBottom: "16px" }}>
-          {error}
-        </Card>
+        <ErrorNotice
+          title={error.title}
+          details={error.details}
+          action={{ label: "Retry", onClick: () => { setError(null); void fetchEntries(); } }}
+        />
       )}
 
       {/* Filter bar */}

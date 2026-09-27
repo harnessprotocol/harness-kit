@@ -4,6 +4,8 @@ import {
   listSecurityPresets, applySecurityPreset,
   detectClaudeAccount,
 } from "../../lib/tauri";
+import { ErrorNotice } from "@harness-kit/ui";
+import { errorDetails } from "../../lib/error-details";
 import type { PermissionsState, SecurityPreset } from "@harness-kit/shared";
 import {
   getPermissionMode, setPermissionMode,
@@ -716,7 +718,8 @@ export default function PermissionsPage() {
   const [permissions, setPermissions] = useState<PermissionsState | null>(null);
   const [presets, setPresets] = useState<SecurityPreset[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // `retry` is set only for a failed load; a failed save or preset offers Dismiss.
+  const [error, setError] = useState<{ title: string; details: string; retry?: boolean } | null>(null);
   const [tauriAvailable] = useState(() =>
     typeof window !== "undefined" && !!(window as unknown as Record<string, unknown>).__TAURI_INTERNALS__
   );
@@ -763,14 +766,18 @@ export default function PermissionsPage() {
       // claude CLI not available or not logged in — leave as stored preference.
     });
 
+    loadPermissions();
+  }, []);
+
+  function loadPermissions() {
     Promise.all([readPermissions(), listSecurityPresets()])
       .then(([perms, presetList]) => {
         setPermissions(perms);
         setPresets(presetList);
       })
-      .catch((e) => setError(String(e)))
+      .catch((e) => setError({ title: "Couldn't read Claude's permission settings", details: errorDetails(e), retry: true }))
       .finally(() => setLoading(false));
-  }, []);
+  }
 
   function handleModeChange(next: PermissionMode) {
     setMode(next);
@@ -842,7 +849,7 @@ export default function PermissionsPage() {
       await updatePermissions(permissions);
       setDirty(false);
     } catch (e) {
-      setError(String(e));
+      setError({ title: "Couldn't save the permission settings", details: errorDetails(e) });
     } finally {
       setSaving(false);
     }
@@ -856,7 +863,7 @@ export default function PermissionsPage() {
       setDirty(false);
       setConfirmPreset(null);
     } catch (e) {
-      setError(String(e));
+      setError({ title: `Couldn't apply the ${preset.name} preset`, details: errorDetails(e) });
     } finally {
       setSaving(false);
     }
@@ -972,14 +979,15 @@ export default function PermissionsPage() {
           <p style={{ fontSize: "12px", color: "var(--fg-subtle)", margin: "0 0 14px" }}>Loading…</p>
         )}
         {tauriAvailable && error && (
-          <div style={{
-            background: "var(--bg-surface)", border: "1px solid var(--danger-light)",
-            borderLeft: "3px solid var(--danger)", borderRadius: "8px",
-            padding: "10px 14px", fontSize: "12px", color: "var(--danger)",
-            marginBottom: "14px",
-          }}>
-            {error}
-          </div>
+          <ErrorNotice
+            title={error.title}
+            details={error.details}
+            action={
+              error.retry
+                ? { label: "Retry", onClick: () => { setError(null); setLoading(true); loadPermissions(); } }
+                : { label: "Dismiss", onClick: () => setError(null) }
+            }
+          />
         )}
         <div style={{ marginBottom: "14px" }}>
           <p style={{

@@ -436,9 +436,15 @@ describe("AuditLogPage — event badge colors", () => {
 });
 
 describe("AuditLogPage — error state", () => {
-  it("shows error message when listAuditEntries rejects", async () => {
-    mockListAuditEntries.mockRejectedValue(new Error("Database error"));
+  it("says the log couldn't load, raw error behind Details, and Retry fetches again (AC-20)", async () => {
+    mockListAuditEntries.mockRejectedValueOnce(new Error("Database error"));
     renderPage();
-    expect(await screen.findByText(/Database error/)).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't load the audit log");
+    expect(screen.getByText("Database error")).not.toBeVisible();
+
+    const calls = mockListAuditEntries.mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(mockListAuditEntries.mock.calls.length).toBe(calls + 1));
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
   });
 });

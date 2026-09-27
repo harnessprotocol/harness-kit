@@ -125,13 +125,15 @@ describe("PermissionsPage — error state", () => {
   it("shows error message when readPermissions rejects", async () => {
     mockReadPermissions.mockRejectedValue(new Error("Permission denied"));
     renderPage();
-    expect(await screen.findByText(/Permission denied/)).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't read Claude's permission settings");
+    // The raw error waits behind Details (AC-20).
+    expect(screen.getByText("Permission denied")).not.toBeVisible();
   });
 
   it("shows the page heading even in error state", async () => {
     mockReadPermissions.mockRejectedValue(new Error("oops"));
     renderPage();
-    await screen.findByText(/oops/);
+    await screen.findByText("oops");
     expect(screen.getByText("Permissions")).toBeInTheDocument();
   });
 });
