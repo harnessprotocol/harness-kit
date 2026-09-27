@@ -4,6 +4,8 @@ import { formatTimestamp, formatDuration, formatNumber, shortModelName } from ".
 import type { SessionSummary, SessionFacet, SessionTranscript, TranscriptEntry } from "@harness-kit/shared";
 import { useArrowNavigation } from "../../hooks/useArrowNavigation";
 import ContextMenu from "../../components/ContextMenu";
+import { ErrorNotice } from "@harness-kit/ui";
+import { errorDetails } from "../../lib/error-details";
 
 // ── Outcome badge ──────────────────────────────────────────────
 
@@ -293,6 +295,8 @@ export default function SessionsPage() {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Bumped by the notice's Retry to list sessions again.
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [facet, setFacet] = useState<SessionFacet | null>(null);
   const [facetLoading, setFacetLoading] = useState(false);
@@ -301,9 +305,9 @@ export default function SessionsPage() {
   useEffect(() => {
     listSessionsSummary()
       .then(setSessions)
-      .catch((e) => setError(String(e)))
+      .catch((e) => setError(errorDetails(e)))
       .finally(() => setLoading(false));
-  }, []);
+  }, [loadAttempt]);
 
   function handleRowClick(sessionId: string) {
     if (expandedId === sessionId) {
@@ -348,16 +352,11 @@ export default function SessionsPage() {
       )}
 
       {error && (
-        <div style={{
-          background: "var(--bg-surface)",
-          border: "1px solid var(--border-base)",
-          borderRadius: "8px",
-          padding: "10px 14px",
-          fontSize: "13px",
-          color: "var(--danger)",
-        }}>
-          {error}
-        </div>
+        <ErrorNotice
+          title="Couldn't list Claude Code sessions"
+          details={error}
+          action={{ label: "Retry", onClick: () => { setError(null); setLoading(true); setLoadAttempt((n) => n + 1); } }}
+        />
       )}
 
       {!loading && !error && sessions.length === 0 && (

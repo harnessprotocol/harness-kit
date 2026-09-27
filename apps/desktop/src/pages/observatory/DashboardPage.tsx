@@ -9,7 +9,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import HKTooltip from "../../components/Tooltip";
-import { Stat } from "@harness-kit/ui";
+import { ErrorNotice, Stat } from "@harness-kit/ui";
 import AccountStatusBadge from "../../components/AccountStatusBadge";
 import { useObservatoryData } from "../../hooks/useObservatoryData";
 import { formatNumber, formatDate, formatHour, shortModelName } from "../../lib/format";
@@ -711,16 +711,11 @@ export default function DashboardPage() {
             Claude Code usage on this machine
           </p>
         </div>
-        <div style={{
-          background: "var(--bg-surface)",
-          border: "1px solid var(--border-base)",
-          borderRadius: "8px",
-          padding: "10px 14px",
-          fontSize: "13px",
-          color: "var(--danger)",
-        }}>
-          {error}
-        </div>
+        <ErrorNotice
+          title="Couldn't read Claude Code's usage data"
+          details={error}
+          action={{ label: "Retry", onClick: refresh }}
+        />
       </div>
     );
   }
