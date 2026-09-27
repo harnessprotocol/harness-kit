@@ -177,6 +177,24 @@ describe("PluginExplorerPage failures (AC-20)", () => {
     await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
   });
 
+  it("stays on a file whose auto-save failed when switching away, keeping the edits", async () => {
+    mockSave.mockRejectedValueOnce(new Error("read-only file system"));
+    vi.mocked(readPluginFile).mockClear();
+    renderPage();
+    fireEvent.click(await screen.findByText("run.sh"));
+    fireEvent.click(await screen.findByText("edit"));
+    // Switching files auto-saves the dirty one first; that save fails.
+    fireEvent.click(screen.getByText("plugin.json"));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't save run.sh");
+    expect(mockSave).toHaveBeenCalledWith("/plugins/demo/run.sh", '{"changed":true}');
+    expect(vi.mocked(readPluginFile)).not.toHaveBeenCalledWith("/plugins/demo/plugin.json");
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry save" }));
+    await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(2));
+    expect(mockSave).toHaveBeenLastCalledWith("/plugins/demo/run.sh", '{"changed":true}');
+  });
+
   it("says the plugin list couldn't be loaded rather than that the plugin is missing", async () => {
     vi.mocked(listInstalledPlugins).mockRejectedValueOnce(new Error("bridge unavailable"));
     renderPage();

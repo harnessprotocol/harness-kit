@@ -111,26 +111,33 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
 
   const reloadTree = useCallback(() => setTreeKey((k) => k + 1), []);
 
-  // Save current file before switching — uses refs to avoid stale closure
-  const saveCurrent = useCallback(async () => {
+  // Save current file before switching — uses refs to avoid stale closure.
+  // Resolves false when the save failed: the caller must not leave the file,
+  // or the unsaved edits would be dropped with no trace.
+  const saveCurrent = useCallback(async (): Promise<boolean> => {
+    const path = currentPathRef.current;
     const content = fileContentRef.current;
     const original = originalContentRef.current;
-    if (currentPathRef.current && content !== null && original !== null && content !== original) {
+    if (path && content !== null && original !== null && content !== original) {
       try {
         setSaving(true);
-        await writePluginFile(currentPathRef.current, content);
+        await writePluginFile(path, content);
         setOriginalContent(content);
-      } catch {
-        // Silent fail on auto-save; user can retry manually
+      } catch (e) {
+        setSaveErrorTitle(`Couldn't save ${fileLabel(path)}`);
+        setSaveError(errorDetails(e));
+        return false;
       } finally {
         setSaving(false);
       }
     }
+    return true;
   }, []);
 
   const selectFile = useCallback(async (path: string) => {
-    // Auto-save dirty file before switching
-    await saveCurrent();
+    // Auto-save the dirty file before switching. If that fails, stay on it
+    // with the edits and the "Couldn't save" notice (Retry save).
+    if (!(await saveCurrent())) return;
 
     setSelectedPath(path);
     currentPathRef.current = path;
