@@ -405,7 +405,8 @@ describe("PluginsPage load failure (AC-20)", () => {
     const fallback = mockInvoke.getMockImplementation()!;
     let installed = [{ name: "demo", version: "1.0.0", source: "/plugins/demo" }];
     let uninstallCalls = 0;
-    mockInvoke.mockImplementation(async (command, args) => {
+    // mockInvoke's type comes from its default implementation's return values.
+    mockInvoke.mockImplementation((async (command: string, args?: Record<string, unknown>) => {
       if (command === "list_installed_plugins") return installed;
       if (command === "uninstall_plugin") {
         uninstallCalls += 1;
@@ -414,7 +415,7 @@ describe("PluginsPage load failure (AC-20)", () => {
         return undefined;
       }
       return fallback(command, args);
-    });
+    }) as typeof fallback);
     render(<MemoryRouter><PluginsPage /></MemoryRouter>);
 
     fireEvent.contextMenu(await screen.findByText("demo"));
