@@ -43,6 +43,17 @@ fn current_platform() -> &'static str {
 /// and ".claude/skillsets/x" is not inside ".claude/skills".
 pub(crate) fn is_declared_store(relative: &str) -> bool {
     let normalized = relative.replace('\\', "/");
+    // Every segment must name something: an empty segment (`a//b`, a trailing
+    // `/`) or a `.` segment would let the write path's parent resolve above
+    // the declared directory (`.claude/skills/.` has parent `.claude`), which
+    // is where the temp file is created. Checked before the `.harness/`
+    // branch so that branch is covered too.
+    if normalized
+        .split('/')
+        .any(|segment| segment.is_empty() || segment == ".")
+    {
+        return false;
+    }
     // HarnessKit's own state directory. The transaction engine writes preimage
     // backups and its manifest here before touching any config file, so a
     // command that refused them would make rollback impossible — which is the
@@ -452,6 +463,19 @@ mod tests {
     #[test]
     fn accepts_a_file_beneath_a_declared_directory() {
         assert!(is_declared_store(".claude/skills/review/SKILL.md"));
+    }
+
+    #[test]
+    fn rejects_empty_and_dot_segments() {
+        // Each would put the temp file's parent above the declared directory.
+        assert!(!is_declared_store(".claude/skills/."));
+        assert!(!is_declared_store(".claude/./skills/review/SKILL.md"));
+        assert!(!is_declared_store(".harness/"));
+        assert!(!is_declared_store(".harness//backups/x.json"));
+        assert!(!is_declared_store(".claude/skills/review/"));
+        // The plain forms stay accepted.
+        assert!(is_declared_store(".claude/skills/review/SKILL.md"));
+        assert!(is_declared_store(".harness/backups/x.json"));
     }
 
     #[test]
