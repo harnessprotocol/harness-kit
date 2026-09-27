@@ -18,6 +18,7 @@ import {
   unacknowledgeDriftItem,
   getAcknowledgedDriftItems,
 } from "../../lib/tauri";
+import { errorDetails } from "../../lib/error-details";
 import { appDataDir, join as joinPath } from "@tauri-apps/api/path";
 import { buildDesktopPortabilitySnapshot, type DesktopPortabilitySnapshot } from "../fleet/portability-data";
 import { useProjectDir } from "../../lib/project-dir";
@@ -89,7 +90,7 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
       );
       setScanned(true);
     } catch (err) {
-      if (seq === loadSeq.current) setError(String(err));
+      if (seq === loadSeq.current) setError(errorDetails(err));
     } finally {
       if (seq === loadSeq.current) setLoading(false);
     }
@@ -122,7 +123,7 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
       setAcknowledged((prev) => new Set(prev).add(key));
       pushToast({ title: "Acknowledged", message: entry.item.path, variant: "info" });
     } catch (err) {
-      pushToast({ title: "Couldn't acknowledge", message: String(err), variant: "danger" });
+      pushToast({ title: "Couldn't acknowledge", message: errorDetails(err), variant: "danger" });
     }
   }
 
@@ -142,7 +143,7 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
         return next;
       });
     } catch (err) {
-      pushToast({ title: "Couldn't update", message: String(err), variant: "danger" });
+      pushToast({ title: "Couldn't update", message: errorDetails(err), variant: "danger" });
     }
   }
 

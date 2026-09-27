@@ -1,4 +1,4 @@
-import { Button, StatusChip, DiffViewer, EmptyState, ToastViewport, type ToastItem } from "@harness-kit/ui";
+import { Button, StatusChip, DiffViewer, EmptyState, ErrorNotice, ToastViewport, type ToastItem } from "@harness-kit/ui";
 import { ChevronRight, ShieldCheck } from "lucide-react";
 import { ADAPTER_META } from "../fleet/adapter-meta";
 import { driftItemKey, type ScopedDriftItem } from "./drift-data";
@@ -110,16 +110,21 @@ export function DriftView({
             </div>
           </div>
         )}
-        <EmptyState
-          icon={<ShieldCheck size={28} strokeWidth={1.5} />}
-          title="No drift detected"
-          description="Every deployed config matches harness.yaml across Global and this project. Compile from Profile after you next edit harness.yaml to keep it that way."
-          action={
-            <Button variant="ghost" onClick={onRescan}>
-              Re-scan
-            </Button>
-          }
-        />
+        {/* A failed scan found nothing, which is not the same as no drift. */}
+        {error ? (
+          <DriftError error={error} onRescan={onRescan} />
+        ) : (
+          <EmptyState
+            icon={<ShieldCheck size={28} strokeWidth={1.5} />}
+            title="No drift detected"
+            description="Every deployed config matches harness.yaml across Global and this project. Compile from Profile after you next edit harness.yaml to keep it that way."
+            action={
+              <Button variant="ghost" onClick={onRescan}>
+                Re-scan
+              </Button>
+            }
+          />
+        )}
       </div>
     );
   }
@@ -147,7 +152,7 @@ export function DriftView({
         </div>
       </div>
 
-      {error && <div className="hk-page-error">{error}</div>}
+      {error && <DriftError error={error} onRescan={onRescan} />}
 
       <ConflictLedger conflicts={portability?.conflicts ?? []} />
 
@@ -226,4 +231,8 @@ export function DriftView({
       <ToastViewport toasts={toasts} onDismiss={onDismissToast} />
     </div>
   );
+}
+
+function DriftError({ error, onRescan }: { error: string; onRescan: () => void }) {
+  return <ErrorNotice title="Couldn't check for drift" details={error} action={{ label: "Retry", onClick: onRescan }} />;
 }

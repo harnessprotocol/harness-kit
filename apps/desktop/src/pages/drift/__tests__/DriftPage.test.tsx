@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor, act, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import DriftPage from "../DriftPage";
 import { PROJECT_CHANGED_EVENT } from "../../../lib/project-dir";
@@ -79,6 +79,24 @@ describe("DriftPage", () => {
     mockDetectDrift.mockResolvedValue({ items: [], hasDrift: false, byClass: {} });
     renderPage();
     await waitFor(() => expect(screen.getByText("No drift detected")).toBeInTheDocument());
+  });
+
+  it("a failed scan says so, with Retry and the raw error behind Details, not 'No drift detected' (AC-20)", async () => {
+    const raw = "EACCES: permission denied, open '/home/user/.claude/CLAUDE.md'";
+    mockDetectDrift
+      .mockRejectedValueOnce(new Error(raw))
+      .mockResolvedValue({ items: [], hasDrift: false, byClass: {} });
+    renderPage();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't check for drift");
+    expect(screen.queryByText("No drift detected")).not.toBeInTheDocument();
+    expect(screen.getByText(raw)).not.toBeVisible();
+    fireEvent.click(screen.getByText("Details"));
+    expect(screen.getByText(raw)).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(await screen.findByText("No drift detected")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("renders a drift item grouped by scope and harness, with a Fix button", async () => {
