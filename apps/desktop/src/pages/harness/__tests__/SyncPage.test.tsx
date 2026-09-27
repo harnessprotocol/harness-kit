@@ -109,15 +109,33 @@ describe("SyncPage", () => {
     });
   });
 
-  it("renders empty state when readHarnessFile throws", async () => {
-    mockReadHarnessFile.mockRejectedValue(new Error("command not found"));
+  it("shows the empty state and Create harness.yaml when the file is absent", async () => {
+    mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null });
 
     renderPage();
 
-    // Falls back to empty state gracefully
-    await waitFor(() => {
-      expect(screen.getByText(/No harness\.yaml found/i)).toBeInTheDocument();
-    });
+    expect(await screen.findByText("No harness.yaml found")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create harness.yaml" })).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("says harness.yaml couldn't be read, not that it is missing, and Retry reads it again (AC-20)", async () => {
+    mockReadHarnessFile
+      .mockRejectedValueOnce(new Error("permission denied"))
+      .mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.claude/harness.yaml" });
+
+    renderPage();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't read harness.yaml");
+    expect(screen.getByText("permission denied")).not.toBeVisible();
+    // A failed read is not a missing file: no false empty state.
+    expect(screen.queryByText("No harness.yaml found")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Create harness.yaml" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(await screen.findByText("/home/user/.claude/harness.yaml")).toBeInTheDocument();
+    expect(mockReadHarnessFile).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("seeds target selection from detection with compile surfaces only", async () => {

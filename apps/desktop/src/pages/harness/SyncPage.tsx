@@ -44,6 +44,9 @@ export default function SyncPage() {
   const [harnessName, setHarnessName] = useState("default");
   const [harnessDescription, setHarnessDescription] = useState<string | null>(null);
   const [harnessLoading, setHarnessLoading] = useState(true);
+  // A failed read is not "no harness.yaml": it gets its own notice, never the
+  // empty state's "Create harness.yaml".
+  const [harnessError, setHarnessError] = useState<string | null>(null);
 
   // Project dir: the title bar's project (AC-17, lib/project-dir.ts)
   const [currentProject] = useProjectDir();
@@ -74,6 +77,7 @@ export default function SyncPage() {
   // Load harness file
   const loadHarness = useCallback(() => {
     setHarnessLoading(true);
+    setHarnessError(null);
     readHarnessFile()
       .then((result) => {
         if (result.found && result.content) {
@@ -89,7 +93,11 @@ export default function SyncPage() {
           setHarnessPath(null);
         }
       })
-      .catch(() => {})
+      .catch((e) => {
+        setHarnessContent(null);
+        setHarnessPath(null);
+        setHarnessError(errorDetails(e));
+      })
       .finally(() => setHarnessLoading(false));
   }, []);
 
@@ -265,8 +273,17 @@ export default function SyncPage() {
           </Button>
         </div>
 
+        {/* harness.yaml couldn't be read */}
+        {!harnessLoading && harnessError && (
+          <ErrorNotice
+            title="Couldn't read harness.yaml"
+            details={harnessError}
+            action={{ label: "Retry", onClick: loadHarness }}
+          />
+        )}
+
         {/* No harness.yaml — empty state */}
-        {!harnessLoading && !harnessContent && (
+        {!harnessLoading && !harnessError && !harnessContent && (
           <EmptyState
             icon={<Wrench size={28} strokeWidth={1.5} />}
             title="No harness.yaml found"
