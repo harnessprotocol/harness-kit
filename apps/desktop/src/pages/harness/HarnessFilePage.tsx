@@ -152,8 +152,9 @@ export default function HarnessFilePage() {
       const { yaml } = generateHarnessYaml(scan);
       openEditor(yaml);
     } catch (e) {
+      // Stay on the empty state: opening the blank template here would hide
+      // the failure behind an editor that looks like a scan result.
       setGenerateError(errorDetails(e));
-      openEditor(HARNESS_TEMPLATE);
     } finally {
       setGenerating(false);
     }
@@ -346,7 +347,11 @@ export default function HarnessFilePage() {
             </p>
 
             {generateError && (
-              <ErrorNotice title="Couldn't scan your Claude Code setup" details={generateError} />
+              <ErrorNotice
+                title="Couldn't scan your Claude Code setup"
+                details={generateError}
+                action={{ label: "Retry scan", onClick: () => void handleGenerate() }}
+              />
             )}
 
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "center" }}>

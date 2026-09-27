@@ -8,9 +8,16 @@ import { CommandPalette } from "../../../components/CommandPalette";
 
 const mockReadHarnessFile = vi.fn();
 const mockWriteHarnessFile = vi.fn();
+const mockScanClaudeConfig = vi.fn();
 vi.mock("../../../lib/tauri", () => ({
   readHarnessFile: () => mockReadHarnessFile(),
   writeHarnessFile: (content: string) => mockWriteHarnessFile(content),
+  scanClaudeConfig: () => mockScanClaudeConfig(),
+}));
+
+vi.mock("../../../lib/harness-generator", () => ({
+  generateHarnessYaml: () => ({ yaml: "version: \"1\"\n# generated\n" }),
+  HARNESS_TEMPLATE: "# template\n",
 }));
 
 // The page passes no onSave to MonacoEditor and relies on its own window keydown
@@ -140,6 +147,27 @@ describe("HarnessFilePage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(await screen.findByText("No harness.yaml found")).toBeInTheDocument();
     expect(mockReadHarnessFile).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("keeps a failed scan on the empty state with the error and Retry scan, not the template (AC-20)", async () => {
+    mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null });
+    mockScanClaudeConfig
+      .mockRejectedValueOnce("permission denied: ~/.claude")
+      .mockResolvedValue({});
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Generate from Claude Code setup" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't scan your Claude Code setup");
+    expect(screen.getByText("permission denied: ~/.claude")).not.toBeVisible();
+    // Still on the empty state; the blank template did not open as if it were the result.
+    expect(screen.getByText("No harness.yaml found")).toBeInTheDocument();
+    expect(screen.queryByTestId("fake-editor")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry scan" }));
+    const editor = await screen.findByTestId("fake-editor");
+    expect(editor).toHaveValue('version: "1"\n# generated\n');
+    expect(mockScanClaudeConfig).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
