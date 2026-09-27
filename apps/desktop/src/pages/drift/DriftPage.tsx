@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import type { ToastItem } from "@harness-kit/ui";
 import {
@@ -18,8 +18,10 @@ import {
   unacknowledgeDriftItem,
   getAcknowledgedDriftItems,
 } from "../../lib/tauri";
+import { errorDetails } from "../../lib/error-details";
 import { appDataDir, join as joinPath } from "@tauri-apps/api/path";
 import { buildDesktopPortabilitySnapshot, type DesktopPortabilitySnapshot } from "../fleet/portability-data";
+import { useProjectDir } from "../../lib/project-dir";
 
 export type { DriftSummary };
 
@@ -37,6 +39,8 @@ export interface DriftPageProps {
 export default function DriftPage({ embedded = false, onSummary }: DriftPageProps = {}) {
   const [searchParams] = useSearchParams();
   const harnessFilter = searchParams.get("harness");
+  // The title bar's project (AC-17); a change rescans.
+  const [projectDir] = useProjectDir();
 
   const [entries, setEntries] = useState<ScopedDriftItem[]>([]);
   const [acknowledged, setAcknowledged] = useState<Set<string>>(new Set());
@@ -54,11 +58,14 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
     setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
   }, []);
 
+  // Only the latest scan lands: a project change can start one while another runs.
+  const loadSeq = useRef(0);
   const load = useCallback(async () => {
+    const seq = ++loadSeq.current;
     setLoading(true);
     setError(null);
     try {
-      const scopes = await buildDriftScopes();
+      const scopes = await buildDriftScopes(projectDir);
       const home = scopes.find((scope) => scope.kind === "global")?.root;
       const project = scopes.find((scope) => scope.kind === "project")?.root;
       // AC-37: acknowledgements moved to the shared harness.db. Copy anything
@@ -75,6 +82,7 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
         getAcknowledgedDriftItems().catch(() => []),
         home ? buildDesktopPortabilitySnapshot(home, project) : Promise.resolve(null),
       ]);
+      if (seq !== loadSeq.current) return;
       setEntries(collected);
       setPortability(portabilitySnapshot);
       setAcknowledged(
@@ -82,11 +90,11 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
       );
       setScanned(true);
     } catch (err) {
-      setError(String(err));
+      if (seq === loadSeq.current) setError(errorDetails(err));
     } finally {
-      setLoading(false);
+      if (seq === loadSeq.current) setLoading(false);
     }
-  }, []);
+  }, [projectDir]);
 
   useEffect(() => {
     load();
@@ -115,7 +123,7 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
       setAcknowledged((prev) => new Set(prev).add(key));
       pushToast({ title: "Acknowledged", message: entry.item.path, variant: "info" });
     } catch (err) {
-      pushToast({ title: "Couldn't acknowledge", message: String(err), variant: "danger" });
+      pushToast({ title: "Couldn't acknowledge", message: errorDetails(err), variant: "danger" });
     }
   }
 
@@ -135,7 +143,7 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
         return next;
       });
     } catch (err) {
-      pushToast({ title: "Couldn't update", message: String(err), variant: "danger" });
+      pushToast({ title: "Couldn't update", message: errorDetails(err), variant: "danger" });
     }
   }
 

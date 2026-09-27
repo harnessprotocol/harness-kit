@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { ActivityTab } from "../ActivityTab";
 import type { DesktopPortabilitySnapshot } from "../../fleet/portability-data";
 
@@ -87,13 +87,20 @@ describe("ActivityTab", () => {
     expect(mockBuildDesktopPortabilitySnapshot).toHaveBeenCalledWith("/home/user", null, expect.any(String));
   });
 
-  it("shows an error notice when the snapshot build itself fails outright", async () => {
-    mockBuildDesktopPortabilitySnapshot.mockRejectedValue(new Error("boom"));
+  it("shows an error notice when the snapshot build itself fails outright (AC-20)", async () => {
+    mockBuildDesktopPortabilitySnapshot.mockRejectedValueOnce(new Error("boom"));
 
     render(<ActivityTab />);
 
-    expect(await screen.findByText(/Ledger failed to build: Error: boom/)).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't build the reconciliation ledger");
+    expect(screen.queryByText(/Error: boom/)).not.toBeInTheDocument();
+    expect(screen.getByText("boom")).not.toBeVisible();
     expect(screen.queryByTestId("project-degraded-notice")).not.toBeInTheDocument();
     expect(screen.queryByText("Reconciliation ledger")).not.toBeInTheDocument();
+
+    // Retry builds it again.
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(await screen.findByText("Reconciliation ledger")).toBeInTheDocument();
+    expect(mockBuildDesktopPortabilitySnapshot).toHaveBeenCalledTimes(2);
   });
 });

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
-import { Button } from "@harness-kit/ui";
+import { Button, ErrorNotice } from "@harness-kit/ui";
 import { listInstalledPlugins } from "../../lib/tauri";
 import type { InstalledPlugin } from "@harness-kit/shared";
 import { usePluginExplorer } from "../../hooks/usePluginExplorer";
+import { errorDetails } from "../../lib/error-details";
 import { getAvailableViewModes, getDefaultViewMode } from "../../lib/viewModes";
 import type { FileEditorState } from "../../hooks/useFileEditor";
 import SplitPane from "../../components/file-explorer/SplitPane";
@@ -19,6 +20,9 @@ export default function PluginExplorerPage() {
   const navigate = useNavigate();
   const [plugin, setPlugin] = useState<InstalledPlugin | null>(null);
   const [loadingPlugin, setLoadingPlugin] = useState(true);
+  // A failed plugin list is not "not found": it gets its own notice.
+  const [pluginError, setPluginError] = useState<string | null>(null);
+  const [pluginLoadKey, setPluginLoadKey] = useState(0);
   const [collapsed, setCollapsed] = useState(false);
   const [viewMode, setViewMode] = useState("editor");
 
@@ -26,14 +30,18 @@ export default function PluginExplorerPage() {
   useEffect(() => {
     if (!pluginName) return;
     setLoadingPlugin(true);
+    setPluginError(null);
     listInstalledPlugins()
       .then((plugins) => {
         const found = plugins.find((p) => p.name === decodeURIComponent(pluginName));
         setPlugin(found ?? null);
       })
-      .catch(() => setPlugin(null))
+      .catch((e) => {
+        setPlugin(null);
+        setPluginError(errorDetails(e));
+      })
       .finally(() => setLoadingPlugin(false));
-  }, [pluginName]);
+  }, [pluginName, pluginLoadKey]);
 
   const explorer = usePluginExplorer(plugin, plugin !== null);
 
@@ -64,12 +72,15 @@ export default function PluginExplorerPage() {
     saving: explorer.saving,
     savedRecently: explorer.savedRecently,
     error: explorer.error,
+    errorTitle: explorer.errorTitle,
+    saveError: explorer.saveError,
+    saveErrorTitle: explorer.saveErrorTitle,
     isDirty: explorer.dirty,
     updateContent: explorer.updateContent,
     // Toolbar Save and Monaco's Cmd+S both go through the confirmation path.
     saveFile: async () => { explorer.requestSave(); },
     revertFile: explorer.revertFile,
-    reload: () => {},
+    reload: explorer.reloadFile,
   }), [explorer]);
 
   const availableModes = getAvailableViewModes(explorer.selectedPath);
@@ -189,6 +200,18 @@ export default function PluginExplorerPage() {
     );
   }
 
+  if (pluginError) {
+    return (
+      <div style={{ padding: "20px 24px", maxWidth: "720px" }}>
+        <ErrorNotice
+          title="Couldn't load your installed plugins"
+          details={pluginError}
+          action={{ label: "Retry", onClick: () => setPluginLoadKey((k) => k + 1) }}
+        />
+      </div>
+    );
+  }
+
   if (!plugin) {
     return (
       <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", gap: "8px" }}>
@@ -215,7 +238,15 @@ export default function PluginExplorerPage() {
   return (
     <SplitPane
       left={leftPanel}
-      right={
+      right={explorer.treeError ? (
+        <div style={{ padding: "20px 24px" }}>
+          <ErrorNotice
+            title={explorer.treeErrorTitle ?? "Couldn't read this plugin's files"}
+            details={explorer.treeError}
+            action={{ label: "Retry", onClick: explorer.reloadTree }}
+          />
+        </div>
+      ) : (
         <EditorPane
           filePath={explorer.selectedPath}
           editor={editorState}
@@ -223,8 +254,10 @@ export default function PluginExplorerPage() {
           availableModes={availableModes}
           onViewModeChange={setViewMode}
           toolbarActions={toolbarActions}
+          // A failed save holds the user on the file; discarding lets them leave.
+          onDiscardChanges={explorer.revertFile}
         />
-      }
+      )}
       collapsed={collapsed}
       onToggleCollapsed={() => setCollapsed((c) => !c)}
     />

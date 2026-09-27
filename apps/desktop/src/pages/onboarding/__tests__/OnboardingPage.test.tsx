@@ -127,7 +127,11 @@ describe("OnboardingPage", () => {
     // The scan step no longer renders the error; the failed step is the
     // only place it appears, alongside the actions.
     expect(await screen.findByText(/machine scan did not finish/i)).toBeInTheDocument();
-    expect(screen.getByText("EACCES: ~/.codex")).toBeInTheDocument(); // no "Error:" prefix
+    // The raw error (no "Error:" prefix) waits behind Details (AC-20).
+    const raw = screen.getByText("EACCES: ~/.codex");
+    expect(raw).not.toBeVisible();
+    fireEvent.click(screen.getByText("Details"));
+    expect(raw).toBeVisible();
     expect(screen.queryByText(/scanning your machine/i)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Retry scan" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Skip setup" })).toBeInTheDocument();

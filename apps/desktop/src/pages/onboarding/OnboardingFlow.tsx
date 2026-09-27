@@ -1,6 +1,6 @@
 import { lazy, Suspense } from "react";
 import { ArrowRight, Search } from "lucide-react";
-import { Button, Card, StatusChip } from "@harness-kit/ui";
+import { Button, Card, ErrorNotice, StatusChip } from "@harness-kit/ui";
 import type { SprawlReveal } from "./onboarding-data";
 
 const MonacoEditor = lazy(() => import("../../components/plugin-explorer/MonacoEditor"));
@@ -100,19 +100,24 @@ function ScanStep({ scanSeconds, scanError }: { scanSeconds: number | null; scan
 
 // ── Step 1b: Scan failed ───────────────────────────────────────────
 
+// The whole step is the error notice (AC-20): its heading says what failed,
+// "Retry scan" is the one action, and the raw error waits behind Details as in
+// ErrorNotice. A tinted ErrorNotice inside the centred wizard frame would
+// repeat the heading and the Retry.
 function ScanFailedStep({ scanError, onRetry }: { scanError: string; onRetry: () => void }) {
   return (
     <div className="hk-onboard-scan">
       <h1 className="hk-onboard-scan-title">The machine scan did not finish</h1>
-      <p className="hk-onboard-scan-sub" data-error="true">
-        {scanError}
-      </p>
       <p className="hk-onboard-lede">You can retry, or skip setup and scan later from Machine.</p>
       <div className="hk-onboard-actions">
         <Button variant="primary" onClick={onRetry}>
           Retry scan
         </Button>
       </div>
+      <details className="hk-onboard-scan-details">
+        <summary>Details</summary>
+        <pre>{scanError}</pre>
+      </details>
     </div>
   );
 }
@@ -331,7 +336,8 @@ function ConfirmStep({
           : "Writing harness.yaml gives you a starting point. You can change every value afterward."}
       </p>
 
-      {writeError && <div className="hk-page-error">{writeError}</div>}
+      {/* No action of its own: "Write harness.yaml" below is the retry. */}
+      {writeError && <ErrorNotice title="Couldn't write harness.yaml" details={writeError} />}
 
       <div className="hk-onboard-actions hk-onboard-actions-confirm">
         <Button variant="primary" onClick={onWriteAndFinish} disabled={writing}>

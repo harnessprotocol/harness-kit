@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { open } from "@tauri-apps/plugin-shell";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { NavItem } from "@harness-kit/ui";
+import { Search } from "lucide-react";
 import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
 import { useArrowNavigation } from "../hooks/useArrowNavigation";
 import { useSidebarResize } from "../hooks/useSidebarResize";
@@ -12,6 +13,7 @@ import { CommandPalette } from "../components/CommandPalette";
 import { useClaudeFileList } from "../hooks/useClaudeFileList";
 import { PageBoundary } from "../components/PageBoundary";
 import { ToastProvider } from "../components/ToastProvider";
+import { ProjectSelector } from "../components/ProjectSelector";
 import { NAV, SETTINGS, visibleNav, type NavEntry } from "../nav";
 
 // Files with dedicated nav items — excluded from the Config Files tree
@@ -206,8 +208,9 @@ function AppShell() {
   }
 
   function handleTitlebarMouseDown(e: React.MouseEvent) {
-    // Guard covers all interactive elements — extend if non-button interactives are added to the titlebar
-    if ((e.target as HTMLElement).closest("button, a, input, [role='button']")) return;
+    // Guard covers all interactive elements — extend if non-button interactives are added to the titlebar.
+    // [data-no-drag] marks a whole control (the project selector and its open menu).
+    if ((e.target as HTMLElement).closest("button, a, input, [role='button'], [data-no-drag]")) return;
     e.preventDefault();
     getCurrentWindow().startDragging().catch((err) => {
       console.error("[titlebar] startDragging failed:", err);
@@ -258,6 +261,24 @@ function AppShell() {
           <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
           </svg>
+        </button>
+        {/* The one project-directory selector (spec AC-17): Machine, Drift and Compile read it */}
+        <ProjectSelector />
+        {/* ⌘K affordance (spec AC-21): the palette lists the open page's commands first.
+            The name includes the visible "⌘K" so a spoken label matches (WCAG 2.5.3). */}
+        <button
+          type="button"
+          className="hk-titlebar-cmdk"
+          data-no-drag=""
+          onClick={() => setPaletteOpen(true)}
+          aria-label="Command palette ⌘K"
+          aria-keyshortcuts="Meta+K"
+          aria-haspopup="dialog"
+          aria-expanded={paletteOpen}
+          title="Command palette (⌘K)"
+        >
+          <Search size={12} strokeWidth={1.7} aria-hidden="true" />
+          <kbd className="hk-titlebar-cmdk-key">⌘K</kbd>
         </button>
       </div>
 

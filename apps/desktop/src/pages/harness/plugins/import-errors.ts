@@ -1,3 +1,5 @@
+import { errorDetails } from "../../../lib/error-details";
+
 /** Last path segment, for either separator. */
 export function folderName(path: string): string {
   return path.split(/[\\/]/).filter(Boolean).pop() || "plugin";
@@ -30,7 +32,7 @@ export interface ImportError {
  * apps/desktop/src-tauri/src/commands/plugin_explorer.rs. Change both together.
  */
 export function describeImportError(err: unknown, name: string): ImportError {
-  const details = err instanceof Error ? err.message : String(err);
+  const details = errorDetails(err);
   const manifest = `${name}/.claude-plugin/plugin.json`;
 
   if (/^Not a directory/i.test(details)) {

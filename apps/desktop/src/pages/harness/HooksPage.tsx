@@ -1,8 +1,9 @@
 import { Suspense, lazy, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Webhook } from "lucide-react";
-import { Button, Card, EmptyState } from "@harness-kit/ui";
+import { Button, Card, EmptyState, ErrorNotice } from "@harness-kit/ui";
 import { useFileEditor } from "../../hooks/useFileEditor";
+import { errorDetails } from "../../lib/error-details";
 import EditorToolbar from "../../components/file-explorer/EditorToolbar";
 
 const MonacoEditor = lazy(() => import("../../components/plugin-explorer/MonacoEditor"));
@@ -268,16 +269,14 @@ function HooksFormattedView({ content }: { content: string }) {
       const raw = parsed?.hooks ?? {};
       return { hooks: raw as Record<string, HookMatcher[]>, parseError: null };
     } catch (e) {
-      return { hooks: {}, parseError: String(e) };
+      return { hooks: {}, parseError: errorDetails(e) };
     }
   }, [content]);
 
   if (parseError) {
     return (
       <div style={{ padding: "20px 24px" }}>
-        <Card padding="sm" style={{ color: "var(--danger)", fontSize: "12px" }}>
-          {parseError}
-        </Card>
+        <ErrorNotice title="Couldn't parse settings.json as JSON" details={parseError} />
       </div>
     );
   }
@@ -370,14 +369,26 @@ export default function HooksPage() {
           )}
           {editor.error && (
             <div style={{ padding: "20px 24px" }}>
-              <Card padding="sm" style={{ color: "var(--danger)", fontSize: "12px" }}>
-                {editor.error}
-              </Card>
+              <ErrorNotice
+                title={editor.errorTitle ?? "Couldn't read settings.json"}
+                details={editor.error}
+                action={{ label: "Reload", onClick: editor.reload }}
+              />
             </div>
           )}
           {!editor.loading && !editor.error && editor.content !== null && (
             <HooksFormattedView content={editor.content} />
           )}
+        </div>
+      )}
+
+      {viewMode === "editor" && editor.saveError && (
+        <div style={{ padding: "8px 16px 0", flexShrink: 0 }}>
+          <ErrorNotice
+            title={editor.saveErrorTitle ?? "Couldn't save settings.json"}
+            details={editor.saveError}
+            action={{ label: "Retry save", onClick: () => void editor.saveFile() }}
+          />
         </div>
       )}
 

@@ -5,6 +5,7 @@ import type { ImportProjectResult } from "@harness-kit/core";
 import { TauriFsProvider } from "../../lib/harness-fs";
 import { writeHarnessFile, grantProjectScope } from "../../lib/tauri";
 import { getCurrentProjectDir } from "../../lib/project-dir";
+import { errorDetails } from "../../lib/error-details";
 import { OnboardingFlow, type OnboardingStep } from "./OnboardingFlow";
 import { buildSprawlReveal, type SprawlReveal } from "./onboarding-data";
 
@@ -48,9 +49,8 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
         // root, so the project dir (when tracked) is scanned as a second,
         // separate pass and its findings are merged in below. The tracked
         // project dir comes from lib/project-dir.ts (getCurrentProjectDir),
-        // the same store other consumers use. Machine still tracks its own
-        // page-local project dir and moves onto this store in a later phase
-        // (specs/ux-consolidation/design.md D9).
+        // the store behind the title-bar selector that Machine, Drift and
+        // Compile also read (specs/ux-consolidation/design.md D9).
         const globalResult = await importMachine({ fs: new TauriFsProvider(home) });
 
         let combined = globalResult;
@@ -74,9 +74,8 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
         setResult(combined);
         setReveal(buildSprawlReveal(combined));
       } catch (err) {
-        // err.message, not String(err): the failed step prints this verbatim
-        // and "Error: EACCES…" reads as a stack line, not a sentence.
-        if (!cancelled) setScanError(err instanceof Error ? err.message : String(err));
+        // The failed step shows this behind Details (AC-20).
+        if (!cancelled) setScanError(errorDetails(err));
       }
     }
 
@@ -108,7 +107,7 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
       await writeHarnessFile(result.harnessYaml);
       onFinish();
     } catch (err) {
-      setWriteError(String(err));
+      setWriteError(errorDetails(err));
     } finally {
       setWriting(false);
     }

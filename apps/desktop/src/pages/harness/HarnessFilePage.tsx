@@ -1,12 +1,14 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button, Card, Input } from "@harness-kit/ui";
+import { Button, Card, ErrorNotice, Input } from "@harness-kit/ui";
 import { readHarnessFile, scanClaudeConfig, writeHarnessFile, saveCustomProfile } from "../../lib/tauri";
 import { parseHarness, validateHarnessYaml } from "@harness-kit/core";
 import type { HarnessConfig, ValidationResult } from "@harness-kit/core";
 import { generateHarnessYaml, HARNESS_TEMPLATE } from "../../lib/harness-generator";
 import type { HarnessProfile } from "../../lib/profiles";
 import { getAvailableViewModes } from "../../lib/viewModes";
+import { useRegisterCommands } from "../../lib/commands";
+import { errorDetails } from "../../lib/error-details";
 import EditorToolbar from "../../components/file-explorer/EditorToolbar";
 import ValidationBanner from "./harness-file/ValidationBanner";
 import MetadataSection from "./harness-file/MetadataSection";
@@ -56,7 +58,7 @@ export default function HarnessFilePage() {
         setDiskContent(result.content);
         setFilePath(result.path);
       })
-      .catch((e) => setFetchError(String(e)))
+      .catch((e) => setFetchError(errorDetails(e)))
       .finally(() => setLoading(false));
   }, []);
 
@@ -70,7 +72,7 @@ export default function HarnessFilePage() {
       const { config } = parseHarness(diskContent);
       return { config, parseError: null };
     } catch (e) {
-      return { config: {} as HarnessConfig, parseError: String(e) };
+      return { config: {} as HarnessConfig, parseError: errorDetails(e) };
     }
   }, [diskContent]);
 
@@ -95,7 +97,7 @@ export default function HarnessFilePage() {
       setFilePath(savedPath);
       setFound(true);
     } catch (e) {
-      setSaveError(String(e));
+      setSaveError(errorDetails(e));
     } finally {
       setSaving(false);
     }
@@ -114,6 +116,25 @@ export default function HarnessFilePage() {
     return () => window.removeEventListener("keydown", onKey);
   }, [view, handleSave]);
 
+  // ⌘K (spec AC-21): Save while the editor is open, disabled when the
+  // Save buttons are (nothing changed, or a save is running).
+  useRegisterCommands(
+    view === "editor"
+      ? [
+          {
+            id: "profile.save",
+            title: "Save harness.yaml",
+            group: "Profile",
+            keywords: ["write"],
+            shortcut: "⌘S",
+            disabled: !saveable || saving,
+            run: handleSave,
+          },
+        ]
+      : [],
+    [view, saveable, saving],
+  );
+
   // ── Empty state actions ───────────────────────────────────────
 
   function openEditor(content: string) {
@@ -131,8 +152,9 @@ export default function HarnessFilePage() {
       const { yaml } = generateHarnessYaml(scan);
       openEditor(yaml);
     } catch (e) {
-      setGenerateError(String(e));
-      openEditor(HARNESS_TEMPLATE);
+      // Stay on the empty state: opening the blank template here would hide
+      // the failure behind an editor that looks like a scan result.
+      setGenerateError(errorDetails(e));
     } finally {
       setGenerating(false);
     }
@@ -168,7 +190,7 @@ export default function HarnessFilePage() {
       setProfileNameOpen(false);
       setTimeout(() => setProfileSavedMsg(false), 2500);
     } catch (e) {
-      setProfileSaveError(String(e));
+      setProfileSaveError(errorDetails(e));
     } finally {
       setProfileSaving(false);
     }
@@ -223,8 +245,10 @@ export default function HarnessFilePage() {
               onKeyDown={(e) => { if (e.key === "Enter") handleSaveAsProfile(); if (e.key === "Escape") setProfileNameOpen(false); }}
               placeholder="e.g. my-setup"
               error={Boolean(profileSaveError)}
-              helperText={profileSaveError ?? undefined}
             />
+            {profileSaveError && (
+              <ErrorNotice title="Couldn't save the profile" details={profileSaveError} />
+            )}
             <div style={{ display: "flex", gap: "6px", justifyContent: "flex-end" }}>
               <Button variant="ghost" size="sm" onClick={() => setProfileNameOpen(false)}>
                 Cancel
@@ -282,10 +306,14 @@ export default function HarnessFilePage() {
         </>
       )}
 
-      {/* Save error (editor view) */}
+      {/* Save error (editor view, whether or not the file exists yet) */}
       {saveError && view === "editor" && (
         <div style={{ padding: "0 24px 8px", flexShrink: 0 }}>
-          <span style={{ fontSize: "11px", color: "var(--danger)" }}>{saveError}</span>
+          <ErrorNotice
+            title="Couldn't save harness.yaml"
+            details={saveError}
+            action={{ label: "Retry", onClick: () => void handleSave() }}
+          />
         </div>
       )}
 
@@ -299,9 +327,11 @@ export default function HarnessFilePage() {
 
         {/* Fetch error */}
         {fetchError && (
-          <Card padding="sm" style={{ fontSize: "13px", color: "var(--danger)", marginTop: "4px" }}>
-            {fetchError}
-          </Card>
+          <ErrorNotice
+            title="Couldn't read harness.yaml"
+            details={fetchError}
+            action={{ label: "Retry", onClick: () => { setFetchError(null); loadHarness(); } }}
+          />
         )}
 
         {/* Empty state — no harness found, not yet in editor */}
@@ -317,7 +347,11 @@ export default function HarnessFilePage() {
             </p>
 
             {generateError && (
-              <p style={{ margin: "0 0 12px", fontSize: "11px", color: "var(--danger)" }}>{generateError}</p>
+              <ErrorNotice
+                title="Couldn't scan your Claude Code setup"
+                details={generateError}
+                action={{ label: "Retry scan", onClick: () => void handleGenerate() }}
+              />
             )}
 
             <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", justifyContent: "center" }}>
@@ -343,7 +377,6 @@ export default function HarnessFilePage() {
                   Will save to <code style={{ fontFamily: "ui-monospace, monospace" }}>~/.claude/harness.yaml</code>
                 </span>
                 <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                  {saveError && <span style={{ fontSize: "11px", color: "var(--danger)" }}>{saveError}</span>}
                   <Button variant="primary" size="sm" onClick={handleSave} disabled={!saveable || saving}>
                     {saving ? "Saving…" : "Save harness.yaml"}
                   </Button>
@@ -371,9 +404,11 @@ export default function HarnessFilePage() {
           <>
             {/* Parse error */}
             {parsed.parseError && (
-              <Card padding="sm" style={{ fontSize: "13px", color: "var(--danger)", marginBottom: "16px", marginTop: "4px" }}>
-                {parsed.parseError}
-              </Card>
+              <ErrorNotice
+                title="Couldn't parse harness.yaml"
+                details={parsed.parseError}
+                action={{ label: "Open in editor", onClick: () => handleViewModeChange("editor") }}
+              />
             )}
 
             {view === "formatted" ? (

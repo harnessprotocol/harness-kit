@@ -7,6 +7,7 @@ import {
 } from "@harness-kit/core";
 import type { SurfaceDescriptor } from "@harness-kit/core";
 import { resolveDesktopDefinitions } from "./definitions";
+import { errorDetails } from "./error-details";
 import { TauriSurfaceFsProvider } from "./surface-fs";
 import { TauriTransactionLedger } from "./state-ledger";
 import { detectDesktopPlatform } from "../pages/machine/machine-data";
@@ -72,10 +73,6 @@ export class McpStoreError extends Error {
   }
 }
 
-function rawMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -132,7 +129,7 @@ async function readRaw(location: McpStoreLocation): Promise<string | null> {
     if (!(await exists(location.absolutePath))) return null;
     return await readTextFile(location.absolutePath);
   } catch (error) {
-    throw new McpStoreError(`Couldn't read ${location.displayPath}.`, "read", rawMessage(error));
+    throw new McpStoreError(`Couldn't read ${location.displayPath}.`, "read", errorDetails(error));
   }
 }
 
@@ -145,7 +142,7 @@ function parseDocument(location: McpStoreLocation, raw: string): Record<string, 
     throw new McpStoreError(
       `${location.displayPath} is not valid JSON, so its MCP servers can't be shown or edited here.`,
       "invalid",
-      rawMessage(error),
+      errorDetails(error),
     );
   }
   if (!isRecord(doc)) {
@@ -172,12 +169,11 @@ function entriesOf(
       "invalid",
     );
   }
-  const servers: McpServerEntries = {};
-  const otherEntries: Record<string, unknown> = {};
-  for (const [name, entry] of Object.entries(value)) {
-    if (isRecord(entry)) servers[name] = entry;
-    else otherEntries[name] = entry;
-  }
+  // Object.fromEntries defines own properties, so an entry named "__proto__"
+  // stays an entry; `obj[name] = entry` would set the prototype instead.
+  const all = Object.entries(value);
+  const servers = Object.fromEntries(all.filter(([, entry]) => isRecord(entry))) as McpServerEntries;
+  const otherEntries = Object.fromEntries(all.filter(([, entry]) => !isRecord(entry)));
   return { servers, otherEntries, entries: value };
 }
 
@@ -202,8 +198,9 @@ export async function readMcpStore(location: McpStoreLocation): Promise<McpStore
  * The write goes through core's transaction engine, like the Machine drawer:
  * the engine re-verifies the file against what was just read, copies it to
  * ~/.harness/backups, writes a manifest, and the change is recorded as a
- * rollback point. The backup is a verbatim copy of ~/.claude.json, MCP env
- * values included, so the desktop's write command makes it owner-only.
+ * rollback point. The backup is ~/.claude.json's text as read here (MCP env
+ * values included; a byte-order mark is not kept), so the desktop's write
+ * command makes it owner-only.
  *
  * What the Rust side guarantees: each write is atomic (temp file, fsync,
  * rename), so nothing ever reads a half-written file, and the write carries
@@ -215,10 +212,17 @@ export async function readMcpStore(location: McpStoreLocation): Promise<McpStore
  * it read before this write will undo it; nothing on this side can see or
  * prevent that.
  *
- * The hash is of the text as the fs plugin decoded it, re-encoded as UTF-8.
- * For a UTF-8 file without a byte-order mark those are the bytes on disk;
- * for anything else the hashes differ and the save is refused, never
- * forced.
+ * The precondition is over TEXT, not bytes on disk: this side can only read
+ * text (the capability grants fs:allow-read-text-file, and readTextFile runs
+ * the bytes through TextDecoder("utf-8")). Both sides compute lowercase hex
+ * SHA-256(UTF-8(decode(strip_bom(bytes)))): one leading UTF-8 BOM dropped,
+ * each maximal invalid UTF-8 subpart replaced by U+FFFD (TextDecoder here,
+ * String::from_utf8_lossy in Rust), re-encoded as UTF-8. So a file with a
+ * BOM or invalid bytes can be saved, and a BOM added or removed by someone
+ * else is not seen as a change. The save writes `content` as given, so a
+ * BOM the file had is dropped; RFC 8259 §8.1 says JSON writers must not add
+ * one, so that is acceptable here. The fixture src/lib/__tests__/fixtures/precondition-
+ * digest.json pins the rule on both sides.
  *
  * Every path is still re-checked against the registry allowlist compiled into
  * the Rust side (apply_surface_transaction), which is the boundary.
@@ -272,11 +276,11 @@ export async function writeMcpServers(
     });
   } catch (error) {
     // The engine refuses before touching anything (path, precondition).
-    throw await classifyWriteFailure(location, raw, rawMessage(error));
+    throw classifyWriteFailure(location, errorDetails(error));
   }
   if (!result.committed) {
     // The engine rolled back (or tried to); the message says why it stopped.
-    throw await classifyWriteFailure(location, raw, result.error ?? "the transaction did not commit");
+    throw classifyWriteFailure(location, result.error ?? "the transaction did not commit");
   }
 
   const changed = Object.keys({ ...current, ...next }).filter(
@@ -300,21 +304,17 @@ export async function writeMcpServers(
 
 /**
  * Say what actually went wrong. A stale file is a conflict the user can
- * retry; anything else is a failed save. Two lookalikes are not conflicts:
+ * retry; anything else is a failed save. One lookalike is not a conflict:
+ * the engine could not put the file back after a failed write ("rollback
+ * failures"). The file may hold the new content, and "reload and try again"
+ * would hide that. The backup is on disk.
  *
- * - The engine could not put the file back after a failed write ("rollback
- *   failures"). The file may hold the new content, and "reload and try
- *   again" would hide that. The backup is on disk.
- * - Rust refused the hash although the file has not changed since it was
- *   read: the fs plugin decodes text (dropping a byte-order mark, replacing
- *   invalid bytes), so the hash of the decoded text never matches those
- *   bytes, and every retry would fail the same way.
+ * A precondition refusal is always a real change to the file's text: the
+ * digest the provider sends and the one Rust computes are over the same
+ * decoded text (see writeMcpServers), so a byte-order mark or invalid bytes
+ * no longer make an unchanged file look changed.
  */
-async function classifyWriteFailure(
-  location: McpStoreLocation,
-  readText: string | null,
-  detail: string,
-): Promise<McpStoreError> {
+function classifyWriteFailure(location: McpStoreLocation, detail: string): McpStoreError {
   if (detail.includes("rollback failures")) {
     return new McpStoreError(
       `Saving ${location.displayPath} failed partway and the previous version could not be restored automatically. Check the file; a copy of it is in ~/.harness/backups.`,
@@ -323,16 +323,6 @@ async function classifyWriteFailure(
     );
   }
   if (detail.includes(CHANGED_ON_DISK) || detail.includes("transaction precondition failed")) {
-    if (detail.includes(CHANGED_ON_DISK)) {
-      const unchanged = await readRaw(location).then((now) => now === readText, () => false);
-      if (unchanged) {
-        return new McpStoreError(
-          `${location.displayPath} isn't plain UTF-8 text (it may start with a byte-order mark or hold invalid bytes), so it can't be saved from here.`,
-          "write",
-          detail,
-        );
-      }
-    }
     return new McpStoreError(
       `${location.displayPath} changed while you were editing. Reload and try again.`,
       "conflict",

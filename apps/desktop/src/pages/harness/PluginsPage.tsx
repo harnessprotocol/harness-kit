@@ -1,12 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence } from "framer-motion";
 import { Blocks } from "lucide-react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
-import { Button, Card, EmptyState } from "@harness-kit/ui";
+import { Button, Card, EmptyState, ErrorNotice } from "@harness-kit/ui";
 import {
   listInstalledPlugins, checkPluginUpdates, uninstallPlugin,
-  importPluginFromPath, importPluginFromZip,
   exportPluginAsZip, exportPluginToFolder,
   isTauriRuntimeAvailable,
 } from "../../lib/tauri";
@@ -15,9 +14,11 @@ import ContextMenu, { type ContextMenuItem } from "../../components/ContextMenu"
 import PluginFilters from "./plugins/PluginFilters";
 import PluginRow from "./plugins/PluginRow";
 import ImportOverlay from "./plugins/ImportOverlay";
-import ImportBanner, { type ImportStatus } from "./plugins/ImportBanner";
-import { describeImportError, folderName, isZipPath, type ImportError } from "./plugins/import-errors";
+import ImportBanner from "./plugins/ImportBanner";
+import { dismissImportStatus, enqueueImports, onPluginsImported, useImportQueue } from "./plugins/import-queue";
 import UninstallDialog from "./plugins/UninstallDialog";
+import { useRegisterCommands } from "../../lib/commands";
+import { errorDetails } from "../../lib/error-details";
 
 const PREVIEW_PLUGINS: InstalledPlugin[] = [
   {
@@ -42,35 +43,6 @@ const PREVIEW_PLUGINS: InstalledPlugin[] = [
   },
 ];
 
-interface ImportBatch {
-  seen: Set<string>;
-  queue: string[];
-  imported: string[];
-  failures: { name: string; error: ImportError }[];
-}
-
-/** One banner for a finished batch; null when nothing was imported or failed. */
-function batchResult({ imported, failures }: ImportBatch): ImportStatus | null {
-  if (failures.length === 0) {
-    return imported.length > 0 ? { state: "success", name: imported.join(", ") } : null;
-  }
-  const alsoImported = imported.length > 0 ? ` Imported ${imported.join(", ")}.` : "";
-  if (failures.length === 1) {
-    const { error } = failures[0];
-    return { state: "error", ...error, title: error.title + alsoImported };
-  }
-  const actions = new Set(failures.map((f) => f.error.action));
-  return {
-    state: "error",
-    title: `${failures.length} failed: ${failures.map((f) => f.name).join(", ")}.${alsoImported}`,
-    action: actions.size === 1 ? failures[0].error.action : "Open Details for each reason.",
-    details: failures
-      .map(({ name, error }) =>
-        [`${name}: ${error.title}${error.action ? ` ${error.action}` : ""}`, error.details].filter(Boolean).join("\n"))
-      .join("\n\n"),
-  };
-}
-
 const DESKTOP_RUNTIME_MESSAGE = "Browser preview mode: plugin filesystem actions require the Harness Kit desktop runtime.";
 
 export default function PluginsPage() {
@@ -78,7 +50,9 @@ export default function PluginsPage() {
   const [plugins, setPlugins] = useState<InstalledPlugin[]>([]);
   const [updates, setUpdates] = useState<Record<string, PluginUpdateInfo>>({});
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // A failed load replaces the list; a failed uninstall sits above it.
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [uninstallError, setUninstallError] = useState<{ pluginName: string; details: string } | null>(null);
   const [runtimeNotice, setRuntimeNotice] = useState<string | null>(null);
   const [tauriAvailable] = useState(isTauriRuntimeAvailable);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; plugin: InstalledPlugin } | null>(null);
@@ -89,11 +63,9 @@ export default function PluginsPage() {
 
   // Import state
   const [dropActive, setDropActive] = useState(false);
-  const [importStatus, setImportStatus] = useState<ImportStatus | null>(null);
-  const [importing, setImporting] = useState(false);
-  // The running batch, if any. Paths that arrive while it runs join its queue
-  // instead of starting a second loop that would fight over importStatus.
-  const batchRef = useRef<ImportBatch | null>(null);
+  // One queue for the app session (see import-queue): leaving the page
+  // mid-batch and dropping the same folder on return joins the running batch.
+  const { importing, status: importStatus } = useImportQueue();
 
   // Uninstall state
   const [uninstallTarget, setUninstallTarget] = useState<InstalledPlugin | null>(null);
@@ -102,17 +74,18 @@ export default function PluginsPage() {
     if (!tauriAvailable) {
       setPlugins(PREVIEW_PLUGINS);
       setUpdates({});
-      setError(null);
+      setLoadError(null);
       setRuntimeNotice(DESKTOP_RUNTIME_MESSAGE);
       setLoading(false);
       return;
     }
 
     setLoading(true);
+    setLoadError(null);
     setRuntimeNotice(null);
     listInstalledPlugins()
       .then(setPlugins)
-      .catch((e) => setError(String(e)))
+      .catch((e) => setLoadError(errorDetails(e)))
       .finally(() => setLoading(false));
 
     checkPluginUpdates()
@@ -125,6 +98,9 @@ export default function PluginsPage() {
   }, [tauriAvailable]);
 
   useEffect(loadPlugins, [loadPlugins]);
+  // A batch that finishes while the page is mounted refreshes the list; one
+  // that finishes while it is away is picked up by the load on return.
+  useEffect(() => onPluginsImported(loadPlugins), [loadPlugins]);
 
   function showDesktopOnlyNotice() {
     setRuntimeNotice(DESKTOP_RUNTIME_MESSAGE);
@@ -157,42 +133,7 @@ export default function PluginsPage() {
   const hasUpdates = Object.keys(updates).length > 0;
 
   // ── Import ───────────────────────────────────────────────
-
-  // The one import path, shared by the folder picker and a native drop. The
-  // Rust commands do the validation (is it a directory, does it carry
-  // .claude-plugin/plugin.json, is it already installed). Imports run one at a
-  // time; a call while a batch runs queues its paths into that batch.
-  const importFolders = useCallback(async (paths: string[]) => {
-    const running = batchRef.current;
-    const batch: ImportBatch = running ?? { seen: new Set<string>(), queue: [], imported: [], failures: [] };
-    for (const path of paths) {
-      if (batch.seen.has(path)) continue;
-      batch.seen.add(path);
-      batch.queue.push(path);
-    }
-    if (running) return;
-
-    batchRef.current = batch;
-    setImporting(true);
-    try {
-      for (let path = batch.queue.shift(); path !== undefined; path = batch.queue.shift()) {
-        const name = folderName(path);
-        setImportStatus({ state: "importing", name });
-        try {
-          const plugin = await (isZipPath(path) ? importPluginFromZip(path) : importPluginFromPath(path));
-          batch.imported.push(plugin?.name || name);
-        } catch (err) {
-          batch.failures.push({ name, error: describeImportError(err, name) });
-        }
-      }
-    } finally {
-      batchRef.current = null;
-      setImporting(false);
-    }
-
-    if (batch.imported.length > 0) loadPlugins();
-    setImportStatus(batchResult(batch));
-  }, [loadPlugins]);
+  // One import path, enqueueImports, shared by the folder picker and a native drop.
 
   // ── Drag-and-drop ────────────────────────────────────────
   // Tauri's native layer owns file drops (dragDropEnabled defaults to true), so
@@ -235,7 +176,7 @@ export default function PluginsPage() {
           setDropActive(false);
         } else if (payload.type === "drop") {
           setDropActive(false);
-          if (payload.paths.length > 0) void importFolders(payload.paths);
+          if (payload.paths.length > 0) void enqueueImports(payload.paths);
         }
       });
     } catch (err) {
@@ -253,7 +194,7 @@ export default function PluginsPage() {
       });
 
     return cleanup;
-  }, [tauriAvailable, importFolders]);
+  }, [tauriAvailable]);
 
   // ── Import from folder picker ────────────────────────────
 
@@ -271,8 +212,23 @@ export default function PluginsPage() {
       return; // Dialog plugin not available or cancelled
     }
     if (!selected) return;
-    await importFolders([selected]);
+    await enqueueImports([selected]);
   }
+
+  // ⌘K (spec AC-21): Import Plugin, disabled when the button is.
+  useRegisterCommands(
+    [
+      {
+        id: "plugins.import",
+        title: "Import plugin from folder…",
+        group: "Plugins",
+        keywords: ["import plugin", "folder", "add"],
+        disabled: !tauriAvailable || importing,
+        run: handleImportFolder,
+      },
+    ],
+    [tauriAvailable, importing],
+  );
 
   // ── Uninstall ────────────────────────────────────────────
 
@@ -285,13 +241,18 @@ export default function PluginsPage() {
     }
 
     const pluginName = uninstallTarget.name;
+    setUninstallTarget(null);
+    await runUninstall(pluginName);
+  }
+
+  // Also the failure notice's Retry: the user already confirmed this uninstall.
+  async function runUninstall(pluginName: string) {
+    setUninstallError(null);
     try {
       await uninstallPlugin(pluginName);
-      setUninstallTarget(null);
       loadPlugins();
     } catch (err) {
-      setError(String(err));
-      setUninstallTarget(null);
+      setUninstallError({ pluginName, details: errorDetails(err) });
     }
   }
 
@@ -385,7 +346,7 @@ export default function PluginsPage() {
       </div>
 
       {/* Import banner */}
-      <ImportBanner status={importStatus} onDismiss={() => setImportStatus(null)} />
+      <ImportBanner status={importStatus} onDismiss={dismissImportStatus} />
 
       {runtimeNotice && (
         <Card padding="sm" style={{ background: "var(--accent-light)", fontSize: "12px", color: "var(--fg-muted)", marginBottom: "12px" }}>
@@ -397,13 +358,23 @@ export default function PluginsPage() {
         <p style={{ fontSize: "13px", color: "var(--fg-subtle)" }}>Loading…</p>
       )}
 
-      {error && (
-        <Card padding="sm" style={{ fontSize: "13px", color: "var(--danger)", marginBottom: "12px" }}>
-          {error}
-        </Card>
+      {loadError && (
+        <ErrorNotice
+          title="Couldn't load installed plugins"
+          details={loadError}
+          action={{ label: "Retry", onClick: loadPlugins }}
+        />
       )}
 
-      {!loading && !error && plugins.length === 0 && (
+      {uninstallError && (
+        <ErrorNotice
+          title={`Couldn't uninstall ${uninstallError.pluginName}`}
+          details={uninstallError.details}
+          action={{ label: "Retry uninstall", onClick: () => void runUninstall(uninstallError.pluginName) }}
+        />
+      )}
+
+      {!loading && !loadError && plugins.length === 0 && (
         <EmptyState
           icon={<Blocks size={28} strokeWidth={1.5} />}
           title="No plugins installed"
@@ -416,7 +387,7 @@ export default function PluginsPage() {
         />
       )}
 
-      {!loading && !error && plugins.length > 0 && (
+      {!loading && !loadError && plugins.length > 0 && (
         <>
           <PluginFilters
             search={search}

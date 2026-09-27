@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Wrench, Pencil, Check, X as XIcon } from "lucide-react";
-import { Button, Card, EmptyState, Input } from "@harness-kit/ui";
+import { Button, Card, EmptyState, ErrorNotice } from "@harness-kit/ui";
 import { COMPILE_SURFACE_IDS, compile, detectPlatforms, isCompileSurface, parseHarness } from "@harness-kit/core";
 import type { CompileResult, DetectedPlatform, SurfaceId } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
@@ -14,23 +14,15 @@ import {
 } from "../../lib/tauri";
 import type { BackupManifest } from "../../lib/tauri";
 import { SyncFsProvider } from "../../lib/sync-fs";
+import { grantProjectDir, useProjectDir } from "../../lib/project-dir";
 import SyncPreview from "./sync/SyncPreview";
+import { useRegisterCommands } from "../../lib/commands";
+import { errorDetails } from "../../lib/error-details";
 import BackupHistory from "./sync/BackupHistory";
 
 const ALL_PLATFORMS: readonly SurfaceId[] = COMPILE_SURFACE_IDS;
-const RECENT_DIRS_KEY = "harness-kit-sync-recent-dirs";
-const MAX_RECENT = 10;
 
 type Phase = "idle" | "previewing" | "previewed" | "applying" | "applied";
-
-function getRecentDirs(): string[] {
-  try { return JSON.parse(localStorage.getItem(RECENT_DIRS_KEY) ?? "[]"); } catch { return []; }
-}
-function saveRecentDir(dir: string) {
-  const dirs = getRecentDirs().filter((d) => d !== dir);
-  dirs.unshift(dir);
-  try { localStorage.setItem(RECENT_DIRS_KEY, JSON.stringify(dirs.slice(0, MAX_RECENT))); } catch {}
-}
 
 // ── Small helpers ─────────────────────────────────────────────
 
@@ -52,10 +44,13 @@ export default function SyncPage() {
   const [harnessName, setHarnessName] = useState("default");
   const [harnessDescription, setHarnessDescription] = useState<string | null>(null);
   const [harnessLoading, setHarnessLoading] = useState(true);
+  // A failed read is not "no harness.yaml": it gets its own notice, never the
+  // empty state's "Create harness.yaml".
+  const [harnessError, setHarnessError] = useState<string | null>(null);
 
-  // Project dir
-  const [projectDir, setProjectDir] = useState("");
-  const [recentDirs] = useState<string[]>(getRecentDirs);
+  // Project dir: the title bar's project (AC-17, lib/project-dir.ts)
+  const [currentProject] = useProjectDir();
+  const projectDir = currentProject ?? "";
   const [dirValid, setDirValid] = useState(false);
   const [dirChecking, setDirChecking] = useState(false);
 
@@ -65,7 +60,13 @@ export default function SyncPage() {
 
   // Sync flow
   const [phase, setPhase] = useState<Phase>("idle");
-  const [previewResult, setPreviewResult] = useState<CompileResult | null>(null);
+  // A preview holds the targets it was compiled for, so the backup that Apply
+  // takes names exactly the surfaces whose files it writes.
+  const [preview, setPreview] = useState<{ result: CompileResult; targets: SurfaceId[] } | null>(null);
+  const previewResult = preview?.result ?? null;
+  // Bumped whenever a preview's inputs change, so a compile still in flight
+  // for the old inputs is dropped instead of shown.
+  const previewGeneration = useRef(0);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [appliedBackupId, setAppliedBackupId] = useState<string | null>(null);
   const [applyError, setApplyError] = useState<string | null>(null);
@@ -73,11 +74,10 @@ export default function SyncPage() {
   // Backups
   const [backups, setBackups] = useState<BackupManifest[]>([]);
 
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   // Load harness file
   const loadHarness = useCallback(() => {
     setHarnessLoading(true);
+    setHarnessError(null);
     readHarnessFile()
       .then((result) => {
         if (result.found && result.content) {
@@ -93,33 +93,43 @@ export default function SyncPage() {
           setHarnessPath(null);
         }
       })
-      .catch(() => {})
+      .catch((e) => {
+        setHarnessContent(null);
+        setHarnessPath(null);
+        setHarnessError(errorDetails(e));
+      })
       .finally(() => setHarnessLoading(false));
   }, []);
 
   useEffect(() => { loadHarness(); }, [loadHarness]);
   useEffect(() => { syncListBackups().then(setBackups).catch(() => {}); }, []);
 
-  // Debounced dir validation + platform detection
-  const handleDirChange = useCallback((dir: string) => {
-    setProjectDir(dir);
+  // Validate the project and detect its platforms whenever it changes. The
+  // grant comes first: the sync bridge refuses a directory not granted this
+  // session, so Compile must not depend on another page having granted it.
+  useEffect(() => {
+    let cancelled = false;
+    previewGeneration.current += 1;
     setDirValid(false);
     setDetectedPlatforms([]);
     setSelectedTargets(new Set());
     setPhase("idle");
-    setPreviewResult(null);
+    setPreview(null);
     setPreviewError(null);
-    if (!dir.trim()) return;
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
-      setDirChecking(true);
+    if (!projectDir) {
+      setDirChecking(false);
+      return;
+    }
+    setDirChecking(true);
+    (async () => {
       try {
-        const exists = await syncFileExists(dir, ".");
-        if (!exists) { setDirValid(false); return; }
+        await grantProjectDir(projectDir);
+        const exists = await syncFileExists(projectDir, ".");
+        if (cancelled || !exists) return;
         setDirValid(true);
-        saveRecentDir(dir);
-        const fs = new SyncFsProvider(dir);
+        const fs = new SyncFsProvider(projectDir);
         const detected = await detectPlatforms(fs);
+        if (cancelled) return;
         setDetectedPlatforms(detected);
         // Detection can report surfaces that aren't compile targets (e.g. pi).
         // The chip UI only renders COMPILE_SURFACE_IDS, so an unfiltered seed
@@ -128,20 +138,26 @@ export default function SyncPage() {
         // so Preview would fail with an error the user can't clear from the
         // chips. Seed the selection with compile surfaces only.
         setSelectedTargets(new Set(detected.map((d) => d.platform).filter(isCompileSurface)));
-      } catch { setDirValid(false); }
-      finally { setDirChecking(false); }
-    }, 300);
-  }, []);
-
-  async function openDirectoryPicker() {
-    try {
-      const { open } = await import("@tauri-apps/plugin-dialog");
-      const selected = await open({ directory: true, title: "Select project directory" });
-      if (selected && typeof selected === "string") handleDirChange(selected);
-    } catch {}
-  }
+      } catch {
+        if (!cancelled) setDirValid(false);
+      } finally {
+        if (!cancelled) setDirChecking(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [projectDir]);
 
   function toggleTarget(platform: SurfaceId) {
+    // A preview stands for the surfaces it was compiled for. Changing them
+    // drops it: Apply goes away and "Preview Changes" is needed again.
+    if (phase === "previewed") {
+      previewGeneration.current += 1;
+      setPhase("idle");
+      setPreview(null);
+      setApplyError(null);
+    }
     setSelectedTargets((prev) => {
       const next = new Set(prev);
       if (next.has(platform)) next.delete(platform); else next.add(platform);
@@ -151,49 +167,95 @@ export default function SyncPage() {
 
   async function handlePreview() {
     if (!harnessContent || selectedTargets.size === 0 || !dirValid) return;
+    const generation = previewGeneration.current;
+    const targets = [...selectedTargets];
     setPhase("previewing");
     setPreviewError(null);
     try {
       const fs = new SyncFsProvider(projectDir);
-      const result = await compile(harnessContent, [...selectedTargets], fs, { dryRun: true });
-      setPreviewResult(result);
+      const result = await compile(harnessContent, targets, fs, { dryRun: true });
+      if (generation !== previewGeneration.current) return;
+      setPreview({ result, targets });
       setPhase("previewed");
     } catch (e) {
-      setPreviewError(String(e));
+      if (generation !== previewGeneration.current) return;
+      setPreviewError(errorDetails(e));
       setPhase("idle");
     }
   }
 
   async function handleApply() {
-    if (!previewResult || !harnessContent) return;
+    if (!preview || !harnessContent) return;
+    const { result, targets } = preview;
+    // If the project changes mid-apply, the page has moved on to the new
+    // project: the old apply's outcome must not show there.
+    const generation = previewGeneration.current;
     setPhase("applying");
     setApplyError(null);
     try {
-      const overwritePaths = previewResult.files.filter((f) => f.action === "update").map((f) => f.path);
-      const backup = await syncCreateBackup(projectDir, harnessName, [...selectedTargets], overwritePaths);
-      setAppliedBackupId(backup.id);
-      const writes = previewResult.files
+      const overwritePaths = result.files.filter((f) => f.action === "update").map((f) => f.path);
+      const backup = await syncCreateBackup(projectDir, harnessName, targets, overwritePaths);
+      if (generation === previewGeneration.current) setAppliedBackupId(backup.id);
+      const writes = result.files
         .filter((f) => f.action === "create" || f.action === "update")
         .map((f) => ({ relativePath: f.path, content: f.content }));
       await syncWriteFiles(projectDir, writes);
-      setPhase("applied");
-      const updated = await syncListBackups();
-      setBackups(updated);
+      if (generation === previewGeneration.current) setPhase("applied");
     } catch (e) {
-      setApplyError(String(e));
-      setPhase("previewed");
+      if (generation === previewGeneration.current) {
+        setApplyError(errorDetails(e));
+        setPhase("previewed");
+      }
     }
+    // A backup may exist even when the writes failed or the project changed.
+    syncListBackups().then(setBackups).catch(() => {});
   }
 
   function handleReset() {
     setPhase("idle");
-    setPreviewResult(null);
+    setPreview(null);
     setPreviewError(null);
     setAppliedBackupId(null);
     setApplyError(null);
   }
 
   const canPreview = dirValid && selectedTargets.size > 0 && !!harnessContent && phase === "idle";
+
+  // ⌘K (spec AC-21): Preview and Apply, offered when their buttons are on
+  // screen and disabled when those are.
+  const writeCount = previewResult
+    ? previewResult.files.filter((f) => f.action === "create" || f.action === "update").length
+    : 0;
+  const applyShown = (phase === "previewed" || phase === "applying") && writeCount > 0;
+  useRegisterCommands(
+    [
+      ...(harnessContent
+        ? [
+            {
+              id: "compile.preview",
+              title: "Preview compile changes",
+              group: "Compile to project",
+              keywords: ["compile", "sync", "dry run"],
+              disabled: !canPreview,
+              run: handlePreview,
+            },
+          ]
+        : []),
+      ...(applyShown
+        ? [
+            {
+              id: "compile.apply",
+              title: `Apply ${writeCount} compiled file${writeCount !== 1 ? "s" : ""}`,
+              group: "Compile to project",
+              keywords: ["compile", "sync", "write"],
+              disabled: phase === "applying",
+              run: handleApply,
+            },
+          ]
+        : []),
+    ],
+    [!!harnessContent, canPreview, applyShown, writeCount, phase],
+  );
 
   return (
     <>
@@ -216,8 +278,17 @@ export default function SyncPage() {
           </Button>
         </div>
 
+        {/* harness.yaml couldn't be read */}
+        {!harnessLoading && harnessError && (
+          <ErrorNotice
+            title="Couldn't read harness.yaml"
+            details={harnessError}
+            action={{ label: "Retry", onClick: loadHarness }}
+          />
+        )}
+
         {/* No harness.yaml — empty state */}
-        {!harnessLoading && !harnessContent && (
+        {!harnessLoading && !harnessError && !harnessContent && (
           <EmptyState
             icon={<Wrench size={28} strokeWidth={1.5} />}
             title="No harness.yaml found"
@@ -256,22 +327,22 @@ export default function SyncPage() {
             {/* Project directory */}
             <div>
               <SectionLabel>Project Directory</SectionLabel>
-              <div style={{ display: "flex", gap: "6px" }}>
-                <div style={{ flex: 1 }}>
-                  <Input
-                    type="text"
-                    value={projectDir}
-                    onChange={(e) => handleDirChange(e.target.value)}
-                    placeholder="~/repos/my-project"
-                    style={{ fontFamily: "ui-monospace, monospace" }}
-                  />
-                </div>
-                <Button variant="ghost" onClick={openDirectoryPicker}>
-                  Browse…
-                </Button>
+              {/* Read-only: the title bar's Project menu is the one place to choose it. */}
+              <div
+                data-testid="compile-project-dir"
+                title={projectDir || undefined}
+                style={{
+                  minWidth: 0, padding: "7px 10px", borderRadius: "6px",
+                  background: "var(--bg-elevated)", fontSize: "12px",
+                  fontFamily: projectDir ? "ui-monospace, monospace" : undefined,
+                  color: projectDir ? "var(--fg-base)" : "var(--fg-subtle)",
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}
+              >
+                {projectDir || "No project chosen. Choose one from the Project menu in the title bar."}
               </div>
 
-              {/* Status / recent */}
+              {/* Status */}
               {projectDir && !dirChecking && (
                 <p style={{
                   margin: "5px 0 0", fontSize: "11px", display: "flex", alignItems: "center", gap: "4px",
@@ -283,25 +354,6 @@ export default function SyncPage() {
               )}
               {dirChecking && (
                 <p style={{ margin: "5px 0 0", fontSize: "11px", color: "var(--fg-subtle)" }}>Checking…</p>
-              )}
-              {!projectDir && recentDirs.length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "6px" }}>
-                  {recentDirs.slice(0, 5).map((d) => (
-                    <button
-                      key={d}
-                      className="hk-reset-btn"
-                      onClick={() => handleDirChange(d)}
-                      style={{
-                        padding: "2px 8px", borderRadius: "4px",
-                        background: "var(--bg-elevated)", color: "var(--fg-subtle)",
-                        fontSize: "10px", fontFamily: "ui-monospace, monospace", cursor: "pointer",
-                        maxWidth: "200px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                      }}
-                    >
-                      {d}
-                    </button>
-                  ))}
-                </div>
               )}
             </div>
 
@@ -316,6 +368,10 @@ export default function SyncPage() {
                     <button
                       key={platform}
                       className="hk-reset-btn"
+                      aria-pressed={checked}
+                      // Locked while a compile or write is in flight: the
+                      // result must match the surfaces it was started for.
+                      disabled={phase === "previewing" || phase === "applying"}
                       onClick={() => toggleTarget(platform)}
                       style={{
                         display: "flex", alignItems: "center", gap: "5px",
@@ -352,9 +408,11 @@ export default function SyncPage() {
 
         {/* Preview error */}
         {previewError && (
-          <Card>
-            <p style={{ margin: 0, fontSize: "12px", color: "var(--danger)" }}>{previewError}</p>
-          </Card>
+          <ErrorNotice
+            title="Couldn't preview the compiled files"
+            details={previewError}
+            action={{ label: "Retry", onClick: () => void handlePreview() }}
+          />
         )}
 
         {/* Preview panel */}
@@ -367,7 +425,13 @@ export default function SyncPage() {
               onApply={handleApply}
             />
             {applyError && (
-              <p style={{ fontSize: "12px", color: "var(--danger)", margin: "8px 0 0" }}>{applyError}</p>
+              <div style={{ marginTop: "8px" }}>
+                <ErrorNotice
+                  title="Couldn't write the compiled files"
+                  details={applyError}
+                  action={{ label: "Retry", onClick: () => void handleApply() }}
+                />
+              </div>
             )}
           </div>
         )}

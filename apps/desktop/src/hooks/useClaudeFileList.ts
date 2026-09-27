@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { listClaudeDir } from "../lib/tauri";
+import { errorDetails } from "../lib/error-details";
 import {
   getConfigFilesDetailLevel,
   type ConfigFilesDetailLevel,
@@ -48,7 +49,7 @@ export function useClaudeFileList(): UseClaudeFileListReturn {
     setLoading(true);
     listClaudeDir()
       .then(setAllFiles)
-      .catch((e) => setError(String(e)))
+      .catch((e) => setError(errorDetails(e)))
       .finally(() => setLoading(false));
   }, []);
 

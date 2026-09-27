@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useId, useState } from "react";
-import { Button } from "@harness-kit/ui";
+import { Button, ErrorNotice } from "@harness-kit/ui";
 import { ArrowRight, X } from "lucide-react";
 import type { GridRow, MachineDiff, MachineGap, SurfaceId } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
+import { errorDetails } from "../../lib/error-details";
 import { useToast } from "../../components/ToastProvider";
+import { useRegisterCommands } from "../../lib/commands";
 import { KIND_LABELS, shortDigest } from "./machine-view-model";
 import {
   applyCellActionViaTauri,
@@ -47,10 +49,12 @@ export function RowDrawer({ row, diffs, gaps, surfaceOrder, onClose, onApplied }
     ([, cell]) => cell.status === "present",
   );
 
-  // Escape closes the drawer.
+  // Escape closes the drawer, unless something above it (the title-bar
+  // project menu, which stays usable while the drawer is open) already
+  // handled that Escape.
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape" && !event.defaultPrevented) onClose();
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -61,8 +65,10 @@ export function RowDrawer({ row, diffs, gaps, surfaceOrder, onClose, onApplied }
       data-testid="machine-row-drawer"
       aria-label={`${row.name} details`}
       style={{
+        // Starts below the title bar so its project selector stays visible
+        // and clickable while the drawer is open.
         position: "fixed",
-        top: 0,
+        top: "var(--titlebar-height)",
         right: 0,
         bottom: 0,
         width: "var(--hk-drawer-width)",
@@ -321,6 +327,9 @@ function RowActions({
   const sourceId = useId();
   const targetId = useId();
   const [status, setStatus] = useState<string | null>(null);
+  // A failed plan or apply (AC-20). No action of its own: changing the
+  // selects plans again, and Apply is right above it.
+  const [failure, setFailure] = useState<{ title: string; details: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmedLoss, setConfirmedLoss] = useState(false);
   const [spent, setSpent] = useState(false);
@@ -328,6 +337,7 @@ function RowActions({
   useEffect(() => {
     setConfirmedLoss(false);
     setStatus(null);
+    setFailure(null);
     // Drop the old plan first: planning does file I/O, and until it resolves
     // Apply must not run the previous from → to pair under the new selects.
     setView(null);
@@ -339,7 +349,7 @@ function RowActions({
         if (!cancelled) setView(next);
       })
       .catch((error: unknown) => {
-        if (!cancelled) setStatus(error instanceof Error ? error.message : String(error));
+        if (!cancelled) setFailure({ title: "Couldn't plan this change", details: errorDetails(error) });
       });
     return () => {
       cancelled = true;
@@ -355,6 +365,7 @@ function RowActions({
   const apply = useCallback(async () => {
     if (!view) return;
     setBusy(true);
+    setFailure(null);
     try {
       const applied = await applyCellActionViaTauri(view, confirmedLoss);
       setStatus(
@@ -383,11 +394,32 @@ function RowActions({
       setConfirmedLoss(false);
       onApplied?.();
     } catch (error) {
-      setStatus(error instanceof Error ? error.message : String(error));
+      setStatus(null);
+      setFailure({ title: `Couldn't copy ${view.request.name} to ${surfaceLabel(view.request.to)}`, details: errorDetails(error) });
     } finally {
       setBusy(false);
     }
   }, [view, onApplied, confirmedLoss, toast]);
+
+  // ⌘K (spec AC-21): the drawer's "Copy CLI command", disabled while the
+  // plan is still being built, as the button is. Absent when the drawer
+  // offers no actions.
+  const hasActions = anyTargets && source !== undefined;
+  useRegisterCommands(
+    hasActions
+      ? [
+          {
+            id: "machine.row.copy-cli",
+            title: `Copy CLI command for ${row.name}`,
+            group: "Machine",
+            keywords: ["cli", "copy", "sync"],
+            disabled: !view,
+            run: () => (view ? copy(view.cli, "CLI command") : undefined),
+          },
+        ]
+      : [],
+    [hasActions, view === null, row.name],
+  );
 
   if (!anyTargets || !source) {
     return (
@@ -571,6 +603,8 @@ function RowActions({
           Copy prompt
         </Button>
       </div>
+
+      {failure && <ErrorNotice title={failure.title} details={failure.details} />}
 
       {status && (
         <p style={{ fontSize: 12, margin: 0 }} role="status">

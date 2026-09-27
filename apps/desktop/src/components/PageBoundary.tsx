@@ -1,4 +1,21 @@
 import React, { Suspense } from "react";
+import { ErrorNotice } from "@harness-kit/ui";
+import { errorDetails } from "../lib/error-details";
+
+// How a failed lazy-route import reads in each engine: Chromium, WebKit
+// (Tauri on macOS), Firefox.
+const CHUNK_LOAD_PATTERNS = [
+  /Failed to fetch dynamically imported module/i,
+  /Importing a module script failed/i,
+  /error loading dynamically imported module/i,
+];
+
+/** A page's code chunk failed to load. React.lazy caches the rejection, so
+ *  only a full reload fetches it again. */
+export function isChunkLoadError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : typeof error === "string" ? error : "";
+  return CHUNK_LOAD_PATTERNS.some((pattern) => pattern.test(message));
+}
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -26,51 +43,20 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
   render() {
     if (this.state.error) {
+      // "Reload page" clears the boundary, which mounts the page afresh. A
+      // failed chunk would re-throw at once from React.lazy's cache, so that
+      // one reloads the window instead.
+      const error = this.state.error;
+      const reload = isChunkLoadError(error)
+        ? () => window.location.reload()
+        : () => this.setState({ error: null });
       return (
-        <div
-          data-testid="page-boundary-error"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            height: "100%",
-            gap: 12,
-            color: "var(--fg-muted)",
-            fontFamily: '-apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif',
-          }}
-        >
-          <span style={{ fontSize: 13 }}>Something went wrong loading this page.</span>
-          {import.meta.env.DEV && (
-            <code style={{
-              fontSize: 11,
-              color: "var(--danger)",
-              background: "var(--bg-elevated)",
-              padding: "6px 12px",
-              borderRadius: 6,
-              maxWidth: 480,
-              textAlign: "center",
-            }}>
-              {this.state.error.message}
-            </code>
-          )}
-          <button
-            onClick={() => {
-              this.setState({ error: null });
-            }}
-            style={{
-              padding: "6px 16px",
-              fontSize: 12,
-              fontWeight: 600,
-              border: "1px solid var(--border-base)",
-              borderRadius: 6,
-              background: "var(--bg-elevated)",
-              color: "var(--fg-base)",
-              cursor: "pointer",
-            }}
-          >
-            Retry
-          </button>
+        <div data-testid="page-boundary-error" className="hk-page">
+          <ErrorNotice
+            title="This page hit an error"
+            details={errorDetails(error)}
+            action={{ label: "Reload page", onClick: reload }}
+          />
         </div>
       );
     }

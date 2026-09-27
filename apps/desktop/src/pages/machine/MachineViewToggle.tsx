@@ -1,4 +1,4 @@
-import { useRef, type KeyboardEvent } from "react";
+import { useRef, useState, type FocusEvent, type KeyboardEvent } from "react";
 import type { MachineView } from "./machine-view-model";
 
 const OPTIONS: { view: MachineView; label: string }[] = [
@@ -22,20 +22,27 @@ export interface MachineViewToggleProps {
 /**
  * Resources | Drift vs harness.yaml under the summary strip (spec AC-18).
  * Two mutually exclusive options that switch the content below, so it is a
- * WAI-ARIA tab list controlling MACHINE_VIEW_PANEL_ID. Only the selected tab
- * is in the Tab order; Left/Right (wrapping) and Home/End move to a tab and
- * select it. Choosing the tab already selected does nothing, so it adds no
- * history entry.
+ * WAI-ARIA tab list controlling MACHINE_VIEW_PANEL_ID.
+ *
+ * Manual activation: Left/Right (wrapping) and Home/End only move focus;
+ * Enter, Space or a click selects. Selecting Drift mounts DriftPage, which
+ * migrates acknowledgements, asks for project access and scans, so moving
+ * focus across the tabs must not do it. The focused tab holds the one
+ * tabIndex 0; when focus leaves the list it returns to the selected tab, so
+ * Tab back in lands there. Choosing the tab already selected does nothing,
+ * so it adds no history entry; choosing the other one is navigation and
+ * pushes one.
  */
 export function MachineViewToggle({ view, onChange }: MachineViewToggleProps) {
   const tabs = useRef<(HTMLButtonElement | null)[]>([]);
-
-  function select(index: number) {
-    const option = OPTIONS[index];
-    // Focus first: the tab elements are keyed by view, so they survive the
-    // re-render the view change causes and focus stays where it moved.
-    tabs.current[index]?.focus();
-    if (option.view !== view) onChange(option.view);
+  const selected = OPTIONS.findIndex((option) => option.view === view);
+  const [focused, setFocused] = useState(selected);
+  // A view change from outside (a link, the strip's Drift cell) moves the
+  // roving stop to the newly selected tab.
+  const [lastSelected, setLastSelected] = useState(selected);
+  if (lastSelected !== selected) {
+    setLastSelected(selected);
+    setFocused(selected);
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
@@ -52,13 +59,18 @@ export function MachineViewToggle({ view, onChange }: MachineViewToggleProps) {
               : null;
     if (target === null) return;
     event.preventDefault();
-    select(target);
+    setFocused(target);
+    tabs.current[target]?.focus();
+  }
+
+  function handleBlur(event: FocusEvent<HTMLDivElement>) {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocused(selected);
   }
 
   return (
-    <div className="hk-machine-view-toggle" role="tablist" aria-label="Machine view">
+    <div className="hk-machine-view-toggle" role="tablist" aria-label="Machine view" onBlur={handleBlur}>
       {OPTIONS.map((option, index) => {
-        const active = option.view === view;
+        const active = index === selected;
         return (
           <button
             key={option.view}
@@ -71,8 +83,9 @@ export function MachineViewToggle({ view, onChange }: MachineViewToggleProps) {
             className="hk-machine-view-option"
             aria-selected={active}
             aria-controls={MACHINE_VIEW_PANEL_ID}
-            tabIndex={active ? 0 : -1}
+            tabIndex={index === focused ? 0 : -1}
             data-active={active ? "true" : undefined}
+            onFocus={() => setFocused(index)}
             onClick={() => {
               if (!active) onChange(option.view);
             }}

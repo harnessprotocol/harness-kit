@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import type { ReactNode } from "react";
 import { readStatsCache, readLiveActivity, computeLiveStats } from "../lib/tauri";
+import { errorDetails } from "../lib/error-details";
 import type { StatsCache, LiveDailyActivity, LiveStats } from "@harness-kit/shared";
 import { createElement } from "react";
 
@@ -62,7 +63,7 @@ export function ObservatoryProvider({ children }: { children: ReactNode }) {
         && activityResult.status === "rejected"
         && statsResult.status === "rejected";
       if (allFailed) {
-        setError(String((cacheResult as PromiseRejectedResult).reason));
+        setError(errorDetails((cacheResult as PromiseRejectedResult).reason));
       } else {
         setError(null);
       }
@@ -70,7 +71,7 @@ export function ObservatoryProvider({ children }: { children: ReactNode }) {
       lastFetchTime.current = Date.now();
       setLastRefreshed(new Date());
     } catch (e) {
-      setError(String(e));
+      setError(errorDetails(e));
     } finally {
       if (isInitial) setLoading(false);
       else setIsRefreshing(false);

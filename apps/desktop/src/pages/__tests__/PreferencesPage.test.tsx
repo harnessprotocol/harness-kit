@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { describe, it, expect, beforeEach, vi } from "vitest";
@@ -16,6 +16,8 @@ vi.mock("@tauri-apps/api/app", () => ({
 vi.mock("../../lib/theme", () => ({
   getTheme: vi.fn(() => "system"),
   setTheme: vi.fn(),
+  toggledTheme: vi.fn(() => "dark"),
+  toggleTheme: vi.fn(),
 }));
 
 vi.mock("../../lib/preferences", async (importOriginal) => {
@@ -28,6 +30,8 @@ vi.mock("../../lib/preferences", async (importOriginal) => {
 });
 
 import PreferencesPage from "../PreferencesPage";
+import { CommandPalette } from "../../components/CommandPalette";
+import { setTheme, toggleTheme } from "../../lib/theme";
 
 // ── Helpers ──────────────────────────────────────────────────
 
@@ -107,5 +111,26 @@ describe("PreferencesPage", () => {
     const toggle = await screen.findByRole("switch", { name: /Comparator/ });
     fireEvent.click(toggle);
     expect(localStorage.getItem("harness-kit-labs-comparator")).toBe("true");
+  });
+});
+
+describe("PreferencesPage in the command palette (AC-21)", () => {
+  it("Toggle theme runs through the Theme control, which then shows the new theme", () => {
+    vi.mocked(setTheme).mockClear();
+    render(
+      <MemoryRouter>
+        <PreferencesPage />
+        <CommandPalette open onClose={() => {}} sections={[]} />
+      </MemoryRouter>,
+    );
+    const palette = screen.getByRole("dialog", { name: "Command palette" });
+    // One entry: the page's replaces the app-wide one.
+    const toggles = within(palette).getAllByRole("button", { name: "Toggle light / dark theme" });
+    expect(toggles).toHaveLength(1);
+    fireEvent.click(toggles[0]);
+
+    expect(setTheme).toHaveBeenCalledWith("dark");
+    expect(toggleTheme).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Dark" }).style.fontWeight).toBe("600");
   });
 });

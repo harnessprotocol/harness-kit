@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { KeyRound } from "lucide-react";
-import { Button, Card, EmptyState, Input, Modal, StatusChip } from "@harness-kit/ui";
+import { Button, Card, EmptyState, ErrorNotice, Input, Modal, StatusChip } from "@harness-kit/ui";
 import {
   listRequiredEnv, setKeychainSecret, deleteKeychainSecret,
   readEnvConfig, writeEnvConfig,
 } from "../../lib/tauri";
+import { errorDetails } from "../../lib/error-details";
 import type { KeychainSecretInfo, EnvConfigEntry } from "@harness-kit/shared";
 
 function StatusBadge({ isSet }: { isSet: boolean }) {
@@ -19,7 +20,9 @@ export default function SecretsPage() {
   const [secrets, setSecrets] = useState<KeychainSecretInfo[]>([]);
   const [envConfig, setEnvConfig] = useState<EnvConfigEntry[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  // `retry` is set only for a failed load; other failures offer Dismiss.
+  const [error, setError] = useState<{ title: string; details: string; retry?: boolean } | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [modalSecret, setModalSecret] = useState<string | null>(null);
   const [secretValue, setSecretValue] = useState("");
   const [savingSecret, setSavingSecret] = useState(false);
@@ -34,9 +37,9 @@ export default function SecretsPage() {
         setSecrets(secretList);
         setEnvConfig(envList);
       })
-      .catch((e) => setError(String(e)))
+      .catch((e) => setError({ title: "Couldn't load secrets", details: errorDetails(e), retry: true }))
       .finally(() => setLoading(false));
-  }, []);
+  }, [loadAttempt]);
 
   useEffect(() => {
     if (!modalSecret) return;
@@ -63,7 +66,7 @@ export default function SecretsPage() {
       setModalSecret(null);
       setSecretValue("");
     } catch (e) {
-      setError(String(e));
+      setError({ title: `Couldn't save ${modalSecret} to the Keychain`, details: errorDetails(e) });
     } finally {
       setSavingSecret(false);
     }
@@ -78,7 +81,7 @@ export default function SecretsPage() {
         ),
       );
     } catch (e) {
-      setError(String(e));
+      setError({ title: `Couldn't remove ${name} from the Keychain`, details: errorDetails(e) });
     }
   }
 
@@ -96,7 +99,7 @@ export default function SecretsPage() {
       await writeEnvConfig(envConfig);
       setEnvDirty(false);
     } catch (e) {
-      setError(String(e));
+      setError({ title: "Couldn't save the environment settings", details: errorDetails(e) });
     }
   }
 
@@ -121,16 +124,15 @@ export default function SecretsPage() {
       </div>
 
       {error && (
-        <Card padding="sm" style={{ fontSize: "13px", color: "var(--danger)", marginBottom: "16px" }}>
-          {error}
-          <button
-            className="hk-reset-btn"
-            onClick={() => setError(null)}
-            style={{ marginLeft: "8px", color: "var(--fg-muted)", cursor: "pointer", fontSize: "11px" }}
-          >
-            dismiss
-          </button>
-        </Card>
+        <ErrorNotice
+          title={error.title}
+          details={error.details}
+          action={
+            error.retry
+              ? { label: "Retry", onClick: () => { setError(null); setLoading(true); setLoadAttempt((n) => n + 1); } }
+              : { label: "Dismiss", onClick: () => setError(null) }
+          }
+        />
       )}
 
       {/* Secrets Vault */}

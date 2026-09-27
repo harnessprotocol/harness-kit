@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, within, act } from "@testing-library/react";
 import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { buildMachineInventory } from "@harness-kit/core";
@@ -8,6 +8,8 @@ import { applyCellActionViaTauri } from "../cell-actions";
 import { ToastProvider } from "../../../components/ToastProvider";
 import { buildDriftScopes, collectDrift } from "../../drift/drift-data";
 import { acknowledgeDriftItem } from "../../../lib/tauri";
+import { PROJECT_CHANGED_EVENT, setCurrentProjectDir } from "../../../lib/project-dir";
+import { CommandPalette } from "../../../components/CommandPalette";
 
 // ── Mocks ──────────────────────────────────────────────────────
 
@@ -673,14 +675,14 @@ describe("MachinePage", () => {
       vi.mocked(buildMachineInventory).mockRejectedValue(new Error("boom"));
       renderAt("/machine?view=drift");
       expect(await screen.findByTestId("drift-view")).toBeInTheDocument();
-      await screen.findByText(/Scan failed/);
+      await screen.findByText("Couldn't scan this machine");
       expect(within(viewToggle()).getByRole("tab", { name: "Drift vs harness.yaml" })).toHaveAttribute(
         "aria-selected",
         "true",
       );
     });
 
-    it("is a tab list whose panel is labelled by the selected tab, driven by arrow keys", async () => {
+    it("is a tab list whose panel is labelled by the selected tab; arrows move focus, Enter selects", async () => {
       renderAt("/machine");
       await screen.findByTestId("machine-grid");
       const resources = within(viewToggle()).getByRole("tab", { name: "Resources" });
@@ -688,36 +690,71 @@ describe("MachinePage", () => {
       const panel = screen.getByRole("tabpanel", { name: "Resources" });
       expect(panel).toContainElement(screen.getByTestId("machine-grid"));
       for (const tab of [resources, drift]) expect(tab).toHaveAttribute("aria-controls", panel.id);
-      // Roving tabindex: only the selected tab is in the Tab order.
+      // Roving tabindex: only one tab is in the Tab order.
       expect(resources).toHaveAttribute("tabindex", "0");
       expect(drift).toHaveAttribute("tabindex", "-1");
 
+      // Manual activation: the arrow moves focus and the roving stop, nothing else.
       resources.focus();
       fireEvent.keyDown(resources, { key: "ArrowRight" });
+      expect(drift).toHaveFocus();
+      expect(drift).toHaveAttribute("tabindex", "0");
+      expect(resources).toHaveAttribute("tabindex", "-1");
+      expect(drift).toHaveAttribute("aria-selected", "false");
+      expect(screen.getByTestId("machine-grid")).toBeInTheDocument();
+      expect(urlParams().has("view")).toBe(false);
+
+      // Enter on a button is its click.
+      fireEvent.keyDown(drift, { key: "Enter" });
+      fireEvent.click(drift);
       expect(await screen.findByTestId("drift-view")).toBeInTheDocument();
       expect(drift).toHaveFocus();
       expect(drift).toHaveAttribute("aria-selected", "true");
-      expect(drift).toHaveAttribute("tabindex", "0");
-      expect(resources).toHaveAttribute("tabindex", "-1");
       expect(screen.getByRole("tabpanel", { name: "Drift vs harness.yaml" })).toContainElement(
         screen.getByTestId("drift-view"),
       );
       expect(urlParams().get("view")).toBe("drift");
 
-      // Wraps at both ends.
+      // Wraps at both ends, still without selecting.
       fireEvent.keyDown(drift, { key: "ArrowRight" });
-      expect(await screen.findByTestId("machine-grid")).toBeInTheDocument();
       expect(resources).toHaveFocus();
       fireEvent.keyDown(resources, { key: "ArrowLeft" });
-      expect(await screen.findByTestId("drift-view")).toBeInTheDocument();
       expect(drift).toHaveFocus();
-
       fireEvent.keyDown(drift, { key: "Home" });
-      expect(await screen.findByTestId("machine-grid")).toBeInTheDocument();
       expect(resources).toHaveFocus();
+      expect(resources).toHaveAttribute("tabindex", "0");
       fireEvent.keyDown(resources, { key: "End" });
-      expect(await screen.findByTestId("drift-view")).toBeInTheDocument();
       expect(drift).toHaveFocus();
+      expect(screen.getByTestId("drift-view")).toBeInTheDocument();
+      expect(urlParams().get("view")).toBe("drift");
+
+      // Leaving the list returns the Tab stop to the selected tab.
+      fireEvent.keyDown(drift, { key: "Home" });
+      expect(resources).toHaveAttribute("tabindex", "0");
+      act(() => resources.blur());
+      expect(drift).toHaveAttribute("tabindex", "0");
+      expect(resources).toHaveAttribute("tabindex", "-1");
+    });
+
+    it("does not mount Drift or scan when the arrow keys only pass over its tab", async () => {
+      // Drift migrates acknowledgements, grants project scope and scans on
+      // mount. Moving focus is not choosing the view.
+      renderAt("/machine");
+      await screen.findByTestId("machine-grid");
+      const resources = within(viewToggle()).getByRole("tab", { name: "Resources" });
+      const drift = within(viewToggle()).getByRole("tab", { name: "Drift vs harness.yaml" });
+      resources.focus();
+      fireEvent.keyDown(resources, { key: "ArrowRight" });
+      expect(drift).toHaveFocus();
+      fireEvent.keyDown(drift, { key: "End" });
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(screen.queryByTestId("machine-drift-view")).not.toBeInTheDocument();
+      expect(buildDriftScopes).not.toHaveBeenCalled();
+      expect(mockGrantProjectScope).not.toHaveBeenCalled();
+
+      fireEvent.click(drift); // Enter / Space on the focused tab
+      expect(await screen.findByTestId("drift-view")).toBeInTheDocument();
+      await waitFor(() => expect(buildDriftScopes).toHaveBeenCalled());
     });
 
     it("adds no history entry when the selected tab is chosen again", async () => {
@@ -830,6 +867,39 @@ describe("MachinePage", () => {
         fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
         await waitFor(() => expect(screen.getByRole("button", { name: "Refresh" })).toBeEnabled());
         expect(scrollIntoView).toHaveBeenCalledTimes(1);
+      });
+
+      it("not on arrival if the page was scrolled while the first scan ran", async () => {
+        // Drift renders before the scan lands; someone who scrolled into it
+        // meanwhile must not be pulled back to the top of the view.
+        let resolve!: (value: unknown) => void;
+        vi.mocked(buildMachineInventory).mockReturnValueOnce(
+          new Promise((r) => { resolve = r; }) as never,
+        );
+        render(
+          <div data-testid="scroller" style={{ overflowY: "auto" }}>
+            <MemoryRouter initialEntries={["/machine?view=drift"]}>
+              <MachinePage />
+            </MemoryRouter>
+          </div>,
+        );
+        const scroller = screen.getByTestId("scroller");
+        let scrollTop = 0;
+        Object.defineProperty(scroller, "scrollTop", { configurable: true, get: () => scrollTop });
+        await screen.findByTestId("drift-view");
+        await new Promise((r) => setTimeout(r, 0));
+        scrollTop = 250;
+
+        resolve(makeInventory());
+        await screen.findByRole("group", { name: "Summary" });
+        await new Promise((r) => setTimeout(r, 0));
+        expect(scrollIntoView).not.toHaveBeenCalled();
+
+        // The next request is a new one and is served.
+        fireEvent.click(within(viewToggle()).getByRole("tab", { name: "Resources" }));
+        await screen.findByTestId("machine-grid");
+        fireEvent.click(within(viewToggle()).getByRole("tab", { name: "Drift vs harness.yaml" }));
+        await waitFor(() => expect(scrollIntoView).toHaveBeenCalledTimes(1));
       });
 
       it("on a switch from the grid, by the strip cell or a link, but not back to the grid", async () => {
@@ -1085,7 +1155,73 @@ describe("MachinePage", () => {
     expect(mockGrantProjectScope).not.toHaveBeenCalled();
     // User-scope data renders
     expect(screen.getByText("postgres")).toBeInTheDocument();
-    expect(screen.queryByText(/Scan failed/)).not.toBeInTheDocument();
+    expect(screen.queryByText("Couldn't scan this machine")).not.toBeInTheDocument();
+  });
+
+  it("scan failure shows a titled notice with Retry, raw error behind Details, Retry rescans (AC-20)", async () => {
+    const raw = "EACCES: permission denied, open '/home/user/.claude.json'";
+    vi.mocked(buildMachineInventory).mockRejectedValueOnce(new Error(raw));
+    renderPage();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't scan this machine");
+    // The raw error is not the message: no "Error:" prefix, and hidden until asked for.
+    expect(screen.queryByText(/Error: EACCES/)).not.toBeInTheDocument();
+    expect(screen.getByText(raw)).not.toBeVisible();
+    fireEvent.click(screen.getByText("Details"));
+    expect(screen.getByText(raw)).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await screen.findByTestId("machine-grid");
+    expect(buildMachineInventory).toHaveBeenCalledTimes(2);
+    expect(screen.queryByText("Couldn't scan this machine")).not.toBeInTheDocument();
+  });
+
+  describe("project directory from the title bar (AC-17)", () => {
+    function projectRoots(): Array<string | null> {
+      return vi
+        .mocked(buildMachineInventory)
+        .mock.calls.map((call) => (call[1] as { projectRoot: string | null }).projectRoot);
+    }
+
+    it("has no project-directory field of its own", async () => {
+      renderPage();
+      await screen.findByTestId("machine-grid");
+      expect(screen.queryByPlaceholderText(/Project directory/)).not.toBeInTheDocument();
+      expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /Browse/ })).not.toBeInTheDocument();
+    });
+
+    it("rescans with the new projectRoot and nothing selected when the project changes", async () => {
+      renderPage();
+      await screen.findByTestId("machine-grid");
+      fireEvent.click(screen.getByTestId("machine-row-mcp-server:postgres"));
+      await screen.findByTestId("machine-row-drawer");
+
+      // Written straight to storage, as another window would: the setter
+      // grants by itself, which would hide a page that stopped granting.
+      act(() => {
+        localStorage.setItem("harness-kit-current-project", "/repo/app");
+        window.dispatchEvent(new Event(PROJECT_CHANGED_EVENT));
+      });
+      await waitFor(() => expect(projectRoots()).toEqual([null, "/repo/app"]));
+      expect(mockGrantProjectScope).toHaveBeenCalledWith("/repo/app");
+      await waitFor(() => expect(screen.queryByTestId("machine-row-drawer")).not.toBeInTheDocument());
+
+      // Clear in the title bar goes back to machine-only.
+      act(() => setCurrentProjectDir(null));
+      await waitFor(() => expect(projectRoots()).toEqual([null, "/repo/app", null]));
+    });
+
+    it("scans the project restored from the last session, and Refresh keeps it", async () => {
+      localStorage.setItem("harness-kit-sync-recent-dirs", JSON.stringify(["/repo/last", "/repo/older"]));
+      renderPage();
+      await screen.findByTestId("machine-grid");
+      expect(projectRoots()).toEqual(["/repo/last"]);
+
+      await waitFor(() => expect(screen.getByRole("button", { name: "Refresh" })).toBeEnabled());
+      fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+      await waitFor(() => expect(projectRoots()).toEqual(["/repo/last", "/repo/last"]));
+    });
   });
 
   it("renders skipped diagnostics with a count and expands on toggle", async () => {
@@ -1111,11 +1247,7 @@ describe("MachinePage", () => {
     await screen.findByTestId("machine-grid");
     expect(screen.queryByTestId("project-degraded-notice")).not.toBeInTheDocument();
 
-    fireEvent.change(
-      screen.getByPlaceholderText(/Project directory/),
-      { target: { value: "/repo/gone" } },
-    );
-    fireEvent.click(screen.getByRole("button", { name: "Refresh" }));
+    act(() => setCurrentProjectDir("/repo/gone"));
 
     await screen.findByTestId("project-degraded-notice");
     expect(
@@ -1293,7 +1425,7 @@ describe("MachinePage", () => {
 
   it("ignores an older scan that resolves after a newer one", async () => {
     // The apply's rescan hangs; meanwhile the user starts a fresh scan
-    // (Enter in the directory field), which clears the selection and lands.
+    // (choosing a project in the title bar), which clears the selection and lands.
     let resolveStale!: (value: unknown) => void;
     const newer = makeInventory();
     newer.rows = newer.rows.filter((row) => row.key !== "skill:reviewer");
@@ -1311,7 +1443,7 @@ describe("MachinePage", () => {
     fireEvent.click(apply);
     await waitFor(() => expect(vi.mocked(buildMachineInventory)).toHaveBeenCalledTimes(2));
 
-    fireEvent.keyDown(screen.getByPlaceholderText(/Project directory/), { key: "Enter" });
+    act(() => setCurrentProjectDir("/repo"));
     await waitFor(() => expect(vi.mocked(buildMachineInventory)).toHaveBeenCalledTimes(3));
     await waitFor(() => expect(gridRowKeys()).not.toContain("skill:reviewer"));
     expect(screen.queryByTestId("machine-row-drawer")).not.toBeInTheDocument();
@@ -1358,5 +1490,87 @@ describe("MachinePage", () => {
 
     fireEvent.keyDown(window, { key: "Escape" });
     await waitFor(() => expect(page).not.toHaveAttribute("data-drawer-open"));
+  });
+});
+
+describe("MachinePage commands in the palette (AC-21)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(buildMachineInventory).mockReset();
+    vi.mocked(buildMachineInventory).mockResolvedValue(makeInventory() as never);
+    mockGrantProjectScope.mockResolvedValue(undefined);
+    vi.mocked(collectDrift).mockReset();
+    vi.mocked(collectDrift).mockResolvedValue([]);
+  });
+
+  function renderWithPalette() {
+    return render(
+      <MemoryRouter>
+        <MachinePage />
+        <LocationProbe />
+        <CommandPalette open onClose={() => {}} sections={[]} />
+      </MemoryRouter>,
+    );
+  }
+
+  function paletteOption(name: string | RegExp) {
+    return within(screen.getByRole("dialog", { name: "Command palette" })).getByRole("button", { name });
+  }
+
+  function queryPaletteOption(name: string | RegExp) {
+    return within(screen.getByRole("dialog", { name: "Command palette" })).queryByRole("button", { name });
+  }
+
+  it("Rescan runs the page's own scan again", async () => {
+    renderWithPalette();
+    await screen.findByTestId("machine-grid");
+    expect(vi.mocked(buildMachineInventory)).toHaveBeenCalledTimes(1);
+
+    const rescan = paletteOption("Rescan this machine");
+    await waitFor(() => expect(rescan).not.toHaveAttribute("aria-disabled"));
+    fireEvent.click(rescan);
+    await waitFor(() => expect(vi.mocked(buildMachineInventory)).toHaveBeenCalledTimes(2));
+  });
+
+  it("switches views and filters through the page's own handlers", async () => {
+    renderWithPalette();
+    await screen.findByTestId("machine-grid");
+    // Already on the grid, and no filter is on.
+    expect(paletteOption("Show resources")).toHaveAttribute("aria-disabled", "true");
+    expect(paletteOption("Filter: show all")).toHaveAttribute("aria-disabled", "true");
+
+    fireEvent.click(paletteOption("Filter: gaps"));
+    await waitFor(() => expect(screen.getByTestId("location-search")).toHaveTextContent("filter=gaps"));
+    expect(gridRowKeys()).toEqual(["mcp-server:postgres"]);
+    expect(paletteOption("Filter: gaps")).toHaveAttribute("aria-disabled", "true");
+
+    fireEvent.click(paletteOption("Filter: show all"));
+    await waitFor(() => expect(screen.getByTestId("location-search")).not.toHaveTextContent("filter="));
+
+    fireEvent.click(paletteOption("Show drift vs harness.yaml"));
+    expect(await screen.findByTestId("machine-drift-view")).toBeInTheDocument();
+    expect(paletteOption("Show drift vs harness.yaml")).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("offers Copy CLI command only while a row with a plan is selected", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    renderWithPalette();
+    await screen.findByTestId("machine-grid");
+    expect(queryPaletteOption(/Copy CLI command/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("machine-row-mcp-server:postgres"));
+    const copy = await waitFor(() => {
+      const option = paletteOption("Copy CLI command for postgres");
+      expect(option).not.toHaveAttribute("aria-disabled");
+      return option;
+    });
+    fireEvent.click(copy);
+    await waitFor(() =>
+      expect(writeText).toHaveBeenCalledWith(expect.stringMatching(/^harness-kit sync --from .* --only mcp-server\/postgres$/)),
+    );
+
+    fireEvent.keyDown(window, { key: "Escape" });
+    await waitFor(() => expect(queryPaletteOption(/Copy CLI command/)).not.toBeInTheDocument());
   });
 });

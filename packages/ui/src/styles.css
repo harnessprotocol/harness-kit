@@ -715,13 +715,72 @@ button.hk-summary-cell[data-active="true"] .hk-summary-label { color: var(--acce
   line-height: 1.5;
   max-width: 65ch;
 }
-.hk-page-error {
+
+/* ── Error notice (AC-20, design D14) ── */
+/* A tinted surface, no outline: what failed, one action, raw error behind
+   Details. */
+.hk-error-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   margin-bottom: 16px;
   padding: 10px 14px;
   border-radius: 8px;
   background: var(--danger-light);
-  color: var(--danger);
   font-size: 12.5px;
+  color: var(--fg-base);
+  min-width: 0;
+}
+/* Spacing is for what follows; a notice that ends its container adds none. */
+.hk-error-notice:last-child { margin-bottom: 0; }
+.hk-error-notice[data-tone="warning"] { background: var(--warning-light); }
+.hk-error-notice-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.hk-error-notice-icon { flex-shrink: 0; color: var(--danger); }
+.hk-error-notice[data-tone="warning"] .hk-error-notice-icon { color: var(--warning); }
+.hk-error-notice-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-weight: 550;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.hk-error-notice-details {
+  padding-left: 26px;
+  font-size: 11.5px;
+  color: var(--fg-muted);
+}
+.hk-error-notice-details > summary {
+  width: fit-content;
+  cursor: pointer;
+  border-radius: 4px;
+  user-select: none;
+}
+.hk-error-notice-details > summary:hover { color: var(--fg-base); }
+.hk-error-notice-details > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.hk-error-notice-details > pre {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  max-height: 200px;
+  overflow: auto;
+  border-radius: 6px;
+  background: var(--bg-surface);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--fg-muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+  cursor: text;
 }
 
 /* ── Onboarding (first run) ── */
@@ -791,8 +850,39 @@ button.hk-summary-cell[data-active="true"] .hk-summary-label { color: var(--acce
   max-width: 48ch;
   margin: 0 auto;
 }
-.hk-onboard-scan-sub[data-error="true"] {
-  color: var(--danger);
+/* The failed-scan step's raw error, behind Details as in ErrorNotice (AC-20). */
+.hk-onboard-scan-details {
+  margin: 20px auto 0;
+  max-width: 60ch;
+  font-size: 11.5px;
+  color: var(--fg-muted);
+}
+.hk-onboard-scan-details > summary {
+  width: fit-content;
+  margin: 0 auto;
+  cursor: pointer;
+  border-radius: 4px;
+  user-select: none;
+}
+.hk-onboard-scan-details > summary:hover { color: var(--fg-base); }
+.hk-onboard-scan-details > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.hk-onboard-scan-details > pre {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  max-height: 200px;
+  overflow: auto;
+  border-radius: 6px;
+  background: var(--bg-surface);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
 }
 /* The failed-scan step reuses the lede and action row inside the centred
    scan block; both default to left alignment. */

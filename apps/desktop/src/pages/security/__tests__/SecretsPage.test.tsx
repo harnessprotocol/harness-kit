@@ -449,7 +449,9 @@ describe("SecretsPage — error handling", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
-    expect(await screen.findByText(/Keychain unavailable/)).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't save OPENAI_API_KEY to the Keychain");
+    // The raw error waits behind Details (AC-20).
+    expect(screen.getByText("Keychain unavailable")).not.toBeVisible();
   });
 
   it("error banner has a dismiss button", async () => {
@@ -466,7 +468,8 @@ describe("SecretsPage — error handling", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
-    await screen.findByText(/Keychain unavailable/);
-    expect(screen.getByRole("button", { name: "dismiss" })).toBeInTheDocument();
+    await screen.findByRole("alert");
+    fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

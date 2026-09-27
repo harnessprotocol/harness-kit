@@ -150,7 +150,10 @@ describe("DashboardPage — error state", () => {
     mockReadLiveActivity = () => Promise.reject(new Error("fail"));
     mockComputeLiveStats = () => Promise.reject(new Error("fail"));
     renderDashboard();
-    expect(await screen.findByText(/Failed to read stats/)).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't read Claude Code's usage data");
+    // The raw error waits behind Details (AC-20).
+    expect(screen.getByText("Failed to read stats")).not.toBeVisible();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
   });
 
   it("does not show loading spinner after error", async () => {
@@ -158,7 +161,7 @@ describe("DashboardPage — error state", () => {
     mockReadLiveActivity = () => Promise.reject(new Error("Error"));
     mockComputeLiveStats = () => Promise.reject(new Error("Error"));
     renderDashboard();
-    await screen.findByText(/Error/);
+    await screen.findByRole("alert");
     expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
   });
 });

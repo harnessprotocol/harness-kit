@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { toggleTheme } from "../lib/theme";
+import { useCommands } from "../lib/commands";
 import { SETTINGS, type NavEntry } from "../nav";
 
 interface Command {
@@ -8,7 +9,17 @@ interface Command {
   label: string;
   group: string;
   hint?: string;
+  /** Lower-cased text the search matches: the label plus a page command's group and keywords. */
+  search: string;
+  disabled?: boolean;
   run: () => void;
+}
+
+/** The section registered page commands appear under, ahead of everything else. */
+export const PAGE_GROUP = "This page";
+
+function reportFailure(error: unknown) {
+  console.error("[command palette] command failed:", error);
 }
 
 interface CommandPaletteProps {
@@ -18,50 +29,97 @@ interface CommandPaletteProps {
 }
 
 /**
- * VS-Code-style command palette. Navigate anywhere and run a few actions.
+ * VS-Code-style command palette (spec AC-21). Lists, in order: the actions the
+ * open page registered through lib/commands.ts ("This page"), the app-wide
+ * actions, and navigation derived from nav.ts. A page command with the id of
+ * an app-wide one replaces it while that page is open. A disabled page
+ * command is listed but does not run, like the button it mirrors.
  */
 export function CommandPalette({ open, onClose, sections }: CommandPaletteProps) {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
-  const [selected, setSelected] = useState(0);
+  // The highlighted command, by id, so it stays put when the list around it
+  // changes (a page registering commands while the palette is open). null,
+  // or an id no longer listed, highlights the first command.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  const registered = useCommands();
 
   const commands = useMemo<Command[]>(() => {
     const go = (path: string) => () => {
       navigate(path);
       onClose();
     };
-    const list: Command[] = [];
-    list.push({ id: "toggle-theme", label: "Toggle light / dark theme", group: "Actions", run: () => { toggleTheme(); onClose(); } });
-    list.push({ id: "nav-settings", label: "Go to Settings", group: "Navigate", run: go(SETTINGS.path) });
-    list.push({ id: "open-drift", label: "Open Drift vs harness.yaml", group: "Navigate", run: go("/machine?view=drift") });
+    const builtIn = (id: string, label: string, group: string, run: () => void): Command => ({
+      id,
+      label,
+      group,
+      search: label.toLowerCase(),
+      run,
+    });
+    const list: Command[] = registered.map((command) => ({
+      id: command.id,
+      label: command.title,
+      group: PAGE_GROUP,
+      hint: command.shortcut,
+      search: [command.title, command.group ?? "", ...(command.keywords ?? [])].join(" ").toLowerCase(),
+      disabled: command.disabled,
+      run: () => {
+        // Ask to close before running, so a command that throws still closes
+        // the palette. onClose only queues the state update; focus is settled
+        // when the palette actually closes (see the effect on `open`).
+        onClose();
+        try {
+          const result = command.run();
+          if (result instanceof Promise) result.catch(reportFailure);
+        } catch (error) {
+          reportFailure(error);
+        }
+      },
+    }));
+    const pageIds = new Set(registered.map((command) => command.id));
+    const rest: Command[] = [];
+    rest.push(builtIn("toggle-theme", "Toggle light / dark theme", "Actions", () => { toggleTheme(); onClose(); }));
+    rest.push(builtIn("nav-settings", "Go to Settings", "Navigate", go(SETTINGS.path)));
+    rest.push(builtIn("open-drift", "Open Drift vs harness.yaml", "Navigate", go("/machine?view=drift")));
     for (const s of sections) {
-      list.push({ id: `nav-${s.id}`, label: `Go to ${s.label}`, group: "Navigate", run: go(s.path) });
+      rest.push(builtIn(`nav-${s.id}`, `Go to ${s.label}`, "Navigate", go(s.path)));
       for (const c of s.children ?? []) {
-        list.push({ id: `nav-${s.id}-${c.path}`, label: `${s.label}: ${c.label}`, group: "Navigate", run: go(c.path) });
+        rest.push(builtIn(`nav-${s.id}-${c.path}`, `${s.label}: ${c.label}`, "Navigate", go(c.path)));
       }
     }
-    return list;
-  }, [sections, navigate, onClose]);
+    return [...list, ...rest.filter((command) => !pageIds.has(command.id))];
+  }, [registered, sections, navigate, onClose]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return commands;
-    return commands.filter((c) => c.label.toLowerCase().includes(q));
+    return commands.filter((c) => c.search.includes(q));
   }, [commands, query]);
 
-  useEffect(() => {
-    if (open) {
-      setQuery("");
-      setSelected(0);
-      // focus after paint
-      requestAnimationFrame(() => inputRef.current?.focus());
-    }
-  }, [open]);
+  const found = filtered.findIndex((command) => command.id === selectedId);
+  const selected = found === -1 ? 0 : found;
 
   useEffect(() => {
-    setSelected(0);
-  }, [query]);
+    if (!open) return;
+    // Focus returns here on close, e.g. to the title bar's ⌘K button.
+    const returnTo = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const dialog = dialogRef.current;
+    setQuery("");
+    setSelectedId(null);
+    // focus after paint
+    const frame = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => {
+      cancelAnimationFrame(frame);
+      // Only if focus was left on the palette (now gone, so on <body>): a
+      // command that moved focus elsewhere, a filter or a field, keeps it.
+      const active = document.activeElement;
+      const leftOnPalette = !active || active === document.body || (dialog?.contains(active) ?? false);
+      if (leftOnPalette && returnTo?.isConnected) returnTo.focus();
+    };
+  }, [open]);
 
   if (!open) return null;
 
@@ -71,13 +129,16 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
       onClose();
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
-      setSelected((i) => Math.min(i + 1, filtered.length - 1));
+      const next = filtered[Math.min(selected + 1, filtered.length - 1)];
+      if (next) setSelectedId(next.id);
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      setSelected((i) => Math.max(i - 1, 0));
+      const previous = filtered[Math.max(selected - 1, 0)];
+      if (previous) setSelectedId(previous.id);
     } else if (e.key === "Enter") {
       e.preventDefault();
-      filtered[selected]?.run();
+      const command = filtered[selected];
+      if (command && !command.disabled) command.run();
     }
   }
 
@@ -85,6 +146,7 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
 
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-label="Command palette"
@@ -117,7 +179,10 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
         <input
           ref={inputRef}
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setSelectedId(null);
+          }}
           placeholder="Type a command or search…"
           aria-label="Command palette search"
           style={{
@@ -157,8 +222,12 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
                   </div>
                 )}
                 <button
-                  onMouseEnter={() => setSelected(i)}
-                  onClick={() => cmd.run()}
+                  type="button"
+                  aria-disabled={cmd.disabled ? "true" : undefined}
+                  onMouseEnter={() => setSelectedId(cmd.id)}
+                  onClick={() => {
+                    if (!cmd.disabled) cmd.run();
+                  }}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -167,12 +236,12 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
                     width: "100%",
                     textAlign: "left",
                     border: "none",
-                    cursor: "pointer",
+                    cursor: cmd.disabled ? "default" : "pointer",
                     borderRadius: "7px",
                     padding: "8px 10px",
                     fontSize: "13px",
                     background: isSel ? "var(--accent-light)" : "transparent",
-                    color: isSel ? "var(--accent-text)" : "var(--fg-base)",
+                    color: cmd.disabled ? "var(--fg-subtle)" : isSel ? "var(--accent-text)" : "var(--fg-base)",
                   }}
                 >
                   <span>{cmd.label}</span>

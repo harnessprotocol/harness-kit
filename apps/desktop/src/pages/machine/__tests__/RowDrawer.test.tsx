@@ -174,3 +174,49 @@ describe("RowDrawer apply never runs a stale plan", () => {
     expect(screen.getByRole("button", { name: "Copy CLI command" })).toBeEnabled();
   });
 });
+
+describe("RowDrawer failures (AC-20)", () => {
+  beforeEach(() => {
+    vi.mocked(buildCellAction).mockClear();
+    vi.mocked(applyCellActionViaTauri).mockClear();
+  });
+
+  it("a failed apply names what it tried, with the raw error behind Details", async () => {
+    const raw = "surface write refused: ~/.gemini/settings.json is outside the allowlist";
+    vi.mocked(applyCellActionViaTauri).mockRejectedValueOnce(new Error(raw));
+    renderDrawer(GEMINI_GAP);
+    const apply = screen.getByRole("button", { name: "Apply" });
+    await waitFor(() => expect(apply).toBeEnabled());
+    fireEvent.click(apply);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/^Couldn't copy postgres to /);
+    expect(screen.getByText(raw)).not.toBeVisible();
+    // Not also printed on the status line.
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("a failed plan says so instead of printing the raw error", async () => {
+    vi.mocked(buildCellAction).mockRejectedValueOnce("unsupported kind for this surface");
+    renderDrawer();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't plan this change");
+    expect(screen.getByText("unsupported kind for this surface")).not.toBeVisible();
+  });
+});
+
+describe("RowDrawer Escape", () => {
+  it("closes on Escape, but not on an Escape something above it already handled", () => {
+    const onClose = vi.fn();
+    render(
+      <RowDrawer row={makeRow()} diffs={[]} gaps={[]} surfaceOrder={SURFACE_ORDER} onClose={onClose} />,
+    );
+    // The title-bar project menu handles its own Escape with preventDefault.
+    const handled = new KeyboardEvent("keydown", { key: "Escape", cancelable: true });
+    handled.preventDefault();
+    window.dispatchEvent(handled);
+    expect(onClose).not.toHaveBeenCalled();
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", cancelable: true }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});

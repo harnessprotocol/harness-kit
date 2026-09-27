@@ -7,11 +7,27 @@ import {
 } from "../lib/tauri";
 import { isCriticalFile } from "../lib/criticalFiles";
 import { getConfirmSave } from "../lib/preferences";
+import { errorDetails } from "../lib/error-details";
 
 export interface PluginExplorerState {
   tree: FileTreeNode | null;
   loading: boolean;
+  /** The file tree couldn't be read, raw, for an ErrorNotice's Details (AC-20). */
+  treeError: string | null;
+  /** What failed, in plain words; set whenever `treeError` is. */
+  treeErrorTitle: string | null;
+  /** Reads the file tree again. */
+  reloadTree: () => void;
+  /** The selected file couldn't be read, raw (AC-20). */
   error: string | null;
+  /** What failed, in plain words; set whenever `error` is. */
+  errorTitle: string | null;
+  /** Reads the selected file again. */
+  reloadFile: () => void;
+  /** The last save failed, raw. The edits stay in the editor. */
+  saveError: string | null;
+  /** What failed, in plain words; set whenever `saveError` is. */
+  saveErrorTitle: string | null;
   selectedPath: string | null;
   fileContent: string | null;
   fileLoading: boolean;
@@ -33,11 +49,22 @@ export interface PluginExplorerState {
   restoreVersion: (content: string) => void;
 }
 
+/** The file's name for a notice title: the last path segment. */
+function fileLabel(path: string): string {
+  return path.split(/[\\/]/).filter(Boolean).pop() ?? path;
+}
+
 export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean): PluginExplorerState {
   const pluginName = plugin?.name ?? "";
   const [tree, setTree] = useState<FileTreeNode | null>(null);
   const [loading, setLoading] = useState(false);
+  const [treeError, setTreeError] = useState<string | null>(null);
+  const [treeErrorTitle, setTreeErrorTitle] = useState<string | null>(null);
+  const [treeKey, setTreeKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [errorTitle, setErrorTitle] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveErrorTitle, setSaveErrorTitle] = useState<string | null>(null);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState<string | null>(null);
   const [originalContent, setOriginalContent] = useState<string | null>(null);
@@ -65,42 +92,59 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
       setSelectedPath(null);
       setFileContent(null);
       setOriginalContent(null);
+      setTreeError(null);
       setError(null);
+      setSaveError(null);
       return;
     }
     setLoading(true);
-    setError(null);
+    setTreeError(null);
     readPluginTree(plugin.source)
       .then(setTree)
-      .catch((e) => setError(String(e)))
+      .catch((e) => {
+        setTree(null);
+        setTreeErrorTitle(`Couldn't read the files in ${pluginName || "this plugin"}`);
+        setTreeError(errorDetails(e));
+      })
       .finally(() => setLoading(false));
-  }, [open, plugin?.source]);
+  }, [open, plugin?.source, treeKey]);
 
-  // Save current file before switching — uses refs to avoid stale closure
-  const saveCurrent = useCallback(async () => {
+  const reloadTree = useCallback(() => setTreeKey((k) => k + 1), []);
+
+  // Save current file before switching — uses refs to avoid stale closure.
+  // Resolves false when the save failed: the caller must not leave the file,
+  // or the unsaved edits would be dropped with no trace.
+  const saveCurrent = useCallback(async (): Promise<boolean> => {
+    const path = currentPathRef.current;
     const content = fileContentRef.current;
     const original = originalContentRef.current;
-    if (currentPathRef.current && content !== null && original !== null && content !== original) {
+    if (path && content !== null && original !== null && content !== original) {
       try {
         setSaving(true);
-        await writePluginFile(currentPathRef.current, content);
+        await writePluginFile(path, content);
         setOriginalContent(content);
-      } catch {
-        // Silent fail on auto-save; user can retry manually
+      } catch (e) {
+        setSaveErrorTitle(`Couldn't save ${fileLabel(path)}`);
+        setSaveError(errorDetails(e));
+        return false;
       } finally {
         setSaving(false);
       }
     }
+    return true;
   }, []);
 
   const selectFile = useCallback(async (path: string) => {
-    // Auto-save dirty file before switching
-    await saveCurrent();
+    // Auto-save the dirty file before switching. If that fails, stay on it
+    // with the edits and the "Couldn't save" notice (Retry save).
+    // "Discard changes" beside that notice (revertFile) is the way out.
+    if (!(await saveCurrent())) return;
 
     setSelectedPath(path);
     currentPathRef.current = path;
     setFileLoading(true);
     setError(null);
+    setSaveError(null);
     try {
       const content = await readPluginFile(path);
       setFileContent(content);
@@ -108,11 +152,17 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
     } catch (e) {
       setFileContent(null);
       setOriginalContent(null);
-      setError(String(e));
+      setErrorTitle(`Couldn't read ${fileLabel(path)}`);
+      setError(errorDetails(e));
     } finally {
       setFileLoading(false);
     }
   }, [saveCurrent]);
+
+  // Only reachable from a failed read, so there are no edits to lose.
+  const reloadFile = useCallback(() => {
+    if (currentPathRef.current) void selectFile(currentPathRef.current);
+  }, [selectFile]);
 
   // Load history when file changes
   useEffect(() => {
@@ -134,6 +184,7 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
   const saveFile = useCallback(async () => {
     if (!selectedPath || fileContent === null) return;
     setSaving(true);
+    setSaveError(null);
     try {
       // Push previous content to history before overwriting
       if (originalContent !== null && pluginName) {
@@ -151,7 +202,8 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
           .catch(() => {});
       }
     } catch (e) {
-      setError(String(e));
+      setSaveErrorTitle(`Couldn't save ${fileLabel(selectedPath)}`);
+      setSaveError(errorDetails(e));
     } finally {
       setSaving(false);
     }
@@ -182,9 +234,13 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
     setFileContent(content);
   }, []);
 
+  // Throws the edits away. This is the way out when a save keeps failing:
+  // with no edits left, switching files no longer needs a save.
   const revertFile = useCallback(() => {
     if (originalContent !== null) {
       setFileContent(originalContent);
+      setSaveError(null);
+      setSaveErrorTitle(null);
     }
   }, [originalContent]);
 
@@ -217,7 +273,8 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
   }, []);
 
   return {
-    tree, loading, error,
+    tree, loading, treeError, treeErrorTitle, reloadTree,
+    error, errorTitle, reloadFile, saveError, saveErrorTitle,
     selectedPath, fileContent, fileLoading,
     dirty, saving, savedRecently,
     confirmState, requestSave, confirmSave, cancelSave,

@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, act, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import DriftPage from "../DriftPage";
+import { PROJECT_CHANGED_EVENT } from "../../../lib/project-dir";
 
 // ── Mocks ──────────────────────────────────────────────────────
 
@@ -47,7 +48,9 @@ vi.mock("../../../lib/harness-fs", () => ({
 }));
 
 const mockGetAcknowledgedDriftItems = vi.fn();
+const mockGrantProjectScope = vi.fn();
 vi.mock("../../../lib/tauri", () => ({
+  grantProjectScope: (...args: unknown[]) => mockGrantProjectScope(...args),
   acknowledgeDriftItem: vi.fn(),
   unacknowledgeDriftItem: vi.fn(),
   getAcknowledgedDriftItems: () => mockGetAcknowledgedDriftItems(),
@@ -69,12 +72,31 @@ describe("DriftPage", () => {
     mockParseHarness.mockReturnValue({ config: { metadata: { name: "test-harness" } } });
     mockValidateHarness.mockReturnValue({ valid: true });
     mockGetAcknowledgedDriftItems.mockResolvedValue([]);
+    mockGrantProjectScope.mockResolvedValue(undefined);
   });
 
   it("shows the empty state when there is no drift", async () => {
     mockDetectDrift.mockResolvedValue({ items: [], hasDrift: false, byClass: {} });
     renderPage();
     await waitFor(() => expect(screen.getByText("No drift detected")).toBeInTheDocument());
+  });
+
+  it("a failed scan says so, with Retry and the raw error behind Details, not 'No drift detected' (AC-20)", async () => {
+    const raw = "EACCES: permission denied, open '/home/user/.claude/CLAUDE.md'";
+    mockDetectDrift
+      .mockRejectedValueOnce(new Error(raw))
+      .mockResolvedValue({ items: [], hasDrift: false, byClass: {} });
+    renderPage();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't check for drift");
+    expect(screen.queryByText("No drift detected")).not.toBeInTheDocument();
+    expect(screen.getByText(raw)).not.toBeVisible();
+    fireEvent.click(screen.getByText("Details"));
+    expect(screen.getByText(raw)).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(await screen.findByText("No drift detected")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("renders a drift item grouped by scope and harness, with a Fix button", async () => {
@@ -123,5 +145,28 @@ describe("DriftPage", () => {
     await waitFor(() => expect(screen.getByText("User-edited")).toBeInTheDocument());
     expect(screen.getByRole("button", { name: "Acknowledge" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Fix" })).not.toBeInTheDocument();
+  });
+
+  it("scans the title bar's project, and rescans when it changes (AC-17)", async () => {
+    mockDetectDrift.mockResolvedValue({ items: [], hasDrift: false, byClass: {} });
+    const scannedRoots = () =>
+      mockDetectDrift.mock.calls.map((call) => (call[1] as { projectRoot: string }).projectRoot);
+
+    // Written straight to storage, as another window or a past session would:
+    // setCurrentProjectDir grants by itself, which would hide a page that
+    // stopped granting before it reads.
+    function storeProject(dir: string) {
+      localStorage.setItem("harness-kit-current-project", dir);
+      window.dispatchEvent(new Event(PROJECT_CHANGED_EVENT));
+    }
+
+    storeProject("/repo/first");
+    renderPage();
+    await waitFor(() => expect(scannedRoots()).toEqual(["/home/user", "/repo/first"]));
+    expect(mockGrantProjectScope).toHaveBeenCalledWith("/repo/first");
+
+    act(() => storeProject("/repo/second"));
+    await waitFor(() => expect(scannedRoots()).toContain("/repo/second"));
+    expect(mockGrantProjectScope).toHaveBeenCalledWith("/repo/second");
   });
 });

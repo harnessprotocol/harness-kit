@@ -43,6 +43,10 @@
   /* Sidebar */
   --sidebar-width: 240px;
 
+  /* Title bar (border-box, its bottom separator included). Fixed layers that
+     must leave the title bar's controls reachable start below it. */
+  --titlebar-height: 38px;
+
   /* Machine row drawer (fixed to the window's right edge) */
   --hk-drawer-width: 380px;
 
@@ -227,6 +231,11 @@
 .hk-registry-enrollment select:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+.hk-registry-notice {
+  flex-basis: 100%;
+  margin-bottom: 0;
 }
 
 .hk-device-code {
@@ -1007,7 +1016,11 @@ body {
 
 /* ── Title bar ── */
 .titlebar {
-  height: 38px;
+  height: var(--titlebar-height);
+  /* Its own layer above the Machine row drawer (z 60), so the project menu
+     opens over an open drawer; still below overlays and modals (100+). */
+  position: relative;
+  z-index: 61;
   display: flex;
   align-items: center;
   flex-shrink: 0;
@@ -1034,6 +1047,49 @@ body {
 .titlebar-btn:hover {
   background: var(--hover-bg);
   color: var(--fg-base);
+}
+
+/* ⌘K affordance (spec AC-21), right of the project selector. */
+.hk-titlebar-cmdk {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  margin-right: 10px;
+  padding: 0 7px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--fg-subtle);
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+  transition: background-color 0.15s ease-out, color 0.15s ease-out;
+}
+
+.hk-titlebar-cmdk:hover,
+.hk-titlebar-cmdk[aria-expanded="true"] {
+  background: var(--hover-bg);
+  color: var(--fg-base);
+}
+
+.hk-titlebar-cmdk:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.hk-titlebar-cmdk-key {
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 550;
+  letter-spacing: 0.02em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hk-titlebar-cmdk {
+    transition: none;
+  }
 }
 
 /* ── Form elements ── */

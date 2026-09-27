@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, fireEvent, act } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, act, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import PluginsPage from "../PluginsPage";
 import { describeImportError } from "../plugins/import-errors";
+import { resetImportQueueForTests } from "../plugins/import-queue";
+import { CommandPalette } from "../../../components/CommandPalette";
 
 // ── Tauri seams ─────────────────────────────────────────────────
 
@@ -98,6 +100,7 @@ describe("PluginsPage drag-to-import (Tauri drag-drop event)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     held.clear();
+    resetImportQueueForTests();
     dragDropHandler = null;
     (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {};
   });
@@ -176,7 +179,12 @@ describe("PluginsPage drag-to-import (Tauri drag-drop event)", () => {
     );
     const raw = screen.getByText("Not a directory: /Users/me/notes.md");
     expect(raw.closest("details")).not.toBeNull();
+    expect(raw).not.toBeVisible();
+    expect(alert).not.toHaveTextContent("Not a directory");
     expect(screen.getByText("Details").tagName).toBe("SUMMARY");
+    // Its one action is Dismiss. (The exit animation never completes in jsdom,
+    // so removal itself is not asserted here.)
+    expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
   });
 
   it("says what failed and what to do when a folder is not a plugin", async () => {
@@ -212,7 +220,7 @@ describe("PluginsPage drag-to-import (Tauri drag-drop event)", () => {
     const alert = await screen.findByRole("alert");
     expect(alert).toHaveTextContent("2 failed: notes.md, not-a-plugin. Imported research.");
     // Each folder's reason and raw error stay available behind Details.
-    const details = alert.querySelector("details")!;
+    const details = screen.getByText("Details").closest("details")!;
     expect(details).toHaveTextContent("Not a directory: /Users/me/notes.md");
     expect(details).toHaveTextContent("Invalid plugin: missing .claude-plugin/plugin.json");
   });
@@ -250,6 +258,29 @@ describe("PluginsPage drag-to-import (Tauri drag-drop event)", () => {
     expect(importCalls().map(([, args]) => args?.sourcePath)).toEqual([
       "/Users/me/research", "/Users/me/harness-share",
     ]);
+    expect(importButton()).toBeEnabled();
+  });
+
+  it("keeps one queue across leaving and returning to the page mid-batch", async () => {
+    // Rust checks "already installed" and then copies: a second loop importing
+    // the same folder alongside the first would race it.
+    const view = await renderPage();
+    const release = holdImport("/Users/me/research");
+    drop("/Users/me/research");
+    await waitFor(() => expect(screen.getByText("Importing research...")).toBeInTheDocument());
+
+    view.unmount();
+    render(<MemoryRouter><PluginsPage /></MemoryRouter>);
+    await waitFor(() => expect(mockOnDragDropEvent).toHaveBeenCalledTimes(2));
+    // The returning page shows the batch still running.
+    expect(screen.getByText("Importing research...")).toBeInTheDocument();
+    expect(importButton()).toBeDisabled();
+
+    drop("/Users/me/research");
+    await release();
+
+    expect(await screen.findByText("Successfully imported research")).toBeInTheDocument();
+    expect(importCalls()).toHaveLength(1);
     expect(importButton()).toBeEnabled();
   });
 
@@ -301,6 +332,31 @@ describe("PluginsPage drag-to-import (Tauri drag-drop event)", () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("drag-and-drop"), failure);
   });
 
+  it("Import plugin from the palette runs the folder picker import, disabled in step with the button (AC-21)", async () => {
+    render(
+      <MemoryRouter>
+        <PluginsPage />
+        <CommandPalette open onClose={() => {}} sections={[]} />
+      </MemoryRouter>,
+    );
+    await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
+    const option = () =>
+      within(screen.getByRole("dialog", { name: "Command palette" })).getByRole("button", {
+        name: "Import plugin from folder…",
+      });
+    expect(option()).not.toHaveAttribute("aria-disabled");
+
+    const release = holdImport("/Users/me/picked");
+    mockDialogOpen.mockResolvedValueOnce("/Users/me/picked");
+    fireEvent.click(option());
+    await waitFor(() => expect(importCalls()).toEqual([["import_plugin_from_path", { sourcePath: "/Users/me/picked" }]]));
+    // While the import runs the button is off, and so is the command.
+    expect(importButton()).toBeDisabled();
+    expect(option()).toHaveAttribute("aria-disabled", "true");
+    await release();
+    await waitFor(() => expect(option()).not.toHaveAttribute("aria-disabled"));
+  });
+
   it("renders the browser preview without touching the Tauri webview", async () => {
     delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
     render(<MemoryRouter><PluginsPage /></MemoryRouter>);
@@ -311,6 +367,73 @@ describe("PluginsPage drag-to-import (Tauri drag-drop event)", () => {
     expect(importButton()).toBeDisabled();
     expect(importButton()).toHaveAttribute("title", expect.stringMatching(/desktop runtime/));
     expect(mockOnDragDropEvent).not.toHaveBeenCalled();
+  });
+});
+
+describe("PluginsPage load failure (AC-20)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    resetImportQueueForTests();
+    (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__ = {};
+  });
+
+  afterEach(() => {
+    delete (window as unknown as Record<string, unknown>).__TAURI_INTERNALS__;
+    vi.restoreAllMocks();
+  });
+
+  it("says the list couldn't load, keeps the raw error behind Details, and Retry reloads", async () => {
+    const raw = "Failed to read ~/.claude/plugins/installed_plugins.json: Permission denied (os error 13)";
+    const fallback = mockInvoke.getMockImplementation()!;
+    mockInvoke.mockImplementation(async (command, args) => {
+      if (command === "list_installed_plugins") throw raw;
+      return fallback(command, args);
+    });
+    render(<MemoryRouter><PluginsPage /></MemoryRouter>);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't load installed plugins");
+    expect(screen.getByText(raw)).not.toBeVisible();
+
+    mockInvoke.mockImplementation(fallback);
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(await screen.findByText("No plugins installed")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("keeps the list up when an uninstall fails, and Retry uninstall runs the same uninstall again", async () => {
+    const raw = "Failed to remove ~/.claude/plugins/demo: Operation not permitted (os error 1)";
+    const fallback = mockInvoke.getMockImplementation()!;
+    let installed = [{ name: "demo", version: "1.0.0", source: "/plugins/demo" }];
+    let uninstallCalls = 0;
+    // mockInvoke's type comes from its default implementation's return values.
+    mockInvoke.mockImplementation((async (command: string, args?: Record<string, unknown>) => {
+      if (command === "list_installed_plugins") return installed;
+      if (command === "uninstall_plugin") {
+        uninstallCalls += 1;
+        if (uninstallCalls === 1) throw raw;
+        installed = [];
+        return undefined;
+      }
+      return fallback(command, args);
+    }) as typeof fallback);
+    render(<MemoryRouter><PluginsPage /></MemoryRouter>);
+
+    fireEvent.contextMenu(await screen.findByText("demo"));
+    fireEvent.click(screen.getByText("Uninstall"));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Uninstall" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't uninstall demo");
+    expect(screen.getByText(raw)).not.toBeVisible();
+    // An operation failure does not replace the list.
+    expect(screen.getByText("demo")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry uninstall" }));
+    await waitFor(() => expect(uninstallCalls).toBe(2));
+    expect(mockInvoke.mock.calls.filter(([c]) => c === "uninstall_plugin").map(([, a]) => a))
+      .toEqual([{ name: "demo" }, { name: "demo" }]);
+    expect(await screen.findByText("No plugins installed")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
 

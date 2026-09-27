@@ -42,7 +42,10 @@ const ROUTES = [
 // compile/check, which statically imported `node:crypto`. Core is now browser-safe
 // (crypto → @noble/hashes), so these routes are guarded like every other route.
 
-const ERROR_BOUNDARY_TEXT = "Something went wrong loading this page.";
+// PageBoundary's notice (components/PageBoundary.tsx). Checked by test id as
+// well as text so a copy change cannot quietly make this guard vacuous.
+const ERROR_BOUNDARY_TEXT = "This page hit an error";
+const ERROR_BOUNDARY_TESTID = "page-boundary-error";
 
 test("app shell mounts at root (not a blank screen)", async ({ appPage }) => {
   await appPage.goto("/");
@@ -61,6 +64,7 @@ async function expectRouteHealthy(appPage: import("@playwright/test").Page, rout
   await expect(appPage.locator("aside")).toBeVisible();
   // Lazy chunk loaded and the page subtree did not throw into the error boundary.
   await expect(appPage.getByText(ERROR_BOUNDARY_TEXT)).toHaveCount(0);
+  await expect(appPage.getByTestId(ERROR_BOUNDARY_TESTID)).toHaveCount(0);
 }
 
 for (const route of ROUTES) {

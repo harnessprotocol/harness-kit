@@ -1,7 +1,11 @@
 import { invoke } from "@tauri-apps/api/core";
 import { TauriFsProvider } from "./harness-fs";
 
-/** `expectedSha256` value that tells the Rust write the file must not exist. */
+/**
+ * `expectedSha256` value that tells the Rust write the file must not exist.
+ * Any other value is sha256Hex of the text readTextFile returned; see
+ * `atomicWriteFile` for why that is text, not bytes on disk.
+ */
 export const ABSENT_SHA256 = "absent";
 
 /** Lowercase hex SHA-256 of a string's UTF-8 bytes. */
@@ -67,8 +71,10 @@ export class TauriSurfaceFsProvider extends TauriFsProvider {
    * and a manifest are written between that check and this write, and
    * ~/.claude.json is rewritten by a running Claude Code, so the window is
    * real. The hash is of the text as the fs plugin decoded it, re-encoded as
-   * UTF-8: for a UTF-8 file without a byte-order mark those are the bytes on
-   * disk, and for anything else the write is refused, never forced.
+   * UTF-8, which is also what Rust hashes (`precondition_digest`: one leading
+   * BOM dropped, invalid UTF-8 replaced by U+FFFD, as TextDecoder does). So a
+   * file with a byte-order mark or invalid bytes still saves, and only a real
+   * change to its text is refused.
    */
   async atomicWriteFile(
     path: string,

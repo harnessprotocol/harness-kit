@@ -174,13 +174,15 @@ describe("SessionsPage — error state", () => {
   it("shows error message when listSessionsSummary rejects", async () => {
     mockListSessionsSummary = () => Promise.reject(new Error("Failed to list sessions"));
     renderSessions();
-    expect(await screen.findByText(/Failed to list sessions/)).toBeInTheDocument();
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't list Claude Code sessions");
+    // The raw error waits behind Details (AC-20).
+    expect(screen.getByText("Failed to list sessions")).not.toBeVisible();
   });
 
   it("does not show loading spinner after error", async () => {
     mockListSessionsSummary = () => Promise.reject(new Error("Error"));
     renderSessions();
-    await screen.findByText(/Error/);
+    await screen.findByRole("alert");
     expect(screen.queryByText("Loading…")).not.toBeInTheDocument();
   });
 });

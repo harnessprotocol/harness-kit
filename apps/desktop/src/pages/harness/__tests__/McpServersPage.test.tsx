@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import McpServersPage from "../McpServersPage";
+import digestFixture from "../../../lib/__tests__/fixtures/precondition-digest.json";
 
 // ── In-memory home directory behind the Tauri calls ─────────────
 
@@ -41,11 +42,12 @@ const rustCommand = async (command: string, args: WriteArgs) => {
 };
 const mockInvoke = vi.fn(rustCommand);
 const mockExists = vi.fn(async (path: string) => files.has(path));
-const mockReadTextFile = vi.fn(async (path: string) => {
+const readFromFiles = async (path: string) => {
   const content = files.get(path);
   if (content === undefined) throw new Error(`ENOENT ${path}`);
   return content;
-});
+};
+const mockReadTextFile = vi.fn(readFromFiles);
 
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: (command: string, args: never) => mockInvoke(command, args),
@@ -127,6 +129,7 @@ describe("McpServersPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockInvoke.mockImplementation(rustCommand);
+    mockReadTextFile.mockImplementation(readFromFiles);
     files.clear();
     recorded.length = 0;
     ledgerFails = false;
@@ -161,8 +164,15 @@ describe("McpServersPage", () => {
     renderPage();
 
     expect(await screen.findByText("Couldn't read ~/.claude.json.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
-    expect(screen.getByText("Details")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("Couldn't read ~/.claude.json.");
+    // The raw error waits behind Details (AC-20), outside the live region so
+    // opening it does not re-announce the notice.
+    expect(screen.getByRole("alert")).not.toHaveTextContent("forbidden path");
+    const raw = screen.getByText("forbidden path: /home/user/.claude.json");
+    expect(raw).not.toBeVisible();
+    fireEvent.click(screen.getByText("Details"));
+    expect(raw).toBeVisible();
     // An unreadable file must not look like an empty one.
     expect(screen.queryByText("No MCP servers yet")).not.toBeInTheDocument();
   });
@@ -364,6 +374,35 @@ describe("McpServersPage", () => {
     expect(doc.mcpServers.legacy).toBe("disabled");
   });
 
+  it("keeps non-server entries named toString and __proto__ through a Raw JSON save", async () => {
+    // Written as text: an object literal can't carry an own "__proto__" key.
+    files.set(
+      `${HOME}/.claude.json`,
+      `{"mcpServers":{"github":${JSON.stringify(STDIO)},"toString":"x","__proto__":"y","constructor":1}}`,
+    );
+    renderPage();
+
+    await screen.findByText("GitHub");
+    fireEvent.click(screen.getByRole("button", { name: "Raw JSON" }));
+    const editor = (await screen.findByTestId("monaco-editor")) as HTMLTextAreaElement;
+    expect(screen.getByRole("note")).toHaveTextContent(/toString/);
+    expect(screen.getByRole("note")).toHaveTextContent(/__proto__/);
+
+    const next = JSON.parse(editor.value);
+    next.github.command = "bunx";
+    fireEvent.change(editor, { target: { value: JSON.stringify(next, null, 2) } });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => expect(storeWrites()).toHaveLength(1));
+    // Own entries only: doc.mcpServers.__proto__ would read the prototype.
+    const servers: Record<string, any> = Object.fromEntries(Object.entries(writtenJson().mcpServers));
+    expect(Object.keys(servers).sort()).toEqual(["__proto__", "constructor", "github", "toString"]);
+    expect(Object.getOwnPropertyDescriptor(servers, "__proto__")?.value).toBe("y");
+    expect(servers.toString).toBe("x");
+    expect(servers.constructor).toBe(1);
+    expect(servers.github.command).toBe("bunx");
+  });
+
   it("a Raw JSON parse error keeps the draft and offers Back to editing, not Reload", async () => {
     files.set(`${HOME}/.claude.json`, JSON.stringify({ mcpServers: { github: STDIO } }));
     renderPage();
@@ -402,6 +441,31 @@ describe("McpServersPage", () => {
     expect(storeWrites()[0].expectedSha256).toBe(sha256(rewritten));
     expect(writtenJson().numStartups).toBe(2);
   });
+
+  // readTextFile is TextDecoder("utf-8") over the bytes, so the page only
+  // ever sees decoded text. The fixture's sha256 is what the Rust rule
+  // computes for the same bytes (checked in surface_write.rs).
+  it.each(["bom", "invalid-utf8"])(
+    "sends the digest the Rust rule computes for the %s fixture",
+    async (name) => {
+      const fixture = digestFixture.cases.find((c) => c.name === name)!;
+      const bytes = Uint8Array.from(fixture.bytesHex.match(/../g)!, (h) => parseInt(h, 16));
+      const decoded = new TextDecoder("utf-8").decode(bytes);
+      expect(decoded).toBe(fixture.text);
+      files.set(`${HOME}/.claude.json`, decoded);
+      renderPage();
+
+      fireEvent.click(await screen.findByRole("button", { name: /add server/i }));
+      const dialog = await screen.findByRole("dialog");
+      fireEvent.change(within(dialog).getByLabelText("Name"), { target: { value: "github" } });
+      fireEvent.change(within(dialog).getByLabelText("Command"), { target: { value: "npx" } });
+      fireEvent.click(within(dialog).getByRole("button", { name: "Save" }));
+
+      await waitFor(() => expect(storeWrites()).toHaveLength(1));
+      expect(storeWrites()[0].expectedSha256).toBe(fixture.sha256);
+      expect(writtenJson().mcpServers.github.command).toBe("npx");
+    },
+  );
 
   it("says the file changed while editing when the Rust precondition refuses", async () => {
     files.set(`${HOME}/.claude.json`, JSON.stringify({ mcpServers: { github: STDIO } }));
@@ -476,6 +540,7 @@ describe("writeMcpServers on the transaction engine", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockInvoke.mockImplementation(rustCommand);
+    mockReadTextFile.mockImplementation(readFromFiles);
     files.clear();
     recorded.length = 0;
     ledgerFails = false;
@@ -553,20 +618,42 @@ describe("writeMcpServers on the transaction engine", () => {
     expect(files.get(`${HOME}/.claude.json`)).toBe(original);
   });
 
-  it("does not call an unsaveable file a conflict", async () => {
-    // The plugin's decoded text hashes differently from the bytes on disk
-    // (a BOM, invalid UTF-8), so Rust refuses although nothing moved.
-    files.set(`${HOME}/.claude.json`, original);
+  it("saves a BOM-prefixed file: the engine sends the digest Rust computes for its bytes", async () => {
+    // The file on disk starts with a byte-order mark. readTextFile drops it,
+    // and Rust hashes the text the same way (precondition_digest), so the
+    // save goes through rather than reading as a change on disk.
+    const fixture = digestFixture.cases.find((c) => c.name === "bom")!;
+    const bytes = Uint8Array.from(fixture.bytesHex.match(/../g)!, (h) => parseInt(h, 16));
+    expect(Array.from(bytes.slice(0, 3))).toEqual([0xef, 0xbb, 0xbf]);
+    let onDisk: Uint8Array | string = bytes;
+    let written: string | null = null;
+    const path = `${HOME}/.claude.json`;
+    files.set(path, "(bytes below)");
+    mockReadTextFile.mockImplementation(async (read: string) => {
+      if (read === path) return typeof onDisk === "string" ? onDisk : new TextDecoder("utf-8").decode(onDisk);
+      return readFromFiles(read);
+    });
     mockInvoke.mockImplementation(async (command: string, args: WriteArgs) => {
-      if (args.files?.some((file) => file.relativePath === ".claude.json")) {
-        throw "Refusing to write '.claude.json': it changed on disk since it was read (expected aa, found bb)";
+      const store = args.files?.find((file) => file.relativePath === ".claude.json");
+      if (!store) return rustCommand(command, args);
+      // What Rust computes for these bytes, pinned by the Rust test on the
+      // same fixture.
+      const actual = typeof onDisk === "string" ? sha256(onDisk) : fixture.sha256;
+      if (store.expectedSha256 !== actual) {
+        throw `Refusing to write '.claude.json': it changed on disk since it was read (expected ${store.expectedSha256}, found ${actual})`;
       }
-      return rustCommand(command, args);
+      onDisk = store.content!;
+      written = store.content!;
+      return [path];
     });
-    await expect(save((current) => ({ ...current, extra: {} }))).rejects.toMatchObject({
-      kind: "write",
-      summary: expect.stringContaining("isn't plain UTF-8"),
-    });
+
+    const outcome = await save((current) => ({ ...current, github: STDIO }));
+
+    expect(outcome).toEqual({});
+    expect(storeWrites()).toHaveLength(1);
+    expect(storeWrites()[0].expectedSha256).toBe(fixture.sha256);
+    expect(JSON.parse(written!).mcpServers.github).toEqual(STDIO);
+    expect(recorded).toHaveLength(1);
   });
 
   it("says so when a failed save could not be undone", async () => {

@@ -1,8 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, act, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { compile, detectPlatforms } from "@harness-kit/core";
 import SyncPage from "../SyncPage";
+import { CommandPalette } from "../../../components/CommandPalette";
+import { setCurrentProjectDir } from "../../../lib/project-dir";
+import { syncCreateBackup, syncWriteFiles } from "../../../lib/tauri";
 
 // ── Mocks ──────────────────────────────────────────────────────
 
@@ -10,12 +13,14 @@ const mockReadHarnessFile = vi.fn();
 const mockScanClaudeConfig = vi.fn();
 const mockSyncFileExists = vi.fn();
 const mockSyncListBackups = vi.fn();
+const mockGrantProjectScope = vi.fn();
 
 vi.mock("../../../lib/tauri", () => ({
   readHarnessFile: () => mockReadHarnessFile(),
   scanClaudeConfig: () => mockScanClaudeConfig(),
   syncFileExists: (...args: unknown[]) => mockSyncFileExists(...args),
   syncListBackups: (...args: unknown[]) => mockSyncListBackups(...args),
+  grantProjectScope: (...args: unknown[]) => mockGrantProjectScope(...args),
   syncWriteFiles: vi.fn(),
   syncCreateBackup: vi.fn(),
   writeHarnessFile: vi.fn(),
@@ -65,11 +70,6 @@ vi.mock("@tauri-apps/api/path", () => ({
   homeDir: vi.fn(() => Promise.resolve("/home/user")),
 }));
 
-// Tauri dialog used by openDirectoryPicker (dynamic import — mock the module)
-vi.mock("@tauri-apps/plugin-dialog", () => ({
-  open: vi.fn(),
-}));
-
 // ── Helpers ────────────────────────────────────────────────────
 
 function renderPage() {
@@ -88,6 +88,7 @@ describe("SyncPage", () => {
     mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null });
     mockSyncFileExists.mockResolvedValue(false);
     mockSyncListBackups.mockResolvedValue([]);
+    mockGrantProjectScope.mockResolvedValue(undefined);
   });
 
   it("renders without crashing", async () => {
@@ -108,15 +109,33 @@ describe("SyncPage", () => {
     });
   });
 
-  it("renders empty state when readHarnessFile throws", async () => {
-    mockReadHarnessFile.mockRejectedValue(new Error("command not found"));
+  it("shows the empty state and Create harness.yaml when the file is absent", async () => {
+    mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null });
 
     renderPage();
 
-    // Falls back to empty state gracefully
-    await waitFor(() => {
-      expect(screen.getByText(/No harness\.yaml found/i)).toBeInTheDocument();
-    });
+    expect(await screen.findByText("No harness.yaml found")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Create harness.yaml" })).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("says harness.yaml couldn't be read, not that it is missing, and Retry reads it again (AC-20)", async () => {
+    mockReadHarnessFile
+      .mockRejectedValueOnce(new Error("permission denied"))
+      .mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.claude/harness.yaml" });
+
+    renderPage();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't read harness.yaml");
+    expect(screen.getByText("permission denied")).not.toBeVisible();
+    // A failed read is not a missing file: no false empty state.
+    expect(screen.queryByText("No harness.yaml found")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Create harness.yaml" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(await screen.findByText("/home/user/.claude/harness.yaml")).toBeInTheDocument();
+    expect(mockReadHarnessFile).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("seeds target selection from detection with compile surfaces only", async () => {
@@ -136,12 +155,9 @@ describe("SyncPage", () => {
       warnings: [],
     } as never);
 
+    setCurrentProjectDir("/repo/with-pi");
     renderPage();
 
-    const dirInput = await screen.findByPlaceholderText("~/repos/my-project");
-    fireEvent.change(dirInput, { target: { value: "/repo/with-pi" } });
-
-    // Debounced (300ms) validation + detection
     await waitFor(() => {
       expect(screen.getByText(/Directory found/i)).toBeInTheDocument();
     }, { timeout: 3000 });
@@ -154,5 +170,250 @@ describe("SyncPage", () => {
     const targets = vi.mocked(compile).mock.calls[0][1] as string[];
     expect(targets).toContain("cursor");
     expect(targets).not.toContain("pi");
+  });
+
+  it("offers Preview, then Apply, in the palette in step with their buttons (AC-21)", async () => {
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.claude/harness.yaml" });
+    mockSyncFileExists.mockResolvedValue(true);
+    vi.mocked(detectPlatforms).mockResolvedValueOnce([
+      { platform: "cursor", indicators: [".cursor"], needsConfirmation: false },
+    ]);
+    vi.mocked(compile).mockResolvedValueOnce({
+      harnessName: "default",
+      targets: ["cursor"],
+      files: [{ platform: "cursor", path: ".cursor/mcp.json", action: "create", content: "{}" }],
+      warnings: [],
+    } as never);
+    setCurrentProjectDir("/repo/palette");
+    render(
+      <MemoryRouter>
+        <SyncPage />
+        <CommandPalette open onClose={() => {}} sections={[]} />
+      </MemoryRouter>,
+    );
+    const palette = () => within(screen.getByRole("dialog", { name: "Command palette" }));
+    await screen.findByText(/Directory found/i);
+    const preview = palette().getByRole("button", { name: "Preview compile changes" });
+    await waitFor(() => expect(preview).not.toHaveAttribute("aria-disabled"));
+    expect(palette().queryByRole("button", { name: /Apply/ })).not.toBeInTheDocument();
+
+    fireEvent.click(preview);
+    await waitFor(() => expect(compile).toHaveBeenCalledTimes(1));
+    expect(await screen.findByRole("button", { name: "Apply 1 file" })).toBeInTheDocument();
+    expect(palette().getByRole("button", { name: "Apply 1 compiled file" })).not.toHaveAttribute("aria-disabled");
+    // Preview is off outside the idle phase, button and command alike.
+    expect(palette().getByRole("button", { name: "Preview compile changes" })).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("a failed preview names what failed, raw error behind Details, and Retry previews again (AC-20)", async () => {
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.claude/harness.yaml" });
+    mockSyncFileExists.mockResolvedValue(true);
+    vi.mocked(detectPlatforms).mockResolvedValueOnce([
+      { platform: "cursor", indicators: [".cursor"], needsConfirmation: false },
+    ]);
+    const raw = "EACCES: permission denied, open '/repo/failing/.cursor/mcp.json'";
+    vi.mocked(compile)
+      .mockRejectedValueOnce(new Error(raw))
+      .mockResolvedValueOnce({ harnessName: "default", targets: ["cursor"], files: [], warnings: [] } as never);
+    setCurrentProjectDir("/repo/failing");
+    renderPage();
+    await screen.findByText(/Directory found/i);
+    const previewButton = screen.getByRole("button", { name: "Preview Changes" });
+    await waitFor(() => expect(previewButton).toBeEnabled());
+    fireEvent.click(previewButton);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't preview the compiled files");
+    expect(screen.getByText(raw)).not.toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(compile).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+  });
+
+  describe("a preview stands for the inputs it was compiled from", () => {
+    beforeEach(() => {
+      mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.claude/harness.yaml" });
+      mockSyncFileExists.mockResolvedValue(true);
+      vi.mocked(syncCreateBackup).mockResolvedValue({ id: "backup-1" } as never);
+      vi.mocked(syncWriteFiles).mockResolvedValue(undefined as never);
+    });
+
+    it("toggling a surface drops the preview, and a fresh preview applies the new set with a matching backup", async () => {
+      vi.mocked(detectPlatforms).mockResolvedValueOnce([
+        { platform: "claude-code", indicators: [".claude"], needsConfirmation: false },
+        { platform: "cursor", indicators: [".cursor"], needsConfirmation: false },
+      ]);
+      vi.mocked(compile)
+        .mockResolvedValueOnce({
+          harnessName: "default",
+          targets: ["claude-code", "cursor"],
+          files: [
+            { platform: "claude-code", path: ".mcp.json", action: "update", content: "{\"a\":1}" },
+            { platform: "cursor", path: ".cursor/mcp.json", action: "create", content: "{}" },
+          ],
+          warnings: [],
+        } as never)
+        .mockResolvedValueOnce({
+          harnessName: "default",
+          targets: ["cursor"],
+          files: [{ platform: "cursor", path: ".cursor/mcp.json", action: "create", content: "{}" }],
+          warnings: [],
+        } as never);
+      setCurrentProjectDir("/repo/stale");
+      render(
+        <MemoryRouter>
+          <SyncPage />
+          <CommandPalette open onClose={() => {}} sections={[]} />
+        </MemoryRouter>,
+      );
+      const palette = () => within(screen.getByRole("dialog", { name: "Command palette" }));
+      await screen.findByText(/Directory found/i);
+      const previewButton = screen.getByRole("button", { name: "Preview Changes" });
+      await waitFor(() => expect(previewButton).toBeEnabled());
+      fireEvent.click(previewButton);
+      expect(await screen.findByRole("button", { name: "Apply 2 files" })).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: /^claude-code/ }));
+
+      // The old preview is gone, button and command alike, and nothing was written.
+      expect(screen.queryByRole("button", { name: /^Apply/ })).not.toBeInTheDocument();
+      expect(palette().queryByRole("button", { name: /^Apply/ })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Preview Changes" })).toBeEnabled();
+      expect(syncCreateBackup).not.toHaveBeenCalled();
+      expect(syncWriteFiles).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole("button", { name: "Preview Changes" }));
+      await waitFor(() => expect(compile).toHaveBeenCalledTimes(2));
+      expect(vi.mocked(compile).mock.calls[1][1]).toEqual(["cursor"]);
+      fireEvent.click(await screen.findByRole("button", { name: "Apply 1 file" }));
+
+      await screen.findByText("Sync complete");
+      expect(syncCreateBackup).toHaveBeenCalledTimes(1);
+      expect(syncCreateBackup).toHaveBeenCalledWith("/repo/stale", "default", ["cursor"], []);
+      expect(syncWriteFiles).toHaveBeenCalledTimes(1);
+      expect(syncWriteFiles).toHaveBeenCalledWith("/repo/stale", [{ relativePath: ".cursor/mcp.json", content: "{}" }]);
+    });
+
+    it("drops a preview that finishes after the project changed", async () => {
+      const cursorOnly = [{ platform: "cursor" as const, indicators: [".cursor"], needsConfirmation: false }];
+      vi.mocked(detectPlatforms).mockResolvedValueOnce(cursorOnly).mockResolvedValueOnce(cursorOnly);
+      let finish: (value: unknown) => void = () => {};
+      vi.mocked(compile).mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }) as never);
+      setCurrentProjectDir("/repo/first");
+      renderPage();
+      await screen.findByText(/Directory found/i);
+      const previewButton = screen.getByRole("button", { name: "Preview Changes" });
+      await waitFor(() => expect(previewButton).toBeEnabled());
+      fireEvent.click(previewButton);
+      await waitFor(() => expect(compile).toHaveBeenCalledTimes(1));
+
+      act(() => setCurrentProjectDir("/repo/second"));
+      await waitFor(() => expect(mockSyncFileExists).toHaveBeenCalledWith("/repo/second", "."));
+      await act(async () => {
+        finish({
+          harnessName: "default",
+          targets: ["cursor"],
+          files: [{ platform: "cursor", path: ".cursor/mcp.json", action: "create", content: "{}" }],
+          warnings: [],
+        });
+      });
+
+      expect(screen.queryByRole("button", { name: /^Apply/ })).not.toBeInTheDocument();
+      await waitFor(() => expect(screen.getByRole("button", { name: "Preview Changes" })).toBeEnabled());
+    });
+
+    /** Previews and starts an Apply on /repo/first whose writes stay in
+     *  flight, then moves the title bar to /repo/second. */
+    async function applyThenSwitchProject() {
+      const cursorOnly = [{ platform: "cursor" as const, indicators: [".cursor"], needsConfirmation: false }];
+      vi.mocked(detectPlatforms).mockResolvedValueOnce(cursorOnly).mockResolvedValueOnce(cursorOnly);
+      vi.mocked(compile).mockResolvedValueOnce({
+        harnessName: "default",
+        targets: ["cursor"],
+        files: [{ platform: "cursor", path: ".cursor/mcp.json", action: "create", content: "{}" }],
+        warnings: [],
+      } as never);
+      let settle: { resolve: () => void; reject: (e: Error) => void } = { resolve: () => {}, reject: () => {} };
+      vi.mocked(syncWriteFiles).mockImplementationOnce(
+        () => new Promise((resolve, reject) => { settle = { resolve: () => resolve(undefined as never), reject }; }),
+      );
+      setCurrentProjectDir("/repo/first");
+      renderPage();
+      await screen.findByText(/Directory found/i);
+      const previewButton = screen.getByRole("button", { name: "Preview Changes" });
+      await waitFor(() => expect(previewButton).toBeEnabled());
+      fireEvent.click(previewButton);
+      fireEvent.click(await screen.findByRole("button", { name: "Apply 1 file" }));
+      await waitFor(() => expect(syncWriteFiles).toHaveBeenCalledWith("/repo/first", expect.anything()));
+
+      act(() => setCurrentProjectDir("/repo/second"));
+      await waitFor(() => expect(mockSyncFileExists).toHaveBeenCalledWith("/repo/second", "."));
+      await waitFor(() => expect(screen.getByRole("button", { name: "Preview Changes" })).toBeEnabled());
+      mockSyncListBackups.mockClear();
+      return settle;
+    }
+
+    it("does not show Sync complete on the new project when an old apply succeeds", async () => {
+      const settle = await applyThenSwitchProject();
+      await act(async () => { settle.resolve(); });
+
+      expect(screen.queryByText("Sync complete")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Preview Changes" })).toBeEnabled();
+      // The backup the old apply took still shows up in the list.
+      await waitFor(() => expect(mockSyncListBackups).toHaveBeenCalled());
+    });
+
+    it("leaves the new project's Preview usable when an old apply fails", async () => {
+      const settle = await applyThenSwitchProject();
+      await act(async () => { settle.reject(new Error("EACCES: /repo/first/.cursor")); });
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /^Apply/ })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Preview Changes" })).toBeEnabled();
+      await waitFor(() => expect(mockSyncListBackups).toHaveBeenCalled());
+    });
+  });
+
+  describe("project directory (AC-17)", () => {
+    beforeEach(() => {
+      mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.claude/harness.yaml" });
+      mockSyncFileExists.mockResolvedValue(true);
+    });
+
+    it("has no directory control of its own, and points to the title bar's Project menu", async () => {
+      renderPage();
+      await screen.findByTestId("compile-project-dir");
+      expect(screen.queryByPlaceholderText("~/repos/my-project")).not.toBeInTheDocument();
+      expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /choose folder/i })).not.toBeInTheDocument();
+      expect(screen.getByTestId("compile-project-dir")).toHaveTextContent(
+        "No project chosen. Choose one from the Project menu in the title bar.",
+      );
+    });
+
+    it("reads the project restored at launch, granting it before the bridge checks it", async () => {
+      // Seeded as a previous session left it: nothing in this session has
+      // granted the directory, so Compile must grant it itself.
+      localStorage.setItem("harness-kit-sync-recent-dirs", JSON.stringify(["/repo/restored"]));
+      renderPage();
+
+      await screen.findByText(/Directory found/i);
+      expect(screen.getByTestId("compile-project-dir")).toHaveTextContent("/repo/restored");
+      expect(mockGrantProjectScope).toHaveBeenCalledWith("/repo/restored");
+      expect(mockSyncFileExists).toHaveBeenCalledWith("/repo/restored", ".");
+      expect(mockGrantProjectScope.mock.invocationCallOrder[0]).toBeLessThan(
+        mockSyncFileExists.mock.invocationCallOrder[0],
+      );
+    });
+
+    it("rechecks when the title bar's project changes", async () => {
+      setCurrentProjectDir("/repo/one");
+      renderPage();
+      await screen.findByText(/Directory found/i);
+
+      act(() => setCurrentProjectDir("/repo/two"));
+      await waitFor(() => expect(mockSyncFileExists).toHaveBeenCalledWith("/repo/two", "."));
+      expect(screen.getByTestId("compile-project-dir")).toHaveTextContent("/repo/two");
+    });
   });
 });

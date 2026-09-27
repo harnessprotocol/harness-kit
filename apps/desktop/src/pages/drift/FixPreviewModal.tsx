@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { buildFixPlan, applyFix, type FixPlan } from "@harness-kit/core";
-import { Modal, Button, DiffViewer } from "@harness-kit/ui";
+import { Modal, Button, DiffViewer, ErrorNotice } from "@harness-kit/ui";
+import { errorDetails } from "../../lib/error-details";
 import type { ScopedDriftItem } from "./drift-data";
 import { lineDiff, collapseToHunks } from "./line-diff";
 
@@ -23,7 +24,7 @@ export function FixPreviewModal({ open, onClose, targets, onApplied }: FixPrevie
   const [plans, setPlans] = useState<{ scopeLabel: string; scopeRoot: string; fs: ScopedDriftItem["scope"]["fs"]; plan: FixPlan }[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ title: string; details: string } | null>(null);
 
   useEffect(() => {
     if (!open || targets.length === 0) {
@@ -49,7 +50,7 @@ export function FixPreviewModal({ open, onClose, targets, onApplied }: FixPrevie
         );
         if (!cancelled) setPlans(built.filter((b) => b.plan.changes.length > 0));
       } catch (err) {
-        if (!cancelled) setError(String(err));
+        if (!cancelled) setError({ title: "Couldn't build the fix preview", details: errorDetails(err) });
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -71,7 +72,7 @@ export function FixPreviewModal({ open, onClose, targets, onApplied }: FixPrevie
       onApplied();
       onClose();
     } catch (err) {
-      setError(String(err));
+      setError({ title: "Couldn't apply the fix", details: errorDetails(err) });
     } finally {
       setApplying(false);
     }
@@ -101,7 +102,8 @@ export function FixPreviewModal({ open, onClose, targets, onApplied }: FixPrevie
       }
     >
       {loading && <p style={{ fontSize: 12.5, color: "var(--fg-subtle)" }}>Building fix plan…</p>}
-      {error && <div className="hk-page-error">{error}</div>}
+      {/* No action of its own: the footer's Cancel and Apply are the way on. */}
+      {error && <ErrorNotice title={error.title} details={error.details} />}
       {!loading && plans && totalFiles === 0 && (
         <p style={{ fontSize: 12.5, color: "var(--fg-subtle)" }}>
           Nothing to fix — these items have no repairable changes.
