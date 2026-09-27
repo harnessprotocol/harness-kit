@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Wrench, Pencil, Check, X as XIcon } from "lucide-react";
-import { Button, Card, EmptyState } from "@harness-kit/ui";
+import { Button, Card, EmptyState, ErrorNotice } from "@harness-kit/ui";
 import { COMPILE_SURFACE_IDS, compile, detectPlatforms, isCompileSurface, parseHarness } from "@harness-kit/core";
 import type { CompileResult, DetectedPlatform, SurfaceId } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
@@ -17,6 +17,7 @@ import { SyncFsProvider } from "../../lib/sync-fs";
 import { grantProjectDir, useProjectDir } from "../../lib/project-dir";
 import SyncPreview from "./sync/SyncPreview";
 import { useRegisterCommands } from "../../lib/commands";
+import { errorDetails } from "../../lib/error-details";
 import BackupHistory from "./sync/BackupHistory";
 
 const ALL_PLATFORMS: readonly SurfaceId[] = COMPILE_SURFACE_IDS;
@@ -151,7 +152,7 @@ export default function SyncPage() {
       setPreviewResult(result);
       setPhase("previewed");
     } catch (e) {
-      setPreviewError(String(e));
+      setPreviewError(errorDetails(e));
       setPhase("idle");
     }
   }
@@ -172,7 +173,7 @@ export default function SyncPage() {
       const updated = await syncListBackups();
       setBackups(updated);
     } catch (e) {
-      setApplyError(String(e));
+      setApplyError(errorDetails(e));
       setPhase("previewed");
     }
   }
@@ -361,9 +362,11 @@ export default function SyncPage() {
 
         {/* Preview error */}
         {previewError && (
-          <Card>
-            <p style={{ margin: 0, fontSize: "12px", color: "var(--danger)" }}>{previewError}</p>
-          </Card>
+          <ErrorNotice
+            title="Couldn't preview the compiled files"
+            details={previewError}
+            action={{ label: "Retry", onClick: () => void handlePreview() }}
+          />
         )}
 
         {/* Preview panel */}
@@ -376,7 +379,13 @@ export default function SyncPage() {
               onApply={handleApply}
             />
             {applyError && (
-              <p style={{ fontSize: "12px", color: "var(--danger)", margin: "8px 0 0" }}>{applyError}</p>
+              <div style={{ marginTop: "8px" }}>
+                <ErrorNotice
+                  title="Couldn't write the compiled files"
+                  details={applyError}
+                  action={{ label: "Retry", onClick: () => void handleApply() }}
+                />
+              </div>
             )}
           </div>
         )}

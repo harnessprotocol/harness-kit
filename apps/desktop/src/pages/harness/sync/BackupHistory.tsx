@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { Button, Card } from "@harness-kit/ui";
+import { Button, Card, ErrorNotice } from "@harness-kit/ui";
 import type { BackupManifest } from "../../../lib/tauri";
 import { syncRestoreBackup } from "../../../lib/tauri";
+import { errorDetails } from "../../../lib/error-details";
 
 interface BackupHistoryProps {
   backups: BackupManifest[];
@@ -76,7 +77,7 @@ export default function BackupHistory({ backups, projectDir, onRestored }: Backu
       await syncRestoreBackup(confirmId);
       onRestored();
     } catch (e) {
-      setError(String(e));
+      setError(errorDetails(e));
     } finally {
       setRestoring(null);
     }
@@ -117,9 +118,10 @@ export default function BackupHistory({ backups, projectDir, onRestored }: Backu
 
       {expanded && (
         <>
+          {/* No action of its own: each row's Restore is the retry. */}
           {error && (
-            <div style={{ padding: "8px 14px", fontSize: "12px", color: "var(--danger)" }}>
-              {error}
+            <div style={{ padding: "8px 14px" }}>
+              <ErrorNotice title="Couldn't restore the backup" details={error} />
             </div>
           )}
 

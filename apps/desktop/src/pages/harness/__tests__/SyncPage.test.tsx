@@ -186,6 +186,31 @@ describe("SyncPage", () => {
     expect(palette().getByRole("button", { name: "Preview compile changes" })).toHaveAttribute("aria-disabled", "true");
   });
 
+  it("a failed preview names what failed, raw error behind Details, and Retry previews again (AC-20)", async () => {
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.claude/harness.yaml" });
+    mockSyncFileExists.mockResolvedValue(true);
+    vi.mocked(detectPlatforms).mockResolvedValueOnce([
+      { platform: "cursor", indicators: [".cursor"], needsConfirmation: false },
+    ]);
+    const raw = "EACCES: permission denied, open '/repo/failing/.cursor/mcp.json'";
+    vi.mocked(compile)
+      .mockRejectedValueOnce(new Error(raw))
+      .mockResolvedValueOnce({ harnessName: "default", targets: ["cursor"], files: [], warnings: [] } as never);
+    setCurrentProjectDir("/repo/failing");
+    renderPage();
+    await screen.findByText(/Directory found/i);
+    const previewButton = screen.getByRole("button", { name: "Preview Changes" });
+    await waitFor(() => expect(previewButton).toBeEnabled());
+    fireEvent.click(previewButton);
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't preview the compiled files");
+    expect(screen.getByText(raw)).not.toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    await waitFor(() => expect(compile).toHaveBeenCalledTimes(2));
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+  });
+
   describe("project directory (AC-17)", () => {
     beforeEach(() => {
       mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.claude/harness.yaml" });
