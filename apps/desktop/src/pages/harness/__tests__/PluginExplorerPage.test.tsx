@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor, act } from "@testing-library/react"
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import PluginExplorerPage from "../PluginExplorerPage";
 import { setConfirmSave } from "../../../lib/preferences";
+import { listInstalledPlugins, readPluginFile, readPluginTree } from "../../../lib/tauri";
 
 // Names are exactly what PluginExplorerPage.tsx and hooks/usePluginExplorer.ts import from lib/tauri.
 const mockSave = vi.fn(async (..._args: unknown[]) => undefined);
@@ -124,5 +125,66 @@ describe("PluginExplorerPage save path (AC-31)", () => {
     await act(async () => {});
     expect(mockSave).toHaveBeenCalledTimes(1);
     expect(screen.queryByText(/Save changes\?/)).not.toBeInTheDocument();
+  });
+});
+
+describe("PluginExplorerPage failures (AC-20)", () => {
+  beforeEach(() => {
+    mockSave.mockReset();
+    mockSave.mockResolvedValue(undefined);
+    setConfirmSave(false);
+  });
+
+  it("says the plugin's files couldn't be read, and Retry reads the tree again", async () => {
+    vi.mocked(readPluginTree).mockRejectedValueOnce(new Error("EACCES: /plugins/demo"));
+    renderPage();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't read the files in demo");
+    expect(screen.getByText("EACCES: /plugins/demo")).not.toBeVisible();
+    expect(screen.queryByText("plugin.json")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(await screen.findByText("plugin.json")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("says a file couldn't be read, and Reload reads it again", async () => {
+    vi.mocked(readPluginFile).mockRejectedValueOnce(new Error("EISDIR"));
+    renderPage();
+    fireEvent.click(await screen.findByText("run.sh"));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't read run.sh");
+    fireEvent.click(screen.getByRole("button", { name: "Reload" }));
+
+    expect(await screen.findByText("edit")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("keeps the editor and its edits when a save fails, and Retry save writes them", async () => {
+    mockSave.mockRejectedValueOnce(new Error("read-only file system"));
+    renderPage();
+    fireEvent.click(await screen.findByText("run.sh"));
+    fireEvent.click(await screen.findByText("edit"));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't save run.sh");
+    expect(screen.getByText("edit")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Reload" })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry save" }));
+    await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(2));
+    expect(mockSave).toHaveBeenLastCalledWith("/plugins/demo/run.sh", '{"changed":true}');
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+  });
+
+  it("says the plugin list couldn't be loaded rather than that the plugin is missing", async () => {
+    vi.mocked(listInstalledPlugins).mockRejectedValueOnce(new Error("bridge unavailable"));
+    renderPage();
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't load your installed plugins");
+    expect(screen.queryByText(/not found/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(await screen.findByText("plugin.json")).toBeInTheDocument();
   });
 });

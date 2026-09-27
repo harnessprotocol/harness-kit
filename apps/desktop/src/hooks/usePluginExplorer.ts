@@ -12,10 +12,22 @@ import { errorDetails } from "../lib/error-details";
 export interface PluginExplorerState {
   tree: FileTreeNode | null;
   loading: boolean;
-  /** The raw error, for an ErrorNotice's Details (AC-20). */
+  /** The file tree couldn't be read, raw, for an ErrorNotice's Details (AC-20). */
+  treeError: string | null;
+  /** What failed, in plain words; set whenever `treeError` is. */
+  treeErrorTitle: string | null;
+  /** Reads the file tree again. */
+  reloadTree: () => void;
+  /** The selected file couldn't be read, raw (AC-20). */
   error: string | null;
   /** What failed, in plain words; set whenever `error` is. */
   errorTitle: string | null;
+  /** Reads the selected file again. */
+  reloadFile: () => void;
+  /** The last save failed, raw. The edits stay in the editor. */
+  saveError: string | null;
+  /** What failed, in plain words; set whenever `saveError` is. */
+  saveErrorTitle: string | null;
   selectedPath: string | null;
   fileContent: string | null;
   fileLoading: boolean;
@@ -46,12 +58,13 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
   const pluginName = plugin?.name ?? "";
   const [tree, setTree] = useState<FileTreeNode | null>(null);
   const [loading, setLoading] = useState(false);
+  const [treeError, setTreeError] = useState<string | null>(null);
+  const [treeErrorTitle, setTreeErrorTitle] = useState<string | null>(null);
+  const [treeKey, setTreeKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [errorTitle, setErrorTitle] = useState<string | null>(null);
-  const fail = useCallback((title: string, e: unknown) => {
-    setErrorTitle(title);
-    setError(errorDetails(e));
-  }, []);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveErrorTitle, setSaveErrorTitle] = useState<string | null>(null);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
   const [fileContent, setFileContent] = useState<string | null>(null);
   const [originalContent, setOriginalContent] = useState<string | null>(null);
@@ -79,16 +92,24 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
       setSelectedPath(null);
       setFileContent(null);
       setOriginalContent(null);
+      setTreeError(null);
       setError(null);
+      setSaveError(null);
       return;
     }
     setLoading(true);
-    setError(null);
+    setTreeError(null);
     readPluginTree(plugin.source)
       .then(setTree)
-      .catch((e) => fail(`Couldn't read the files in ${pluginName || "this plugin"}`, e))
+      .catch((e) => {
+        setTree(null);
+        setTreeErrorTitle(`Couldn't read the files in ${pluginName || "this plugin"}`);
+        setTreeError(errorDetails(e));
+      })
       .finally(() => setLoading(false));
-  }, [open, plugin?.source]);
+  }, [open, plugin?.source, treeKey]);
+
+  const reloadTree = useCallback(() => setTreeKey((k) => k + 1), []);
 
   // Save current file before switching — uses refs to avoid stale closure
   const saveCurrent = useCallback(async () => {
@@ -115,6 +136,7 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
     currentPathRef.current = path;
     setFileLoading(true);
     setError(null);
+    setSaveError(null);
     try {
       const content = await readPluginFile(path);
       setFileContent(content);
@@ -122,11 +144,17 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
     } catch (e) {
       setFileContent(null);
       setOriginalContent(null);
-      fail(`Couldn't read ${fileLabel(path)}`, e);
+      setErrorTitle(`Couldn't read ${fileLabel(path)}`);
+      setError(errorDetails(e));
     } finally {
       setFileLoading(false);
     }
-  }, [saveCurrent, fail]);
+  }, [saveCurrent]);
+
+  // Only reachable from a failed read, so there are no edits to lose.
+  const reloadFile = useCallback(() => {
+    if (currentPathRef.current) void selectFile(currentPathRef.current);
+  }, [selectFile]);
 
   // Load history when file changes
   useEffect(() => {
@@ -148,6 +176,7 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
   const saveFile = useCallback(async () => {
     if (!selectedPath || fileContent === null) return;
     setSaving(true);
+    setSaveError(null);
     try {
       // Push previous content to history before overwriting
       if (originalContent !== null && pluginName) {
@@ -165,11 +194,12 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
           .catch(() => {});
       }
     } catch (e) {
-      fail(`Couldn't save ${fileLabel(selectedPath)}`, e);
+      setSaveErrorTitle(`Couldn't save ${fileLabel(selectedPath)}`);
+      setSaveError(errorDetails(e));
     } finally {
       setSaving(false);
     }
-  }, [selectedPath, fileContent, originalContent, pluginName, fail]);
+  }, [selectedPath, fileContent, originalContent, pluginName]);
 
   const requestSave = useCallback(() => {
     if (!selectedPath || fileContent === null || !dirty) return;
@@ -231,7 +261,8 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
   }, []);
 
   return {
-    tree, loading, error, errorTitle,
+    tree, loading, treeError, treeErrorTitle, reloadTree,
+    error, errorTitle, reloadFile, saveError, saveErrorTitle,
     selectedPath, fileContent, fileLoading,
     dirty, saving, savedRecently,
     confirmState, requestSave, confirmSave, cancelSave,
