@@ -42,3 +42,6 @@ export type { ToggleProps } from "./components/Toggle.js";
 
 export { CommandPalette } from "./components/CommandPalette.js";
 export type { CommandPaletteProps, Command } from "./components/CommandPalette.js";
+
+export { ErrorNotice } from "./components/ErrorNotice.js";
+export type { ErrorNoticeProps, ErrorNoticeAction, ErrorNoticeTone } from "./components/ErrorNotice.js";

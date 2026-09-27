@@ -724,6 +724,71 @@ button.hk-summary-cell[data-active="true"] .hk-summary-label { color: var(--acce
   font-size: 12.5px;
 }
 
+/* ── Error notice (AC-20, design D14) ── */
+/* A tinted surface, no outline: what failed, one action, raw error behind
+   Details. */
+.hk-error-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: var(--danger-light);
+  font-size: 12.5px;
+  color: var(--fg-base);
+  min-width: 0;
+}
+.hk-error-notice[data-tone="warning"] { background: var(--warning-light); }
+.hk-error-notice-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.hk-error-notice-icon { flex-shrink: 0; color: var(--danger); }
+.hk-error-notice[data-tone="warning"] .hk-error-notice-icon { color: var(--warning); }
+.hk-error-notice-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-weight: 550;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.hk-error-notice-details {
+  padding-left: 26px;
+  font-size: 11.5px;
+  color: var(--fg-muted);
+}
+.hk-error-notice-details > summary {
+  width: fit-content;
+  cursor: pointer;
+  border-radius: 4px;
+  user-select: none;
+}
+.hk-error-notice-details > summary:hover { color: var(--fg-base); }
+.hk-error-notice-details > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.hk-error-notice-details > pre {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  max-height: 200px;
+  overflow: auto;
+  border-radius: 6px;
+  background: var(--bg-surface);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--fg-muted);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+  cursor: text;
+}
+
 /* ── Onboarding (first run) ── */
 /* Full-bleed wizard shell — no app sidebar (DESIGN.md §6.3). Sequence:
    scan -> sprawl reveal -> harness.yaml preview -> confirm. Borderless,

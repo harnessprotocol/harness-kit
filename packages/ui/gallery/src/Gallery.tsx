@@ -22,6 +22,7 @@ import {
   Toast,
   ToastViewport,
   EmptyState,
+  ErrorNotice,
   Stat,
   Card,
   Input,
@@ -252,6 +253,19 @@ export function Gallery() {
             title="No harnesses configured yet"
             description="We read the config you already have — no authoring required."
             action={<Button variant="primary">Scan this machine</Button>}
+          />
+        </Section>
+
+        <Section title="Error notice">
+          <ErrorNotice
+            title="Couldn't scan this machine"
+            action={{ label: "Retry", onClick: () => {} }}
+            details={"EACCES: permission denied, open '/Users/me/.claude/settings.json'"}
+          />
+          <ErrorNotice
+            tone="warning"
+            title="Couldn't scan the project folder. Showing machine-only results."
+            details="ENOENT: no such file or directory, scandir '/tmp/gone'"
           />
         </Section>
 
