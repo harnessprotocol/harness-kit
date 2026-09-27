@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, act } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import DriftPage from "../DriftPage";
-import { setCurrentProjectDir } from "../../../lib/project-dir";
+import { PROJECT_CHANGED_EVENT } from "../../../lib/project-dir";
 
 // ── Mocks ──────────────────────────────────────────────────────
 
@@ -134,11 +134,20 @@ describe("DriftPage", () => {
     const scannedRoots = () =>
       mockDetectDrift.mock.calls.map((call) => (call[1] as { projectRoot: string }).projectRoot);
 
-    setCurrentProjectDir("/repo/first");
+    // Written straight to storage, as another window or a past session would:
+    // setCurrentProjectDir grants by itself, which would hide a page that
+    // stopped granting before it reads.
+    function storeProject(dir: string) {
+      localStorage.setItem("harness-kit-current-project", dir);
+      window.dispatchEvent(new Event(PROJECT_CHANGED_EVENT));
+    }
+
+    storeProject("/repo/first");
     renderPage();
     await waitFor(() => expect(scannedRoots()).toEqual(["/home/user", "/repo/first"]));
+    expect(mockGrantProjectScope).toHaveBeenCalledWith("/repo/first");
 
-    act(() => setCurrentProjectDir("/repo/second"));
+    act(() => storeProject("/repo/second"));
     await waitFor(() => expect(scannedRoots()).toContain("/repo/second"));
     expect(mockGrantProjectScope).toHaveBeenCalledWith("/repo/second");
   });

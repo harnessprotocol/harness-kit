@@ -8,7 +8,7 @@ import { applyCellActionViaTauri } from "../cell-actions";
 import { ToastProvider } from "../../../components/ToastProvider";
 import { buildDriftScopes, collectDrift } from "../../drift/drift-data";
 import { acknowledgeDriftItem } from "../../../lib/tauri";
-import { setCurrentProjectDir } from "../../../lib/project-dir";
+import { PROJECT_CHANGED_EVENT, setCurrentProjectDir } from "../../../lib/project-dir";
 
 // ── Mocks ──────────────────────────────────────────────────────
 
@@ -1178,7 +1178,12 @@ describe("MachinePage", () => {
       fireEvent.click(screen.getByTestId("machine-row-mcp-server:postgres"));
       await screen.findByTestId("machine-row-drawer");
 
-      act(() => setCurrentProjectDir("/repo/app"));
+      // Written straight to storage, as another window would: the setter
+      // grants by itself, which would hide a page that stopped granting.
+      act(() => {
+        localStorage.setItem("harness-kit-current-project", "/repo/app");
+        window.dispatchEvent(new Event(PROJECT_CHANGED_EVENT));
+      });
       await waitFor(() => expect(projectRoots()).toEqual([null, "/repo/app"]));
       expect(mockGrantProjectScope).toHaveBeenCalledWith("/repo/app");
       await waitFor(() => expect(screen.queryByTestId("machine-row-drawer")).not.toBeInTheDocument());
