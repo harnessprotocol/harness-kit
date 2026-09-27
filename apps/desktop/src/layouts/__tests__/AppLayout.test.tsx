@@ -211,12 +211,11 @@ describe("title-bar project selector (AC-17)", () => {
     expect(mockGrantProjectScope).not.toHaveBeenCalled();
   });
 
-  it("shows the restored project's folder name, full path in the tooltip, and grants it at launch", () => {
+  it("shows the restored project's folder name, full path in the tooltip", () => {
     localStorage.setItem("harness-kit-sync-recent-dirs", JSON.stringify(["/Users/me/repos/app"]));
     renderLayout();
     expect(selector()).toHaveTextContent("app");
     expect(selector()).toHaveAttribute("title", "/Users/me/repos/app");
-    expect(mockGrantProjectScope).toHaveBeenCalledWith("/Users/me/repos/app");
   });
 
   it("Choose folder… sets the project through lib/project-dir.ts", async () => {

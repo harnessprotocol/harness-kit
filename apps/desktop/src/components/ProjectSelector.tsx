@@ -2,8 +2,6 @@ import { useEffect, useId, useRef, useState } from "react";
 import { ChevronDown, Folder, FolderOpen, X } from "lucide-react";
 import {
   chooseProjectDir,
-  getCurrentProjectDir,
-  grantProjectDir,
   projectDirLabel,
   useProjectDir,
   useRecentProjectDirs,
@@ -15,7 +13,8 @@ const MAX_RECENT_SHOWN = 5;
 /**
  * The title bar's project selector (spec AC-17, design D9): the one place a
  * project directory is chosen. Machine, Drift and Profile › Compile read what
- * it writes through lib/project-dir.ts.
+ * it writes through lib/project-dir.ts. A project restored at launch is not
+ * granted here: each reader grants the directory before it reads it.
  *
  * A menu button: Enter/Space/ArrowDown open it on the first item, ArrowUp on
  * the last; arrows move, Home/End jump; Escape closes and returns focus to the
@@ -35,13 +34,6 @@ export function ProjectSelector() {
   const menuRef = useRef<HTMLDivElement>(null);
   const pendingFocus = useRef<"first" | "last">("first");
   const menuId = useId();
-
-  // The project restored at launch gets the same access grant a fresh choice
-  // does, so Compile works without another page having granted it first.
-  useEffect(() => {
-    const restored = getCurrentProjectDir();
-    if (restored) void grantProjectDir(restored);
-  }, []);
 
   function items(): HTMLElement[] {
     return Array.from(menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? []);

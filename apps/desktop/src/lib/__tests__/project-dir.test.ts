@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { waitFor } from "@testing-library/react";
 import {
   PROJECT_CHANGED_EVENT,
+  expandStoredTildes,
   getCurrentProjectDir,
   getRecentProjectDirs,
   setCurrentProjectDir,
@@ -11,10 +13,17 @@ vi.mock("../tauri", () => ({
   grantProjectScope: (...args: unknown[]) => mockGrantProjectScope(...args),
 }));
 
+const mockHomeDir = vi.fn();
+vi.mock("@tauri-apps/api/path", () => ({
+  homeDir: () => mockHomeDir(),
+}));
+
 describe("project-dir store (AC-17)", () => {
   beforeEach(() => {
     mockGrantProjectScope.mockReset();
     mockGrantProjectScope.mockResolvedValue(undefined);
+    mockHomeDir.mockReset();
+    mockHomeDir.mockResolvedValue("/Users/me");
   });
 
   afterEach(() => {
@@ -67,5 +76,62 @@ describe("project-dir store (AC-17)", () => {
     setCurrentProjectDir("/saved");
     expect(localStorage.getItem("harness-kit-current-project")).toBe("/saved");
     expect(getCurrentProjectDir()).toBe("/saved");
+  });
+
+  describe("`~` paths saved by older builds", () => {
+    it("restores a `~` recent head as the absolute path, persisted, and announces it", async () => {
+      localStorage.setItem(
+        "harness-kit-sync-recent-dirs",
+        JSON.stringify(["~/repos/app", "/abs/other", "~", "~bob/repo"]),
+      );
+      const heard = vi.fn();
+      window.addEventListener(PROJECT_CHANGED_EVENT, heard);
+
+      // Never handed out literally: plugin-fs would read `~/repos/app` as a
+      // relative path and every project store would read absent.
+      expect(getCurrentProjectDir()).toBeNull();
+      expect(getRecentProjectDirs()).toEqual(["/abs/other"]);
+
+      await waitFor(() => expect(getCurrentProjectDir()).toBe("/Users/me/repos/app"));
+      window.removeEventListener(PROJECT_CHANGED_EVENT, heard);
+      expect(heard).toHaveBeenCalled();
+      // `~bob/...` cannot be expanded here, so it is dropped.
+      expect(JSON.parse(localStorage.getItem("harness-kit-sync-recent-dirs")!)).toEqual([
+        "/Users/me/repos/app",
+        "/abs/other",
+        "/Users/me",
+      ]);
+    });
+
+    it("expands a `~` current project and keeps the key absolute", async () => {
+      localStorage.setItem("harness-kit-current-project", "~/repos/app");
+      await expandStoredTildes();
+      expect(localStorage.getItem("harness-kit-current-project")).toBe("/Users/me/repos/app");
+      expect(getCurrentProjectDir()).toBe("/Users/me/repos/app");
+    });
+
+    it("drops `~` entries when the home directory cannot be read", async () => {
+      mockHomeDir.mockRejectedValue(new Error("no home"));
+      localStorage.setItem("harness-kit-sync-recent-dirs", JSON.stringify(["~/repos/app", "/abs/other"]));
+      localStorage.setItem("harness-kit-current-project", "~/repos/app");
+      await expandStoredTildes();
+      expect(getRecentProjectDirs()).toEqual(["/abs/other"]);
+      expect(localStorage.getItem("harness-kit-current-project")).toBe("");
+      expect(getCurrentProjectDir()).toBeNull();
+    });
+
+    it("stores and grants a `~` choice as the absolute path", async () => {
+      setCurrentProjectDir("~/repos/picked");
+      await waitFor(() => expect(getCurrentProjectDir()).toBe("/Users/me/repos/picked"));
+      expect(getRecentProjectDirs()).toEqual(["/Users/me/repos/picked"]);
+      expect(mockGrantProjectScope.mock.calls).toEqual([["/Users/me/repos/picked"]]);
+    });
+
+    it("leaves absolute paths alone without asking for the home directory", async () => {
+      setCurrentProjectDir("/abs/app");
+      await expandStoredTildes();
+      expect(mockHomeDir).not.toHaveBeenCalled();
+      expect(getCurrentProjectDir()).toBe("/abs/app");
+    });
   });
 });
