@@ -5,6 +5,8 @@ import { buildDesktopPortabilitySnapshot, type DesktopPortabilitySnapshot } from
 import { getCurrentProjectDir } from "../../lib/project-dir";
 import { installationId } from "../../lib/installation-id";
 import { grantProjectScope } from "../../lib/tauri";
+import { errorDetails } from "../../lib/error-details";
+import { ErrorNotice } from "@harness-kit/ui";
 
 const AuditLogPage = lazy(() => import("../security/AuditLogPage"));
 
@@ -24,6 +26,8 @@ export function ActivityTab() {
   // personal-scope only. `error` is the snapshot build itself throwing.
   const [projectDegraded, setProjectDegraded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Bumped by the notice's Retry to build the snapshot again.
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -55,13 +59,13 @@ export function ActivityTab() {
       if (!cancelled) {
         setSnapshot(null);
         setProjectDegraded(false);
-        setError(String(err));
+        setError(errorDetails(err));
       }
     });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [attempt]);
 
   return (
     <div style={{ display: "grid", gap: 24 }}>
@@ -69,7 +73,13 @@ export function ActivityTab() {
         <AuditLogPage />
       </Suspense>
 
-      {error && <div className="hk-page-error">Ledger failed to build: {error}</div>}
+      {error && (
+        <ErrorNotice
+          title="Couldn't build the reconciliation ledger"
+          details={error}
+          action={{ label: "Retry", onClick: () => setAttempt((n) => n + 1) }}
+        />
+      )}
 
       {projectDegraded && (
         <div
