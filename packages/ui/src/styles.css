@@ -715,14 +715,6 @@ button.hk-summary-cell[data-active="true"] .hk-summary-label { color: var(--acce
   line-height: 1.5;
   max-width: 65ch;
 }
-.hk-page-error {
-  margin-bottom: 16px;
-  padding: 10px 14px;
-  border-radius: 8px;
-  background: var(--danger-light);
-  color: var(--danger);
-  font-size: 12.5px;
-}
 
 /* ── Error notice (AC-20, design D14) ── */
 /* A tinted surface, no outline: what failed, one action, raw error behind
