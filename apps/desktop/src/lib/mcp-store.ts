@@ -3,6 +3,7 @@ import { homeDir } from "@tauri-apps/api/path";
 import { exists, readTextFile } from "@tauri-apps/plugin-fs";
 import type { SurfaceDescriptor } from "@harness-kit/core";
 import { resolveDesktopDefinitions } from "./definitions";
+import { errorDetails } from "./error-details";
 import { detectDesktopPlatform } from "../pages/machine/machine-data";
 
 /**
@@ -79,10 +80,6 @@ export class McpStoreError extends Error {
   }
 }
 
-function rawMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
-}
-
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -139,7 +136,7 @@ async function readRaw(location: McpStoreLocation): Promise<string | null> {
     if (!(await exists(location.absolutePath))) return null;
     return await readTextFile(location.absolutePath);
   } catch (error) {
-    throw new McpStoreError(`Couldn't read ${location.displayPath}.`, "read", rawMessage(error));
+    throw new McpStoreError(`Couldn't read ${location.displayPath}.`, "read", errorDetails(error));
   }
 }
 
@@ -152,7 +149,7 @@ function parseDocument(location: McpStoreLocation, raw: string): Record<string, 
     throw new McpStoreError(
       `${location.displayPath} is not valid JSON, so its MCP servers can't be shown or edited here.`,
       "invalid",
-      rawMessage(error),
+      errorDetails(error),
     );
   }
   if (!isRecord(doc)) {
@@ -258,7 +255,7 @@ export async function writeMcpServers(
       files: [{ relativePath: location.relativePath, content, expectedSha256 }],
     });
   } catch (error) {
-    const detail = rawMessage(error);
+    const detail = errorDetails(error);
     if (detail.includes(CHANGED_ON_DISK)) {
       throw new McpStoreError(
         `${location.displayPath} changed while you were editing. Reload and try again.`,

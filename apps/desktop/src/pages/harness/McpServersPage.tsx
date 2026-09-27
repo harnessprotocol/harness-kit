@@ -1,6 +1,6 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 import { ExternalLink as ExternalLinkIcon, PlugZap, Pencil, Plus, Trash2 } from "lucide-react";
-import { Button, Card, EmptyState, Modal } from "@harness-kit/ui";
+import { Button, Card, EmptyState, ErrorNotice, Modal } from "@harness-kit/ui";
 import EditorToolbar from "../../components/file-explorer/EditorToolbar";
 import McpServerForm from "../../components/mcp/McpServerForm";
 import { type ClaudeMcpServer, isNetworkServer, inferTransport } from "../../lib/mcp-types";
@@ -13,6 +13,7 @@ import {
   type McpStoreLocation,
   type McpStoreSnapshot,
 } from "../../lib/mcp-store";
+import { errorDetails } from "../../lib/error-details";
 
 const MonacoEditor = lazy(() => import("../../components/plugin-explorer/MonacoEditor"));
 
@@ -258,15 +259,15 @@ function ServerCard({
 
 function toStoreError(error: unknown, fallback: string): McpStoreError {
   if (error instanceof McpStoreError) return error;
-  return new McpStoreError(fallback, "write", error instanceof Error ? error.message : String(error));
+  return new McpStoreError(fallback, "write", errorDetails(error));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-/** What failed, one action, and the raw error behind a Details disclosure. */
-function ErrorNotice({
+/** An McpStoreError as an ErrorNotice: its summary, one action, its raw detail. */
+function StoreErrorNotice({
   error,
   actionLabel,
   onAction,
@@ -275,20 +276,7 @@ function ErrorNotice({
   actionLabel: string;
   onAction: () => void;
 }) {
-  return (
-    <Card padding="sm" role="alert" style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-        <span style={{ flex: 1, fontSize: 12, color: "var(--danger)" }}>{error.summary}</span>
-        <Button size="sm" onClick={onAction}>{actionLabel}</Button>
-      </div>
-      {error.detail && (
-        <details style={{ fontSize: 11, color: "var(--fg-subtle)" }}>
-          <summary style={{ cursor: "pointer" }}>Details</summary>
-          <code style={{ fontFamily: MONO, wordBreak: "break-all" }}>{error.detail}</code>
-        </details>
-      )}
-    </Card>
-  );
+  return <ErrorNotice title={error.summary} details={error.detail} action={{ label: actionLabel, onClick: onAction }} />;
 }
 
 // ── Page ──────────────────────────────────────────────────────
@@ -384,7 +372,7 @@ export default function McpServersPage() {
       setMutationError(new McpStoreError(
         "That JSON doesn't parse, so nothing was saved.",
         "draft",
-        error instanceof Error ? error.message : String(error),
+        errorDetails(error),
       ));
       return;
     }
@@ -473,7 +461,7 @@ export default function McpServersPage() {
 
       {load.status === "error" && (
         <div style={{ padding: "16px 24px" }}>
-          <ErrorNotice error={load.error} actionLabel="Try again" onAction={() => void reload()} />
+          <StoreErrorNotice error={load.error} actionLabel="Try again" onAction={() => void reload()} />
         </div>
       )}
 
@@ -481,7 +469,7 @@ export default function McpServersPage() {
         <div style={{ flex: 1, overflow: "auto" }}>
           {mutationError && !form && !pendingDelete && (
             <div style={{ padding: "16px 24px 0" }}>
-              <ErrorNotice error={mutationError} actionLabel="Reload" onAction={() => void reload()} />
+              <StoreErrorNotice error={mutationError} actionLabel="Reload" onAction={() => void reload()} />
             </div>
           )}
           {entries.length === 0 ? (
@@ -523,7 +511,7 @@ export default function McpServersPage() {
             const action = errorAction(mutationError, () => void reload());
             return (
               <div style={{ padding: "8px 24px" }}>
-                <ErrorNotice error={mutationError} actionLabel={action.label} onAction={action.run} />
+                <StoreErrorNotice error={mutationError} actionLabel={action.label} onAction={action.run} />
               </div>
             );
           })()}
@@ -554,7 +542,7 @@ export default function McpServersPage() {
         existingNames={[...entries.map(([name]) => name), ...otherNames]}
         saving={saving}
         error={mutationError && form ? (
-          <ErrorNotice error={mutationError} actionLabel="Reload" onAction={() => { setForm(null); void reload(); }} />
+          <StoreErrorNotice error={mutationError} actionLabel="Reload" onAction={() => { setForm(null); void reload(); }} />
         ) : undefined}
         onSave={(name, server) => void handleFormSave(name, server)}
         onCancel={() => { setForm(null); setMutationError(null); }}
@@ -579,7 +567,7 @@ export default function McpServersPage() {
             sessions stop loading it.
           </span>
           {mutationError && pendingDelete && (
-            <ErrorNotice error={mutationError} actionLabel="Reload" onAction={() => { setPendingDelete(null); void reload(); }} />
+            <StoreErrorNotice error={mutationError} actionLabel="Reload" onAction={() => { setPendingDelete(null); void reload(); }} />
           )}
         </div>
       </Modal>

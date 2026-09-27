@@ -129,7 +129,14 @@ describe("McpServersPage", () => {
 
     expect(await screen.findByText("Couldn't read ~/.claude.json.")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
-    expect(screen.getByText("Details")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent("Couldn't read ~/.claude.json.");
+    // The raw error waits behind Details (AC-20), outside the live region so
+    // opening it does not re-announce the notice.
+    expect(screen.getByRole("alert")).not.toHaveTextContent("forbidden path");
+    const raw = screen.getByText("forbidden path: /home/user/.claude.json");
+    expect(raw).not.toBeVisible();
+    fireEvent.click(screen.getByText("Details"));
+    expect(raw).toBeVisible();
     // An unreadable file must not look like an empty one.
     expect(screen.queryByText("No MCP servers yet")).not.toBeInTheDocument();
   });
