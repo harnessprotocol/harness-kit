@@ -254,6 +254,8 @@ export default function PluginExplorerPage() {
           availableModes={availableModes}
           onViewModeChange={setViewMode}
           toolbarActions={toolbarActions}
+          // A failed save holds the user on the file; discarding lets them leave.
+          onDiscardChanges={explorer.revertFile}
         />
       )}
       collapsed={collapsed}

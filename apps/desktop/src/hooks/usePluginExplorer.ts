@@ -137,6 +137,7 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
   const selectFile = useCallback(async (path: string) => {
     // Auto-save the dirty file before switching. If that fails, stay on it
     // with the edits and the "Couldn't save" notice (Retry save).
+    // "Discard changes" beside that notice (revertFile) is the way out.
     if (!(await saveCurrent())) return;
 
     setSelectedPath(path);
@@ -233,9 +234,13 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
     setFileContent(content);
   }, []);
 
+  // Throws the edits away. This is the way out when a save keeps failing:
+  // with no edits left, switching files no longer needs a save.
   const revertFile = useCallback(() => {
     if (originalContent !== null) {
       setFileContent(originalContent);
+      setSaveError(null);
+      setSaveErrorTitle(null);
     }
   }, [originalContent]);
 

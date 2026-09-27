@@ -51,6 +51,8 @@ describe("EditorPane with useFileEditor (AC-20)", () => {
     expect(screen.getByTestId("editor")).toHaveValue('{"edited":true}');
     expect(screen.queryByRole("button", { name: "Reload" })).not.toBeInTheDocument();
     expect(mockRead).toHaveBeenCalledTimes(1);
+    // No discard handler was passed, so there is no way to throw the edits away here.
+    expect(screen.queryByRole("button", { name: "Discard changes" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Retry save" }));
 

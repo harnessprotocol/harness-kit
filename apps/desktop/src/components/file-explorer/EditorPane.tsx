@@ -1,5 +1,5 @@
 import { Suspense, lazy } from "react";
-import { ErrorNotice } from "@harness-kit/ui";
+import { Button, ErrorNotice } from "@harness-kit/ui";
 import type { FileEditorState } from "../../hooks/useFileEditor";
 import EditorToolbar from "./EditorToolbar";
 
@@ -50,6 +50,11 @@ export interface EditorPaneProps {
    *  used for loading/saving/language detection (e.g. "Instructions · Claude Code"
    *  instead of the raw "~/.claude/CLAUDE.md"). */
   displayName?: string;
+  /** Throws the unsaved edits away and clears the save error. When given, a
+   *  failed save with unsaved edits offers "Discard changes" beside the
+   *  notice. Pass it where a failed save would otherwise hold the user on
+   *  the file (Plugin Explorer won't switch files until the save succeeds). */
+  onDiscardChanges?: () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────
@@ -64,6 +69,7 @@ export default function EditorPane({
   toolbarActions,
   toolbarSubtitle,
   displayName,
+  onDiscardChanges,
 }: EditorPaneProps) {
   return (
     <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
@@ -80,14 +86,32 @@ export default function EditorPane({
       />
 
       {/* Save error: the editor stays below with the unsaved content. Reload
-          here would re-read the file and throw the edits away. */}
+          here would re-read the file and throw the edits away. Discarding them
+          is a separate, secondary choice, outside the notice. */}
       {filePath && editor.saveError && (
-        <div style={{ padding: "8px 16px 0", flexShrink: 0 }}>
-          <ErrorNotice
-            title={editor.saveErrorTitle ?? "Couldn't save this file"}
-            details={editor.saveError}
-            action={{ label: "Retry save", onClick: () => void editor.saveFile() }}
-          />
+        <div style={{
+          padding: "8px 16px 0", flexShrink: 0,
+          display: "flex", alignItems: "flex-start", gap: "8px",
+        }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <ErrorNotice
+              title={editor.saveErrorTitle ?? "Couldn't save this file"}
+              details={editor.saveError}
+              action={{ label: "Retry save", onClick: () => void editor.saveFile() }}
+            />
+          </div>
+          {onDiscardChanges && editor.isDirty && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onDiscardChanges}
+              // Level with Retry save inside the notice; muted, as the lesser choice.
+              style={{ marginTop: "10px", flexShrink: 0, color: "var(--fg-muted)" }}
+            >
+              Discard changes
+            </Button>
+          )}
         </div>
       )}
 

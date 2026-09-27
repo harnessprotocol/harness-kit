@@ -195,6 +195,38 @@ describe("PluginExplorerPage failures (AC-20)", () => {
     expect(mockSave).toHaveBeenLastCalledWith("/plugins/demo/run.sh", '{"changed":true}');
   });
 
+  it("offers Discard changes when saves keep failing, and after it the user can switch files", async () => {
+    // A read-only plugin dir: every save fails.
+    mockSave.mockRejectedValue(new Error("read-only file system"));
+    vi.mocked(readPluginFile).mockClear();
+    renderPage();
+    fireEvent.click(await screen.findByText("run.sh"));
+    fireEvent.click(await screen.findByText("edit"));
+    expect(screen.getByTitle("Unsaved changes")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("plugin.json"));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't save run.sh");
+
+    // Switching again fails the same way: the user stays on run.sh.
+    fireEvent.click(screen.getByText("plugin.json"));
+    await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(2));
+    await act(async () => {});
+    expect(vi.mocked(readPluginFile)).not.toHaveBeenCalledWith("/plugins/demo/plugin.json");
+    expect(screen.getByRole("alert")).toHaveTextContent("Couldn't save run.sh");
+
+    fireEvent.click(screen.getByRole("button", { name: "Discard changes" }));
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Discard changes" })).not.toBeInTheDocument();
+    // The edits are gone: the file is back to what was read.
+    expect(screen.queryByTitle("Unsaved changes")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("plugin.json"));
+    await waitFor(() =>
+      expect(vi.mocked(readPluginFile)).toHaveBeenCalledWith("/plugins/demo/plugin.json"));
+    // Nothing left to save, so no third write was tried.
+    expect(mockSave).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
   it("says the plugin list couldn't be loaded rather than that the plugin is missing", async () => {
     vi.mocked(listInstalledPlugins).mockRejectedValueOnce(new Error("bridge unavailable"));
     renderPage();
