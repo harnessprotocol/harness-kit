@@ -233,6 +233,11 @@
   outline-offset: 2px;
 }
 
+.hk-registry-notice {
+  flex-basis: 100%;
+  margin-bottom: 0;
+}
+
 .hk-device-code {
   padding: 7px 9px;
   border: 1px solid var(--border-base);

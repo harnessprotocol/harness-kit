@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { open } from "@tauri-apps/plugin-shell";
-import { Button, StatusChip } from "@harness-kit/ui";
+import { Button, ErrorNotice, StatusChip } from "@harness-kit/ui";
+import type { ErrorNoticeAction } from "@harness-kit/ui";
+import { errorDetails } from "../../lib/error-details";
 import type { InventorySnapshot } from "@harness-kit/core";
 
 const REGISTRY_URL_KEY = "harness-kit-registry-url";
@@ -20,6 +22,14 @@ interface Rollout {
   status: "scheduled" | "active" | "paused" | "completed" | "rolled-back";
   effectiveAt: string;
   releaseDigest: string;
+}
+
+/** A failed registry call, shown as an ErrorNotice (AC-20): never the raw
+ *  network text as the status line. */
+interface Failure {
+  title: string;
+  details: string;
+  action?: ErrorNoticeAction;
 }
 
 type EnrollmentStatus = "not-enrolled" | "authorizing" | "current" | "pending" | "paused" | "rolled-back" | "error";
@@ -48,8 +58,10 @@ export function RegistryEnrollment({ inventory }: { inventory: Omit<InventorySna
   const [userCode, setUserCode] = useState<string | null>(null);
   const [organizations, setOrganizations] = useState<Organization[]>([]);
   const [organizationId, setOrganizationId] = useState(() => localStorage.getItem(ORGANIZATION_KEY) ?? "");
+  const [failure, setFailure] = useState<Failure | null>(null);
 
   async function sync(activeToken: string, preferredOrganization = organizationId): Promise<void> {
+    setFailure(null);
     try {
       const available = await request<Organization[]>(registryUrl, "/v1/organizations", activeToken);
       setOrganizations(available);
@@ -89,10 +101,17 @@ export function RegistryEnrollment({ inventory }: { inventory: Omit<InventorySna
         sessionStorage.removeItem(REGISTRY_TOKEN_KEY);
         setToken(null);
         setStatus("not-enrolled");
+        setDetail("Connect this device to receive governed rollout assignments.");
+        // "Enroll this device" comes back on screen and is the next step.
+        setFailure({ title: "Your registry session ended", details: errorDetails(error) });
       } else {
         setStatus("error");
+        setFailure({
+          title: "Couldn't sync with the registry",
+          details: errorDetails(error),
+          action: { label: "Retry", onClick: () => void sync(activeToken, preferredOrganization) },
+        });
       }
-      setDetail(error instanceof Error ? error.message : "Registry sync failed");
     }
   }
 
@@ -104,6 +123,7 @@ export function RegistryEnrollment({ inventory }: { inventory: Omit<InventorySna
     localStorage.setItem(REGISTRY_URL_KEY, registryUrl);
     setStatus("authorizing");
     setDetail("Waiting for authorization in the web console…");
+    setFailure(null);
     try {
       const authorization = await request<DeviceAuthorization>(registryUrl, "/v1/auth/device", undefined, {
         clientName: "Harness Kit Desktop",
@@ -132,7 +152,11 @@ export function RegistryEnrollment({ inventory }: { inventory: Omit<InventorySna
       throw new Error("Device authorization expired before approval.");
     } catch (error) {
       setStatus("error");
-      setDetail(error instanceof Error ? error.message : "Device enrollment failed");
+      setUserCode(null);
+      setDetail("Check the registry URL, then enroll again.");
+      // No action on the notice: "Enroll this device" below is the retry, and
+      // the URL may need fixing first.
+      setFailure({ title: "Couldn't enroll this device", details: errorDetails(error) });
     }
   }
 
@@ -144,8 +168,16 @@ export function RegistryEnrollment({ inventory }: { inventory: Omit<InventorySna
     <div className="hk-registry-enrollment">
       <div className="hk-registry-status">
         <StatusChip variant={tone}>{status}</StatusChip>
-        <p>{detail}</p>
+        {!failure?.action && <p>{detail}</p>}
       </div>
+      {failure && (
+        <ErrorNotice
+          className="hk-registry-notice"
+          title={failure.title}
+          details={failure.details}
+          action={failure.action}
+        />
+      )}
       {organizations.length > 1 && (
         <label>
           Organization
@@ -174,7 +206,10 @@ export function RegistryEnrollment({ inventory }: { inventory: Omit<InventorySna
           </Button>
         </>
       )}
-      {token && <Button variant="ghost" size="sm" onClick={() => void sync(token)}>Refresh assignment</Button>}
+      {/* While a sync failure is up, its Retry is the one way to try again. */}
+      {token && !failure && (
+        <Button variant="ghost" size="sm" onClick={() => void sync(token)}>Refresh assignment</Button>
+      )}
     </div>
   );
 }
