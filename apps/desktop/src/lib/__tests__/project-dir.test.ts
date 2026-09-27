@@ -110,14 +110,35 @@ describe("project-dir store (AC-17)", () => {
       expect(getCurrentProjectDir()).toBe("/Users/me/repos/app");
     });
 
-    it("drops `~` entries when the home directory cannot be read", async () => {
+    it("hides but keeps `~` entries when the home directory cannot be read", async () => {
       mockHomeDir.mockRejectedValue(new Error("no home"));
       localStorage.setItem("harness-kit-sync-recent-dirs", JSON.stringify(["~/repos/app", "/abs/other"]));
       localStorage.setItem("harness-kit-current-project", "~/repos/app");
       await expandStoredTildes();
+      // Hidden for this session, never handed out literally...
       expect(getRecentProjectDirs()).toEqual(["/abs/other"]);
-      expect(localStorage.getItem("harness-kit-current-project")).toBe("");
-      expect(getCurrentProjectDir()).toBeNull();
+      expect(getCurrentProjectDir()).not.toBe("~/repos/app");
+      // ...but still stored, so a later launch can expand them.
+      expect(JSON.parse(localStorage.getItem("harness-kit-sync-recent-dirs")!)).toEqual([
+        "~/repos/app",
+        "/abs/other",
+      ]);
+      expect(localStorage.getItem("harness-kit-current-project")).toBe("~/repos/app");
+    });
+
+    it("keeps unexpanded `~` recents when a project is chosen before the home lookup returns", async () => {
+      let resolveHome!: (home: string) => void;
+      mockHomeDir.mockImplementation(() => new Promise((resolve) => (resolveHome = resolve)));
+      localStorage.setItem("harness-kit-sync-recent-dirs", JSON.stringify(["~/repos/app"]));
+      const expanding = expandStoredTildes();
+      setCurrentProjectDir("/abs/new");
+      expect(JSON.parse(localStorage.getItem("harness-kit-sync-recent-dirs")!)).toEqual([
+        "/abs/new",
+        "~/repos/app",
+      ]);
+      resolveHome("/Users/me");
+      await expanding;
+      expect(getRecentProjectDirs()).toEqual(["/abs/new", "/Users/me/repos/app"]);
     });
 
     it("stores and grants a `~` choice as the absolute path", async () => {

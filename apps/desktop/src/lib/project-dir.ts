@@ -104,9 +104,11 @@ function expandInBackground(): void {
 
 /**
  * Rewrite stored `~` paths as absolute ones, dropping any that cannot be
- * expanded (including when the home directory cannot be read). One run at a
- * time; storage is re-read after the home lookup so a choice made meanwhile
- * is kept. Announces the change when it wrote one.
+ * expanded against the home directory (e.g. `~bob/x`). When the home
+ * directory itself cannot be read, nothing is rewritten: the getters hide `~`
+ * entries for this session and a later launch retries. One run at a time;
+ * storage is re-read after the home lookup so a choice made meanwhile is
+ * kept. Announces the change when it wrote one.
  */
 export function expandStoredTildes(): Promise<void> {
   expanding ??= (async () => {
@@ -115,8 +117,9 @@ export function expandStoredTildes(): Promise<void> {
     try {
       home = await homeDir();
     } catch {
-      // No home directory: every `~` entry is dropped below.
+      return;
     }
+    if (!home) return;
     const expand = (dir: string) => expandTilde(dir, home);
     const recent = readRecent();
     const current = readCurrent();
@@ -158,7 +161,9 @@ export function setCurrentProjectDir(dir: string | null): void {
   }
   try {
     if (next) {
-      const recent = [next, ...getRecentProjectDirs().filter((d) => d !== next)].slice(0, MAX_RECENT);
+      // The raw list, `~` entries included: a choice made before they are
+      // expanded must not delete them.
+      const recent = [next, ...readRecent().filter((d) => d !== next)].slice(0, MAX_RECENT);
       localStorage.setItem(RECENT_DIRS_KEY, JSON.stringify(recent));
     }
     localStorage.setItem(CURRENT_KEY, next ?? "");

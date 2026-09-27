@@ -74,7 +74,9 @@ export function dismissImportStatus(): void {
 /**
  * Imports `paths`, queued behind any running batch. The Rust commands do the
  * validation (is it a directory, does it carry .claude-plugin/plugin.json, is
- * it already installed). Resolves when the batch these paths joined is done.
+ * it already installed). Starting a batch resolves when that batch is done;
+ * joining a running batch resolves at once (the running loop picks the paths
+ * up). Callers follow progress through the subscription, not this promise.
  */
 export async function enqueueImports(paths: string[]): Promise<void> {
   const running = batch;
