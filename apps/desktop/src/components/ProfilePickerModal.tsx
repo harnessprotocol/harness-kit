@@ -5,6 +5,8 @@ import { PROFILES } from "../lib/profiles";
 import type { HarnessProfile } from "../lib/profiles";
 import { listCustomProfiles, getCustomProfile, deleteCustomProfile } from "../lib/tauri";
 import type { CustomProfile } from "../lib/tauri";
+import { ErrorNotice } from "@harness-kit/ui";
+import { errorDetails } from "../lib/error-details";
 
 interface ProfilePickerModalProps {
   open: boolean;
@@ -17,8 +19,8 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
   const [customProfiles, setCustomProfiles] = useState<CustomProfile[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<{ id: string; details: string } | null>(null);
+  const [loadError, setLoadError] = useState<{ profile: CustomProfile; details: string } | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -39,7 +41,7 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
       await deleteCustomProfile(id);
       setCustomProfiles((prev) => prev.filter((p) => p.id !== id));
     } catch (err) {
-      setDeleteError(String(err));
+      setDeleteError({ id, details: errorDetails(err) });
     } finally {
       setDeletingId(null);
     }
@@ -52,7 +54,7 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
       const yaml = await getCustomProfile(p.id);
       onSelect({ id: p.id, name: p.name, description: p.description, icon: FileText, tags: [], yaml });
     } catch (err) {
-      setLoadError(String(err));
+      setLoadError({ profile: p, details: errorDetails(err) });
     } finally {
       setLoadingId(null);
     }
@@ -142,13 +144,17 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
             {/* Content */}
             <div style={{ overflowY: "auto", padding: "0 16px 16px" }}>
               {deleteError && (
-                <div style={{ margin: "10px 0 0", padding: "8px 12px", borderRadius: "6px", background: "var(--bg-surface)", border: "1px solid var(--danger)", fontSize: "11px", color: "var(--danger)" }}>
-                  Failed to delete profile: {deleteError}
+                <div style={{ marginTop: "10px" }}>
+                  <ErrorNotice title={`Couldn't delete the profile "${deleteError.id}"`} details={deleteError.details} />
                 </div>
               )}
               {loadError && (
-                <div style={{ margin: "10px 0 0", padding: "8px 12px", borderRadius: "6px", background: "var(--bg-surface)", border: "1px solid var(--danger)", fontSize: "11px", color: "var(--danger)" }}>
-                  Failed to load profile: {loadError}
+                <div style={{ marginTop: "10px" }}>
+                  <ErrorNotice
+                    title={`Couldn't open the profile "${loadError.profile.name}"`}
+                    details={loadError.details}
+                    action={{ label: "Retry", onClick: () => void handleCustomSelect(loadError.profile) }}
+                  />
                 </div>
               )}
               {/* Custom profiles section */}

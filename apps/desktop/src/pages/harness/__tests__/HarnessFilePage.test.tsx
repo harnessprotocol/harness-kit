@@ -127,11 +127,19 @@ describe("HarnessFilePage", () => {
     expect(mockWriteHarnessFile).toHaveBeenCalledWith('version: "1"\nmetadata:\n  name: second\n');
   });
 
-  it("shows error when readHarnessFile throws", async () => {
-    mockReadHarnessFile.mockRejectedValue(new Error("command not found"));
+  it("says harness.yaml couldn't be read, raw error behind Details, and Retry reads it again (AC-20)", async () => {
+    mockReadHarnessFile
+      .mockRejectedValueOnce(new Error("command not found"))
+      .mockResolvedValue({ found: false, content: null, path: null });
     renderPage();
-    await waitFor(() => {
-      expect(screen.getByText(/command not found/i)).toBeInTheDocument();
-    });
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't read harness.yaml");
+    expect(screen.getByText("command not found")).not.toBeVisible();
+    fireEvent.click(screen.getByText("Details"));
+    expect(screen.getByText("command not found")).toBeVisible();
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(await screen.findByText("No harness.yaml found")).toBeInTheDocument();
+    expect(mockReadHarnessFile).toHaveBeenCalledTimes(2);
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });
