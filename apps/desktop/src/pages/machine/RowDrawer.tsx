@@ -47,10 +47,12 @@ export function RowDrawer({ row, diffs, gaps, surfaceOrder, onClose, onApplied }
     ([, cell]) => cell.status === "present",
   );
 
-  // Escape closes the drawer.
+  // Escape closes the drawer, unless something above it (the title-bar
+  // project menu, which stays usable while the drawer is open) already
+  // handled that Escape.
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape" && !event.defaultPrevented) onClose();
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);

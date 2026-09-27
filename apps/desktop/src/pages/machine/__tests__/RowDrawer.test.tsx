@@ -174,3 +174,20 @@ describe("RowDrawer apply never runs a stale plan", () => {
     expect(screen.getByRole("button", { name: "Copy CLI command" })).toBeEnabled();
   });
 });
+
+describe("RowDrawer Escape", () => {
+  it("closes on Escape, but not on an Escape something above it already handled", () => {
+    const onClose = vi.fn();
+    render(
+      <RowDrawer row={makeRow()} diffs={[]} gaps={[]} surfaceOrder={SURFACE_ORDER} onClose={onClose} />,
+    );
+    // The title-bar project menu handles its own Escape with preventDefault.
+    const handled = new KeyboardEvent("keydown", { key: "Escape", cancelable: true });
+    handled.preventDefault();
+    window.dispatchEvent(handled);
+    expect(onClose).not.toHaveBeenCalled();
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", cancelable: true }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});
