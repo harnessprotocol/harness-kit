@@ -38,13 +38,16 @@ fn current_platform() -> &'static str {
     }
 }
 
-/// HarnessKit's own state directory: preimage backups and transaction
-/// manifests. Backups are verbatim copies of config stores, and ~/.claude.json
-/// carries MCP env values (tokens), so everything written here is private to
-/// the user regardless of umask. Unix only: on Windows the modes are not
-/// applied and privacy rests on the profile directory's ACL.
+/// The transaction engine's preimage backups and manifests, and NOTHING else
+/// under ~/.harness — that directory also holds harness.db, harness.yaml,
+/// device.json and exchange/identity.key, which this webview-reachable
+/// command must not be able to touch. Scoped to backups/ rather than the
+/// whole state directory. Backups are verbatim copies of config stores, and
+/// ~/.claude.json carries MCP env values (tokens), so everything written here
+/// is private to the user regardless of umask. Unix only: on Windows the
+/// modes are not applied and privacy rests on the profile directory's ACL.
 fn is_state_path(normalized: &str) -> bool {
-    normalized.starts_with(".harness/")
+    normalized.starts_with(".harness/backups/")
 }
 
 /// Whether a home-relative path is a config store the registry declares.
@@ -65,10 +68,11 @@ pub(crate) fn is_declared_store(relative: &str) -> bool {
     {
         return false;
     }
-    // HarnessKit's own state directory. The transaction engine writes preimage
-    // backups and its manifest here before touching any config file, so a
-    // command that refused them would make rollback impossible — which is the
-    // whole point of routing desktop writes through the engine.
+    // The transaction engine's own backups and manifest, scoped to that one
+    // subtree (see is_state_path). The engine writes them here before touching
+    // any config file, so a command that refused them would make rollback
+    // impossible — which is the whole point of routing desktop writes through
+    // the engine.
     if is_state_path(&normalized) {
         return true;
     }
@@ -488,6 +492,17 @@ mod tests {
     }
 
     #[test]
+    fn rejects_the_rest_of_the_state_directory() {
+        // Only backups/ is in scope. harness.db, harness.yaml, device.json and
+        // exchange/identity.key are written by their own Rust commands, never
+        // through this one, and must stay unreachable from the webview.
+        assert!(!is_declared_store(".harness/harness.db"));
+        assert!(!is_declared_store(".harness/harness.yaml"));
+        assert!(!is_declared_store(".harness/device.json"));
+        assert!(!is_declared_store(".harness/exchange/identity.key"));
+    }
+
+    #[test]
     fn rejects_a_store_the_engine_only_reads() {
         // Plugin state is enumerated, never written BY THE SURFACE ENGINE:
         // installing goes through the surface's own installer, and editing
@@ -534,13 +549,13 @@ mod tests {
         let home = tempfile::TempDir::new().unwrap();
         for path in [
             ".claude/skills/",
-            ".harness/",
-            ".harness/.",
+            ".harness/backups/",
+            ".harness/backups/.",
             ".claude//skills/x",
             ".claude/./skills/x",
-            ".harness//x",
-            ".harness/./x",
-            ".harness/a/./b",
+            ".harness/backups//x",
+            ".harness/backups/./x",
+            ".harness/backups/a/./b",
             ".claude.json/",
             ".claude/skills/x\0y",
         ] {
