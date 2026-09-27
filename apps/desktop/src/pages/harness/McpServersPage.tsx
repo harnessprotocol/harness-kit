@@ -306,7 +306,7 @@ export default function McpServersPage() {
       setLoad({ status: "ready", snapshot });
       setRawDraft(null);
     } catch (error) {
-      setLoad({ status: "error", error: toStoreError(error, "Couldn't load Claude Code's MCP servers.") });
+      setLoad({ status: "error", error: toStoreError(error, "Couldn't load Claude Code's MCP servers") });
     }
   }, []);
 
@@ -332,7 +332,7 @@ export default function McpServersPage() {
       await reload();
       return true;
     } catch (error) {
-      setMutationError(toStoreError(error, `Couldn't save ${snapshot.location.displayPath}.`));
+      setMutationError(toStoreError(error, `Couldn't save ${snapshot.location.displayPath}`));
       return false;
     } finally {
       setSaving(false);
@@ -440,6 +440,9 @@ export default function McpServersPage() {
         actions={snapshot && entries.length > 0 && viewMode === "servers" ? addButton : undefined}
       />
 
+      {/* Only once the store is resolved: "Reading …" beside a failure
+          notice reads as a scan still running. */}
+      {location && (
       <div style={{ padding: "8px 24px 0", fontSize: 11, color: "var(--fg-subtle)" }}>
         Reading{" "}
         <code data-testid="mcp-store-path" style={{ fontFamily: MONO, color: "var(--fg-muted)" }}>
@@ -447,6 +450,7 @@ export default function McpServersPage() {
         </code>
         {viewMode === "json" && ` · the ${rootKey} key only; other keys in the file keep their values`}
       </div>
+      )}
 
       {load.status === "loading" && (
         <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: 10 }} aria-busy="true">
@@ -461,7 +465,7 @@ export default function McpServersPage() {
 
       {load.status === "error" && (
         <div style={{ padding: "16px 24px" }}>
-          <StoreErrorNotice error={load.error} actionLabel="Try again" onAction={() => void reload()} />
+          <StoreErrorNotice error={load.error} actionLabel="Retry" onAction={() => void reload()} />
         </div>
       )}
 

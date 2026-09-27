@@ -128,7 +128,7 @@ describe("McpServersPage", () => {
     renderPage();
 
     expect(await screen.findByText("Couldn't read ~/.claude.json.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Try again" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("Couldn't read ~/.claude.json.");
     // The raw error waits behind Details (AC-20), outside the live region so
     // opening it does not re-announce the notice.
