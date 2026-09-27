@@ -739,6 +739,8 @@ button.hk-summary-cell[data-active="true"] .hk-summary-label { color: var(--acce
   color: var(--fg-base);
   min-width: 0;
 }
+/* Spacing is for what follows; a notice that ends its container adds none. */
+.hk-error-notice:last-child { margin-bottom: 0; }
 .hk-error-notice[data-tone="warning"] { background: var(--warning-light); }
 .hk-error-notice-row {
   display: flex;
