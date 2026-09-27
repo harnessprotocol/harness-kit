@@ -858,8 +858,39 @@ button.hk-summary-cell[data-active="true"] .hk-summary-label { color: var(--acce
   max-width: 48ch;
   margin: 0 auto;
 }
-.hk-onboard-scan-sub[data-error="true"] {
-  color: var(--danger);
+/* The failed-scan step's raw error, behind Details as in ErrorNotice (AC-20). */
+.hk-onboard-scan-details {
+  margin: 20px auto 0;
+  max-width: 60ch;
+  font-size: 11.5px;
+  color: var(--fg-muted);
+}
+.hk-onboard-scan-details > summary {
+  width: fit-content;
+  margin: 0 auto;
+  cursor: pointer;
+  border-radius: 4px;
+  user-select: none;
+}
+.hk-onboard-scan-details > summary:hover { color: var(--fg-base); }
+.hk-onboard-scan-details > summary:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.hk-onboard-scan-details > pre {
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  max-height: 200px;
+  overflow: auto;
+  border-radius: 6px;
+  background: var(--bg-surface);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
 }
 /* The failed-scan step reuses the lede and action row inside the centred
    scan block; both default to left alignment. */

@@ -5,6 +5,7 @@ import type { ImportProjectResult } from "@harness-kit/core";
 import { TauriFsProvider } from "../../lib/harness-fs";
 import { writeHarnessFile, grantProjectScope } from "../../lib/tauri";
 import { getCurrentProjectDir } from "../../lib/project-dir";
+import { errorDetails } from "../../lib/error-details";
 import { OnboardingFlow, type OnboardingStep } from "./OnboardingFlow";
 import { buildSprawlReveal, type SprawlReveal } from "./onboarding-data";
 
@@ -73,9 +74,8 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
         setResult(combined);
         setReveal(buildSprawlReveal(combined));
       } catch (err) {
-        // err.message, not String(err): the failed step prints this verbatim
-        // and "Error: EACCES…" reads as a stack line, not a sentence.
-        if (!cancelled) setScanError(err instanceof Error ? err.message : String(err));
+        // The failed step shows this behind Details (AC-20).
+        if (!cancelled) setScanError(errorDetails(err));
       }
     }
 
@@ -107,7 +107,7 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
       await writeHarnessFile(result.harnessYaml);
       onFinish();
     } catch (err) {
-      setWriteError(String(err));
+      setWriteError(errorDetails(err));
     } finally {
       setWriting(false);
     }
