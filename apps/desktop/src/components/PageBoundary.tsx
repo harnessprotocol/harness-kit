@@ -2,6 +2,21 @@ import React, { Suspense } from "react";
 import { ErrorNotice } from "@harness-kit/ui";
 import { errorDetails } from "../lib/error-details";
 
+// How a failed lazy-route import reads in each engine: Chromium, WebKit
+// (Tauri on macOS), Firefox.
+const CHUNK_LOAD_PATTERNS = [
+  /Failed to fetch dynamically imported module/i,
+  /Importing a module script failed/i,
+  /error loading dynamically imported module/i,
+];
+
+/** A page's code chunk failed to load. React.lazy caches the rejection, so
+ *  only a full reload fetches it again. */
+export function isChunkLoadError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : typeof error === "string" ? error : "";
+  return CHUNK_LOAD_PATTERNS.some((pattern) => pattern.test(message));
+}
+
 interface ErrorBoundaryProps {
   children: React.ReactNode;
 }
@@ -28,13 +43,19 @@ class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundarySta
 
   render() {
     if (this.state.error) {
-      // "Reload page" clears the boundary, which mounts the page afresh.
+      // "Reload page" clears the boundary, which mounts the page afresh. A
+      // failed chunk would re-throw at once from React.lazy's cache, so that
+      // one reloads the window instead.
+      const error = this.state.error;
+      const reload = isChunkLoadError(error)
+        ? () => window.location.reload()
+        : () => this.setState({ error: null });
       return (
         <div data-testid="page-boundary-error" className="hk-page">
           <ErrorNotice
             title="This page hit an error"
-            details={errorDetails(this.state.error)}
-            action={{ label: "Reload page", onClick: () => this.setState({ error: null }) }}
+            details={errorDetails(error)}
+            action={{ label: "Reload page", onClick: reload }}
           />
         </div>
       );
