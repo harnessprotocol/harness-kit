@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Wrench, Pencil, Check, X as XIcon, FolderOpen } from "lucide-react";
+import { Wrench, Pencil, Check, X as XIcon } from "lucide-react";
 import { Button, Card, EmptyState } from "@harness-kit/ui";
 import { COMPILE_SURFACE_IDS, compile, detectPlatforms, isCompileSurface, parseHarness } from "@harness-kit/core";
 import type { CompileResult, DetectedPlatform, SurfaceId } from "@harness-kit/core";
@@ -14,7 +14,7 @@ import {
 } from "../../lib/tauri";
 import type { BackupManifest } from "../../lib/tauri";
 import { SyncFsProvider } from "../../lib/sync-fs";
-import { chooseProjectDir, grantProjectDir, useProjectDir } from "../../lib/project-dir";
+import { grantProjectDir, useProjectDir } from "../../lib/project-dir";
 import SyncPreview from "./sync/SyncPreview";
 import BackupHistory from "./sync/BackupHistory";
 
@@ -247,24 +247,19 @@ export default function SyncPage() {
             {/* Project directory */}
             <div>
               <SectionLabel>Project Directory</SectionLabel>
-              <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-                <div
-                  data-testid="compile-project-dir"
-                  title={projectDir || undefined}
-                  style={{
-                    flex: 1, minWidth: 0, padding: "7px 10px", borderRadius: "6px",
-                    background: "var(--bg-elevated)", fontSize: "12px",
-                    fontFamily: projectDir ? "ui-monospace, monospace" : undefined,
-                    color: projectDir ? "var(--fg-base)" : "var(--fg-subtle)",
-                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                  }}
-                >
-                  {projectDir || "No project chosen. Choose one here or in the title bar."}
-                </div>
-                <Button variant="ghost" onClick={() => void chooseProjectDir()}>
-                  <FolderOpen size={12} strokeWidth={1.7} style={{ marginRight: 5 }} />
-                  Choose folder…
-                </Button>
+              {/* Read-only: the title bar's Project menu is the one place to choose it. */}
+              <div
+                data-testid="compile-project-dir"
+                title={projectDir || undefined}
+                style={{
+                  minWidth: 0, padding: "7px 10px", borderRadius: "6px",
+                  background: "var(--bg-elevated)", fontSize: "12px",
+                  fontFamily: projectDir ? "ui-monospace, monospace" : undefined,
+                  color: projectDir ? "var(--fg-base)" : "var(--fg-subtle)",
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}
+              >
+                {projectDir || "No project chosen. Choose one from the Project menu in the title bar."}
               </div>
 
               {/* Status */}

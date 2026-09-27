@@ -68,11 +68,6 @@ vi.mock("@tauri-apps/api/path", () => ({
   homeDir: vi.fn(() => Promise.resolve("/home/user")),
 }));
 
-// Tauri dialog used by chooseProjectDir (dynamic import — mock the module)
-vi.mock("@tauri-apps/plugin-dialog", () => ({
-  open: vi.fn(),
-}));
-
 // ── Helpers ────────────────────────────────────────────────────
 
 function renderPage() {
@@ -163,12 +158,15 @@ describe("SyncPage", () => {
       mockSyncFileExists.mockResolvedValue(true);
     });
 
-    it("has no directory field of its own", async () => {
+    it("has no directory control of its own, and points to the title bar's Project menu", async () => {
       renderPage();
       await screen.findByTestId("compile-project-dir");
       expect(screen.queryByPlaceholderText("~/repos/my-project")).not.toBeInTheDocument();
       expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
-      expect(screen.getByTestId("compile-project-dir")).toHaveTextContent(/No project chosen/);
+      expect(screen.queryByRole("button", { name: /choose folder/i })).not.toBeInTheDocument();
+      expect(screen.getByTestId("compile-project-dir")).toHaveTextContent(
+        "No project chosen. Choose one from the Project menu in the title bar.",
+      );
     });
 
     it("reads the project restored at launch, granting it before the bridge checks it", async () => {
