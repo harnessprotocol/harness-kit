@@ -2,6 +2,7 @@ import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react
 import { ExternalLink as ExternalLinkIcon, PlugZap, Pencil, Plus, Trash2 } from "lucide-react";
 import { Button, Card, EmptyState, ErrorNotice, Modal } from "@harness-kit/ui";
 import EditorToolbar from "../../components/file-explorer/EditorToolbar";
+import { useToast } from "../../components/ToastProvider";
 import McpServerForm from "../../components/mcp/McpServerForm";
 import { type ClaudeMcpServer, isNetworkServer, inferTransport } from "../../lib/mcp-types";
 import { lookupMcpServer, getAvatarColor, type McpServerMeta } from "../../lib/mcp-registry";
@@ -295,6 +296,7 @@ export default function McpServersPage() {
   const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [mutationError, setMutationError] = useState<McpStoreError | null>(null);
+  const toast = useToast();
   const [rawDraft, setRawDraft] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
@@ -328,7 +330,16 @@ export default function McpServersPage() {
     setSaving(true);
     setMutationError(null);
     try {
-      await writeMcpServers(snapshot.location, snapshot.entries, update);
+      const outcome = await writeMcpServers(snapshot.location, snapshot.entries, update);
+      // The change is applied and backed up either way; only the index that
+      // lists it for rollback failed, so say so rather than a bare success.
+      if (outcome?.ledgerError) {
+        toast({
+          title: "Saved",
+          message: `Not added to the rollback list (${outcome.ledgerError}). The backup is still on disk.`,
+          variant: "warning",
+        });
+      }
       await reload();
       return true;
     } catch (error) {

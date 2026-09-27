@@ -68,9 +68,24 @@ export async function assertNoSymlinkBoundary(fs: FsProvider, root: string, path
   }
 }
 
-async function atomicWrite(fs: FsProvider, path: string, content: string, suffix: string, mode?: number): Promise<void> {
+async function atomicWrite(
+  fs: FsProvider,
+  path: string,
+  content: string,
+  suffix: string,
+  mode?: number,
+  /** Content the file is expected to hold right now; null means absent. */
+  replaces?: string | null,
+): Promise<void> {
   const parent = fs.dirname(path);
   await fs.mkdir(parent, { recursive: true });
+  if (fs.atomicWriteFile) {
+    await fs.atomicWriteFile(path, content, {
+      ...(mode !== undefined ? { mode } : {}),
+      ...(replaces !== undefined ? { replaces } : {}),
+    });
+    return;
+  }
   const temporary = `${path}.harness-tmp-${suffix}`;
   await fs.writeFile(temporary, content);
   if (mode !== undefined && fs.setFileMode) await fs.setFileMode(temporary, mode);
@@ -201,7 +216,7 @@ export async function applyFileTransaction(
         await remove(fs, fullPath);
         removed.push(change.path);
       } else {
-        await atomicWrite(fs, fullPath, change.after, `${timestamp}-${index}`, originalModes.get(changeKey(change)));
+        await atomicWrite(fs, fullPath, change.after, `${timestamp}-${index}`, originalModes.get(changeKey(change)), change.before);
         written.push(change.path);
       }
       mutated.push(change);
@@ -218,7 +233,7 @@ export async function applyFileTransaction(
         if (change.before === null) {
           if (await fs.exists(fullPath)) await remove(fs, fullPath);
         } else {
-          await atomicWrite(fs, fullPath, change.before, `${timestamp}-rollback-${index}`, originalModes.get(changeKey(change)));
+          await atomicWrite(fs, fullPath, change.before, `${timestamp}-rollback-${index}`, originalModes.get(changeKey(change)), change.after);
         }
         rolledBack.push(change.path);
       } catch (rollbackError) {
