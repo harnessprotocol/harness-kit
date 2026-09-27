@@ -24,6 +24,7 @@ Reject any UI that contains:
 - Four-stat-cards-in-a-row as decoration. Show data the user acts on, or nothing.
 - **Inline hex or spacing literals in page code.** Every themed property comes from a token var through a `packages/ui` component. (Lint-enforced in `apps/desktop/src/pages`.)
 - Exclamation marks in app copy. Vague errors. System-jargon labels.
+- **A raw error as the message.** No page renders `String(err)` or an error's text inline. A failed scan, load, or write is an `ErrorNotice` (§7): what failed in plain words, one action, the raw text behind "Details" (ux-consolidation AC-20).
 
 ---
 
@@ -123,7 +124,7 @@ Headings get `text-wrap: balance`. Running prose (rare in-app) stays ≤ ~65ch.
 - **Motion:** 150–250ms ease-out, `transform`/`opacity` only. No spring/bounce. Respect `prefers-reduced-motion` (kill transitions/animations).
 - **Interaction:** `cursor:pointer` on everything clickable. Hover = background tint (`--hover-bg` or `--accent-light` on rows), **never a scale transform that shifts layout**. Visible focus ring: `2px solid --accent` (or `--accent-glow` box-shadow), offset 2px. ⌘K command palette backed by **one command registry**, `apps/desktop/src/lib/commands.ts` (spec AC-21, design D10). A page registers the actions it already shows as buttons with `useRegisterCommands(commands, deps)`; they are listed while the page is mounted and removed when it unmounts. The palette shows, in order: "This page" (the registered commands), the app-wide actions, then navigation derived from `nav.ts`. A registered command mirrors its button: present when the button is, and listed but disabled (`aria-disabled`, not runnable) when the button is disabled. Each `run` calls the page's latest handler, so the registry never re-registers on every render. Duplicate ids: the most recent registration wins until it unmounts, and a page command with an app-wide command's id replaces it while that page is open (Settings' "Toggle light / dark theme" goes through the Theme control, so the control follows). No page adds palette entries any other way.
 - **Empty states teach:** every empty surface states what it's for + why it's empty + one action button. Never a blank pane.
-- **Copy voice:** plain, specific, count-forward ("5 harnesses, 5 drifted", "Drift 3"). Buttons say what happens ("Recompile all" → toast "Recompiled 4 configs"). Errors: what broke + how to fix. No exclamation marks.
+- **Copy voice:** plain, specific, count-forward ("5 harnesses, 5 drifted", "Drift 3"). Buttons say what happens ("Recompile all" → toast "Recompiled 4 configs"). Errors: what broke + how to fix, as an `ErrorNotice` (§7). No exclamation marks.
 - **Labs:** entries carrying a `labs` key in `apps/desktop/src/nav.ts` (Comparator today) are hidden from the sidebar, the ⌘-number shortcuts and the command palette until enabled in Settings › Labs. The route itself stays mounted, so a direct navigation still renders it (ux-consolidation spec AC-8, design D4).
 
 ---
@@ -191,7 +192,17 @@ Re-skin existing data behavior onto `packages/ui` + these tokens. No new feature
 
 Build these token-driven, borderless-by-default (surface via `--bg-elevated`/`--bg-surface` + `--shadow-sm`, no neutral outline). Components live only in `packages/ui/src/components/`; the desktop-local `apps/desktop/src/components/ui/` set was removed (ux-consolidation AC-41) and must not return.
 
-- `Button` (primary=azure fill+white / ghost=elevated / danger), `Sidebar`+`NavItem`, `SummaryStrip`, `Matrix`/`Table`, `StatusChip` (success/warning/danger/subtle), `DiffViewer` (mono), `Modal` (one implementation, kills the 3 legacy modal styles), `Toast`, `EmptyState`, `Stat`, `Card`, form controls (input/select/toggle), `CommandPalette`.
+- `Button` (primary=azure fill+white / ghost=elevated / danger), `Sidebar`+`NavItem`, `SummaryStrip`, `Matrix`/`Table`, `StatusChip` (success/warning/danger/subtle), `DiffViewer` (mono), `Modal` (one implementation, kills the 3 legacy modal styles), `Toast`, `EmptyState`, `ErrorNotice`, `Stat`, `Card`, form controls (input/select/toggle), `CommandPalette`.
+
+**`ErrorNotice`** (spec AC-20, design D14) is the one way a failed scan, load, or write is shown:
+
+- `title`: what failed, in plain words ("Couldn't scan this machine", "Couldn't read harness.yaml"). Never the error text.
+- `action`: at most one `{ label, onClick }`, the natural next step: Retry for a scan or load, "Reload page" in `PageBoundary`, Dismiss for a one-off failure. Omit it when a button already on screen is the retry (a modal's Apply, a form's Save).
+- `details`: the raw error, from `errorDetails(err)` in `apps/desktop/src/lib/error-details.ts` (an Error's message, a string as is, an object's `message` or JSON; never `String(err)`). It sits in a native `<details>` under "Details", mono, scrollable, selectable, closed by default.
+- `tone`: `danger` (default) for a failure, `warning` for a partial result. A tinted surface (`--danger-light` / `--warning-light`), no outline.
+- Only the title is a live region (`role="alert"` for danger, `status` for warning). `role="alert"` is atomic, so a region that held the disclosure would re-announce when Details opens. Do not wrap a notice in another live region.
+
+A failed load never falls through to the empty state: "No drift detected" or "No MCP servers yet" after a failed read is a false statement. The onboarding scan-failed step is itself the notice (its heading, "Retry scan"), so it keeps its layout and puts the raw error behind the same "Details" disclosure. Toasts for failed one-off actions carry `errorDetails(err)` as their message.
 
 Every v2 page uses only these + token vars for themed properties. Theme toggle re-themes **every** page — no page may hardcode its own palette (the old Board mistake is banned).
 
