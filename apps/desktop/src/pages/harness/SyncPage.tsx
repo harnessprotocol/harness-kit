@@ -187,23 +187,28 @@ export default function SyncPage() {
   async function handleApply() {
     if (!preview || !harnessContent) return;
     const { result, targets } = preview;
+    // If the project changes mid-apply, the page has moved on to the new
+    // project: the old apply's outcome must not show there.
+    const generation = previewGeneration.current;
     setPhase("applying");
     setApplyError(null);
     try {
       const overwritePaths = result.files.filter((f) => f.action === "update").map((f) => f.path);
       const backup = await syncCreateBackup(projectDir, harnessName, targets, overwritePaths);
-      setAppliedBackupId(backup.id);
+      if (generation === previewGeneration.current) setAppliedBackupId(backup.id);
       const writes = result.files
         .filter((f) => f.action === "create" || f.action === "update")
         .map((f) => ({ relativePath: f.path, content: f.content }));
       await syncWriteFiles(projectDir, writes);
-      setPhase("applied");
-      const updated = await syncListBackups();
-      setBackups(updated);
+      if (generation === previewGeneration.current) setPhase("applied");
     } catch (e) {
-      setApplyError(errorDetails(e));
-      setPhase("previewed");
+      if (generation === previewGeneration.current) {
+        setApplyError(errorDetails(e));
+        setPhase("previewed");
+      }
     }
+    // A backup may exist even when the writes failed or the project changed.
+    syncListBackups().then(setBackups).catch(() => {});
   }
 
   function handleReset() {

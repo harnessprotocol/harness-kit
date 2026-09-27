@@ -321,6 +321,57 @@ describe("SyncPage", () => {
       expect(screen.queryByRole("button", { name: /^Apply/ })).not.toBeInTheDocument();
       await waitFor(() => expect(screen.getByRole("button", { name: "Preview Changes" })).toBeEnabled());
     });
+
+    /** Previews and starts an Apply on /repo/first whose writes stay in
+     *  flight, then moves the title bar to /repo/second. */
+    async function applyThenSwitchProject() {
+      const cursorOnly = [{ platform: "cursor" as const, indicators: [".cursor"], needsConfirmation: false }];
+      vi.mocked(detectPlatforms).mockResolvedValueOnce(cursorOnly).mockResolvedValueOnce(cursorOnly);
+      vi.mocked(compile).mockResolvedValueOnce({
+        harnessName: "default",
+        targets: ["cursor"],
+        files: [{ platform: "cursor", path: ".cursor/mcp.json", action: "create", content: "{}" }],
+        warnings: [],
+      } as never);
+      let settle: { resolve: () => void; reject: (e: Error) => void } = { resolve: () => {}, reject: () => {} };
+      vi.mocked(syncWriteFiles).mockImplementationOnce(
+        () => new Promise((resolve, reject) => { settle = { resolve: () => resolve(undefined as never), reject }; }),
+      );
+      setCurrentProjectDir("/repo/first");
+      renderPage();
+      await screen.findByText(/Directory found/i);
+      const previewButton = screen.getByRole("button", { name: "Preview Changes" });
+      await waitFor(() => expect(previewButton).toBeEnabled());
+      fireEvent.click(previewButton);
+      fireEvent.click(await screen.findByRole("button", { name: "Apply 1 file" }));
+      await waitFor(() => expect(syncWriteFiles).toHaveBeenCalledWith("/repo/first", expect.anything()));
+
+      act(() => setCurrentProjectDir("/repo/second"));
+      await waitFor(() => expect(mockSyncFileExists).toHaveBeenCalledWith("/repo/second", "."));
+      await waitFor(() => expect(screen.getByRole("button", { name: "Preview Changes" })).toBeEnabled());
+      mockSyncListBackups.mockClear();
+      return settle;
+    }
+
+    it("does not show Sync complete on the new project when an old apply succeeds", async () => {
+      const settle = await applyThenSwitchProject();
+      await act(async () => { settle.resolve(); });
+
+      expect(screen.queryByText("Sync complete")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Preview Changes" })).toBeEnabled();
+      // The backup the old apply took still shows up in the list.
+      await waitFor(() => expect(mockSyncListBackups).toHaveBeenCalled());
+    });
+
+    it("leaves the new project's Preview usable when an old apply fails", async () => {
+      const settle = await applyThenSwitchProject();
+      await act(async () => { settle.reject(new Error("EACCES: /repo/first/.cursor")); });
+
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: /^Apply/ })).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Preview Changes" })).toBeEnabled();
+      await waitFor(() => expect(mockSyncListBackups).toHaveBeenCalled());
+    });
   });
 
   describe("project directory (AC-17)", () => {
