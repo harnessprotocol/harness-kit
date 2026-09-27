@@ -44,10 +44,10 @@ Format: EARS (`WHEN … THE SYSTEM SHALL …`). Each criterion cites the audit f
 - [x] AC-14: WHEN the inventory contains gaps or diffs THE SYSTEM SHALL mark closable-gap cells and divergent cells distinctly from plain absent and plain present cells, and selecting the Gaps or Diffs cell of the summary strip SHALL filter the grid to the matching rows. *(M2, P2)*
 - [x] AC-15: WHEN the drawer offers a copy THE SYSTEM SHALL show the source surface and the target surface as two selectable controls, defaulting the source to the effective-digest winner and the target to the first closable gap. *(M3, P2)*
 - [x] AC-16: WHEN a direct apply succeeds THE SYSTEM SHALL rescan, update the grid, and show a toast naming the resource and the target surface. *(M4, P0 for the rescan, P2 for the toast)*
-- [ ] AC-17: WHEN a project directory is chosen THE SYSTEM SHALL offer one selector in the title bar, and Machine, the Drift section and Profile › Compile SHALL read the same value. *(M5, P2)*
+- [x] AC-17: WHEN a project directory is chosen THE SYSTEM SHALL offer one selector in the title bar, and Machine, the Drift section and Profile › Compile SHALL read the same value. *(M5, P2)*
 - [x] AC-18: WHEN Drift is shown THE SYSTEM SHALL present it as a view of Machine reached from a "Drift vs harness.yaml" strip cell and a view toggle, not a collapsed accordion, and acknowledge and fix SHALL continue to work as specified by cross-harness-config-management AC-37. *(P2)*
 - [x] AC-19: WHEN the drawer is open THE SYSTEM SHALL keep every grid column reachable (the content insets or the grid scrolls beside the drawer); the drawer SHALL NOT cover columns. *(m5, P2)*
-- [ ] AC-20: WHEN a scan or load fails THE SYSTEM SHALL say what failed and offer one action, with the raw error behind a "Details" disclosure; no page SHALL render a bare `String(err)`. *(m2, P2)*
+- [x] AC-20: WHEN a scan or load fails THE SYSTEM SHALL say what failed and offer one action, with the raw error behind a "Details" disclosure; no page SHALL render a bare `String(err)`. *(m2, P2)*
 - [ ] AC-21: WHEN a page has actions THE SYSTEM SHALL register them in the command registry so ⌘K lists them while that page is open, and the title bar SHALL show a ⌘K affordance. *(M9, P2)* *Amended 2026-09-27: Phase 2b registers commands on Machine, Profile, Profile › Compile, Plugins and Settings, and adds the title-bar ⌘K button. The remaining pages (Drift acknowledge and fix, MCP servers, Hooks, Secrets, Profile "Save as profile") register in Phase 4, so AC-21 stays open until then.*
 
 ### Profile (harness.yaml)
@@ -62,8 +62,8 @@ Format: EARS (`WHEN … THE SYSTEM SHALL …`). Each criterion cites the audit f
 
 - [ ] AC-27: WHEN a marketplace plugin detail renders THE SYSTEM SHALL offer "Install to …" with a surface picker that yields the same three action surfaces as the Machine drawer (direct apply where a driver exists, the CLI command, the agent prompt) and a copy control on the install command. *(B5, P3)*
 - [x] AC-28: WHEN the marketplace catalog renders THE SYSTEM SHALL state when the catalog was generated and SHALL NOT describe a bundled snapshot as a live registry. *(B5, P1)*
-- [ ] AC-29: WHEN a folder is dragged over the Plugins page THE SYSTEM SHALL either import it through the Tauri drag-drop event or show no drop overlay at all. *(M14, P2)*
-- [ ] AC-30: WHEN the MCP servers page renders THE SYSTEM SHALL read the store paths from the surface registry, SHALL show the teaching empty state when no store exists, and SHALL offer adding and editing a server through a form rather than only raw JSON. *(B3, P2)*
+- [x] AC-29: WHEN a folder is dragged over the Plugins page THE SYSTEM SHALL either import it through the Tauri drag-drop event or show no drop overlay at all. *(M14, P2)*
+- [x] AC-30: WHEN the MCP servers page renders THE SYSTEM SHALL read the store paths from the surface registry, SHALL show the teaching empty state when no store exists, and SHALL offer adding and editing a server through a form rather than only raw JSON. *(B3, P2)*
 
 ### Editors
 
