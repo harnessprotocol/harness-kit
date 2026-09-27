@@ -86,6 +86,25 @@ Format: EARS (`WHEN … THE SYSTEM SHALL …`). Each criterion cites the audit f
 - [x] AC-41: WHEN the release ships THE SYSTEM SHALL contain none of: the Agents page, Harness Resilience Profiles, FirstRunPermissionModal, ConfirmDialog, HarnessEditorModal, PluginExplorerModal, FileViewerPage, the `/harness/settings` page, `apps/desktop/src/components/ui/*`, the Board-era tokens, `--card-glass`, `--cat-purple`. *(M11, P0/P1)*
 - [x] AC-42: WHEN the Comparator results phase renders THE SYSTEM SHALL NOT show a rating derived from an exit code, and no copy SHALL promise "record results manually" unless a results form exists. *(B4, P1)*
 
+### Phase 2c: safe and truthful (added 2026-09-27)
+
+From the adversarial review of main at 047e79d1 ("Harness Kit Red Team"). These come before Phase 3. AC-50, AC-56 and AC-58 reach into `packages/core` or `src-tauri`, which the Boundaries list as ask-first: the plan names each seam and stops for approval.
+
+- [ ] AC-48: WHEN a plugin is uninstalled THE SYSTEM SHALL delete only that install record's own `installPath`, after checking it resolves under `~/.claude/plugins/cache/`, SHALL match the full `name@marketplace` key, and SHALL refuse empty, `.` and reserved names.
+- [ ] AC-49: WHEN a permissions preset is applied THE SYSTEM SHALL merge it into the existing rules, SHALL NOT remove a deny rule without listing it for confirmation, and SHALL preserve the key order of `settings.json`.
+- [ ] AC-50: WHEN any page saves a user config file THE SYSTEM SHALL write it atomically with a changed-on-disk check and a restorable backup, through the same path as `apply_surface_transaction`; no write path SHALL truncate a file in place.
+- [ ] AC-51: WHEN onboarding would write `harness.yaml` and one exists THE SYSTEM SHALL show the difference and back the file up before replacing it, or leave it untouched.
+- [ ] AC-52: WHEN the webview is granted capabilities THE SYSTEM SHALL grant only what production code calls (no shell execute, spawn, stdin or kill), SHALL bind project-scope grants to paths the native dialog returned, and SHALL keep every path-taking command inside its declared roots.
+- [ ] AC-53: WHEN Compile writes into a project THE SYSTEM SHALL refuse any path component that is a symbolic link, dangling or not.
+- [ ] AC-54: WHEN a secret is stored THE SYSTEM SHALL NOT pass its value on a command line.
+- [ ] AC-55: WHEN Drift, Profile, Compile or onboarding read `harness.yaml` THE SYSTEM SHALL use `~/.claude/harness.yaml` as the personal profile and the selected project's committed `harness.yaml` as that project's team baseline, and Drift SHALL distinguish "no harness.yaml", "could not read", "never compiled" and "clean".
+- [ ] AC-56: WHEN onboarding or "Generate from Claude Code setup" builds a `harness.yaml` THE SYSTEM SHALL derive it from the same machine inventory the grid shows.
+- [ ] AC-57: WHEN a grid cell is clicked THE SYSTEM SHALL open the drawer with that cell's surface as the target, SHALL show "+ copy" only where the drawer can apply, and a copy the app reports as done SHALL leave no gap in that cell.
+- [ ] AC-58: WHEN an MCP config entry carries a `url` THE SYSTEM SHALL read it as a remote server.
+- [ ] AC-59: WHEN the Machine grid renders THE SYSTEM SHALL hide surfaces that are not installed by default, with a control to show all of them.
+- [ ] AC-60: WHEN a webview IPC payload or a plugin permission changes THE SYSTEM SHALL fail CI if the Rust command no longer accepts that payload or the capability no longer grants that call, and a nightly job SHALL launch the real app on macOS.
+- [ ] AC-61: WHEN text renders on any surface THE SYSTEM SHALL meet WCAG AA contrast in both themes, every modal SHALL trap focus and return it on close, and the sidebar SHALL mark the current section on every route.
+
 ### Unchanged behavior
 
 - [x] AC-43: WHEN Drift acknowledge or fix runs THE SYSTEM SHALL CONTINUE TO use the shared `harness.db` acknowledgements and the dry-run preview modal. *(cross-harness AC-37)*
@@ -126,6 +145,12 @@ Format: EARS (`WHEN … THE SYSTEM SHALL …`). Each criterion cites the audit f
 | m7 header pattern | design D13 | P4 |
 | m8 native feel | AC-40 | P4 |
 | Design-system sweep | AC-36–AC-39, AC-41 | P0, P4 |
+| Red team: data loss (uninstall, presets, onboarding, editors) | AC-48–AC-51 | P2c |
+| Red team: webview trust boundary, symlinks, secrets | AC-52–AC-54 | P2c |
+| Red team: three engines, Drift, grid contradictions, remote MCP | AC-55–AC-58 | P2c |
+| Red team: not-installed columns | AC-59 | P2c |
+| Red team: test seams | AC-60 | P2c |
+| Red team: contrast, focus, sidebar | AC-61 | P2c |
 
 ## Out of Scope
 
@@ -142,9 +167,19 @@ Defaults are what the plan assumes until answered. Criteria tagged with the ques
 - Q1 (resolved). Comparator is kept, not deleted with Agents and the resilience profiles; its nav entry shows only with Settings › Labs on. The /comparator route itself is not guarded. Shipped in Phase 1.
 - Q2 (resolved). Fleet retires into Machine; /fleet redirects. Shipped in Phase 1.
 - [NEEDS CLARIFICATION: Q3. Keep the name "Machine" for the home (default) or rename it ("This computer", "Overview")? Default: keep, with the subtitle doing the explaining.]
-- [NEEDS CLARIFICATION: Q4. Team baseline: git-only, a committed harness.yaml read from a local path first (default), with URL fetch waiting on the signed-definitions transport? Default: yes.]
+- Q4 (resolved 2026-09-27). Team baseline is git-only: the selected project's committed `harness.yaml`, read from the local checkout; URL fetch waits on the signed-definitions transport. The personal profile stays at `~/.claude/harness.yaml`. See AC-55.
 - Q5 (resolved). The Machine drawer is the only write path to Codex and Cursor. The editor group is named "Claude Code"; future surfaces become sibling groups.
 - [NEEDS CLARIFICATION: Q6. Native menu bar in Phase 4 (default) or earlier?]
+
+### Decisions (2026-09-27)
+
+Taken after the adversarial review, on its recommendations:
+
+1. The webview is not trusted. The Rust side's guards are made real rather than the claims withdrawn (AC-52, AC-53, AC-54).
+2. `harness.yaml`: one personal file at `~/.claude/harness.yaml`, plus the selected project's committed `harness.yaml` as the team baseline; Profile follows the title-bar project (AC-55, Q4).
+3. Permission presets merge into existing rules and never silently drop a deny rule (AC-49).
+4. Surfaces that are not installed are hidden from the grid by default (AC-59).
+5. PR #400's change to `packages/core` (`atomicWriteFile` in the file-transaction engine) was approved when John started that task; recorded here because the Boundaries list it as ask-first.
 
 ## Dependencies
 
