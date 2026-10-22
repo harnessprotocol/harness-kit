@@ -24,7 +24,8 @@ At a high-leverage moment — after planning a non-trivial change, mid-way throu
 3. Articulates the work into a self-contained brief: the goal, the plan/diff/tests, key assumptions, and scope boundaries
 4. Spawns two **read-only** critics in parallel, one per model
 5. Synthesizes their findings — agreement signals high confidence, divergence is surfaced
-6. Reports back what mattered and acts on the blocking items
+6. Verifies each blocking finding against the real code, since agreement between critics does not prove it
+7. Reports back what mattered, names any finding that did not hold, and acts on the verified blocking items
 
 ## Why different models
 
@@ -35,6 +36,7 @@ A model that didn't produce the work is far more likely to see what's wrong with
 | Opus          | `sonnet` | `haiku`  |
 | Sonnet        | `opus`   | `haiku`  |
 | Haiku         | `opus`   | `sonnet` |
+| Any other tier (e.g. Fable) | `opus` | `sonnet` |
 
 ## Output Structure
 

@@ -37,6 +37,11 @@
 
 - Capability matrix now spans 11 surfaces × 10 resource kinds with `not-applicable` cells (e.g. pi has no MCP concept); website matrix page renders all 11 grouped by product family.
 - Desktop Tauri filesystem **read** scope widened to the user-level config paths the grid observes (`~/.claude.json`, Claude Desktop and VS Code application-support paths, `~/.copilot`, `~/.agents`); write scope unchanged.
+- **rubber-ducky: verify before applying.** A new step checks each blocking finding against the real code before anything changes, and reports findings that do not hold. The critic model table now covers other tiers and notes that aliases track the current generation.
+- **dependabot-sweep runs only when invoked by name** (`disable-model-invocation`), since it pushes and merges without further prompts. Removed the `when_to_use` and `effort` frontmatter keys, which plugins do not ship.
+- **orient finds its files from the git root.** It looks for `knowledge/` in the working directory, then the git root, and finds `research/` the same way.
+- **research:** `/research` classifies `source_type` with the same rules as `/refresh-research`, and the batch-mode step range in Common Mistakes is corrected.
+- **Plugin versions** — rubber-ducky 0.2.0, dependabot-sweep 0.2.0, orient 0.3.0, research 0.5.2.
 
 ### Fixed
 

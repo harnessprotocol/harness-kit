@@ -258,7 +258,7 @@ Extract KEY CONCEPTS. Don't invent content.
    - Tags: lowercase, hyphenated for multi-word (`vector-search`, `open-source`)
    - Target 3–8 tags per entry
    - Reuse existing tags before creating new ones — check INDEX.md tags column for vocabulary
-   - `source_type`: auto-classify from URL — `github.com` → `repo`; contains "docs" or `.io`/`.dev`/`.ai` → `docs`; `arxiv` or `.pdf` → `paper`; `blog`/`medium`/`substack` → `blog`; `youtube`/`youtu.be` → `video`; no URL → `internal`; else → `blog`
+   - `source_type`: auto-classify from URL, first match wins (same rules as `/refresh-research`): `github.com/{owner}/{repo}` → `repo`; contains "docs." or "/docs" or "/api" → `docs`; contains ".io"/".dev"/".ai" (if not a blog path) → `docs`; contains "blog"/"medium"/"substack" → `blog`; contains "arxiv"/".pdf" → `paper`; starts with "internal" or empty → `internal`; contains "youtube"/"youtu.be" → `video`; else → `blog`
 
 **Tag Taxonomy (reuse aggressively):**
 
@@ -387,7 +387,7 @@ See [subdirectory selection reference](${CLAUDE_SKILL_DIR}/references/subdirecto
 | Added duplicate row to INDEX.md | If synthesis existed, update the date on the existing row |
 | No Related Research section | Scan research/ after synthesis; omit only if truly no connections |
 | Didn't update INDEX.md | Always update research/INDEX.md after synthesis |
-| Processed batch without sequential steps | Each input gets full Steps 0–7; don't skip for subsequent inputs |
+| Processed batch without sequential steps | Each input gets full Steps 0–8; don't skip for subsequent inputs |
 | Used technical synthesis structure for non-technical content | Detect content type; use non-technical structure with Bridge section |
 | No Bridge to Technical Work section | Required for non-technical content; if no bridge exists, say so explicitly |
 | Missed cross-domain connection | Always scan across human ↔ technical divide, not just within-category |
