@@ -81,7 +81,7 @@ The skill enforces strict limits to keep orientation fast and focused:
 
 **Requirements:** Optional — [MCP Memory Server](https://github.com/anthropics/claude-code-memory) for graph search. Works without it using knowledge files and research index only.
 
-**Note:** This plugin assumes a specific project structure (`knowledge/`, `knowledge/journal/`, `research/INDEX.md`) and MCP Memory Server entity types (Desire, Tension, Evidence, etc.). Fork and adapt the SKILL.md if your project uses different conventions.
+**Note:** This plugin assumes a specific project structure (`knowledge/`, `knowledge/journal/`, `research/INDEX.md`) and MCP Memory Server entity types (Desire, Tension, Evidence, etc.). The skill looks for `knowledge/` in the current directory first, then in the git root, and reads `research/` from the same place. Fork and adapt the SKILL.md if your project uses different conventions.
 
 ## Design Notes
 
