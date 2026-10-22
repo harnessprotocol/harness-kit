@@ -121,7 +121,8 @@ inspection. Before you change anything:
 - **Verify each blocking or must-fix finding against the real code.** Open the file, trace the path,
   and confirm the failure occurs. For a plan review, check the finding against the existing code and
   constraints the plan relies on. Treat the claim as a hypothesis to disprove.
-- **Never bulk-apply critic output.** Fix findings one at a time, each after you have confirmed it.
+- **Never bulk-apply critic output.** When you act in step 7, fix findings one at a time, each after
+  you have confirmed it.
 - **Agreement between both critics raises confidence but does not prove a finding.** Both models can
   share the same blind spot, or the same wrong assumption from an ambiguous brief. A verified
   single-critic finding outranks an unverified consensus.
