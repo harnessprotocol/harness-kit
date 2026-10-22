@@ -1,6 +1,11 @@
 ---
 name: pr-sweep
-description: Use when you want to sweep all open pull requests across all repos, triage their status, run code reviews on unreviewed PRs, merge what's ready, fix quick blockers, and produce a full status report. Trigger when the user says "check my PRs", "close out open PRs", "what's the status of my PRs", "sweep my PRs", "PR sweep", "pull request sweep", or wants a cross-repo PR status report. Future: pairs with the loop skill for ongoing automated PR management.
+description: >-
+  Use when you want to sweep all open pull requests across all repos, triage their status, run code
+  reviews on unreviewed PRs, merge what's ready, fix quick blockers, and produce a full status
+  report. Trigger when the user says "check my PRs", "close out open PRs", "what's the status of my
+  PRs", "sweep my PRs", "PR sweep", "pull request sweep", or wants a cross-repo PR status report.
+  Future: pairs with the loop skill for ongoing automated PR management.
 ---
 
 # Pull Request Sweep

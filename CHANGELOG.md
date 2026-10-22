@@ -52,6 +52,7 @@
 - **Desktop sync bridge could write anywhere under `$HOME`.** `commands/sync.rs` writes through `std::fs`, bypassing the Tauri fs plugin scope, and never constrained its `project_dir` — so a caller passing `~/` could reach any dotfile through the ordinary relative-path writer. Path traversal was blocked correctly; the *root* was not. All five entry points now resolve through one guard that refuses the home directory and its ancestors.
 - **CLI printed a stack trace for every command failure.** `program.parse()` had no error handling, so any async command rejection surfaced as an unhandled rejection. Failures are now one line on stderr with exit 1.
 - CLI bundling preserves `node:` import prefixes (tsup's `removeNodeProtocol` default silently broke `node:sqlite` in dist while tests stayed green); a dist smoke test now runs the built artifact.
+- **pr-sweep and harness-import frontmatter now parses as YAML.** Each `description` contained `: ` in an unquoted scalar, which strict YAML parsers reject; both now use a folded block. pr-sweep 0.2.2, harness-share 0.4.1.
 
 ## 0.11.0 — 2026-07-27
 
