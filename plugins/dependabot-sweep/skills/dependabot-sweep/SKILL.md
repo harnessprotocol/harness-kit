@@ -1,6 +1,6 @@
 ---
 name: dependabot-sweep
-description: Use when the user wants to fix, address, clear, or resolve open Dependabot security/vulnerability alerts for a repository, end to end. Fetches open alerts via the gh CLI, fixes them per ecosystem (pnpm/npm overrides + lockfile regen, cargo update, pip/go/bundler), verifies with audit and frozen-lockfile installs, then branches → commits → pushes → opens a PR, and squash-merges once CI is green — escalating only when a fix carries breaking-change risk or can't be resolved. Trigger on "/dependabot-sweep", "address the dependabot alerts", "fix the security vulnerabilities", "clear the dependabot alerts", "handle the dependency vulnerabilities", "sweep dependabot".
+description: Use when the user wants to fix, address, clear, or resolve open Dependabot security/vulnerability alerts for a repository, end to end. Fetches open alerts via the gh CLI, fixes them per ecosystem (pnpm/npm overrides + lockfile regen, cargo update, pip/go/bundler), verifies with audit and frozen-lockfile installs, then branches → commits → pushes → opens a PR, and squash-merges once CI is green — escalating only when a fix carries breaking-change risk or can't be resolved. Invoke it by name with "/dependabot-sweep". It does not start from a plain-language request, because it pushes and merges without further prompts.
 disable-model-invocation: true
 ---
 

@@ -108,11 +108,25 @@ back. They do not change anything — you decide what to do with the feedback.
 
 ### 5. Synthesize the two critiques
 
-- **Where the two models agree** → high confidence; treat it as real.
+- **Where the two models agree** → high confidence; still verify it in step 6 before acting.
 - **Where they disagree** → flag it explicitly; use your own judgment, and investigate if it's blocking.
 - **Dedup** overlapping findings. Order by severity: blocking first.
 
-### 6. Decide and report back
+### 6. Verify before acting (do NOT skip)
+
+Critics can surface false positives, meaning findings that sound authoritative but do not hold
+against the actual code. A critic may flag a "blocking" issue that turns out to be wrong on
+inspection. Before you change anything:
+
+- **Verify each blocking or must-fix finding against the real code.** Open the file, trace the path,
+  and confirm the failure occurs. For a plan review, check the finding against the existing code and
+  constraints the plan relies on. Treat the claim as a hypothesis to disprove.
+- **Never bulk-apply critic output.** Fix findings one at a time, each after you have confirmed it.
+- **Agreement between both critics raises confidence but does not prove a finding.** Both models can
+  share the same blind spot, or the same wrong assumption from an ambiguous brief. A verified
+  single-critic finding outranks an unverified consensus.
+
+### 7. Decide and report back
 
 Summarize for the user what *mattered* and what you'll do about it — don't dump both critiques verbatim:
 
@@ -120,23 +134,9 @@ Summarize for the user what *mattered* and what you'll do about it — don't dum
 > it — so I'm adding a lock before I implement. Sonnet also suggested X (non-blocking); I'll skip that
 > for now."
 
-Then act on the blocking items (or let the user decide). The duck reviews; you remain the one who
-changes code.
-
-### 7. Verify before applying (do NOT skip)
-
-Critics can surface false positives, meaning findings that sound authoritative but do not hold
-against the actual code. A critic may flag a "blocking" issue that turns out to be wrong on
-inspection. Before you change anything:
-
-- **Verify each blocking or must-fix finding against the real code.** Open the file, trace the path,
-  and confirm the failure occurs. Treat the claim as a hypothesis to disprove.
-- **Never bulk-apply critic output.** Fix findings one at a time, each after you have confirmed it.
-- **Agreement between both critics raises confidence but does not prove a finding.** Both models can
-  share the same blind spot, or the same wrong assumption from an ambiguous brief. A verified
-  single-critic finding outranks an unverified consensus.
-- **Report a disproved finding.** Tell the user "the duck flagged X but it does not hold because Y"
-  instead of dropping it silently.
+Name any finding you disproved in step 6 ("the duck flagged X but it does not hold because Y")
+instead of dropping it silently. Then act on the verified blocking items (or let the user decide).
+The duck reviews; you remain the one who changes code.
 
 ## The critic instructions
 

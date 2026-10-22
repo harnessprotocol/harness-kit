@@ -258,7 +258,7 @@ Extract KEY CONCEPTS. Don't invent content.
    - Tags: lowercase, hyphenated for multi-word (`vector-search`, `open-source`)
    - Target 3–8 tags per entry
    - Reuse existing tags before creating new ones — check INDEX.md tags column for vocabulary
-   - `source_type`: auto-classify from URL, first match wins (same rules as `/refresh-research`): `github.com/{owner}/{repo}` → `repo`; contains "docs." or "/docs" or "/api" → `docs`; contains ".io"/".dev"/".ai" (if not a blog path) → `docs`; contains "blog"/"medium"/"substack" → `blog`; contains "arxiv"/".pdf" → `paper`; no URL or "internal" → `internal`; contains "youtube"/"youtu.be" → `video`; else → `blog`
+   - `source_type`: auto-classify from URL, first match wins (same rules as `/refresh-research`): `github.com/{owner}/{repo}` → `repo`; contains "docs." or "/docs" or "/api" → `docs`; contains ".io"/".dev"/".ai" (if not a blog path) → `docs`; contains "blog"/"medium"/"substack" → `blog`; contains "arxiv"/".pdf" → `paper`; starts with "internal" or empty → `internal`; contains "youtube"/"youtu.be" → `video`; else → `blog`
 
 **Tag Taxonomy (reuse aggressively):**
 

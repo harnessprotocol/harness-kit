@@ -66,7 +66,7 @@ When a word matches both a known entity type and a plausible keyword (e.g., "pro
 *"Does 'project' mean the entity type (graph nodes of type Project) or the topic keyword (anything related to projects)?"*
 Skip this check when context makes the intent obvious (e.g., "open tensions" → entity type).
 
-**Entity type reference:** Check `reference.md` in your knowledge directory (resolved in Step 3) for the current schema if unsure which entity types exist.
+**Entity type reference:** Check `reference.md` in your knowledge directory (resolve the base as described in Step 3) for the current schema if unsure which entity types exist.
 
 ---
 
