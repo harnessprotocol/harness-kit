@@ -35,4 +35,4 @@ Running the skill is consent for the full workflow — it does not prompt to pus
 /dependabot-sweep
 ```
 
-Also triggers on: "address the dependabot alerts", "fix the security vulnerabilities", "clear the dependabot alerts".
+The skill runs only when you invoke it by name. Claude does not start it from a plain request such as "fix the security vulnerabilities", because it pushes and merges without further prompts.

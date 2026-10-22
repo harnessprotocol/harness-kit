@@ -66,7 +66,7 @@ When a word matches both a known entity type and a plausible keyword (e.g., "pro
 *"Does 'project' mean the entity type (graph nodes of type Project) or the topic keyword (anything related to projects)?"*
 Skip this check when context makes the intent obvious (e.g., "open tensions" → entity type).
 
-**Entity type reference:** Check `knowledge/reference.md` for the current schema if unsure which entity types exist.
+**Entity type reference:** Check `reference.md` in your knowledge directory (resolved in Step 3) for the current schema if unsure which entity types exist.
 
 ---
 
@@ -105,9 +105,15 @@ If MCP Memory Server is not connected, skip this step entirely and note it in th
 
 ### Step 3: Scan Knowledge Files
 
-1. List the `knowledge/` directory to discover what files exist
+**Resolve base directory (use first match):**
+1. Check if `knowledge/` exists in the current working directory. If so, the working directory is the base.
+2. Run `git rev-parse --show-toplevel` to find the git root. If `knowledge/` exists there, the git root is the base.
+3. If neither exists, skip this step and note: *"Knowledge: no `knowledge/` directory found. Skipped."*
+
+Once the base directory is resolved, all paths below are relative to it:
+1. List `[base]/knowledge/` to discover what files exist
 2. Use the Grep tool to search discovered files for the topic keyword(s)
-3. For time qualifiers: list `knowledge/journal/` and read matching date entries (most recent first, per time qualifier definitions in Step 1)
+3. For time qualifiers: list `[base]/knowledge/journal/` and read matching date entries (most recent first, per time qualifier definitions in Step 1)
 4. Extract only the enclosing section (H2/H3 level) around each match — NOT entire files
 5. **Cap:** Aim for 3-5 files; extend beyond if the topic genuinely spans more
 6. **Cap:** Read at most 3 journal entries
@@ -115,18 +121,19 @@ If MCP Memory Server is not connected, skip this step entirely and note it in th
    - Technical/project topics → prefer `projects.md`, `evidence.md`, `development_log.md`
    - Conceptual/identity topics → prefer `core_principles.md`, `identity.md`, `procedures.md`
 
-If no `knowledge/` directory exists, skip this step and note it.
-
 ---
 
 ### Step 4: Scan Research Index (conditional)
 
-1. If `research/INDEX.md` exists, grep it for the topic keyword(s)
-2. Check if a `research/[topic]/` directory exists — if so, list its files
+Use the base directory resolved in Step 3. If Step 3 found no `knowledge/`, resolve the base the same
+way using `research/` instead: the current working directory first, then the git root.
+
+1. If `[base]/research/INDEX.md` exists, grep it for the topic keyword(s)
+2. Check if a `[base]/research/[topic]/` directory exists — if so, list its files
 3. **List only** — do NOT read synthesis files. Offer to read specific ones.
 4. **Cap:** Show up to 5 matching research entries
 
-If no `research/` directory or INDEX.md exists, skip this step.
+If no `research/` directory or INDEX.md exists at the base, skip this step.
 
 ---
 

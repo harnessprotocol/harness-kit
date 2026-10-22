@@ -52,3 +52,5 @@ Reach for the duck while the decision is still cheap to change; reach for `/revi
 
 - Read-only. The critics never modify files or run stateful commands — they review, you decide.
 - Skips trivial changes (one-line fixes, renames) so it doesn't slow down quick edits.
+- Critics can be wrong. Claude checks each blocking finding against the real code before changing
+  anything, and tells you when a finding does not hold.

@@ -1,15 +1,15 @@
 ---
 name: rubber-ducky
 description: >-
-  Use when you've planned a non-trivial change and are about to implement it, finished a complex
-  or multi-file piece of work, just wrote tests, or are stuck on repeated failures — and any time
-  the user says "rubber duck this", "rubber ducky", "get a second opinion", "sanity-check my plan",
-  "poke holes in this", "what am I missing", "critique my approach", "review this before I build it",
-  or "/rubber-ducky". Spawns independent read-only critics on DIFFERENT Claude models than the one
-  driving the session to catch blind spots, design flaws, and substantive bugs while course
-  corrections are still cheap. Skip it only for small, obvious, well-understood changes. Do NOT use
-  for reviewing a finished diff or PR — use /review for that; rubber-ducky pressure-tests your own
-  in-progress thinking before and during implementation.
+  Use when you've planned a non-trivial change and are about to implement it, finished a complex or
+  multi-file piece of work, just wrote tests, or are stuck on repeated failures or unexpected
+  results — and any time the user says "rubber duck this", "rubber ducky", "get a second opinion",
+  "sanity-check my plan", "poke holes in this", "what am I missing", "critique my approach", "review
+  this before I build it", or "/rubber-ducky". Spawns independent read-only critics on DIFFERENT
+  Claude models than the one driving the session to catch blind spots, design flaws, and substantive
+  bugs while course corrections are still cheap. Skip it only for small, obvious, well-understood
+  changes. Do NOT use for reviewing a finished diff or PR — use /review for that; rubber-ducky
+  pressure-tests your own in-progress thinking before and during implementation.
 ---
 
 # Rubber Ducky
@@ -71,14 +71,16 @@ continue.
 
 ### 2. Pick the two critic models
 
-You know your current session model from your environment (e.g. Opus, Sonnet, or Haiku). Select the
-**two model aliases the session is NOT using** from `{opus, sonnet, haiku}`:
+You know your current session model from your environment. Select the **two model aliases the
+session is NOT using** from `{opus, sonnet, haiku}`. Aliases resolve to the current generation of
+each tier, so never pin dated model IDs here.
 
 | Session model | Critic 1 | Critic 2 |
 |---------------|----------|----------|
-| Opus          | `sonnet` | `haiku`  |
-| Sonnet        | `opus`   | `haiku`  |
-| Haiku         | `opus`   | `sonnet` |
+| Opus-tier     | `sonnet` | `haiku`  |
+| Sonnet-tier   | `opus`   | `haiku`  |
+| Haiku-tier    | `opus`   | `sonnet` |
+| Any other tier (e.g. Fable) | `opus` | `sonnet` |
 
 Two reviewers on different models surface different failure modes; agreement between them is a strong
 signal, disagreement is worth flagging. If only one other model is available in this harness, run one
@@ -120,6 +122,21 @@ Summarize for the user what *mattered* and what you'll do about it — don't dum
 
 Then act on the blocking items (or let the user decide). The duck reviews; you remain the one who
 changes code.
+
+### 7. Verify before applying (do NOT skip)
+
+Critics can surface false positives, meaning findings that sound authoritative but do not hold
+against the actual code. A critic may flag a "blocking" issue that turns out to be wrong on
+inspection. Before you change anything:
+
+- **Verify each blocking or must-fix finding against the real code.** Open the file, trace the path,
+  and confirm the failure occurs. Treat the claim as a hypothesis to disprove.
+- **Never bulk-apply critic output.** Fix findings one at a time, each after you have confirmed it.
+- **Agreement between both critics raises confidence but does not prove a finding.** Both models can
+  share the same blind spot, or the same wrong assumption from an ambiguous brief. A verified
+  single-critic finding outranks an unverified consensus.
+- **Report a disproved finding.** Tell the user "the duck flagged X but it does not hold because Y"
+  instead of dropping it silently.
 
 ## The critic instructions
 
