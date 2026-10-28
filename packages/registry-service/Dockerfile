@@ -1,4 +1,4 @@
-FROM node:22-alpine AS build
+FROM node:25-alpine AS build
 RUN corepack enable
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
@@ -9,7 +9,7 @@ COPY packages/core packages/core
 COPY packages/registry-service packages/registry-service
 RUN pnpm --filter @harness-kit/core build && pnpm --filter @harness-kit/registry-service build
 
-FROM node:22-alpine
+FROM node:25-alpine
 RUN corepack enable
 WORKDIR /app
 COPY --from=build /app/node_modules ./node_modules
