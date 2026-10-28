@@ -1,12 +1,17 @@
 version: 2
 updates:
   # GitHub Actions — weekly is fine, these move slowly
+  # Every entry waits `cooldown` days after a release before Dependabot proposes it.
+  # Hijacked releases are usually caught and pulled within days, so the wait keeps them
+  # out. Security updates ignore the cooldown and the schedule.
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 2
+    cooldown:
+      default-days: 7
     groups:
       actions:
         patterns:
@@ -22,8 +27,11 @@ updates:
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "monday"
     open-pull-requests-limit: 3
+    cooldown:
+      default-days: 7
     ignore:
       - dependency-name: "*"
         update-types: ["version-update:semver-major"]
@@ -33,15 +41,24 @@ updates:
           - "*"
 
   # Rust / Tauri desktop
+  # Groups hold minor and patch only, so a major bump arrives as its own PR and
+  # never rides along inside an auto-merged group.
   - package-ecosystem: "cargo"
     directory: "/apps/desktop/src-tauri"
     schedule:
-      interval: "daily"
+      interval: "weekly"
+      day: "monday"
     open-pull-requests-limit: 2
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
     groups:
       cargo:
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   # Python evals — weekly, low churn
   - package-ecosystem: "pip"
@@ -50,7 +67,30 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 1
+    cooldown:
+      default-days: 7
+      semver-major-days: 14
     groups:
       pip:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Docker base images (both Dockerfiles use floating tags like node:22-alpine, so
+  # this only moves the pinned minor, e.g. nginx 1.29 -> 1.30). Monthly, one PR.
+  # The auto-merge workflow skips this ecosystem; a human merges these.
+  - package-ecosystem: "docker"
+    directories:
+      - "/apps/admin-console"
+      - "/packages/registry-service"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 1
+    cooldown:
+      default-days: 7
+    groups:
+      docker:
         patterns:
           - "*"

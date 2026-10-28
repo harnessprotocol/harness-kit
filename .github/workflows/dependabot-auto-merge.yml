@@ -7,6 +7,7 @@ name: Dependabot Auto-Merge
 # Scope is gated on the Dependabot update type:
 #   • patch + minor → auto-merge (squash, delete branch)
 #   • major         → left open, labelled `needs-manual-review`, flagged for a human
+#   • docker        → left open for a human; CI does not build the images
 #
 # Prerequisites (one-time):
 #   • Repo setting "Allow auto-merge" (allow_auto_merge) must be enabled.
@@ -27,17 +28,20 @@ concurrency:
 
 jobs:
   auto-merge:
-    if: github.actor == 'dependabot[bot]'
+    # Gate on the PR author, not github.actor. Commenting on a fork PR can make
+    # Dependabot force-push to it, which turns the bot into the "actor" of a PR it
+    # did not write and defeats an actor check. The author never changes.
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
     runs-on: ubuntu-latest
     steps:
       - name: Fetch Dependabot metadata
         id: meta
-        uses: dependabot/fetch-metadata@v3
+        uses: dependabot/fetch-metadata@25dd0e34f4fe68f24cc83900b1fe3fe149efef98 # v3.1.0
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Enable auto-merge for patch & minor updates
-        if: steps.meta.outputs.update-type == 'version-update:semver-patch' || steps.meta.outputs.update-type == 'version-update:semver-minor'
+        if: (steps.meta.outputs.update-type == 'version-update:semver-patch' || steps.meta.outputs.update-type == 'version-update:semver-minor') && steps.meta.outputs.package-ecosystem != 'docker'
         run: |
           gh pr merge --auto --squash --delete-branch "$PR_URL"
           gh pr comment "$PR_URL" --body \
