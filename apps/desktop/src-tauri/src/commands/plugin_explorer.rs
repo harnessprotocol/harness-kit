@@ -297,15 +297,21 @@ pub fn import_plugin_from_zip(zip_path: String) -> Result<super::plugins::Instal
         let mut file = archive.by_index(i)
             .map_err(|e| format!("Failed to read zip entry: {}", e))?;
 
-        let out_path = temp_dir.join(file.mangled_name());
+        let entry_name = file.name()
+            .map_err(|e| format!("Failed to read zip entry name: {}", e))?
+            .into_owned();
+        let out_path = temp_dir.join(
+            file.mangled_name()
+                .map_err(|e| format!("Failed to read zip entry name: {}", e))?,
+        );
 
         // Zip Slip protection: ensure extracted path stays within temp_dir
         if !out_path.starts_with(&temp_dir) {
             let _ = fs::remove_dir_all(&temp_dir);
-            return Err(format!("Zip entry escapes extraction directory: {}", file.name()));
+            return Err(format!("Zip entry escapes extraction directory: {}", entry_name));
         }
 
-        if file.name().ends_with('/') {
+        if entry_name.ends_with('/') {
             fs::create_dir_all(&out_path)
                 .map_err(|e| format!("Failed to create directory: {}", e))?;
         } else {
@@ -581,6 +587,42 @@ mod tests {
         assert!(import_plugin_from_zip(not_zip.to_string_lossy().to_string())
             .unwrap_err()
             .starts_with("Failed to read zip archive: "));
+    }
+
+    #[test]
+    fn import_plugin_from_zip_keeps_entries_inside_the_extraction_dir() {
+        use std::io::Write;
+
+        let tmp = TempDir::new().unwrap();
+        let probe = format!("zip-slip-probe-{}.txt", uuid::Uuid::new_v4());
+        let escaped = std::env::temp_dir().join(&probe);
+        let zip_path = tmp.path().join("hostile.zip");
+        {
+            let mut writer = zip::ZipWriter::new(fs::File::create(&zip_path).unwrap());
+            let options = zip::write::SimpleFileOptions::default();
+            writer.start_file(format!("../{}", probe), options).unwrap();
+            writer.write_all(b"escaped").unwrap();
+            writer.start_file("pkg/readme.txt", options).unwrap();
+            writer.write_all(b"inside").unwrap();
+            writer.finish().unwrap();
+        }
+
+        let leftovers = |dir: &Path| -> Vec<std::path::PathBuf> {
+            fs::read_dir(dir).unwrap()
+                .filter_map(|e| e.ok().map(|e| e.path()))
+                .filter(|p| p.file_name().map_or(false, |n| n.to_string_lossy().starts_with("harness-kit-import-")))
+                .collect()
+        };
+        let before = leftovers(&std::env::temp_dir());
+
+        let err = import_plugin_from_zip(zip_path.to_string_lossy().to_string()).unwrap_err();
+        assert_eq!(err, "Could not find .claude-plugin/plugin.json in extracted archive");
+        assert!(!escaped.exists(), "zip entry escaped the extraction directory");
+
+        // The extraction directory is left behind on this error path; remove what this run created.
+        for dir in leftovers(&std::env::temp_dir()).into_iter().filter(|p| !before.contains(p)) {
+            let _ = fs::remove_dir_all(dir);
+        }
     }
 
     #[test]
