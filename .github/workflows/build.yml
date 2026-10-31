@@ -37,6 +37,11 @@ jobs:
           pnpm --filter @harness-kit/shared --filter @harness-kit/core build
           pnpm --filter @harness-kit/marketplace-data generate --strict
 
+      # The website also imports a static capability matrix generated straight
+      # from @harness-kit/core's adapter registry (gitignored build output).
+      - name: Generate capability matrix data
+        run: pnpm --filter @harness-kit/website-data generate
+
       - name: Build all packages
         # Desktop (Tauri) is excluded — requires Rust + platform-specific system libs.
         # Desktop is built and tested in the desktop-build-test job in validate.yml.
