@@ -1,5 +1,4 @@
 import { createServer } from "node:http";
-import { fileURLToPath } from "node:url";
 import { LiveGitHubOAuthProvider } from "./github-oauth.js";
 import { createRegistryHttpHandler } from "./http.js";
 import { migrate } from "./migrate.js";
@@ -47,11 +46,4 @@ export async function startRegistryServer(): Promise<ReturnType<typeof createSer
   });
   console.log(`Harness Kit registry listening on ${publicBaseUrl}`);
   return server;
-}
-
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  startRegistryServer().catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-  });
 }

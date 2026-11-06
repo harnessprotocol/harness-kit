@@ -27,10 +27,3 @@ export async function migrate(connectionString = process.env.DATABASE_URL): Prom
     await repository.pool.end();
   }
 }
-
-if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  migrate().then(() => console.log("Registry migrations complete.")).catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-  });
-}
