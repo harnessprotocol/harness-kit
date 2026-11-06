@@ -18,6 +18,12 @@ import { describeImportError, folderName, isZipPath, type ImportError } from "./
  * it is dismissed or the next batch starts, so coming back shows it.
  */
 
+/**
+ * Queue entry for "ask Rust to open the folder dialog". Not a path: Rust only
+ * imports a folder it picked in its own dialog or one the user dropped.
+ */
+export const PICK_FOLDER = "\0pick-folder";
+
 export interface ImportQueueState {
   importing: boolean;
   status: ImportStatus | null;
@@ -92,10 +98,15 @@ export async function enqueueImports(paths: string[]): Promise<void> {
   setState({ importing: true });
   try {
     for (let path = current.queue.shift(); path !== undefined; path = current.queue.shift()) {
-      const name = folderName(path);
+      const picking = path === PICK_FOLDER;
+      const name = picking ? "plugin" : folderName(path);
       setState({ status: { state: "importing", name } });
       try {
-        const plugin = await (isZipPath(path) ? importPluginFromZip(path) : importPluginFromPath(path));
+        const plugin = await (picking
+          ? importPluginFromPath(null)
+          : isZipPath(path) ? importPluginFromZip(path) : importPluginFromPath(path));
+        // null: the user cancelled Rust's dialog. Nothing imported, nothing failed.
+        if (plugin === null) continue;
         current.imported.push(plugin?.name || name);
       } catch (err) {
         current.failures.push({ name, error: describeImportError(err, name) });

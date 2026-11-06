@@ -8,12 +8,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const invoke = vi.hoisted(() => vi.fn());
 const lstat = vi.hoisted(() => vi.fn());
 const mkdir = vi.hoisted(() => vi.fn());
+const writeTextFile = vi.hoisted(() => vi.fn());
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 vi.mock("@tauri-apps/api/path", () => ({ homeDir: async () => "/home/user" }));
 vi.mock("@tauri-apps/plugin-fs", () => ({
   readTextFile: async () => "",
-  writeTextFile: async () => {},
+  writeTextFile,
   exists: async () => true,
   readDir: async () => [],
   lstat,
@@ -58,10 +59,37 @@ describe("TauriFsProvider", () => {
     });
   });
 
+  it("never deletes the source of a refused rename unless it is an engine temp file", async () => {
+    invoke.mockImplementation(async (cmd: string) => {
+      if (cmd === "guarded_rename_file") throw "refused";
+    });
+    const fs = new TauriFsProvider("/home/user");
+    await expect(fs.renameFile("/home/user/.claude.json", "/home/user/.claude/x")).rejects.toBe("refused");
+    expect(invoke).not.toHaveBeenCalledWith("guarded_remove_file", expect.anything());
+  });
+
+  it("writes through the guarded Rust command, never the fs plugin", async () => {
+    const fs = new TauriFsProvider("/home/user");
+    await fs.writeFile("/home/user/.claude/a.harness-tmp-1", "content");
+    expect(invoke).toHaveBeenCalledWith("guarded_write_file", {
+      path: "/home/user/.claude/a.harness-tmp-1",
+      content: "content",
+    });
+    expect(writeTextFile).not.toHaveBeenCalled();
+  });
+
+  it("surfaces a Rust refusal of a write", async () => {
+    invoke.mockRejectedValue("the webview may only write the engine's temp files");
+    const fs = new TauriFsProvider("/home/user");
+    await expect(fs.writeFile("/home/user/.claude/settings.json", "x")).rejects.toBe(
+      "the webview may only write the engine's temp files",
+    );
+  });
+
   it("still rethrows the rename error when the temp cleanup also fails", async () => {
     invoke.mockRejectedValue("refused");
     const fs = new TauriFsProvider("/home/user");
-    await expect(fs.renameFile("/home/user/a.tmp", "/home/user/a")).rejects.toBe("refused");
+    await expect(fs.renameFile("/home/user/a.harness-tmp-1", "/home/user/a")).rejects.toBe("refused");
   });
 
   it("removes through the guarded Rust command", async () => {

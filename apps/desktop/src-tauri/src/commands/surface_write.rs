@@ -299,7 +299,7 @@ fn sha256_hex(bytes: &[u8]) -> String {
 /// webview's `readTextFile` returns it. That is a WHATWG TextDecoder("utf-8"):
 /// it drops one leading BOM and replaces each maximal invalid subpart with
 /// U+FFFD, which is what `from_utf8_lossy` does too.
-fn precondition_digest(bytes: &[u8]) -> String {
+pub(crate) fn precondition_digest(bytes: &[u8]) -> String {
     let body = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(bytes);
     sha256_hex(String::from_utf8_lossy(body).as_bytes())
 }
@@ -341,7 +341,7 @@ fn check_unchanged(dest: &Path, expected: &str, relative: &str) -> Result<(), St
 /// plain write handled. The file is
 /// created exclusively so an existing file or planted symlink is never
 /// opened. Owner-only from the first byte on unix.
-fn create_temp(dest: &Path) -> Result<(PathBuf, fs::File), String> {
+pub(crate) fn create_temp(dest: &Path) -> Result<(PathBuf, fs::File), String> {
     let parent = dest
         .parent()
         .ok_or_else(|| format!("{} has no parent directory", dest.display()))?;
@@ -510,11 +510,18 @@ pub(crate) fn loaded_text_digest(text: &str) -> String {
 /// `expected_sha256` is the digest of what the caller loaded
 /// ([`loaded_text_digest`] on the webview side); `None` means the file must
 /// not exist. Returns the backup path when one was written.
+///
+/// A symlinked `dest` is followed to its final target: the digest check, the
+/// backup and the atomic write all happen at the target and the link stays.
+/// This is for user-scope files only (a dotfile the user pointed at their
+/// dotfiles repo); project writes refuse symlinks (`sync_write_files`).
 pub(crate) fn write_user_file(
     dest: &Path,
     content: &str,
     expected_sha256: Option<&str>,
 ) -> Result<Option<PathBuf>, String> {
+    let dest = resolve_link_target(dest)?;
+    let dest = dest.as_path();
     let label = dest.display().to_string();
     let expected = expected_sha256.unwrap_or(ABSENT_SENTINEL);
     check_unchanged(dest, expected, &label)?;
@@ -540,6 +547,36 @@ pub(crate) fn write_user_file(
     write_atomically(dest, content.as_bytes(), Some(expected), &label, sync_directory)
         .or_else(settled_on_disk)?;
     Ok(backup)
+}
+
+/// Follow `path` through any chain of symlinks to the path it finally names,
+/// which may not exist (a dangling link). Only the final component is
+/// resolved; parent directories are left to the OS. A relative link target is
+/// taken relative to the directory holding the link.
+pub(crate) fn resolve_link_target(path: &Path) -> Result<PathBuf, String> {
+    let mut current = path.to_path_buf();
+    for _ in 0..40 {
+        match fs::symlink_metadata(&current) {
+            Ok(meta) if meta.file_type().is_symlink() => {
+                let target = fs::read_link(&current)
+                    .map_err(|e| format!("Failed to read link {}: {}", current.display(), e))?;
+                current = if target.is_absolute() {
+                    target
+                } else {
+                    current.parent().unwrap_or_else(|| Path::new("")).join(target)
+                };
+            }
+            _ => return Ok(current),
+        }
+    }
+    Err(format!("{} has too many levels of symbolic links", path.display()))
+}
+
+/// The digest a save of the user file at `path` will check against
+/// ([`write_user_file`]): the digest of the file the path finally names, or
+/// the absent sentinel when there is none.
+pub(crate) fn user_file_digest(path: &Path) -> Result<String, String> {
+    current_digest(&resolve_link_target(path)?)
 }
 
 /// A rename that landed but whose directory fsync failed still wrote the file.
@@ -1424,13 +1461,91 @@ mod user_file_tests {
 
     #[cfg(unix)]
     #[test]
-    fn a_symlinked_destination_is_refused_not_followed() {
+    fn a_symlinked_destination_is_written_at_its_target_and_the_link_stays() {
+        let dir = TempDir::new().unwrap();
+        let repo = dir.path().join("dotfiles");
+        let home = dir.path().join("home");
+        fs::create_dir_all(&repo).unwrap();
+        fs::create_dir_all(&home).unwrap();
+        let target = repo.join("target.md");
+        fs::write(&target, "t").unwrap();
+        let link = home.join("link.md");
+        std::os::unix::fs::symlink(&target, &link).unwrap();
+
+        let backup = write_user_file(&link, "x", Some(&loaded_text_digest("t")))
+            .unwrap()
+            .expect("a backup of the old content");
+
+        assert!(fs::symlink_metadata(&link).unwrap().file_type().is_symlink(), "link was replaced");
+        assert_eq!(fs::read_to_string(&target).unwrap(), "x");
+        assert_eq!(fs::read_to_string(&link).unwrap(), "x");
+        assert_eq!(backup.parent().unwrap(), repo, "backup belongs beside the target");
+        assert_eq!(fs::read_to_string(backup).unwrap(), "t");
+        assert_eq!(siblings(&home), vec!["link.md"], "nothing else lands beside the link");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_relative_and_chained_symlink_resolves_to_the_final_target() {
+        let dir = TempDir::new().unwrap();
+        fs::create_dir_all(dir.path().join("real")).unwrap();
+        fs::create_dir_all(dir.path().join("home")).unwrap();
+        let target = dir.path().join("real/target.md");
+        fs::write(&target, "t").unwrap();
+        std::os::unix::fs::symlink("../real/target.md", dir.path().join("home/hop.md")).unwrap();
+        std::os::unix::fs::symlink("hop.md", dir.path().join("home/link.md")).unwrap();
+        write_user_file(&dir.path().join("home/link.md"), "x", Some(&loaded_text_digest("t"))).unwrap();
+        assert_eq!(fs::read_to_string(&target).unwrap(), "x");
+        assert!(fs::symlink_metadata(dir.path().join("home/link.md")).unwrap().file_type().is_symlink());
+        assert!(fs::symlink_metadata(dir.path().join("home/hop.md")).unwrap().file_type().is_symlink());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_symlinked_destination_still_checks_the_digest_at_the_target() {
+        let dir = TempDir::new().unwrap();
+        let target = dir.path().join("target.md");
+        fs::write(&target, "disk").unwrap();
+        let link = dir.path().join("link.md");
+        std::os::unix::fs::symlink(&target, &link).unwrap();
+        let err = write_user_file(&link, "x", Some(&loaded_text_digest("stale"))).unwrap_err();
+        assert!(err.contains("changed on disk"), "{err}");
+        assert_eq!(fs::read_to_string(&target).unwrap(), "disk");
+        assert!(fs::symlink_metadata(&link).unwrap().file_type().is_symlink());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn user_file_digest_follows_a_symlink() {
         let dir = TempDir::new().unwrap();
         let target = dir.path().join("target.md");
         fs::write(&target, "t").unwrap();
         let link = dir.path().join("link.md");
         std::os::unix::fs::symlink(&target, &link).unwrap();
-        assert!(write_user_file(&link, "x", Some(&loaded_text_digest("t"))).is_err());
-        assert_eq!(fs::read_to_string(&target).unwrap(), "t");
+        assert_eq!(user_file_digest(&link).unwrap(), loaded_text_digest("t"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_symlink_loop_is_refused() {
+        let dir = TempDir::new().unwrap();
+        let a = dir.path().join("a.md");
+        let b = dir.path().join("b.md");
+        std::os::unix::fs::symlink(&b, &a).unwrap();
+        std::os::unix::fs::symlink(&a, &b).unwrap();
+        let err = write_user_file(&a, "x", None).unwrap_err();
+        assert!(err.contains("symbolic links"), "{err}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn replacing_a_file_keeps_its_mode() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = TempDir::new().unwrap();
+        let file = dir.path().join("a.md");
+        fs::write(&file, "old").unwrap();
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o640)).unwrap();
+        write_user_file(&file, "new", Some(&loaded_text_digest("old"))).unwrap();
+        assert_eq!(fs::metadata(&file).unwrap().permissions().mode() & 0o777, 0o640);
     }
 }

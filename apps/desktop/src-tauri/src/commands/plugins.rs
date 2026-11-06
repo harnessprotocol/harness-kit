@@ -1,3 +1,4 @@
+use super::surface_write::{precondition_digest, write_user_file};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -277,33 +278,56 @@ fn validate_plugin_name(part: &str) -> Result<(), String> {
     Ok(())
 }
 
-/// Resolve the `installed_plugins.json` key for `name`. An exact key match
-/// wins. A bare name (no `@`) matches only when exactly one key has that name.
+/// Find `name` among the `installed_plugins.json` keys. Only the full
+/// `name@marketplace` key matches: a bare name is refused, because it would
+/// pick a record the caller did not name when two marketplaces ship the same
+/// plugin.
 fn resolve_plugin_key(
     plugins: &serde_json::Map<String, serde_json::Value>,
     name: &str,
 ) -> Result<Option<String>, String> {
-    if plugins.contains_key(name) {
-        return Ok(Some(name.to_string()));
-    }
-    if name.contains('@') {
-        return Ok(None);
-    }
-    let matches: Vec<&String> = plugins
-        .keys()
-        .filter(|k| k.find('@').map_or(k.as_str(), |i| &k[..i]) == name)
-        .collect();
-    match matches.len() {
-        0 => Ok(None),
-        1 => Ok(Some(matches[0].clone())),
-        _ => Err(format!(
-            "Plugin name {:?} is installed from several marketplaces; use the full name@marketplace key",
+    if !name.contains('@') {
+        return Err(format!(
+            "Plugin {:?} must be given as its full name@marketplace key",
             name
-        )),
+        ));
     }
+    Ok(plugins.contains_key(name).then(|| name.to_string()))
+}
+
+/// Split a full key into its name and marketplace parts, each of which must
+/// be a single safe path segment: they name the one directory
+/// (`cache/<marketplace>/<name>`) an uninstall may delete.
+fn split_plugin_key(key: &str) -> Result<(&str, &str), String> {
+    let (name, marketplace) = key
+        .split_once('@')
+        .ok_or_else(|| format!("Plugin {:?} must be given as its full name@marketplace key", key))?;
+    validate_plugin_name(name)?;
+    let trimmed = marketplace.trim();
+    if trimmed.is_empty()
+        || trimmed == "."
+        || trimmed == ".."
+        || marketplace != trimmed
+        || marketplace.contains(['/', '\\'])
+        || marketplace.contains("..")
+    {
+        return Err(format!("Invalid marketplace name: {:?}", marketplace));
+    }
+    Ok((name, marketplace))
 }
 
 fn uninstall_plugin_in(claude_dir: &std::path::Path, name: String) -> Result<(), String> {
+    uninstall_plugin_with(claude_dir, name, || {})
+}
+
+/// As above; `before_write` runs after the file was read and every path
+/// validated, just before the record is rewritten (a test seam for a
+/// concurrent writer).
+fn uninstall_plugin_with(
+    claude_dir: &std::path::Path,
+    name: String,
+    before_write: impl FnOnce(),
+) -> Result<(), String> {
     validate_plugin_name(&name)?;
     if let Some(base) = name.find('@').map(|i| &name[..i]) {
         validate_plugin_name(base)?;
@@ -331,8 +355,10 @@ fn uninstall_plugin_in(claude_dir: &std::path::Path, name: String) -> Result<(),
         None => return Ok(()),
     };
 
-    // Delete only this record's own installPath, and only when it resolves
-    // strictly under plugins/cache. Canonicalize first to block symlinks and `..`.
+    // Delete only this record's own installPath, and only when it resolves to
+    // plugins/cache/<marketplace>/<name> or beneath it, with marketplace and
+    // name taken from the key. Canonicalize first to block symlinks and `..`.
+    let (key_name, key_marketplace) = split_plugin_key(&key)?;
     let install_paths: Vec<String> = data["plugins"][&key]
         .as_array()
         .map(|records| {
@@ -344,7 +370,7 @@ fn uninstall_plugin_in(claude_dir: &std::path::Path, name: String) -> Result<(),
         })
         .unwrap_or_default();
 
-    let cache_dir = plugins_dir.join("cache");
+    let own_dir = plugins_dir.join("cache").join(key_marketplace).join(key_name);
     let mut to_remove = Vec::new();
     for install_path in &install_paths {
         let path = std::path::Path::new(install_path);
@@ -353,30 +379,40 @@ fn uninstall_plugin_in(claude_dir: &std::path::Path, name: String) -> Result<(),
         }
         let canonical = path.canonicalize()
             .map_err(|e| format!("Invalid plugin path: {}", e))?;
-        let canonical_cache = cache_dir.canonicalize()
+        let canonical_own = own_dir.canonicalize()
             .map_err(|e| format!("Invalid plugin cache dir: {}", e))?;
-        if canonical == canonical_cache || !canonical.starts_with(&canonical_cache) {
-            return Err("Access denied: plugin path outside plugins cache directory".to_string());
+        if !canonical.starts_with(&canonical_own) {
+            return Err(format!(
+                "Access denied: plugin path is not inside plugins/cache/{}/{}",
+                key_marketplace, key_name
+            ));
         }
         to_remove.push(canonical);
     }
-    // Validate every path before deleting any.
-    for canonical in to_remove {
-        std::fs::remove_dir_all(&canonical)
-            .map_err(|e| format!("Failed to remove plugin directory: {}", e))?;
-    }
-
-    // Remove only that key from installed_plugins.json
+    // Every path is validated above. Remove the record first: if that write is
+    // refused (the file changed since it was read; the claude CLI also writes
+    // it), nothing has been deleted.
     if let Some(plugins) = data.get_mut("plugins").and_then(|p| p.as_object_mut()) {
         plugins.remove(&key);
     }
-
-    let serialized = serde_json::to_string_pretty(&data).unwrap();
-    let tmp_path = json_path.with_extension("json.tmp");
-    std::fs::write(&tmp_path, &serialized)
+    let serialized = serde_json::to_string_pretty(&data)
+        .map_err(|e| format!("Failed to serialize installed_plugins.json: {}", e))?;
+    let loaded = precondition_digest(contents.as_bytes());
+    before_write();
+    write_user_file(&json_path, &serialized, Some(&loaded))
         .map_err(|e| format!("Failed to write installed_plugins.json: {}", e))?;
-    std::fs::rename(&tmp_path, &json_path)
-        .map_err(|e| format!("Failed to finalize installed_plugins.json: {}", e))?;
+
+    // The record is gone; a failed delete leaves a directory with no record,
+    // so name it.
+    for canonical in to_remove {
+        std::fs::remove_dir_all(&canonical).map_err(|e| {
+            format!(
+                "Plugin removed from installed_plugins.json, but its directory {} could not be deleted: {}",
+                canonical.display(),
+                e
+            )
+        })?;
+    }
 
     Ok(())
 }
@@ -495,7 +531,7 @@ mod tests {
         );
         std::fs::write(claude.join("plugins").join("installed_plugins.json"), &json).unwrap();
 
-        // Bare name is ambiguous: refuse, delete nothing.
+        // A bare name is refused whether or not it is ambiguous: delete nothing.
         assert!(uninstall_plugin_in(&claude, "tool".to_string()).is_err());
         assert!(a.exists() && b.exists());
 
@@ -505,6 +541,126 @@ mod tests {
         let left = list_installed_plugins_in(&claude).unwrap();
         assert_eq!(left.len(), 1);
         assert_eq!(left[0].marketplace.as_deref(), Some("two"));
+    }
+
+    #[test]
+    fn uninstall_deletes_nothing_when_the_record_file_changed_after_it_was_read() {
+        let (_d, claude) = uninstall_fixture(r#"{"plugins":{}}"#);
+        let a = make_install(&claude, "mkt/alpha/1.0.0");
+        let json_path = claude.join("plugins").join("installed_plugins.json");
+        std::fs::write(
+            &json_path,
+            format!(r#"{{"plugins":{{"alpha@mkt":{}}}}}"#, record(&a)),
+        )
+        .unwrap();
+        let err = uninstall_plugin_with(&claude, "alpha@mkt".to_string(), || {
+            // The claude CLI rewrites the file between our read and our write.
+            std::fs::write(&json_path, r#"{"plugins":{"other@mkt":[]}}"#).unwrap();
+        })
+        .unwrap_err();
+        assert!(err.contains("changed on disk"), "got: {err}");
+        assert!(a.exists(), "a directory was deleted although the record was not removed");
+    }
+
+    #[test]
+    fn uninstall_keeps_the_record_removed_and_names_the_leftover_when_a_delete_fails() {
+        let (_d, claude) = uninstall_fixture(r#"{"plugins":{}}"#);
+        let a = make_install(&claude, "mkt/alpha/1.0.0");
+        std::fs::write(
+            claude.join("plugins").join("installed_plugins.json"),
+            format!(r#"{{"plugins":{{"alpha@mkt":{}}}}}"#, record(&a)),
+        )
+        .unwrap();
+        // A read-only parent makes the delete fail after the record is gone.
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let parent = a.parent().unwrap();
+            std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o500)).unwrap();
+            let result = uninstall_plugin_in(&claude, "alpha@mkt".to_string());
+            std::fs::set_permissions(parent, std::fs::Permissions::from_mode(0o700)).unwrap();
+            if a.exists() {
+                let err = result.unwrap_err();
+                assert!(err.contains("1.0.0"), "leftover dir not named: {err}");
+                assert!(list_installed_plugins_in(&claude).unwrap().is_empty());
+            }
+        }
+    }
+
+    #[test]
+    fn uninstall_refuses_a_bare_name_even_when_only_one_key_matches() {
+        let (_d, claude) = uninstall_fixture(r#"{"plugins":{}}"#);
+        let a = make_install(&claude, "mkt/solo/1.0.0");
+        let json = format!(r#"{{"plugins":{{"solo@mkt":{}}}}}"#, record(&a));
+        std::fs::write(claude.join("plugins").join("installed_plugins.json"), json).unwrap();
+        let err = uninstall_plugin_in(&claude, "solo".to_string()).unwrap_err();
+        assert!(err.contains("name@marketplace"), "got: {err}");
+        assert!(a.exists());
+        assert_eq!(list_installed_plugins_in(&claude).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn uninstall_refuses_install_path_that_is_a_whole_marketplace_directory() {
+        let (_d, claude) = uninstall_fixture(r#"{"plugins":{}}"#);
+        let other = make_install(&claude, "mkt/other/1.0.0");
+        let market = claude.join("plugins").join("cache").join("mkt");
+        let json = format!(r#"{{"plugins":{{"evil@mkt":{}}}}}"#, record(&market));
+        std::fs::write(claude.join("plugins").join("installed_plugins.json"), json).unwrap();
+        assert!(uninstall_plugin_in(&claude, "evil@mkt".to_string()).is_err());
+        assert!(other.exists(), "another plugin in the marketplace was deleted");
+        assert_eq!(list_installed_plugins_in(&claude).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn uninstall_refuses_install_path_inside_another_plugins_directory() {
+        let (_d, claude) = uninstall_fixture(r#"{"plugins":{}}"#);
+        let other = make_install(&claude, "mkt/other/1.0.0");
+        let json = format!(r#"{{"plugins":{{"evil@mkt":{}}}}}"#, record(&other));
+        std::fs::write(claude.join("plugins").join("installed_plugins.json"), json).unwrap();
+        assert!(uninstall_plugin_in(&claude, "evil@mkt".to_string()).is_err());
+        assert!(other.exists());
+    }
+
+    #[test]
+    fn uninstall_refuses_install_path_in_a_different_marketplace() {
+        let (_d, claude) = uninstall_fixture(r#"{"plugins":{}}"#);
+        let other = make_install(&claude, "two/tool/1.0.0");
+        let json = format!(r#"{{"plugins":{{"tool@one":{}}}}}"#, record(&other));
+        std::fs::write(claude.join("plugins").join("installed_plugins.json"), json).unwrap();
+        assert!(uninstall_plugin_in(&claude, "tool@one".to_string()).is_err());
+        assert!(other.exists());
+    }
+
+    #[test]
+    fn uninstall_allows_the_plugin_directory_itself() {
+        let (_d, claude) = uninstall_fixture(r#"{"plugins":{}}"#);
+        let plugin_dir = make_install(&claude, "mkt/alpha");
+        let json = format!(r#"{{"plugins":{{"alpha@mkt":{}}}}}"#, record(&plugin_dir));
+        std::fs::write(claude.join("plugins").join("installed_plugins.json"), json).unwrap();
+        uninstall_plugin_in(&claude, "alpha@mkt".to_string()).unwrap();
+        assert!(!plugin_dir.exists());
+    }
+
+    #[test]
+    fn uninstall_rewrite_backs_up_installed_plugins_and_leaves_no_temp_file() {
+        let (_d, claude) = uninstall_fixture(r#"{"plugins":{}}"#);
+        let a = make_install(&claude, "mkt/alpha/1.0.0");
+        let json = format!(r#"{{"plugins":{{"alpha@mkt":{}}}}}"#, record(&a));
+        let json_path = claude.join("plugins").join("installed_plugins.json");
+        std::fs::write(&json_path, &json).unwrap();
+        uninstall_plugin_in(&claude, "alpha@mkt".to_string()).unwrap();
+        let names: Vec<String> = std::fs::read_dir(claude.join("plugins"))
+            .unwrap()
+            .flatten()
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect();
+        let backups: Vec<_> = names.iter().filter(|n| n.starts_with("installed_plugins.json.bak-")).collect();
+        assert_eq!(backups.len(), 1, "names: {names:?}");
+        assert_eq!(
+            std::fs::read_to_string(claude.join("plugins").join(backups[0])).unwrap(),
+            json
+        );
+        assert!(!names.iter().any(|n| n.ends_with(".tmp") || n.starts_with(".hk-tmp-")), "names: {names:?}");
     }
 
     #[test]

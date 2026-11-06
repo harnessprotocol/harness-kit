@@ -15,7 +15,7 @@ import PluginFilters from "./plugins/PluginFilters";
 import PluginRow from "./plugins/PluginRow";
 import ImportOverlay from "./plugins/ImportOverlay";
 import ImportBanner from "./plugins/ImportBanner";
-import { dismissImportStatus, enqueueImports, onPluginsImported, useImportQueue } from "./plugins/import-queue";
+import { dismissImportStatus, enqueueImports, onPluginsImported, PICK_FOLDER, useImportQueue } from "./plugins/import-queue";
 import UninstallDialog from "./plugins/UninstallDialog";
 import { useRegisterCommands } from "../../lib/commands";
 import { errorDetails } from "../../lib/error-details";
@@ -204,15 +204,8 @@ export default function PluginsPage() {
       return;
     }
 
-    let selected: string | null;
-    try {
-      const { open } = await import("@tauri-apps/plugin-dialog");
-      selected = await open({ directory: true, title: "Select plugin folder" });
-    } catch {
-      return; // Dialog plugin not available or cancelled
-    }
-    if (!selected) return;
-    await enqueueImports([selected]);
+    // Rust opens the dialog; the chosen path never passes through the webview.
+    await enqueueImports([PICK_FOLDER]);
   }
 
   // ⌘K (spec AC-21): Import Plugin, disabled when the button is.

@@ -222,22 +222,30 @@ fn refuse_symlink_components(root: &Path, relative: &str) -> Result<(), String> 
 
 /// Replace `dest` atomically: stage in a temp file in the same directory,
 /// fsync, then rename. A failure removes the temp file and leaves `dest` as it
-/// was. `create_new` makes the temp open refuse a pre-planted path.
+/// was. The temp file comes from the shared `create_temp`: a fixed-length
+/// random name (never built from `dest`'s name, which could pass NAME_MAX),
+/// opened with `create_new` so a pre-planted path is refused.
+///
+/// The result has the replaced file's mode (the temp file starts owner-only,
+/// which would otherwise lock out a shared project file), or 0644 for a file
+/// that did not exist.
 fn write_file_atomically(dest: &Path, bytes: &[u8]) -> Result<(), String> {
     use std::io::Write;
-    let parent = dest
-        .parent()
-        .ok_or_else(|| format!("{} has no parent directory", dest.display()))?;
-    let name = dest
-        .file_name()
-        .map(|n| n.to_string_lossy().into_owned())
-        .unwrap_or_default();
-    let temp = parent.join(format!(".{}.{}.tmp", name, uuid::Uuid::new_v4()));
+    #[cfg(unix)]
+    let mode = {
+        use std::os::unix::fs::PermissionsExt;
+        match fs::symlink_metadata(dest) {
+            Ok(meta) if meta.is_file() => meta.permissions().mode() & 0o777,
+            _ => 0o644,
+        }
+    };
+    let (temp, mut file) = super::surface_write::create_temp(dest)?;
     let staged = (|| -> std::io::Result<()> {
-        let mut file = fs::OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&temp)?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            file.set_permissions(fs::Permissions::from_mode(mode))?;
+        }
         file.write_all(bytes)?;
         file.sync_all()?;
         drop(file);
@@ -572,6 +580,40 @@ mod tests {
                 fs::read_to_string(Path::new(&project).join("out.md")).unwrap(),
                 "compiled"
             );
+        }
+
+        #[test]
+        fn replacing_a_file_keeps_its_mode() {
+            use std::os::unix::fs::PermissionsExt;
+            let (_tmp, project) = granted_project();
+            let file = Path::new(&project).join("run.sh");
+            fs::write(&file, "old").unwrap();
+            fs::set_permissions(&file, fs::Permissions::from_mode(0o750)).unwrap();
+            write(&project, "run.sh").unwrap();
+            assert_eq!(fs::read_to_string(&file).unwrap(), "compiled");
+            assert_eq!(fs::metadata(&file).unwrap().permissions().mode() & 0o777, 0o750);
+        }
+
+        #[test]
+        fn a_new_file_is_not_owner_only() {
+            use std::os::unix::fs::PermissionsExt;
+            let (_tmp, project) = granted_project();
+            write(&project, "fresh.md").unwrap();
+            let mode = fs::metadata(Path::new(&project).join("fresh.md")).unwrap().permissions().mode();
+            assert_eq!(mode & 0o777, 0o644, "project files are shared, not private like temp files");
+        }
+
+        #[test]
+        fn a_name_near_the_filesystem_limit_still_writes() {
+            let (_tmp, project) = granted_project();
+            let name = format!("{}.md", "n".repeat(240));
+            write(&project, &name).unwrap();
+            assert_eq!(
+                fs::read_to_string(Path::new(&project).join(&name)).unwrap(),
+                "compiled"
+            );
+            let names: Vec<_> = fs::read_dir(&project).unwrap().flatten().collect();
+            assert_eq!(names.len(), 1, "temp file left behind");
         }
 
         #[test]

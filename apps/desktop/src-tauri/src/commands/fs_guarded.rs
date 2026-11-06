@@ -1,38 +1,60 @@
-//! Guarded rename and remove for the webview's `TauriFsProvider`.
+//! Guarded write, rename and remove for the webview's `TauriFsProvider`.
 //!
-//! The fs plugin's `rename` and `remove` are not granted to the webview: a
-//! capability scope cannot say "no symlinks" or "no recursive delete", and
-//! the webview is not trusted. These two commands take their place. Each
-//! resolves its paths natively and refuses anything that is not
+//! The fs plugin's `write_text_file`, `rename` and `remove` are not granted to
+//! the webview: a capability scope cannot say "no symlinks", "no recursive
+//! delete" or "only the engine's temp files", and the webview is not trusted.
+//! These three commands take their place and enforce their own limits.
 //!
-//! - inside a project root the user picked in the native folder dialog
-//!   (`fs_scope::is_granted_root`), or
-//! - a registry-declared config store under the home directory
-//!   (`surface_write::is_declared_store`, which also covers the transaction
-//!   engine's `.harness/backups/` subtree), optionally with the engine's
-//!   `.harness-tmp-<suffix>` temp-file suffix.
+//! What each one accepts, after its paths are resolved natively:
+//!
+//! - `guarded_write_file` writes one `.harness-tmp-<suffix>` file, and only
+//!   when that file is a temp sibling of a registry-declared config store under
+//!   the home directory (`surface_write::is_declared_store`, which also covers
+//!   the transaction engine's `.harness/backups/` subtree) or lies inside a
+//!   project root the user picked in the native folder dialog
+//!   (`fs_scope::granted_root_for`). It never writes the store itself.
+//! - `guarded_rename_file` moves a regular file. Onto a declared store it
+//!   accepts only that store's own `.harness-tmp-<suffix>` sibling, so a file
+//!   written under one store cannot be renamed onto another (`~/.claude.json`
+//!   carries MCP commands). Inside a granted root it accepts a move whose two
+//!   ends lie in the same granted root.
+//! - `guarded_remove_file` deletes one regular file only when it is a
+//!   `.harness-tmp-<suffix>` file (declared store sibling, or inside a granted
+//!   root) or a file under `~/.harness/backups/` outside the quarantine (a
+//!   quarantined file is never deleted, only moved again). A declared store, or any other
+//!   file inside a granted root, is not deleted: it is moved to
+//!   `~/.harness/backups/quarantine/<UTC stamp>/<relative path>` (directories
+//!   0700, file mode kept), which is how rollback removes a file it created.
+//!   Anything else is refused.
 //!
 //! Symlinks are refused at the source (`symlink_metadata`, so a link is never
 //! followed), directories are refused outright (no recursive removal exists
-//! here), and every path must be absolute with no `..`. The parent directory
-//! is canonicalized before the root check, so a symlinked ancestor that leaves
-//! the roots is caught.
+//! here), and every path must be absolute with no `.` or `..`. The parent
+//! directory is canonicalized, so a symlinked ancestor that leaves the roots is
+//! caught. The home-relative top directory (`~/.claude`) is canonicalized too,
+//! so a `~/.claude` the user symlinked into a dotfiles repo still counts as
+//! the declared location.
 
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 
-use super::fs_scope::is_granted_root;
+use super::fs_scope::granted_root_for;
 use super::surface_write::is_declared_store;
 
-/// Suffix the transaction engine gives the sibling file it renames over a
+/// Marker the transaction engine puts in the sibling file it renames over a
 /// store (`<store>.harness-tmp-<suffix>`).
 const TEMP_MARKER: &str = ".harness-tmp-";
+
+/// Home-relative prefix of the engine's backups, the only non-temp files the
+/// webview may delete.
+const BACKUPS_PREFIX: &str = ".harness/backups/";
 
 struct Roots<'a> {
     /// Canonical home directory.
     home: &'a Path,
-    /// Whether a canonical path lies inside a dialog-granted project root.
-    granted: &'a dyn Fn(&Path) -> bool,
+    /// The outermost dialog-granted project root that contains a canonical
+    /// path, if any.
+    granted: &'a dyn Fn(&Path) -> Option<PathBuf>,
 }
 
 /// Absolute, `..`-free path whose parent exists, returned with the parent
@@ -68,25 +90,94 @@ fn strip_temp_suffix(relative: &str) -> &str {
     }
 }
 
-fn in_roots(resolved: &Path, roots: &Roots) -> bool {
-    if (roots.granted)(resolved) {
-        return true;
+/// Whether the final component is an engine temp name (`<name>.harness-tmp-<x>`
+/// with a non-empty name and suffix).
+fn is_temp_name(path: &Path) -> bool {
+    let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+        return false;
+    };
+    match name.rfind(TEMP_MARKER) {
+        Some(i) => i > 0 && name.len() > i + TEMP_MARKER.len(),
+        None => false,
     }
-    let Ok(relative) = resolved.strip_prefix(roots.home) else {
-        return false;
-    };
-    let Some(relative) = relative.to_str() else {
-        return false;
-    };
+}
+
+/// The home-relative path (with `/` separators) of `resolved`, as the
+/// registry names it, or `None` when `original` is not under `home`.
+///
+/// `resolved` has a canonical parent, so with `~/.claude` symlinked into a
+/// dotfiles repo it no longer starts with `home`. The home-relative top
+/// directory is canonicalized and substituted back, so such a path compares by
+/// the location the user and the registry mean. A path that leaves the top
+/// directory through a deeper symlink does not start with the canonical top
+/// and yields `None`.
+fn store_relative(original: &str, resolved: &Path, home: &Path) -> Option<String> {
+    let lexical = Path::new(original).strip_prefix(home).ok()?;
+    let mut components = lexical.components();
+    let top = components.next()?.as_os_str().to_str()?;
+    if components.next().is_none() {
+        // A direct child of home: the parent is home itself.
+        return resolved
+            .strip_prefix(home)
+            .ok()
+            .and_then(|r| r.to_str())
+            .map(str::to_owned);
+    }
+    let canonical_top = home.join(top).canonicalize().ok()?;
+    let rest = resolved.strip_prefix(&canonical_top).ok()?.to_str()?;
+    Some(format!("{top}/{rest}"))
+}
+
+/// A declared store, or a declared store's temp sibling, by home-relative path.
+fn declared_or_temp(relative: &str) -> bool {
     is_declared_store(strip_temp_suffix(relative))
 }
 
-fn checked(path: &str, roots: &Roots) -> Result<PathBuf, String> {
-    let resolved = resolve(path)?;
-    if !in_roots(&resolved, roots) {
-        return Err(format!("{path}: outside the roots this app may modify"));
+/// Writes and temp-file removal: the engine's temp file next to a declared
+/// store, or any temp file inside a granted root.
+fn temp_in_roots(original: &str, resolved: &Path, roots: &Roots) -> bool {
+    if !is_temp_name(resolved) {
+        return false;
     }
-    Ok(resolved)
+    if (roots.granted)(resolved).is_some() {
+        return true;
+    }
+    store_relative(original, resolved, roots.home).is_some_and(|rel| declared_or_temp(&rel))
+}
+
+/// A rename is allowed when both ends are inside one granted root, or when
+/// the source is the destination's own temp sibling and the destination is a
+/// declared store.
+fn rename_allowed(from: &str, source: &Path, to: &str, dest: &Path, roots: &Roots) -> bool {
+    if let (Some(a), Some(b)) = ((roots.granted)(source), (roots.granted)(dest)) {
+        if a == b {
+            return true;
+        }
+    }
+    if !is_temp_name(source) {
+        return false;
+    }
+    let (Some(from_rel), Some(to_rel)) = (
+        store_relative(from, source, roots.home),
+        store_relative(to, dest, roots.home),
+    ) else {
+        return false;
+    };
+    is_declared_store(&to_rel) && strip_temp_suffix(&from_rel) == to_rel
+}
+
+/// A removal is allowed for an engine temp file, or a file the engine keeps
+/// under `~/.harness/backups/` outside the quarantine. Quarantined files are
+/// never deleted from the webview.
+fn remove_allowed(original: &str, resolved: &Path, roots: &Roots) -> bool {
+    if temp_in_roots(original, resolved, roots) {
+        return true;
+    }
+    store_relative(original, resolved, roots.home).is_some_and(|rel| {
+        rel.starts_with(BACKUPS_PREFIX)
+            && !rel.starts_with(QUARANTINE_PREFIX)
+            && is_declared_store(&rel)
+    })
 }
 
 /// The source must be an existing regular file: not a symlink, not a directory.
@@ -101,9 +192,30 @@ fn require_regular_file(resolved: &Path, shown: &str) -> Result<(), String> {
     Ok(())
 }
 
+fn guarded_write(path: &str, content: &str, roots: &Roots) -> Result<(), String> {
+    let target = resolve(path)?;
+    if !temp_in_roots(path, &target, roots) {
+        return Err(format!(
+            "{path}: the webview may only write the engine's {TEMP_MARKER}<suffix> files beside a config store or inside a project root"
+        ));
+    }
+    match fs::symlink_metadata(&target) {
+        Ok(existing) if existing.file_type().is_symlink() || existing.is_dir() => {
+            return Err(format!("{path}: target is a symlink or directory"));
+        }
+        _ => {}
+    }
+    fs::write(&target, content).map_err(|e| format!("write {path}: {e}"))
+}
+
 fn guarded_rename(from: &str, to: &str, roots: &Roots) -> Result<(), String> {
-    let source = checked(from, roots)?;
-    let dest = checked(to, roots)?;
+    let source = resolve(from)?;
+    let dest = resolve(to)?;
+    if !rename_allowed(from, &source, to, &dest, roots) {
+        return Err(format!(
+            "{from} -> {to}: outside the moves this app may make (a temp file onto its own store, or within one project root)"
+        ));
+    }
     require_regular_file(&source, from)?;
     if let Ok(existing) = fs::symlink_metadata(&dest) {
         if existing.file_type().is_symlink() || existing.is_dir() {
@@ -113,10 +225,73 @@ fn guarded_rename(from: &str, to: &str, roots: &Roots) -> Result<(), String> {
     fs::rename(&source, &dest).map_err(|e| format!("rename {from} -> {to}: {e}"))
 }
 
+/// Where a quarantined file goes, relative to the home directory.
+const QUARANTINE_DIR: &str = ".harness/backups/quarantine";
+const QUARANTINE_PREFIX: &str = ".harness/backups/quarantine/";
+
+/// The path a file keeps below its quarantine stamp: home-relative for a
+/// declared store, root-relative inside a granted root. `None` when the path
+/// is neither.
+fn quarantine_relative(original: &str, resolved: &Path, roots: &Roots) -> Option<String> {
+    if let Some(root) = (roots.granted)(resolved) {
+        return resolved.strip_prefix(root).ok()?.to_str().map(str::to_owned);
+    }
+    store_relative(original, resolved, roots.home).filter(|rel| is_declared_store(rel))
+}
+
+/// Move a regular file to `~/.harness/backups/quarantine/<UTC stamp>/<relative>`
+/// instead of deleting it. Directories are created 0700; the file keeps its
+/// mode. Rollback of a file the engine created has to remove it, and this keeps
+/// the bytes recoverable if the webview asks for a store it should not lose.
+fn quarantine(target: &Path, relative: &str, home: &Path) -> Result<(), String> {
+    let stamp = chrono::Utc::now().format("%Y%m%dT%H%M%S%.3fZ").to_string();
+    let base = home.join(QUARANTINE_DIR);
+    let mut dest = base.join(&stamp).join(relative);
+    let mut n = 1;
+    while fs::symlink_metadata(&dest).is_ok() {
+        dest = base.join(format!("{stamp}-{n}")).join(relative);
+        n += 1;
+    }
+    let dir = dest.parent().ok_or("quarantine: no parent directory")?;
+    make_private_dirs(dir)?;
+    let real = dir.canonicalize().map_err(|e| format!("quarantine: {e}"))?;
+    if !real.starts_with(home) {
+        return Err("quarantine: directory resolves outside the home directory".to_string());
+    }
+    if fs::rename(target, &dest).is_err() {
+        // Another volume (a project root): copy keeps the mode, then remove.
+        fs::copy(target, &dest).map_err(|e| format!("quarantine copy: {e}"))?;
+        fs::remove_file(target).map_err(|e| format!("quarantine remove: {e}"))?;
+    }
+    Ok(())
+}
+
+fn make_private_dirs(dir: &Path) -> Result<(), String> {
+    let mut builder = fs::DirBuilder::new();
+    builder.recursive(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::DirBuilderExt;
+        builder.mode(0o700);
+    }
+    builder
+        .create(dir)
+        .map_err(|e| format!("quarantine: {}: {e}", dir.display()))
+}
+
 fn guarded_remove(path: &str, roots: &Roots) -> Result<(), String> {
-    let target = checked(path, roots)?;
+    let target = resolve(path)?;
+    if remove_allowed(path, &target, roots) {
+        require_regular_file(&target, path)?;
+        return fs::remove_file(&target).map_err(|e| format!("remove {path}: {e}"));
+    }
+    let Some(relative) = quarantine_relative(path, &target, roots) else {
+        return Err(format!(
+            "{path}: outside the roots this app may modify (only declared stores and files inside a project root can be removed)"
+        ));
+    };
     require_regular_file(&target, path)?;
-    fs::remove_file(&target).map_err(|e| format!("remove {path}: {e}"))
+    quarantine(&target, &relative, roots.home)
 }
 
 fn home() -> Result<PathBuf, String> {
@@ -124,18 +299,27 @@ fn home() -> Result<PathBuf, String> {
     Ok(home.canonicalize().unwrap_or(home))
 }
 
-/// Rename one regular file inside the declared roots.
+/// Write one engine temp file (`<store>.harness-tmp-<suffix>`). Never a store.
+#[tauri::command]
+pub fn guarded_write_file(path: String, content: String) -> Result<(), String> {
+    let home = home()?;
+    guarded_write(&path, &content, &Roots { home: &home, granted: &granted_root_for })
+}
+
+/// Rename one regular file: a temp file onto its own store, or within one
+/// granted project root.
 #[tauri::command]
 pub fn guarded_rename_file(from: String, to: String) -> Result<(), String> {
     let home = home()?;
-    guarded_rename(&from, &to, &Roots { home: &home, granted: &is_granted_root })
+    guarded_rename(&from, &to, &Roots { home: &home, granted: &granted_root_for })
 }
 
-/// Delete one regular file inside the declared roots. Never a directory.
+/// Remove one regular file: delete an engine temp file or a backup, move a
+/// declared store or project-root file to quarantine. Never a directory.
 #[tauri::command]
 pub fn guarded_remove_file(path: String) -> Result<(), String> {
     let home = home()?;
-    guarded_remove(&path, &Roots { home: &home, granted: &is_granted_root })
+    guarded_remove(&path, &Roots { home: &home, granted: &granted_root_for })
 }
 
 #[cfg(test)]
@@ -145,6 +329,9 @@ mod tests {
     use tempfile::TempDir;
 
     const STORE: &str = ".claude/skills/review/SKILL.md";
+    /// A second declared store; a file written under `STORE`'s tree must not
+    /// be renamed onto it.
+    const OTHER_STORE: &str = ".claude.json";
 
     struct Fixture {
         _tmp: TempDir,
@@ -167,30 +354,82 @@ mod tests {
     }
 
     impl Fixture {
-        fn roots<'a>(&'a self, granted: &'a dyn Fn(&Path) -> bool) -> Roots<'a> {
+        fn roots<'a>(&'a self, granted: &'a dyn Fn(&Path) -> Option<PathBuf>) -> Roots<'a> {
             Roots { home: &self.home, granted }
         }
         fn s(path: &Path) -> String {
             path.to_string_lossy().into_owned()
         }
+        fn temp(&self, rel: &str) -> PathBuf {
+            self.home.join(format!("{rel}{TEMP_MARKER}abc"))
+        }
     }
 
-    fn project_granted(f: &Fixture) -> impl Fn(&Path) -> bool {
-        let project = f.project.clone();
-        move |p: &Path| p.starts_with(&project)
+    fn no_roots(_: &Path) -> Option<PathBuf> {
+        None
+    }
+
+    fn root_at(root: &Path) -> impl Fn(&Path) -> Option<PathBuf> {
+        let root = root.to_path_buf();
+        move |p: &Path| p.starts_with(&root).then(|| root.clone())
+    }
+
+    fn project_granted(f: &Fixture) -> impl Fn(&Path) -> Option<PathBuf> {
+        root_at(&f.project)
+    }
+
+    #[test]
+    fn declared_other_store_is_really_declared() {
+        assert!(is_declared_store(STORE));
+        assert!(is_declared_store(OTHER_STORE));
     }
 
     #[test]
     fn rename_declared_store_temp_over_store() {
         let f = fixture();
         let store = f.home.join(STORE);
-        let temp = f.home.join(format!("{STORE}{TEMP_MARKER}abc"));
+        let temp = f.temp(STORE);
         fs::write(&store, "old").unwrap();
         fs::write(&temp, "new").unwrap();
-        let none = |_: &Path| false;
-        guarded_rename(&Fixture::s(&temp), &Fixture::s(&store), &f.roots(&none)).unwrap();
+        guarded_rename(&Fixture::s(&temp), &Fixture::s(&store), &f.roots(&no_roots)).unwrap();
         assert_eq!(fs::read_to_string(&store).unwrap(), "new");
         assert!(!temp.exists());
+    }
+
+    #[test]
+    fn rename_store_file_onto_another_store_refused() {
+        let f = fixture();
+        let source = f.home.join(STORE);
+        let target = f.home.join(OTHER_STORE);
+        fs::write(&source, "{\"mcpServers\":{\"x\":{\"command\":\"evil\"}}}").unwrap();
+        fs::write(&target, "{}").unwrap();
+        let err = guarded_rename(&Fixture::s(&source), &Fixture::s(&target), &f.roots(&no_roots))
+            .unwrap_err();
+        assert!(err.contains("outside the moves"), "{err}");
+        assert_eq!(fs::read_to_string(&target).unwrap(), "{}");
+        assert!(source.exists());
+    }
+
+    #[test]
+    fn rename_temp_of_one_store_onto_another_store_refused() {
+        let f = fixture();
+        let temp = f.temp(STORE);
+        let target = f.home.join(OTHER_STORE);
+        fs::write(&temp, "evil").unwrap();
+        fs::write(&target, "{}").unwrap();
+        assert!(guarded_rename(&Fixture::s(&temp), &Fixture::s(&target), &f.roots(&no_roots)).is_err());
+        assert_eq!(fs::read_to_string(&target).unwrap(), "{}");
+        assert!(temp.exists());
+    }
+
+    #[test]
+    fn rename_temp_onto_a_non_store_in_home_refused() {
+        let f = fixture();
+        let temp = f.temp(STORE);
+        fs::write(&temp, "x").unwrap();
+        let zshrc = f.home.join(".zshrc");
+        assert!(guarded_rename(&Fixture::s(&temp), &Fixture::s(&zshrc), &f.roots(&no_roots)).is_err());
+        assert!(!zshrc.exists());
     }
 
     #[test]
@@ -205,24 +444,153 @@ mod tests {
     }
 
     #[test]
-    fn remove_declared_store_and_backup() {
+    fn rename_between_two_granted_roots_refused() {
         let f = fixture();
-        let store = f.home.join(STORE);
-        fs::write(&store, "x").unwrap();
+        let other_root = f.outside.clone();
+        let project = f.project.clone();
+        let granted = move |p: &Path| {
+            [&project, &other_root]
+                .into_iter()
+                .find(|r| p.starts_with(r))
+                .cloned()
+        };
+        let a = f.project.join("a.txt");
+        let b = f.outside.join("a.txt");
+        fs::write(&a, "x").unwrap();
+        assert!(guarded_rename(&Fixture::s(&a), &Fixture::s(&b), &f.roots(&granted)).is_err());
+        assert!(a.exists() && !b.exists());
+    }
+
+    #[test]
+    fn rename_granted_root_file_onto_a_store_refused() {
+        let f = fixture();
+        let a = f.project.join("a.txt");
+        fs::write(&a, "x").unwrap();
+        let target = f.home.join(OTHER_STORE);
+        fs::write(&target, "{}").unwrap();
+        let granted = project_granted(&f);
+        assert!(guarded_rename(&Fixture::s(&a), &Fixture::s(&target), &f.roots(&granted)).is_err());
+        assert_eq!(fs::read_to_string(&target).unwrap(), "{}");
+    }
+
+    #[test]
+    fn remove_declared_store_moves_it_to_quarantine() {
+        use std::os::unix::fs::PermissionsExt;
+        let f = fixture();
+        let store = f.home.join(OTHER_STORE);
+        fs::write(&store, "{\"keep\":true}").unwrap();
+        fs::set_permissions(&store, fs::Permissions::from_mode(0o600)).unwrap();
+        let nested = f.home.join(STORE);
+        fs::write(&nested, "nested bytes").unwrap();
+        for path in [&store, &nested] {
+            guarded_remove(&Fixture::s(path), &f.roots(&no_roots)).unwrap();
+            assert!(!path.exists(), "original is gone");
+        }
+        let quarantine = f.home.join(QUARANTINE_DIR);
+        let files = walk(&quarantine);
+        let find = |suffix: &str| files.iter().find(|p| p.ends_with(suffix)).unwrap().clone();
+        let kept = find(OTHER_STORE);
+        assert_eq!(fs::read_to_string(&kept).unwrap(), "{\"keep\":true}");
+        assert_eq!(fs::metadata(&kept).unwrap().permissions().mode() & 0o777, 0o600);
+        assert_eq!(fs::read_to_string(find(STORE)).unwrap(), "nested bytes");
+        let stamp_dir = kept.parent().unwrap();
+        assert_eq!(fs::metadata(stamp_dir).unwrap().permissions().mode() & 0o777, 0o700);
+    }
+
+    #[test]
+    fn removing_a_quarantined_file_never_deletes_its_bytes() {
+        let f = fixture();
+        let store = f.home.join(OTHER_STORE);
+        fs::write(&store, "precious").unwrap();
+        guarded_remove(&Fixture::s(&store), &f.roots(&no_roots)).unwrap();
+        let held = walk(&f.home.join(QUARANTINE_DIR)).pop().unwrap();
+        let _ = guarded_remove(&Fixture::s(&held), &f.roots(&no_roots));
+        let bodies: Vec<String> = walk(&f.home.join(QUARANTINE_DIR))
+            .into_iter()
+            .map(|p| fs::read_to_string(p).unwrap())
+            .collect();
+        assert_eq!(bodies, ["precious"], "the quarantined bytes survive a remove");
+    }
+
+    #[test]
+    fn removing_the_same_store_twice_keeps_both_copies() {
+        let f = fixture();
+        let store = f.home.join(OTHER_STORE);
+        for body in ["one", "two"] {
+            fs::write(&store, body).unwrap();
+            guarded_remove(&Fixture::s(&store), &f.roots(&no_roots)).unwrap();
+        }
+        let mut bodies: Vec<String> = Vec::new();
+        for stamp in fs::read_dir(f.home.join(QUARANTINE_DIR)).unwrap() {
+            let dir = stamp.unwrap().path();
+            for entry in walk(&dir) {
+                bodies.push(fs::read_to_string(entry).unwrap());
+            }
+        }
+        bodies.sort();
+        assert_eq!(bodies, ["one", "two"]);
+    }
+
+    fn walk(dir: &Path) -> Vec<PathBuf> {
+        let mut out = Vec::new();
+        for e in fs::read_dir(dir).unwrap() {
+            let p = e.unwrap().path();
+            if p.is_dir() { out.extend(walk(&p)) } else { out.push(p) }
+        }
+        out
+    }
+
+    #[test]
+    fn remove_undeclared_directory_and_symlinked_store_still_refused() {
+        let f = fixture();
+        let dir = f.home.join(".claude/skills/review/sub");
+        fs::create_dir_all(&dir).unwrap();
+        assert!(guarded_remove(&Fixture::s(&dir), &f.roots(&no_roots)).is_err());
+        assert!(dir.exists());
+        let target = f.outside.join("t");
+        fs::write(&target, "t").unwrap();
+        let link = f.home.join(OTHER_STORE);
+        symlink(&target, &link).unwrap();
+        assert!(guarded_remove(&Fixture::s(&link), &f.roots(&no_roots)).is_err());
+        assert!(fs::symlink_metadata(&link).is_ok() && target.exists());
+    }
+
+    #[test]
+    fn remove_store_temp_and_backup() {
+        let f = fixture();
+        let temp = f.temp(STORE);
+        fs::write(&temp, "x").unwrap();
         let backups = f.home.join(".harness/backups/2026-01-01");
         fs::create_dir_all(&backups).unwrap();
         let backup = backups.join("transaction.json");
         fs::write(&backup, "{}").unwrap();
-        let none = |_: &Path| false;
-        guarded_remove(&Fixture::s(&store), &f.roots(&none)).unwrap();
-        guarded_remove(&Fixture::s(&backup), &f.roots(&none)).unwrap();
-        assert!(!store.exists() && !backup.exists());
+        guarded_remove(&Fixture::s(&temp), &f.roots(&no_roots)).unwrap();
+        guarded_remove(&Fixture::s(&backup), &f.roots(&no_roots)).unwrap();
+        assert!(!temp.exists() && !backup.exists());
+    }
+
+    #[test]
+    fn remove_in_granted_root_deletes_temp_files_and_quarantines_the_rest() {
+        let f = fixture();
+        let plain = f.project.join("sub/keep.txt");
+        fs::create_dir_all(plain.parent().unwrap()).unwrap();
+        let temp = f.project.join(format!("keep.txt{TEMP_MARKER}1"));
+        fs::write(&plain, "precious").unwrap();
+        fs::write(&temp, "x").unwrap();
+        let granted = project_granted(&f);
+        guarded_remove(&Fixture::s(&plain), &f.roots(&granted)).unwrap();
+        assert!(!plain.exists());
+        let stamp = fs::read_dir(f.home.join(QUARANTINE_DIR)).unwrap().next().unwrap().unwrap().path();
+        assert_eq!(fs::read_to_string(stamp.join("sub/keep.txt")).unwrap(), "precious");
+        guarded_remove(&Fixture::s(&temp), &f.roots(&granted)).unwrap();
+        assert!(!temp.exists());
+        assert_eq!(walk(&f.home.join(QUARANTINE_DIR)).len(), 1, "a temp file is deleted, not quarantined");
     }
 
     #[test]
     fn remove_outside_roots_refused() {
         let f = fixture();
-        let victim = f.outside.join("victim.txt");
+        let victim = f.outside.join(format!("victim.txt{TEMP_MARKER}1"));
         fs::write(&victim, "x").unwrap();
         let granted = project_granted(&f);
         let err = guarded_remove(&Fixture::s(&victim), &f.roots(&granted)).unwrap_err();
@@ -235,9 +603,89 @@ mod tests {
         let f = fixture();
         let zshrc = f.home.join(".zshrc");
         fs::write(&zshrc, "x").unwrap();
-        let none = |_: &Path| false;
-        assert!(guarded_remove(&Fixture::s(&zshrc), &f.roots(&none)).is_err());
+        assert!(guarded_remove(&Fixture::s(&zshrc), &f.roots(&no_roots)).is_err());
         assert!(zshrc.exists());
+    }
+
+    #[test]
+    fn write_store_temp_ok_and_the_store_itself_refused() {
+        let f = fixture();
+        let temp = f.temp(STORE);
+        guarded_write(&Fixture::s(&temp), "new", &f.roots(&no_roots)).unwrap();
+        assert_eq!(fs::read_to_string(&temp).unwrap(), "new");
+
+        let store = f.home.join(OTHER_STORE);
+        fs::write(&store, "{}").unwrap();
+        let err = guarded_write(&Fixture::s(&store), "evil", &f.roots(&no_roots)).unwrap_err();
+        assert!(err.contains("may only write"), "{err}");
+        assert_eq!(fs::read_to_string(&store).unwrap(), "{}");
+    }
+
+    #[test]
+    fn write_temp_of_an_undeclared_name_refused() {
+        let f = fixture();
+        let temp = f.home.join(format!(".zshrc{TEMP_MARKER}1"));
+        assert!(guarded_write(&Fixture::s(&temp), "x", &f.roots(&no_roots)).is_err());
+        assert!(!temp.exists());
+        // The bare name of a store is never writable, declared or not.
+        let bare = f.home.join(".claude/settings.json");
+        assert!(guarded_write(&Fixture::s(&bare), "x", &f.roots(&no_roots)).is_err());
+        assert!(!bare.exists());
+    }
+
+    #[test]
+    fn write_inside_granted_root_only_temp_files() {
+        let f = fixture();
+        let granted = project_granted(&f);
+        let temp = f.project.join(format!("AGENTS.md{TEMP_MARKER}1"));
+        guarded_write(&Fixture::s(&temp), "x", &f.roots(&granted)).unwrap();
+        assert!(temp.exists());
+        let plain = f.project.join("AGENTS.md");
+        assert!(guarded_write(&Fixture::s(&plain), "x", &f.roots(&granted)).is_err());
+        assert!(!plain.exists());
+        let elsewhere = f.outside.join(format!("a.txt{TEMP_MARKER}1"));
+        assert!(guarded_write(&Fixture::s(&elsewhere), "x", &f.roots(&granted)).is_err());
+        assert!(!elsewhere.exists());
+    }
+
+    #[test]
+    fn write_through_a_symlinked_temp_refused() {
+        let f = fixture();
+        let target = f.outside.join("secret.txt");
+        fs::write(&target, "secret").unwrap();
+        let temp = f.temp(STORE);
+        symlink(&target, &temp).unwrap();
+        assert!(guarded_write(&Fixture::s(&temp), "evil", &f.roots(&no_roots)).is_err());
+        assert_eq!(fs::read_to_string(&target).unwrap(), "secret");
+    }
+
+    #[test]
+    fn symlinked_claude_dir_still_accepts_store_rename_and_write() {
+        let tmp = tempfile::tempdir().unwrap();
+        let base = tmp.path().canonicalize().unwrap();
+        let home = base.join("home");
+        let dotfiles = base.join("dotfiles/claude");
+        fs::create_dir_all(&home).unwrap();
+        fs::create_dir_all(dotfiles.join("skills/review")).unwrap();
+        symlink(&dotfiles, home.join(".claude")).unwrap();
+        let roots = Roots { home: &home, granted: &no_roots };
+
+        let store = home.join(STORE);
+        let temp = home.join(format!("{STORE}{TEMP_MARKER}abc"));
+        fs::write(dotfiles.join("skills/review/SKILL.md"), "old").unwrap();
+        guarded_write(&Fixture::s(&temp), "new", &roots).unwrap();
+        guarded_rename(&Fixture::s(&temp), &Fixture::s(&store), &roots).unwrap();
+        assert_eq!(fs::read_to_string(dotfiles.join("skills/review/SKILL.md")).unwrap(), "new");
+    }
+
+    #[test]
+    fn symlinked_subdirectory_leaving_the_top_dir_refused() {
+        let f = fixture();
+        fs::remove_dir_all(f.home.join(".claude/skills/review")).unwrap();
+        symlink(&f.outside, f.home.join(".claude/skills/review")).unwrap();
+        let temp = f.temp(STORE);
+        assert!(guarded_write(&Fixture::s(&temp), "x", &f.roots(&no_roots)).is_err());
+        assert!(!f.outside.join("SKILL.md.harness-tmp-abc").exists());
     }
 
     #[test]
@@ -254,9 +702,9 @@ mod tests {
     #[test]
     fn dotdot_escape_refused() {
         let f = fixture();
-        let victim = f.outside.join("victim.txt");
+        let victim = f.outside.join(format!("victim.txt{TEMP_MARKER}1"));
         fs::write(&victim, "x").unwrap();
-        let escape = format!("{}/../outside/victim.txt", Fixture::s(&f.project));
+        let escape = format!("{}/../outside/victim.txt{TEMP_MARKER}1", Fixture::s(&f.project));
         let granted = project_granted(&f);
         let err = guarded_remove(&escape, &f.roots(&granted)).unwrap_err();
         assert!(err.contains("'..'"), "{err}");
@@ -273,11 +721,11 @@ mod tests {
     #[test]
     fn symlinked_ancestor_leaving_roots_refused() {
         let f = fixture();
-        let victim = f.outside.join("victim.txt");
+        let victim = f.outside.join(format!("victim.txt{TEMP_MARKER}1"));
         fs::write(&victim, "x").unwrap();
         let link = f.project.join("link");
         symlink(&f.outside, &link).unwrap();
-        let through = link.join("victim.txt");
+        let through = link.join(format!("victim.txt{TEMP_MARKER}1"));
         let granted = project_granted(&f);
         assert!(guarded_remove(&Fixture::s(&through), &f.roots(&granted)).is_err());
         assert!(victim.exists());
@@ -288,7 +736,7 @@ mod tests {
         let f = fixture();
         let target = f.outside.join("secret.txt");
         fs::write(&target, "secret").unwrap();
-        let link = f.project.join("link.txt");
+        let link = f.project.join(format!("link.txt{TEMP_MARKER}1"));
         symlink(&target, &link).unwrap();
         let granted = project_granted(&f);
         let dest = f.project.join("moved.txt");
@@ -304,7 +752,7 @@ mod tests {
     #[test]
     fn directory_remove_refused() {
         let f = fixture();
-        let dir = f.project.join("tree");
+        let dir = f.project.join(format!("tree{TEMP_MARKER}1"));
         fs::create_dir_all(dir.join("nested")).unwrap();
         fs::write(dir.join("nested/file.txt"), "x").unwrap();
         let granted = project_granted(&f);
@@ -335,7 +783,6 @@ mod tests {
         let sneaky = f.home.join(".ssh/id_rsa.harness-tmp-1");
         fs::create_dir_all(sneaky.parent().unwrap()).unwrap();
         fs::write(&sneaky, "x").unwrap();
-        let none = |_: &Path| false;
-        assert!(guarded_remove(&Fixture::s(&sneaky), &f.roots(&none)).is_err());
+        assert!(guarded_remove(&Fixture::s(&sneaky), &f.roots(&no_roots)).is_err());
     }
 }

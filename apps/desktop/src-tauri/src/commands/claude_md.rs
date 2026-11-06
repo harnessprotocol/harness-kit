@@ -1,4 +1,4 @@
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 
 use super::surface_write::write_user_file;
 
@@ -23,25 +23,41 @@ pub fn read_claude_md(path: String) -> Result<String, String> {
 
 fn read_claude_md_in(home: &Path, path: &str) -> Result<String, String> {
     let expanded = expand(home, path);
+    let outside = || "Access denied: path is outside ~/.claude".to_string();
 
-    if !expanded.exists() {
-        return Err(format!("File not found: {}", expanded.display()));
+    // The path must sit inside ~/.claude as written, with no `.` or `..`.
+    if has_dot_components(&expanded) || !expanded.starts_with(home.join(".claude")) {
+        return Err(outside());
     }
+    let file_name = expanded.file_name().ok_or_else(outside)?;
+    let parent = expanded.parent().ok_or_else(outside)?;
+    let Ok(canonical_parent) = parent.canonicalize() else {
+        return Err(format!("File not found: {}", expanded.display()));
+    };
 
-    // Canonicalize both sides so symlinked temp dirs and `..` compare correctly.
+    // Compare the containing directory, not the file. `~/.claude` itself may
+    // be a symlink (canonicalized here), and so may the file: a
+    // `~/.claude/CLAUDE.md` linked into a dotfiles repo is read through the
+    // link. A symlinked directory below ~/.claude that leaves it is refused.
     let claude_dir = home
         .join(".claude")
         .canonicalize()
         .map_err(|e| format!("Invalid path: {}", e))?;
-    let canonical = expanded
-        .canonicalize()
-        .map_err(|e| format!("Invalid path: {}", e))?;
-    if !canonical.starts_with(&claude_dir) {
-        return Err("Access denied: path is outside ~/.claude".to_string());
+    if !canonical_parent.starts_with(&claude_dir) {
+        return Err(outside());
+    }
+    let target = canonical_parent.join(file_name);
+    if !target.exists() {
+        return Err(format!("File not found: {}", expanded.display()));
     }
 
-    std::fs::read_to_string(&canonical)
-        .map_err(|e| format!("Failed to read {}: {}", canonical.display(), e))
+    std::fs::read_to_string(&target)
+        .map_err(|e| format!("Failed to read {}: {}", target.display(), e))
+}
+
+fn has_dot_components(path: &Path) -> bool {
+    path.components()
+        .any(|c| matches!(c, Component::ParentDir | Component::CurDir))
 }
 
 /// Save a file under `~/.claude` (AC-50). `expected_sha256` is the digest of
@@ -65,10 +81,33 @@ fn write_config_file_in(
 ) -> Result<(), String> {
     let expanded = expand(home, path);
 
-    // Pre-check: path must nominally start within ~/.claude/ before any resolution
+    // Pre-check: the path must start within ~/.claude/ as written, and carry
+    // no `.` or `..` (Path::starts_with compares components, so
+    // `~/.claude/../x` would pass it). Nothing is created before this passes.
     let claude_dir = home.join(".claude");
-    if !expanded.starts_with(&claude_dir) {
+    if has_dot_components(&expanded) || !expanded.starts_with(&claude_dir) {
         return Err("write_config_file: path must be within ~/.claude/".to_string());
+    }
+
+    // The deepest directory that already exists below the path must not leave
+    // ~/.claude through a symlink; check that before create_dir_all makes
+    // directories on the far side of it. When ~/.claude itself does not exist
+    // yet, nothing below it can be a link.
+    let mut existing = expanded.parent();
+    while let Some(dir) = existing {
+        if dir.exists() {
+            break;
+        }
+        existing = dir.parent();
+    }
+    if let Some(dir) = existing.filter(|d| d.starts_with(&claude_dir)) {
+        let within = match (dir.canonicalize(), claude_dir.canonicalize()) {
+            (Ok(real), Ok(root)) => real.starts_with(root),
+            _ => false,
+        };
+        if !within {
+            return Err("write_config_file: path must be within ~/.claude/".to_string());
+        }
     }
 
     // Ensure parent directory exists before canonicalization
@@ -195,5 +234,82 @@ mod tests {
         assert!(err.contains("outside ~/.claude"), "{}", err);
         let err = read_claude_md_in(home.path(), "~/.claude/../.zshrc").unwrap_err();
         assert!(err.contains("outside ~/.claude"), "{}", err);
+    }
+}
+
+#[cfg(test)]
+mod round2_tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    #[test]
+    fn dotdot_path_creates_no_directory_outside_claude_dir() {
+        let tmp = TempDir::new().unwrap();
+        let base = tmp.path().canonicalize().unwrap();
+        let home = base.join("home");
+        std::fs::create_dir_all(home.join(".claude")).unwrap();
+        let err = write_config_file_in(&home, "~/.claude/../../escape/a/b", "x", None).unwrap_err();
+        assert!(err.contains("within ~/.claude"), "{err}");
+        assert!(!base.join("escape").exists());
+    }
+
+    #[test]
+    fn dotdot_is_refused_even_when_it_stays_inside() {
+        let tmp = TempDir::new().unwrap();
+        let home = tmp.path().canonicalize().unwrap();
+        std::fs::create_dir_all(home.join(".claude")).unwrap();
+        let err = write_config_file_in(&home, "~/.claude/sub/../x.md", "x", None).unwrap_err();
+        assert!(err.contains("within ~/.claude"), "{err}");
+        assert!(!home.join(".claude/sub").exists());
+        assert!(!home.join(".claude/x.md").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn symlinked_subdir_leaving_claude_dir_creates_no_directory_outside() {
+        let tmp = TempDir::new().unwrap();
+        let base = tmp.path().canonicalize().unwrap();
+        let home = base.join("home");
+        let outside = base.join("outside");
+        std::fs::create_dir_all(home.join(".claude")).unwrap();
+        std::fs::create_dir_all(&outside).unwrap();
+        std::os::unix::fs::symlink(&outside, home.join(".claude/link")).unwrap();
+        let err = write_config_file_in(&home, "~/.claude/link/new/f.md", "x", None).unwrap_err();
+        assert!(err.contains("within ~/.claude"), "{err}");
+        assert!(!outside.join("new").exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn symlinked_claude_md_into_dotfiles_is_readable() {
+        let tmp = TempDir::new().unwrap();
+        let base = tmp.path().canonicalize().unwrap();
+        let home = base.join("home");
+        let dotfiles = base.join("dotfiles");
+        std::fs::create_dir_all(home.join(".claude")).unwrap();
+        std::fs::create_dir_all(&dotfiles).unwrap();
+        std::fs::write(dotfiles.join("CLAUDE.md"), "from dotfiles").unwrap();
+        std::os::unix::fs::symlink(dotfiles.join("CLAUDE.md"), home.join(".claude/CLAUDE.md")).unwrap();
+        assert_eq!(read_claude_md_in(&home, "~/.claude/CLAUDE.md").unwrap(), "from dotfiles");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn symlinked_claude_dir_is_readable_and_a_linked_subdir_is_not() {
+        let tmp = TempDir::new().unwrap();
+        let base = tmp.path().canonicalize().unwrap();
+        let home = base.join("home");
+        let dotfiles = base.join("dotfiles/claude");
+        let outside = base.join("outside");
+        std::fs::create_dir_all(&home).unwrap();
+        std::fs::create_dir_all(&dotfiles).unwrap();
+        std::fs::create_dir_all(&outside).unwrap();
+        std::fs::write(dotfiles.join("CLAUDE.md"), "dir link").unwrap();
+        std::fs::write(outside.join("secret"), "secret").unwrap();
+        std::os::unix::fs::symlink(&dotfiles, home.join(".claude")).unwrap();
+        assert_eq!(read_claude_md_in(&home, "~/.claude/CLAUDE.md").unwrap(), "dir link");
+        std::os::unix::fs::symlink(&outside, dotfiles.join("sub")).unwrap();
+        let err = read_claude_md_in(&home, "~/.claude/sub/secret").unwrap_err();
+        assert!(err.contains("outside ~/.claude"), "{err}");
     }
 }

@@ -1,6 +1,6 @@
 {
   "identifier": "default",
-  "description": "Default capability — grants core API, read access to harness config roots under $HOME (read-ONLY for the Machine-observation paths: .claude.json, the exact Claude Desktop / VS Code User config files the surface registry declares, .copilot, .agents), and shell open. No shell execute, spawn, stdin or kill: production code runs processes from Rust only. fs rename and remove are not granted; they go through guarded_rename_file and guarded_remove_file",
+  "description": "Default capability — grants core API, read access to harness config roots under $HOME (the Machine-observation paths .claude.json, the exact Claude Desktop / VS Code User config files the surface registry declares, .copilot and .agents are reachable only by the read, read-dir and exists permissions), mkdir and lstat inside the fs scope, and shell open. No shell execute, spawn, stdin or kill: production code runs processes from Rust only. fs write, rename and remove are not granted to the webview; they go through guarded_write_file, guarded_rename_file and guarded_remove_file, which write and rename only the engine's .harness-tmp-<suffix> files, and delete only those and its backups (removing a store moves it to ~/.harness/backups/quarantine/ instead)",
   "windows": ["main"],
   "permissions": [
     "core:default",
@@ -10,7 +10,6 @@
     "fs:allow-read-text-file",
     "fs:allow-read-dir",
     "fs:allow-exists",
-    "fs:allow-write-text-file",
     "fs:allow-lstat",
     "fs:allow-mkdir",
     {
@@ -190,6 +189,7 @@
     "allow-detect-harnesses",
     "allow-grant-project-scope",
     "allow-choose-project-dir",
+    "allow-guarded-write-file",
     "allow-guarded-rename-file",
     "allow-guarded-remove-file",
     "allow-acknowledge-drift-item",

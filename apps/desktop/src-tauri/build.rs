@@ -110,7 +110,8 @@ fn main() {
                 // Runtime FS scope grants (used by Fleet/Drift's project scope)
                 "grant_project_scope",
                 "choose_project_dir",
-                // Guarded rename/remove for the webview's TauriFsProvider
+                // Guarded write/rename/remove for the webview's TauriFsProvider
+                "guarded_write_file",
                 "guarded_rename_file",
                 "guarded_remove_file",
                 // Drift (acknowledgement persistence)

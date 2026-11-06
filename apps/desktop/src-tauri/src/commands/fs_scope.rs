@@ -19,12 +19,19 @@ fn granted_roots() -> &'static Mutex<HashSet<PathBuf>> {
 
 /// Whether `candidate` is a granted root or lives inside one.
 pub(crate) fn is_granted_root(candidate: &Path) -> bool {
-    let Ok(roots) = granted_roots().lock() else {
-        return false;
-    };
+    granted_root_for(candidate).is_some()
+}
+
+/// The outermost granted root that is `candidate` or contains it. Two paths
+/// with the same outermost root lie inside one granted root, which is the
+/// test a move between them has to pass.
+pub(crate) fn granted_root_for(candidate: &Path) -> Option<PathBuf> {
+    let roots = granted_roots().lock().ok()?;
     roots
         .iter()
-        .any(|root| candidate == root || candidate.starts_with(root))
+        .filter(|root| candidate == root.as_path() || candidate.starts_with(root))
+        .min_by_key(|root| root.components().count())
+        .cloned()
 }
 
 /// Record a canonical root as granted. Test-visible so the sync bridge's
@@ -63,10 +70,12 @@ pub(crate) fn is_home_or_ancestor(candidate: &Path, home: &Path) -> bool {
 /// `$HOME/**`. Fleet/Drift's project scope is an arbitrary directory the user
 /// picked via a folder dialog (see SyncPage's `open({ directory: true })` and
 /// `getCurrentProjectDir()`), so it can't be listed ahead of time. This
-/// command extends the runtime scope to cover exactly that directory,
-/// in-memory only (not persisted to disk, not retroactively trusting any
-/// other path) — it must be called again each launch before the project
-/// scope is used.
+/// command extends the runtime scope to cover exactly that directory
+/// (not retroactively trusting any other path). The scope itself lasts one
+/// launch, so this must be called again each launch before the project scope
+/// is used; the user's pick is what persists: `picked-project-roots.json`
+/// in the app data directory keeps it with no expiry, and a later grant of
+/// that directory or one inside it is accepted without the dialog.
 ///
 /// This command is reachable from any webview JS, so it can't just trust the
 /// caller: it's the trust boundary the static scope tightening above exists

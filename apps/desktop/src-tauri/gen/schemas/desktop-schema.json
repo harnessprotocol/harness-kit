@@ -2451,6 +2451,12 @@
           "markdownDescription": "Enables the guarded_rename_file command without any pre-configured scope."
         },
         {
+          "description": "Enables the guarded_write_file command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-guarded-write-file",
+          "markdownDescription": "Enables the guarded_write_file command without any pre-configured scope."
+        },
+        {
           "description": "Enables the import_plugin_from_path command without any pre-configured scope.",
           "type": "string",
           "const": "allow-import-plugin-from-path",
@@ -3067,6 +3073,12 @@
           "type": "string",
           "const": "deny-guarded-rename-file",
           "markdownDescription": "Denies the guarded_rename_file command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the guarded_write_file command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-guarded-write-file",
+          "markdownDescription": "Denies the guarded_write_file command without any pre-configured scope."
         },
         {
           "description": "Denies the import_plugin_from_path command without any pre-configured scope.",

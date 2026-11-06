@@ -49,7 +49,9 @@ const mockInvoke = vi.fn(async (command: string, args?: Record<string, unknown>)
     case "check_plugin_updates":
       return [];
     case "import_plugin_from_path": {
-      const path = String(args?.sourcePath);
+      const picked = args?.sourcePath ?? (await mockDialogOpen());
+      if (!picked) return null; // dialog cancelled in Rust
+      const path = String(picked);
       await held.get(path);
       if (path.endsWith(".zip") || path.endsWith(".md")) throw `Not a directory: ${path}`;
       if (path.endsWith("not-a-plugin")) throw "Invalid plugin: missing .claude-plugin/plugin.json";
@@ -68,10 +70,9 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: (command: string, args?: Record<string, unknown>) => mockInvoke(command, args),
 }));
 
+// Stands in for the native dialog Rust opens when the page passes no path.
+// The webview itself no longer reaches the dialog plugin to pick a plugin.
 const mockDialogOpen = vi.fn();
-vi.mock("@tauri-apps/plugin-dialog", () => ({
-  open: (...args: unknown[]) => mockDialogOpen(...args),
-}));
 
 // ── Helpers ─────────────────────────────────────────────────────
 
@@ -152,11 +153,24 @@ describe("PluginsPage drag-to-import (Tauri drag-drop event)", () => {
     expect(await screen.findByRole("status")).toHaveTextContent("Successfully imported research");
     expect(importCalls()).toEqual([["import_plugin_from_path", { sourcePath: "/Users/me/research" }]]);
 
-    // The picker lands on the very same command with the chosen path.
+    // The picker lands on the very same command, naming no path: Rust opens
+    // the dialog and the webview never sees the chosen folder.
     mockDialogOpen.mockResolvedValueOnce("/Users/me/harness-share");
     fireEvent.click(importButton());
     await waitFor(() => expect(importCalls()).toHaveLength(2));
-    expect(importCalls()[1]).toEqual(["import_plugin_from_path", { sourcePath: "/Users/me/harness-share" }]);
+    expect(importCalls()[1]).toEqual(["import_plugin_from_path", { sourcePath: null }]);
+    expect(await screen.findByText("Successfully imported harness-share")).toBeInTheDocument();
+  });
+
+  it("a folder dialog the user cancels in Rust imports nothing and reports no failure", async () => {
+    await renderPage();
+    mockDialogOpen.mockResolvedValueOnce(null);
+    fireEvent.click(importButton());
+    await waitFor(() => expect(importCalls()).toEqual([["import_plugin_from_path", { sourcePath: null }]]));
+    await waitFor(() => expect(importButton()).toBeEnabled());
+    // The status region is always mounted; a cancel leaves it empty.
+    expect(screen.queryByRole("status")?.textContent ?? "").toBe("");
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
   it("routes a dropped .zip to the zip import command", async () => {
@@ -349,7 +363,7 @@ describe("PluginsPage drag-to-import (Tauri drag-drop event)", () => {
     const release = holdImport("/Users/me/picked");
     mockDialogOpen.mockResolvedValueOnce("/Users/me/picked");
     fireEvent.click(option());
-    await waitFor(() => expect(importCalls()).toEqual([["import_plugin_from_path", { sourcePath: "/Users/me/picked" }]]));
+    await waitFor(() => expect(importCalls()).toEqual([["import_plugin_from_path", { sourcePath: null }]]));
     // While the import runs the button is off, and so is the command.
     expect(importButton()).toBeDisabled();
     expect(option()).toHaveAttribute("aria-disabled", "true");

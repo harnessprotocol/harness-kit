@@ -184,7 +184,8 @@ pub fn run() {
             // Runtime FS scope grants (used by Fleet/Drift's project scope)
             commands::fs_scope::grant_project_scope,
             commands::fs_scope::choose_project_dir,
-            // Guarded rename/remove for the webview's TauriFsProvider
+            // Guarded write/rename/remove for the webview's TauriFsProvider
+            commands::fs_guarded::guarded_write_file,
             commands::fs_guarded::guarded_rename_file,
             commands::fs_guarded::guarded_remove_file,
             // Drift (acknowledgement persistence; drift computation itself
@@ -197,6 +198,13 @@ pub fn run() {
             commands::feedback::get_system_info,
             commands::feedback::submit_feedback,
         ])
+        // The OS reports a drop to the native layer; remember the paths here
+        // so plugin import can accept only paths the user actually dropped.
+        .on_window_event(|_window, event| {
+            if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event {
+                commands::plugin_explorer::record_dropped_paths(paths);
+            }
+        })
         .setup(|app| {
             // Size the main window to 75% of the primary monitor on launch.
             if let Some(window) = app.get_webview_window("main") {

@@ -199,13 +199,78 @@ pub fn write_plugin_file(
 /// matched by prefix in apps/desktop/src/pages/harness/plugins/import-errors.ts
 /// to reword it for the Plugins page. Changing any of these strings breaks
 /// that rewording; `tests::import_error_prefixes_match_import_errors_ts` pins them.
+///
+/// The webview never names the source. With `source_path` `None` the native
+/// folder dialog opens here; with `Some`, the path must be one the user
+/// dropped on the window, recorded by `record_dropped_paths` from the native
+/// drag-drop event (and spent by this call). Resolves `None` when the user
+/// cancels the dialog.
 #[tauri::command]
-pub fn import_plugin_from_path(source_path: String) -> Result<super::plugins::InstalledPlugin, String> {
-    let plugins_dir = dirs::home_dir()
+pub async fn import_plugin_from_path(
+    app: tauri::AppHandle,
+    source_path: Option<String>,
+) -> Result<Option<super::plugins::InstalledPlugin>, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let source = match source_path {
+        Some(path) => take_dropped(&path)?,
+        None => {
+            let Some(picked) = app
+                .dialog()
+                .file()
+                .set_title("Select plugin folder")
+                .blocking_pick_folder()
+            else {
+                return Ok(None);
+            };
+            picked.into_path().map_err(|e| e.to_string())?
+        }
+    };
+    import_plugin_into(&source.to_string_lossy(), &user_plugins_dir()?).map(Some)
+}
+
+fn user_plugins_dir() -> Result<PathBuf, String> {
+    Ok(dirs::home_dir()
         .ok_or("Could not resolve home directory")?
         .join(".claude")
-        .join("plugins");
-    import_plugin_into(&source_path, &plugins_dir)
+        .join("plugins"))
+}
+
+/// Paths the user dropped on the window, as reported by the OS to the native
+/// layer. The webview hears about a drop too, but only a path recorded here
+/// is accepted back from it, so it cannot name a folder or zip of its own.
+fn dropped_paths() -> &'static std::sync::Mutex<Vec<PathBuf>> {
+    static DROPPED: std::sync::OnceLock<std::sync::Mutex<Vec<PathBuf>>> = std::sync::OnceLock::new();
+    DROPPED.get_or_init(|| std::sync::Mutex::new(Vec::new()))
+}
+
+/// Keep the most recent drops; a drop that is never imported must not pile up.
+const MAX_REMEMBERED_DROPS: usize = 256;
+
+/// Called from the window's native drag-drop event (lib.rs).
+pub(crate) fn record_dropped_paths(paths: &[PathBuf]) {
+    if let Ok(mut dropped) = dropped_paths().lock() {
+        for path in paths {
+            if !dropped.contains(path) {
+                dropped.push(path.clone());
+            }
+        }
+        let excess = dropped.len().saturating_sub(MAX_REMEMBERED_DROPS);
+        dropped.drain(..excess);
+    }
+}
+
+/// Spend one recorded drop. Refuses a path the OS never reported.
+fn take_dropped(path: &str) -> Result<PathBuf, String> {
+    let wanted = Path::new(path);
+    let mut dropped = dropped_paths()
+        .lock()
+        .map_err(|_| "Drop registry is unavailable".to_string())?;
+    match dropped.iter().position(|p| p == wanted) {
+        Some(i) => Ok(dropped.remove(i)),
+        None => Err(format!(
+            "Refusing to import {path}: it was not dropped on the window or chosen in the dialog"
+        )),
+    }
 }
 
 /// `import_plugin_from_path` with the destination `~/.claude/plugins` passed
@@ -288,9 +353,35 @@ fn copy_capped(
     Ok(if copied > max { None } else { Some(copied) })
 }
 
+/// Same source rule as `import_plugin_from_path`: the zip is chosen in a
+/// native dialog opened here (`None`), or is a path the user dropped on the
+/// window (`Some`).
 #[tauri::command]
-pub fn import_plugin_from_zip(zip_path: String) -> Result<super::plugins::InstalledPlugin, String> {
-    let zip_file = fs::File::open(&zip_path)
+pub async fn import_plugin_from_zip(
+    app: tauri::AppHandle,
+    zip_path: Option<String>,
+) -> Result<Option<super::plugins::InstalledPlugin>, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let zip = match zip_path {
+        Some(path) => take_dropped(&path)?,
+        None => {
+            let Some(picked) = app
+                .dialog()
+                .file()
+                .set_title("Select plugin zip")
+                .add_filter("Plugin zip", &["zip"])
+                .blocking_pick_file()
+            else {
+                return Ok(None);
+            };
+            picked.into_path().map_err(|e| e.to_string())?
+        }
+    };
+    import_zip_at(&zip.to_string_lossy()).map(Some)
+}
+
+fn import_zip_at(zip_path: &str) -> Result<super::plugins::InstalledPlugin, String> {
+    let zip_file = fs::File::open(zip_path)
         .map_err(|e| format!("Failed to open zip: {}", e))?;
 
     let mut archive = zip::ZipArchive::new(zip_file)
@@ -366,7 +457,8 @@ pub fn import_plugin_from_zip(zip_path: String) -> Result<super::plugins::Instal
     let plugin_root = find_plugin_root(&temp_dir)?;
 
     // Use the folder import from here
-    let result = import_plugin_from_path(plugin_root.to_string_lossy().to_string());
+    let result = user_plugins_dir()
+        .and_then(|dir| import_plugin_into(&plugin_root.to_string_lossy(), &dir));
 
     // Clean up temp
     let _ = fs::remove_dir_all(&temp_dir);
@@ -680,14 +772,44 @@ mod tests {
 
         // /^Failed to (open|read) zip/
         let missing_zip = tmp.path().join("missing.zip");
-        assert!(import_plugin_from_zip(missing_zip.to_string_lossy().to_string())
+        assert!(import_zip_at(&missing_zip.to_string_lossy())
             .unwrap_err()
             .starts_with("Failed to open zip: "));
         let not_zip = tmp.path().join("not.zip");
         fs::write(&not_zip, "not a zip").unwrap();
-        assert!(import_plugin_from_zip(not_zip.to_string_lossy().to_string())
+        assert!(import_zip_at(&not_zip.to_string_lossy())
             .unwrap_err()
             .starts_with("Failed to read zip archive: "));
+    }
+
+    #[test]
+    fn only_a_path_the_os_dropped_can_be_imported_and_only_once() {
+        let tmp = TempDir::new().unwrap();
+        let dropped = tmp.path().join("dropped-plugin");
+        let invented = tmp.path().join("webview-invented");
+        record_dropped_paths(&[dropped.clone()]);
+
+        let err = take_dropped(&invented.to_string_lossy()).unwrap_err();
+        assert!(err.starts_with("Refusing to import"), "{err}");
+        assert_eq!(take_dropped(&dropped.to_string_lossy()).unwrap(), dropped);
+        assert!(
+            take_dropped(&dropped.to_string_lossy()).is_err(),
+            "a drop is spent by the import it authorises"
+        );
+    }
+
+    #[test]
+    fn remembered_drops_are_capped() {
+        let tmp = TempDir::new().unwrap();
+        let first = tmp.path().join("first");
+        record_dropped_paths(&[first.clone()]);
+        let flood: Vec<PathBuf> = (0..MAX_REMEMBERED_DROPS + 5)
+            .map(|i| tmp.path().join(format!("flood-{i}")))
+            .collect();
+        record_dropped_paths(&flood);
+        assert!(take_dropped(&first.to_string_lossy()).is_err());
+        let last = flood.last().unwrap();
+        assert_eq!(&take_dropped(&last.to_string_lossy()).unwrap(), last);
     }
 
     #[test]
@@ -734,7 +856,7 @@ mod tests {
         };
         let before = leftovers(&std::env::temp_dir());
 
-        let err = import_plugin_from_zip(zip_path.to_string_lossy().to_string()).unwrap_err();
+        let err = import_zip_at(&zip_path.to_string_lossy()).unwrap_err();
         assert_eq!(err, "Could not find .claude-plugin/plugin.json in extracted archive");
         assert!(!escaped.exists(), "zip entry escaped the extraction directory");
 

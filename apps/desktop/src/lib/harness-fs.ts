@@ -1,6 +1,5 @@
 import {
   readTextFile,
-  writeTextFile,
   exists,
   mkdir,
   readDir,
@@ -26,8 +25,12 @@ export class TauriFsProvider implements FsProvider {
     return readTextFile(path);
   }
 
+  // The fs plugin's write is not granted to the webview (a scope cannot tell
+  // a hooks file from a temp file). The Rust command writes only the engine's
+  // `.harness-tmp-<suffix>` file beside a declared store or inside a project
+  // root the user picked, and refuses everything else.
   async writeFile(path: string, content: string): Promise<void> {
-    await writeTextFile(path, content);
+    await invoke("guarded_write_file", { path, content });
   }
 
   async exists(path: string): Promise<boolean> {
@@ -67,18 +70,23 @@ export class TauriFsProvider implements FsProvider {
 
   // The fs plugin's rename and remove are not granted to the webview: a
   // capability scope cannot refuse symlinks or recursive deletes. These Rust
-  // commands check both paths against the declared roots, refuse a symlink
-  // source, and never remove a directory.
+  // commands accept a temp file renamed onto its own store (or a move inside
+  // one project root), refuse a symlink source, delete only temp files and
+  // backups (removing a store moves it to quarantine), and never remove a
+  // directory.
   async renameFile(from: string, to: string): Promise<void> {
     try {
       await invoke("guarded_rename_file", { from, to });
     } catch (err) {
       // A refused rename leaves the engine's temp file behind; clear it
-      // best-effort and report the refusal, not the cleanup.
-      try {
-        await invoke("guarded_remove_file", { path: from });
-      } catch {
-        /* best effort */
+      // best-effort and report the refusal, not the cleanup. Only a temp
+      // file: a refused rename of anything else must not delete its source.
+      if (from.includes(".harness-tmp")) {
+        try {
+          await invoke("guarded_remove_file", { path: from });
+        } catch {
+          /* best effort */
+        }
       }
       throw err;
     }
