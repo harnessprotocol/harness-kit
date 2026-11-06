@@ -1535,9 +1535,12 @@ describe("MachinePage commands in the palette (AC-21)", () => {
   it("switches views and filters through the page's own handlers", async () => {
     renderWithPalette();
     await screen.findByTestId("machine-grid");
-    // Already on the grid, and no filter is on.
-    expect(paletteOption("Show resources")).toHaveAttribute("aria-disabled", "true");
-    expect(paletteOption("Filter: show all")).toHaveAttribute("aria-disabled", "true");
+    // Already on the grid, and no filter is on. The page registers its palette
+    // commands in an effect, which can land after the grid's first paint.
+    await waitFor(() => {
+      expect(paletteOption("Show resources")).toHaveAttribute("aria-disabled", "true");
+      expect(paletteOption("Filter: show all")).toHaveAttribute("aria-disabled", "true");
+    });
 
     fireEvent.click(paletteOption("Filter: gaps"));
     await waitFor(() => expect(screen.getByTestId("location-search")).toHaveTextContent("filter=gaps"));
