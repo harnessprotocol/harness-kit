@@ -33,7 +33,10 @@ function parseJson(text) {
 }
 
 function cell(value) {
-  return String(value ?? "").replace(/\|/g, "\\|").replace(/\n/g, " ");
+  return String(value ?? "")
+    .replace(/\\/g, "\\\\")
+    .replace(/\|/g, "\\|")
+    .replace(/\r?\n/g, " ");
 }
 
 function table(headers, rows) {
