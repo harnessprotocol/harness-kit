@@ -165,7 +165,7 @@ describe("PermissionsPage — preset buttons", () => {
       const strictStrong = Array.from(strongs).find((el) => el.textContent === "Strict");
       expect(strictStrong).toBeDefined();
       // The parent paragraph should contain the confirmation text
-      expect(strictStrong?.closest("p")?.textContent).toMatch(/Apply.*preset\? This will overwrite/);
+      expect(strictStrong?.closest("p")?.textContent).toMatch(/Apply.*preset\? Its rules are added/);
     });
   });
 
@@ -192,6 +192,23 @@ describe("PermissionsPage — preset buttons", () => {
 
     await waitFor(() => {
       expect(mockApplySecurityPreset).toHaveBeenCalledWith("strict");
+    });
+  });
+
+  it("lists deny rules the preset would drop and applies only after a second confirmation", async () => {
+    mockApplySecurityPreset
+      .mockResolvedValueOnce({ applied: false, droppedDeny: ["Bash(rm:*)"] })
+      .mockResolvedValueOnce({ applied: true, droppedDeny: ["Bash(rm:*)"] });
+    renderPage();
+    fireEvent.click((await screen.findByText("Strict")).closest("button")!);
+    fireEvent.click(await screen.findByRole("button", { name: "Apply" }));
+
+    expect(await screen.findByText("Bash(rm:*)")).toBeInTheDocument();
+    expect(mockApplySecurityPreset).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Remove deny rules and apply" }));
+    await waitFor(() => {
+      expect(mockApplySecurityPreset).toHaveBeenLastCalledWith("strict", true);
     });
   });
 

@@ -725,6 +725,8 @@ export default function PermissionsPage() {
   );
   const [saving, setSaving] = useState(false);
   const [confirmPreset, setConfirmPreset] = useState<SecurityPreset | null>(null);
+  // Deny rules a confirmed preset would remove; set after the first apply call returns them unwritten.
+  const [pendingDeny, setPendingDeny] = useState<string[] | null>(null);
   const [dirty, setDirty] = useState(false);
 
   const [budgetGuard, setBudgetGuardState] = useState<BudgetGuardConfig>(() => getBudgetGuard());
@@ -858,10 +860,18 @@ export default function PermissionsPage() {
   async function handleApplyPreset(preset: SecurityPreset) {
     setSaving(true);
     try {
-      await applySecurityPreset(preset.id);
-      setPermissions(preset.permissions);
+      const outcome = await (pendingDeny
+        ? applySecurityPreset(preset.id, true)
+        : applySecurityPreset(preset.id));
+      if (outcome && outcome.applied === false) {
+        setPendingDeny(outcome.droppedDeny);
+        return;
+      }
+      // The preset is merged into existing rules, so reload rather than show the preset itself.
+      setPermissions(await readPermissions());
       setDirty(false);
       setConfirmPreset(null);
+      setPendingDeny(null);
     } catch (e) {
       setError({ title: `Couldn't apply the ${preset.name} preset`, details: errorDetails(e) });
     } finally {
@@ -1008,7 +1018,7 @@ export default function PermissionsPage() {
               {presets.map((preset) => (
                 <button
                   key={preset.id}
-                  onClick={() => setConfirmPreset(preset)}
+                  onClick={() => { setConfirmPreset(preset); setPendingDeny(null); }}
                   style={{
                     padding: "7px 12px",
                     background: "var(--bg-surface)",
@@ -1035,17 +1045,25 @@ export default function PermissionsPage() {
             borderRadius: "8px", padding: "12px 14px", marginBottom: "14px",
           }}>
             <p style={{ fontSize: "12px", color: "var(--fg-base)", margin: "0 0 10px" }}>
-              Apply <strong>{confirmPreset.name}</strong> preset? This will overwrite current settings.
+              Apply <strong>{confirmPreset.name}</strong> preset? Its rules are added to your current settings.
             </p>
+            {pendingDeny && (
+              <div style={{ fontSize: "12px", color: "var(--fg-base)", margin: "0 0 10px" }}>
+                This preset removes these deny rules:
+                <ul style={{ margin: "4px 0 0 16px", padding: 0 }}>
+                  {pendingDeny.map((rule) => <li key={rule}><code>{rule}</code></li>)}
+                </ul>
+              </div>
+            )}
             <div style={{ display: "flex", gap: "6px" }}>
               <button
                 onClick={() => handleApplyPreset(confirmPreset)}
                 disabled={saving}
                 className="btn btn-primary btn-sm"
               >
-                {saving ? "Applying…" : "Apply"}
+                {saving ? "Applying…" : pendingDeny ? "Remove deny rules and apply" : "Apply"}
               </button>
-              <button onClick={() => setConfirmPreset(null)} className="btn btn-secondary btn-sm">
+              <button onClick={() => { setConfirmPreset(null); setPendingDeny(null); }} className="btn btn-secondary btn-sm">
                 Cancel
               </button>
             </div>
