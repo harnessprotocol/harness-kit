@@ -90,6 +90,33 @@ Writes native config files for every AI tool `harness import` detected — `.cla
   today; skills, subagents, hooks, and model config are export-only for now on most tools.
 </Callout>
 
+## Use in CI
+
+Fail a pull request when compiled config files no longer match `harness.yaml`:
+
+```yaml
+name: Harness
+on: [pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: harnessprotocol/harness-kit@v0.13.0
+        with:
+          target: claude-code,cursor,agents-md
+```
+
+The step exits 1 on drift and writes a table of the drifted files to the job summary. Run `harness compile` locally and commit the result to fix it.
+
+| Input | Default | Meaning |
+|-------|---------|---------|
+| `command` | `check` | `check` compares compiled files with `harness.yaml`. `status` reports drift across detected tools. |
+| `harness-file` | `harness.yaml` | Path to the profile (`check`). |
+| `target` | all | Comma-separated targets (`check`). |
+| `baseline` | none | Team baseline `harness.yaml` in the checkout (`status`). |
+| `cli-version` | the release version | npm version or dist-tag of `@harness-kit/cli`, for example `latest`. |
+
 ## No existing config? Start with a plugin
 
 If you're trying harness-kit from scratch with nothing to import yet, install a plugin instead and try it in under a minute.
