@@ -72,8 +72,60 @@ jobs:
       - name: Build and test all packages
         run: pnpm turbo run build test
 
-  # build-cli-npm is omitted until NPM_TOKEN is configured in repo secrets.
-  # To re-enable: add the job back with needs: [prepare, gate] and set NPM_TOKEN.
+  # Publishes the CLI and the workspace packages it needs at runtime, in
+  # dependency order: shared, core, exchange, cli. Does nothing (and passes)
+  # when the NPM_TOKEN repo secret is not set. A job-level `if` cannot read
+  # secrets, so the first step checks the token through the job env instead.
+  build-cli-npm:
+    needs: [prepare, gate]
+    runs-on: ubuntu-latest
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - name: Check for NPM_TOKEN
+        id: token
+        run: |
+          if [ -z "$NPM_TOKEN" ]; then
+            echo "::notice::NPM_TOKEN is not set; skipping npm publish."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v7
+        if: steps.token.outputs.publish == 'true'
+
+      - uses: pnpm/action-setup@v6
+        if: steps.token.outputs.publish == 'true'
+
+      - uses: actions/setup-node@v7
+        if: steps.token.outputs.publish == 'true'
+        with:
+          node-version: 24
+          cache: pnpm
+          registry-url: https://registry.npmjs.org
+
+      - name: Stamp version
+        if: steps.token.outputs.publish == 'true'
+        run: bash scripts/stamp-version.sh ${{ needs.prepare.outputs.version }}
+
+      - name: Install dependencies
+        if: steps.token.outputs.publish == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        if: steps.token.outputs.publish == 'true'
+        run: pnpm turbo run build --filter=@harness-kit/cli...
+
+      - name: Publish to npm
+        if: steps.token.outputs.publish == 'true'
+        run: |
+          pnpm --filter @harness-kit/shared publish --no-git-checks
+          pnpm --filter @harness-kit/core publish --no-git-checks
+          pnpm --filter @harness-kit/exchange publish --no-git-checks
+          pnpm --filter @harness-kit/cli publish --no-git-checks
+        env:
+          NODE_AUTH_TOKEN: ${{ env.NPM_TOKEN }}
 
   build-cli-standalone:
     needs: [prepare, gate]

@@ -1,5 +1,5 @@
 import type { MarketplaceFinding, MarketplaceSecurity } from '@/lib/marketplace/types';
-import { TrustBadge } from './TrustBadge';
+import { TrustBadge, formatScanDate } from './TrustBadge';
 
 const SEVERITY_COLOR: Record<string, string> = {
   critical: '#ef4444',
@@ -46,13 +46,25 @@ function FindingItem({ finding }: { finding: MarketplaceFinding }) {
 
 export function SecurityPanel({ security }: { security: MarketplaceSecurity }) {
   const { permissions, findings } = security;
+  const scanned = formatScanDate(security.scanDate);
   return (
     <section>
       <div className="mb-3 flex flex-wrap items-center gap-3">
         <h2 className="font-display text-lg font-semibold text-fd-foreground">Security &amp; permissions</h2>
         <TrustBadge tier={security.trust} />
-        <span className="text-sm text-fd-muted-foreground">{security.summary}</span>
+        {scanned && <span className="text-xs text-fd-muted-foreground">Scanned {scanned}</span>}
       </div>
+      <p className="mb-3 flex flex-wrap gap-x-4 text-xs text-fd-muted-foreground">
+        {(['critical', 'warning', 'info'] as const).map((sev) => {
+          const n = security[`${sev}Count` as const];
+          return (
+            <span key={sev}>
+              <span className="font-semibold" style={{ color: n > 0 ? SEVERITY_COLOR[sev] : 'var(--fg-subtle)' }}>{n}</span>{' '}
+              {sev}
+            </span>
+          );
+        })}
+      </p>
 
       <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-fd-muted-foreground">
         Declared capabilities
@@ -72,9 +84,18 @@ export function SecurityPanel({ security }: { security: MarketplaceSecurity }) {
         />
         <PermissionRow
           label="Filesystem patterns"
-          value={permissions.filesystemPatterns.length ? permissions.filesystemPatterns.join(', ') : 'None'}
+          value={permissions.filesystemPatterns.length ? String(permissions.filesystemPatterns.length) : 'None'}
           on={permissions.filesystemPatterns.length > 0}
         />
+        {permissions.filesystemPatterns.length > 0 && (
+          <ul className="flex flex-wrap gap-1.5 pb-3">
+            {permissions.filesystemPatterns.map((p) => (
+              <li key={p} className="rounded-md bg-fd-background/60 px-2 py-0.5 font-mono text-[11px] text-fd-muted-foreground">
+                {p}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
 
       {findings.length > 0 ? (

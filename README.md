@@ -29,7 +29,7 @@ Your AI coding setup — plugins, skills, MCP servers, hooks, conventions — pa
 **CLI** (`harness validate`, `compile`, `install`, `sync`, ...):
 ```bash
 brew tap harnessprotocol/tap && brew install harness-kit
-# or: npm install -g @harness-kit/cli  # requires Node.js 22+
+# or: npm install -g @harness-kit/cli  # requires Node.js 24+
 ```
 
 **Desktop App**:
@@ -152,6 +152,33 @@ curl -fsSL https://raw.githubusercontent.com/harnessprotocol/harness-kit/main/ha
 
 See [`harness.yaml.example`](harness.yaml.example) for the config format. New captures use Harness Protocol v2; v1 profiles continue to parse, compile, and reconcile.
 </details>
+
+## ✅ Use in CI
+
+Fail a pull request when compiled config files no longer match `harness.yaml`:
+
+```yaml
+name: Harness
+on: [pull_request]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: harnessprotocol/harness-kit@v0.13.0
+        with:
+          target: claude-code,cursor,agents-md
+```
+
+The step exits 1 on drift and writes a table of the drifted files to the job summary. Run `harness compile` locally and commit the result to fix it.
+
+| Input | Default | Meaning |
+|-------|---------|---------|
+| `command` | `check` | `check` compares compiled files with `harness.yaml`. `status` reports drift across detected tools. |
+| `harness-file` | `harness.yaml` | Path to the profile (`check`). |
+| `target` | all | Comma-separated targets (`check`). |
+| `baseline` | none | Team baseline `harness.yaml` in the checkout (`status`). |
+| `cli-version` | the release version | npm version or dist-tag of `@harness-kit/cli`, for example `latest`. |
 
 ## 🔒 Security & Privacy
 

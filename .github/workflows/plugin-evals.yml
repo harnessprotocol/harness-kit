@@ -1,0 +1,130 @@
+name: Plugin evals (live)
+
+# Runs `claude plugin eval` against plugins that ship an evals/ directory.
+# Calls the model, so it is opt-in:
+#   - workflow_dispatch
+#   - a published release
+#   - a pull request labeled `run-evals` (only plugins the PR changed)
+# Deterministic graders only, one run per case, pinned Haiku, $2 cap per plugin.
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+  pull_request:
+    types: [labeled, synchronize, reopened]
+    branches: [main]
+
+concurrency:
+  group: plugin-evals-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  CLAUDE_CODE_VERSION: "2.1.307"
+  EVAL_MODEL: claude-haiku-5-5
+  EVAL_MAX_COST_USD: "2"
+
+jobs:
+  plan:
+    # On PRs, run only while the `run-evals` label is present.
+    if: >-
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'run-evals')
+    runs-on: ubuntu-latest
+    outputs:
+      plugins: ${{ steps.matrix.outputs.plugins }}
+      has_plugins: ${{ steps.matrix.outputs.has_plugins }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Select plugins with evals
+        id: matrix
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          CHANGED=""
+          if [ "$EVENT" = "pull_request" ]; then
+            CHANGED=$(git diff --name-only "$BASE_SHA" "$HEAD_SHA" | sed -n 's#^plugins/\([^/]*\)/.*#\1#p' | sort -u)
+          fi
+          LIST=()
+          for dir in plugins/*/; do
+            name=$(basename "$dir")
+            [ -d "${dir}evals" ] || continue
+            if [ "$EVENT" = "pull_request" ] && ! printf '%s\n' "$CHANGED" | grep -qx "$name"; then
+              continue
+            fi
+            LIST+=("$name")
+          done
+          if [ ${#LIST[@]} -eq 0 ]; then
+            echo "has_plugins=false" >> "$GITHUB_OUTPUT"
+            echo "plugins=[]" >> "$GITHUB_OUTPUT"
+            echo "::notice::No plugins with evals/ matched; nothing to run."
+          else
+            echo "has_plugins=true" >> "$GITHUB_OUTPUT"
+            echo "plugins=$(printf '%s\n' "${LIST[@]}" | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+          fi
+
+  eval:
+    needs: plan
+    if: needs.plan.outputs.has_plugins == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        plugin: ${{ fromJSON(needs.plan.outputs.plugins) }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code@${{ env.CLAUDE_CODE_VERSION }}
+
+      - name: Check credentials
+        id: auth
+        env:
+          OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$OAUTH_TOKEN" ] || [ -n "$API_KEY" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "::notice title=Evals skipped::Neither CLAUDE_CODE_OAUTH_TOKEN nor ANTHROPIC_API_KEY is set."
+          fi
+
+      - name: Run plugin evals
+        if: steps.auth.outputs.available == 'true'
+        env:
+          # The OAuth token wins when both are set: an exported ANTHROPIC_API_KEY
+          # would otherwise take priority over it in the CLI.
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN == '' && secrets.ANTHROPIC_API_KEY || '' }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/eval-out"
+          claude plugin eval "plugins/${{ matrix.plugin }}" \
+            --trust-plugin \
+            --json "$RUNNER_TEMP/eval-out/results.json" \
+            --output-dir "$RUNNER_TEMP/eval-out/run" \
+            --threshold 0.8 \
+            --model "$EVAL_MODEL" \
+            --no-publish \
+            --max-cost-usd "$EVAL_MAX_COST_USD" \
+            --ablation none
+
+      - name: Upload results
+        if: always() && steps.auth.outputs.available == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: plugin-eval-${{ matrix.plugin }}
+          path: ${{ runner.temp }}/eval-out/
+          if-no-files-found: warn

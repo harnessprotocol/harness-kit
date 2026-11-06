@@ -1,0 +1,49 @@
+name: harness-kit
+description: Check that compiled agent config matches harness.yaml, or report drift against a team baseline.
+
+inputs:
+  command:
+    description: "check (compiled files match harness.yaml) or status (fleet drift, optionally against a baseline)."
+    required: false
+    default: check
+  harness-file:
+    description: "Path to harness.yaml. Used by check."
+    required: false
+    default: harness.yaml
+  target:
+    description: "Comma-separated targets for check, for example claude-code,cursor,agents-md. Empty checks all targets."
+    required: false
+    default: ""
+  baseline:
+    description: "Path to a team baseline harness.yaml in the checkout. Used by status."
+    required: false
+    default: ""
+  cli-version:
+    # Pinned to the release this tag ships. Bump this default when cutting a
+    # release. Users can override it with an npm version or dist-tag such as latest.
+    description: "Version or dist-tag of @harness-kit/cli to run."
+    required: false
+    default: "0.13.0"
+
+outputs:
+  exit-code:
+    description: "Exit code of the CLI. 0 means no drift."
+    value: ${{ steps.run.outputs.exit-code }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v7
+      with:
+        node-version: 24
+
+    - name: Run harness ${{ inputs.command }}
+      id: run
+      shell: bash
+      env:
+        HK_COMMAND: ${{ inputs.command }}
+        HK_FILE: ${{ inputs.harness-file }}
+        HK_TARGET: ${{ inputs.target }}
+        HK_BASELINE: ${{ inputs.baseline }}
+        HK_CLI_VERSION: ${{ inputs.cli-version }}
+      run: bash "${{ github.action_path }}/scripts/action-run.sh"

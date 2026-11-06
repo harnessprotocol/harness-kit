@@ -4,6 +4,8 @@ import {
   COMPILE_SURFACE_IDS,
   EMPTY_PORTABILITY_STATE,
   LEGACY_SURFACE_RENAMES,
+  TARGET_ALIASES,
+  resolveTargetAlias,
   capabilityForResource,
   computeFileHash,
   parseHarness,
@@ -30,6 +32,9 @@ import type {
 import { NodeFsProvider } from "@harness-kit/core/node";
 
 export const ALL_TARGETS: readonly SurfaceId[] = COMPILE_SURFACE_IDS;
+
+/** Alias target names (e.g. `agents-md`) shown beside real targets in errors. */
+export const ALIAS_NAMES: string = Object.keys(TARGET_ALIASES).join(", ");
 
 export interface LayerFlags {
   organization?: string;
@@ -76,11 +81,11 @@ export function legacyTargetHint(target: string): string {
 
 export function parseTargets(value?: string): SurfaceId[] {
   if (!value || value === "all") return [...ALL_TARGETS];
-  const selected = value.split(",").map((entry) => entry.trim() as SurfaceId);
+  const selected = value.split(",").map((entry) => resolveTargetAlias(entry.trim()) as SurfaceId);
   const unknown = selected.filter((target) => !ALL_TARGETS.includes(target));
   if (unknown.length > 0) {
     const listed = unknown.map((target) => `${target}${legacyTargetHint(target)}`).join(", ");
-    throw new Error(`unknown target(s): ${listed}; expected ${ALL_TARGETS.join(", ")} or all`);
+    throw new Error(`unknown target(s): ${listed}; expected ${ALL_TARGETS.join(", ")}, ${ALIAS_NAMES} or all`);
   }
   return [...new Set(selected)];
 }

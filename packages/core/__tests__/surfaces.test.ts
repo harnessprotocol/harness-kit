@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { SURFACES, getSurface, PRIORITY_SURFACES } from "../src/surfaces/registry.js";
-import { SURFACE_IDS } from "../src/surfaces/types.js";
+import { SURFACE_IDS, TARGET_ALIASES, resolveTargetAlias } from "../src/surfaces/types.js";
 import type { StoreFormatId, SurfaceId } from "../src/surfaces/types.js";
 import type { HarnessResourceKind } from "../src/portability/types.js";
 
@@ -88,5 +88,19 @@ describe("surface registry", () => {
         ).toBe(false);
       }
     }
+  });
+});
+
+describe("target aliases", () => {
+  it("resolves agents-md to the codex surface (AGENTS.md + .agents/skills, no MCP)", () => {
+    expect(resolveTargetAlias("agents-md")).toBe("codex");
+  });
+  it("leaves real surface ids and unknown names unchanged", () => {
+    for (const id of SURFACE_IDS) expect(resolveTargetAlias(id)).toBe(id);
+    expect(resolveTargetAlias("bogus")).toBe("bogus");
+  });
+  it("agents-md is an alias, not a surface", () => {
+    expect((SURFACE_IDS as readonly string[]).includes("agents-md")).toBe(false);
+    expect(TARGET_ALIASES).toEqual({ "agents-md": "codex" });
   });
 });

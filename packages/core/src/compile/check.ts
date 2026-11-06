@@ -7,6 +7,7 @@ import { compileSkills } from "./skills.js";
 import { getSlotMappings } from "./instructions.js";
 import { renderArchitecturalConstraints } from "./architectural-constraints.js";
 import { TARGETS } from "./targets.js";
+import { buildPermissionsText } from "./permissions.js";
 
 // ── Low-level utilities ──────────────────────────────────────
 
@@ -215,6 +216,7 @@ export async function checkCompiled(
   // ── Instruction checks ───────────────────────────────────
   const instructions = config.instructions;
   if (instructions) {
+    const permText = config.permissions ? buildPermissionsText(config.permissions) : null;
     // Derive file mapping from getSlotMappings() (single source of truth in instructions.ts)
     // rather than duplicating the slot→file map here.
     for (const mapping of getSlotMappings()) {
@@ -230,8 +232,15 @@ export async function checkCompiled(
         seenPaths.add(filePath);
 
         const deployedPath = fs.joinPath(cwd, filePath);
+        // Compile appends the non-enforceable permissions text to the
+        // operational block on every target except claude-code (which gets
+        // .claude/settings.json instead). Expect the same text here.
+        const expected =
+          mapping.slot === "operational" && target !== "claude-code" && permText
+            ? slotContent + "\n\n" + permText
+            : slotContent;
         const status = await instructionDrift(
-          slotContent,
+          expected,
           deployedPath,
           harnessName,
           mapping.slot,

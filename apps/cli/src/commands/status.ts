@@ -296,6 +296,10 @@ export async function statusCommand(flags: StatusFlags): Promise<void> {
     );
   }
 
+  const hasDriftOrBlocked =
+    report.summary.drift > 0 ||
+    Boolean((reconciliation as { blocked?: boolean } | undefined)?.blocked);
+
   if (flags.json) {
     console.log(
       JSON.stringify({
@@ -309,6 +313,7 @@ export async function statusCommand(flags: StatusFlags): Promise<void> {
         ),
       }),
     );
+    if (hasDriftOrBlocked) process.exit(1);
     return;
   }
 
@@ -326,7 +331,5 @@ export async function statusCommand(flags: StatusFlags): Promise<void> {
     console.log(chalk.yellow("Whole-harness reconciliation has unresolved conflicts."));
   }
 
-  if (report.summary.drift > 0 || (reconciliation as { blocked?: boolean } | undefined)?.blocked) {
-    process.exit(1);
-  }
+  if (hasDriftOrBlocked) process.exit(1);
 }
