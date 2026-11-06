@@ -168,8 +168,9 @@ describe("PluginsPage drag-to-import (Tauri drag-drop event)", () => {
     fireEvent.click(importButton());
     await waitFor(() => expect(importCalls()).toEqual([["import_plugin_from_path", { sourcePath: null }]]));
     await waitFor(() => expect(importButton()).toBeEnabled());
-    // The status region is always mounted; a cancel leaves it empty.
-    expect(screen.queryByRole("status")?.textContent ?? "").toBe("");
+    // The status region is always mounted; a cancel leaves it empty once the
+    // cancelled import settles (a status stuck on "Importing" times out here).
+    await waitFor(() => expect(screen.queryByRole("status")?.textContent ?? "").toBe(""));
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 
