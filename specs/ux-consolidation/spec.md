@@ -90,13 +90,13 @@ Format: EARS (`WHEN … THE SYSTEM SHALL …`). Each criterion cites the audit f
 
 From the adversarial review of main at 047e79d1 ("Harness Kit Red Team"). These come before Phase 3. AC-50, AC-56 and AC-58 reach into `packages/core` or `src-tauri`, which the Boundaries list as ask-first: the plan names each seam and stops for approval.
 
-- [ ] AC-48: WHEN a plugin is uninstalled THE SYSTEM SHALL delete only that install record's own `installPath`, after checking it resolves under `~/.claude/plugins/cache/`, SHALL match the full `name@marketplace` key, and SHALL refuse empty, `.` and reserved names.
-- [ ] AC-49: WHEN a permissions preset is applied THE SYSTEM SHALL merge it into the existing rules, SHALL NOT remove a deny rule without listing it for confirmation, and SHALL preserve the key order of `settings.json`.
-- [ ] AC-50: WHEN any page saves a user config file THE SYSTEM SHALL write it atomically with a changed-on-disk check and a restorable backup, through the same path as `apply_surface_transaction`; no write path SHALL truncate a file in place.
-- [ ] AC-51: WHEN onboarding would write `harness.yaml` and one exists THE SYSTEM SHALL show the difference and back the file up before replacing it, or leave it untouched.
-- [ ] AC-52: WHEN the webview is granted capabilities THE SYSTEM SHALL grant only what production code calls (no shell execute, spawn, stdin or kill), SHALL bind project-scope grants to paths the native dialog returned, and SHALL keep every path-taking command inside its declared roots.
-- [ ] AC-53: WHEN Compile writes into a project THE SYSTEM SHALL refuse any path component that is a symbolic link, dangling or not.
-- [ ] AC-54: WHEN a secret is stored THE SYSTEM SHALL NOT pass its value on a command line.
+- [x] AC-48: WHEN a plugin is uninstalled THE SYSTEM SHALL delete only that install record's own `installPath`, after checking it resolves under `~/.claude/plugins/cache/`, SHALL match the full `name@marketplace` key, and SHALL refuse empty, `.` and reserved names.
+- [x] AC-49: WHEN a permissions preset is applied THE SYSTEM SHALL merge it into the existing rules, SHALL NOT remove a deny rule without listing it for confirmation, and SHALL preserve the key order of `settings.json`.
+- [x] AC-50: WHEN any page saves a user config file THE SYSTEM SHALL write it atomically with a changed-on-disk check and a restorable backup, through the same path as `apply_surface_transaction`; no write path SHALL truncate a file in place.
+- [x] AC-51: WHEN onboarding would write `harness.yaml` and one exists THE SYSTEM SHALL show the difference and back the file up before replacing it, or leave it untouched.
+- [x] AC-52: WHEN the webview is granted capabilities THE SYSTEM SHALL grant only what production code calls (no shell execute, spawn, stdin or kill), SHALL bind project-scope grants to paths the native dialog returned, and SHALL keep every path-taking command inside its declared roots.
+- [x] AC-53: WHEN Compile writes into a project THE SYSTEM SHALL refuse any path component that is a symbolic link, dangling or not.
+- [x] AC-54: WHEN a secret is stored THE SYSTEM SHALL NOT pass its value on a command line.
 - [ ] AC-55: WHEN Drift, Profile, Compile or onboarding read `harness.yaml` THE SYSTEM SHALL use `~/.claude/harness.yaml` as the personal profile and the selected project's committed `harness.yaml` as that project's team baseline, and Drift SHALL distinguish "no harness.yaml", "could not read", "never compiled" and "clean".
 - [ ] AC-56: WHEN onboarding or "Generate from Claude Code setup" builds a `harness.yaml` THE SYSTEM SHALL derive it from the same machine inventory the grid shows.
 - [ ] AC-57: WHEN a grid cell is clicked THE SYSTEM SHALL open the drawer with that cell's surface as the target, SHALL show "+ copy" only where the drawer can apply, and a copy the app reports as done SHALL leave no gap in that cell.
