@@ -230,41 +230,31 @@ describe("OnboardingPage", () => {
       expect(mockWriteConfigFile).not.toHaveBeenCalled();
     });
 
-    it("differs + Replace: writes the backup first, then the new file", async () => {
+    it("differs + Replace: one write with the shown file's digest, no webview-side backup", async () => {
       mockReadHarnessFile.mockResolvedValue({ found: true, content: "version: old\n", path: TARGET });
-      const order: string[] = [];
-      mockWriteConfigFile.mockImplementation(async () => {
-        order.push("backup");
-      });
-      mockWriteHarnessFile.mockImplementation(async () => {
-        order.push("write");
-        return TARGET;
-      });
+      mockWriteHarnessFile.mockResolvedValue(TARGET);
       const { user, onFinish } = await toConfirm();
       await user.click(await screen.findByRole("button", { name: /^write harness\.yaml$/i }));
       await user.click(await screen.findByRole("button", { name: /replace \(backup kept\)/i }));
       await waitFor(() => expect(onFinish).toHaveBeenCalled());
-      expect(order).toEqual(["backup", "write"]);
-      expect(mockWriteConfigFile).toHaveBeenCalledWith(
-        expect.stringMatching(/^~\/\.claude\/harness\.yaml\.bak-.+/),
-        "version: old\n",
-      );
-      // The replace is checked against the digest of the file the user was shown.
+      expect(mockWriteHarnessFile).toHaveBeenCalledTimes(1);
       expect(mockWriteHarnessFile).toHaveBeenCalledWith(
         ONBOARDING_FIXTURE_RESULT.harnessYaml,
         await loadedDigest("version: old\n"),
       );
+      expect(mockWriteConfigFile).not.toHaveBeenCalled();
     });
 
-    it("does not write the new file when the backup fails", async () => {
+    it("shows the error and finishes nothing when Rust refuses because the file changed", async () => {
       mockReadHarnessFile.mockResolvedValue({ found: true, content: "version: old\n", path: TARGET });
-      mockWriteConfigFile.mockRejectedValue(new Error("disk full"));
+      mockWriteHarnessFile.mockRejectedValue("harness.yaml changed on disk since it was loaded");
       const { user, onFinish } = await toConfirm();
       await user.click(await screen.findByRole("button", { name: /^write harness\.yaml$/i }));
       await user.click(await screen.findByRole("button", { name: /replace \(backup kept\)/i }));
-      await waitFor(() => expect(mockWriteConfigFile).toHaveBeenCalled());
-      expect(mockWriteHarnessFile).not.toHaveBeenCalled();
+      await waitFor(() => expect(mockWriteHarnessFile).toHaveBeenCalledTimes(1));
+      expect(await screen.findByText(/changed on disk/i)).toBeInTheDocument();
       expect(onFinish).not.toHaveBeenCalled();
+      expect(mockWriteConfigFile).not.toHaveBeenCalled();
     });
   });
 });

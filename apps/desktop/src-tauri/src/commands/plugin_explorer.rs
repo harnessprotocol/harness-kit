@@ -374,16 +374,43 @@ pub fn import_plugin_from_zip(zip_path: String) -> Result<super::plugins::Instal
     result
 }
 
+/// Export a plugin as a zip. The destination comes from a native save dialog
+/// opened here, never from the webview, so the webview cannot choose an
+/// arbitrary path to overwrite. Resolves `false` when the user cancels.
 #[tauri::command]
-pub fn export_plugin_as_zip(plugin_path: String, save_path: String) -> Result<(), String> {
-    // Validate plugin_path is within the plugins directory
+pub async fn export_plugin_as_zip(
+    app: tauri::AppHandle,
+    plugin_path: String,
+) -> Result<bool, String> {
+    use tauri_plugin_dialog::DialogExt;
     let validated = validate_plugin_path(&plugin_path)?;
-    let source = validated.as_path();
+    let default_name = format!(
+        "{}.zip",
+        validated
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "plugin".to_string())
+    );
+    let Some(picked) = app
+        .dialog()
+        .file()
+        .set_title("Export plugin as zip")
+        .set_file_name(default_name)
+        .blocking_save_file()
+    else {
+        return Ok(false);
+    };
+    let save_path = picked.into_path().map_err(|e| e.to_string())?;
+    write_plugin_zip(&validated, &save_path)?;
+    Ok(true)
+}
+
+fn write_plugin_zip(source: &Path, save_path: &Path) -> Result<(), String> {
     if !source.is_dir() {
-        return Err(format!("Not a directory: {}", plugin_path));
+        return Err(format!("Not a directory: {}", source.display()));
     }
 
-    let file = fs::File::create(&save_path)
+    let file = fs::File::create(save_path)
         .map_err(|e| format!("Failed to create zip file: {}", e))?;
     let mut zip_writer = zip::ZipWriter::new(file);
 
@@ -428,20 +455,38 @@ pub fn export_plugin_as_zip(plugin_path: String, save_path: String) -> Result<()
     Ok(())
 }
 
+/// Export a plugin into a folder chosen in a native folder dialog opened
+/// here, never named by the webview. Resolves `false` when the user cancels.
 #[tauri::command]
-pub fn export_plugin_to_folder(plugin_path: String, dest: String) -> Result<(), String> {
-    // Validate plugin_path is within the plugins directory
+pub async fn export_plugin_to_folder(
+    app: tauri::AppHandle,
+    plugin_path: String,
+) -> Result<bool, String> {
+    use tauri_plugin_dialog::DialogExt;
     let validated = validate_plugin_path(&plugin_path)?;
-    let source = validated.as_path();
+    let Some(picked) = app
+        .dialog()
+        .file()
+        .set_title("Export plugin to folder")
+        .blocking_pick_folder()
+    else {
+        return Ok(false);
+    };
+    let dest = picked.into_path().map_err(|e| e.to_string())?;
+    copy_plugin_to_folder(&validated, &dest)?;
+    Ok(true)
+}
+
+fn copy_plugin_to_folder(source: &Path, dest: &Path) -> Result<(), String> {
     if !source.is_dir() {
-        return Err(format!("Not a directory: {}", plugin_path));
+        return Err(format!("Not a directory: {}", source.display()));
     }
 
     // Create a named subdirectory to avoid merging into an existing folder
     let dir_name = source.file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| "plugin".to_string());
-    let destination = Path::new(&dest).join(dir_name);
+    let destination = dest.join(dir_name);
 
     if destination.exists() {
         return Err(format!("Destination already exists: {}", destination.display()));
@@ -643,6 +688,24 @@ mod tests {
         assert!(import_plugin_from_zip(not_zip.to_string_lossy().to_string())
             .unwrap_err()
             .starts_with("Failed to read zip archive: "));
+    }
+
+    #[test]
+    fn export_helpers_write_zip_and_folder_copy() {
+        let tmp = TempDir::new().unwrap();
+        let src = tmp.path().join("demo");
+        write_manifest(&src, r#"{"name":"demo","version":"1.0.0"}"#);
+
+        let zip_path = tmp.path().join("out.zip");
+        write_plugin_zip(&src, &zip_path).unwrap();
+        assert!(zip_path.metadata().unwrap().len() > 0);
+
+        let dest = tmp.path().join("dest");
+        fs::create_dir_all(&dest).unwrap();
+        copy_plugin_to_folder(&src, &dest).unwrap();
+        assert!(dest.join("demo/.claude-plugin/plugin.json").is_file());
+        // A second export never merges into the existing folder.
+        assert!(copy_plugin_to_folder(&src, &dest).unwrap_err().starts_with("Destination already exists"));
     }
 
     #[test]

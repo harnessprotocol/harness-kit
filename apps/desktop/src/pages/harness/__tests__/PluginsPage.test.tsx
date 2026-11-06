@@ -403,7 +403,7 @@ describe("PluginsPage load failure (AC-20)", () => {
   it("keeps the list up when an uninstall fails, and Retry uninstall runs the same uninstall again", async () => {
     const raw = "Failed to remove ~/.claude/plugins/demo: Operation not permitted (os error 1)";
     const fallback = mockInvoke.getMockImplementation()!;
-    let installed = [{ name: "demo", version: "1.0.0", source: "/plugins/demo" }];
+    let installed = [{ name: "demo", version: "1.0.0", marketplace: "harness-kit", source: "/plugins/demo" }];
     let uninstallCalls = 0;
     // mockInvoke's type comes from its default implementation's return values.
     mockInvoke.mockImplementation((async (command: string, args?: Record<string, unknown>) => {
@@ -431,7 +431,7 @@ describe("PluginsPage load failure (AC-20)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Retry uninstall" }));
     await waitFor(() => expect(uninstallCalls).toBe(2));
     expect(mockInvoke.mock.calls.filter(([c]) => c === "uninstall_plugin").map(([, a]) => a))
-      .toEqual([{ name: "demo" }, { name: "demo" }]);
+      .toEqual([{ name: "demo@harness-kit" }, { name: "demo@harness-kit" }]);
     expect(await screen.findByText("No plugins installed")).toBeInTheDocument();
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });

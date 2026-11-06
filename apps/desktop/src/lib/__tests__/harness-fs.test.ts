@@ -45,6 +45,25 @@ describe("TauriFsProvider", () => {
     });
   });
 
+  it("removes the temp file and rethrows the original error when a rename is refused", async () => {
+    invoke.mockImplementation(async (cmd: string) => {
+      if (cmd === "guarded_rename_file") throw "refused: target changed";
+    });
+    const fs = new TauriFsProvider("/home/user");
+    await expect(
+      fs.renameFile("/home/user/.claude/a.harness-tmp-1", "/home/user/.claude/a"),
+    ).rejects.toBe("refused: target changed");
+    expect(invoke).toHaveBeenCalledWith("guarded_remove_file", {
+      path: "/home/user/.claude/a.harness-tmp-1",
+    });
+  });
+
+  it("still rethrows the rename error when the temp cleanup also fails", async () => {
+    invoke.mockRejectedValue("refused");
+    const fs = new TauriFsProvider("/home/user");
+    await expect(fs.renameFile("/home/user/a.tmp", "/home/user/a")).rejects.toBe("refused");
+  });
+
   it("removes through the guarded Rust command", async () => {
     const fs = new TauriFsProvider("/home/user");
     await fs.removeFile("/home/user/.claude/a");

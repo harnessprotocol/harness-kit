@@ -61,12 +61,19 @@ export async function importPluginFromZip(zipPath: string): Promise<InstalledPlu
   return invoke<InstalledPlugin>("import_plugin_from_zip", { zipPath });
 }
 
-export async function exportPluginAsZip(pluginPath: string, savePath: string): Promise<void> {
-  return invoke<void>("export_plugin_as_zip", { pluginPath, savePath });
+/** Rust opens the save dialog; the webview never names the destination. Resolves false on cancel. */
+export async function exportPluginAsZip(pluginPath: string): Promise<boolean> {
+  return invoke<boolean>("export_plugin_as_zip", { pluginPath });
 }
 
-export async function exportPluginToFolder(pluginPath: string, dest: string): Promise<void> {
-  return invoke<void>("export_plugin_to_folder", { pluginPath, dest });
+/** Rust opens the folder dialog; the webview never names the destination. Resolves false on cancel. */
+export async function exportPluginToFolder(pluginPath: string): Promise<boolean> {
+  return invoke<boolean>("export_plugin_to_folder", { pluginPath });
+}
+
+/** The `installed_plugins.json` key Rust matches uninstall against. */
+export function pluginKey(plugin: { name: string; marketplace?: string }): string {
+  return plugin.marketplace ? `${plugin.name}@${plugin.marketplace}` : plugin.name;
 }
 
 // ── File History commands ───────────────────────────────────

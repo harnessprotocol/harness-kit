@@ -258,21 +258,14 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
   const exportAsZip = useCallback(async () => {
     if (!plugin?.source) return;
     try {
-      const { save } = await import("@tauri-apps/plugin-dialog");
-      const savePath = await save({
-        defaultPath: `${plugin.name}.zip`,
-        title: "Export plugin as zip",
-      });
-      if (savePath) await exportPluginAsZip(plugin.source, savePath);
+      await exportPluginAsZip(plugin.source);
     } catch { /* cancelled */ }
-  }, [plugin?.source, plugin?.name]);
+  }, [plugin?.source]);
 
   const exportToFolder = useCallback(async () => {
     if (!plugin?.source) return;
     try {
-      const { open } = await import("@tauri-apps/plugin-dialog");
-      const dest = await open({ directory: true, title: "Export plugin to folder" });
-      if (dest) await exportPluginToFolder(plugin.source, dest as string);
+      await exportPluginToFolder(plugin.source);
     } catch { /* cancelled */ }
   }, [plugin?.source]);
 

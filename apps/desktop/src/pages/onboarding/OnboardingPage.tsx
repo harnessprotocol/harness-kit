@@ -4,7 +4,7 @@ import { importMachine } from "@harness-kit/core";
 import type { ImportProjectResult } from "@harness-kit/core";
 import { TauriFsProvider } from "../../lib/harness-fs";
 import { Modal, Button, DiffViewer } from "@harness-kit/ui";
-import { writeHarnessFile, readHarnessFile, writeConfigFile, grantProjectScope } from "../../lib/tauri";
+import { writeHarnessFile, readHarnessFile, grantProjectScope } from "../../lib/tauri";
 import { loadedDigest } from "../../lib/loaded-digest";
 import { lineDiff, collapseToHunks } from "../drift/line-diff";
 import { getCurrentProjectDir } from "../../lib/project-dir";
@@ -142,11 +142,8 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
     setWriting(true);
     setWriteError(null);
     try {
-      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
-      // Backup first; if it fails the original stays untouched.
-      // The backup path is new, so it must not exist yet (no expected digest).
-      await writeConfigFile(`${WRITE_TARGET}.bak-${stamp}`, conflict.existing);
-      // Replace only the file the user was shown; a change since is refused.
+      // Rust backs up the existing file before replacing it, and refuses when
+      // it no longer matches the digest of the file the user was shown.
       await writeHarnessFile(result.harnessYaml, await loadedDigest(conflict.existing));
       setConflict(null);
       onFinish();

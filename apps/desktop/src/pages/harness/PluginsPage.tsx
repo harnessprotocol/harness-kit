@@ -5,7 +5,7 @@ import { Blocks } from "lucide-react";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { Button, Card, EmptyState, ErrorNotice } from "@harness-kit/ui";
 import {
-  listInstalledPlugins, checkPluginUpdates, uninstallPlugin,
+  listInstalledPlugins, checkPluginUpdates, uninstallPlugin, pluginKey,
   exportPluginAsZip, exportPluginToFolder,
   isTauriRuntimeAvailable,
 } from "../../lib/tauri";
@@ -52,7 +52,7 @@ export default function PluginsPage() {
   const [loading, setLoading] = useState(true);
   // A failed load replaces the list; a failed uninstall sits above it.
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [uninstallError, setUninstallError] = useState<{ pluginName: string; details: string } | null>(null);
+  const [uninstallError, setUninstallError] = useState<{ pluginName: string; key: string; details: string } | null>(null);
   const [runtimeNotice, setRuntimeNotice] = useState<string | null>(null);
   const [tauriAvailable] = useState(isTauriRuntimeAvailable);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; plugin: InstalledPlugin } | null>(null);
@@ -241,18 +241,21 @@ export default function PluginsPage() {
     }
 
     const pluginName = uninstallTarget.name;
+    const key = pluginKey(uninstallTarget);
     setUninstallTarget(null);
-    await runUninstall(pluginName);
+    await runUninstall(pluginName, key);
   }
 
   // Also the failure notice's Retry: the user already confirmed this uninstall.
-  async function runUninstall(pluginName: string) {
+  // `key` is the full name@marketplace key, so a name installed from two
+  // marketplaces removes only the one the user picked.
+  async function runUninstall(pluginName: string, key: string) {
     setUninstallError(null);
     try {
-      await uninstallPlugin(pluginName);
+      await uninstallPlugin(key);
       loadPlugins();
     } catch (err) {
-      setUninstallError({ pluginName, details: errorDetails(err) });
+      setUninstallError({ pluginName, key, details: errorDetails(err) });
     }
   }
 
@@ -284,12 +287,7 @@ export default function PluginsPage() {
         onClick: async () => {
           if (!plugin.source) return;
           try {
-            const { save } = await import("@tauri-apps/plugin-dialog");
-            const savePath = await save({
-              defaultPath: `${plugin.name}.zip`,
-              title: "Export plugin as zip",
-            });
-            if (savePath) await exportPluginAsZip(plugin.source, savePath);
+            await exportPluginAsZip(plugin.source);
           } catch { /* cancelled */ }
         },
       },
@@ -298,9 +296,7 @@ export default function PluginsPage() {
         onClick: async () => {
           if (!plugin.source) return;
           try {
-            const { open } = await import("@tauri-apps/plugin-dialog");
-            const dest = await open({ directory: true, title: "Export plugin to folder" });
-            if (dest) await exportPluginToFolder(plugin.source, dest as string);
+            await exportPluginToFolder(plugin.source);
           } catch { /* cancelled */ }
         },
       },
@@ -370,7 +366,7 @@ export default function PluginsPage() {
         <ErrorNotice
           title={`Couldn't uninstall ${uninstallError.pluginName}`}
           details={uninstallError.details}
-          action={{ label: "Retry uninstall", onClick: () => void runUninstall(uninstallError.pluginName) }}
+          action={{ label: "Retry uninstall", onClick: () => void runUninstall(uninstallError.pluginName, uninstallError.key) }}
         />
       )}
 

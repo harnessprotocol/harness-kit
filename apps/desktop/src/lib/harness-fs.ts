@@ -70,7 +70,18 @@ export class TauriFsProvider implements FsProvider {
   // commands check both paths against the declared roots, refuse a symlink
   // source, and never remove a directory.
   async renameFile(from: string, to: string): Promise<void> {
-    await invoke("guarded_rename_file", { from, to });
+    try {
+      await invoke("guarded_rename_file", { from, to });
+    } catch (err) {
+      // A refused rename leaves the engine's temp file behind; clear it
+      // best-effort and report the refusal, not the cleanup.
+      try {
+        await invoke("guarded_remove_file", { path: from });
+      } catch {
+        /* best effort */
+      }
+      throw err;
+    }
   }
 
   async removeFile(path: string): Promise<void> {
