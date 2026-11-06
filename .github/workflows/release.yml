@@ -129,7 +129,7 @@ jobs:
 
   build-cli-standalone:
     needs: [prepare, gate]
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v7
 
@@ -214,7 +214,7 @@ jobs:
 
   build-desktop:
     needs: [prepare, gate]
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v7
 
