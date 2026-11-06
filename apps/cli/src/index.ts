@@ -97,7 +97,7 @@ program
   .argument("[path]", "Path to harness.yaml", "harness.yaml")
   .option(
     "--target <targets>",
-    "Target platforms: claude-code, cursor, copilot-vscode, codex, opencode, windsurf, gemini, junie (comma-separated), or all",
+    "Target platforms: claude-code, cursor, copilot-vscode, codex, opencode, windsurf, gemini, junie, agents-md (alias of codex: AGENTS.md and .agents/skills) (comma-separated), or all",
   )
   .option("--dry-run", "Preview output without writing files")
   .option("--clean", "Remove orphaned marker blocks from previous compilations")
@@ -194,7 +194,7 @@ program
   .argument("[path]", "Path to harness.yaml", "harness.yaml")
   .option(
     "--target <targets>",
-    "Target platforms to check (comma-separated), or all",
+    "Target platforms to check (comma-separated; agents-md is an alias of codex), or all",
   )
   .option("--json", "Output results as JSON")
   .addHelpText(

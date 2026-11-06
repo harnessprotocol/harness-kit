@@ -108,6 +108,29 @@ describe("compile command", () => {
       expect(env.exitCode).toBeNull();
     });
 
+    it("accepts agents-md as an alias that writes AGENTS.md", async () => {
+      const fixturePath = resolve(FIXTURES, "valid-harness.yaml");
+
+      await compileCommand(fixturePath, { target: "agents-md", dryRun: true });
+
+      const output = env.getLog();
+      expect(output).toContain("AGENTS.md");
+      expect(output).not.toContain("CLAUDE.md");
+      expect(env.exitCode).toBeNull();
+    });
+
+    it("still rejects unknown targets and lists agents-md as valid", async () => {
+      const fixturePath = resolve(FIXTURES, "valid-harness.yaml");
+
+      await expect(
+        compileCommand(fixturePath, { target: "agents", dryRun: true }),
+      ).rejects.toThrow();
+
+      expect(env.getError()).toContain("Unknown target: agents");
+      expect(env.getError()).toContain("agents-md");
+      expect(env.exitCode).toBe(1);
+    });
+
     it("compiles for multiple comma-separated targets", async () => {
       const fixturePath = resolve(FIXTURES, "valid-harness.yaml");
 

@@ -371,9 +371,17 @@ export async function initCommand(outputPath: string): Promise<void> {
 
   console.log("");
   console.log(chalk.green("Created harness.yaml"));
-  console.log(
-    chalk.dim(
-      `Run ${chalk.white("harness compile")} to generate platform config files.`,
-    ),
-  );
+  console.log(chalk.dim(compileHint(detected)));
+}
+
+/**
+ * Next-step hint after scaffolding. With no confirmed tool in the directory
+ * (nothing detected, or only a bare AGENTS.md), point at the `agents-md`
+ * target, which writes AGENTS.md without assuming a particular tool.
+ */
+export function compileHint(detected: ReadonlyArray<{ needsConfirmation: boolean }>): string {
+  if (detected.every((d) => d.needsConfirmation)) {
+    return "No AI tool config detected. Run harness compile --target agents-md to write AGENTS.md, or pick a tool with --target.";
+  }
+  return "Run harness compile to generate platform config files.";
 }

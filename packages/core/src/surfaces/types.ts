@@ -51,6 +51,23 @@ export function isCompileSurface(id: SurfaceId): id is CompileSurfaceId {
   return (COMPILE_SURFACE_IDS as readonly SurfaceId[]).includes(id);
 }
 
+/**
+ * Target names accepted on the command line that are not surfaces of their
+ * own. `agents-md` means "write AGENTS.md for any AGENTS.md-reading tool"; it
+ * resolves to the codex surface (AGENTS.md + `.agents/skills`, no MCP file),
+ * the most generic member of the AGENTS.md family.
+ */
+export const TARGET_ALIASES: Readonly<Record<string, CompileSurfaceId>> = {
+  "agents-md": "codex",
+};
+
+/** Resolve a target alias to its surface id; any other name passes through. */
+export function resolveTargetAlias<T extends string>(name: T): T | CompileSurfaceId {
+  return Object.prototype.hasOwnProperty.call(TARGET_ALIASES, name)
+    ? TARGET_ALIASES[name]
+    : name;
+}
+
 /** The harness products surfaces belong to (multiple surfaces may share one). */
 export const PRODUCT_FAMILIES = [
   "claude", "copilot", "codex", "cursor", "pi", "opencode",

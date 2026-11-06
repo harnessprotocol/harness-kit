@@ -429,7 +429,7 @@ export type {
   DetectProbe,
   SurfaceDescriptor,
 } from "./surfaces/types.js";
-export { SURFACE_IDS, COMPILE_SURFACE_IDS, PRODUCT_FAMILIES, isCompileSurface } from "./surfaces/types.js";
+export { SURFACE_IDS, COMPILE_SURFACE_IDS, PRODUCT_FAMILIES, isCompileSurface, TARGET_ALIASES, resolveTargetAlias } from "./surfaces/types.js";
 export { SURFACES, PRIORITY_SURFACES, getSurface } from "./surfaces/registry.js";
 export { resolveSurfaces, getSurfaceFrom } from "./surfaces/resolve.js";
 export { PUBLISHER_KEYS, releaseSnapshot } from "./definitions/publisher-keys.js";

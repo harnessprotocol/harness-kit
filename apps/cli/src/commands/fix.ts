@@ -9,11 +9,12 @@ import {
   buildFixPlan,
   applyFix,
   getCheckableTargets,
+  resolveTargetAlias,
   isProtocolV2,
 } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
 import type { FixOperation, SurfaceId } from "@harness-kit/core";
-import { buildReconciliationContext, legacyTargetHint, summarizePlan } from "./portability-common.js";
+import { ALIAS_NAMES, buildReconciliationContext, legacyTargetHint, summarizePlan } from "./portability-common.js";
 
 interface FixFlags {
   target?: string;
@@ -26,14 +27,15 @@ const ALL_TARGETS = getCheckableTargets();
 
 function parseTargets(targetStr: string): SurfaceId[] {
   if (targetStr === "all") return ALL_TARGETS;
-  return targetStr.split(",").map((t) => {
-    const trimmed = t.trim() as SurfaceId;
+  const parsed = targetStr.split(",").map((t) => {
+    const trimmed = resolveTargetAlias(t.trim()) as SurfaceId;
     if (!ALL_TARGETS.includes(trimmed)) {
-      console.error(`Unknown target: ${trimmed}${legacyTargetHint(trimmed)}. Valid targets: ${ALL_TARGETS.join(", ")}, all`);
+      console.error(`Unknown target: ${trimmed}${legacyTargetHint(trimmed)}. Valid targets: ${ALL_TARGETS.join(", ")}, ${ALIAS_NAMES}, all`);
       process.exit(1);
     }
     return trimmed;
   });
+  return [...new Set(parsed)];
 }
 
 function operationLabel(op: FixOperation): string {

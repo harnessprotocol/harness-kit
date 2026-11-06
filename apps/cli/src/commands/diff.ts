@@ -9,6 +9,7 @@ import {
   validateHarness,
   detectDrift,
   getCheckableTargets,
+  resolveTargetAlias,
   isProtocolV2,
   buildMachineInventory,
   SURFACE_IDS,
@@ -24,6 +25,7 @@ import type {
   SurfaceId,
 } from "@harness-kit/core";
 import {
+  ALIAS_NAMES,
   buildReconciliationContext,
   currentPlatform,
   legacyTargetHint,
@@ -42,14 +44,15 @@ const ALL_TARGETS = getCheckableTargets();
 
 function parseTargets(targetStr: string): SurfaceId[] {
   if (targetStr === "all") return ALL_TARGETS;
-  return targetStr.split(",").map((t) => {
-    const trimmed = t.trim() as SurfaceId;
+  const parsed = targetStr.split(",").map((t) => {
+    const trimmed = resolveTargetAlias(t.trim()) as SurfaceId;
     if (!ALL_TARGETS.includes(trimmed)) {
-      console.error(`Unknown target: ${trimmed}${legacyTargetHint(trimmed)}. Valid targets: ${ALL_TARGETS.join(", ")}, all`);
+      console.error(`Unknown target: ${trimmed}${legacyTargetHint(trimmed)}. Valid targets: ${ALL_TARGETS.join(", ")}, ${ALIAS_NAMES}, all`);
       process.exit(1);
     }
     return trimmed;
   });
+  return [...new Set(parsed)];
 }
 
 function classLabel(cls: DriftClass): string {

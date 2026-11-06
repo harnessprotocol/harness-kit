@@ -1,9 +1,10 @@
-import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, writeFile, readFile, copyFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SURFACE_IDS } from "@harness-kit/core";
 import { statusCommand } from "../src/commands/status.js";
+import { compileCommand } from "../src/commands/compile.js";
 import { diffCommand } from "../src/commands/diff.js";
 import { detectCommand } from "../src/commands/detect.js";
 import { SqliteStateStore } from "../src/state/sqlite-store.js";
@@ -59,6 +60,40 @@ describe.sequential("machine inventory CLI", () => {
       JSON.stringify({ mcpServers: { postgres: { command: "pg-mcp" } } }),
     );
   }
+
+  describe("status exit code", () => {
+    /** Compile for codex, then edit AGENTS.md so the deployed block drifts. */
+    async function seedDriftedProject(): Promise<void> {
+      await copyFile(
+        join(__dirname, "fixtures", "valid-harness.yaml"),
+        join(project, "harness.yaml"),
+      );
+      await compileCommand("harness.yaml", { target: "codex", force: true });
+      const agents = join(project, "AGENTS.md");
+      await writeFile(agents, (await readFile(agents, "utf-8")).replace("pnpm build", "pnpm drifted"));
+      env.consoleLog.length = 0;
+      env.exitCode = null;
+    }
+
+    it("exits 1 after printing JSON when drift exists (--json matches text mode)", async () => {
+      await seedDriftedProject();
+      await expect(statusCommand({ json: true })).rejects.toThrow("process.exit(1)");
+      const payload = JSON.parse(env.getLog()) as { summary: { drift: number } };
+      expect(payload.summary.drift).toBeGreaterThan(0);
+      expect(env.exitCode).toBe(1);
+    });
+
+    it("exits 1 in text mode when drift exists", async () => {
+      await seedDriftedProject();
+      await expect(statusCommand({})).rejects.toThrow("process.exit(1)");
+    });
+
+    it("does not exit when --json finds no drift", async () => {
+      await seedDuplicateMcpFixture();
+      await statusCommand({ json: true });
+      expect(env.exitCode).toBeNull();
+    });
+  });
 
   describe("status machine section", () => {
     it("emits an additive machine key in --json with all 11 surfaces in registry order", async () => {

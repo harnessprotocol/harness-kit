@@ -11,13 +11,14 @@ import {
   getAllInstructionFilePaths,
   parseHarness,
   removeOrphanedBlocks,
+  resolveTargetAlias,
   validateHarness,
 } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
 import type { OrphanedBlock, SurfaceId } from "@harness-kit/core";
 import { formatCompileReport, formatDryRunFile } from "../formatters/report.js";
 import { formatValidationResult } from "../formatters/validation.js";
-import { legacyTargetHint } from "./portability-common.js";
+import { ALIAS_NAMES, legacyTargetHint } from "./portability-common.js";
 
 interface CompileFlags {
   target?: string;
@@ -66,14 +67,15 @@ const ALL_TARGETS: readonly SurfaceId[] = COMPILE_SURFACE_IDS;
 
 function parseTargets(targetStr: string): SurfaceId[] {
   if (targetStr === "all") return [...ALL_TARGETS];
-  return targetStr.split(",").map((t) => {
-    const trimmed = t.trim() as SurfaceId;
+  const parsed = targetStr.split(",").map((t) => {
+    const trimmed = resolveTargetAlias(t.trim()) as SurfaceId;
     if (!ALL_TARGETS.includes(trimmed)) {
-      console.error(`Unknown target: ${trimmed}${legacyTargetHint(trimmed)}. Valid targets: ${ALL_TARGETS.join(", ")}, all`);
+      console.error(`Unknown target: ${trimmed}${legacyTargetHint(trimmed)}. Valid targets: ${ALL_TARGETS.join(", ")}, ${ALIAS_NAMES}, all`);
       process.exit(1);
     }
     return trimmed;
   });
+  return [...new Set(parsed)];
 }
 
 export async function compileCommand(
