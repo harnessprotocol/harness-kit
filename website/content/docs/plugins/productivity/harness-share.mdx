@@ -27,7 +27,7 @@ harness-share is a multi-skill plugin that manages your AI tool configuration as
 |-------|-------------|
 | `/harness-export` | Captures installed plugins into a shareable `harness.yaml` |
 | `/harness-import` | Installs plugins from a shared `harness.yaml` config |
-| `/harness-compile` | Compiles `harness.yaml` into native configs for all 8 supported targets |
+| `/harness-compile` | Compiles `harness.yaml` into native configs for all 8 supported targets, plus the `agents-md` alias |
 | `/harness-sync` | Bidirectional sync of skills, MCP configs, and instructions across platforms |
 | `/harness-validate` | Validates a `harness.yaml` before compiling or sharing |
 
@@ -49,17 +49,18 @@ Scans all AI tool directories, deduplicates installed plugins, and writes a `har
 /harness-import path/to/harness.yaml
 ```
 
-Presents plugins interactively — install all or pick a subset. Detects and sets up whichever of the 8 supported targets are present.
+Presents plugins interactively — install all or pick a subset. Detects and sets up whichever of the 8 supported targets are present (`agents-md` is an alias for `codex`).
 
 ### Compile to native formats
 
 ```
 /harness-compile
 /harness-compile --target cursor,windsurf
+/harness-compile --target agents-md
 /harness-compile --dry-run
 ```
 
-One `harness.yaml` produces native config files for all 8 supported targets: `claude-code`, `cursor`, `copilot`, `codex`, `opencode`, `windsurf`, `gemini`, `junie`. The last five share a single `AGENTS.md` file, written once regardless of how many of them are active. Generated content is wrapped in section markers so re-compilation only updates harness-managed sections.
+One `harness.yaml` produces native config files for all 8 supported targets: `claude-code`, `cursor`, `copilot`, `codex`, `opencode`, `windsurf`, `gemini`, `junie`. The last five share a single `AGENTS.md` file, written once regardless of how many of them are active. `agents-md` is an alias, not a ninth target: it compiles for any tool that reads AGENTS.md (same output as `codex`). Generated content is wrapped in section markers so re-compilation only updates harness-managed sections.
 
 ### Sync across platforms
 

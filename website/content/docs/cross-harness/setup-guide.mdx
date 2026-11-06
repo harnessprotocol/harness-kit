@@ -12,7 +12,7 @@ harness-kit plugins are plain markdown — no binaries, no runtimes, nothing to 
 The skill format used by harness-kit follows the [Agent Skills specification](https://agentskills.io) — an open standard for cross-platform skill portability. Skills built to this spec work in Claude Code, GitHub Copilot, and any other compliant platform without modification. The sections below show how to wire harness-kit skills into each tool.
 
 <Callout type="info">
-The `harness-share` plugin's `/harness-compile` skill automates everything below for **8 targets** — Claude Code, Cursor, Copilot, Codex, OpenCode, Windsurf, Gemini CLI, and JetBrains Junie — from a single `harness.yaml`. The manual steps in this guide are the fallback for one-off setups or tools it doesn't cover.
+The `harness-share` plugin's `/harness-compile` skill automates everything below for **8 targets** — Claude Code, Cursor, Copilot, Codex, OpenCode, Windsurf, Gemini CLI, and JetBrains Junie — from a single `harness.yaml`. The `agents-md` target is an alias: it compiles for any tool that reads AGENTS.md (same output as `codex`). The manual steps in this guide are the fallback for one-off setups or tools it doesn't cover.
 </Callout>
 
 ## GitHub Copilot

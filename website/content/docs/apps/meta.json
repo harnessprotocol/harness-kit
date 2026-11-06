@@ -1,4 +1,4 @@
 {
   "title": "Desktop App",
-  "pages": ["comparator", "observatory", "command-palette", "parity", "agents"]
+  "pages": ["comparator", "observatory", "command-palette", "parity"]
 }

@@ -25,7 +25,7 @@ Quick reference for feature support by editor — useful when deciding where to 
 
 ## harness-kit Plugin Portability
 
-`/harness-compile` automates the "copy SKILL.md" column for all 8 targets — the table below describes what's portable, not that you have to do it by hand. The last five targets share a single `AGENTS.md` file, so their portability story is identical across all of them.
+`/harness-compile` automates the "copy SKILL.md" column for all 8 targets — the table below describes what's portable, not that you have to do it by hand. The last five targets share a single `AGENTS.md` file, so their portability story is identical across all of them. The `agents-md` target is an alias: it compiles for any tool that reads AGENTS.md (same output as `codex`).
 
 | Plugin | Claude Code | Copilot CLI | VS Code (Copilot) | Cursor | Codex / OpenCode / Windsurf / Gemini CLI / Junie |
 |---|---|---|---|---|---|

@@ -9,7 +9,7 @@ const MOCK_PLUGINS = getAllPlugins()
   .slice(0, 6)
   .map((p) => ({ name: p.name, desc: p.description }));
 
-type SectionId = 'harness' | 'marketplace' | 'observatory' | 'agents' | 'comparator' | 'security' | 'parity';
+type SectionId = 'harness' | 'marketplace' | 'observatory' | 'comparator' | 'security' | 'parity';
 
 interface DesktopMockProps {
   interactive?: boolean;
@@ -53,16 +53,6 @@ const SECTIONS = [
         icon: (
           <svg viewBox="0 0 20 20" fill="currentColor">
             <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-          </svg>
-        ),
-      },
-      {
-        id: 'agents',
-        label: 'Agents',
-        title: 'Agents',
-        icon: (
-          <svg viewBox="0 0 20 20" fill="currentColor">
-            <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
         ),
       },
@@ -318,32 +308,6 @@ export function DesktopMock({
                 <div key={p.name} className={styles.pluginTile}>
                   <div className={styles.pluginTileName}>{p.name}</div>
                   <div className={styles.pluginTileDesc}>{p.desc}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Agents */}
-          <div className={`${styles.pane} ${activeSection === 'agents' ? styles.paneActive : ''}`}>
-            <div className={styles.paneTitle}>Agents</div>
-            <div className={styles.paneSubtitle}>4 running · 2 idle</div>
-            <div className={styles.agentGrid}>
-              {[
-                { name: 'code-reviewer', status: 'reviewing feat/auth-rewrite · 3 files', running: true },
-                { name: 'doc-updater', status: 'checking API ref drift', running: true },
-                { name: 'test-writer', status: 'idle · last ran 4m ago', running: false },
-                { name: 'commit-crafter', status: 'drafting message', running: true },
-                { name: 'memory-updater', status: 'idle · waiting for hook', running: false },
-                { name: 'parity-checker', status: 'Cursor vs Claude', running: true },
-              ].map((agent) => (
-                <div key={agent.name} className={styles.agentCard}>
-                  <div className={`${styles.agentDot} ${agent.running ? styles.agentDotRunning : styles.agentDotIdle}`} />
-                  <div>
-                    <div className={styles.agentName}>{agent.name}</div>
-                    <div className={`${styles.agentStatus} ${agent.running ? styles.agentStatusRunning : ''}`}>
-                      {agent.status}
-                    </div>
-                  </div>
                 </div>
               ))}
             </div>

@@ -28,9 +28,8 @@ execution rather than raw terminal output.
 
 ### 2. Execution
 
-Each harness runs in parallel in an isolated terminal session. The activity stream
-shows real-time updates: plans, thinking blocks, tool calls, file edits, and terminal
-output. ACP-compatible harnesses will emit typed events directly once full transport is enabled.
+Live in-app execution is not available in this build. The Comparator cannot start
+runs. Run each harness yourself, then record the results here for review and scoring.
 
 ### 3. Results
 

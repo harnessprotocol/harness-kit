@@ -15,7 +15,7 @@ Conformance does not require harness-kit. Any tool that correctly validates and 
 
 ## Protocol v2 and reconciliation
 
-Harness Protocol v2 treats native tool configuration and `harness.yaml` as bidirectional peers. A profile records portable intent; `harness.lock` records resolved revisions and immutable digests; gitignored local state records the last-applied reconciliation base, managed-file fingerprints, backups, and rollback history.
+Harness Protocol v2 treats native tool configuration and `harness.yaml` as bidirectional peers. A profile records portable intent; `harness.lock` records resolved revisions and immutable digests; gitignored local state records the last-applied reconciliation base, managed-file fingerprints, backups, and rollback history. The desktop app keeps backups in `~/.harness/backups/`.
 
 Resources resolve through organization → personal → project → session layers. The closest definition wins, but organization policy is a ceiling lower layers cannot widen. Native-only settings stay in namespaced vendor blocks so they can round-trip to their originating harness; applying them elsewhere produces a portability warning instead of invented support.
 

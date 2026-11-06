@@ -45,7 +45,8 @@ reads.
 
 ## The permissions summary
 
-Each plugin page lists the capabilities the scan inferred:
+Each plugin page shows the scan date and the finding counts by severity. It also lists
+the capabilities the scan inferred:
 
 - **Network access** — whether the plugin reaches the network.
 - **File writes** — whether it requests write access, and to which paths.
