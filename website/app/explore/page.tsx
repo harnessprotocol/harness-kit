@@ -64,18 +64,6 @@ const NAV_GROUPS: Group[] = [
         ),
       },
       {
-        id: 'agents',
-        title: 'Agents',
-        description: 'Monitor and control specialist subagents running across your harness — live status, output, and history.',
-        href: '/docs/concepts/agents',
-        accent: 'var(--cat-purple)',
-        icon: (
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0z" />
-          </svg>
-        ),
-      },
-      {
         id: 'comparator',
         title: 'Comparator',
         description: 'Run the same prompt across Claude Code, Cursor, and Copilot side by side. Find what works.',

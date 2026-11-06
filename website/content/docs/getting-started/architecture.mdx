@@ -58,7 +58,7 @@ The full schema also supports top-level skills, architecture constraints, policy
 
 The desktop app is a management console with a single sidebar: Machine, Profile, Claude Code, and Marketplace, plus Settings pinned at the bottom. It reads your harness configuration, provides observability into what your AI tools are doing, and gives you direct control over the pieces that are hard to manage from a terminal.
 
-- **Machine** — home; a cross-surface grid of every AI-harness resource detected on your machine (and, once you point it at a project directory, that project's resources too), with drift repair against harness.yaml embedded as a collapsible section below the grid
+- **Machine** — home; a cross-surface grid of every AI-harness resource detected on your machine (and, once you point it at a project directory, that project's resources too), with drift repair against harness.yaml embedded as a collapsible section below the grid. After updating to v0.13.0, pick the project folder once more.
 - **Profile** — view, edit, and compile your harness.yaml
 - **Claude Code** — Instructions, MCP servers, Plugins, Hooks, Permissions, and Usage (session telemetry: every session, every tool call, token usage, timeline, trends) — all scoped to that one surface
 - **Marketplace** — browse and install plugins from the registry
@@ -94,7 +94,7 @@ harness rollback --list   # list rollback points across user and project scope
 harness rollback          # restore a complete previous transaction
 harness skills promote    # pin or package a repository-local skill
 harness org rollout-sync  # preview or apply this device's pinned organization rollout
-harness status            # show the fleet: which harnesses are installed, where, and how drifted
+harness status            # show the fleet: which harnesses are installed, where, and how drifted; with --json, exits 1 on drift
 harness diff              # show drift between harness.yaml and deployed tool configs
 harness fix               # preview (default) or --apply repairs for detected drift
 ```
