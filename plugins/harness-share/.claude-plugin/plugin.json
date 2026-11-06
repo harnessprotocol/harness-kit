@@ -1,8 +1,8 @@
 {
   "name": "harness-share",
   "description": "Compile, export, import, and sync harness configurations across Claude Code, Cursor, GitHub Copilot, Codex, OpenCode, Windsurf, Gemini CLI, and Junie",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "category": "productivity",
   "tags": ["configuration", "export", "import", "yaml", "cross-platform"],
-  "skills": ["harness-compile", "harness-export", "harness-import", "harness-sync", "harness-validate"]
+  "skills": ["./skills/harness-compile", "./skills/harness-export", "./skills/harness-import", "./skills/harness-sync", "./skills/harness-validate"]
 }

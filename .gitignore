@@ -83,3 +83,8 @@ packages/shared/shared
 
 # pnpm store (if local)
 .pnpm-store/
+
+# `claude plugin eval` run output (per-plugin suites under plugins/*/evals/)
+plugins/*/evals/results/
+evals/results/*.json
+!evals/results/latest.json

@@ -27,6 +27,41 @@ jobs:
         # Protocol schema, SKILL.md frontmatter, README badge count.
         run: bash scripts/validate-manifests.sh
 
+  plugin-validate:
+    # Free gate: no model calls, no API key. `claude plugin validate` checks each
+    # manifest plus its skills, agents and commands.
+    #
+    # Not --strict: strict turns warnings into errors, and every manifest here
+    # carries repo-convention fields the validator calls "unknown" or "belongs in
+    # the marketplace entry" (category, tags, requires, x-developed-with) plus a
+    # missing author. Those are enforced by scripts/validate-manifests.sh instead.
+    # Errors (bad skill paths, broken frontmatter, unloadable files) still fail.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Install Claude Code CLI
+        run: npm install -g @anthropic-ai/claude-code@2.1.307
+
+      - name: Validate every plugin
+        run: |
+          FAILED=0
+          for plugin_dir in plugins/*/; do
+            name=$(basename "$plugin_dir")
+            if claude plugin validate "$plugin_dir" --json > "/tmp/validate-$name.json"; then
+              echo "ok   $name"
+            else
+              echo "::error title=plugin validate failed::$name"
+              jq -r '(.manifest.errors[]?, (.contents[]?.errors[]?)) | "  \(.path // "-"): \(.message)"' "/tmp/validate-$name.json" || cat "/tmp/validate-$name.json"
+              FAILED=1
+            fi
+          done
+          exit $FAILED
+
   security-scan:
     runs-on: ubuntu-latest
     steps:

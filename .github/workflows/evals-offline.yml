@@ -1,0 +1,39 @@
+name: Evals (offline replay)
+
+# Free: replays committed golden responses through the structural graders.
+# No API key, no model calls.
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "plugins/docgen/**"
+      - "plugins/explain/**"
+      - "plugins/review/**"
+      - "evals/**"
+      - ".github/workflows/evals-offline.yml"
+
+concurrency:
+  group: evals-offline-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  offline-replay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: evals/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r evals/requirements.txt
+
+      - name: Replay golden responses
+        run: python evals/runner.py --offline
