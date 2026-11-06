@@ -68,15 +68,20 @@ fn resolve_project_root(project_dir: &str) -> Result<PathBuf, String> {
     Ok(canonical_root)
 }
 
-/// Validate that `relative` is safely within `project_dir`.
-/// Rejects absolute paths and ".." components in `relative`.
-fn validate_project_path(project_dir: &str, relative: &str) -> Result<PathBuf, String> {
+fn validate_relative(relative: &str) -> Result<(), String> {
     if Path::new(relative).is_absolute() {
         return Err("relative path must not be absolute".to_string());
     }
     if relative.contains("..") {
         return Err("relative path must not contain '..'".to_string());
     }
+    Ok(())
+}
+
+/// Validate that `relative` is safely within `project_dir`.
+/// Rejects absolute paths and ".." components in `relative`.
+fn validate_project_path(project_dir: &str, relative: &str) -> Result<PathBuf, String> {
+    validate_relative(relative)?;
 
     let canonical_root = resolve_project_root(project_dir)?;
 
@@ -187,9 +192,77 @@ pub fn sync_read_dir(project_dir: String, dir_path: String) -> Result<Vec<String
     Ok(names)
 }
 
+/// Refuse any component of `relative` (under `root`) that is a symbolic link,
+/// dangling or not. Uses `symlink_metadata`, which does not follow links;
+/// `exists()`/`metadata()` follow them and report a dangling link as absent,
+/// which is how a planted dangling link would redirect a create.
+fn refuse_symlink_components(root: &Path, relative: &str) -> Result<(), String> {
+    let mut walked = root.to_path_buf();
+    for segment in Path::new(relative).components() {
+        walked.push(segment);
+        match fs::symlink_metadata(&walked) {
+            Ok(meta) if meta.file_type().is_symlink() => {
+                return Err(format!(
+                    "Refusing to write '{}': '{}' is a symbolic link",
+                    relative,
+                    walked.display()
+                ));
+            }
+            Ok(_) => {}
+            // Missing component: nothing to follow, and its parent was
+            // checked on the previous iteration.
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+            Err(e) => {
+                return Err(format!("Failed to inspect {}: {}", walked.display(), e));
+            }
+        }
+    }
+    Ok(())
+}
+
+/// Replace `dest` atomically: stage in a temp file in the same directory,
+/// fsync, then rename. A failure removes the temp file and leaves `dest` as it
+/// was. `create_new` makes the temp open refuse a pre-planted path.
+fn write_file_atomically(dest: &Path, bytes: &[u8]) -> Result<(), String> {
+    use std::io::Write;
+    let parent = dest
+        .parent()
+        .ok_or_else(|| format!("{} has no parent directory", dest.display()))?;
+    let name = dest
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let temp = parent.join(format!(".{}.{}.tmp", name, uuid::Uuid::new_v4()));
+    let staged = (|| -> std::io::Result<()> {
+        let mut file = fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&temp)?;
+        file.write_all(bytes)?;
+        file.sync_all()?;
+        drop(file);
+        fs::rename(&temp, dest)
+    })();
+    if let Err(e) = staged {
+        let _ = fs::remove_file(&temp);
+        return Err(format!("{}", e));
+    }
+    Ok(())
+}
+
 /// Write compiled output files into a project directory.
+///
+/// Every component from the project root to the target is checked with
+/// `symlink_metadata` before anything is written; any symlink refuses the
+/// whole call. The check runs for all files first so a bad path late in the
+/// batch cannot leave earlier files half-applied.
 #[tauri::command]
 pub fn sync_write_files(project_dir: String, files: Vec<SyncFileWrite>) -> Result<(), String> {
+    let root = resolve_project_root(&project_dir)?;
+    for file in &files {
+        validate_relative(&file.relative_path)?;
+        refuse_symlink_components(&root, &file.relative_path)?;
+    }
     for file in &files {
         let dest = validate_project_path(&project_dir, &file.relative_path)?;
         if let Some(parent) = dest.parent() {
@@ -197,7 +270,7 @@ pub fn sync_write_files(project_dir: String, files: Vec<SyncFileWrite>) -> Resul
                 format!("Failed to create directory for {}: {}", file.relative_path, e)
             })?;
         }
-        fs::write(&dest, &file.content)
+        write_file_atomically(&dest, file.content.as_bytes())
             .map_err(|e| format!("Failed to write {}: {}", file.relative_path, e))?;
     }
     Ok(())
@@ -448,6 +521,133 @@ mod tests {
         let err = validate_project_path(dir.to_str().unwrap(), "../escape.txt").unwrap_err();
         assert!(err.contains(".."));
         fs::remove_dir_all(&dir).ok();
+    }
+
+    // ── Symlink refusal (AC-53) ──────────────────────────────────
+
+    #[cfg(unix)]
+    mod symlinks {
+        use super::*;
+        use std::os::unix::fs::symlink;
+
+        fn granted_project() -> (tempfile::TempDir, String) {
+            let tmp = tempfile::tempdir().unwrap();
+            let root = tmp.path().canonicalize().unwrap();
+            super::super::super::fs_scope::remember_granted_root(root.clone());
+            let s = root.to_string_lossy().into_owned();
+            (tmp, s)
+        }
+
+        fn write(project: &str, rel: &str) -> Result<(), String> {
+            sync_write_files(
+                project.to_string(),
+                vec![SyncFileWrite {
+                    relative_path: rel.to_string(),
+                    content: "compiled".to_string(),
+                }],
+            )
+        }
+
+        fn assert_refused(result: Result<(), String>) {
+            let err = result.unwrap_err();
+            assert!(err.contains("symbolic link"), "got: {err}");
+        }
+
+        #[test]
+        fn normal_path_succeeds_and_leaves_no_temp_files() {
+            let (_tmp, project) = granted_project();
+            write(&project, "sub/dir/out.md").unwrap();
+            let dir = Path::new(&project).join("sub/dir");
+            assert_eq!(fs::read_to_string(dir.join("out.md")).unwrap(), "compiled");
+            let names: Vec<_> = fs::read_dir(&dir).unwrap().flatten().collect();
+            assert_eq!(names.len(), 1, "temp file left behind");
+        }
+
+        #[test]
+        fn overwrites_an_existing_regular_file() {
+            let (_tmp, project) = granted_project();
+            fs::write(Path::new(&project).join("out.md"), "old").unwrap();
+            write(&project, "out.md").unwrap();
+            assert_eq!(
+                fs::read_to_string(Path::new(&project).join("out.md")).unwrap(),
+                "compiled"
+            );
+        }
+
+        #[test]
+        fn refuses_a_symlink_at_the_target() {
+            let (_tmp, project) = granted_project();
+            let outside = tempfile::tempdir().unwrap();
+            let victim = outside.path().join("victim.txt");
+            fs::write(&victim, "original").unwrap();
+            symlink(&victim, Path::new(&project).join("out.md")).unwrap();
+            assert_refused(write(&project, "out.md"));
+            assert_eq!(fs::read_to_string(&victim).unwrap(), "original");
+        }
+
+        #[test]
+        fn refuses_a_symlinked_parent_directory() {
+            let (_tmp, project) = granted_project();
+            let outside = tempfile::tempdir().unwrap();
+            symlink(outside.path(), Path::new(&project).join("linked")).unwrap();
+            assert_refused(write(&project, "linked/out.md"));
+            assert!(!outside.path().join("out.md").exists());
+        }
+
+        #[test]
+        fn refuses_a_dangling_symlink_at_the_target() {
+            let (_tmp, project) = granted_project();
+            let outside = tempfile::tempdir().unwrap();
+            let missing = outside.path().join("not-yet.txt");
+            symlink(&missing, Path::new(&project).join("out.md")).unwrap();
+            assert_refused(write(&project, "out.md"));
+            assert!(!missing.exists(), "write followed the dangling link");
+        }
+
+        #[test]
+        fn refuses_a_dangling_symlink_as_a_parent() {
+            let (_tmp, project) = granted_project();
+            let outside = tempfile::tempdir().unwrap();
+            let missing_dir = outside.path().join("not-yet-dir");
+            symlink(&missing_dir, Path::new(&project).join("linked")).unwrap();
+            assert_refused(write(&project, "linked/out.md"));
+            assert!(!missing_dir.exists(), "create_dir_all followed the link");
+        }
+
+        #[test]
+        fn a_bad_path_late_in_the_batch_writes_nothing() {
+            let (_tmp, project) = granted_project();
+            let outside = tempfile::tempdir().unwrap();
+            symlink(outside.path(), Path::new(&project).join("linked")).unwrap();
+            let result = sync_write_files(
+                project.clone(),
+                vec![
+                    SyncFileWrite {
+                        relative_path: "first.md".to_string(),
+                        content: "x".to_string(),
+                    },
+                    SyncFileWrite {
+                        relative_path: "linked/second.md".to_string(),
+                        content: "y".to_string(),
+                    },
+                ],
+            );
+            assert_refused(result);
+            assert!(!Path::new(&project).join("first.md").exists());
+        }
+
+        #[test]
+        fn failed_atomic_write_leaves_destination_and_directory_untouched() {
+            let tmp = tempfile::tempdir().unwrap();
+            // Destination is a non-empty directory: rename over it fails.
+            let dest = tmp.path().join("out.md");
+            fs::create_dir(&dest).unwrap();
+            fs::write(dest.join("keep"), "k").unwrap();
+            assert!(write_file_atomically(&dest, b"new").is_err());
+            assert!(dest.join("keep").exists());
+            let names: Vec<_> = fs::read_dir(tmp.path()).unwrap().flatten().collect();
+            assert_eq!(names.len(), 1, "temp file left behind after failure");
+        }
     }
 
     #[test]
