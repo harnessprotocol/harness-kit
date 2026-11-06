@@ -57,7 +57,7 @@ describe("EditorPane with useFileEditor (AC-20)", () => {
     fireEvent.click(screen.getByRole("button", { name: "Retry save" }));
 
     await waitFor(() => expect(mockWrite).toHaveBeenCalledTimes(2));
-    expect(mockWrite).toHaveBeenLastCalledWith(FILE, '{"edited":true}');
+    expect(mockWrite).toHaveBeenLastCalledWith(FILE, '{"edited":true}', expect.any(String));
     await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
     expect(screen.getByTestId("editor")).toHaveValue('{"edited":true}');
   });

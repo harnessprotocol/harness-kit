@@ -183,24 +183,94 @@ pub fn read_plugin_file(file_path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn write_plugin_file(file_path: String, content: String) -> Result<(), String> {
+pub fn write_plugin_file(
+    file_path: String,
+    content: String,
+    expected_sha256: Option<String>,
+) -> Result<(), String> {
     let path = validate_plugin_write_path(&file_path)?;
 
-    fs::write(path, content)
-        .map_err(|e| format!("Failed to write file: {}", e))
+    // AC-50: changed-on-disk check, timestamped backup, atomic replace.
+    super::surface_write::write_user_file(&path, &content, expected_sha256.as_deref())
+        .map(|_| ())
 }
 
 /// Error text from `import_plugin_from_path` / `import_plugin_from_zip` is
 /// matched by prefix in apps/desktop/src/pages/harness/plugins/import-errors.ts
 /// to reword it for the Plugins page. Changing any of these strings breaks
 /// that rewording; `tests::import_error_prefixes_match_import_errors_ts` pins them.
+///
+/// The webview never names the source. With `source_path` `None` the native
+/// folder dialog opens here; with `Some`, the path must be one the user
+/// dropped on the window, recorded by `record_dropped_paths` from the native
+/// drag-drop event (and spent by this call). Resolves `None` when the user
+/// cancels the dialog.
 #[tauri::command]
-pub fn import_plugin_from_path(source_path: String) -> Result<super::plugins::InstalledPlugin, String> {
-    let plugins_dir = dirs::home_dir()
+pub async fn import_plugin_from_path(
+    app: tauri::AppHandle,
+    source_path: Option<String>,
+) -> Result<Option<super::plugins::InstalledPlugin>, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let source = match source_path {
+        Some(path) => take_dropped(&path)?,
+        None => {
+            let Some(picked) = app
+                .dialog()
+                .file()
+                .set_title("Select plugin folder")
+                .blocking_pick_folder()
+            else {
+                return Ok(None);
+            };
+            picked.into_path().map_err(|e| e.to_string())?
+        }
+    };
+    import_plugin_into(&source.to_string_lossy(), &user_plugins_dir()?).map(Some)
+}
+
+fn user_plugins_dir() -> Result<PathBuf, String> {
+    Ok(dirs::home_dir()
         .ok_or("Could not resolve home directory")?
         .join(".claude")
-        .join("plugins");
-    import_plugin_into(&source_path, &plugins_dir)
+        .join("plugins"))
+}
+
+/// Paths the user dropped on the window, as reported by the OS to the native
+/// layer. The webview hears about a drop too, but only a path recorded here
+/// is accepted back from it, so it cannot name a folder or zip of its own.
+fn dropped_paths() -> &'static std::sync::Mutex<Vec<PathBuf>> {
+    static DROPPED: std::sync::OnceLock<std::sync::Mutex<Vec<PathBuf>>> = std::sync::OnceLock::new();
+    DROPPED.get_or_init(|| std::sync::Mutex::new(Vec::new()))
+}
+
+/// Keep the most recent drops; a drop that is never imported must not pile up.
+const MAX_REMEMBERED_DROPS: usize = 256;
+
+/// Called from the window's native drag-drop event (lib.rs).
+pub(crate) fn record_dropped_paths(paths: &[PathBuf]) {
+    if let Ok(mut dropped) = dropped_paths().lock() {
+        for path in paths {
+            if !dropped.contains(path) {
+                dropped.push(path.clone());
+            }
+        }
+        let excess = dropped.len().saturating_sub(MAX_REMEMBERED_DROPS);
+        dropped.drain(..excess);
+    }
+}
+
+/// Spend one recorded drop. Refuses a path the OS never reported.
+fn take_dropped(path: &str) -> Result<PathBuf, String> {
+    let wanted = Path::new(path);
+    let mut dropped = dropped_paths()
+        .lock()
+        .map_err(|_| "Drop registry is unavailable".to_string())?;
+    match dropped.iter().position(|p| p == wanted) {
+        Some(i) => Ok(dropped.remove(i)),
+        None => Err(format!(
+            "Refusing to import {path}: it was not dropped on the window or chosen in the dialog"
+        )),
+    }
 }
 
 /// `import_plugin_from_path` with the destination `~/.claude/plugins` passed
@@ -270,9 +340,48 @@ fn import_plugin_into(source_path: &str, plugins_dir: &Path) -> Result<super::pl
     })
 }
 
+/// Copy at most `max` bytes. Reads one byte past the cap through `take()` so
+/// an entry that decompresses larger than `max` is refused
+/// (`ErrorKind::FileTooLarge`) instead of filling the disk.
+fn copy_capped(
+    reader: &mut impl std::io::Read,
+    writer: &mut impl std::io::Write,
+    max: u64,
+) -> std::io::Result<Option<u64>> {
+    use std::io::Read;
+    let copied = std::io::copy(&mut reader.take(max.saturating_add(1)), writer)?;
+    Ok(if copied > max { None } else { Some(copied) })
+}
+
+/// Same source rule as `import_plugin_from_path`: the zip is chosen in a
+/// native dialog opened here (`None`), or is a path the user dropped on the
+/// window (`Some`).
 #[tauri::command]
-pub fn import_plugin_from_zip(zip_path: String) -> Result<super::plugins::InstalledPlugin, String> {
-    let zip_file = fs::File::open(&zip_path)
+pub async fn import_plugin_from_zip(
+    app: tauri::AppHandle,
+    zip_path: Option<String>,
+) -> Result<Option<super::plugins::InstalledPlugin>, String> {
+    use tauri_plugin_dialog::DialogExt;
+    let zip = match zip_path {
+        Some(path) => take_dropped(&path)?,
+        None => {
+            let Some(picked) = app
+                .dialog()
+                .file()
+                .set_title("Select plugin zip")
+                .add_filter("Plugin zip", &["zip"])
+                .blocking_pick_file()
+            else {
+                return Ok(None);
+            };
+            picked.into_path().map_err(|e| e.to_string())?
+        }
+    };
+    import_zip_at(&zip.to_string_lossy()).map(Some)
+}
+
+fn import_zip_at(zip_path: &str) -> Result<super::plugins::InstalledPlugin, String> {
+    let zip_file = fs::File::open(zip_path)
         .map_err(|e| format!("Failed to open zip: {}", e))?;
 
     let mut archive = zip::ZipArchive::new(zip_file)
@@ -285,6 +394,7 @@ pub fn import_plugin_from_zip(zip_path: String) -> Result<super::plugins::Instal
 
     const MAX_EXTRACTED_BYTES: u64 = 100 * 1024 * 1024; // 100MB
     const MAX_ENTRIES: usize = 10_000;
+    const MAX_ENTRY_BYTES: u64 = 50 * 1024 * 1024; // 50MB per entry
 
     if archive.len() > MAX_ENTRIES {
         let _ = fs::remove_dir_all(&temp_dir);
@@ -321,8 +431,20 @@ pub fn import_plugin_from_zip(zip_path: String) -> Result<super::plugins::Instal
             }
             let mut outfile = fs::File::create(&out_path)
                 .map_err(|e| format!("Failed to create file: {}", e))?;
-            let bytes_written = std::io::copy(&mut file, &mut outfile)
-                .map_err(|e| format!("Failed to extract file: {}", e))?;
+            // The central directory's declared size is attacker-controlled, so
+            // the cap is on bytes actually read, not on the header.
+            let cap = MAX_ENTRY_BYTES.min(MAX_EXTRACTED_BYTES - total_extracted);
+            let bytes_written = match copy_capped(&mut file, &mut outfile, cap) {
+                Ok(Some(n)) => n,
+                Ok(None) => {
+                    let _ = fs::remove_dir_all(&temp_dir);
+                    return Err(format!("Zip entry too large when extracted: {}", entry_name));
+                }
+                Err(e) => {
+                    let _ = fs::remove_dir_all(&temp_dir);
+                    return Err(format!("Failed to extract file: {}", e));
+                }
+            };
             total_extracted += bytes_written;
             if total_extracted > MAX_EXTRACTED_BYTES {
                 let _ = fs::remove_dir_all(&temp_dir);
@@ -335,7 +457,8 @@ pub fn import_plugin_from_zip(zip_path: String) -> Result<super::plugins::Instal
     let plugin_root = find_plugin_root(&temp_dir)?;
 
     // Use the folder import from here
-    let result = import_plugin_from_path(plugin_root.to_string_lossy().to_string());
+    let result = user_plugins_dir()
+        .and_then(|dir| import_plugin_into(&plugin_root.to_string_lossy(), &dir));
 
     // Clean up temp
     let _ = fs::remove_dir_all(&temp_dir);
@@ -343,16 +466,43 @@ pub fn import_plugin_from_zip(zip_path: String) -> Result<super::plugins::Instal
     result
 }
 
+/// Export a plugin as a zip. The destination comes from a native save dialog
+/// opened here, never from the webview, so the webview cannot choose an
+/// arbitrary path to overwrite. Resolves `false` when the user cancels.
 #[tauri::command]
-pub fn export_plugin_as_zip(plugin_path: String, save_path: String) -> Result<(), String> {
-    // Validate plugin_path is within the plugins directory
+pub async fn export_plugin_as_zip(
+    app: tauri::AppHandle,
+    plugin_path: String,
+) -> Result<bool, String> {
+    use tauri_plugin_dialog::DialogExt;
     let validated = validate_plugin_path(&plugin_path)?;
-    let source = validated.as_path();
+    let default_name = format!(
+        "{}.zip",
+        validated
+            .file_name()
+            .map(|n| n.to_string_lossy().into_owned())
+            .unwrap_or_else(|| "plugin".to_string())
+    );
+    let Some(picked) = app
+        .dialog()
+        .file()
+        .set_title("Export plugin as zip")
+        .set_file_name(default_name)
+        .blocking_save_file()
+    else {
+        return Ok(false);
+    };
+    let save_path = picked.into_path().map_err(|e| e.to_string())?;
+    write_plugin_zip(&validated, &save_path)?;
+    Ok(true)
+}
+
+fn write_plugin_zip(source: &Path, save_path: &Path) -> Result<(), String> {
     if !source.is_dir() {
-        return Err(format!("Not a directory: {}", plugin_path));
+        return Err(format!("Not a directory: {}", source.display()));
     }
 
-    let file = fs::File::create(&save_path)
+    let file = fs::File::create(save_path)
         .map_err(|e| format!("Failed to create zip file: {}", e))?;
     let mut zip_writer = zip::ZipWriter::new(file);
 
@@ -397,20 +547,38 @@ pub fn export_plugin_as_zip(plugin_path: String, save_path: String) -> Result<()
     Ok(())
 }
 
+/// Export a plugin into a folder chosen in a native folder dialog opened
+/// here, never named by the webview. Resolves `false` when the user cancels.
 #[tauri::command]
-pub fn export_plugin_to_folder(plugin_path: String, dest: String) -> Result<(), String> {
-    // Validate plugin_path is within the plugins directory
+pub async fn export_plugin_to_folder(
+    app: tauri::AppHandle,
+    plugin_path: String,
+) -> Result<bool, String> {
+    use tauri_plugin_dialog::DialogExt;
     let validated = validate_plugin_path(&plugin_path)?;
-    let source = validated.as_path();
+    let Some(picked) = app
+        .dialog()
+        .file()
+        .set_title("Export plugin to folder")
+        .blocking_pick_folder()
+    else {
+        return Ok(false);
+    };
+    let dest = picked.into_path().map_err(|e| e.to_string())?;
+    copy_plugin_to_folder(&validated, &dest)?;
+    Ok(true)
+}
+
+fn copy_plugin_to_folder(source: &Path, dest: &Path) -> Result<(), String> {
     if !source.is_dir() {
-        return Err(format!("Not a directory: {}", plugin_path));
+        return Err(format!("Not a directory: {}", source.display()));
     }
 
     // Create a named subdirectory to avoid merging into an existing folder
     let dir_name = source.file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| "plugin".to_string());
-    let destination = Path::new(&dest).join(dir_name);
+    let destination = dest.join(dir_name);
 
     if destination.exists() {
         return Err(format!("Destination already exists: {}", destination.display()));
@@ -526,6 +694,31 @@ mod tests {
         fs::write(dir.join(".claude-plugin").join("plugin.json"), json).unwrap();
     }
 
+    #[test]
+    fn copy_capped_refuses_an_entry_over_the_limit() {
+        let data = vec![7u8; 11];
+        let mut out = Vec::new();
+        assert_eq!(copy_capped(&mut data.as_slice(), &mut out, 10).unwrap(), None);
+        // Never wrote more than limit + 1 bytes of an unbounded stream.
+        assert!(out.len() <= 11);
+    }
+
+    #[test]
+    fn copy_capped_stops_reading_an_endless_stream() {
+        let mut endless = std::io::repeat(0u8);
+        let mut out = Vec::new();
+        assert_eq!(copy_capped(&mut endless, &mut out, 1024).unwrap(), None);
+        assert_eq!(out.len(), 1025);
+    }
+
+    #[test]
+    fn copy_capped_accepts_an_entry_at_the_limit() {
+        let data = vec![7u8; 10];
+        let mut out = Vec::new();
+        assert_eq!(copy_capped(&mut data.as_slice(), &mut out, 10).unwrap(), Some(10));
+        assert_eq!(out, data);
+    }
+
     /// apps/desktop/src/pages/harness/plugins/import-errors.ts matches these
     /// prefixes to reword import failures. If one changes here, update the
     /// matching regex there (and this test) in the same commit.
@@ -579,14 +772,62 @@ mod tests {
 
         // /^Failed to (open|read) zip/
         let missing_zip = tmp.path().join("missing.zip");
-        assert!(import_plugin_from_zip(missing_zip.to_string_lossy().to_string())
+        assert!(import_zip_at(&missing_zip.to_string_lossy())
             .unwrap_err()
             .starts_with("Failed to open zip: "));
         let not_zip = tmp.path().join("not.zip");
         fs::write(&not_zip, "not a zip").unwrap();
-        assert!(import_plugin_from_zip(not_zip.to_string_lossy().to_string())
+        assert!(import_zip_at(&not_zip.to_string_lossy())
             .unwrap_err()
             .starts_with("Failed to read zip archive: "));
+    }
+
+    #[test]
+    fn only_a_path_the_os_dropped_can_be_imported_and_only_once() {
+        let tmp = TempDir::new().unwrap();
+        let dropped = tmp.path().join("dropped-plugin");
+        let invented = tmp.path().join("webview-invented");
+        record_dropped_paths(&[dropped.clone()]);
+
+        let err = take_dropped(&invented.to_string_lossy()).unwrap_err();
+        assert!(err.starts_with("Refusing to import"), "{err}");
+        assert_eq!(take_dropped(&dropped.to_string_lossy()).unwrap(), dropped);
+        assert!(
+            take_dropped(&dropped.to_string_lossy()).is_err(),
+            "a drop is spent by the import it authorises"
+        );
+    }
+
+    #[test]
+    fn remembered_drops_are_capped() {
+        let tmp = TempDir::new().unwrap();
+        let first = tmp.path().join("first");
+        record_dropped_paths(&[first.clone()]);
+        let flood: Vec<PathBuf> = (0..MAX_REMEMBERED_DROPS + 5)
+            .map(|i| tmp.path().join(format!("flood-{i}")))
+            .collect();
+        record_dropped_paths(&flood);
+        assert!(take_dropped(&first.to_string_lossy()).is_err());
+        let last = flood.last().unwrap();
+        assert_eq!(&take_dropped(&last.to_string_lossy()).unwrap(), last);
+    }
+
+    #[test]
+    fn export_helpers_write_zip_and_folder_copy() {
+        let tmp = TempDir::new().unwrap();
+        let src = tmp.path().join("demo");
+        write_manifest(&src, r#"{"name":"demo","version":"1.0.0"}"#);
+
+        let zip_path = tmp.path().join("out.zip");
+        write_plugin_zip(&src, &zip_path).unwrap();
+        assert!(zip_path.metadata().unwrap().len() > 0);
+
+        let dest = tmp.path().join("dest");
+        fs::create_dir_all(&dest).unwrap();
+        copy_plugin_to_folder(&src, &dest).unwrap();
+        assert!(dest.join("demo/.claude-plugin/plugin.json").is_file());
+        // A second export never merges into the existing folder.
+        assert!(copy_plugin_to_folder(&src, &dest).unwrap_err().starts_with("Destination already exists"));
     }
 
     #[test]
@@ -615,7 +856,7 @@ mod tests {
         };
         let before = leftovers(&std::env::temp_dir());
 
-        let err = import_plugin_from_zip(zip_path.to_string_lossy().to_string()).unwrap_err();
+        let err = import_zip_at(&zip_path.to_string_lossy()).unwrap_err();
         assert_eq!(err, "Could not find .claude-plugin/plugin.json in extracted archive");
         assert!(!escaped.exists(), "zip entry escaped the extraction directory");
 

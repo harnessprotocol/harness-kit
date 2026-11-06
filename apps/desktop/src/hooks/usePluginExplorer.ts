@@ -8,6 +8,7 @@ import {
 import { isCriticalFile } from "../lib/criticalFiles";
 import { getConfirmSave } from "../lib/preferences";
 import { errorDetails } from "../lib/error-details";
+import { isChangedOnDisk, loadedDigest } from "../lib/loaded-digest";
 
 export interface PluginExplorerState {
   tree: FileTreeNode | null;
@@ -121,10 +122,14 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
     if (path && content !== null && original !== null && content !== original) {
       try {
         setSaving(true);
-        await writePluginFile(path, content);
+        await writePluginFile(path, content, await loadedDigest(original));
         setOriginalContent(content);
       } catch (e) {
-        setSaveErrorTitle(`Couldn't save ${fileLabel(path)}`);
+        setSaveErrorTitle(
+          isChangedOnDisk(e)
+            ? `${fileLabel(path)} changed on disk. Reload it before saving`
+            : `Couldn't save ${fileLabel(path)}`,
+        );
         setSaveError(errorDetails(e));
         return false;
       } finally {
@@ -186,11 +191,13 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
     setSaving(true);
     setSaveError(null);
     try {
-      // Push previous content to history before overwriting
+      // The write is checked against the disk first. Pushing history before it
+      // would record a version for a save that is then refused.
+      await writePluginFile(selectedPath, fileContent, await loadedDigest(originalContent));
+      // Push previous content to history now that the overwrite landed
       if (originalContent !== null && pluginName) {
         await pushFileHistory(pluginName, selectedPath, originalContent).catch(() => {});
       }
-      await writePluginFile(selectedPath, fileContent);
       setOriginalContent(fileContent);
       setSavedRecently(true);
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
@@ -202,7 +209,11 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
           .catch(() => {});
       }
     } catch (e) {
-      setSaveErrorTitle(`Couldn't save ${fileLabel(selectedPath)}`);
+      setSaveErrorTitle(
+        isChangedOnDisk(e)
+          ? `${fileLabel(selectedPath)} changed on disk. Reload it before saving`
+          : `Couldn't save ${fileLabel(selectedPath)}`,
+      );
       setSaveError(errorDetails(e));
     } finally {
       setSaving(false);
@@ -247,21 +258,14 @@ export function usePluginExplorer(plugin: InstalledPlugin | null, open: boolean)
   const exportAsZip = useCallback(async () => {
     if (!plugin?.source) return;
     try {
-      const { save } = await import("@tauri-apps/plugin-dialog");
-      const savePath = await save({
-        defaultPath: `${plugin.name}.zip`,
-        title: "Export plugin as zip",
-      });
-      if (savePath) await exportPluginAsZip(plugin.source, savePath);
+      await exportPluginAsZip(plugin.source);
     } catch { /* cancelled */ }
-  }, [plugin?.source, plugin?.name]);
+  }, [plugin?.source]);
 
   const exportToFolder = useCallback(async () => {
     if (!plugin?.source) return;
     try {
-      const { open } = await import("@tauri-apps/plugin-dialog");
-      const dest = await open({ directory: true, title: "Export plugin to folder" });
-      if (dest) await exportPluginToFolder(plugin.source, dest as string);
+      await exportPluginToFolder(plugin.source);
     } catch { /* cancelled */ }
   }, [plugin?.source]);
 

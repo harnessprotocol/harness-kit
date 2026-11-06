@@ -38,9 +38,6 @@ fn main() {
                 "read_session_transcript",
                 // Git
                 "check_git_repo",
-                "create_worktrees",
-                "remove_worktrees",
-                "get_diff_against_commit",
                 "check_for_updates",
                 "trigger_rebuild",
                 // Evaluation
@@ -112,6 +109,11 @@ fn main() {
                 "detect_harnesses",
                 // Runtime FS scope grants (used by Fleet/Drift's project scope)
                 "grant_project_scope",
+                "choose_project_dir",
+                // Guarded write/rename/remove for the webview's TauriFsProvider
+                "guarded_write_file",
+                "guarded_rename_file",
+                "guarded_remove_file",
                 // Drift (acknowledgement persistence)
                 "acknowledge_drift_item",
                 "unacknowledge_drift_item",

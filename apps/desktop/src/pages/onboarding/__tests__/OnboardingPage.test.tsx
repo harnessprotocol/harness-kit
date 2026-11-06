@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import OnboardingPage from "../OnboardingPage";
+import { loadedDigest } from "../../../lib/loaded-digest";
 import { ONBOARDING_FIXTURE_RESULT, ONBOARDING_FIXTURE_LOW_COUNT } from "../../__fixtures__/onboarding-fixture-data";
 
 // ── Mocks ──────────────────────────────────────────────────────
@@ -24,8 +25,12 @@ vi.mock("../../../lib/harness-fs", () => ({
 
 const mockWriteHarnessFile = vi.fn();
 const mockGrantProjectScope = vi.fn();
+const mockReadHarnessFile = vi.fn();
+const mockWriteConfigFile = vi.fn();
 vi.mock("../../../lib/tauri", () => ({
   writeHarnessFile: (...args: unknown[]) => mockWriteHarnessFile(...args),
+  readHarnessFile: (...args: unknown[]) => mockReadHarnessFile(...args),
+  writeConfigFile: (...args: unknown[]) => mockWriteConfigFile(...args),
   grantProjectScope: (...args: unknown[]) => mockGrantProjectScope(...args),
 }));
 
@@ -48,6 +53,8 @@ describe("OnboardingPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockWriteHarnessFile.mockResolvedValue("~/.claude/harness.yaml");
+    mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null });
+    mockWriteConfigFile.mockResolvedValue(undefined);
   });
 
   it("runs the scan step then advances to the sprawl reveal with real counts", async () => {
@@ -172,6 +179,90 @@ describe("OnboardingPage", () => {
 
     await waitFor(() => expect(screen.getByText(/permission denied/i)).toBeInTheDocument(), {
       timeout: 3000,
+    });
+  });
+
+  describe("existing harness.yaml (AC-51)", () => {
+    const TARGET = "~/.claude/harness.yaml";
+
+    async function toConfirm() {
+      mockImportMachine.mockResolvedValue(ONBOARDING_FIXTURE_RESULT);
+      const user = userEvent.setup();
+      const utils = renderPage();
+      await waitFor(() => expect(screen.getByText(/preview harness\.yaml/i)).toBeInTheDocument(), {
+        timeout: 3000,
+      });
+      await user.click(screen.getByRole("button", { name: /preview harness\.yaml/i }));
+      await user.click(await screen.findByRole("button", { name: /^continue$/i }));
+      return { user, ...utils };
+    }
+
+    it("writes directly when no file exists", async () => {
+      const { user, onFinish } = await toConfirm();
+      await user.click(await screen.findByRole("button", { name: /^write harness\.yaml$/i }));
+      await waitFor(() => expect(mockWriteHarnessFile).toHaveBeenCalledWith(ONBOARDING_FIXTURE_RESULT.harnessYaml));
+      expect(mockWriteConfigFile).not.toHaveBeenCalled();
+      await waitFor(() => expect(onFinish).toHaveBeenCalled());
+    });
+
+    it("skips the write when the existing file is identical", async () => {
+      mockReadHarnessFile.mockResolvedValue({
+        found: true,
+        content: ONBOARDING_FIXTURE_RESULT.harnessYaml,
+        path: TARGET,
+      });
+      const { user, onFinish } = await toConfirm();
+      await user.click(await screen.findByRole("button", { name: /^write harness\.yaml$/i }));
+      await waitFor(() => expect(onFinish).toHaveBeenCalled());
+      expect(mockWriteHarnessFile).not.toHaveBeenCalled();
+      expect(mockWriteConfigFile).not.toHaveBeenCalled();
+    });
+
+    it("differs + Keep existing: no write, no backup", async () => {
+      mockReadHarnessFile.mockResolvedValue({ found: true, content: "version: old\n", path: TARGET });
+      const { user, onFinish } = await toConfirm();
+      await user.click(await screen.findByRole("button", { name: /^write harness\.yaml$/i }));
+      expect(await screen.findByRole("button", { name: /^keep existing$/i })).toBeInTheDocument();
+      expect(mockWriteHarnessFile).not.toHaveBeenCalled();
+      await user.click(screen.getByRole("button", { name: /^keep existing$/i }));
+      await waitFor(() => expect(onFinish).toHaveBeenCalled());
+      expect(mockWriteHarnessFile).not.toHaveBeenCalled();
+      expect(mockWriteConfigFile).not.toHaveBeenCalled();
+    });
+
+    it("the Replace dialog says the backup goes to ~/.harness/backups/user, not beside the file", async () => {
+      mockReadHarnessFile.mockResolvedValue({ found: true, content: "version: old\n", path: TARGET });
+      const { user } = await toConfirm();
+      await user.click(await screen.findByRole("button", { name: /^write harness\.yaml$/i }));
+      expect(await screen.findByText(/~\/\.harness\/backups\/user\//)).toBeInTheDocument();
+      expect(screen.queryByText(/\.bak-/)).not.toBeInTheDocument();
+    });
+
+    it("differs + Replace: one write with the shown file's digest, no webview-side backup", async () => {
+      mockReadHarnessFile.mockResolvedValue({ found: true, content: "version: old\n", path: TARGET });
+      mockWriteHarnessFile.mockResolvedValue(TARGET);
+      const { user, onFinish } = await toConfirm();
+      await user.click(await screen.findByRole("button", { name: /^write harness\.yaml$/i }));
+      await user.click(await screen.findByRole("button", { name: /replace \(backup kept\)/i }));
+      await waitFor(() => expect(onFinish).toHaveBeenCalled());
+      expect(mockWriteHarnessFile).toHaveBeenCalledTimes(1);
+      expect(mockWriteHarnessFile).toHaveBeenCalledWith(
+        ONBOARDING_FIXTURE_RESULT.harnessYaml,
+        await loadedDigest("version: old\n"),
+      );
+      expect(mockWriteConfigFile).not.toHaveBeenCalled();
+    });
+
+    it("shows the error and finishes nothing when Rust refuses because the file changed", async () => {
+      mockReadHarnessFile.mockResolvedValue({ found: true, content: "version: old\n", path: TARGET });
+      mockWriteHarnessFile.mockRejectedValue("harness.yaml changed on disk since it was loaded");
+      const { user, onFinish } = await toConfirm();
+      await user.click(await screen.findByRole("button", { name: /^write harness\.yaml$/i }));
+      await user.click(await screen.findByRole("button", { name: /replace \(backup kept\)/i }));
+      await waitFor(() => expect(mockWriteHarnessFile).toHaveBeenCalledTimes(1));
+      expect(await screen.findByText(/changed on disk/i)).toBeInTheDocument();
+      expect(onFinish).not.toHaveBeenCalled();
+      expect(mockWriteConfigFile).not.toHaveBeenCalled();
     });
   });
 });

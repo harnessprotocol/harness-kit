@@ -94,6 +94,37 @@ pub(crate) fn is_declared_store(relative: &str) -> bool {
         .any(|directory| normalized.starts_with(&format!("{}/", directory)))
 }
 
+/// Whether a project-root-relative path is a store the app compiles to inside a
+/// project, or part of the engine's project-local backups. The store list is
+/// the `project` entry of the generated write scope, derived from the registry's
+/// writable project-scope stores (`projectWriteScope` in packages/core), so a
+/// project's `.git/`, `.claude/settings.json` (hooks) and arbitrary files are
+/// not on it. `.harness/backups/` is the engine's per-project preimage and
+/// manifest subtree. Same segment rules as [`is_declared_store`].
+pub(crate) fn is_declared_project_store(relative: &str) -> bool {
+    let normalized = relative.replace('\\', "/");
+    if normalized
+        .split('/')
+        .any(|segment| segment.is_empty() || segment == "." || segment == "..")
+        || normalized.contains('\0')
+    {
+        return false;
+    }
+    if is_state_path(&normalized) {
+        return true;
+    }
+    let Some(project) = scope().get("project") else {
+        return false;
+    };
+    if project.files.iter().any(|file| file == &normalized) {
+        return true;
+    }
+    project
+        .directories
+        .iter()
+        .any(|directory| normalized.starts_with(&format!("{}/", directory)))
+}
+
 /// `expectedSha256` value meaning "the file must not exist yet".
 pub(crate) const ABSENT_SENTINEL: &str = "absent";
 
@@ -299,7 +330,7 @@ fn sha256_hex(bytes: &[u8]) -> String {
 /// webview's `readTextFile` returns it. That is a WHATWG TextDecoder("utf-8"):
 /// it drops one leading BOM and replaces each maximal invalid subpart with
 /// U+FFFD, which is what `from_utf8_lossy` does too.
-fn precondition_digest(bytes: &[u8]) -> String {
+pub(crate) fn precondition_digest(bytes: &[u8]) -> String {
     let body = bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(bytes);
     sha256_hex(String::from_utf8_lossy(body).as_bytes())
 }
@@ -341,7 +372,7 @@ fn check_unchanged(dest: &Path, expected: &str, relative: &str) -> Result<(), St
 /// plain write handled. The file is
 /// created exclusively so an existing file or planted symlink is never
 /// opened. Owner-only from the first byte on unix.
-fn create_temp(dest: &Path) -> Result<(PathBuf, fs::File), String> {
+pub(crate) fn create_temp(dest: &Path) -> Result<(PathBuf, fs::File), String> {
     let parent = dest
         .parent()
         .ok_or_else(|| format!("{} has no parent directory", dest.display()))?;
@@ -492,6 +523,183 @@ fn sync_directory(directory: &Path) -> std::io::Result<()> {
 #[cfg(not(unix))]
 fn sync_directory(_directory: &Path) -> std::io::Result<()> {
     Ok(())
+}
+
+/// The digest a webview computes for text it loaded from a user config file:
+/// SHA-256 of the text with one leading BOM dropped (see [`precondition_digest`]).
+#[cfg(test)]
+pub(crate) fn loaded_text_digest(text: &str) -> String {
+    precondition_digest(text.as_bytes())
+}
+
+/// Where user-file backups go, relative to the home directory. Never beside
+/// the file: a dotfile symlinked into a git repo (or `~/.claude` itself being
+/// one) would put a copy of its secrets, such as MCP tokens in `~/.claude.json`,
+/// where `git add -A` picks them up.
+pub(crate) const USER_BACKUPS_DIR: &str = ".harness/backups/user";
+
+#[cfg(test)]
+thread_local! {
+    static TEST_HOME: std::cell::RefCell<Option<PathBuf>> = const { std::cell::RefCell::new(None) };
+}
+
+/// Tests that look at backups name the home they go under. One that does not
+/// gets a private temp directory for its thread, never the real `~/.harness`.
+#[cfg(test)]
+pub(crate) fn set_test_home(home: &Path) {
+    TEST_HOME.with(|h| *h.borrow_mut() = Some(home.to_path_buf()));
+}
+
+/// Every file under `home`'s user backups, sorted, for tests to inspect.
+#[cfg(test)]
+pub(crate) fn user_backups(home: &Path) -> Vec<PathBuf> {
+    fn walk(dir: &Path, out: &mut Vec<PathBuf>) {
+        let Ok(entries) = fs::read_dir(dir) else { return };
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                walk(&path, out);
+            } else {
+                out.push(path);
+            }
+        }
+    }
+    let mut out = Vec::new();
+    walk(&home.join(USER_BACKUPS_DIR), &mut out);
+    out.sort();
+    out
+}
+
+fn backup_home() -> Result<PathBuf, String> {
+    #[cfg(test)]
+    {
+        thread_local! {
+            static SCRATCH: tempfile::TempDir = tempfile::tempdir().unwrap();
+        }
+        return Ok(TEST_HOME
+            .with(|h| h.borrow().clone())
+            .unwrap_or_else(|| SCRATCH.with(|d| d.path().to_path_buf())));
+    }
+    #[cfg(not(test))]
+    dirs::home_dir().ok_or_else(|| "Could not resolve the home directory".to_string())
+}
+
+/// The home-relative path of the LINK the user knows the file by (not its
+/// symlink target), `/`-separated. A path outside the home directory (a
+/// `~/.claude` symlinked to a dotfiles repo hands callers the canonical
+/// location) keeps its absolute components under `_outside_home/`.
+fn backup_relative(link: &Path, home: &Path) -> String {
+    let canonical_home = home.canonicalize().ok();
+    let inside = link
+        .strip_prefix(home)
+        .ok()
+        .or_else(|| canonical_home.as_deref().and_then(|h| link.strip_prefix(h).ok()));
+    let (prefix, path) = match inside {
+        Some(rest) => ("", rest),
+        None => ("_outside_home/", link),
+    };
+    let names: Vec<String> = path
+        .components()
+        .filter_map(|c| match c {
+            std::path::Component::Normal(n) => Some(n.to_string_lossy().into_owned()),
+            _ => None,
+        })
+        .collect();
+    format!("{prefix}{}", names.join("/"))
+}
+
+/// The shared save path for user config files outside the surface registry
+/// (AC-50): refuse if the file changed on disk since the caller loaded it,
+/// copy the old content to `~/.harness/backups/user/<UTC stamp>/<home-relative
+/// path of `dest`>` (directories 0700, file 0600), then replace the file
+/// atomically (temp file + rename). Nothing truncates the destination in place.
+///
+/// `expected_sha256` is the digest of what the caller loaded
+/// ([`loaded_text_digest`] on the webview side); `None` means the file must
+/// not exist. Returns the backup path when one was written.
+///
+/// A symlinked `dest` is followed to its final target: the digest check and the
+/// atomic write happen at the target and the link stays. The backup is keyed by
+/// the LINK's path, and lives under the home directory, not beside the target.
+/// This is for user-scope files only (a dotfile the user pointed at their
+/// dotfiles repo); project writes refuse symlinks (`sync_write_files`).
+pub(crate) fn write_user_file(
+    link: &Path,
+    content: &str,
+    expected_sha256: Option<&str>,
+) -> Result<Option<PathBuf>, String> {
+    let dest = resolve_link_target(link)?;
+    let dest = dest.as_path();
+    let label = dest.display().to_string();
+    let expected = expected_sha256.unwrap_or(ABSENT_SENTINEL);
+    check_unchanged(dest, expected, &label)?;
+
+    let backup = match fs::read(dest) {
+        Ok(old) => {
+            let home = backup_home()?;
+            let relative = backup_relative(link, &home);
+            let stamp = chrono::Utc::now().format("%Y%m%dT%H%M%S%3fZ").to_string();
+            let mut slot = stamp.clone();
+            let mut n = 1;
+            let (backup, backup_relative_path) = loop {
+                let rel = format!("{USER_BACKUPS_DIR}/{slot}/{relative}");
+                let path = home.join(&rel);
+                if fs::symlink_metadata(&path).is_err() {
+                    break (path, rel);
+                }
+                slot = format!("{stamp}-{n}");
+                n += 1;
+            };
+            write_atomically(&backup, &old, None, &backup_relative_path, sync_directory)
+                .or_else(settled_on_disk)
+                .map_err(|e| format!("Failed to back up {}: {}", label, e))?;
+            Some(backup)
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
+        Err(e) => return Err(format!("Failed to read {}: {}", label, e)),
+    };
+
+    write_atomically(dest, content.as_bytes(), Some(expected), &label, sync_directory)
+        .or_else(settled_on_disk)?;
+    Ok(backup)
+}
+
+/// Follow `path` through any chain of symlinks to the path it finally names,
+/// which may not exist (a dangling link). Only the final component is
+/// resolved; parent directories are left to the OS. A relative link target is
+/// taken relative to the directory holding the link.
+pub(crate) fn resolve_link_target(path: &Path) -> Result<PathBuf, String> {
+    let mut current = path.to_path_buf();
+    for _ in 0..40 {
+        match fs::symlink_metadata(&current) {
+            Ok(meta) if meta.file_type().is_symlink() => {
+                let target = fs::read_link(&current)
+                    .map_err(|e| format!("Failed to read link {}: {}", current.display(), e))?;
+                current = if target.is_absolute() {
+                    target
+                } else {
+                    current.parent().unwrap_or_else(|| Path::new("")).join(target)
+                };
+            }
+            _ => return Ok(current),
+        }
+    }
+    Err(format!("{} has too many levels of symbolic links", path.display()))
+}
+
+/// The digest a save of the user file at `path` will check against
+/// ([`write_user_file`]): the digest of the file the path finally names, or
+/// the absent sentinel when there is none.
+pub(crate) fn user_file_digest(path: &Path) -> Result<String, String> {
+    current_digest(&resolve_link_target(path)?)
+}
+
+/// A rename that landed but whose directory fsync failed still wrote the file.
+fn settled_on_disk(failure: WriteFailure) -> Result<(), String> {
+    match failure {
+        WriteFailure::Unchanged(message) => Err(message),
+        WriteFailure::ReplacedNotDurable(_) => Ok(()),
+    }
 }
 
 fn refuse_read_only(dest: &Path, relative: &str) -> Result<(), String> {
@@ -1292,5 +1500,224 @@ mod tests {
         )
         .unwrap_err();
         assert!(err.contains("not a regular file"), "got: {}", err);
+    }
+}
+
+#[cfg(test)]
+mod user_file_tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    fn siblings(dir: &Path) -> Vec<String> {
+        let mut names: Vec<String> = fs::read_dir(dir)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        names.sort();
+        names
+    }
+
+    #[test]
+    fn matching_digest_writes_and_leaves_a_backup() {
+        let dir = TempDir::new().unwrap();
+        set_test_home(dir.path());
+        let file = dir.path().join("a.md");
+        fs::write(&file, "old").unwrap();
+        let backup = write_user_file(&file, "new", Some(&loaded_text_digest("old")))
+            .unwrap()
+            .expect("a backup of the old content");
+        assert_eq!(fs::read_to_string(&file).unwrap(), "new");
+        assert_eq!(fs::read_to_string(backup).unwrap(), "old");
+        assert_eq!(siblings(dir.path()), vec![".harness", "a.md"], "no backup or temp file beside the file");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn backups_live_under_the_home_backups_dir_private_and_keyed_by_the_home_relative_path() {
+        use std::os::unix::fs::PermissionsExt;
+        let home = TempDir::new().unwrap();
+        set_test_home(home.path());
+        let file = home.path().join(".claude/nested/a.md");
+        fs::create_dir_all(file.parent().unwrap()).unwrap();
+        fs::write(&file, "old").unwrap();
+        let backup = write_user_file(&file, "new", Some(&loaded_text_digest("old")))
+            .unwrap()
+            .unwrap();
+        let rel = backup.strip_prefix(home.path().join(USER_BACKUPS_DIR)).unwrap();
+        let parts: Vec<_> = rel.components().map(|c| c.as_os_str().to_string_lossy().into_owned()).collect();
+        assert_eq!(parts.len(), 4, "<stamp>/.claude/nested/a.md, got {parts:?}");
+        assert_eq!(parts[1..], [".claude", "nested", "a.md"]);
+        let mode = |p: &Path| fs::metadata(p).unwrap().permissions().mode() & 0o777;
+        assert_eq!(mode(&backup), 0o600);
+        assert_eq!(mode(backup.parent().unwrap()), 0o700, "created directories are private");
+        assert_eq!(mode(backup.parent().unwrap().parent().unwrap().parent().unwrap()), 0o700);
+        assert_eq!(siblings(file.parent().unwrap()), vec!["a.md"], "nothing beside the file");
+        assert_eq!(user_backups(home.path()), vec![backup]);
+    }
+
+    #[test]
+    fn two_backups_in_one_millisecond_both_survive() {
+        let home = TempDir::new().unwrap();
+        set_test_home(home.path());
+        let file = home.path().join("a.md");
+        fs::write(&file, "one").unwrap();
+        write_user_file(&file, "two", Some(&loaded_text_digest("one"))).unwrap();
+        write_user_file(&file, "three", Some(&loaded_text_digest("two"))).unwrap();
+        let mut bodies: Vec<String> = user_backups(home.path())
+            .iter()
+            .map(|p| fs::read_to_string(p).unwrap())
+            .collect();
+        bodies.sort();
+        assert_eq!(bodies, ["one", "two"]);
+    }
+
+    #[test]
+    fn a_file_outside_the_home_directory_is_backed_up_under_the_home_not_beside_it() {
+        let home = TempDir::new().unwrap();
+        let elsewhere = TempDir::new().unwrap();
+        set_test_home(home.path());
+        let file = elsewhere.path().join("a.md");
+        fs::write(&file, "old").unwrap();
+        let backup = write_user_file(&file, "new", Some(&loaded_text_digest("old"))).unwrap().unwrap();
+        assert!(backup.starts_with(home.path().join(USER_BACKUPS_DIR)), "{}", backup.display());
+        assert!(backup.to_string_lossy().contains("_outside_home"));
+        assert_eq!(siblings(elsewhere.path()), vec!["a.md"]);
+    }
+
+    #[test]
+    fn mismatched_digest_refuses_and_changes_nothing() {
+        let dir = TempDir::new().unwrap();
+        let file = dir.path().join("a.md");
+        fs::write(&file, "disk").unwrap();
+        let err = write_user_file(&file, "new", Some(&loaded_text_digest("loaded"))).unwrap_err();
+        assert!(err.contains("changed on disk"), "{}", err);
+        assert_eq!(fs::read_to_string(&file).unwrap(), "disk");
+        assert_eq!(siblings(dir.path()), vec!["a.md"]);
+    }
+
+    #[test]
+    fn none_on_an_existing_file_refuses_and_none_on_a_missing_file_creates() {
+        let dir = TempDir::new().unwrap();
+        let file = dir.path().join("a.md");
+        assert!(write_user_file(&file, "first", None).unwrap().is_none());
+        assert_eq!(fs::read_to_string(&file).unwrap(), "first");
+        let err = write_user_file(&file, "second", None).unwrap_err();
+        assert!(err.contains("changed on disk"), "{}", err);
+        assert_eq!(fs::read_to_string(&file).unwrap(), "first");
+    }
+
+    #[test]
+    fn a_leading_bom_does_not_change_the_loaded_digest() {
+        let dir = TempDir::new().unwrap();
+        let file = dir.path().join("a.md");
+        fs::write(&file, "\u{feff}old").unwrap();
+        // The webview hashes the text with the BOM stripped.
+        write_user_file(&file, "new", Some(&loaded_text_digest("old"))).unwrap();
+        assert_eq!(fs::read_to_string(&file).unwrap(), "new");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn replaces_the_file_through_a_temp_rename_not_in_place() {
+        use std::os::unix::fs::MetadataExt;
+        let dir = TempDir::new().unwrap();
+        let file = dir.path().join("a.md");
+        fs::write(&file, "old").unwrap();
+        let before = fs::metadata(&file).unwrap().ino();
+        write_user_file(&file, "new", Some(&loaded_text_digest("old"))).unwrap();
+        assert_ne!(fs::metadata(&file).unwrap().ino(), before);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_symlinked_destination_is_written_at_its_target_and_the_link_stays() {
+        let dir = TempDir::new().unwrap();
+        let repo = dir.path().join("dotfiles");
+        let home = dir.path().join("home");
+        fs::create_dir_all(&repo).unwrap();
+        fs::create_dir_all(&home).unwrap();
+        let target = repo.join("target.md");
+        fs::write(&target, "t").unwrap();
+        let link = home.join("link.md");
+        std::os::unix::fs::symlink(&target, &link).unwrap();
+        set_test_home(&home);
+
+        let backup = write_user_file(&link, "x", Some(&loaded_text_digest("t")))
+            .unwrap()
+            .expect("a backup of the old content");
+
+        assert!(fs::symlink_metadata(&link).unwrap().file_type().is_symlink(), "link was replaced");
+        assert_eq!(fs::read_to_string(&target).unwrap(), "x");
+        assert_eq!(fs::read_to_string(&link).unwrap(), "x");
+        assert!(backup.starts_with(home.join(USER_BACKUPS_DIR)), "backup goes under the home backups dir");
+        assert_eq!(backup.file_name().unwrap(), "link.md", "keyed by the link, not the target");
+        assert_eq!(fs::read_to_string(backup).unwrap(), "t");
+        assert_eq!(siblings(&repo), vec!["target.md"], "nothing lands in the dotfiles repo");
+        assert_eq!(siblings(&home), vec![".harness", "link.md"], "nothing else lands beside the link");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_relative_and_chained_symlink_resolves_to_the_final_target() {
+        let dir = TempDir::new().unwrap();
+        fs::create_dir_all(dir.path().join("real")).unwrap();
+        fs::create_dir_all(dir.path().join("home")).unwrap();
+        let target = dir.path().join("real/target.md");
+        fs::write(&target, "t").unwrap();
+        std::os::unix::fs::symlink("../real/target.md", dir.path().join("home/hop.md")).unwrap();
+        std::os::unix::fs::symlink("hop.md", dir.path().join("home/link.md")).unwrap();
+        write_user_file(&dir.path().join("home/link.md"), "x", Some(&loaded_text_digest("t"))).unwrap();
+        assert_eq!(fs::read_to_string(&target).unwrap(), "x");
+        assert!(fs::symlink_metadata(dir.path().join("home/link.md")).unwrap().file_type().is_symlink());
+        assert!(fs::symlink_metadata(dir.path().join("home/hop.md")).unwrap().file_type().is_symlink());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_symlinked_destination_still_checks_the_digest_at_the_target() {
+        let dir = TempDir::new().unwrap();
+        let target = dir.path().join("target.md");
+        fs::write(&target, "disk").unwrap();
+        let link = dir.path().join("link.md");
+        std::os::unix::fs::symlink(&target, &link).unwrap();
+        let err = write_user_file(&link, "x", Some(&loaded_text_digest("stale"))).unwrap_err();
+        assert!(err.contains("changed on disk"), "{err}");
+        assert_eq!(fs::read_to_string(&target).unwrap(), "disk");
+        assert!(fs::symlink_metadata(&link).unwrap().file_type().is_symlink());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn user_file_digest_follows_a_symlink() {
+        let dir = TempDir::new().unwrap();
+        let target = dir.path().join("target.md");
+        fs::write(&target, "t").unwrap();
+        let link = dir.path().join("link.md");
+        std::os::unix::fs::symlink(&target, &link).unwrap();
+        assert_eq!(user_file_digest(&link).unwrap(), loaded_text_digest("t"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_symlink_loop_is_refused() {
+        let dir = TempDir::new().unwrap();
+        let a = dir.path().join("a.md");
+        let b = dir.path().join("b.md");
+        std::os::unix::fs::symlink(&b, &a).unwrap();
+        std::os::unix::fs::symlink(&a, &b).unwrap();
+        let err = write_user_file(&a, "x", None).unwrap_err();
+        assert!(err.contains("symbolic links"), "{err}");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn replacing_a_file_keeps_its_mode() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = TempDir::new().unwrap();
+        let file = dir.path().join("a.md");
+        fs::write(&file, "old").unwrap();
+        fs::set_permissions(&file, fs::Permissions::from_mode(0o640)).unwrap();
+        write_user_file(&file, "new", Some(&loaded_text_digest("old"))).unwrap();
+        assert_eq!(fs::metadata(&file).unwrap().permissions().mode() & 0o777, 0o640);
     }
 }

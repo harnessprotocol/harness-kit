@@ -3,7 +3,10 @@ import { homeDir } from "@tauri-apps/api/path";
 import { importMachine } from "@harness-kit/core";
 import type { ImportProjectResult } from "@harness-kit/core";
 import { TauriFsProvider } from "../../lib/harness-fs";
-import { writeHarnessFile, grantProjectScope } from "../../lib/tauri";
+import { Modal, Button, DiffViewer } from "@harness-kit/ui";
+import { writeHarnessFile, readHarnessFile, grantProjectScope } from "../../lib/tauri";
+import { loadedDigest } from "../../lib/loaded-digest";
+import { lineDiff, collapseToHunks } from "../drift/line-diff";
 import { getCurrentProjectDir } from "../../lib/project-dir";
 import { errorDetails } from "../../lib/error-details";
 import { OnboardingFlow, type OnboardingStep } from "./OnboardingFlow";
@@ -23,6 +26,9 @@ export interface OnboardingPageProps {
  * view (the same pattern used by Machine) so the flow can be
  * screenshot-tested with fixture data with no live backend.
  */
+/** Where `write_harness_file` puts the file; the only path onboarding can overwrite. */
+const WRITE_TARGET = "~/.claude/harness.yaml";
+
 export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
   const [step, setStep] = useState<OnboardingStep>("scan");
   const [scanSeconds, setScanSeconds] = useState<number | null>(null);
@@ -31,6 +37,8 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
   const [reveal, setReveal] = useState<SprawlReveal | null>(null);
   const [writing, setWriting] = useState(false);
   const [writeError, setWriteError] = useState<string | null>(null);
+  // Set when the target file already exists with different content (AC-51).
+  const [conflict, setConflict] = useState<{ existing: string } | null>(null);
   const startedAt = useRef<number>(Date.now());
   // Bumped by Retry; the scan effect is keyed on it so a rerun goes back
   // through the scan step (AC-32). handleRetry resets the scan state.
@@ -104,6 +112,17 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
     setWriting(true);
     setWriteError(null);
     try {
+      // AC-51: never replace an existing harness.yaml unseen. A read failure
+      // aborts the write rather than risk clobbering a file we couldn't read.
+      const current = await readHarnessFile();
+      if (current.found && current.path === WRITE_TARGET) {
+        if (current.content === result.harnessYaml) {
+          onFinish();
+          return;
+        }
+        setConflict({ existing: current.content ?? "" });
+        return;
+      }
       await writeHarnessFile(result.harnessYaml);
       onFinish();
     } catch (err) {
@@ -112,6 +131,29 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
       setWriting(false);
     }
   }, [result, onFinish]);
+
+  const handleKeepExisting = useCallback(() => {
+    setConflict(null);
+    onFinish();
+  }, [onFinish]);
+
+  const handleReplace = useCallback(async () => {
+    if (!result || !conflict) return;
+    setWriting(true);
+    setWriteError(null);
+    try {
+      // Rust backs up the existing file before replacing it, and refuses when
+      // it no longer matches the digest of the file the user was shown.
+      await writeHarnessFile(result.harnessYaml, await loadedDigest(conflict.existing));
+      setConflict(null);
+      onFinish();
+    } catch (err) {
+      setConflict(null);
+      setWriteError(errorDetails(err));
+    } finally {
+      setWriting(false);
+    }
+  }, [result, conflict, onFinish]);
 
   const handleRetry = useCallback(() => {
     setScanError(null);
@@ -131,20 +173,45 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
   }, [onFinish]);
 
   return (
-    <OnboardingFlow
-      step={step}
-      scanSeconds={scanSeconds}
-      scanError={scanError}
-      reveal={reveal}
-      harnessYaml={result?.harnessYaml ?? null}
-      writing={writing}
-      writeError={writeError}
-      onAdvance={handleAdvance}
-      onWriteAndFinish={handleWriteAndFinish}
-      onExploreReadOnly={handleExploreReadOnly}
-      onSkip={handleSkip}
-      onRetry={handleRetry}
-    />
+    <>
+      <OnboardingFlow
+        step={step}
+        scanSeconds={scanSeconds}
+        scanError={scanError}
+        reveal={reveal}
+        harnessYaml={result?.harnessYaml ?? null}
+        writing={writing}
+        writeError={writeError}
+        onAdvance={handleAdvance}
+        onWriteAndFinish={handleWriteAndFinish}
+        onExploreReadOnly={handleExploreReadOnly}
+        onSkip={handleSkip}
+        onRetry={handleRetry}
+      />
+      <Modal
+        open={conflict !== null}
+        onClose={handleKeepExisting}
+        title="harness.yaml already exists"
+        footer={
+          <>
+            <Button variant="primary" onClick={handleKeepExisting} disabled={writing}>
+              Keep existing
+            </Button>
+            <Button variant="ghost" onClick={handleReplace} disabled={writing}>
+              {writing ? "Replacing…" : "Replace (backup kept)"}
+            </Button>
+          </>
+        }
+      >
+        <p style={{ fontSize: 12.5, color: "var(--fg-subtle)", marginBottom: 10 }}>
+          {WRITE_TARGET} differs from what onboarding would write. Replacing first copies the current
+          file to ~/.harness/backups/user/&lt;timestamp&gt;/.claude/harness.yaml, not next to the file.
+        </p>
+        {conflict && result && (
+          <DiffViewer lines={collapseToHunks(lineDiff(conflict.existing, result.harnessYaml))} />
+        )}
+      </Modal>
+    </>
   );
 }
 

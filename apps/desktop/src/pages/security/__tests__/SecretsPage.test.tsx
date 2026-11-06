@@ -73,10 +73,10 @@ function renderPage() {
 beforeEach(() => {
   vi.clearAllMocks();
   mockListRequiredEnv.mockResolvedValue([]);
-  mockReadEnvConfig.mockResolvedValue([]);
+  mockReadEnvConfig.mockResolvedValue({ entries: [], sha256: "absent" });
   mockSetKeychainSecret.mockResolvedValue(undefined);
   mockDeleteKeychainSecret.mockResolvedValue(undefined);
-  mockWriteEnvConfig.mockResolvedValue(undefined);
+  mockWriteEnvConfig.mockResolvedValue("e2");
 });
 
 // ── Tests ─────────────────────────────────────────────────────
@@ -382,7 +382,7 @@ describe("SecretsPage — delete secret", () => {
 
 describe("SecretsPage — environment config", () => {
   beforeEach(() => {
-    mockReadEnvConfig.mockResolvedValue([ENV_ENTRY, ENV_ENTRY_NO_PLUGIN]);
+    mockReadEnvConfig.mockResolvedValue({ entries: [ENV_ENTRY, ENV_ENTRY_NO_PLUGIN], sha256: "e1" });
   });
 
   it("renders env variable names", async () => {
@@ -431,6 +431,34 @@ describe("SecretsPage — environment config", () => {
     await waitFor(() => {
       expect(mockWriteEnvConfig).toHaveBeenCalledTimes(1);
     });
+    // The digest of the file the edits started from rides along.
+    expect(mockWriteEnvConfig.mock.calls[0][1]).toBe("e1");
+  });
+
+  it("a second Save All sends the digest the first save returned", async () => {
+    renderPage();
+    await screen.findByText("HARNESS_LOG_LEVEL");
+    fireEvent.change(screen.getAllByDisplayValue("info")[0], { target: { value: "debug" } });
+    fireEvent.click(await screen.findByRole("button", { name: "Save All" }));
+    await waitFor(() => expect(mockWriteEnvConfig).toHaveBeenCalledTimes(1));
+    fireEvent.change(screen.getAllByDisplayValue("debug")[0], { target: { value: "warn" } });
+    fireEvent.click(await screen.findByRole("button", { name: "Save All" }));
+    await waitFor(() => expect(mockWriteEnvConfig).toHaveBeenCalledTimes(2));
+    expect(mockWriteEnvConfig.mock.calls[1][1]).toBe("e2");
+  });
+
+  it("offers to reload when env.json changed on disk since it was read", async () => {
+    mockWriteEnvConfig.mockRejectedValue(
+      "Failed to write env.json: Refusing to write '/h/env.json': it changed on disk since it was read (expected a, found b)",
+    );
+    renderPage();
+    await screen.findByText("HARNESS_LOG_LEVEL");
+    fireEvent.change(screen.getAllByDisplayValue("info")[0], { target: { value: "debug" } });
+    fireEvent.click(await screen.findByRole("button", { name: "Save All" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("env.json changed on disk");
+    mockReadEnvConfig.mockResolvedValue({ entries: [ENV_ENTRY, ENV_ENTRY_NO_PLUGIN], sha256: "e7" });
+    fireEvent.click(screen.getByRole("button", { name: "Reload from disk" }));
+    await waitFor(() => expect(mockReadEnvConfig).toHaveBeenCalledTimes(2));
   });
 });
 

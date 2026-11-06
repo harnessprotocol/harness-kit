@@ -6,6 +6,7 @@ import {
   readEnvConfig, writeEnvConfig,
 } from "../../lib/tauri";
 import { errorDetails } from "../../lib/error-details";
+import { isChangedOnDisk } from "../../lib/loaded-digest";
 import type { KeychainSecretInfo, EnvConfigEntry } from "@harness-kit/shared";
 
 function StatusBadge({ isSet }: { isSet: boolean }) {
@@ -21,7 +22,10 @@ export default function SecretsPage() {
   const [envConfig, setEnvConfig] = useState<EnvConfigEntry[]>([]);
   const [loading, setLoading] = useState(true);
   // `retry` is set only for a failed load; other failures offer Dismiss.
-  const [error, setError] = useState<{ title: string; details: string; retry?: boolean } | null>(null);
+  // `changed` marks a save refused because env.json changed since it was read; it offers a reload.
+  const [error, setError] = useState<{ title: string; details: string; retry?: boolean; changed?: boolean } | null>(null);
+  // Digest of the env.json the shown entries came from; every save sends it back.
+  const [envDigest, setEnvDigest] = useState<string | undefined>(undefined);
   const [loadAttempt, setLoadAttempt] = useState(0);
   const [modalSecret, setModalSecret] = useState<string | null>(null);
   const [secretValue, setSecretValue] = useState("");
@@ -33,9 +37,11 @@ export default function SecretsPage() {
       listRequiredEnv(),
       readEnvConfig(),
     ])
-      .then(([secretList, envList]) => {
+      .then(([secretList, env]) => {
         setSecrets(secretList);
-        setEnvConfig(envList);
+        setEnvConfig(env.entries);
+        setEnvDigest(env.sha256);
+        setEnvDirty(false);
       })
       .catch((e) => setError({ title: "Couldn't load secrets", details: errorDetails(e), retry: true }))
       .finally(() => setLoading(false));
@@ -96,10 +102,14 @@ export default function SecretsPage() {
 
   async function handleSaveEnv() {
     try {
-      await writeEnvConfig(envConfig);
+      setEnvDigest(await writeEnvConfig(envConfig, envDigest));
       setEnvDirty(false);
     } catch (e) {
-      setError({ title: "Couldn't save the environment settings", details: errorDetails(e) });
+      setError(
+        isChangedOnDisk(e)
+          ? { title: "env.json changed on disk", details: errorDetails(e), changed: true }
+          : { title: "Couldn't save the environment settings", details: errorDetails(e) },
+      );
     }
   }
 
@@ -130,7 +140,9 @@ export default function SecretsPage() {
           action={
             error.retry
               ? { label: "Retry", onClick: () => { setError(null); setLoading(true); setLoadAttempt((n) => n + 1); } }
-              : { label: "Dismiss", onClick: () => setError(null) }
+              : error.changed
+                ? { label: "Reload from disk", onClick: () => { setError(null); setLoading(true); setLoadAttempt((n) => n + 1); } }
+                : { label: "Dismiss", onClick: () => setError(null) }
           }
         />
       )}

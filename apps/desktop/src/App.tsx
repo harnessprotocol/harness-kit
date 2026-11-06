@@ -41,12 +41,11 @@ if (import.meta.env.DEV) {
   const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   fetch("http://localhost:1422/__tauri_cli__")
     .catch(() => null); // ignore — just prevents console noise
-  import("@tauri-apps/plugin-shell").then(({ Command }) => {
-    Command.create("git", ["branch", "--show-current"])
-      .execute()
-      .then((out) => {
-        const branch = out.stdout.trim() || "detached";
-        document.title = `Harness Kit — ${branch} — ${time}`;
+  // Branch comes from a Rust command: the webview has no shell grant.
+  import("@tauri-apps/api/core").then(({ invoke }) => {
+    invoke<{ branch: string | null }>("check_git_repo", { dir: import.meta.env.VITE_REPO_PATH })
+      .then((info) => {
+        document.title = `Harness Kit — ${info.branch || "detached"} — ${time}`;
       })
       .catch(() => {
         document.title = `Harness Kit — dev — ${time}`;

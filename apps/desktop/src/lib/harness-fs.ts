@@ -1,16 +1,25 @@
 import {
   readTextFile,
-  writeTextFile,
   exists,
   mkdir,
   readDir,
   lstat,
-  rename,
-  remove,
 } from "@tauri-apps/plugin-fs";
+import { invoke } from "@tauri-apps/api/core";
 import { homeDir } from "@tauri-apps/api/path";
 import type { FsProvider } from "@harness-kit/core";
 import { posixJoin, posixDirname } from "@harness-kit/core";
+
+/**
+ * Whether the FINAL path segment is an engine temp name (`<name>.harness-tmp-<suffix>`,
+ * the same test the Rust guard applies). A marker in a directory name does not count.
+ */
+function isEngineTempName(path: string): boolean {
+  const name = path.slice(path.lastIndexOf("/") + 1);
+  const marker = ".harness-tmp-";
+  const at = name.lastIndexOf(marker);
+  return at > 0 && name.length > at + marker.length;
+}
 
 /**
  * FsProvider implementation for Tauri desktop apps.
@@ -27,8 +36,13 @@ export class TauriFsProvider implements FsProvider {
     return readTextFile(path);
   }
 
+  // The fs plugin's write is not granted to the webview (a scope cannot tell
+  // a hooks file from a temp file). The Rust command writes only the engine's
+  // `.harness-tmp-<suffix>` file beside a declared home store, or beside a
+  // declared project store inside a project root the user picked, and refuses
+  // everything else (including anything under `.git`).
   async writeFile(path: string, content: string): Promise<void> {
-    await writeTextFile(path, content);
+    await invoke("guarded_write_file", { path, content });
   }
 
   async exists(path: string): Promise<boolean> {
@@ -66,12 +80,32 @@ export class TauriFsProvider implements FsProvider {
     }
   }
 
+  // The fs plugin's rename and remove are not granted to the webview: a
+  // capability scope cannot refuse symlinks or recursive deletes. These Rust
+  // commands accept a temp file renamed onto its own declared store (home, or
+  // a project store), refuse a symlink source, delete only temp files and
+  // backups (removing a store moves it to quarantine), and never remove a
+  // directory.
   async renameFile(from: string, to: string): Promise<void> {
-    await rename(from, to);
+    try {
+      await invoke("guarded_rename_file", { from, to });
+    } catch (err) {
+      // A refused rename leaves the engine's temp file behind; clear it
+      // best-effort and report the refusal, not the cleanup. Only a temp
+      // file: a refused rename of anything else must not delete its source.
+      if (isEngineTempName(from)) {
+        try {
+          await invoke("guarded_remove_file", { path: from });
+        } catch {
+          /* best effort */
+        }
+      }
+      throw err;
+    }
   }
 
   async removeFile(path: string): Promise<void> {
-    await remove(path);
+    await invoke("guarded_remove_file", { path });
   }
 
   async isSymlink(path: string): Promise<boolean> {

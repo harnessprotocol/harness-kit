@@ -4,6 +4,7 @@ import {
   createHomeTransactionRoot,
   homeWriteScope,
   isWritableHomePath,
+  projectWriteScope,
 } from "../src/surfaces/write-scope.js";
 import { SURFACES } from "../src/surfaces/registry.js";
 import { isWritableFormat } from "../src/write/write-store.js";
@@ -160,5 +161,31 @@ describe("home root wired into transactions (AC-31)", () => {
       { fs, timestamp: "project", roots: { home: createHomeTransactionRoot("/home/user", "darwin") } },
     );
     expect(result.committed).toBe(true);
+  });
+});
+
+describe("project write scope", () => {
+  const scope = projectWriteScope();
+
+  it("covers the writable project stores and never the settings or git files", () => {
+    expect(isWritableHomePath(".mcp.json", scope)).toBe(true);
+    expect(isWritableHomePath("AGENTS.md", scope)).toBe(true);
+    expect(isWritableHomePath(".claude/skills/x/SKILL.md", scope)).toBe(true);
+    // json-generic permissions have no writer, so hooks files stay out.
+    expect(isWritableHomePath(".claude/settings.json", scope)).toBe(false);
+    expect(isWritableHomePath(".git/config", scope)).toBe(false);
+    expect(isWritableHomePath("foo.txt", scope)).toBe(false);
+  });
+
+  it("derives from every writable project store in the registry", () => {
+    for (const surface of SURFACES) {
+      for (const store of surface.stores) {
+        if (store.scope !== "project" || !isWritableFormat(store.formatId)) continue;
+        expect(
+          isWritableHomePath(store.path, scope) || isWritableHomePath(`${store.path}/child.md`, scope),
+          `${surface.id} ${store.path}`,
+        ).toBe(true);
+      }
+    }
   });
 });

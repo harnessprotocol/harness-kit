@@ -58,7 +58,7 @@ describe("HooksPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Retry save" }));
     await waitFor(() => expect(mockWriteConfigFile).toHaveBeenCalledTimes(2));
-    expect(mockWriteConfigFile).toHaveBeenLastCalledWith("~/.claude/settings.json", '{"hooks": {"x": 1}}');
+    expect(mockWriteConfigFile).toHaveBeenLastCalledWith("~/.claude/settings.json", '{"hooks": {"x": 1}}', expect.any(String));
     await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
   });
 });

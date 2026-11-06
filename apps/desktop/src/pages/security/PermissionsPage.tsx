@@ -6,6 +6,7 @@ import {
 } from "../../lib/tauri";
 import { ErrorNotice } from "@harness-kit/ui";
 import { errorDetails } from "../../lib/error-details";
+import { isChangedOnDisk } from "../../lib/loaded-digest";
 import type { PermissionsState, SecurityPreset } from "@harness-kit/shared";
 import {
   getPermissionMode, setPermissionMode,
@@ -719,13 +720,18 @@ export default function PermissionsPage() {
   const [presets, setPresets] = useState<SecurityPreset[]>([]);
   const [loading, setLoading] = useState(true);
   // `retry` is set only for a failed load; a failed save or preset offers Dismiss.
-  const [error, setError] = useState<{ title: string; details: string; retry?: boolean } | null>(null);
+  // `changed` marks a save refused because settings.json changed since it was read; it offers a reload.
+  const [error, setError] = useState<{ title: string; details: string; retry?: boolean; changed?: boolean } | null>(null);
   const [tauriAvailable] = useState(() =>
     typeof window !== "undefined" && !!(window as unknown as Record<string, unknown>).__TAURI_INTERNALS__
   );
   const [saving, setSaving] = useState(false);
   const [confirmPreset, setConfirmPreset] = useState<SecurityPreset | null>(null);
+  // Deny rules a confirmed preset would remove; set after the first apply call returns them unwritten.
+  const [pendingDeny, setPendingDeny] = useState<string[] | null>(null);
   const [dirty, setDirty] = useState(false);
+  // Digest of the settings.json the shown permissions came from; every save sends it back.
+  const [settingsDigest, setSettingsDigest] = useState<string | undefined>(undefined);
 
   const [budgetGuard, setBudgetGuardState] = useState<BudgetGuardConfig>(() => getBudgetGuard());
 
@@ -772,7 +778,10 @@ export default function PermissionsPage() {
   function loadPermissions() {
     Promise.all([readPermissions(), listSecurityPresets()])
       .then(([perms, presetList]) => {
-        setPermissions(perms);
+        const { sha256, ...state } = perms;
+        setPermissions(state);
+        setSettingsDigest(sha256);
+        setDirty(false);
         setPresets(presetList);
       })
       .catch((e) => setError({ title: "Couldn't read Claude's permission settings", details: errorDetails(e), retry: true }))
@@ -846,10 +855,15 @@ export default function PermissionsPage() {
     if (!permissions) return;
     setSaving(true);
     try {
-      await updatePermissions(permissions);
+      const written = await updatePermissions(permissions, settingsDigest);
+      setSettingsDigest(written);
       setDirty(false);
     } catch (e) {
-      setError({ title: "Couldn't save the permission settings", details: errorDetails(e) });
+      setError(
+        isChangedOnDisk(e)
+          ? { title: "settings.json changed on disk", details: errorDetails(e), changed: true }
+          : { title: "Couldn't save the permission settings", details: errorDetails(e) },
+      );
     } finally {
       setSaving(false);
     }
@@ -858,12 +872,30 @@ export default function PermissionsPage() {
   async function handleApplyPreset(preset: SecurityPreset) {
     setSaving(true);
     try {
-      await applySecurityPreset(preset.id);
-      setPermissions(preset.permissions);
+      // The confirmed list is exactly what the user was shown; Rust refuses
+      // if the rules the preset would drop are no longer that list.
+      const outcome = await (pendingDeny
+        ? applySecurityPreset(preset.id, settingsDigest, pendingDeny)
+        : applySecurityPreset(preset.id, settingsDigest));
+      if (outcome && outcome.applied === false) {
+        setPendingDeny(outcome.droppedDeny);
+        return;
+      }
+      // The preset is merged into existing rules, so reload rather than show the preset itself.
+      const { sha256, ...state } = await readPermissions();
+      setPermissions(state);
+      setSettingsDigest(sha256);
       setDirty(false);
       setConfirmPreset(null);
+      setPendingDeny(null);
     } catch (e) {
-      setError({ title: `Couldn't apply the ${preset.name} preset`, details: errorDetails(e) });
+      // A refused apply drops its confirmation: the next try recomputes and shows the list again.
+      setPendingDeny(null);
+      setError(
+        isChangedOnDisk(e)
+          ? { title: "settings.json changed on disk", details: errorDetails(e), changed: true }
+          : { title: `Couldn't apply the ${preset.name} preset`, details: errorDetails(e) },
+      );
     } finally {
       setSaving(false);
     }
@@ -985,7 +1017,18 @@ export default function PermissionsPage() {
             action={
               error.retry
                 ? { label: "Retry", onClick: () => { setError(null); setLoading(true); loadPermissions(); } }
-                : { label: "Dismiss", onClick: () => setError(null) }
+                : error.changed
+                  ? {
+                      label: "Reload from disk",
+                      onClick: () => {
+                        setError(null);
+                        setConfirmPreset(null);
+                        setPendingDeny(null);
+                        setLoading(true);
+                        loadPermissions();
+                      },
+                    }
+                  : { label: "Dismiss", onClick: () => setError(null) }
             }
           />
         )}
@@ -1008,7 +1051,7 @@ export default function PermissionsPage() {
               {presets.map((preset) => (
                 <button
                   key={preset.id}
-                  onClick={() => setConfirmPreset(preset)}
+                  onClick={() => { setConfirmPreset(preset); setPendingDeny(null); }}
                   style={{
                     padding: "7px 12px",
                     background: "var(--bg-surface)",
@@ -1035,17 +1078,25 @@ export default function PermissionsPage() {
             borderRadius: "8px", padding: "12px 14px", marginBottom: "14px",
           }}>
             <p style={{ fontSize: "12px", color: "var(--fg-base)", margin: "0 0 10px" }}>
-              Apply <strong>{confirmPreset.name}</strong> preset? This will overwrite current settings.
+              Apply <strong>{confirmPreset.name}</strong> preset? Its rules are merged into your existing rules. Existing allow rules, writable paths and allowed hosts are kept.
             </p>
+            {pendingDeny && (
+              <div style={{ fontSize: "12px", color: "var(--fg-base)", margin: "0 0 10px" }}>
+                This preset removes these deny rules:
+                <ul style={{ margin: "4px 0 0 16px", padding: 0 }}>
+                  {pendingDeny.map((rule) => <li key={rule}><code>{rule}</code></li>)}
+                </ul>
+              </div>
+            )}
             <div style={{ display: "flex", gap: "6px" }}>
               <button
                 onClick={() => handleApplyPreset(confirmPreset)}
                 disabled={saving}
                 className="btn btn-primary btn-sm"
               >
-                {saving ? "Applying…" : "Apply"}
+                {saving ? "Applying…" : pendingDeny ? "Remove deny rules and apply" : "Apply"}
               </button>
-              <button onClick={() => setConfirmPreset(null)} className="btn btn-secondary btn-sm">
+              <button onClick={() => { setConfirmPreset(null); setPendingDeny(null); }} className="btn btn-secondary btn-sm">
                 Cancel
               </button>
             </div>

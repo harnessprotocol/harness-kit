@@ -44,24 +44,42 @@ export async function readPluginFile(filePath: string): Promise<string> {
   return invoke<string>("read_plugin_file", { filePath });
 }
 
-export async function writePluginFile(filePath: string, content: string): Promise<void> {
-  return invoke<void>("write_plugin_file", { filePath, content });
+/** `expectedSha256`: digest of what the page loaded (`loadedDigest`); omit when the file was new. */
+export async function writePluginFile(
+  filePath: string,
+  content: string,
+  expectedSha256?: string,
+): Promise<void> {
+  return invoke<void>("write_plugin_file", { filePath, content, expectedSha256 });
 }
 
-export async function importPluginFromPath(sourcePath: string): Promise<InstalledPlugin> {
-  return invoke<InstalledPlugin>("import_plugin_from_path", { sourcePath });
+/**
+ * Rust opens the folder dialog when `sourcePath` is null (resolves null on
+ * cancel). A string must be a path the user dropped on the window; Rust
+ * refuses any other, so the webview cannot name a folder of its own.
+ */
+export async function importPluginFromPath(sourcePath: string | null): Promise<InstalledPlugin | null> {
+  return invoke<InstalledPlugin | null>("import_plugin_from_path", { sourcePath });
 }
 
-export async function importPluginFromZip(zipPath: string): Promise<InstalledPlugin> {
-  return invoke<InstalledPlugin>("import_plugin_from_zip", { zipPath });
+/** Same rule as importPluginFromPath, with a zip dialog when `zipPath` is null. */
+export async function importPluginFromZip(zipPath: string | null): Promise<InstalledPlugin | null> {
+  return invoke<InstalledPlugin | null>("import_plugin_from_zip", { zipPath });
 }
 
-export async function exportPluginAsZip(pluginPath: string, savePath: string): Promise<void> {
-  return invoke<void>("export_plugin_as_zip", { pluginPath, savePath });
+/** Rust opens the save dialog; the webview never names the destination. Resolves false on cancel. */
+export async function exportPluginAsZip(pluginPath: string): Promise<boolean> {
+  return invoke<boolean>("export_plugin_as_zip", { pluginPath });
 }
 
-export async function exportPluginToFolder(pluginPath: string, dest: string): Promise<void> {
-  return invoke<void>("export_plugin_to_folder", { pluginPath, dest });
+/** Rust opens the folder dialog; the webview never names the destination. Resolves false on cancel. */
+export async function exportPluginToFolder(pluginPath: string): Promise<boolean> {
+  return invoke<boolean>("export_plugin_to_folder", { pluginPath });
+}
+
+/** The full `name@marketplace` `installed_plugins.json` key; Rust refuses a bare name on uninstall. */
+export function pluginKey(plugin: { name: string; marketplace?: string }): string {
+  return plugin.marketplace ? `${plugin.name}@${plugin.marketplace}` : plugin.name;
 }
 
 // ── File History commands ───────────────────────────────────
@@ -95,8 +113,13 @@ export async function readClaudeMd(path: string): Promise<string> {
   return invoke<string>("read_claude_md", { path });
 }
 
-export async function writeConfigFile(path: string, content: string): Promise<void> {
-  return invoke<void>("write_config_file", { path, content });
+/** `expectedSha256`: digest of what the page loaded (`loadedDigest`); omit when the file must not exist. */
+export async function writeConfigFile(
+  path: string,
+  content: string,
+  expectedSha256?: string,
+): Promise<void> {
+  return invoke<void>("write_config_file", { path, content, expectedSha256 });
 }
 
 // ── Harness File commands ─────────────────────────────────────
@@ -111,8 +134,9 @@ export async function readHarnessFile(): Promise<HarnessFileResult> {
   return invoke<HarnessFileResult>("read_harness_file");
 }
 
-export async function writeHarnessFile(content: string): Promise<string> {
-  return invoke<string>("write_harness_file", { content });
+/** `expectedSha256`: digest of the loaded ~/.claude/harness.yaml (`loadedDigest`); omit when it did not exist. */
+export async function writeHarnessFile(content: string, expectedSha256?: string): Promise<string> {
+  return invoke<string>("write_harness_file", { content, expectedSha256 });
 }
 
 export interface ClaudeConfigScan {
@@ -216,20 +240,51 @@ export async function grantProjectScope(path: string): Promise<void> {
 
 // ── Security commands ───────────────────────────────────────
 
-export async function readPermissions(): Promise<PermissionsState> {
-  return invoke<PermissionsState>("read_permissions");
+/** The permissions plus `sha256`, the digest of the settings.json they were read from. */
+export type PermissionsRead = PermissionsState & { sha256: string };
+
+export async function readPermissions(): Promise<PermissionsRead> {
+  return invoke<PermissionsRead>("read_permissions");
 }
 
-export async function updatePermissions(permissions: PermissionsState): Promise<void> {
-  return invoke<void>("update_permissions", { permissions });
+/**
+ * Save edited permissions. `expectedSha256` is the `sha256` from the read the
+ * edits started from; the save is refused if settings.json changed since.
+ * Resolves to the digest of the file as written.
+ */
+export async function updatePermissions(
+  permissions: PermissionsState,
+  expectedSha256?: string,
+): Promise<string> {
+  return invoke<string>("update_permissions", { permissions, expectedSha256 });
 }
 
 export async function listSecurityPresets(): Promise<SecurityPreset[]> {
   return invoke<SecurityPreset[]>("list_security_presets");
 }
 
-export async function applySecurityPreset(presetId: string): Promise<void> {
-  return invoke<void>("apply_security_preset", { presetId });
+export interface PresetOutcome {
+  /** False when nothing was written because deny rules need confirmation. */
+  applied: boolean;
+  droppedDeny: string[];
+}
+
+/**
+ * Merge a preset into settings.json. `expectedSha256` is the digest from the
+ * last `readPermissions`. `confirmedDropDeny` is the exact `droppedDeny` list
+ * a previous call returned and the user agreed to; the call is refused if the
+ * deny rules the preset would now remove are not exactly that list.
+ */
+export async function applySecurityPreset(
+  presetId: string,
+  expectedSha256?: string,
+  confirmedDropDeny?: string[],
+): Promise<PresetOutcome> {
+  return invoke<PresetOutcome>("apply_security_preset", {
+    presetId,
+    expectedSha256,
+    confirmedDropDeny,
+  });
 }
 
 export async function listRequiredEnv(): Promise<KeychainSecretInfo[]> {
@@ -244,12 +299,22 @@ export async function deleteKeychainSecret(name: string): Promise<void> {
   return invoke<void>("delete_keychain_secret", { name });
 }
 
-export async function readEnvConfig(): Promise<EnvConfigEntry[]> {
-  return invoke<EnvConfigEntry[]>("read_env_config");
+/** The env entries plus `sha256`, the digest of the env.json they were read from ("absent" if none). */
+export interface EnvConfigRead {
+  entries: EnvConfigEntry[];
+  sha256: string;
 }
 
-export async function writeEnvConfig(entries: EnvConfigEntry[]): Promise<void> {
-  return invoke<void>("write_env_config", { entries });
+export async function readEnvConfig(): Promise<EnvConfigRead> {
+  return invoke<EnvConfigRead>("read_env_config");
+}
+
+/** `expectedSha256`: the `sha256` of the read the edits started from. Resolves to the digest as written. */
+export async function writeEnvConfig(
+  entries: EnvConfigEntry[],
+  expectedSha256?: string,
+): Promise<string> {
+  return invoke<string>("write_env_config", { entries, expectedSha256 });
 }
 
 export async function listAuditEntries(

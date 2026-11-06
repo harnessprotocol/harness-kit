@@ -173,7 +173,7 @@ describe("PluginExplorerPage failures (AC-20)", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Retry save" }));
     await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(2));
-    expect(mockSave).toHaveBeenLastCalledWith("/plugins/demo/run.sh", '{"changed":true}');
+    expect(mockSave).toHaveBeenLastCalledWith("/plugins/demo/run.sh", '{"changed":true}', expect.any(String));
     await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
   });
 
@@ -187,12 +187,12 @@ describe("PluginExplorerPage failures (AC-20)", () => {
     fireEvent.click(screen.getByText("plugin.json"));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't save run.sh");
-    expect(mockSave).toHaveBeenCalledWith("/plugins/demo/run.sh", '{"changed":true}');
+    expect(mockSave).toHaveBeenCalledWith("/plugins/demo/run.sh", '{"changed":true}', expect.any(String));
     expect(vi.mocked(readPluginFile)).not.toHaveBeenCalledWith("/plugins/demo/plugin.json");
 
     fireEvent.click(screen.getByRole("button", { name: "Retry save" }));
     await waitFor(() => expect(mockSave).toHaveBeenCalledTimes(2));
-    expect(mockSave).toHaveBeenLastCalledWith("/plugins/demo/run.sh", '{"changed":true}');
+    expect(mockSave).toHaveBeenLastCalledWith("/plugins/demo/run.sh", '{"changed":true}', expect.any(String));
   });
 
   it("offers Discard changes when saves keep failing, and after it the user can switch files", async () => {
