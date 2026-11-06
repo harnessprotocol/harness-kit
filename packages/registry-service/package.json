@@ -7,9 +7,9 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsup",
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx watch src/bin/server.ts",
     "start": "node dist/server.js",
-    "migrate": "tsx src/migrate.ts",
+    "migrate": "tsx src/bin/migrate.ts",
     "test": "vitest run",
     "test:contract": "tsx scripts/contract.ts"
   },
