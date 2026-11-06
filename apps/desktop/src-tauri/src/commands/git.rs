@@ -1,8 +1,7 @@
 use serde::Serialize;
+use std::path::{Path, PathBuf};
 use tauri::AppHandle;
 use tauri_plugin_shell::ShellExt;
-
-pub use super::types::FileDiffEntry;
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -12,13 +11,6 @@ pub struct GitRepoInfo {
     pub is_git_repo: bool,
     pub current_commit: Option<String>,
     pub branch: Option<String>,
-}
-
-#[derive(Debug, Serialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct WorktreeResult {
-    pub panel_id: String,
-    pub worktree_path: String,
 }
 
 #[derive(Debug, Serialize, Clone)]
@@ -78,150 +70,6 @@ pub async fn check_git_repo(app: AppHandle, dir: String) -> Result<GitRepoInfo, 
     };
 
     Ok(GitRepoInfo { is_git_repo: true, current_commit, branch })
-}
-
-#[tauri::command]
-pub async fn create_worktrees(
-    app: AppHandle,
-    repo_dir: String,
-    comparison_id: String,
-    panel_ids: Vec<String>,
-    commit: String,
-) -> Result<Vec<WorktreeResult>, String> {
-    let base_dir = format!("{}/.comparator-worktrees/{}", repo_dir, comparison_id);
-    let shell = app.shell();
-
-    let mut results = Vec::new();
-    for panel_id in &panel_ids {
-        let worktree_path = format!("{}/{}", base_dir, panel_id);
-
-        let output = shell.command("git")
-            .args(["worktree", "add", "-d", &worktree_path, &commit])
-            .current_dir(&repo_dir)
-            .output()
-            .await
-            .map_err(|e| format!("Failed to create worktree for {}: {}", panel_id, e))?;
-
-        if !output.status.success() {
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            return Err(format!("Failed to create worktree for {}: {}", panel_id, stderr));
-        }
-
-        results.push(WorktreeResult {
-            panel_id: panel_id.clone(),
-            worktree_path,
-        });
-    }
-
-    Ok(results)
-}
-
-
-#[tauri::command]
-pub async fn remove_worktrees(
-    app: AppHandle,
-    repo_dir: String,
-    comparison_id: String,
-) -> Result<(), String> {
-    let base_dir = format!("{}/.comparator-worktrees/{}", repo_dir, comparison_id);
-    let shell = app.shell();
-
-    // List all worktrees and remove ones in our directory
-    let list_out = shell.command("git")
-        .args(["worktree", "list", "--porcelain"])
-        .current_dir(&repo_dir)
-        .output()
-        .await
-        .map_err(|e| e.to_string())?;
-
-    if list_out.status.success() {
-        let output = String::from_utf8_lossy(&list_out.stdout);
-        for line in output.lines() {
-            if let Some(path) = line.strip_prefix("worktree ") {
-                if path.starts_with(&base_dir) {
-                    let _ = shell.command("git")
-                        .args(["worktree", "remove", "--force", path])
-                        .current_dir(&repo_dir)
-                        .output()
-                        .await;
-                }
-            }
-        }
-    }
-
-    // Clean up directory
-    let _ = std::fs::remove_dir_all(&base_dir);
-
-    // Also try to remove parent .comparator-worktrees if empty
-    let parent = format!("{}/.comparator-worktrees", repo_dir);
-    let _ = std::fs::remove_dir(&parent);
-
-    Ok(())
-}
-
-#[tauri::command]
-pub async fn get_diff_against_commit(
-    app: AppHandle,
-    worktree_path: String,
-    base_commit: String,
-) -> Result<Vec<FileDiffEntry>, String> {
-    // Validate base_commit to prevent flag injection (e.g. "--output=/tmp/evil")
-    if base_commit.starts_with('-') || !base_commit.chars().all(|c| c.is_alphanumeric() || "~^-_/.".contains(c)) {
-        return Err("Invalid base_commit reference".to_string());
-    }
-
-    let shell = app.shell();
-
-    // Get list of changed files
-    let name_status = shell.command("git")
-        .args(["diff", &base_commit, "--name-status"])
-        .current_dir(&worktree_path)
-        .output()
-        .await
-        .map_err(|e| e.to_string())?;
-
-    if !name_status.status.success() {
-        return Ok(vec![]);
-    }
-
-    let output = String::from_utf8_lossy(&name_status.stdout);
-    let mut results = Vec::new();
-
-    for line in output.lines() {
-        let line = line.trim();
-        if line.is_empty() { continue; }
-
-        let parts: Vec<&str> = line.splitn(2, '\t').collect();
-        if parts.len() < 2 { continue; }
-
-        let change_type = match parts[0].chars().next() {
-            Some('A') => "added",
-            Some('M') => "modified",
-            Some('D') => "deleted",
-            Some('R') => "renamed",
-            _ => "modified",
-        };
-
-        let file_path = parts[1].to_string();
-
-        // Get the actual diff for this file
-        let diff_out = shell.command("git")
-            .args(["diff", &base_commit, "--", &file_path])
-            .current_dir(&worktree_path)
-            .output()
-            .await
-            .map_err(|e| e.to_string())?;
-
-        let diff_text = if diff_out.status.success() {
-            String::from_utf8_lossy(&diff_out.stdout).to_string()
-        } else {
-            String::new()
-        };
-
-        results.push(FileDiffEntry { file_path, diff_text, change_type: change_type.to_string() });
-    }
-
-    Ok(results)
 }
 
 /// Check whether a newer release is available on GitHub.
@@ -291,10 +139,36 @@ pub async fn check_for_updates(app: AppHandle) -> UpdateStatus {
     }
 }
 
+/// The checkout this binary was compiled from: `CARGO_MANIFEST_DIR` is
+/// `<repo>/apps/desktop/src-tauri`. A shipped build points at a CI path that
+/// does not exist on the user's machine, so rebuild is refused there.
+fn build_checkout() -> PathBuf {
+    Path::new(env!("CARGO_MANIFEST_DIR")).join("../../..")
+}
+
+/// `repo_path` comes from the webview, so it is not trusted: the only
+/// directory the build may run in is the checkout this binary was built from.
+/// Anything else would let webview JS run `pnpm install:desktop` (a package
+/// script, so arbitrary code) in a directory of its choosing.
+fn validate_rebuild_path(repo_path: &str, checkout: &Path) -> Result<PathBuf, String> {
+    let requested = Path::new(repo_path)
+        .canonicalize()
+        .map_err(|e| format!("Repo path is not accessible: {}", e))?;
+    let expected = checkout
+        .canonicalize()
+        .map_err(|_| "This build was not made from a local checkout".to_string())?;
+    if requested != expected {
+        return Err("Refusing to rebuild: not the checkout this app was built from".to_string());
+    }
+    Ok(requested)
+}
+
 /// Run `pnpm install:desktop` in the background and restart the app when done.
 /// No Terminal window — build runs silently, app relaunches automatically on success.
 #[tauri::command]
 pub async fn trigger_rebuild(app: AppHandle, repo_path: String) -> Result<(), String> {
+    let repo_path = validate_rebuild_path(&repo_path, &build_checkout())?;
+
     // macOS GUI apps launch with a minimal PATH that omits Homebrew, nvm, pnpm, etc.
     // Use a login shell so the user's full shell environment (including pnpm) is available.
     // Use .current_dir() instead of interpolating the path into the shell string — this
@@ -325,4 +199,33 @@ pub async fn trigger_rebuild(app: AppHandle, repo_path: String) -> Result<(), St
     app.exit(0);
 
     Ok(()) // unreachable but satisfies the return type
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rebuild_accepts_only_the_build_checkout() {
+        let tmp = tempfile::tempdir().unwrap();
+        let checkout = tmp.path().join("checkout");
+        let other = tmp.path().join("other");
+        std::fs::create_dir_all(&checkout).unwrap();
+        std::fs::create_dir_all(&other).unwrap();
+
+        assert!(validate_rebuild_path(checkout.to_str().unwrap(), &checkout).is_ok());
+        let err = validate_rebuild_path(other.to_str().unwrap(), &checkout).unwrap_err();
+        assert!(err.contains("not the checkout"), "{err}");
+        // A `..` route to a different directory resolves before the comparison.
+        let sneaky = format!("{}/../other", checkout.display());
+        assert!(validate_rebuild_path(&sneaky, &checkout).is_err());
+    }
+
+    #[test]
+    fn rebuild_refused_when_checkout_is_missing() {
+        let tmp = tempfile::tempdir().unwrap();
+        let gone = tmp.path().join("gone");
+        let err = validate_rebuild_path(tmp.path().to_str().unwrap(), &gone).unwrap_err();
+        assert!(err.contains("local checkout"), "{err}");
+    }
 }

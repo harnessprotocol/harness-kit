@@ -1,14 +1,4 @@
-use serde::{Deserialize, Serialize};
-
-/// Shared file diff type — used by git.rs (returns from diff commands)
-/// and comparator_db.rs (persisted to/from SQLite).
-#[derive(Debug, Serialize, Deserialize, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct FileDiffEntry {
-    pub file_path: String,
-    pub diff_text: String,
-    pub change_type: String,
-}
+use serde::Serialize;
 
 /// Pairwise evaluation session — created once per comparison run to track blind voting.
 #[derive(Debug, Serialize, Clone)]

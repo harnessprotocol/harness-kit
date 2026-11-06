@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-guarded-remove-file"
+description = "Enables the guarded_remove_file command without any pre-configured scope."
+commands.allow = ["guarded_remove_file"]
+
+[[permission]]
+identifier = "deny-guarded-remove-file"
+description = "Denies the guarded_remove_file command without any pre-configured scope."
+commands.deny = ["guarded_remove_file"]

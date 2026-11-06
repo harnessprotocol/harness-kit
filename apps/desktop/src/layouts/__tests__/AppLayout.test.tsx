@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { open as openDialog } from "@tauri-apps/plugin-dialog";
+import { invoke } from "@tauri-apps/api/core";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import AppLayout from "../AppLayout";
 import { NAV, visibleNav } from "../../nav";
@@ -13,7 +13,11 @@ vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: vi.fn(() => ({ startDragging: mockStartDragging })),
 }));
 
-vi.mock("@tauri-apps/plugin-dialog", () => ({ open: vi.fn() }));
+// The folder dialog is opened by Rust (`choose_project_dir`), not the webview.
+// Every other command (the sidebar's list_claude_dir, ...) gets an empty list.
+const invokeDefault = async (cmd: string, picked: string | null = null) =>
+  cmd === "choose_project_dir" ? picked : [];
+vi.mock("@tauri-apps/api/core", () => ({ invoke: vi.fn(async (cmd: string) => invokeDefault(cmd)) }));
 
 const mockGrantProjectScope = vi.fn().mockResolvedValue(undefined);
 vi.mock("../../lib/tauri", async (importOriginal) => ({
@@ -200,7 +204,8 @@ describe("title-bar project selector (AC-17)", () => {
   beforeEach(() => {
     mockStartDragging.mockClear();
     mockGrantProjectScope.mockClear();
-    vi.mocked(openDialog).mockReset();
+    vi.mocked(invoke).mockReset();
+    vi.mocked(invoke).mockImplementation(async (cmd) => invokeDefault(cmd));
   });
 
   it("says No project when none is set, and grants nothing", () => {
@@ -219,24 +224,25 @@ describe("title-bar project selector (AC-17)", () => {
   });
 
   it("Choose folder… sets the project through lib/project-dir.ts", async () => {
-    vi.mocked(openDialog).mockResolvedValue("/Users/me/repos/picked");
+    vi.mocked(invoke).mockImplementation(async (cmd) =>
+      invokeDefault(cmd, "/Users/me/repos/picked"),
+    );
     renderLayout();
     fireEvent.click(selector());
     fireEvent.click(screen.getByRole("menuitem", { name: "Choose folder…" }));
 
     await waitFor(() => expect(selector()).toHaveTextContent("picked"));
-    expect(openDialog).toHaveBeenCalledWith(expect.objectContaining({ directory: true }));
+    expect(invoke).toHaveBeenCalledWith("choose_project_dir");
     expect(getCurrentProjectDir()).toBe("/Users/me/repos/picked");
     expect(getRecentProjectDirs()[0]).toBe("/Users/me/repos/picked");
     expect(mockGrantProjectScope).toHaveBeenCalledWith("/Users/me/repos/picked");
   });
 
   it("a cancelled dialog changes nothing", async () => {
-    vi.mocked(openDialog).mockResolvedValue(null);
     renderLayout();
     fireEvent.click(selector());
     fireEvent.click(screen.getByRole("menuitem", { name: "Choose folder…" }));
-    await waitFor(() => expect(openDialog).toHaveBeenCalled());
+    await waitFor(() => expect(invoke).toHaveBeenCalled());
     expect(selector()).toHaveTextContent("No project");
     expect(getCurrentProjectDir()).toBeNull();
   });

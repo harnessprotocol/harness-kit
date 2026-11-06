@@ -188,11 +188,16 @@ export function grantProjectDir(dir: string): Promise<boolean> {
   );
 }
 
-/** Open the native folder picker and make the pick the current project. */
+/**
+ * Open the native folder picker and make the pick the current project.
+ * Rust opens the dialog and grants the scope itself: `grant_project_scope`
+ * only accepts directories that were picked this way, so a path the webview
+ * names on its own is never trusted.
+ */
 export async function chooseProjectDir(): Promise<string | null> {
   try {
-    const { open } = await import("@tauri-apps/plugin-dialog");
-    const selected = await open({ directory: true, title: "Select project directory" });
+    const { invoke } = await import("@tauri-apps/api/core");
+    const selected = await invoke<string | null>("choose_project_dir");
     if (selected && typeof selected === "string") {
       setCurrentProjectDir(selected);
       return selected;

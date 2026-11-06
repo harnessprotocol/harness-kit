@@ -5,9 +5,8 @@ import {
   mkdir,
   readDir,
   lstat,
-  rename,
-  remove,
 } from "@tauri-apps/plugin-fs";
+import { invoke } from "@tauri-apps/api/core";
 import { homeDir } from "@tauri-apps/api/path";
 import type { FsProvider } from "@harness-kit/core";
 import { posixJoin, posixDirname } from "@harness-kit/core";
@@ -66,12 +65,16 @@ export class TauriFsProvider implements FsProvider {
     }
   }
 
+  // The fs plugin's rename and remove are not granted to the webview: a
+  // capability scope cannot refuse symlinks or recursive deletes. These Rust
+  // commands check both paths against the declared roots, refuse a symlink
+  // source, and never remove a directory.
   async renameFile(from: string, to: string): Promise<void> {
-    await rename(from, to);
+    await invoke("guarded_rename_file", { from, to });
   }
 
   async removeFile(path: string): Promise<void> {
-    await remove(path);
+    await invoke("guarded_remove_file", { path });
   }
 
   async isSymlink(path: string): Promise<boolean> {

@@ -109,9 +109,6 @@ pub fn run() {
             commands::observatory::read_session_transcript,
             // Git
             commands::git::check_git_repo,
-            commands::git::create_worktrees,
-            commands::git::remove_worktrees,
-            commands::git::get_diff_against_commit,
             commands::git::check_for_updates,
             commands::git::trigger_rebuild,
             // Evaluation
@@ -186,6 +183,10 @@ pub fn run() {
             commands::harnesses::detect_harnesses,
             // Runtime FS scope grants (used by Fleet/Drift's project scope)
             commands::fs_scope::grant_project_scope,
+            commands::fs_scope::choose_project_dir,
+            // Guarded rename/remove for the webview's TauriFsProvider
+            commands::fs_guarded::guarded_rename_file,
+            commands::fs_guarded::guarded_remove_file,
             // Drift (acknowledgement persistence; drift computation itself
             // lives in packages/core, run from the Drift page — see
             // commands/parity.rs module docs)

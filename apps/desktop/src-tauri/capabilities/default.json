@@ -1,6 +1,6 @@
 {
   "identifier": "default",
-  "description": "Default capability — grants core API, read access to harness config roots under $HOME (read-ONLY for the Machine-observation paths: .claude.json, the exact Claude Desktop / VS Code User config files the surface registry declares, .copilot, .agents), and shell spawn for comparator",
+  "description": "Default capability — grants core API, read access to harness config roots under $HOME (read-ONLY for the Machine-observation paths: .claude.json, the exact Claude Desktop / VS Code User config files the surface registry declares, .copilot, .agents), and shell open. No shell execute, spawn, stdin or kill: production code runs processes from Rust only. fs rename and remove are not granted; they go through guarded_rename_file and guarded_remove_file",
   "windows": ["main"],
   "permissions": [
     "core:default",
@@ -11,6 +11,8 @@
     "fs:allow-read-dir",
     "fs:allow-exists",
     "fs:allow-write-text-file",
+    "fs:allow-lstat",
+    "fs:allow-mkdir",
     {
       "identifier": "fs:scope",
       "allow": [
@@ -40,7 +42,9 @@
         { "path": "$HOME/.pi" },
         { "path": "$HOME/.pi/**" },
         { "path": "$HOME/.harness-kit" },
-        { "path": "$HOME/.harness-kit/**" }
+        { "path": "$HOME/.harness-kit/**" },
+        { "path": "$HOME/.harness/backups" },
+        { "path": "$HOME/.harness/backups/**" }
       ]
     },
     {
@@ -92,23 +96,7 @@
     "dialog:allow-open",
     "dialog:allow-save",
     "shell:default",
-    "shell:allow-spawn",
-    "shell:allow-stdin-write",
-    "shell:allow-kill",
     "shell:allow-open",
-    {
-      "identifier": "shell:allow-execute",
-      "allow": [
-        { "name": "claude", "cmd": "claude", "args": true },
-        { "name": "cursor-agent", "cmd": "cursor-agent", "args": ["--version"] },
-        { "name": "copilot", "cmd": "copilot", "args": ["--version"] },
-        { "name": "codex", "cmd": "codex", "args": ["--version"] },
-        { "name": "opencode", "cmd": "opencode", "args": ["--version"] },
-        { "name": "gh", "cmd": "gh", "args": true },
-        { "name": "git", "cmd": "git", "args": true },
-        { "name": "security", "cmd": "security", "args": true }
-      ]
-    },
     "allow-list-installed-plugins",
     "allow-list-marketplaces",
     "allow-check-plugin-updates",
@@ -140,9 +128,6 @@
     "allow-compute-live-stats",
     "allow-read-session-transcript",
     "allow-check-git-repo",
-    "allow-create-worktrees",
-    "allow-remove-worktrees",
-    "allow-get-diff-against-commit",
     "allow-check-for-updates",
     "allow-trigger-rebuild",
     "allow-save-evaluation",
@@ -204,6 +189,9 @@
     "allow-sync-restore-backup",
     "allow-detect-harnesses",
     "allow-grant-project-scope",
+    "allow-choose-project-dir",
+    "allow-guarded-rename-file",
+    "allow-guarded-remove-file",
     "allow-acknowledge-drift-item",
     "allow-unacknowledge-drift-item",
     "allow-get-acknowledged-drift-items",

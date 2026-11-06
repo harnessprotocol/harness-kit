@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-choose-project-dir"
+description = "Enables the choose_project_dir command without any pre-configured scope."
+commands.allow = ["choose_project_dir"]
+
+[[permission]]
+identifier = "deny-choose-project-dir"
+description = "Denies the choose_project_dir command without any pre-configured scope."
+commands.deny = ["choose_project_dir"]
