@@ -259,58 +259,124 @@ pub fn uninstall_plugin(name: String) -> Result<(), String> {
     uninstall_plugin_in(&claude_dir()?, name)
 }
 
+const RESERVED_PLUGIN_NAMES: [&str; 3] = ["cache", "data", "marketplaces"];
+
+/// Reject names that are empty, `.`/`..`, reserved directory names, or contain
+/// path separators. Applied to the whole argument and to its name part.
+fn validate_plugin_name(part: &str) -> Result<(), String> {
+    let trimmed = part.trim();
+    if trimmed.is_empty() || trimmed == "." || trimmed == ".." {
+        return Err(format!("Invalid plugin name: {:?}", part));
+    }
+    if trimmed.contains('/') || trimmed.contains('\\') || trimmed.contains("..") {
+        return Err(format!("Invalid plugin name: {:?}", part));
+    }
+    if RESERVED_PLUGIN_NAMES.contains(&trimmed) {
+        return Err(format!("Refusing to uninstall reserved name {:?}", part));
+    }
+    Ok(())
+}
+
+/// Resolve the `installed_plugins.json` key for `name`. An exact key match
+/// wins. A bare name (no `@`) matches only when exactly one key has that name.
+fn resolve_plugin_key(
+    plugins: &serde_json::Map<String, serde_json::Value>,
+    name: &str,
+) -> Result<Option<String>, String> {
+    if plugins.contains_key(name) {
+        return Ok(Some(name.to_string()));
+    }
+    if name.contains('@') {
+        return Ok(None);
+    }
+    let matches: Vec<&String> = plugins
+        .keys()
+        .filter(|k| k.find('@').map_or(k.as_str(), |i| &k[..i]) == name)
+        .collect();
+    match matches.len() {
+        0 => Ok(None),
+        1 => Ok(Some(matches[0].clone())),
+        _ => Err(format!(
+            "Plugin name {:?} is installed from several marketplaces; use the full name@marketplace key",
+            name
+        )),
+    }
+}
+
 fn uninstall_plugin_in(claude_dir: &std::path::Path, name: String) -> Result<(), String> {
-    // Validate name doesn't contain path traversal characters
-    if name.contains('/') || name.contains('\\') || name.contains("..") {
-        return Err("Invalid plugin name".to_string());
+    validate_plugin_name(&name)?;
+    if let Some(base) = name.find('@').map(|i| &name[..i]) {
+        validate_plugin_name(base)?;
     }
 
     let plugins_dir = claude_dir.join("plugins");
+    let json_path = plugins_dir.join("installed_plugins.json");
+    if !json_path.exists() {
+        return Ok(());
+    }
 
-    // Remove plugin directory — canonicalize before removal to block symlink traversal
-    let plugin_dir = plugins_dir.join(&name);
-    if plugin_dir.exists() {
-        let canonical = plugin_dir.canonicalize()
-            .map_err(|e| format!("Invalid plugin path: {}", e))?;
-        let canonical_plugins = plugins_dir.canonicalize()
-            .map_err(|e| format!("Invalid plugins dir: {}", e))?;
-        if !canonical.starts_with(&canonical_plugins) {
-            return Err("Access denied: plugin path outside plugins directory".to_string());
+    let contents = std::fs::read_to_string(&json_path)
+        .map_err(|e| format!("Failed to read installed_plugins.json: {}", e))?;
+    let mut data: serde_json::Value = serde_json::from_str(&contents)
+        .map_err(|e| format!("Failed to parse installed_plugins.json: {}", e))?;
+
+    let key = match data
+        .get("plugins")
+        .and_then(|p| p.as_object())
+        .map(|p| resolve_plugin_key(p, &name))
+        .transpose()?
+        .flatten()
+    {
+        Some(k) => k,
+        None => return Ok(()),
+    };
+
+    // Delete only this record's own installPath, and only when it resolves
+    // strictly under plugins/cache. Canonicalize first to block symlinks and `..`.
+    let install_paths: Vec<String> = data["plugins"][&key]
+        .as_array()
+        .map(|records| {
+            records
+                .iter()
+                .filter_map(|r| r.get("installPath").and_then(|p| p.as_str()))
+                .map(String::from)
+                .collect()
+        })
+        .unwrap_or_default();
+
+    let cache_dir = plugins_dir.join("cache");
+    let mut to_remove = Vec::new();
+    for install_path in &install_paths {
+        let path = std::path::Path::new(install_path);
+        if !path.exists() {
+            continue;
         }
+        let canonical = path.canonicalize()
+            .map_err(|e| format!("Invalid plugin path: {}", e))?;
+        let canonical_cache = cache_dir.canonicalize()
+            .map_err(|e| format!("Invalid plugin cache dir: {}", e))?;
+        if canonical == canonical_cache || !canonical.starts_with(&canonical_cache) {
+            return Err("Access denied: plugin path outside plugins cache directory".to_string());
+        }
+        to_remove.push(canonical);
+    }
+    // Validate every path before deleting any.
+    for canonical in to_remove {
         std::fs::remove_dir_all(&canonical)
             .map_err(|e| format!("Failed to remove plugin directory: {}", e))?;
     }
 
-    // Remove from installed_plugins.json
-    let json_path = plugins_dir.join("installed_plugins.json");
-    if json_path.exists() {
-        let contents = std::fs::read_to_string(&json_path)
-            .map_err(|e| format!("Failed to read installed_plugins.json: {}", e))?;
-        let mut data: serde_json::Value = serde_json::from_str(&contents)
-            .map_err(|e| format!("Failed to parse installed_plugins.json: {}", e))?;
-
-        if let Some(plugins) = data.get_mut("plugins").and_then(|p| p.as_object_mut()) {
-            // Remove any key matching the name (with or without @marketplace suffix)
-            let keys_to_remove: Vec<String> = plugins
-                .keys()
-                .filter(|k| {
-                    let base = k.find('@').map_or(k.as_str(), |i| &k[..i]);
-                    base == name
-                })
-                .cloned()
-                .collect();
-            for key in keys_to_remove {
-                plugins.remove(&key);
-            }
-        }
-
-        let serialized = serde_json::to_string_pretty(&data).unwrap();
-        let tmp_path = json_path.with_extension("json.tmp");
-        std::fs::write(&tmp_path, &serialized)
-            .map_err(|e| format!("Failed to write installed_plugins.json: {}", e))?;
-        std::fs::rename(&tmp_path, &json_path)
-            .map_err(|e| format!("Failed to finalize installed_plugins.json: {}", e))?;
+    // Remove only that key from installed_plugins.json
+    if let Some(plugins) = data.get_mut("plugins").and_then(|p| p.as_object_mut()) {
+        plugins.remove(&key);
     }
+
+    let serialized = serde_json::to_string_pretty(&data).unwrap();
+    let tmp_path = json_path.with_extension("json.tmp");
+    std::fs::write(&tmp_path, &serialized)
+        .map_err(|e| format!("Failed to write installed_plugins.json: {}", e))?;
+    std::fs::rename(&tmp_path, &json_path)
+        .map_err(|e| format!("Failed to finalize installed_plugins.json: {}", e))?;
 
     Ok(())
 }
@@ -356,5 +422,122 @@ mod tests {
         assert_eq!(result[1].name, "orient");
         assert_eq!(result[2].name, "research");
         assert_eq!(result[2].version, "0.3.0");
+    }
+
+    // --- uninstall_plugin_in ---
+
+    /// Build `<tmp>/.claude/plugins` with a cache dir, a sentinel file in the
+    /// plugins dir and the given installed_plugins.json body.
+    fn uninstall_fixture(json: &str) -> (TempDir, std::path::PathBuf) {
+        let dir = TempDir::new().unwrap();
+        let claude = dir.path().join(".claude");
+        let plugins = claude.join("plugins");
+        std::fs::create_dir_all(plugins.join("cache")).unwrap();
+        std::fs::write(plugins.join("cache").join("keep.txt"), "x").unwrap();
+        std::fs::write(plugins.join("installed_plugins.json"), json).unwrap();
+        (dir, claude)
+    }
+
+    fn make_install(claude: &std::path::Path, rel: &str) -> std::path::PathBuf {
+        let p = claude.join("plugins").join("cache").join(rel);
+        std::fs::create_dir_all(&p).unwrap();
+        std::fs::write(p.join("marker"), "x").unwrap();
+        p
+    }
+
+    fn record(path: &std::path::Path) -> String {
+        format!(
+            r#"[{{"version":"1.0.0","installedAt":"2024-01-01T00:00:00Z","installPath":{}}}]"#,
+            serde_json::to_string(path.to_str().unwrap()).unwrap()
+        )
+    }
+
+    #[test]
+    fn uninstall_refuses_reserved_and_degenerate_names() {
+        let (_d, claude) = uninstall_fixture(r#"{"plugins":{}}"#);
+        for bad in ["cache", "data", "marketplaces", ".", "..", "", "cache@x", "a/b"] {
+            let err = uninstall_plugin_in(&claude, bad.to_string()).unwrap_err();
+            assert!(!err.is_empty(), "{bad:?} should be refused");
+        }
+        assert!(claude.join("plugins").join("cache").join("keep.txt").exists());
+    }
+
+    #[test]
+    fn uninstall_happy_path_deletes_only_own_install_path() {
+        let (d, claude) = uninstall_fixture(r#"{"plugins":{}}"#);
+        let a = make_install(&claude, "mkt/alpha/1.0.0");
+        let b = make_install(&claude, "mkt/beta/1.0.0");
+        let json = format!(
+            r#"{{"plugins":{{"alpha@mkt":{},"beta@mkt":{}}}}}"#,
+            record(&a),
+            record(&b)
+        );
+        std::fs::write(claude.join("plugins").join("installed_plugins.json"), json).unwrap();
+        uninstall_plugin_in(&claude, "alpha@mkt".to_string()).unwrap();
+        assert!(!a.exists());
+        assert!(b.exists());
+        assert!(claude.join("plugins").join("cache").join("keep.txt").exists());
+        let left = list_installed_plugins_in(&claude).unwrap();
+        assert_eq!(left.len(), 1);
+        assert_eq!(left[0].name, "beta");
+        drop(d);
+    }
+
+    #[test]
+    fn uninstall_same_name_other_marketplace_is_untouched() {
+        let (_d, claude) = uninstall_fixture(r#"{"plugins":{}}"#);
+        let a = make_install(&claude, "one/tool/1.0.0");
+        let b = make_install(&claude, "two/tool/1.0.0");
+        let json = format!(
+            r#"{{"plugins":{{"tool@one":{},"tool@two":{}}}}}"#,
+            record(&a),
+            record(&b)
+        );
+        std::fs::write(claude.join("plugins").join("installed_plugins.json"), &json).unwrap();
+
+        // Bare name is ambiguous: refuse, delete nothing.
+        assert!(uninstall_plugin_in(&claude, "tool".to_string()).is_err());
+        assert!(a.exists() && b.exists());
+
+        uninstall_plugin_in(&claude, "tool@one".to_string()).unwrap();
+        assert!(!a.exists());
+        assert!(b.exists());
+        let left = list_installed_plugins_in(&claude).unwrap();
+        assert_eq!(left.len(), 1);
+        assert_eq!(left[0].marketplace.as_deref(), Some("two"));
+    }
+
+    #[test]
+    fn uninstall_refuses_install_path_outside_cache() {
+        let (d, claude) = uninstall_fixture(r#"{"plugins":{}}"#);
+        let outside = d.path().join("precious");
+        std::fs::create_dir_all(&outside).unwrap();
+        std::fs::write(outside.join("file"), "x").unwrap();
+        let json = format!(r#"{{"plugins":{{"evil@mkt":{}}}}}"#, record(&outside));
+        std::fs::write(claude.join("plugins").join("installed_plugins.json"), json).unwrap();
+        assert!(uninstall_plugin_in(&claude, "evil@mkt".to_string()).is_err());
+        assert!(outside.join("file").exists());
+        // Record stays so the user can see the failure.
+        assert_eq!(list_installed_plugins_in(&claude).unwrap().len(), 1);
+    }
+
+    #[test]
+    fn uninstall_refuses_install_path_equal_to_cache() {
+        let (_d, claude) = uninstall_fixture(r#"{"plugins":{}}"#);
+        let cache = claude.join("plugins").join("cache");
+        let json = format!(r#"{{"plugins":{{"evil@mkt":{}}}}}"#, record(&cache));
+        std::fs::write(claude.join("plugins").join("installed_plugins.json"), json).unwrap();
+        assert!(uninstall_plugin_in(&claude, "evil@mkt".to_string()).is_err());
+        assert!(cache.join("keep.txt").exists());
+    }
+
+    #[test]
+    fn uninstall_refuses_dotdot_install_path_escaping_cache() {
+        let (_d, claude) = uninstall_fixture(r#"{"plugins":{}}"#);
+        let sneaky = claude.join("plugins").join("cache").join("..").join("..");
+        let json = format!(r#"{{"plugins":{{"evil@mkt":{}}}}}"#, record(&sneaky));
+        std::fs::write(claude.join("plugins").join("installed_plugins.json"), json).unwrap();
+        assert!(uninstall_plugin_in(&claude, "evil@mkt".to_string()).is_err());
+        assert!(claude.join("plugins").join("installed_plugins.json").exists());
     }
 }
