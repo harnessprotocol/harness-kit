@@ -24,8 +24,12 @@ vi.mock("../../../lib/harness-fs", () => ({
 
 const mockWriteHarnessFile = vi.fn();
 const mockGrantProjectScope = vi.fn();
+const mockReadHarnessFile = vi.fn();
+const mockWriteConfigFile = vi.fn();
 vi.mock("../../../lib/tauri", () => ({
   writeHarnessFile: (...args: unknown[]) => mockWriteHarnessFile(...args),
+  readHarnessFile: (...args: unknown[]) => mockReadHarnessFile(...args),
+  writeConfigFile: (...args: unknown[]) => mockWriteConfigFile(...args),
   grantProjectScope: (...args: unknown[]) => mockGrantProjectScope(...args),
 }));
 
@@ -48,6 +52,8 @@ describe("OnboardingPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockWriteHarnessFile.mockResolvedValue("~/.claude/harness.yaml");
+    mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null });
+    mockWriteConfigFile.mockResolvedValue(undefined);
   });
 
   it("runs the scan step then advances to the sprawl reveal with real counts", async () => {
@@ -172,6 +178,88 @@ describe("OnboardingPage", () => {
 
     await waitFor(() => expect(screen.getByText(/permission denied/i)).toBeInTheDocument(), {
       timeout: 3000,
+    });
+  });
+
+  describe("existing harness.yaml (AC-51)", () => {
+    const TARGET = "~/.claude/harness.yaml";
+
+    async function toConfirm() {
+      mockImportMachine.mockResolvedValue(ONBOARDING_FIXTURE_RESULT);
+      const user = userEvent.setup();
+      const utils = renderPage();
+      await waitFor(() => expect(screen.getByText(/preview harness\.yaml/i)).toBeInTheDocument(), {
+        timeout: 3000,
+      });
+      await user.click(screen.getByRole("button", { name: /preview harness\.yaml/i }));
+      await user.click(await screen.findByRole("button", { name: /^continue$/i }));
+      return { user, ...utils };
+    }
+
+    it("writes directly when no file exists", async () => {
+      const { user, onFinish } = await toConfirm();
+      await user.click(await screen.findByRole("button", { name: /^write harness\.yaml$/i }));
+      await waitFor(() => expect(mockWriteHarnessFile).toHaveBeenCalledWith(ONBOARDING_FIXTURE_RESULT.harnessYaml));
+      expect(mockWriteConfigFile).not.toHaveBeenCalled();
+      await waitFor(() => expect(onFinish).toHaveBeenCalled());
+    });
+
+    it("skips the write when the existing file is identical", async () => {
+      mockReadHarnessFile.mockResolvedValue({
+        found: true,
+        content: ONBOARDING_FIXTURE_RESULT.harnessYaml,
+        path: TARGET,
+      });
+      const { user, onFinish } = await toConfirm();
+      await user.click(await screen.findByRole("button", { name: /^write harness\.yaml$/i }));
+      await waitFor(() => expect(onFinish).toHaveBeenCalled());
+      expect(mockWriteHarnessFile).not.toHaveBeenCalled();
+      expect(mockWriteConfigFile).not.toHaveBeenCalled();
+    });
+
+    it("differs + Keep existing: no write, no backup", async () => {
+      mockReadHarnessFile.mockResolvedValue({ found: true, content: "version: old\n", path: TARGET });
+      const { user, onFinish } = await toConfirm();
+      await user.click(await screen.findByRole("button", { name: /^write harness\.yaml$/i }));
+      expect(await screen.findByRole("button", { name: /^keep existing$/i })).toBeInTheDocument();
+      expect(mockWriteHarnessFile).not.toHaveBeenCalled();
+      await user.click(screen.getByRole("button", { name: /^keep existing$/i }));
+      await waitFor(() => expect(onFinish).toHaveBeenCalled());
+      expect(mockWriteHarnessFile).not.toHaveBeenCalled();
+      expect(mockWriteConfigFile).not.toHaveBeenCalled();
+    });
+
+    it("differs + Replace: writes the backup first, then the new file", async () => {
+      mockReadHarnessFile.mockResolvedValue({ found: true, content: "version: old\n", path: TARGET });
+      const order: string[] = [];
+      mockWriteConfigFile.mockImplementation(async () => {
+        order.push("backup");
+      });
+      mockWriteHarnessFile.mockImplementation(async () => {
+        order.push("write");
+        return TARGET;
+      });
+      const { user, onFinish } = await toConfirm();
+      await user.click(await screen.findByRole("button", { name: /^write harness\.yaml$/i }));
+      await user.click(await screen.findByRole("button", { name: /replace \(backup kept\)/i }));
+      await waitFor(() => expect(onFinish).toHaveBeenCalled());
+      expect(order).toEqual(["backup", "write"]);
+      expect(mockWriteConfigFile).toHaveBeenCalledWith(
+        expect.stringMatching(/^~\/\.claude\/harness\.yaml\.bak-.+/),
+        "version: old\n",
+      );
+      expect(mockWriteHarnessFile).toHaveBeenCalledWith(ONBOARDING_FIXTURE_RESULT.harnessYaml);
+    });
+
+    it("does not write the new file when the backup fails", async () => {
+      mockReadHarnessFile.mockResolvedValue({ found: true, content: "version: old\n", path: TARGET });
+      mockWriteConfigFile.mockRejectedValue(new Error("disk full"));
+      const { user, onFinish } = await toConfirm();
+      await user.click(await screen.findByRole("button", { name: /^write harness\.yaml$/i }));
+      await user.click(await screen.findByRole("button", { name: /replace \(backup kept\)/i }));
+      await waitFor(() => expect(mockWriteConfigFile).toHaveBeenCalled());
+      expect(mockWriteHarnessFile).not.toHaveBeenCalled();
+      expect(onFinish).not.toHaveBeenCalled();
     });
   });
 });
