@@ -542,6 +542,7 @@ export type { TransactionContext, TransactionRoot } from "./portability/transact
 export {
   createHomeTransactionRoot,
   homeWriteScope,
+  projectWriteScope,
   isWritableHomePath,
 } from "./surfaces/write-scope.js";
 export type { HomeWriteScope } from "./surfaces/write-scope.js";

@@ -11,17 +11,20 @@
 import { writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { homeWriteScope } from "@harness-kit/core";
+import { homeWriteScope, projectWriteScope } from "@harness-kit/core";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = join(here, "..", "src-tauri", "generated", "write-scope.json");
 
-const scope = Object.fromEntries(
-  ["darwin", "linux", "win32"].map((platform) => {
+const scope = Object.fromEntries([
+  ...["darwin", "linux", "win32"].map((platform) => {
     const { files, directories } = homeWriteScope(platform);
     return [platform, { files: [...files].sort(), directories: [...directories].sort() }];
   }),
-);
+  // Project-relative stores: what a granted project root may receive. Same
+  // derivation as the home lists, so the two cannot drift apart in kind.
+  ["project", (({ files, directories }) => ({ files: [...files].sort(), directories: [...directories].sort() }))(projectWriteScope())],
+]);
 
 writeFileSync(out, `${JSON.stringify(scope, null, 2)}\n`);
 console.log(`wrote ${out}`);

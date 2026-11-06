@@ -643,7 +643,8 @@ mod tests {
 
     #[test]
     fn uninstall_rewrite_backs_up_installed_plugins_and_leaves_no_temp_file() {
-        let (_d, claude) = uninstall_fixture(r#"{"plugins":{}}"#);
+        let (d, claude) = uninstall_fixture(r#"{"plugins":{}}"#);
+        crate::commands::surface_write::set_test_home(d.path());
         let a = make_install(&claude, "mkt/alpha/1.0.0");
         let json = format!(r#"{{"plugins":{{"alpha@mkt":{}}}}}"#, record(&a));
         let json_path = claude.join("plugins").join("installed_plugins.json");
@@ -654,12 +655,11 @@ mod tests {
             .flatten()
             .map(|e| e.file_name().to_string_lossy().into_owned())
             .collect();
-        let backups: Vec<_> = names.iter().filter(|n| n.starts_with("installed_plugins.json.bak-")).collect();
-        assert_eq!(backups.len(), 1, "names: {names:?}");
-        assert_eq!(
-            std::fs::read_to_string(claude.join("plugins").join(backups[0])).unwrap(),
-            json
-        );
+        assert!(!names.iter().any(|n| n.contains(".bak-")), "backup beside the file: {names:?}");
+        let backups = crate::commands::surface_write::user_backups(d.path());
+        assert_eq!(backups.len(), 1, "backups: {backups:?}");
+        assert!(backups[0].ends_with(".claude/plugins/installed_plugins.json"), "{backups:?}");
+        assert_eq!(std::fs::read_to_string(&backups[0]).unwrap(), json);
         assert!(!names.iter().any(|n| n.ends_with(".tmp") || n.starts_with(".hk-tmp-")), "names: {names:?}");
     }
 

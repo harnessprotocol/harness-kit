@@ -72,6 +72,31 @@ export function homeWriteScope(
 }
 
 /**
+ * The set of project-relative paths HarnessKit may write into a project root,
+ * derived from the registry's project-scope stores by the same rule as
+ * `homeWriteScope` (writable formats only). The desktop's guarded fs commands
+ * embed this list, so a granted project root is not a license to write any
+ * file inside it. Project paths do not vary by platform.
+ */
+export function projectWriteScope(
+  registry: readonly SurfaceDescriptor[] = SURFACES,
+): HomeWriteScope {
+  const files = new Set<string>();
+  const directories = new Set<string>();
+  for (const surface of registry) {
+    for (const store of surface.stores) {
+      if (store.scope !== "project") continue;
+      if (!isWritableFormat(store.formatId)) continue;
+      const path = normalize(store.path);
+      if (path.length === 0) continue;
+      if (isDirectoryStore(store)) directories.add(path);
+      else files.add(path);
+    }
+  }
+  return { files, directories: [...directories].sort() };
+}
+
+/**
  * Whether a home-relative path may be written.
  *
  * Matching is path-segment aware in both directions: `.claude.json.bak` is not

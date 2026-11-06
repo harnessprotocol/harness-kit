@@ -204,8 +204,8 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
         }
       >
         <p style={{ fontSize: 12.5, color: "var(--fg-subtle)", marginBottom: 10 }}>
-          {WRITE_TARGET} differs from what onboarding would write. Replacing saves the current file as{" "}
-          {WRITE_TARGET}.bak-&lt;timestamp&gt; first.
+          {WRITE_TARGET} differs from what onboarding would write. Replacing first copies the current
+          file to ~/.harness/backups/user/&lt;timestamp&gt;/.claude/harness.yaml, not next to the file.
         </p>
         {conflict && result && (
           <DiffViewer lines={collapseToHunks(lineDiff(conflict.existing, result.harnessYaml))} />

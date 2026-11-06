@@ -82,5 +82,32 @@
       ".pi/agent/skills",
       ".windsurf/skills"
     ]
+  },
+  "project": {
+    "files": [
+      ".codex/config.toml",
+      ".cursor/mcp.json",
+      ".gemini/settings.json",
+      ".github/copilot-instructions.md",
+      ".junie/mcp/mcp.json",
+      ".mcp.json",
+      ".pi/APPEND_SYSTEM.md",
+      ".vscode/mcp.json",
+      "AGENTS.md",
+      "CLAUDE.md",
+      "opencode.json"
+    ],
+    "directories": [
+      ".agents/skills",
+      ".claude/skills",
+      ".cursor/rules",
+      ".cursor/skills",
+      ".gemini/skills",
+      ".github/skills",
+      ".junie/skills",
+      ".opencode/skills",
+      ".pi/skills",
+      ".windsurf/skills"
+    ]
   }
 }

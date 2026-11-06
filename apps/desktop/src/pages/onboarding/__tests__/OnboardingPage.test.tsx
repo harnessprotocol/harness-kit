@@ -230,6 +230,14 @@ describe("OnboardingPage", () => {
       expect(mockWriteConfigFile).not.toHaveBeenCalled();
     });
 
+    it("the Replace dialog says the backup goes to ~/.harness/backups/user, not beside the file", async () => {
+      mockReadHarnessFile.mockResolvedValue({ found: true, content: "version: old\n", path: TARGET });
+      const { user } = await toConfirm();
+      await user.click(await screen.findByRole("button", { name: /^write harness\.yaml$/i }));
+      expect(await screen.findByText(/~\/\.harness\/backups\/user\//)).toBeInTheDocument();
+      expect(screen.queryByText(/\.bak-/)).not.toBeInTheDocument();
+    });
+
     it("differs + Replace: one write with the shown file's digest, no webview-side backup", async () => {
       mockReadHarnessFile.mockResolvedValue({ found: true, content: "version: old\n", path: TARGET });
       mockWriteHarnessFile.mockResolvedValue(TARGET);

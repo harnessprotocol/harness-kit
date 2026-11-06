@@ -104,10 +104,11 @@ fn settings_digest_at(path: &std::path::Path) -> Result<String, String> {
 
 /// Serialize `value` and replace `path` through the shared user-file save
 /// (`write_user_file`): refuse if the file's digest is no longer
-/// `expected_sha256` (`None` means it must not exist), back the old content up
-/// to a timestamped `.bak-<time>` sibling, then replace it atomically. A
-/// symlinked `path` is followed: all of that happens at the link's target and
-/// the link stays. A trailing newline in the previous file is kept so
+/// `expected_sha256` (`None` means it must not exist), copy the old content to
+/// `~/.harness/backups/user/<time>/<path of the link under home>`, then replace
+/// it atomically. A symlinked `path` is followed: the check and the replace
+/// happen at the link's target and the link stays; the backup is not put beside
+/// the target. A trailing newline in the previous file is kept so
 /// untouched content stays byte-identical.
 fn write_settings_at(
     path: &std::path::Path,
@@ -944,6 +945,7 @@ mod tests {
         let link = dir.path().join(".claude").join("settings.json");
         std::fs::create_dir_all(link.parent().unwrap()).unwrap();
         std::os::unix::fs::symlink(&target, &link).unwrap();
+        crate::commands::surface_write::set_test_home(dir.path());
 
         // The digest the page got from reading through the link.
         assert_eq!(settings_digest_at(&link).unwrap(), digest_of(SETTINGS));
@@ -951,12 +953,16 @@ mod tests {
 
         assert!(std::fs::symlink_metadata(&link).unwrap().file_type().is_symlink(), "link was replaced");
         assert!(std::fs::read_to_string(&target).unwrap().contains("\"Edit\""));
-        let backups = std::fs::read_dir(&repo)
+        let beside_target: Vec<_> = std::fs::read_dir(&repo)
             .unwrap()
             .flatten()
-            .filter(|e| e.file_name().to_string_lossy().starts_with("settings.json.bak-"))
-            .count();
-        assert_eq!(backups, 1, "backup belongs beside the target");
+            .map(|e| e.file_name().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(beside_target, ["settings.json"], "nothing is written into the dotfiles repo");
+        let backups = crate::commands::surface_write::user_backups(dir.path());
+        assert_eq!(backups.len(), 1, "{backups:?}");
+        assert!(backups[0].ends_with(".claude/settings.json"), "keyed by the link: {backups:?}");
+        assert_eq!(std::fs::read_to_string(&backups[0]).unwrap(), SETTINGS);
     }
 
     fn env_entry(name: &str, value: &str) -> EnvConfigEntry {
@@ -983,13 +989,17 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("env.json");
         std::fs::write(&path, "[]").unwrap();
+        crate::commands::surface_write::set_test_home(dir.path());
         write_env_config_at(&path, &[env_entry("A", "1")], Some(&digest_of("[]"))).unwrap();
         let names: Vec<String> = std::fs::read_dir(dir.path())
             .unwrap()
             .flatten()
             .map(|e| e.file_name().to_string_lossy().into_owned())
             .collect();
-        assert_eq!(names.iter().filter(|n| n.starts_with("env.json.bak-")).count(), 1, "{names:?}");
+        assert!(!names.iter().any(|n| n.contains(".bak-")), "backup beside the file: {names:?}");
+        let backups = crate::commands::surface_write::user_backups(dir.path());
+        assert_eq!(backups.len(), 1, "{backups:?}");
+        assert_eq!(std::fs::read_to_string(&backups[0]).unwrap(), "[]");
         assert!(!names.iter().any(|n| n.starts_with(".hk-tmp-")), "{names:?}");
         let read = read_env_config_at(&path).unwrap();
         assert_eq!(read.entries.len(), 1);
@@ -1073,25 +1083,28 @@ mod tests {
     fn write_creates_private_timestamped_backup_and_keeps_the_files_mode() {
         let dir = tempfile::tempdir().unwrap();
         let path = write_fixture(dir.path(), SETTINGS);
+        crate::commands::surface_write::set_test_home(dir.path());
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
             std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o640)).unwrap();
         }
         apply(&path, &preset(&["Edit"], &[], &[]), None).unwrap();
-        let backups: Vec<_> = std::fs::read_dir(path.parent().unwrap())
+        let beside: Vec<_> = std::fs::read_dir(path.parent().unwrap())
             .unwrap()
             .flatten()
-            .filter(|e| e.file_name().to_string_lossy().starts_with("settings.json.bak-"))
+            .filter(|e| e.file_name().to_string_lossy().contains(".bak-"))
             .collect();
+        assert!(beside.is_empty(), "backup beside the file");
+        let backups = crate::commands::surface_write::user_backups(dir.path());
         assert_eq!(backups.len(), 1);
-        assert_eq!(std::fs::read_to_string(backups[0].path()).unwrap(), SETTINGS);
+        assert_eq!(std::fs::read_to_string(&backups[0]).unwrap(), SETTINGS);
         #[cfg(unix)]
         {
             use std::os::unix::fs::PermissionsExt;
             let mode = |p: &std::path::Path| std::fs::metadata(p).unwrap().permissions().mode() & 0o777;
             assert_eq!(mode(&path), 0o640, "the replaced file keeps its mode");
-            assert_eq!(mode(&backups[0].path()), 0o600);
+            assert_eq!(mode(&backups[0]), 0o600);
         }
         let leftovers = std::fs::read_dir(path.parent().unwrap())
             .unwrap()

@@ -68,6 +68,18 @@ describe("TauriFsProvider", () => {
     expect(invoke).not.toHaveBeenCalledWith("guarded_remove_file", expect.anything());
   });
 
+  it("treats only the final path segment as a temp name when cleaning up a refused rename", async () => {
+    invoke.mockImplementation(async (cmd: string) => {
+      if (cmd === "guarded_rename_file") throw "refused";
+    });
+    const fs = new TauriFsProvider("/home/user");
+    // The marker is in a directory name, not in the file's own name.
+    await expect(
+      fs.renameFile("/home/user/x.harness-tmp-1/precious.md", "/home/user/x.harness-tmp-1/other.md"),
+    ).rejects.toBe("refused");
+    expect(invoke).not.toHaveBeenCalledWith("guarded_remove_file", expect.anything());
+  });
+
   it("writes through the guarded Rust command, never the fs plugin", async () => {
     const fs = new TauriFsProvider("/home/user");
     await fs.writeFile("/home/user/.claude/a.harness-tmp-1", "content");

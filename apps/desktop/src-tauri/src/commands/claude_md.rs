@@ -63,7 +63,8 @@ fn has_dot_components(path: &Path) -> bool {
 /// Save a file under `~/.claude` (AC-50). `expected_sha256` is the digest of
 /// what the page loaded; `None` means the file must not exist yet. A
 /// mismatch is refused with a "changed on disk" error, and the old content is
-/// kept as `<name>.bak-<timestamp>` before the file is replaced atomically.
+/// copied to `~/.harness/backups/user/<timestamp>/<path under home>` before the
+/// file is replaced atomically.
 #[tauri::command]
 pub fn write_config_file(
     path: String,
@@ -149,17 +150,25 @@ mod tests {
 
     fn home_with(file: &str, content: &str) -> TempDir {
         let home = TempDir::new().unwrap();
+        crate::commands::surface_write::set_test_home(home.path());
         let path = home.path().join(".claude").join(file);
         std::fs::create_dir_all(path.parent().unwrap()).unwrap();
         std::fs::write(path, content).unwrap();
         home
     }
 
-    fn backups(home: &Path, prefix: &str) -> Vec<PathBuf> {
-        std::fs::read_dir(home.join(".claude"))
+    /// Backups of `name`, which live under `~/.harness/backups/user`, never
+    /// beside the file.
+    fn backups(home: &Path, name: &str) -> Vec<PathBuf> {
+        let beside: Vec<_> = std::fs::read_dir(home.join(".claude"))
             .unwrap()
-            .map(|e| e.unwrap().path())
-            .filter(|p| p.file_name().unwrap().to_string_lossy().starts_with(prefix))
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .filter(|n| n.contains(".bak-"))
+            .collect();
+        assert!(beside.is_empty(), "backup beside the file: {beside:?}");
+        crate::commands::surface_write::user_backups(home)
+            .into_iter()
+            .filter(|p| p.file_name().unwrap().to_string_lossy() == name)
             .collect()
     }
 
@@ -170,7 +179,7 @@ mod tests {
         write_config_file_in(home.path(), "~/.claude/CLAUDE.md", "new\n", Some(&digest)).unwrap();
         let file = home.path().join(".claude/CLAUDE.md");
         assert_eq!(std::fs::read_to_string(&file).unwrap(), "new\n");
-        let found = backups(home.path(), "CLAUDE.md.bak-");
+        let found = backups(home.path(), "CLAUDE.md");
         assert_eq!(found.len(), 1);
         assert_eq!(std::fs::read_to_string(&found[0]).unwrap(), "old\n");
     }
@@ -184,7 +193,7 @@ mod tests {
         assert!(err.contains("changed on disk"), "{}", err);
         let file = home.path().join(".claude/CLAUDE.md");
         assert_eq!(std::fs::read_to_string(&file).unwrap(), "changed elsewhere\n");
-        assert!(backups(home.path(), "CLAUDE.md.bak-").is_empty());
+        assert!(backups(home.path(), "CLAUDE.md").is_empty());
     }
 
     #[test]
@@ -199,9 +208,10 @@ mod tests {
     #[test]
     fn none_digest_creates_a_new_file_without_a_backup() {
         let home = TempDir::new().unwrap();
+        crate::commands::surface_write::set_test_home(home.path());
         write_config_file_in(home.path(), "~/.claude/new.md", "hi\n", None).unwrap();
         assert_eq!(std::fs::read_to_string(home.path().join(".claude/new.md")).unwrap(), "hi\n");
-        assert!(backups(home.path(), "new.md.bak-").is_empty());
+        assert!(backups(home.path(), "new.md").is_empty());
     }
 
     #[cfg(unix)]

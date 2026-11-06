@@ -69,8 +69,8 @@ fn read_harness_file_in(home_raw: &Path) -> Result<HarnessFileResult, String> {
 ///
 /// `expected_sha256` is the digest of the file the page loaded from that path
 /// (`None`: it did not exist). A mismatch is refused as "changed on disk"; the
-/// old content is kept as `harness.yaml.bak-<timestamp>` and the file is
-/// replaced atomically (AC-50).
+/// old content is copied to `~/.harness/backups/user/<timestamp>/.claude/harness.yaml`
+/// and the file is replaced atomically (AC-50).
 #[tauri::command]
 pub fn write_harness_file(content: String, expected_sha256: Option<String>) -> Result<String, String> {
     write_harness_file_in(&home_dir()?, content, expected_sha256.as_deref())
@@ -191,16 +191,22 @@ mod tests {
 
     fn home_with_harness(content: &str) -> TempDir {
         let dir = TempDir::new().unwrap();
+        super::super::surface_write::set_test_home(dir.path());
         std::fs::create_dir(dir.path().join(".claude")).unwrap();
         std::fs::write(dir.path().join(".claude/harness.yaml"), content).unwrap();
         dir
     }
 
+    /// Backups of harness.yaml: under `~/.harness/backups/user`, never beside it.
     fn harness_backups(home: &Path) -> Vec<std::path::PathBuf> {
-        std::fs::read_dir(home.join(".claude"))
+        let beside = std::fs::read_dir(home.join(".claude"))
             .unwrap()
-            .map(|e| e.unwrap().path())
-            .filter(|p| p.file_name().unwrap().to_string_lossy().starts_with("harness.yaml.bak-"))
+            .filter(|e| e.as_ref().unwrap().file_name().to_string_lossy().contains(".bak-"))
+            .count();
+        assert_eq!(beside, 0, "a backup was written beside the file");
+        super::super::surface_write::user_backups(home)
+            .into_iter()
+            .filter(|p| p.file_name().unwrap().to_string_lossy() == "harness.yaml")
             .collect()
     }
 
