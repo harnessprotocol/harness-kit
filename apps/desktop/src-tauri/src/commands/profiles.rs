@@ -145,12 +145,24 @@ pub fn get_custom_profile(id: String) -> Result<String, String> {
 
 #[tauri::command]
 pub fn save_custom_profile(id: String, content: String) -> Result<String, String> {
-    validate_id(&id)?;
-    let dir = profiles_dir()?;
-    std::fs::create_dir_all(&dir)
+    save_custom_profile_in(&profiles_dir()?, &id, &content)
+}
+
+/// Create a profile. An existing id is refused, never overwritten (AC-50);
+/// the write is atomic and expects the file to be absent, so a profile that
+/// appears between the check and the write is refused too.
+fn save_custom_profile_in(dir: &std::path::Path, id: &str, content: &str) -> Result<String, String> {
+    validate_id(id)?;
+    std::fs::create_dir_all(dir)
         .map_err(|e| format!("Failed to create profiles directory: {}", e))?;
     let path = dir.join(format!("{}.yaml", id));
-    std::fs::write(&path, &content)
+    if path.exists() {
+        return Err(format!(
+            "A profile named '{}' already exists. Choose a different name.",
+            id
+        ));
+    }
+    super::surface_write::write_user_file(&path, content, None)
         .map_err(|e| format!("Failed to write profile: {}", e))?;
     Ok(path.to_string_lossy().to_string())
 }
@@ -219,6 +231,24 @@ mod tests {
         let yaml = "metadata:\n  name: stops-here\nplugins:\n  - name: research";
         let (name, _) = extract_metadata(yaml);
         assert_eq!(name, "stops-here");
+    }
+
+    #[test]
+    fn save_custom_profile_creates_a_new_profile() {
+        let dir = tempfile::TempDir::new().unwrap();
+        let path = save_custom_profile_in(dir.path(), "mine", "version: \"1\"\n").unwrap();
+        assert_eq!(std::fs::read_to_string(path).unwrap(), "version: \"1\"\n");
+    }
+
+    #[test]
+    fn save_custom_profile_refuses_an_existing_id() {
+        let dir = tempfile::TempDir::new().unwrap();
+        std::fs::write(dir.path().join("mine.yaml"), "original\n").unwrap();
+        let err = save_custom_profile_in(dir.path(), "mine", "replacement\n").unwrap_err();
+        assert!(err.contains("already exists"), "{}", err);
+        assert_eq!(std::fs::read_to_string(dir.path().join("mine.yaml")).unwrap(), "original\n");
+        // No backup or temp litter either.
+        assert_eq!(std::fs::read_dir(dir.path()).unwrap().count(), 1);
     }
 
     #[test]

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { readClaudeMd, writeConfigFile } from "../lib/tauri";
 import { errorDetails } from "../lib/error-details";
+import { isChangedOnDisk, loadedDigest } from "../lib/loaded-digest";
 
 export interface FileEditorState {
   content: string | null;
@@ -82,7 +83,8 @@ export function useFileEditor(filePath: string | null): FileEditorState {
     // the old file: its outcome must not land on the new one.
     const stillCurrent = () => filePathRef.current === filePath;
     try {
-      await writeConfigFile(filePath, content);
+      // AC-50: the save is refused if the file no longer matches what was loaded.
+      await writeConfigFile(filePath, content, await loadedDigest(originalContent));
       if (!stillCurrent()) return;
       setOriginalContent(content);
       setSavedRecently(true);
@@ -90,12 +92,16 @@ export function useFileEditor(filePath: string | null): FileEditorState {
       savedTimerRef.current = setTimeout(() => setSavedRecently(false), 2000);
     } catch (e) {
       if (!stillCurrent()) return;
-      setSaveErrorTitle(`Couldn't save ${fileLabel(filePath)}`);
+      setSaveErrorTitle(
+        isChangedOnDisk(e)
+          ? `${fileLabel(filePath)} changed on disk. Reload it before saving`
+          : `Couldn't save ${fileLabel(filePath)}`,
+      );
       setSaveError(errorDetails(e));
     } finally {
       setSaving(false);
     }
-  }, [filePath, content]);
+  }, [filePath, content, originalContent]);
 
   const revertFile = useCallback(() => {
     if (originalContent !== null) setContent(originalContent);

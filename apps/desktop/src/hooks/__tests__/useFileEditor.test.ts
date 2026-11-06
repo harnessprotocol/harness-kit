@@ -25,7 +25,8 @@ async function saveThenSwitch() {
   act(() => hook.result.current.updateContent("old edited"));
   let saving: Promise<void> = Promise.resolve();
   act(() => { saving = hook.result.current.saveFile(); });
-  expect(mockWrite).toHaveBeenCalledWith(OLD, "old edited");
+  // The digest of what was loaded is computed first, so the write is async.
+  await waitFor(() => expect(mockWrite).toHaveBeenCalledWith(OLD, "old edited", expect.any(String)));
 
   hook.rerender({ path: NEW });
   await waitFor(() => expect(hook.result.current.content).toBe("new content"));
@@ -62,5 +63,35 @@ describe("useFileEditor: a save that settles after the file changed", () => {
     expect(hook.result.current.originalContent).toBe("new content");
     expect(hook.result.current.isDirty).toBe(false);
     expect(hook.result.current.savedRecently).toBe(false);
+  });
+});
+
+describe("useFileEditor: AC-50 changed-on-disk check", () => {
+  const HELLO_SHA = "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824";
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRead.mockResolvedValue("hello");
+  });
+
+  it("sends the digest of the content it loaded", async () => {
+    mockWrite.mockResolvedValue(undefined);
+    const hook = renderHook(() => useFileEditor(OLD));
+    await waitFor(() => expect(hook.result.current.content).toBe("hello"));
+    act(() => hook.result.current.updateContent("hello world"));
+    await act(async () => { await hook.result.current.saveFile(); });
+    expect(mockWrite).toHaveBeenCalledWith(OLD, "hello world", HELLO_SHA);
+  });
+
+  it("explains a changed-on-disk refusal and keeps the edits", async () => {
+    mockWrite.mockRejectedValue("Refusing to write 'x': it changed on disk since it was read");
+    const hook = renderHook(() => useFileEditor(OLD));
+    await waitFor(() => expect(hook.result.current.content).toBe("hello"));
+    act(() => hook.result.current.updateContent("mine"));
+    await act(async () => { await hook.result.current.saveFile(); });
+    expect(hook.result.current.saveErrorTitle).toMatch(/changed on disk/);
+    expect(hook.result.current.saveError).toMatch(/changed on disk/);
+    expect(hook.result.current.content).toBe("mine");
+    expect(hook.result.current.isDirty).toBe(true);
   });
 });

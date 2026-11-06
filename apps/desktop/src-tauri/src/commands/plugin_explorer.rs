@@ -183,11 +183,16 @@ pub fn read_plugin_file(file_path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn write_plugin_file(file_path: String, content: String) -> Result<(), String> {
+pub fn write_plugin_file(
+    file_path: String,
+    content: String,
+    expected_sha256: Option<String>,
+) -> Result<(), String> {
     let path = validate_plugin_write_path(&file_path)?;
 
-    fs::write(path, content)
-        .map_err(|e| format!("Failed to write file: {}", e))
+    // AC-50: changed-on-disk check, timestamped backup, atomic replace.
+    super::surface_write::write_user_file(&path, &content, expected_sha256.as_deref())
+        .map(|_| ())
 }
 
 /// Error text from `import_plugin_from_path` / `import_plugin_from_zip` is
@@ -270,6 +275,19 @@ fn import_plugin_into(source_path: &str, plugins_dir: &Path) -> Result<super::pl
     })
 }
 
+/// Copy at most `max` bytes. Reads one byte past the cap through `take()` so
+/// an entry that decompresses larger than `max` is refused
+/// (`ErrorKind::FileTooLarge`) instead of filling the disk.
+fn copy_capped(
+    reader: &mut impl std::io::Read,
+    writer: &mut impl std::io::Write,
+    max: u64,
+) -> std::io::Result<Option<u64>> {
+    use std::io::Read;
+    let copied = std::io::copy(&mut reader.take(max.saturating_add(1)), writer)?;
+    Ok(if copied > max { None } else { Some(copied) })
+}
+
 #[tauri::command]
 pub fn import_plugin_from_zip(zip_path: String) -> Result<super::plugins::InstalledPlugin, String> {
     let zip_file = fs::File::open(&zip_path)
@@ -285,6 +303,7 @@ pub fn import_plugin_from_zip(zip_path: String) -> Result<super::plugins::Instal
 
     const MAX_EXTRACTED_BYTES: u64 = 100 * 1024 * 1024; // 100MB
     const MAX_ENTRIES: usize = 10_000;
+    const MAX_ENTRY_BYTES: u64 = 50 * 1024 * 1024; // 50MB per entry
 
     if archive.len() > MAX_ENTRIES {
         let _ = fs::remove_dir_all(&temp_dir);
@@ -321,8 +340,20 @@ pub fn import_plugin_from_zip(zip_path: String) -> Result<super::plugins::Instal
             }
             let mut outfile = fs::File::create(&out_path)
                 .map_err(|e| format!("Failed to create file: {}", e))?;
-            let bytes_written = std::io::copy(&mut file, &mut outfile)
-                .map_err(|e| format!("Failed to extract file: {}", e))?;
+            // The central directory's declared size is attacker-controlled, so
+            // the cap is on bytes actually read, not on the header.
+            let cap = MAX_ENTRY_BYTES.min(MAX_EXTRACTED_BYTES - total_extracted);
+            let bytes_written = match copy_capped(&mut file, &mut outfile, cap) {
+                Ok(Some(n)) => n,
+                Ok(None) => {
+                    let _ = fs::remove_dir_all(&temp_dir);
+                    return Err(format!("Zip entry too large when extracted: {}", entry_name));
+                }
+                Err(e) => {
+                    let _ = fs::remove_dir_all(&temp_dir);
+                    return Err(format!("Failed to extract file: {}", e));
+                }
+            };
             total_extracted += bytes_written;
             if total_extracted > MAX_EXTRACTED_BYTES {
                 let _ = fs::remove_dir_all(&temp_dir);
@@ -524,6 +555,31 @@ mod tests {
     fn write_manifest(dir: &Path, json: &str) {
         fs::create_dir_all(dir.join(".claude-plugin")).unwrap();
         fs::write(dir.join(".claude-plugin").join("plugin.json"), json).unwrap();
+    }
+
+    #[test]
+    fn copy_capped_refuses_an_entry_over_the_limit() {
+        let data = vec![7u8; 11];
+        let mut out = Vec::new();
+        assert_eq!(copy_capped(&mut data.as_slice(), &mut out, 10).unwrap(), None);
+        // Never wrote more than limit + 1 bytes of an unbounded stream.
+        assert!(out.len() <= 11);
+    }
+
+    #[test]
+    fn copy_capped_stops_reading_an_endless_stream() {
+        let mut endless = std::io::repeat(0u8);
+        let mut out = Vec::new();
+        assert_eq!(copy_capped(&mut endless, &mut out, 1024).unwrap(), None);
+        assert_eq!(out.len(), 1025);
+    }
+
+    #[test]
+    fn copy_capped_accepts_an_entry_at_the_limit() {
+        let data = vec![7u8; 10];
+        let mut out = Vec::new();
+        assert_eq!(copy_capped(&mut data.as_slice(), &mut out, 10).unwrap(), Some(10));
+        assert_eq!(out, data);
     }
 
     /// apps/desktop/src/pages/harness/plugins/import-errors.ts matches these

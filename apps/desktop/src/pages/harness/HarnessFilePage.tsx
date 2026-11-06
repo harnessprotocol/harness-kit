@@ -9,6 +9,7 @@ import type { HarnessProfile } from "../../lib/profiles";
 import { getAvailableViewModes } from "../../lib/viewModes";
 import { useRegisterCommands } from "../../lib/commands";
 import { errorDetails } from "../../lib/error-details";
+import { loadedDigest } from "../../lib/loaded-digest";
 import EditorToolbar from "../../components/file-explorer/EditorToolbar";
 import ValidationBanner from "./harness-file/ValidationBanner";
 import MetadataSection from "./harness-file/MetadataSection";
@@ -92,7 +93,10 @@ export default function HarnessFilePage() {
     setSaving(true);
     setSaveError(null);
     try {
-      const savedPath = await writeHarnessFile(editorContent);
+      // AC-50: only the file at the write target counts as "loaded". When the
+      // page loaded ~/harness.yaml instead, ~/.claude/harness.yaml was absent.
+      const expected = filePath === "~/.claude/harness.yaml" ? await loadedDigest(diskContent) : undefined;
+      const savedPath = await writeHarnessFile(editorContent, expected);
       setDiskContent(editorContent);
       setFilePath(savedPath);
       setFound(true);
@@ -101,7 +105,7 @@ export default function HarnessFilePage() {
     } finally {
       setSaving(false);
     }
-  }, [saving, saveable, editorContent]);
+  }, [saving, saveable, editorContent, filePath, diskContent]);
 
   // Cmd+S in editor view
   useEffect(() => {
@@ -309,11 +313,19 @@ export default function HarnessFilePage() {
       {/* Save error (editor view, whether or not the file exists yet) */}
       {saveError && view === "editor" && (
         <div style={{ padding: "0 24px 8px", flexShrink: 0 }}>
-          <ErrorNotice
-            title="Couldn't save harness.yaml"
-            details={saveError}
-            action={{ label: "Retry", onClick: () => void handleSave() }}
-          />
+          {saveError.includes("changed on disk") ? (
+            <ErrorNotice
+              title="harness.yaml changed on disk"
+              details={saveError}
+              action={{ label: "Reload from disk", onClick: () => { setSaveError(null); loadHarness(); } }}
+            />
+          ) : (
+            <ErrorNotice
+              title="Couldn't save harness.yaml"
+              details={saveError}
+              action={{ label: "Retry", onClick: () => void handleSave() }}
+            />
+          )}
         </div>
       )}
 

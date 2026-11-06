@@ -44,8 +44,13 @@ export async function readPluginFile(filePath: string): Promise<string> {
   return invoke<string>("read_plugin_file", { filePath });
 }
 
-export async function writePluginFile(filePath: string, content: string): Promise<void> {
-  return invoke<void>("write_plugin_file", { filePath, content });
+/** `expectedSha256`: digest of what the page loaded (`loadedDigest`); omit when the file was new. */
+export async function writePluginFile(
+  filePath: string,
+  content: string,
+  expectedSha256?: string,
+): Promise<void> {
+  return invoke<void>("write_plugin_file", { filePath, content, expectedSha256 });
 }
 
 export async function importPluginFromPath(sourcePath: string): Promise<InstalledPlugin> {
@@ -95,8 +100,13 @@ export async function readClaudeMd(path: string): Promise<string> {
   return invoke<string>("read_claude_md", { path });
 }
 
-export async function writeConfigFile(path: string, content: string): Promise<void> {
-  return invoke<void>("write_config_file", { path, content });
+/** `expectedSha256`: digest of what the page loaded (`loadedDigest`); omit when the file must not exist. */
+export async function writeConfigFile(
+  path: string,
+  content: string,
+  expectedSha256?: string,
+): Promise<void> {
+  return invoke<void>("write_config_file", { path, content, expectedSha256 });
 }
 
 // ── Harness File commands ─────────────────────────────────────
@@ -111,8 +121,9 @@ export async function readHarnessFile(): Promise<HarnessFileResult> {
   return invoke<HarnessFileResult>("read_harness_file");
 }
 
-export async function writeHarnessFile(content: string): Promise<string> {
-  return invoke<string>("write_harness_file", { content });
+/** `expectedSha256`: digest of the loaded ~/.claude/harness.yaml (`loadedDigest`); omit when it did not exist. */
+export async function writeHarnessFile(content: string, expectedSha256?: string): Promise<string> {
+  return invoke<string>("write_harness_file", { content, expectedSha256 });
 }
 
 export interface ClaudeConfigScan {
@@ -228,8 +239,17 @@ export async function listSecurityPresets(): Promise<SecurityPreset[]> {
   return invoke<SecurityPreset[]>("list_security_presets");
 }
 
-export async function applySecurityPreset(presetId: string): Promise<void> {
-  return invoke<void>("apply_security_preset", { presetId });
+export interface PresetOutcome {
+  /** False when nothing was written because deny rules need confirmation. */
+  applied: boolean;
+  droppedDeny: string[];
+}
+
+export async function applySecurityPreset(
+  presetId: string,
+  confirmDropDeny?: boolean,
+): Promise<PresetOutcome> {
+  return invoke<PresetOutcome>("apply_security_preset", { presetId, confirmDropDeny });
 }
 
 export async function listRequiredEnv(): Promise<KeychainSecretInfo[]> {

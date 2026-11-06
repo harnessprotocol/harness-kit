@@ -494,6 +494,62 @@ fn sync_directory(_directory: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
+/// The digest a webview computes for text it loaded from a user config file:
+/// SHA-256 of the text with one leading BOM dropped (see [`precondition_digest`]).
+#[cfg(test)]
+pub(crate) fn loaded_text_digest(text: &str) -> String {
+    precondition_digest(text.as_bytes())
+}
+
+/// The shared save path for user config files outside the surface registry
+/// (AC-50): refuse if the file changed on disk since the caller loaded it,
+/// write a timestamped `<name>.bak-<stamp>` copy of the old content, then
+/// replace the file atomically (temp file + rename). Nothing truncates the
+/// destination in place.
+///
+/// `expected_sha256` is the digest of what the caller loaded
+/// ([`loaded_text_digest`] on the webview side); `None` means the file must
+/// not exist. Returns the backup path when one was written.
+pub(crate) fn write_user_file(
+    dest: &Path,
+    content: &str,
+    expected_sha256: Option<&str>,
+) -> Result<Option<PathBuf>, String> {
+    let label = dest.display().to_string();
+    let expected = expected_sha256.unwrap_or(ABSENT_SENTINEL);
+    check_unchanged(dest, expected, &label)?;
+
+    let backup = match fs::read(dest) {
+        Ok(old) => {
+            let name = dest
+                .file_name()
+                .ok_or_else(|| format!("{} has no file name", label))?
+                .to_string_lossy()
+                .into_owned();
+            let stamp = chrono::Utc::now().format("%Y%m%dT%H%M%S%3fZ");
+            let backup = dest.with_file_name(format!("{}.bak-{}", name, stamp));
+            write_atomically(&backup, &old, None, &backup.display().to_string(), sync_directory)
+                .or_else(settled_on_disk)
+                .map_err(|e| format!("Failed to back up {}: {}", label, e))?;
+            Some(backup)
+        }
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
+        Err(e) => return Err(format!("Failed to read {}: {}", label, e)),
+    };
+
+    write_atomically(dest, content.as_bytes(), Some(expected), &label, sync_directory)
+        .or_else(settled_on_disk)?;
+    Ok(backup)
+}
+
+/// A rename that landed but whose directory fsync failed still wrote the file.
+fn settled_on_disk(failure: WriteFailure) -> Result<(), String> {
+    match failure {
+        WriteFailure::Unchanged(message) => Err(message),
+        WriteFailure::ReplacedNotDurable(_) => Ok(()),
+    }
+}
+
 fn refuse_read_only(dest: &Path, relative: &str) -> Result<(), String> {
     #[cfg(unix)]
     {
@@ -1292,5 +1348,89 @@ mod tests {
         )
         .unwrap_err();
         assert!(err.contains("not a regular file"), "got: {}", err);
+    }
+}
+
+#[cfg(test)]
+mod user_file_tests {
+    use super::*;
+    use tempfile::TempDir;
+
+    fn siblings(dir: &Path) -> Vec<String> {
+        let mut names: Vec<String> = fs::read_dir(dir)
+            .unwrap()
+            .map(|e| e.unwrap().file_name().to_string_lossy().into_owned())
+            .collect();
+        names.sort();
+        names
+    }
+
+    #[test]
+    fn matching_digest_writes_and_leaves_a_backup() {
+        let dir = TempDir::new().unwrap();
+        let file = dir.path().join("a.md");
+        fs::write(&file, "old").unwrap();
+        let backup = write_user_file(&file, "new", Some(&loaded_text_digest("old")))
+            .unwrap()
+            .expect("a backup of the old content");
+        assert_eq!(fs::read_to_string(&file).unwrap(), "new");
+        assert_eq!(fs::read_to_string(backup).unwrap(), "old");
+        assert_eq!(siblings(dir.path()).len(), 2, "no temp file left behind");
+    }
+
+    #[test]
+    fn mismatched_digest_refuses_and_changes_nothing() {
+        let dir = TempDir::new().unwrap();
+        let file = dir.path().join("a.md");
+        fs::write(&file, "disk").unwrap();
+        let err = write_user_file(&file, "new", Some(&loaded_text_digest("loaded"))).unwrap_err();
+        assert!(err.contains("changed on disk"), "{}", err);
+        assert_eq!(fs::read_to_string(&file).unwrap(), "disk");
+        assert_eq!(siblings(dir.path()), vec!["a.md"]);
+    }
+
+    #[test]
+    fn none_on_an_existing_file_refuses_and_none_on_a_missing_file_creates() {
+        let dir = TempDir::new().unwrap();
+        let file = dir.path().join("a.md");
+        assert!(write_user_file(&file, "first", None).unwrap().is_none());
+        assert_eq!(fs::read_to_string(&file).unwrap(), "first");
+        let err = write_user_file(&file, "second", None).unwrap_err();
+        assert!(err.contains("changed on disk"), "{}", err);
+        assert_eq!(fs::read_to_string(&file).unwrap(), "first");
+    }
+
+    #[test]
+    fn a_leading_bom_does_not_change_the_loaded_digest() {
+        let dir = TempDir::new().unwrap();
+        let file = dir.path().join("a.md");
+        fs::write(&file, "\u{feff}old").unwrap();
+        // The webview hashes the text with the BOM stripped.
+        write_user_file(&file, "new", Some(&loaded_text_digest("old"))).unwrap();
+        assert_eq!(fs::read_to_string(&file).unwrap(), "new");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn replaces_the_file_through_a_temp_rename_not_in_place() {
+        use std::os::unix::fs::MetadataExt;
+        let dir = TempDir::new().unwrap();
+        let file = dir.path().join("a.md");
+        fs::write(&file, "old").unwrap();
+        let before = fs::metadata(&file).unwrap().ino();
+        write_user_file(&file, "new", Some(&loaded_text_digest("old"))).unwrap();
+        assert_ne!(fs::metadata(&file).unwrap().ino(), before);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn a_symlinked_destination_is_refused_not_followed() {
+        let dir = TempDir::new().unwrap();
+        let target = dir.path().join("target.md");
+        fs::write(&target, "t").unwrap();
+        let link = dir.path().join("link.md");
+        std::os::unix::fs::symlink(&target, &link).unwrap();
+        assert!(write_user_file(&link, "x", Some(&loaded_text_digest("t"))).is_err());
+        assert_eq!(fs::read_to_string(&target).unwrap(), "t");
     }
 }

@@ -3,6 +3,7 @@ import { render, screen, waitFor, fireEvent, act, within } from "@testing-librar
 import { MemoryRouter } from "react-router-dom";
 import HarnessFilePage from "../HarnessFilePage";
 import { CommandPalette } from "../../../components/CommandPalette";
+import { loadedDigest } from "../../../lib/loaded-digest";
 
 // ── Mocks ──────────────────────────────────────────────────────
 
@@ -11,7 +12,7 @@ const mockWriteHarnessFile = vi.fn();
 const mockScanClaudeConfig = vi.fn();
 vi.mock("../../../lib/tauri", () => ({
   readHarnessFile: () => mockReadHarnessFile(),
-  writeHarnessFile: (content: string) => mockWriteHarnessFile(content),
+  writeHarnessFile: (content: string, expectedSha256?: string) => mockWriteHarnessFile(content, expectedSha256),
   scanClaudeConfig: () => mockScanClaudeConfig(),
 }));
 
@@ -102,7 +103,32 @@ describe("HarnessFilePage", () => {
     // waitFor resolves on the first call; flush pending work and confirm no second save landed.
     await act(async () => {});
     expect(mockWriteHarnessFile).toHaveBeenCalledTimes(1);
-    expect(mockWriteHarnessFile).toHaveBeenCalledWith('version: "1"\nmetadata:\n  name: edited\n');
+    expect(mockWriteHarnessFile).toHaveBeenCalledWith(
+      'version: "1"\nmetadata:\n  name: edited\n',
+      await loadedDigest('version: "1"\n'),
+    );
+  });
+
+  it("sends no digest when the page loaded ~/harness.yaml, since the write target was absent (AC-50)", async () => {
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"\n', path: "~/harness.yaml" });
+    mockWriteHarnessFile.mockResolvedValue("~/.claude/harness.yaml");
+    renderPage();
+    fireEvent.click(await screen.findByText("Editor"));
+    fireEvent.change(await screen.findByTestId("fake-editor"), { target: { value: "edited\n" } });
+    fireEvent.keyDown(window, { key: "s", metaKey: true });
+    await waitFor(() => expect(mockWriteHarnessFile).toHaveBeenCalledWith("edited\n", undefined));
+  });
+
+  it("names a changed-on-disk refusal and offers Reload from disk (AC-50)", async () => {
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"\n', path: "~/.claude/harness.yaml" });
+    mockWriteHarnessFile.mockRejectedValue("Refusing to write 'x': it changed on disk since it was read");
+    renderPage();
+    fireEvent.click(await screen.findByText("Editor"));
+    fireEvent.change(await screen.findByTestId("fake-editor"), { target: { value: "edited\n" } });
+    fireEvent.keyDown(window, { key: "s", metaKey: true });
+    expect(await screen.findByRole("alert")).toHaveTextContent("harness.yaml changed on disk");
+    expect(screen.getByRole("button", { name: "Reload from disk" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Retry" })).not.toBeInTheDocument();
   });
 
   it("offers Save harness.yaml in the palette while editing, saving the latest content (AC-21)", async () => {
@@ -131,7 +157,10 @@ describe("HarnessFilePage", () => {
     fireEvent.click(save);
 
     await waitFor(() => expect(mockWriteHarnessFile).toHaveBeenCalledTimes(1));
-    expect(mockWriteHarnessFile).toHaveBeenCalledWith('version: "1"\nmetadata:\n  name: second\n');
+    expect(mockWriteHarnessFile).toHaveBeenCalledWith(
+      'version: "1"\nmetadata:\n  name: second\n',
+      await loadedDigest('version: "1"\n'),
+    );
   });
 
   it("says harness.yaml couldn't be read, raw error behind Details, and Retry reads it again (AC-20)", async () => {

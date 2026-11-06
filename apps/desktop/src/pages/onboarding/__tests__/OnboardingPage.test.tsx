@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import OnboardingPage from "../OnboardingPage";
+import { loadedDigest } from "../../../lib/loaded-digest";
 import { ONBOARDING_FIXTURE_RESULT, ONBOARDING_FIXTURE_LOW_COUNT } from "../../__fixtures__/onboarding-fixture-data";
 
 // ── Mocks ──────────────────────────────────────────────────────
@@ -248,7 +249,11 @@ describe("OnboardingPage", () => {
         expect.stringMatching(/^~\/\.claude\/harness\.yaml\.bak-.+/),
         "version: old\n",
       );
-      expect(mockWriteHarnessFile).toHaveBeenCalledWith(ONBOARDING_FIXTURE_RESULT.harnessYaml);
+      // The replace is checked against the digest of the file the user was shown.
+      expect(mockWriteHarnessFile).toHaveBeenCalledWith(
+        ONBOARDING_FIXTURE_RESULT.harnessYaml,
+        await loadedDigest("version: old\n"),
+      );
     });
 
     it("does not write the new file when the backup fails", async () => {
