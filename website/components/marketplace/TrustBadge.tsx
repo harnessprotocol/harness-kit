@@ -53,8 +53,16 @@ function Glyph({ icon, color }: { icon: TrustMeta['icon']; color: string }) {
   }
 }
 
-export function TrustBadge({ tier, title }: { tier: TrustTier; title?: string }) {
+/** ISO date (YYYY-MM-DD, UTC) for a scan timestamp, or null if unparseable. */
+export function formatScanDate(scanDate: string | undefined): string | null {
+  if (!scanDate) return null;
+  const d = new Date(scanDate);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+}
+
+export function TrustBadge({ tier, title, scanDate }: { tier: TrustTier; title?: string; scanDate?: string }) {
   const meta = TRUST[tier];
+  const scanned = formatScanDate(scanDate);
   return (
     <span
       className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
@@ -62,7 +70,7 @@ export function TrustBadge({ tier, title }: { tier: TrustTier; title?: string })
         color: meta.color,
         background: `color-mix(in srgb, ${meta.color} 14%, transparent)`,
       }}
-      title={title ?? `Security scan: ${meta.label}`}
+      title={title ?? `Security scan: ${meta.label}${scanned ? `, scanned ${scanned}` : ''}`}
     >
       <Glyph icon={meta.icon} color={meta.color} />
       {meta.label}

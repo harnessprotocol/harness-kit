@@ -19,7 +19,7 @@ export function PluginCard({ plugin, categoryName }: { plugin: MarketplacePlugin
         >
           {categoryName}
         </span>
-        <TrustBadge tier={plugin.security.trust} />
+        <TrustBadge tier={plugin.security.trust} scanDate={plugin.security.scanDate} />
       </div>
 
       <div className="mb-1 flex items-baseline gap-2">
