@@ -14,6 +14,7 @@ on:
       - '**'
   release:
     types: [published]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -75,7 +76,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
       - name: Deploy production
-        if: github.event_name == 'release'
+        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
         working-directory: website
         run: pnpm dlx wrangler@latest pages deploy out --project-name=harness-kit-docs --branch=main
         env:
