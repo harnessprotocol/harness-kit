@@ -15,6 +15,7 @@
   },
   "scripts": {
     "build": "tsup",
+    "build:npm": "node scripts/build-npm.mjs",
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest"

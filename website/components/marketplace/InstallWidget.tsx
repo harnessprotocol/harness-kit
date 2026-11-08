@@ -136,7 +136,7 @@ function PluginCliTab({ plugin }: { plugin: MarketplacePlugin }) {
     <div className="flex flex-col gap-4">
       <div>
         <p className="mb-2 text-sm text-fd-muted-foreground">Run ephemerally (no install):</p>
-        <InstallCommand command={`npx @harness-kit/cli run ${plugin.name}@harnessprotocol/harness-kit`} />
+        <InstallCommand command={`npx harness-kit run${plugin.name}@harnessprotocol/harness-kit`} />
       </div>
       <details className="rounded-xl bg-fd-card/40 px-4 py-3 text-sm">
         <summary className="cursor-pointer text-fd-muted-foreground select-none">
@@ -146,8 +146,8 @@ function PluginCliTab({ plugin }: { plugin: MarketplacePlugin }) {
           <p className="text-xs text-fd-muted-foreground">
             1. Add to your <code className="font-mono">harness.yaml</code> plugins list, then:
           </p>
-          <InstallCommand command="npx @harness-kit/cli sync" />
-          <InstallCommand command="npx @harness-kit/cli compile" />
+          <InstallCommand command="npx harness-kit sync" />
+          <InstallCommand command="npx harness-kit compile" />
         </div>
       </details>
     </div>
@@ -213,8 +213,8 @@ function ProfileCliTab({ profile }: { profile: MarketplaceProfile }) {
         <DownloadYaml slug={profile.slug} yaml={profile.harnessYaml} />
       </div>
       <div className="flex flex-col gap-3">
-        <InstallCommand command="npx @harness-kit/cli sync" />
-        <InstallCommand command="npx @harness-kit/cli compile" />
+        <InstallCommand command="npx harness-kit sync" />
+        <InstallCommand command="npx harness-kit compile" />
       </div>
       <p className="text-xs text-fd-muted-foreground">
         <code className="font-mono">compile</code> writes native config for Claude Code, Cursor, and

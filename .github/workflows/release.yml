@@ -72,60 +72,63 @@ jobs:
       - name: Build and test all packages
         run: pnpm turbo run build test
 
-  # Publishes the CLI and the workspace packages it needs at runtime, in
-  # dependency order: shared, core, exchange, cli. Does nothing (and passes)
-  # when the NPM_TOKEN repo secret is not set. A job-level `if` cannot read
-  # secrets, so the first step checks the token through the job env instead.
+  # Publishes the CLI as the unscoped `harness-kit` npm package: one bundle with
+  # the workspace packages inlined. Uses npm Trusted Publishing (OIDC), so there
+  # is no npm token. The trusted publisher must be configured on npmjs.com for
+  # harnessprotocol/harness-kit, workflow release.yml. The first version is
+  # published by hand, which is when the package can be linked to this workflow;
+  # a version that already exists on npm is skipped.
   build-cli-npm:
     needs: [prepare, gate]
     runs-on: ubuntu-latest
-    env:
-      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    permissions:
+      contents: read
+      id-token: write
     steps:
-      - name: Check for NPM_TOKEN
-        id: token
-        run: |
-          if [ -z "$NPM_TOKEN" ]; then
-            echo "::notice::NPM_TOKEN is not set; skipping npm publish."
-            echo "publish=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "publish=true" >> "$GITHUB_OUTPUT"
-          fi
-
       - uses: actions/checkout@v7
-        if: steps.token.outputs.publish == 'true'
 
       - uses: pnpm/action-setup@v6
-        if: steps.token.outputs.publish == 'true'
 
       - uses: actions/setup-node@v7
-        if: steps.token.outputs.publish == 'true'
         with:
           node-version: 24
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
+      # Trusted publishing needs npm 11.5.1 or later.
+      - name: Ensure npm supports trusted publishing
+        run: |
+          required="11.5.1"
+          current="$(npm --version)"
+          if [ "$(printf '%s\n%s\n' "$required" "$current" | sort -V | head -n1)" != "$required" ]; then
+            npm install -g npm@latest
+          fi
+          npm --version
+
       - name: Stamp version
-        if: steps.token.outputs.publish == 'true'
         run: bash scripts/stamp-version.sh ${{ needs.prepare.outputs.version }}
 
       - name: Install dependencies
-        if: steps.token.outputs.publish == 'true'
         run: pnpm install --frozen-lockfile
 
-      - name: Build packages
-        if: steps.token.outputs.publish == 'true'
-        run: pnpm turbo run build --filter=@harness-kit/cli...
+      - name: Build npm package
+        run: pnpm run build:cli-npm
+        env:
+          HK_NPM_VERSION: ${{ needs.prepare.outputs.version }}
 
       - name: Publish to npm
-        if: steps.token.outputs.publish == 'true'
-        run: |
-          pnpm --filter @harness-kit/shared publish --no-git-checks
-          pnpm --filter @harness-kit/core publish --no-git-checks
-          pnpm --filter @harness-kit/exchange publish --no-git-checks
-          pnpm --filter @harness-kit/cli publish --no-git-checks
+        working-directory: apps/cli/npm-dist
         env:
-          NODE_AUTH_TOKEN: ${{ env.NPM_TOKEN }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+        run: |
+          if npm view "harness-kit@${VERSION}" version >/dev/null 2>&1; then
+            echo "::notice::harness-kit@${VERSION} is already on npm; skipping publish."
+          elif [[ "$VERSION" == *-* ]]; then
+            # npm refuses a prerelease without an explicit non-latest tag.
+            npm publish --provenance --access public --tag next
+          else
+            npm publish --provenance --access public
+          fi
 
   build-cli-standalone:
     needs: [prepare, gate]

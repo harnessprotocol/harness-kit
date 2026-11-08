@@ -6,7 +6,7 @@
 #   HK_FILE         path to harness.yaml (check only)
 #   HK_TARGET       comma-separated targets (check only, optional)
 #   HK_BASELINE     baseline harness.yaml path (status only, optional)
-#   HK_CLI_VERSION  npm version or dist-tag of @harness-kit/cli
+#   HK_CLI_VERSION  npm version or dist-tag of the harness-kit package
 #   HK_CLI          optional override command used instead of npx (local testing)
 #   GITHUB_STEP_SUMMARY, GITHUB_OUTPUT  provided by GitHub Actions
 #
@@ -38,7 +38,7 @@ if [ -n "${HK_CLI:-}" ]; then
   # shellcheck disable=SC2206
   runner=($HK_CLI)
 else
-  runner=(npx -y "@harness-kit/cli@${HK_CLI_VERSION:-latest}")
+  runner=(npx -y "harness-kit@${HK_CLI_VERSION:-latest}")
 fi
 
 "${runner[@]}" "${args[@]}" >"$OUT_DIR/stdout.json" 2>"$OUT_DIR/stderr.txt"

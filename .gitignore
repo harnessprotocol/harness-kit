@@ -49,6 +49,7 @@ packages/registry-service/dist/
 
 # CLI
 apps/cli/dist/
+apps/cli/npm-dist/
 
 # Marketplace data generator
 packages/marketplace-data/dist/
