@@ -269,6 +269,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: write
     steps:
       - uses: actions/checkout@v7
 
@@ -338,3 +339,11 @@ jobs:
           git add Formula/harness-kit.rb Casks/harness-kit.rb
           git commit -m "chore: bump harness-kit to v${VERSION}"
           git push
+
+      # A release created with GITHUB_TOKEN does not fire `release: published`
+      # for other workflows, so the production docs deploy is dispatched here
+      # (workflow_dispatch is the one event GITHUB_TOKEN can trigger).
+      - name: Deploy the docs site to production
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run deploy-docs.yml --repo "${{ github.repository }}" --ref "${{ github.ref_name }}"
