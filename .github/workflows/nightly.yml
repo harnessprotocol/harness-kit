@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   build-cli-standalone:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v7
 
@@ -79,7 +79,7 @@ jobs:
           retention-days: 1
 
   build-desktop:
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v7
 
