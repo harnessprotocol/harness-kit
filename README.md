@@ -29,7 +29,7 @@ Your AI coding setup — plugins, skills, MCP servers, hooks, conventions — pa
 **CLI** (`harness validate`, `compile`, `install`, `sync`, ...):
 ```bash
 brew tap harnessprotocol/tap && brew install harness-kit
-# or: npm install -g harness-kit  # requires Node.js 24+
+# or: npm install -g @harnessprotocol/cli  # requires Node.js 24+
 ```
 
 **Desktop App**:

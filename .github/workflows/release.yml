@@ -121,8 +121,8 @@ jobs:
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
         run: |
-          if npm view "harness-kit@${VERSION}" version >/dev/null 2>&1; then
-            echo "::notice::harness-kit@${VERSION} is already on npm; skipping publish."
+          if npm view "@harnessprotocol/cli@${VERSION}" version >/dev/null 2>&1; then
+            echo "::notice::@harnessprotocol/cli@${VERSION} is already on npm; skipping publish."
           elif [[ "$VERSION" == *-* ]]; then
             # npm refuses a prerelease without an explicit non-latest tag.
             npm publish --provenance --access public --tag next

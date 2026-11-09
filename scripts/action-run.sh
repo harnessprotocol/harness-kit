@@ -38,7 +38,7 @@ if [ -n "${HK_CLI:-}" ]; then
   # shellcheck disable=SC2206
   runner=($HK_CLI)
 else
-  runner=(npx -y "harness-kit@${HK_CLI_VERSION:-latest}")
+  runner=(npx -y -p "@harnessprotocol/cli@${HK_CLI_VERSION:-latest}" harness-kit)
 fi
 
 "${runner[@]}" "${args[@]}" >"$OUT_DIR/stdout.json" 2>"$OUT_DIR/stderr.txt"

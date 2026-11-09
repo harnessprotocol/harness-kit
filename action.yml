@@ -21,7 +21,7 @@ inputs:
   cli-version:
     # Pinned to the release this tag ships. Bump this default when cutting a
     # release. Users can override it with an npm version or dist-tag such as latest.
-    description: "Version or dist-tag of the harness-kit npm package to run."
+    description: "Version or dist-tag of the @harnessprotocol/cli npm package to run."
     required: false
     default: "0.13.1"
 

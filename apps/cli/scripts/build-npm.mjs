@@ -50,7 +50,7 @@ for (const dir of [
 const sorted = Object.fromEntries(Object.entries(dependencies).sort(([a], [b]) => a.localeCompare(b)));
 
 const manifest = {
-  name: "harness-kit",
+  name: "@harnessprotocol/cli",
   version,
   description: "Compile one harness.yaml into config for Claude Code, Cursor, Codex and other agents, and check it for drift.",
   type: "module",
@@ -79,11 +79,11 @@ Compile one \`harness.yaml\` into config for Claude Code, Cursor, Codex and othe
 agents, and check that compiled files match it.
 
 \`\`\`bash
-npm install -g harness-kit   # requires Node.js 24+
+npm install -g @harnessprotocol/cli   # requires Node.js 24+
 harness-kit --help
 
 # or run without installing
-npx harness-kit check
+npx -p @harnessprotocol/cli harness-kit check
 \`\`\`
 
 Documentation: https://harnesskit.ai
@@ -92,4 +92,4 @@ Documentation: https://harnesskit.ai
 
 mkdirSync(outDir, { recursive: true });
 copyFileSync(join(repoRoot, "LICENSE"), join(outDir, "LICENSE"));
-console.log(`Built harness-kit@${version} in ${outDir}`);
+console.log(`Built @harnessprotocol/cli@${version} in ${outDir}`);
