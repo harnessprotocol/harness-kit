@@ -61,7 +61,7 @@ brew tap harnessprotocol/tap
 brew install harness-kit
 
 # npm
-npm install -g @harness-kit/cli
+npm install -g @harnessprotocol/cli
 
 # Verify
 harness --version

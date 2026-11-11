@@ -29,7 +29,7 @@ Your AI coding setup — plugins, skills, MCP servers, hooks, conventions — pa
 **CLI** (`harness validate`, `compile`, `install`, `sync`, ...):
 ```bash
 brew tap harnessprotocol/tap && brew install harness-kit
-# or: npm install -g @harness-kit/cli  # requires Node.js 24+
+# or: npm install -g @harnessprotocol/cli  # requires Node.js 24+
 ```
 
 **Desktop App**:
@@ -165,7 +165,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: harnessprotocol/harness-kit@v0.13.0
+      - uses: harnessprotocol/harness-kit@v0.13.1
         with:
           target: claude-code,cursor,agents-md
 ```
@@ -178,7 +178,7 @@ The step exits 1 on drift and writes a table of the drifted files to the job sum
 | `harness-file` | `harness.yaml` | Path to the profile (`check`). |
 | `target` | all | Comma-separated targets (`check`). |
 | `baseline` | none | Team baseline `harness.yaml` in the checkout (`status`). |
-| `cli-version` | the release version | npm version or dist-tag of `@harness-kit/cli`, for example `latest`. |
+| `cli-version` | the release version | npm version or dist-tag of the `harness-kit` npm package, for example `latest`. |
 
 ## 🔒 Security & Privacy
 
