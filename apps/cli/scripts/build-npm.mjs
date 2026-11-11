@@ -54,7 +54,7 @@ const manifest = {
   version,
   description: "Compile one harness.yaml into config for Claude Code, Cursor, Codex and other agents, and check it for drift.",
   type: "module",
-  bin: { "harness-kit": "./dist/index.js", harness: "./dist/index.js" },
+  bin: { "harness-kit": "dist/index.js", harness: "dist/index.js" },
   files: ["dist", "README.md", "LICENSE"],
   engines: { node: ">=24" },
   license: "Apache-2.0",

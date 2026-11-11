@@ -116,19 +116,24 @@ jobs:
         env:
           HK_NPM_VERSION: ${{ needs.prepare.outputs.version }}
 
-      - name: Publish to npm
+      # The trusted publisher allows staging only: a release goes live after a
+      # maintainer approves it on npmjs.com (or `npm stage approve <id>`) with 2FA.
+      - name: Stage the npm release
         working-directory: apps/cli/npm-dist
         env:
           VERSION: ${{ needs.prepare.outputs.version }}
         run: |
           if npm view "@harnessprotocol/cli@${VERSION}" version >/dev/null 2>&1; then
             echo "::notice::@harnessprotocol/cli@${VERSION} is already on npm; skipping publish."
-          elif [[ "$VERSION" == *-* ]]; then
-            # npm refuses a prerelease without an explicit non-latest tag.
-            npm publish --provenance --access public --tag next
-          else
-            npm publish --provenance --access public
+            exit 0
           fi
+          if [[ "$VERSION" == *-* ]]; then
+            # npm refuses a prerelease without an explicit non-latest tag.
+            npm stage publish . --provenance --access public --tag next
+          else
+            npm stage publish . --provenance --access public
+          fi
+          echo "::notice::@harnessprotocol/cli@${VERSION} is staged. Approve it at https://www.npmjs.com/package/@harnessprotocol/cli to publish."
 
   build-cli-standalone:
     needs: [prepare, gate]
