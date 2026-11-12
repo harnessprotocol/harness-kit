@@ -91,21 +91,21 @@ const toolItemStyle: CSSProperties = {
 const allowToolStyle: CSSProperties = {
   ...toolItemStyle,
   background: "var(--success-light)",
-  color: "var(--success)",
+  color: "var(--success-text)",
   border: "1px solid var(--success-light)",
 };
 
 const denyToolStyle: CSSProperties = {
   ...toolItemStyle,
   background: "var(--danger-light)",
-  color: "var(--danger)",
+  color: "var(--danger-text)",
   border: "1px solid var(--danger-light)",
 };
 
 const askToolStyle: CSSProperties = {
   ...toolItemStyle,
   background: "var(--warning-light)",
-  color: "var(--warning)",
+  color: "var(--warning-text)",
   border: "1px solid var(--warning-light)",
 };
 
@@ -160,7 +160,7 @@ export default function PermissionsSection({ permissions }: PermissionsSectionPr
           {tools?.allow && tools.allow.length > 0 && (
             <div style={{ marginBottom: "10px" }}>
               <div style={{
-                fontSize: "10px", fontWeight: 600, color: "var(--success)",
+                fontSize: "10px", fontWeight: 600, color: "var(--success-text)",
                 marginBottom: "6px", display: "flex", alignItems: "center", gap: "4px",
               }}>
                 <span style={{
@@ -179,7 +179,7 @@ export default function PermissionsSection({ permissions }: PermissionsSectionPr
           {tools?.deny && tools.deny.length > 0 && (
             <div style={{ marginBottom: "10px" }}>
               <div style={{
-                fontSize: "10px", fontWeight: 600, color: "var(--danger)",
+                fontSize: "10px", fontWeight: 600, color: "var(--danger-text)",
                 marginBottom: "6px", display: "flex", alignItems: "center", gap: "4px",
               }}>
                 <span style={{
@@ -198,7 +198,7 @@ export default function PermissionsSection({ permissions }: PermissionsSectionPr
           {tools?.ask && tools.ask.length > 0 && (
             <div style={{ marginBottom: "10px" }}>
               <div style={{
-                fontSize: "10px", fontWeight: 600, color: "var(--warning)",
+                fontSize: "10px", fontWeight: 600, color: "var(--warning-text)",
                 marginBottom: "6px", display: "flex", alignItems: "center", gap: "4px",
               }}>
                 <span style={{
@@ -221,9 +221,9 @@ export default function PermissionsSection({ permissions }: PermissionsSectionPr
           <div style={labelStyle("paths")}>Paths</div>
           {paths?.writable && paths.writable.length > 0 && (
             <div style={{ marginBottom: "6px" }}>
-              <div style={{ ...categoryLabelStyle, color: "var(--success)" }}>Writable</div>
+              <div style={{ ...categoryLabelStyle, color: "var(--success-text)" }}>Writable</div>
               {paths.writable.map((p) => (
-                <code key={p} style={{ ...monoPathStyle, color: "var(--success)" }}>{p}</code>
+                <code key={p} style={{ ...monoPathStyle, color: "var(--success-text)" }}>{p}</code>
               ))}
             </div>
           )}

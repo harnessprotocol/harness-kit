@@ -354,7 +354,7 @@ function ConfirmStep({
           {writing ? "Writing…" : "Write harness.yaml"}
         </Button>
         <Button variant="ghost" onClick={onExploreReadOnly} disabled={writing}>
-          Explore read-only
+          Skip for now
         </Button>
       </div>
       <p className="hk-onboard-confirm-note">Nothing is written until you confirm.</p>

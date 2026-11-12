@@ -65,7 +65,7 @@ export default function BudgetAlertBanner({
       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
         <TriangleAlert size={16} strokeWidth={1.7} aria-hidden="true" style={{ color: "var(--warning)", flexShrink: 0 }} />
         <div>
-          <span style={{ fontWeight: 600, color: "var(--warning)" }}>
+          <span style={{ fontWeight: 600, color: "var(--warning-text)" }}>
             Daily budget exceeded:&nbsp;
           </span>
           {messages.join(" · ")}
@@ -83,7 +83,7 @@ export default function BudgetAlertBanner({
           justifyContent: "center",
           border: "none",
           background: "none",
-          color: "var(--warning)",
+          color: "var(--warning-text)",
           cursor: "pointer",
           lineHeight: 1,
           padding: "0 2px",

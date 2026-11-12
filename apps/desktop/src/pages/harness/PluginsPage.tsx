@@ -34,11 +34,11 @@ const PREVIEW_PLUGINS: InstalledPlugin[] = [
   {
     name: "harness-share",
     version: "0.3.0",
-    description: "Compile and sync harness.yaml across AI tool configurations.",
+    description: "Compile harness.yaml to your AI tool configurations.",
     marketplace: "harness-kit",
     source: "browser-preview://plugins/harness-share",
     category: "Configure",
-    tags: ["sync", "configuration"],
+    tags: ["compile", "configuration"],
     component_counts: { skills: 4, agents: 0, scripts: 3 },
   },
 ];

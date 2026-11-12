@@ -296,7 +296,7 @@ describe("SyncPage", () => {
       expect(vi.mocked(compile).mock.calls[1][1]).toEqual(["cursor"]);
       fireEvent.click(await screen.findByRole("button", { name: "Apply 1 file" }));
 
-      await screen.findByText("Sync complete");
+      await screen.findByText("Compile complete");
       expect(syncCreateBackup).toHaveBeenCalledTimes(1);
       expect(syncCreateBackup).toHaveBeenCalledWith("/repo/stale", "default", ["cursor"], []);
       expect(syncWriteFiles).toHaveBeenCalledTimes(1);
@@ -362,11 +362,11 @@ describe("SyncPage", () => {
       return settle;
     }
 
-    it("does not show Sync complete on the new project when an old apply succeeds", async () => {
+    it("does not show Compile complete on the new project when an old apply succeeds", async () => {
       const settle = await applyThenSwitchProject();
       await act(async () => { settle.resolve(); });
 
-      expect(screen.queryByText("Sync complete")).not.toBeInTheDocument();
+      expect(screen.queryByText("Compile complete")).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Preview Changes" })).toBeEnabled();
       // The backup the old apply took still shows up in the list.
       await waitFor(() => expect(mockSyncListBackups).toHaveBeenCalled());

@@ -8,7 +8,7 @@ import {
   getFontSize, setFontSize, FONT_SIZE_MIN, FONT_SIZE_MAX,
   getDensity, setDensity,
   getDefaultSection, setDefaultSection,
-  getLabs, setLab,
+  getLabs, setLab, getLedgerLab, setLedgerLab,
   getMarkdownFont, setMarkdownFont,
   getConfirmSave, setConfirmSave,
   getConfigFilesDetailLevel, setConfigFilesDetailLevel,
@@ -363,7 +363,7 @@ function GeneralTab({ onOpenFeedback }: { onOpenFeedback: () => void }) {
 
         <SettingRow
           label="Confirm before saving"
-          description="Critical config files always require confirmation"
+          description="Applies in Plugin Explorer. Critical files always ask there."
         >
           <Segmented
             options={[
@@ -571,6 +571,7 @@ function GeneralTab({ onOpenFeedback }: { onOpenFeedback: () => void }) {
 
 function LabsTab() {
   const [labs, setLabsState] = useState(getLabs);
+  const [ledger, setLedgerState] = useState(getLedgerLab);
 
   return (
     <div style={{ padding: "20px 24px", maxWidth: "640px" }}>
@@ -603,6 +604,21 @@ function LabsTab() {
             onChange={(on) => {
               setLab("comparator", on);
               setLabsState(getLabs());
+            }}
+          />
+        </SettingRow>
+
+        <SettingRow
+          label="Reconciliation ledger"
+          description="Show layers, conflicts, capability totals and rollback points on the Activity tab."
+        >
+          <Toggle
+            id="lab-ledger"
+            checked={ledger}
+            aria-label="Reconciliation ledger"
+            onChange={(on) => {
+              setLedgerLab(on);
+              setLedgerState(getLedgerLab());
             }}
           />
         </SettingRow>

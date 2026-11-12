@@ -201,7 +201,7 @@ export default function SecretsPage() {
                     {secret.isSet ? "Update" : "Set"}
                   </Button>
                   {secret.isSet && (
-                    <Button variant="ghost" size="sm" onClick={() => handleDeleteSecret(secret.name)} style={{ color: "var(--danger)" }}>
+                    <Button variant="ghost" size="sm" onClick={() => handleDeleteSecret(secret.name)} style={{ color: "var(--danger-text)" }}>
                       Delete
                     </Button>
                   )}

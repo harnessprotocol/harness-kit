@@ -460,7 +460,7 @@ function RowActions({
     return (
       <div style={{ marginTop: "auto", padding: "14px 18px 18px", fontSize: 12, opacity: 0.7 }}>
         {!anyTargets
-          ? "Present on every surface that supports it — nothing to sync."
+          ? "Present on every surface that supports it — nothing to copy."
           : "Not present on any surface — nothing to copy from."}
       </div>
     );

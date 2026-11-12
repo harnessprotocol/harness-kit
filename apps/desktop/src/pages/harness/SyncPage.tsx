@@ -323,7 +323,7 @@ export default function SyncPage() {
           <EmptyState
             icon={<Wrench size={28} strokeWidth={1.5} />}
             title="No harness.yaml found"
-            description="Create your harness.yaml first, then come back to sync it to your projects."
+            description="Create your harness.yaml first, then come back to compile it to your projects."
             action={
               <Button variant="primary" onClick={() => navigate("/harness/file")}>
                 Create harness.yaml
@@ -380,7 +380,7 @@ export default function SyncPage() {
               {projectDir && !dirChecking && (
                 <p style={{
                   margin: "5px 0 0", fontSize: "11px", display: "flex", alignItems: "center", gap: "4px",
-                  color: dirValid ? "var(--success)" : "var(--danger)",
+                  color: dirValid ? "var(--success-text)" : "var(--danger-text)",
                 }}>
                   {dirValid ? <Check size={11} strokeWidth={2} /> : <XIcon size={11} strokeWidth={2} />}
                   {dirValid ? "Directory found" : "Directory not found"}
@@ -474,8 +474,8 @@ export default function SyncPage() {
         {phase === "applied" && (
           <Card style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", flexWrap: "wrap" }}>
             <div>
-              <p style={{ margin: "0 0 2px", fontSize: "13px", fontWeight: 600, color: "var(--success)" }}>
-                Sync complete
+              <p style={{ margin: "0 0 2px", fontSize: "13px", fontWeight: 600, color: "var(--success-text)" }}>
+                Compile complete
               </p>
               {appliedBackupId && (
                 <code style={{ fontSize: "10px", color: "var(--fg-subtle)", fontFamily: "ui-monospace, monospace" }}>
@@ -485,7 +485,7 @@ export default function SyncPage() {
             </div>
             <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap" }}>
               <Button variant="ghost" size="sm" onClick={handleReset}>
-                Sync again
+                Compile again
               </Button>
             </div>
           </Card>

@@ -58,14 +58,26 @@ describe("ActivityTab", () => {
     mockBuildDesktopPortabilitySnapshot.mockResolvedValue(snapshot);
   });
 
-  it("renders both the audit log and the reconciliation ledger", async () => {
+  it("shows the audit log and device enrollment, not the ledger internals, by default (2c.13)", async () => {
+    render(<ActivityTab />);
+
+    expect(await screen.findByText("Audit Log")).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Device enrollment" })).toBeInTheDocument();
+    expect(screen.queryByText("Reconciliation ledger")).not.toBeInTheDocument();
+    expect(screen.queryByText("Rollback points")).not.toBeInTheDocument();
+  });
+
+  it("renders the reconciliation ledger when the Labs flag is on", async () => {
+    localStorage.setItem("harness-kit-labs-ledger", "true");
     render(<ActivityTab />);
 
     expect(await screen.findByText("Audit Log")).toBeInTheDocument();
     expect(await screen.findByText("Reconciliation ledger")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Device enrollment" })).not.toBeInTheDocument();
   });
 
   it("does not grant project scope when no project is tracked", async () => {
+    localStorage.setItem("harness-kit-labs-ledger", "true");
     render(<ActivityTab />);
     await screen.findByText("Reconciliation ledger");
     expect(mockGrantProjectScope).not.toHaveBeenCalled();
@@ -73,6 +85,7 @@ describe("ActivityTab", () => {
 
   it("shows a degraded notice when a project is tracked but its scope grant fails", async () => {
     localStorage.setItem("harness-kit-sync-recent-dirs", JSON.stringify(["/repo/gone"]));
+    localStorage.setItem("harness-kit-labs-ledger", "true");
     mockGrantProjectScope.mockRejectedValue(new Error("forbidden"));
 
     render(<ActivityTab />);
@@ -88,11 +101,12 @@ describe("ActivityTab", () => {
   });
 
   it("shows an error notice when the snapshot build itself fails outright (AC-20)", async () => {
+    localStorage.setItem("harness-kit-labs-ledger", "true");
     mockBuildDesktopPortabilitySnapshot.mockRejectedValueOnce(new Error("boom"));
 
     render(<ActivityTab />);
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't build the reconciliation ledger");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't read this device's state");
     expect(screen.queryByText(/Error: boom/)).not.toBeInTheDocument();
     expect(screen.getByText("boom")).not.toBeVisible();
     expect(screen.queryByTestId("project-degraded-notice")).not.toBeInTheDocument();

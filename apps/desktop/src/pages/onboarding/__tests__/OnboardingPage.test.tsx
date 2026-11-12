@@ -138,7 +138,7 @@ describe("OnboardingPage", () => {
     await waitFor(() => expect(onFinish).toHaveBeenCalled());
   });
 
-  it("explore read-only finishes without writing anything", async () => {
+  it("skip for now finishes without writing anything", async () => {
     mockImportMachine.mockResolvedValue(ONBOARDING_FIXTURE_RESULT);
     const user = userEvent.setup();
     const { onFinish } = renderPage();
@@ -148,7 +148,7 @@ describe("OnboardingPage", () => {
     });
     await user.click(screen.getByRole("button", { name: /preview harness\.yaml/i }));
     await user.click(await screen.findByRole("button", { name: /^continue$/i }));
-    await user.click(await screen.findByRole("button", { name: /explore read-only/i }));
+    await user.click(await screen.findByRole("button", { name: /skip for now/i }));
 
     expect(mockWriteHarnessFile).not.toHaveBeenCalled();
     expect(onFinish).toHaveBeenCalled();

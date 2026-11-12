@@ -3,6 +3,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { MACHINE_FIXTURE_INVENTORY } from "../../__fixtures__/machine-fixture-data";
 import { MachineGrid } from "../MachineGrid";
 import { CELL_VARIANTS, LEGEND_VARIANTS } from "../cell-state";
+import { surfaceLabel } from "../../../lib/surface-labels";
 
 function renderGrid() {
   return render(
@@ -141,6 +142,18 @@ describe("MachineGrid instructions row (AC-57)", () => {
     const cell = screen.getByTestId(`cell-${instructionsRow.key}-codex`);
     expect(cell).toHaveAttribute("data-status", "present");
     expect(cell).not.toHaveTextContent("+ copy");
+  });
+});
+
+describe("MachineGrid column labels at narrow widths (2c.12)", () => {
+  it("truncates a surface label with an ellipsis and keeps the full name in a tooltip", () => {
+    renderGrid();
+    const header = screen.getByTestId("surface-col-claude-code");
+    expect(header).toHaveAttribute("title", surfaceLabel("claude-code"));
+    const label = screen.getByTestId("surface-label-claude-code");
+    expect(label.style.textOverflow).toBe("ellipsis");
+    expect(label.style.overflow).toBe("hidden");
+    expect(screen.getByTestId("machine-grid").style.tableLayout).toBe("fixed");
   });
 });
 

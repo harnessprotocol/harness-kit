@@ -75,7 +75,7 @@
 
 .hk-btn-danger {
   background: var(--danger-light);
-  color: var(--danger);
+  color: var(--danger-text);
 }
 .hk-btn-danger:hover:not(:disabled) {
   filter: brightness(1.08);
@@ -419,9 +419,9 @@ button.hk-summary-cell[data-active="true"] .hk-summary-label { color: var(--acce
 .hk-toast-icon { flex-shrink: 0; margin-top: 1px; }
 .hk-toast-title { font-size: 13px; font-weight: 550; color: var(--fg-base); }
 .hk-toast-message { font-size: 12px; color: var(--fg-muted); margin-top: 2px; }
-.hk-toast[data-variant="success"] .hk-toast-icon { color: var(--success); }
-.hk-toast[data-variant="warning"] .hk-toast-icon { color: var(--warning); }
-.hk-toast[data-variant="danger"] .hk-toast-icon { color: var(--danger); }
+.hk-toast[data-variant="success"] .hk-toast-icon { color: var(--success-text); }
+.hk-toast[data-variant="warning"] .hk-toast-icon { color: var(--warning-text); }
+.hk-toast[data-variant="danger"] .hk-toast-icon { color: var(--danger-text); }
 .hk-toast[data-variant="info"] .hk-toast-icon { color: var(--accent); }
 @keyframes hk-toast-in {
   from { opacity: 0; transform: translateY(8px); }
@@ -529,7 +529,7 @@ button.hk-summary-cell[data-active="true"] .hk-summary-label { color: var(--acce
   color: var(--fg-subtle);
 }
 .hk-helper-text[data-error="true"] {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 
 .hk-input,
@@ -740,8 +740,8 @@ button.hk-summary-cell[data-active="true"] .hk-summary-label { color: var(--acce
   gap: 10px;
   min-width: 0;
 }
-.hk-error-notice-icon { flex-shrink: 0; color: var(--danger); }
-.hk-error-notice[data-tone="warning"] .hk-error-notice-icon { color: var(--warning); }
+.hk-error-notice-icon { flex-shrink: 0; color: var(--danger-text); }
+.hk-error-notice[data-tone="warning"] .hk-error-notice-icon { color: var(--warning-text); }
 .hk-error-notice-title {
   flex: 1;
   min-width: 0;

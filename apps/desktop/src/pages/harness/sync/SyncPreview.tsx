@@ -79,7 +79,7 @@ export default function SyncPreview({ result, applying, onApply }: SyncPreviewPr
           <strong style={{ color: "var(--fg-base)" }}>{writeCount}</strong> write{writeCount !== 1 ? "s" : ""}
         </span>
         {warningCount > 0 && (
-          <span style={{ color: "var(--warning)" }}>
+          <span style={{ color: "var(--warning-text)" }}>
             {warningCount} warning{warningCount !== 1 ? "s" : ""}
           </span>
         )}
@@ -109,7 +109,7 @@ export default function SyncPreview({ result, applying, onApply }: SyncPreviewPr
       {/* Warnings */}
       {result.warnings.length > 0 && (
         <Card padding="sm">
-          <p style={{ fontSize: "11px", fontWeight: 600, color: "var(--warning)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.3px" }}>
+          <p style={{ fontSize: "11px", fontWeight: 600, color: "var(--warning-text)", margin: "0 0 6px", textTransform: "uppercase", letterSpacing: "0.3px" }}>
             Warnings
           </p>
           <ul style={{ margin: 0, paddingLeft: "16px" }}>

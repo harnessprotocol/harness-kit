@@ -62,7 +62,7 @@ export default function ImportBanner({ status, onDismiss }: ImportBannerProps) {
 
 const TONES = {
   accent: { background: "var(--accent-light)", color: "var(--accent-text)" },
-  success: { background: "var(--success-light)", color: "var(--success)" },
+  success: { background: "var(--success-light)", color: "var(--success-text)" },
 } as const;
 
 function Reveal({ children }: { children: ReactNode }) {

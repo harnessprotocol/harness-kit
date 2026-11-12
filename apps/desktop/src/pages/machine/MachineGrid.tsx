@@ -59,6 +59,11 @@ function CellChip({
   );
 }
 
+const RESOURCE_COL_WIDTH = 180;
+// Wide enough for a cell chip (46px + padding) and a short label; longer
+// labels truncate. Below RESOURCE + this × columns the grid scrolls.
+const SURFACE_COL_MIN_WIDTH = 84;
+
 // Surface-header badges. Shared with the legend, which shows a sample of each.
 const HEADER_BADGE_STYLE: CSSProperties = {
   display: "inline-flex",
@@ -191,8 +196,22 @@ export function MachineGrid({
       <div style={{ overflowX: "auto" }}>
         <table
           data-testid="machine-grid"
-          style={{ borderCollapse: "collapse", width: "100%", minWidth: 760 }}
+          // Fixed layout: every surface column gets the same width, and a label
+          // that does not fit is cut with an ellipsis (full name in the
+          // tooltip) instead of being clipped mid-glyph at narrow widths.
+          style={{
+            borderCollapse: "collapse",
+            tableLayout: "fixed",
+            width: "100%",
+            minWidth: RESOURCE_COL_WIDTH + SURFACE_COL_MIN_WIDTH * surfaceOrder.length,
+          }}
         >
+          <colgroup>
+            <col style={{ width: RESOURCE_COL_WIDTH }} />
+            {surfaceOrder.map((id) => (
+              <col key={id} />
+            ))}
+          </colgroup>
           <thead>
             {/* Product-family group header row */}
             <tr>
@@ -235,10 +254,20 @@ export function MachineGrid({
                     scope="col"
                     data-testid={`surface-col-${id}`}
                     data-detected={detected ? "true" : "false"}
-                    style={{ ...headCellStyle, ...(detected ? {} : { opacity: 0.45 }) }}
+                    title={surfaceLabel(id)}
+                    style={{
+                      ...headCellStyle,
+                      overflow: "hidden",
+                      ...(detected ? {} : { opacity: 0.45 }),
+                    }}
                   >
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-                      {surfaceLabel(id)}
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, maxWidth: "100%" }}>
+                      <span
+                        data-testid={`surface-label-${id}`}
+                        style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                      >
+                        {surfaceLabel(id)}
+                      </span>
                       {skipped > 0 && (
                         <span
                           title={`${skipped} skipped ${skipped === 1 ? "entry" : "entries"} — see diagnostics below`}

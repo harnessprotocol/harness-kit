@@ -217,7 +217,7 @@ export default function MachinePage() {
             padding: "6px 10px",
             borderRadius: 6,
             background: "var(--warning-light)",
-            color: "var(--warning)",
+            color: "var(--warning-text)",
             fontSize: 11.5,
           }}
         >

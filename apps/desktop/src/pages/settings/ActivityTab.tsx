@@ -1,6 +1,8 @@
 import { Suspense, lazy, useEffect, useState } from "react";
 import { homeDir } from "@tauri-apps/api/path";
 import { PortabilityPanel } from "../fleet/PortabilityPanel";
+import { RegistryEnrollment } from "../fleet/RegistryEnrollment";
+import { getLedgerLab } from "../../lib/preferences";
 import { buildDesktopPortabilitySnapshot, type DesktopPortabilitySnapshot } from "../fleet/portability-data";
 import { getCurrentProjectDir } from "../../lib/project-dir";
 import { installationId } from "../../lib/installation-id";
@@ -75,7 +77,7 @@ export function ActivityTab() {
 
       {error && (
         <ErrorNotice
-          title="Couldn't build the reconciliation ledger"
+          title="Couldn't read this device's state"
           details={error}
           action={{ label: "Retry", onClick: () => setAttempt((n) => n + 1) }}
         />
@@ -88,7 +90,7 @@ export function ActivityTab() {
             padding: "6px 10px",
             borderRadius: 6,
             background: "var(--warning-light)",
-            color: "var(--warning)",
+            color: "var(--warning-text)",
             fontSize: 11.5,
           }}
         >
@@ -96,7 +98,20 @@ export function ActivityTab() {
         </div>
       )}
 
-      <PortabilityPanel snapshot={snapshot} />
+      {getLedgerLab() ? (
+        <PortabilityPanel snapshot={snapshot} />
+      ) : (
+        snapshot && (
+          <section className="hk-portability" aria-labelledby="enrollment-heading">
+            <div className="hk-portability-head">
+              <h2 id="enrollment-heading">Device enrollment</h2>
+            </div>
+            <div className="hk-portability-body">
+              <RegistryEnrollment inventory={snapshot.inventory} />
+            </div>
+          </section>
+        )
+      )}
     </div>
   );
 }
