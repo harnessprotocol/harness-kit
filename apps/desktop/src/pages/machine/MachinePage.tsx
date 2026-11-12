@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, EmptyState, ErrorNotice } from "@harness-kit/ui";
 import { ChevronRight, ScanSearch } from "lucide-react";
-import type { GridRow, MachineInventory } from "@harness-kit/core";
+import type { GridRow, MachineInventory, SurfaceId } from "@harness-kit/core";
 import { errorDetails } from "../../lib/error-details";
 import { surfaceLabel } from "../../lib/surface-labels";
 import { useProjectDir } from "../../lib/project-dir";
@@ -38,6 +38,8 @@ export default function MachinePage() {
   const [error, setError] = useState<string | null>(null);
   const [projectDir] = useProjectDir();
   const [selectedRow, setSelectedRow] = useState<GridRow | null>(null);
+  // The cell clicked to open the drawer: its surface is the drawer's first "To" choice (AC-57).
+  const [clickedSurface, setClickedSurface] = useState<SurfaceId | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
   const [projectDegraded, setProjectDegraded] = useState(false);
 
@@ -295,7 +297,10 @@ export default function MachinePage() {
                         inventory={{ ...inventory, rows: shownRows }}
                         variants={variants}
                         selectedRowKey={selectedRow?.key ?? null}
-                        onRowClick={(row) => setSelectedRow(row)}
+                        onRowClick={(row, surface) => {
+                          setSelectedRow(row);
+                          setClickedSurface(surface ?? null);
+                        }}
                       />
                     </div>
                   )}
@@ -391,6 +396,7 @@ export default function MachinePage() {
           diffs={rowDiffs}
           gaps={inventory?.gaps ?? []}
           surfaceOrder={inventory?.surfaces.map((surface) => surface.id) ?? []}
+          initialTarget={clickedSurface ?? undefined}
           onClose={() => setSelectedRow(null)}
           onApplied={() => load(projectDir, true)}
         />

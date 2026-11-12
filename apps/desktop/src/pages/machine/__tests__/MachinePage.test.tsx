@@ -378,9 +378,19 @@ describe("MachinePage", () => {
     vi.mocked(collectDrift).mockResolvedValue([]);
   });
 
+  it("hides undetected columns by default (AC-59)", async () => {
+    renderPage();
+    await screen.findByTestId("machine-grid");
+    for (const id of SURFACE_IDS) {
+      expect(screen.queryByTestId(`surface-col-${id}`) !== null).toBe(DETECTED.has(id));
+    }
+    expect(screen.getByRole("button", { name: "Show all 11" })).toBeInTheDocument();
+  });
+
   it("renders all 11 surface columns grouped by family, undetected dimmed and annotated", async () => {
     renderPage();
     await screen.findByTestId("machine-grid");
+    fireEvent.click(screen.getByRole("button", { name: "Show all 11" }));
 
     for (const id of SURFACE_IDS) {
       const col = screen.getByTestId(`surface-col-${id}`);
@@ -402,6 +412,7 @@ describe("MachinePage", () => {
   it("renders NA cells as em-dash with tooltip and unknown cells as ? badge", async () => {
     renderPage();
     await screen.findByTestId("machine-grid");
+    fireEvent.click(screen.getByRole("button", { name: "Show all 11" }));
 
     const naCell = screen.getByTestId("cell-mcp-server:postgres-pi");
     expect(naCell).toHaveAttribute("data-status", "not-applicable");
@@ -431,6 +442,15 @@ describe("MachinePage", () => {
       expect(within(drawer).getByRole("button", { name: new RegExp(label, "i") })).toBeInTheDocument();
     }
     expect(drawer).not.toHaveTextContent("Sync arrives in M2");
+  });
+
+  it("opens the drawer with the clicked cell's surface as the target (AC-57)", async () => {
+    renderPage();
+    await screen.findByTestId("machine-grid");
+
+    fireEvent.click(screen.getByTestId("cell-mcp-server:postgres-cursor"));
+    const drawer = await screen.findByTestId("machine-row-drawer");
+    expect((within(drawer).getByLabelText("To") as HTMLSelectElement).value).toBe("cursor");
   });
 
   it("badges a surface's registered plugin marketplaces, naming them in the title (AC-4)", async () => {

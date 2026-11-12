@@ -1,4 +1,5 @@
-import { Fragment, type CSSProperties } from "react";
+import { Fragment, useState, type CSSProperties } from "react";
+import { Button } from "@harness-kit/ui";
 import { Store } from "lucide-react";
 import type { GridCell, GridRow, MachineInventory, SurfaceId } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
@@ -112,7 +113,11 @@ function GridLegend() {
 export interface MachineGridProps {
   inventory: MachineInventory;
   selectedRowKey: string | null;
-  onRowClick: (row: GridRow) => void;
+  /**
+   * `surface` is the clicked cell's column (AC-57); undefined for a click on
+   * the row's name or its keyboard activation.
+   */
+  onRowClick: (row: GridRow, surface?: SurfaceId) => void;
   /** Precomputed variants by row key (see `inventoryVariants`). Computed per row when omitted. */
   variants?: Map<string, Record<SurfaceId, CellVariant>>;
 }
@@ -123,8 +128,15 @@ export function MachineGrid({
   onRowClick,
   variants: variantsByRow,
 }: MachineGridProps) {
-  const groups = familyGroups(inventory.surfaces);
-  const surfaceOrder: SurfaceId[] = inventory.surfaces.map((surface) => surface.id);
+  // AC-59: surfaces that are not installed are hidden until asked for. With
+  // none installed, hiding them would leave an empty grid, so all show.
+  const [showAll, setShowAll] = useState(false);
+  const installedCount = inventory.surfaces.filter((surface) => surface.detected).length;
+  const hasHidden = installedCount > 0 && installedCount < inventory.surfaces.length;
+  const shownSurfaces =
+    showAll || !hasHidden ? inventory.surfaces : inventory.surfaces.filter((surface) => surface.detected);
+  const groups = familyGroups(shownSurfaces);
+  const surfaceOrder: SurfaceId[] = shownSurfaces.map((surface) => surface.id);
   const detectedById = new Map(inventory.surfaces.map((surface) => [surface.id, surface.detected]));
   const skippedById = new Map(
     inventory.surfaces.map((surface) => [surface.id, surface.skipped.length]),
@@ -154,6 +166,28 @@ export function MachineGrid({
 
   return (
     <div>
+      {hasHidden && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            gap: 8,
+            marginBottom: 8,
+            fontSize: 11.5,
+            color: "var(--fg-muted)",
+          }}
+        >
+          {!showAll && (
+            <span>
+              {installedCount} of {inventory.surfaces.length} surfaces installed
+            </span>
+          )}
+          <Button variant="ghost" size="sm" onClick={() => setShowAll((value) => !value)}>
+            {showAll ? "Hide not installed" : `Show all ${inventory.surfaces.length}`}
+          </Button>
+        </div>
+      )}
       <div style={{ overflowX: "auto" }}>
         <table
           data-testid="machine-grid"
@@ -251,7 +285,13 @@ export function MachineGrid({
               const newKind = !previous || previous.kind !== row.kind;
               const selected = row.key === selectedRowKey;
               const variants =
-                variantsByRow?.get(row.key) ?? rowCellVariants(row, inventory.gaps, surfaceOrder);
+                variantsByRow?.get(row.key) ??
+                // Every surface, shown or not: a hidden copy still sets the baseline.
+                rowCellVariants(
+                  row,
+                  inventory.gaps,
+                  inventory.surfaces.map((surface) => surface.id),
+                );
               return (
                 <Fragment key={row.key}>
                   {newKind && (
@@ -310,6 +350,10 @@ export function MachineGrid({
                           data-testid={`cell-${row.key}-${id}`}
                           data-status={row.cells[id]?.status}
                           data-variant={variants[id]}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onRowClick(row, id);
+                          }}
                           style={{
                             padding: "6px 8px",
                             textAlign: "center",

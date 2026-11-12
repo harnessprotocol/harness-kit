@@ -42,9 +42,23 @@ export interface RowDrawerProps {
   onClose: () => void;
   /** Re-scan after a successful apply so the grid reflects the write. */
   onApplied?: () => void;
+  /**
+   * The surface of the grid cell that was clicked (AC-57): the first choice
+   * for "To". Ignored when that surface cannot receive a copy from the chosen
+   * source (it holds the same content, or cannot take this resource).
+   */
+  initialTarget?: SurfaceId;
 }
 
-export function RowDrawer({ row, diffs, gaps, surfaceOrder, onClose, onApplied }: RowDrawerProps) {
+export function RowDrawer({
+  row,
+  diffs,
+  gaps,
+  surfaceOrder,
+  onClose,
+  onApplied,
+  initialTarget,
+}: RowDrawerProps) {
   const presentSurfaces = Object.entries(row.cells).filter(
     ([, cell]) => cell.status === "present",
   );
@@ -255,13 +269,16 @@ export function RowDrawer({ row, diffs, gaps, surfaceOrder, onClose, onApplied }
         </div>
       )}
 
-      {/* Keyed by row: another row's source and target choices must not carry over. */}
+      {/* Keyed by row and clicked cell: another row's source and target choices
+          must not carry over, and a click on another cell of this row starts
+          over with that cell as the target. */}
       <RowActions
-        key={row.key}
+        key={`${row.key}|${initialTarget ?? ""}`}
         row={row}
         gaps={gaps}
         surfaceOrder={surfaceOrder}
         onApplied={onApplied}
+        initialTarget={initialTarget}
       />
     </aside>
   );
@@ -288,11 +305,13 @@ function RowActions({
   gaps,
   surfaceOrder,
   onApplied,
+  initialTarget,
 }: {
   row: GridRow;
   gaps: MachineGap[];
   surfaceOrder: SurfaceId[];
   onApplied?: () => void;
+  initialTarget?: SurfaceId;
 }) {
   const sources = inSurfaceOrder(presentSources(row), surfaceOrder);
   // AC-15: default to the copy holding the row's baseline digest, the one the
@@ -315,7 +334,7 @@ function RowActions({
   const diffTargets =
     source === undefined ? [] : inSurfaceOrder(divergentTargets(row, source), surfaceOrder);
   const targets = [...gapTargets, ...diffTargets];
-  const [chosenTarget, setTarget] = useState<SurfaceId | null>(null);
+  const [chosenTarget, setTarget] = useState<SurfaceId | null>(initialTarget ?? null);
   const target: SurfaceId | "" =
     chosenTarget !== null && targets.includes(chosenTarget) ? chosenTarget : (targets[0] ?? "");
   // Whether ANY source has something to copy. A source whose digest is

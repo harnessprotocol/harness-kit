@@ -26,6 +26,7 @@ export const CELL_VARIANTS: Record<CellVariant, CellVariantInfo> = {
   "present-user": { chip: "user", label: "present at user scope" },
   "present-project": { chip: "project", label: "present in this project" },
   gap: { chip: "+ copy", label: "closable gap" },
+  // (a gap the app cannot apply shows as absent: see APP_APPLIES_KINDS)
   differs: { chip: "differs", label: "same name, different content" },
   absent: { chip: null, label: "not here, and nothing can be copied here" },
   none: { chip: "—", label: "no such concept" },
@@ -89,9 +90,17 @@ function presentVariant(cell: GridCell, baseline: string | undefined): CellVaria
 }
 
 /**
+ * Kinds the drawer's Apply can write. A plugin gap is real but the app cannot
+ * close it (it needs the surface's own installer, see `appCannotRun` in
+ * RowDrawer), so its cells do not offer "+ copy" (AC-57).
+ */
+const APP_APPLIES_KINDS: ReadonlySet<GridRow["kind"]> = new Set(["mcp-server", "skill", "instructions"]);
+
+/**
  * One variant per cell in `row.cells`. "differs" is relative to
  * `rowBaselineDigest`, not to the pairwise `inventory.diffs`. An absent cell
- * is a "gap" only when the row's MachineGap lists its surface in `missingOn`.
+ * is a "gap" only when the row's MachineGap lists its surface in `missingOn`
+ * and the drawer can apply that kind of row.
  */
 export function rowCellVariants(
   row: GridRow,
@@ -99,7 +108,9 @@ export function rowCellVariants(
   surfaceOrder: SurfaceId[],
 ): Record<SurfaceId, CellVariant> {
   const baseline = rowBaselineDigest(row, surfaceOrder);
-  const missingOn = new Set(gaps.find((gap) => gap.row === row.key)?.missingOn ?? []);
+  const missingOn = new Set(
+    APP_APPLIES_KINDS.has(row.kind) ? (gaps.find((gap) => gap.row === row.key)?.missingOn ?? []) : [],
+  );
   const variants = {} as Record<SurfaceId, CellVariant>;
   for (const id of Object.keys(row.cells) as SurfaceId[]) {
     const cell = row.cells[id];
