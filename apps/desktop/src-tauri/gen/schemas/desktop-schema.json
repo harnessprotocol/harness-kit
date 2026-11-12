@@ -2685,12 +2685,6 @@
           "markdownDescription": "Enables the save_panel command without any pre-configured scope."
         },
         {
-          "description": "Enables the scan_claude_config command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-scan-claude-config",
-          "markdownDescription": "Enables the scan_claude_config command without any pre-configured scope."
-        },
-        {
           "description": "Enables the set_keychain_secret command without any pre-configured scope.",
           "type": "string",
           "const": "allow-set-keychain-secret",
@@ -3307,12 +3301,6 @@
           "type": "string",
           "const": "deny-save-panel",
           "markdownDescription": "Denies the save_panel command without any pre-configured scope."
-        },
-        {
-          "description": "Denies the scan_claude_config command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-scan-claude-config",
-          "markdownDescription": "Denies the scan_claude_config command without any pre-configured scope."
         },
         {
           "description": "Denies the set_keychain_secret command without any pre-configured scope.",

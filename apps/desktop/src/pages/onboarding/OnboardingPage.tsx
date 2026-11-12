@@ -10,7 +10,8 @@ import { lineDiff, collapseToHunks } from "../drift/line-diff";
 import { getCurrentProjectDir } from "../../lib/project-dir";
 import { errorDetails } from "../../lib/error-details";
 import { OnboardingFlow, type OnboardingStep } from "./OnboardingFlow";
-import { buildSprawlReveal, type SprawlReveal } from "./onboarding-data";
+import { buildSprawlReveal, withInventorySections, type SprawlReveal } from "./onboarding-data";
+import { importPersonalHarness } from "../../lib/personal-inventory";
 
 export interface OnboardingPageProps {
   /** Called once the user has confirmed (write or explore read-only) — dismisses the wizard. */
@@ -75,6 +76,12 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
             // take down the whole scan — fall back to the global-only result.
           }
         }
+
+        // AC-56: the file written comes from the machine inventory the grid
+        // shows; the scan above only supplies the reveal and the sections the
+        // inventory does not cover.
+        const inventory = await importPersonalHarness();
+        combined = withInventorySections(combined, inventory.harnessConfig);
 
         if (cancelled) return;
         const elapsed = Math.max(0.1, (Date.now() - startedAt.current) / 1000);
@@ -219,10 +226,11 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
  * Merge two importMachine() results (global scope + project scope) into one
  * for display purposes: union the per-adapter findings (dedupe by file) and
  * concatenate provenance conflicts. The synthesized harnessYaml/harnessConfig
- * from the global pass is kept as the write target — this mirrors "global
- * config is the source of truth, project just adds visibility into what's
- * also configured there" rather than silently picking one scope's YAML over
- * the other.
+ * from the global pass is kept — this mirrors "global config is the source of
+ * truth, project just adds visibility into what's also configured there"
+ * rather than silently picking one scope's YAML over the other. The caller
+ * then replaces its MCP servers and permissions with the machine inventory's
+ * (`withInventorySections`, AC-56) before anything is written.
  */
 function mergeImportResults(
   a: ImportProjectResult,

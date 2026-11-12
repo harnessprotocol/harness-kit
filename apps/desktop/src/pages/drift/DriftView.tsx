@@ -1,7 +1,7 @@
 import { Button, StatusChip, DiffViewer, EmptyState, ErrorNotice, ToastViewport, type ToastItem } from "@harness-kit/ui";
 import { ChevronRight, ShieldCheck } from "lucide-react";
 import { ADAPTER_META } from "../fleet/adapter-meta";
-import { driftItemKey, type ScopedDriftItem } from "./drift-data";
+import { driftItemKey, type ScopedDriftItem, type ScopeStatus } from "./drift-data";
 import { CLASS_LABEL, CLASS_VARIANT, isRepairable } from "./classification";
 import { lineDiff, collapseToHunks } from "./line-diff";
 import { ConflictLedger } from "./ConflictLedger";
@@ -35,6 +35,38 @@ export interface DriftViewProps {
   onRescan: () => void;
   onDismissToast: (id: string) => void;
   portability?: DesktopPortabilitySnapshot | null;
+  /** What each scanned scope's harness.yaml is (AC-55); empty before a scan lands. */
+  scopeStatuses?: ScopeStatus[];
+}
+
+/** The scopes Drift could not honestly call clean: no file, unreadable, or never compiled. */
+function attentionNotes(statuses: ScopeStatus[]): { key: string; text: string }[] {
+  const notes: { key: string; text: string }[] = [];
+  for (const s of statuses) {
+    const key = `${s.scope.kind}::${s.scope.root}`;
+    if (s.state === "no-file") {
+      notes.push({ key, text: `${s.scope.label}: no harness.yaml at ${s.path}, so there is nothing to compare against.` });
+    } else if (s.state === "unreadable") {
+      notes.push({ key, text: `${s.scope.label}: could not read ${s.path}${s.detail ? ` (${s.detail})` : ""}.` });
+    } else if (s.state === "never-compiled") {
+      notes.push({ key, text: `${s.scope.label}: ${s.path} has never been compiled. Nothing it describes is deployed yet.` });
+    }
+  }
+  return notes;
+}
+
+function ScopeNotes({ statuses }: { statuses: ScopeStatus[] }) {
+  const notes = attentionNotes(statuses);
+  if (notes.length === 0) return null;
+  return (
+    <div data-testid="drift-scope-notes" style={{ marginBottom: 16 }}>
+      {notes.map((n) => (
+        <p key={n.key} style={{ margin: "0 0 6px", fontSize: 12, color: "var(--fg-muted)" }}>
+          {n.text}
+        </p>
+      ))}
+    </div>
+  );
 }
 
 /**
@@ -61,6 +93,7 @@ export function DriftView({
   onRescan,
   onDismissToast,
   portability = null,
+  scopeStatuses = [],
 }: DriftViewProps) {
   const visible = filteredEntries.filter((e) => showAcknowledged || !acknowledged.has(driftItemKey(e.scope, e.item)));
 
@@ -76,6 +109,8 @@ export function DriftView({
   })();
 
   const repairableCount = filteredEntries.filter((e) => isRepairable(e.item.class)).length;
+  const needsAttention = attentionNotes(scopeStatuses).length > 0;
+  const hasProject = scopeStatuses.some((s) => s.scope.kind === "project");
 
   if (loading && entries.length === 0) {
     return (
@@ -113,11 +148,20 @@ export function DriftView({
         {/* A failed scan found nothing, which is not the same as no drift. */}
         {error ? (
           <DriftError error={error} onRescan={onRescan} />
+        ) : needsAttention ? (
+          // Some scope has no usable or no deployed harness.yaml: saying "no
+          // drift" would claim a comparison that never happened (AC-55).
+          <>
+            <ScopeNotes statuses={scopeStatuses} />
+            <Button variant="ghost" onClick={onRescan}>
+              Re-scan
+            </Button>
+          </>
         ) : (
           <EmptyState
             icon={<ShieldCheck size={28} strokeWidth={1.5} />}
             title="No drift detected"
-            description="Every deployed config matches harness.yaml across Global and this project. Compile from Profile after you next edit harness.yaml to keep it that way."
+            description={`Every deployed config matches harness.yaml across Global${hasProject ? " and this project" : ""}. Compile from Profile after you next edit harness.yaml to keep it that way.`}
             action={
               <Button variant="ghost" onClick={onRescan}>
                 Re-scan
@@ -153,6 +197,8 @@ export function DriftView({
       </div>
 
       {error && <DriftError error={error} onRescan={onRescan} />}
+
+      <ScopeNotes statuses={scopeStatuses} />
 
       <ConflictLedger conflicts={portability?.conflicts ?? []} />
 

@@ -90,7 +90,6 @@ pub fn run() {
             // Harness File
             commands::harness_file::read_harness_file,
             commands::harness_file::write_harness_file,
-            commands::harness_file::scan_claude_config,
             // Custom Profiles
             commands::profiles::list_custom_profiles,
             commands::profiles::get_custom_profile,

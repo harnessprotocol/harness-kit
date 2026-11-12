@@ -4,9 +4,11 @@ import type { ToastItem } from "@harness-kit/ui";
 import {
   buildDriftScopes,
   collectDrift,
+  describeScopes,
   driftItemKey,
   summarizeDrift,
   type DriftSummary,
+  type ScopeStatus,
   type ScopedDriftItem,
 } from "./drift-data";
 import { isRepairable } from "./classification";
@@ -51,6 +53,7 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
   const [showAcknowledged, setShowAcknowledged] = useState(false);
   const [portability, setPortability] = useState<DesktopPortabilitySnapshot | null>(null);
   const [scanned, setScanned] = useState(false);
+  const [scopeStatuses, setScopeStatuses] = useState<ScopeStatus[]>([]);
 
   const pushToast = useCallback((toast: Omit<ToastItem, "id">) => {
     const id = `${Date.now()}-${Math.random()}`;
@@ -77,13 +80,17 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
         .then((dir) => joinPath(dir, "comparator.db"))
         .then((legacy) => migrateDriftAcknowledgements(legacy))
         .catch(() => 0);
-      const [collected, ackRows, portabilitySnapshot] = await Promise.all([
-        collectDrift(scopes),
+      const [{ collected, statuses }, ackRows, portabilitySnapshot] = await Promise.all([
+        collectDrift(scopes).then(async (collected) => ({
+          collected,
+          statuses: await describeScopes(scopes, collected),
+        })),
         getAcknowledgedDriftItems().catch(() => []),
         home ? buildDesktopPortabilitySnapshot(home, project) : Promise.resolve(null),
       ]);
       if (seq !== loadSeq.current) return;
       setEntries(collected);
+      setScopeStatuses(statuses);
       setPortability(portabilitySnapshot);
       setAcknowledged(
         new Set(ackRows.map((a) => [a.scopeRoot, a.adapter, a.path, a.harnessName, a.slot].join("::"))),
@@ -172,6 +179,7 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
         onRescan={load}
         onDismissToast={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))}
         portability={portability}
+        scopeStatuses={scopeStatuses}
       />
 
       <FixPreviewModal

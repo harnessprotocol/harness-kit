@@ -104,7 +104,6 @@ fn main() {
                 // Harness file
                 "read_harness_file",
                 "write_harness_file",
-                "scan_claude_config",
                 // Harness detection (used by Fleet)
                 "detect_harnesses",
                 // Runtime FS scope grants (used by Fleet/Drift's project scope)

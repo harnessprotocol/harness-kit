@@ -9,15 +9,18 @@ import { loadedDigest } from "../../../lib/loaded-digest";
 
 const mockReadHarnessFile = vi.fn();
 const mockWriteHarnessFile = vi.fn();
-const mockScanClaudeConfig = vi.fn();
 vi.mock("../../../lib/tauri", () => ({
   readHarnessFile: () => mockReadHarnessFile(),
   writeHarnessFile: (content: string, expectedSha256?: string) => mockWriteHarnessFile(content, expectedSha256),
-  scanClaudeConfig: () => mockScanClaudeConfig(),
+}));
+
+// AC-56: "Generate from Claude Code setup" builds from the machine inventory.
+const mockImportPersonalHarness = vi.fn();
+vi.mock("../../../lib/personal-inventory", () => ({
+  importPersonalHarness: () => mockImportPersonalHarness(),
 }));
 
 vi.mock("../../../lib/harness-generator", () => ({
-  generateHarnessYaml: () => ({ yaml: "version: \"1\"\n# generated\n" }),
   HARNESS_TEMPLATE: "# template\n",
 }));
 
@@ -181,9 +184,9 @@ describe("HarnessFilePage", () => {
 
   it("keeps a failed scan on the empty state with the error and Retry scan, not the template (AC-20)", async () => {
     mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null });
-    mockScanClaudeConfig
+    mockImportPersonalHarness
       .mockRejectedValueOnce("permission denied: ~/.claude")
-      .mockResolvedValue({});
+      .mockResolvedValue({ harnessYaml: 'version: "1"\n# generated\n' });
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: "Generate from Claude Code setup" }));
 
@@ -196,7 +199,7 @@ describe("HarnessFilePage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Retry scan" }));
     const editor = await screen.findByTestId("fake-editor");
     expect(editor).toHaveValue('version: "1"\n# generated\n');
-    expect(mockScanClaudeConfig).toHaveBeenCalledTimes(2);
+    expect(mockImportPersonalHarness).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

@@ -139,17 +139,6 @@ export async function writeHarnessFile(content: string, expectedSha256?: string)
   return invoke<string>("write_harness_file", { content, expectedSha256 });
 }
 
-export interface ClaudeConfigScan {
-  mcpServersJson: string | null;
-  settingsJson: string | null;
-  mcpSource: string | null;
-  settingsSource: string | null;
-}
-
-export async function scanClaudeConfig(): Promise<ClaudeConfigScan> {
-  return invoke<ClaudeConfigScan>("scan_claude_config");
-}
-
 // ── Custom Profile commands ───────────────────────────────────
 
 export interface CustomProfile {

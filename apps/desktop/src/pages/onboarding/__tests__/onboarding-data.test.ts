@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type { ImportProjectResult } from "@harness-kit/core";
-import { buildSprawlReveal } from "../onboarding-data";
+import { buildSprawlReveal, withInventorySections } from "../onboarding-data";
 import {
   ONBOARDING_FIXTURE_RESULT,
   ONBOARDING_FIXTURE_LOW_COUNT,
@@ -79,5 +79,36 @@ describe("buildSprawlReveal", () => {
     expect(reveal.stats.directConflicts).toBe(0);
     expect(reveal.convergence.sources).toHaveLength(0);
     expect(reveal.conflicts).toHaveLength(0);
+  });
+});
+
+describe("withInventorySections (AC-56)", () => {
+  const inventoryConfig = {
+    version: "1",
+    metadata: { name: "inv", description: "d" },
+    "mcp-servers": { fromGrid: { transport: "stdio", command: "grid-cmd" } },
+    permissions: { tools: { allow: ["Bash(ls)"] } },
+  } as ImportProjectResult["harnessConfig"];
+
+  it("takes mcp-servers and permissions from the inventory, not from the adapter scan", () => {
+    const out = withInventorySections(ONBOARDING_FIXTURE_RESULT, inventoryConfig);
+    expect(Object.keys(out.harnessConfig["mcp-servers"] ?? {})).toEqual(["fromGrid"]);
+    expect(out.harnessConfig.permissions).toEqual({ tools: { allow: ["Bash(ls)"] } });
+    expect(out.harnessYaml).toContain("fromGrid");
+    expect(out.harnessYaml).not.toContain("postgres");
+  });
+
+  it("drops adapter-scan servers when the inventory has none", () => {
+    const empty = { version: "1", metadata: { name: "inv", description: "d" } } as ImportProjectResult["harnessConfig"];
+    const out = withInventorySections(ONBOARDING_FIXTURE_RESULT, empty);
+    expect(out.harnessConfig["mcp-servers"]).toBeUndefined();
+    expect(out.harnessYaml).not.toContain("mcp-servers");
+  });
+
+  it("keeps what the inventory does not cover (instructions) and the scan's findings", () => {
+    const out = withInventorySections(ONBOARDING_FIXTURE_LOW_COUNT, inventoryConfig);
+    expect(out.harnessConfig.instructions).toEqual({ operational: "Run tests before committing." });
+    expect(out.findings).toBe(ONBOARDING_FIXTURE_LOW_COUNT.findings);
+    expect(out.harnessYaml).toContain("Run tests before committing.");
   });
 });

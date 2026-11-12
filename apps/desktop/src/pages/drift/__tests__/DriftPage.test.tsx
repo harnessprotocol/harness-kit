@@ -32,10 +32,20 @@ vi.mock("@tauri-apps/api/path", () => ({
   join: vi.fn((...segments: string[]) => Promise.resolve(segments.join("/"))),
 }));
 
+// Paths with no file, and paths whose read fails. Every other harness.yaml
+// exists and reads as a valid one.
+const absentPaths = new Set<string>();
+const unreadablePaths = new Set<string>();
+
 function makeFsProvider(cwd: string) {
   return {
     cwd: () => cwd,
-    readFile: vi.fn(() => Promise.resolve('version: "1"\nmetadata:\n  name: test-harness\n')),
+    exists: vi.fn((p: string) => Promise.resolve(!absentPaths.has(p))),
+    readFile: vi.fn((p: string) =>
+      unreadablePaths.has(p)
+        ? Promise.reject(new Error("EACCES: permission denied"))
+        : Promise.resolve('version: "1"\nmetadata:\n  name: test-harness\n'),
+    ),
     joinPath: (...segs: string[]) => segs.join("/"),
     homedir: () => Promise.resolve("/home/user"),
   };
@@ -68,6 +78,8 @@ function renderPage() {
 describe("DriftPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    absentPaths.clear();
+    unreadablePaths.clear();
     localStorage.clear();
     mockParseHarness.mockReturnValue({ config: { metadata: { name: "test-harness" } } });
     mockValidateHarness.mockReturnValue({ valid: true });
@@ -79,6 +91,67 @@ describe("DriftPage", () => {
     mockDetectDrift.mockResolvedValue({ items: [], hasDrift: false, byClass: {} });
     renderPage();
     await waitFor(() => expect(screen.getByText("No drift detected")).toBeInTheDocument());
+  });
+
+  describe("what the empty state claims (AC-55)", () => {
+    const EMPTY = { items: [], hasDrift: false, byClass: {} };
+
+    it("says 'no harness.yaml', not 'No drift detected', when ~/.claude/harness.yaml is absent", async () => {
+      absentPaths.add("/home/user/.claude/harness.yaml");
+      mockDetectDrift.mockResolvedValue(EMPTY);
+      renderPage();
+      expect(await screen.findByTestId("drift-scope-notes")).toHaveTextContent(
+        "no harness.yaml at /home/user/.claude/harness.yaml",
+      );
+      expect(screen.queryByText("No drift detected")).not.toBeInTheDocument();
+      expect(mockDetectDrift).not.toHaveBeenCalled();
+    });
+
+    it("says 'could not read' when the file exists but cannot be read", async () => {
+      unreadablePaths.add("/home/user/.claude/harness.yaml");
+      mockDetectDrift.mockResolvedValue(EMPTY);
+      renderPage();
+      expect(await screen.findByTestId("drift-scope-notes")).toHaveTextContent(
+        "could not read /home/user/.claude/harness.yaml (EACCES: permission denied)",
+      );
+      expect(screen.queryByText("No drift detected")).not.toBeInTheDocument();
+    });
+
+    it("says 'never compiled' when every slot is missing", async () => {
+      mockDetectDrift.mockResolvedValue({
+        items: [
+          { class: "missing", path: "CLAUDE.md", adapter: "claude-code", target: "claude-code", harnessName: "h", slot: "operational", detail: "d" },
+        ],
+        hasDrift: true,
+        byClass: {},
+      });
+      renderPage();
+      expect(await screen.findByTestId("drift-scope-notes")).toHaveTextContent("has never been compiled");
+    });
+
+    it("does not mention 'this project' when no project is set", async () => {
+      mockDetectDrift.mockResolvedValue(EMPTY);
+      renderPage();
+      const description = await screen.findByText(/Every deployed config matches harness\.yaml/);
+      expect(description).toHaveTextContent("across Global.");
+      expect(description).not.toHaveTextContent("this project");
+    });
+
+    it("mentions 'this project' when one is set, and reads its committed harness.yaml", async () => {
+      localStorage.setItem("harness-kit-current-project", "/repo/first");
+      mockDetectDrift.mockResolvedValue(EMPTY);
+      renderPage();
+      const description = await screen.findByText(/Every deployed config matches harness\.yaml/);
+      expect(description).toHaveTextContent("across Global and this project.");
+    });
+
+    it("reports a project with no committed harness.yaml by its own path", async () => {
+      localStorage.setItem("harness-kit-current-project", "/repo/first");
+      absentPaths.add("/repo/first/harness.yaml");
+      mockDetectDrift.mockResolvedValue(EMPTY);
+      renderPage();
+      expect(await screen.findByTestId("drift-scope-notes")).toHaveTextContent("no harness.yaml at /repo/first/harness.yaml");
+    });
   });
 
   it("a failed scan says so, with Retry and the raw error behind Details, not 'No drift detected' (AC-20)", async () => {

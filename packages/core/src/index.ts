@@ -191,6 +191,8 @@ export type {
 export type { ImportContext } from "./import/import-project.js";
 export type { SynthesizeResult } from "./import/synthesize.js";
 export { importProject, importMachine, importProjectValidated } from "./import/import-project.js";
+export { importFromInventory } from "./import/import-inventory.js";
+export type { InventoryImportMeta, InventoryImportResult } from "./import/import-inventory.js";
 export { skillDirectoryDigest } from "./import/read-skills.js";
 export { synthesize } from "./import/synthesize.js";
 export {

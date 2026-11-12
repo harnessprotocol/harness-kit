@@ -1,10 +1,11 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Card, ErrorNotice, Input } from "@harness-kit/ui";
-import { readHarnessFile, scanClaudeConfig, writeHarnessFile, saveCustomProfile } from "../../lib/tauri";
+import { readHarnessFile, writeHarnessFile, saveCustomProfile } from "../../lib/tauri";
+import { importPersonalHarness } from "../../lib/personal-inventory";
 import { parseHarness, validateHarnessYaml } from "@harness-kit/core";
 import type { HarnessConfig, ValidationResult } from "@harness-kit/core";
-import { generateHarnessYaml, HARNESS_TEMPLATE } from "../../lib/harness-generator";
+import { HARNESS_TEMPLATE } from "../../lib/harness-generator";
 import type { HarnessProfile } from "../../lib/profiles";
 import { getAvailableViewModes } from "../../lib/viewModes";
 import { useRegisterCommands } from "../../lib/commands";
@@ -93,8 +94,9 @@ export default function HarnessFilePage() {
     setSaving(true);
     setSaveError(null);
     try {
-      // AC-50: only the file at the write target counts as "loaded". When the
-      // page loaded ~/harness.yaml instead, ~/.claude/harness.yaml was absent.
+      // AC-50: the digest is of the file at the write target; `undefined`
+      // when the page found no file there (AC-55: the personal profile is
+      // ~/.claude/harness.yaml and nothing else).
       const expected = filePath === "~/.claude/harness.yaml" ? await loadedDigest(diskContent) : undefined;
       const savedPath = await writeHarnessFile(editorContent, expected);
       setDiskContent(editorContent);
@@ -152,9 +154,12 @@ export default function HarnessFilePage() {
     setGenerating(true);
     setGenerateError(null);
     try {
-      const scan = await scanClaudeConfig();
-      const { yaml } = generateHarnessYaml(scan);
-      openEditor(yaml);
+      // AC-56: the same machine inventory the Machine grid shows.
+      const { harnessYaml } = await importPersonalHarness({
+        name: "my-harness",
+        description: "Generated from existing Claude Code configuration.",
+      });
+      openEditor(harnessYaml);
     } catch (e) {
       // Stay on the empty state: opening the blank template here would hide
       // the failure behind an editor that looks like a scan result.

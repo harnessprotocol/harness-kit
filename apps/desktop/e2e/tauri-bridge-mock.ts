@@ -12,19 +12,6 @@ export const MOCK_RESPONSES: Record<string, unknown> = {
     content: 'version: "1"\nmetadata:\n  name: test-harness\n',
     path: "~/.claude/harness.yaml",
   },
-  scan_claude_config: {
-    mcpServersJson: JSON.stringify({
-      mcpServers: {
-        tauri: { command: "tauri-mcp" },
-        grafana: { command: "grafana-mcp" },
-      },
-    }),
-    settingsJson: JSON.stringify({
-      permissions: { allow: Array(16).fill("Bash") },
-    }),
-    mcpSource: "~/.claude/mcp.json",
-    settingsSource: "~/.claude/settings.local.json",
-  },
   list_installed_plugins: [],
   check_plugin_updates: [],
   list_marketplaces: [],
