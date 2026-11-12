@@ -66,7 +66,7 @@
 }
 
 /* Whole-harness portability ledger: dense, operational, and intentionally
-   distinct from the summary-card language used elsewhere in Fleet. */
+   distinct from the summary-card language used elsewhere in the app. */
 .hk-portability {
   margin-top: 24px;
   padding: 18px 0 0;

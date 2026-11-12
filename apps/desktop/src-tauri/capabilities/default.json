@@ -178,6 +178,8 @@
     "allow-record-bundle-number",
     "allow-apply-surface-transaction",
     "allow-record-transaction",
+    "allow-list-changes",
+    "allow-undo-change",
     "allow-migrate-drift-acknowledgements",
     "allow-acknowledge-drift",
     "allow-unacknowledge-drift",

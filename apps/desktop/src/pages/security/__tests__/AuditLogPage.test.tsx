@@ -136,8 +136,15 @@ describe("AuditLogPage — empty state", () => {
   it("shows hint text in empty state", async () => {
     renderPage();
     expect(
-      await screen.findByText(/Entries are created when permissions or secrets are modified/),
+      await screen.findByText(/Entries are created when permissions or secrets change/),
     ).toBeInTheDocument();
+  });
+
+  it("filters to Machine copies and undone changes with the Changes pill", async () => {
+    mockListAuditEntries.mockResolvedValue([]);
+    renderPage();
+    fireEvent.click(await screen.findByRole("button", { name: "Changes" }));
+    await waitFor(() => expect(mockListAuditEntries).toHaveBeenLastCalledWith(25, 0, "changes"));
   });
 });
 

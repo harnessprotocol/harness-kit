@@ -171,6 +171,8 @@ pub fn run() {
             commands::harness_state::get_highest_bundle_number,
             commands::harness_state::record_bundle_number,
             commands::harness_state::record_transaction,
+            commands::changes::list_changes,
+            commands::changes::undo_change,
             commands::harness_state::migrate_drift_acknowledgements,
             commands::harness_state::acknowledge_drift,
             commands::harness_state::unacknowledge_drift,

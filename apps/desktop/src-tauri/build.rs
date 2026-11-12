@@ -94,6 +94,8 @@ fn main() {
                 "sync_write_files",
                 "apply_surface_transaction",
                 "record_transaction",
+                "list_changes",
+                "undo_change",
                 "migrate_drift_acknowledgements",
                 "acknowledge_drift",
                 "unacknowledge_drift",

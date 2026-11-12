@@ -18,6 +18,8 @@ export interface LedgerEntryInput {
   surfaces: SurfaceId[];
   kinds: HarnessResourceKind[];
   identityKeys: string[];
+  /** Set for a Machine drawer copy: the surface it was copied from. */
+  copiedFrom?: SurfaceId;
 }
 
 export interface LedgerOutcome {
@@ -58,6 +60,7 @@ export async function recordAppliedTransaction(
     surfaces: input.surfaces,
     kinds: input.kinds,
     identityKeys: input.identityKeys,
+    ...(input.copiedFrom ? { copiedFrom: input.copiedFrom } : {}),
   };
   try {
     await store.recordTransaction(record);

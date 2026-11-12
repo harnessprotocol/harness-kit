@@ -52,6 +52,16 @@ describe("transaction ledger recording (AC-32)", () => {
     expect(store.records[0]?.roots).toEqual(["home"]);
   });
 
+  it("carries the source surface of a copy into the row, and adds no key otherwise", async () => {
+    const store = fakeStore();
+    const changes = [{ root: "home" as const, path: ".claude.json", before: "{}", after: "{}" }];
+    const input = { ...INPUT, surfaces: [...INPUT.surfaces], kinds: [...INPUT.kinds] };
+    await recordAppliedTransaction(RESULT, changes, { ...input, copiedFrom: "codex" }, store);
+    await recordAppliedTransaction(RESULT, changes, input, store);
+    expect(store.records[0]?.copiedFrom).toBe("codex");
+    expect("copiedFrom" in (store.records[1] ?? {})).toBe(false);
+  });
+
   it("lists both roots for a mixed transaction, in a stable order", async () => {
     const store = fakeStore();
     await recordAppliedTransaction(

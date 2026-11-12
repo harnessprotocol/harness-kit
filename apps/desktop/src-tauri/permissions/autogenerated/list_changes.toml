@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-list-changes"
+description = "Enables the list_changes command without any pre-configured scope."
+commands.allow = ["list_changes"]
+
+[[permission]]
+identifier = "deny-list-changes"
+description = "Denies the list_changes command without any pre-configured scope."
+commands.deny = ["list_changes"]

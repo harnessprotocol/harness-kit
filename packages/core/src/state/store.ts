@@ -93,6 +93,11 @@ export interface TransactionRecord {
   kinds: HarnessResourceKind[];
   /** `${kind}:${lowercased name}` identity keys changed. */
   identityKeys: string[];
+  /**
+   * The surface a Machine drawer copy took the resource from. Absent for every
+   * other apply. The desktop turns its presence into an audit entry.
+   */
+  copiedFrom?: SurfaceId;
 }
 
 /**

@@ -16,6 +16,7 @@ pub mod harness_file;
 pub mod profiles;
 pub mod harness_state;
 pub mod surface_write;
+pub mod changes;
 pub mod sync;
 pub mod parity;
 pub mod pairwise;

@@ -11,10 +11,12 @@ import type { TransactionRecord, TransactionRecorder } from "@harness-kit/core";
  * from core, and resolves the path the same way the CLI does
  * (`HARNESS_STATE_PATH` included) so both agree on which file the ledger is.
  *
- * Records only. `rollback --list` is a CLI command and nothing in the app
- * reads the ledger, so no read is exposed over IPC — a command with no caller
- * is attack surface bought for nothing. Observation snapshots likewise belong
- * to the CLI's scan path; stubbing them here would be a silent no-op.
+ * Records only. The one reader the app has is Settings › Activity's Changes
+ * list (`list_changes` / `undo_change`, see tauri.ts), and it lives in Rust
+ * with its own checks, so the webview never receives raw ledger rows or
+ * supplies a rollback manifest. A record that carries `copiedFrom` also makes
+ * Rust write the Machine copy's audit entry. Observation snapshots belong to
+ * the CLI's scan path; stubbing them here would be a silent no-op.
  */
 export class TauriTransactionLedger implements TransactionRecorder {
   async recordTransaction(record: TransactionRecord): Promise<void> {

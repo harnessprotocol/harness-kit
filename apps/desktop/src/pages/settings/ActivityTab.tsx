@@ -9,15 +9,15 @@ import { installationId } from "../../lib/installation-id";
 import { grantProjectScope } from "../../lib/tauri";
 import { errorDetails } from "../../lib/error-details";
 import { ErrorNotice } from "@harness-kit/ui";
+import { ChangesList } from "./ChangesList";
 
 const AuditLogPage = lazy(() => import("../security/AuditLogPage"));
 
 /**
- * Settings › Activity (AC-11, Task 1.7). Combines the audit log
- * (permission/secret/preset events, from the retired standalone Audit Log
- * page) with the portability reconciliation ledger (rollback points,
- * portability notices, device enrollment — from the retired Fleet page)
- * on one tab.
+ * Settings › Activity (AC-11, Task 1.7). One tab for three things: the
+ * Changes list (what the app changed, with Undo), the audit log (permission,
+ * secret, preset and Machine copy events), and device enrollment. The
+ * reconciliation ledger (layers, conflicts, rollback points) is a Labs view.
  */
 export function ActivityTab() {
   const [snapshot, setSnapshot] = useState<DesktopPortabilitySnapshot | null>(null);
@@ -37,8 +37,8 @@ export function ActivityTab() {
       const projectDir = getCurrentProjectDir();
       const home = await homeDir();
       // The static FS capability only covers known $HOME config roots, not
-      // an arbitrary project dir — grant runtime scope first (mirrors
-      // machine-data.ts / drift-data.ts / the retired FleetPage). A failed
+      // an arbitrary project dir — grant runtime scope first (as
+      // machine-data.ts and drift-data.ts do). A failed
       // grant just drops the project layer rather than failing the ledger.
       const scopeReady = projectDir
         ? await grantProjectScope(projectDir).then(
@@ -71,6 +71,8 @@ export function ActivityTab() {
 
   return (
     <div style={{ display: "grid", gap: 24 }}>
+      <ChangesList />
+
       <Suspense fallback={null}>
         <AuditLogPage />
       </Suspense>

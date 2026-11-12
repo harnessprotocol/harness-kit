@@ -22,11 +22,11 @@ import DriftPage from "../drift/DriftPage";
 
 /**
  * Machine (Task 14): cross-surface inventory of this machine, whose row
- * drawer applies changes between surfaces. Defaults to machine-only
- * observation (no project directory). The project comes from the title bar's
- * selector (AC-17, lib/project-dir.ts): choosing one adds project-scope
- * stores to the scan, and every change starts a new scan with nothing
- * selected.
+ * drawer applies changes between surfaces. The project comes from the title
+ * bar's selector (AC-17, lib/project-dir.ts). The last project chosen is
+ * restored at launch and adds project-scope stores to the scan; with none
+ * chosen the scan is machine-only. Every change of project starts a new scan
+ * with nothing selected.
  *
  * Two views share the page head and summary strip (spec AC-18, design D6):
  * the surface grid and Drift against harness.yaml, chosen by `?view=`

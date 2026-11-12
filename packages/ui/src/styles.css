@@ -682,7 +682,7 @@ button.hk-summary-cell[data-active="true"] .hk-summary-label { color: var(--acce
 }
 
 /* ── Page shell ── */
-/* Generic page scaffolding shared by every v2 page (Fleet, Drift, ...) —
+/* Generic page scaffolding shared by every v2 page (Machine, Drift, ...) —
    head row (title + subtitle + primary action), title/subtitle type scale,
    and an inline error banner. Not a "component" per se, but themed purely
    via tokens so pages never inline hex/spacing literals (DESIGN.md §1). */

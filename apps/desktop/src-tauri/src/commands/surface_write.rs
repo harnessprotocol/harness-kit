@@ -190,7 +190,7 @@ pub fn apply_surface_transaction(files: Vec<SurfaceFileWrite>) -> Result<Vec<Str
 
 /// The command body with the home directory injected, so tests run against a
 /// tempdir instead of the real home (and never mutate the process-global HOME).
-fn apply_surface_transaction_in(
+pub(crate) fn apply_surface_transaction_in(
     home: &Path,
     files: Vec<SurfaceFileWrite>,
 ) -> Result<Vec<String>, String> {

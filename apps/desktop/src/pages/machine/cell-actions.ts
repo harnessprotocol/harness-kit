@@ -127,10 +127,12 @@ export async function buildCellAction(
  * those: no stale-edit check, no backup, and nothing applied from the desktop
  * could ever be rolled back.
  *
- * Known gap: no ledger row, because the desktop StateStore bridge does not
- * exist yet. The manifest is on disk and usable via
- * `harness-kit rollback --transaction <path>`; it just will not appear in
- * `rollback --list` until that bridge lands.
+ * After the apply commits, a ledger row is recorded through
+ * `TauriTransactionLedger` (the `record_transaction` command). That row is
+ * what Settings › Activity lists under Changes, where Undo restores the
+ * previous content, and it is what makes Rust write the audit entry for the
+ * copy. A failed record comes back as `ledgerError` below; the files are
+ * already changed and the manifest is on disk.
  */
 export interface CellApplyResult {
   written: string[];
@@ -219,6 +221,8 @@ export async function applyCellActionViaTauri(
       surfaces: [view.request.to],
       kinds: [view.request.kind],
       identityKeys: [`${view.request.kind}:${view.request.name.toLowerCase()}`],
+      // Rust turns this into the audit entry (from, to, what, when).
+      copiedFrom: view.request.from,
     },
     new TauriTransactionLedger(),
   );

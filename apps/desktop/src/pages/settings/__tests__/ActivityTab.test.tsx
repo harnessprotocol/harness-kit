@@ -45,6 +45,8 @@ const mockGrantProjectScope = vi.fn();
 vi.mock("../../../lib/tauri", () => ({
   listAuditEntries: (...args: unknown[]) => mockListAuditEntries(...args),
   clearAuditEntries: vi.fn(),
+  listChanges: vi.fn(() => Promise.resolve([])),
+  undoChange: vi.fn(),
   grantProjectScope: (...args: unknown[]) => mockGrantProjectScope(...args),
 }));
 
@@ -65,6 +67,13 @@ describe("ActivityTab", () => {
     expect(await screen.findByRole("heading", { name: "Device enrollment" })).toBeInTheDocument();
     expect(screen.queryByText("Reconciliation ledger")).not.toBeInTheDocument();
     expect(screen.queryByText("Rollback points")).not.toBeInTheDocument();
+  });
+
+  it("shows the Changes list first, above the audit log", async () => {
+    render(<ActivityTab />);
+    const changes = await screen.findByRole("heading", { name: "Changes" });
+    const audit = await screen.findByText("Audit Log");
+    expect(changes.compareDocumentPosition(audit) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it("renders the reconciliation ledger when the Labs flag is on", async () => {

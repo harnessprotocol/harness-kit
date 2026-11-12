@@ -51,6 +51,13 @@ pub struct TransactionRecord {
     pub surfaces: Vec<String>,
     pub kinds: Vec<String>,
     pub identity_keys: Vec<String>,
+    /// The surface a Machine drawer copy took the resource from. Absent for
+    /// every other apply (an MCP page save, a CLI apply). Its presence is what
+    /// makes `record_transaction` write an audit entry; the entry's text is
+    /// built here from this id and the structured fields above, never taken
+    /// from the webview as prose.
+    #[serde(default)]
+    pub copied_from: Option<String>,
 }
 
 /// The `payload` column's JSON, shared with the CLI.
@@ -69,6 +76,8 @@ struct RecordPayload {
     kinds: Vec<String>,
     #[serde(default)]
     identity_keys: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    copied_from: Option<String>,
 }
 
 /// Resolve the shared db path the same way the CLI does, `HARNESS_STATE_PATH`
@@ -80,7 +89,7 @@ struct RecordPayload {
 /// even when the user's shell exports it. The override is therefore reliable
 /// for CI and tests, not for a GUI launch — parity holds for the default
 /// path, which is what matters in practice.
-fn state_path() -> Result<PathBuf, String> {
+pub(crate) fn state_path() -> Result<PathBuf, String> {
     if let Ok(override_path) = std::env::var("HARNESS_STATE_PATH") {
         let trimmed = override_path.trim();
         if !trimmed.is_empty() {
@@ -289,8 +298,6 @@ fn tighten_permissions(path: &std::path::Path) {
 }
 
 /// Best-effort array-of-strings extraction, independent of sibling fields.
-/// Only the (test-only) read path needs it.
-#[cfg(test)]
 fn string_array(document: &serde_json::Value, key: &str) -> Vec<String> {
     document
         .get(key)
@@ -667,8 +674,37 @@ pub(crate) fn migrate_drift_acknowledgements_at(
 }
 
 #[tauri::command]
-pub fn record_transaction(record: TransactionRecord) -> Result<(), String> {
-    record_transaction_at(&state_path()?, record)
+pub fn record_transaction(
+    db: tauri::State<'_, crate::db::Db>,
+    record: TransactionRecord,
+) -> Result<(), String> {
+    record_transaction_audited(&db, &state_path()?, record)
+}
+
+/// {@link record_transaction_at}, plus the audit entry a Machine copy owes.
+///
+/// The entry is written only after the ledger row is, and only when the record
+/// names a source surface. Its text comes from `changes::copy_audit_entry`,
+/// which builds it from structured fields; a malformed `copiedFrom` refuses the
+/// whole record rather than logging something the app did not do.
+pub(crate) fn record_transaction_audited(
+    db: &crate::db::Db,
+    path: &std::path::Path,
+    record: TransactionRecord,
+) -> Result<(), String> {
+    let audit = super::changes::copy_audit_entry(&record)?;
+    record_transaction_at(path, record)?;
+    if let Some(entry) = audit {
+        super::security::log_audit(
+            db,
+            "machine_copy",
+            "changes",
+            &entry.summary,
+            Some(&entry.details),
+            "machine",
+        );
+    }
+    Ok(())
 }
 
 /// Path-taking core of {@link record_transaction}. Split out so tests can
@@ -685,6 +721,7 @@ pub(crate) fn record_transaction_at(
         surfaces: record.surfaces,
         kinds: record.kinds,
         identity_keys: record.identity_keys,
+        copied_from: record.copied_from,
     })
     .map_err(|e| format!("Failed to serialize payload: {}", e))?;
     let roots = serde_json::to_string(&record.roots)
@@ -717,12 +754,9 @@ pub(crate) fn record_transaction_at(
 
 /// Recorded transactions, newest first.
 ///
-/// Deliberately NOT a #[tauri::command], and `cfg(test)` because that leaves
-/// it with no production caller at all: nothing in the app reads the ledger —
-/// `rollback --list` is a CLI command — and exposing a read over IPC with no
-/// caller is attack surface bought for nothing. Re-exposing it later means
-/// lifting the cfg and adding the attribute.
-#[cfg(test)]
+/// Not a #[tauri::command] itself: the webview never gets raw ledger rows.
+/// `changes::list_changes` is the one reader the app exposes (Settings ›
+/// Activity), and it returns a trimmed view with the manifest's file names.
 pub(crate) fn list_transactions_at(
     path: &std::path::Path,
     limit: Option<i64>,
@@ -750,6 +784,7 @@ pub(crate) fn list_transactions_at(
             surfaces: string_array(&document, "surfaces"),
             kinds: string_array(&document, "kinds"),
             identity_keys: string_array(&document, "identityKeys"),
+            copied_from: None,
         };
         Ok(TransactionRecord {
             transaction_id: row.get(0)?,
@@ -761,6 +796,10 @@ pub(crate) fn list_transactions_at(
             surfaces: parsed.surfaces,
             kinds: parsed.kinds,
             identity_keys: parsed.identity_keys,
+            copied_from: document
+                .get("copiedFrom")
+                .and_then(|value| value.as_str())
+                .map(String::from),
         })
     };
     let rows = match limit {
@@ -1043,6 +1082,7 @@ mod tests {
             surfaces: vec!["cursor".to_string()],
             kinds: vec!["mcp-server".to_string()],
             identity_keys: vec!["mcp-server:postgres".to_string()],
+            copied_from: None,
         }
     }
 
@@ -1333,6 +1373,7 @@ mod cross_impl {
                 surfaces: vec!["cursor".to_string()],
                 kinds: vec!["mcp-server".to_string()],
                 identity_keys: vec!["mcp-server:postgres".to_string()],
+                copied_from: None,
             },
         )
         .unwrap();

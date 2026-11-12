@@ -316,6 +316,46 @@ export async function clearAuditEntries(beforeDate: string): Promise<void> {
   return invoke<void>("clear_audit_entries", { beforeDate });
 }
 
+// ── Changes (Settings > Activity) ────────────────────────────
+
+/** One change the app made, from the rollback ledger. */
+export interface ChangeEntry {
+  transactionId: string;
+  appliedAt: string;
+  surfaces: string[];
+  kinds: string[];
+  identityKeys: string[];
+  /** Home-relative paths the change touched. */
+  files: string[];
+  /** The surface a Machine copy came from, when the change was one. */
+  copiedFrom: string | null;
+  status: "applied" | "undone" | "unavailable";
+  undoable: boolean;
+  /** Why Undo is not offered, in words for the user. */
+  reason: string | null;
+}
+
+export interface UndoOutcome {
+  transactionId: string;
+  files: string[];
+  /** Set when the files were restored but the change was not marked undone. */
+  warning: string | null;
+}
+
+/** Recent changes, newest first. Read-only. */
+export async function listChanges(limit?: number): Promise<ChangeEntry[]> {
+  return invoke<ChangeEntry[]>("list_changes", { limit });
+}
+
+/**
+ * Undo one change by id. Rust looks up the change, verifies every file still
+ * holds what the change left, and restores the previous content; the webview
+ * supplies nothing but the id.
+ */
+export async function undoChange(transactionId: string): Promise<UndoOutcome> {
+  return invoke<UndoOutcome>("undo_change", { transactionId });
+}
+
 // ── Sync commands ────────────────────────────────────────────
 
 export interface SyncFileWrite {

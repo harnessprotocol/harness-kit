@@ -1,0 +1,19 @@
+{
+  "command": "list_changes",
+  "calls": [
+    {
+      "fn": "listChanges",
+      "args": [
+        50
+      ],
+      "payload": {
+        "limit": 50
+      }
+    },
+    {
+      "fn": "listChanges",
+      "args": [],
+      "payload": {}
+    }
+  ]
+}

@@ -9,7 +9,7 @@ import ContextMenu from "../../components/ContextMenu";
 
 const PAGE_SIZE = 25;
 
-type CategoryFilter = "all" | "permissions" | "secrets";
+type CategoryFilter = "all" | "permissions" | "secrets" | "changes";
 
 function Pill({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
@@ -37,6 +37,8 @@ const EVENT_VARIANT: Record<string, StatusChipVariant> = {
   preset_applied: "success",
   secret_access: "warning",
   secret_delete: "danger",
+  machine_copy: "success",
+  change_undone: "warning",
 };
 
 function EventBadge({ eventType }: { eventType: string }) {
@@ -128,7 +130,7 @@ export default function AuditLogPage() {
           Audit Log
         </h1>
         <p style={{ fontSize: "12px", color: "var(--fg-muted)", margin: "3px 0 0" }}>
-          Track permission changes, secret operations, and preset applications.
+          Track permission changes, secret operations, preset applications, and copies between surfaces.
         </p>
       </div>
 
@@ -153,6 +155,7 @@ export default function AuditLogPage() {
         <Pill label="All" active={filter === "all"} onClick={() => handleFilterChange("all")} />
         <Pill label="Permissions" active={filter === "permissions"} onClick={() => handleFilterChange("permissions")} />
         <Pill label="Secrets" active={filter === "secrets"} onClick={() => handleFilterChange("secrets")} />
+        <Pill label="Changes" active={filter === "changes"} onClick={() => handleFilterChange("changes")} />
 
         <div style={{ flex: 1 }} />
 
@@ -205,7 +208,7 @@ export default function AuditLogPage() {
             <EmptyState
               icon={<ScrollText size={28} strokeWidth={1.5} />}
               title="No audit entries found"
-              description="Entries are created when permissions or secrets are modified."
+              description="Entries are created when permissions or secrets change, or a Machine copy applies."
             />
           ) : (
             entries.map((entry, idx) => (
