@@ -23,7 +23,7 @@ Harness Kit continues to parse and compile v1 profiles. New captures produce v2,
 
 ## Desktop App
 
-The desktop app treats `harness.yaml` and native configuration as peer state. Fleet and Drift show profile scope, provenance, capability losses, reconciliation conflicts, capture/apply previews, rollout assignment, and local rollback history. Invalid profiles and state are surfaced as blocking errors rather than silently treated as absent.
+The desktop app treats `harness.yaml` and native configuration as peer state. Machine shows where each resource lives across tools and previews a copy, including capability losses, before it writes. Its Drift view lists reconciliation conflicts. Settings › Activity lists rollback points, portability notices and device enrollment. Invalid profiles and state are surfaced as blocking errors rather than silently treated as absent.
 
 ## Architectural constraints
 

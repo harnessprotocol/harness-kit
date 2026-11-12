@@ -178,9 +178,9 @@ pub fn run() {
             commands::sync::sync_create_backup,
             commands::sync::sync_list_backups,
             commands::sync::sync_restore_backup,
-            // Harness detection (used by Fleet)
+            // Harness detection (used by Comparator's setup)
             commands::harnesses::detect_harnesses,
-            // Runtime FS scope grants (used by Fleet/Drift's project scope)
+            // Runtime FS scope grants (used by the project scope of Machine, Drift and Compile)
             commands::fs_scope::grant_project_scope,
             commands::fs_scope::choose_project_dir,
             // Guarded write/rename/remove for the webview's TauriFsProvider

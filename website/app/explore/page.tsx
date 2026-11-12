@@ -23,10 +23,10 @@ const NAV_GROUPS: Group[] = [
     label: 'CORE',
     tiles: [
       {
-        id: 'harness',
-        title: 'Harness',
-        description: 'Configure your AI tool setup — plugins, hooks, MCP servers, and CLAUDE.md.',
-        href: '/docs/getting-started/installation',
+        id: 'machine',
+        title: 'Machine',
+        description: 'See what each AI tool on your machine has configured, and copy a missing piece from one tool to another.',
+        href: '/docs/apps/machine',
         accent: 'var(--cat-blue)',
         icon: (
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -53,8 +53,8 @@ const NAV_GROUPS: Group[] = [
     tiles: [
       {
         id: 'observatory',
-        title: 'Observatory',
-        description: 'Every session, every tool call, every minute. See what your AI actually did.',
+        title: 'Usage',
+        description: 'Claude Code sessions, tool calls and token use, read from local data.',
         href: '/docs/apps/observatory',
         accent: 'var(--cat-blue)',
         icon: (
@@ -82,8 +82,8 @@ const NAV_GROUPS: Group[] = [
     tiles: [
       {
         id: 'security',
-        title: 'Security',
-        description: 'Permission rules, secrets management, and audit trail across your harness.',
+        title: 'Permissions and secrets',
+        description: 'Permission rules live under Claude Code. Secrets and the activity log live in Settings.',
         href: '/docs/guides/secrets-management',
         accent: 'var(--cat-green)',
         icon: (
@@ -93,10 +93,10 @@ const NAV_GROUPS: Group[] = [
         ),
       },
       {
-        id: 'parity',
-        title: 'Harness Parity',
-        description: 'After you compile, confirm every connected AI tool ended up with the same plugins, MCP servers, hooks, and skills — and catch drift.',
-        href: '/docs/apps/parity',
+        id: 'drift',
+        title: 'Drift',
+        description: 'Compare harness.yaml with the files compiled from it. Each fix shows a preview first.',
+        href: '/docs/apps/machine',
         accent: 'var(--cat-green)',
         icon: (
           <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
@@ -152,7 +152,7 @@ export default function ExplorePage() {
             Explore Harness Kit
           </h1>
           <p className="mx-auto max-w-xl text-base leading-relaxed text-fd-muted-foreground">
-            Nine surfaces. One keyboard. Everything your AI coding tool forgot to give you.
+            What the desktop app does, one area at a time.
           </p>
         </div>
       </section>

@@ -25,7 +25,7 @@ const methods = [
     id: 'desktop-app',
     icon: <MonitorIcon />,
     title: 'Desktop App',
-    description: 'Observatory, Memory, Board, and AI Chat — all in one native app. The best way to see and manage your harness.',
+    description: 'A native app that shows what each AI coding tool on your machine has configured and copies missing pieces between them.',
     tags: ['Homebrew Cask', 'DMG'],
     href: '#desktop-app',
     featured: true,

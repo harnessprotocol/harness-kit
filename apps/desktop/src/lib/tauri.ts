@@ -220,7 +220,7 @@ export async function detectHarnesses(): Promise<HarnessInfo[]> {
  * directory, in-memory for this app session. The static capability
  * (capabilities/default.json) only lists known harness config roots under
  * $HOME — it never grants a blanket $HOME/** scope — so callers that need
- * TauriFsProvider access to an arbitrary project dir (Fleet, Drift) must
+ * TauriFsProvider access to an arbitrary project dir (Machine, Drift, Profile) must
  * grant it here first.
  */
 export async function grantProjectScope(path: string): Promise<void> {

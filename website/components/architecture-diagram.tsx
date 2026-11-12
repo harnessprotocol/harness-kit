@@ -16,7 +16,7 @@ const SUBTLE = '#4a5060';
 // Groups sourced from NAV in nav.ts, plus the Settings button pinned in the
 // sidebar footer (rendered separately from NAV, so it isn't in the command
 // palette). Comparator carries a `labs` flag and stays hidden until enabled
-// in Settings › Labs. Drift is a section embedded inside Machine, not a
+// in Settings › Labs. Drift is a view (a tab) of Machine, not a
 // destination of its own; Claude Code's "Usage" child is the old Observatory.
 // Security has no route or sidebar entry of its own anymore — Permissions
 // moved under Claude Code and Secrets/Activity moved under Settings; every
@@ -380,7 +380,7 @@ export function ArchitectureDiagram() {
         })}
 
         {/* ════════════════════════════════════════════════════════════════════
-            Session data feedback: AI Tools Observatory → Desktop App
+            Session data feedback: AI Tools usage data → Desktop App (Claude Code › Usage)
             Path runs at x=390 — the 60 px gap between the two columns.
             DA right edge = 360, AT left edge = 420. No box overlap.
         ════════════════════════════════════════════════════════════════════ */}

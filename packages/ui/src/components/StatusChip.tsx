@@ -17,8 +17,8 @@ const VARIANT_CLASS: Record<StatusChipVariant, string> = {
 
 /**
  * Tinted background + colored text + a 6px dot. Never a solid-fill pill
- * (DESIGN.md §2/§7). Used for drift/sync/conflict states across Fleet, Drift,
- * Configure.
+ * (DESIGN.md §2/§7). Used for drift/sync/conflict states in Machine and
+ * Drift.
  */
 export function StatusChip({
   variant = "subtle",

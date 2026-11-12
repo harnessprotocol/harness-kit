@@ -205,7 +205,7 @@ function capabilityFor(
  * SCOPE — the definitions registry reaches the SURFACE GRID path only:
  * observe → grid → plan → apply → rollback. The legacy compile/portability
  * flow (`reconcile.ts`, `apply.ts`, `portability-common.ts`, the desktop
- * Fleet page) still reads `TARGET_CAPABILITY_MATRIX`, because that flow
+ * portability panel in the desktop's Settings › Activity) still reads `TARGET_CAPABILITY_MATRIX`, because that flow
  * compiles a harness.yaml and never resolves definitions at all. AC-26 is
  * scoped to "next inventory", so this line is deliberate — but it means a
  * bundle that changes a capability is visible to `sync` and not to `apply`.

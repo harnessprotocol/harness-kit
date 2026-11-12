@@ -6,8 +6,8 @@ import { grantProjectScope } from "./tauri";
  * The one project directory the desktop app tracks (spec AC-17, design D9).
  * The title bar's selector writes it; Machine, Drift and Profile › Compile
  * subscribe, Onboarding and Settings › Activity read it once. There is no
- * multi-project registry (see DESIGN.md Fleet contract: scope honestly to
- * Global + the open project).
+ * multi-project registry (see DESIGN.md §6 Machine: scope honestly to this
+ * machine plus the open project).
  *
  * Access: reading the value grants nothing. Every consumer calls
  * `grantProjectDir` before it touches the project (the grant is idempotent on
