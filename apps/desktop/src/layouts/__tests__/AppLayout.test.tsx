@@ -342,7 +342,7 @@ describe("title-bar ⌘K affordance (AC-21)", () => {
     renderLayout();
     commandButton().focus();
     fireEvent.click(commandButton());
-    const input = screen.getByRole("textbox", { name: "Command palette search" });
+    const input = screen.getByRole("combobox", { name: "Command palette search" });
     await waitFor(() => expect(input).toHaveFocus());
     fireEvent.keyDown(input, { key: "Escape" });
     expect(screen.queryByRole("dialog", { name: "Command palette" })).not.toBeInTheDocument();
@@ -356,5 +356,73 @@ describe("title-bar ⌘K affordance (AC-21)", () => {
     fireEvent.mouseDown(commandButton().querySelector("kbd")!);
     await new Promise((r) => setTimeout(r, 0));
     expect(mockStartDragging).not.toHaveBeenCalled();
+  });
+});
+
+// AC-61: the sidebar marks the current section on every route, child routes included.
+describe("sidebar marks the current section (AC-61)", () => {
+  const ROUTES: Array<[string, string]> = [
+    ["/machine", "Machine"],
+    ["/harness/file", "Profile"],
+    ["/harness/sync", "Profile"],
+    ["/harness/claude-md", "Claude Code"],
+    ["/harness/mcp", "Claude Code"],
+    ["/harness/plugins", "Claude Code"],
+    ["/harness/plugins/some-plugin", "Claude Code"],
+    ["/harness/hooks", "Claude Code"],
+    ["/harness/permissions", "Claude Code"],
+    ["/harness/config/settings.json", "Claude Code"],
+    ["/observatory", "Claude Code"],
+    ["/observatory/sessions", "Claude Code"],
+    ["/marketplace", "Marketplace"],
+    ["/marketplace/some-slug", "Marketplace"],
+    ["/preferences", "Settings"],
+    ["/preferences/secrets", "Settings"],
+  ];
+
+  it.each(ROUTES)("%s marks exactly %s", (route, label) => {
+    render(
+      <MemoryRouter initialEntries={[route]}>
+        <AppLayout />
+      </MemoryRouter>,
+    );
+    const nav = document.querySelector("aside")!;
+    const current = Array.from(nav.querySelectorAll("[aria-current]"))
+      .filter((el) => el.closest('[role="link"], button') === el && !el.classList.contains("sidebar-subitem"))
+      .map((el) => el.textContent?.replace(/⌘\d/, "").trim());
+    expect(current).toEqual([label]);
+  });
+
+  it("marks the open child link too", () => {
+    render(
+      <MemoryRouter initialEntries={["/harness/mcp"]}>
+        <AppLayout />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole("link", { name: "MCP servers" })).toHaveAttribute("aria-current", "page");
+  });
+});
+
+describe("collapsed sidebar (AC-61)", () => {
+  it("is inert and hidden from assistive tech while collapsed, and live otherwise", () => {
+    localStorage.setItem("sidebar-collapsed", "true");
+    const { unmount } = render(
+      <MemoryRouter initialEntries={["/machine"]}>
+        <AppLayout />
+      </MemoryRouter>,
+    );
+    const wrapper = document.querySelector("aside")!.parentElement!;
+    expect(wrapper).toHaveAttribute("inert");
+    expect(wrapper).toHaveAttribute("aria-hidden", "true");
+    unmount();
+    localStorage.removeItem("sidebar-collapsed");
+    render(
+      <MemoryRouter initialEntries={["/machine"]}>
+        <AppLayout />
+      </MemoryRouter>,
+    );
+    const open = document.querySelector("aside")!.parentElement!;
+    expect(open).not.toHaveAttribute("inert");
+    expect(open).not.toHaveAttribute("aria-hidden");
   });
 });

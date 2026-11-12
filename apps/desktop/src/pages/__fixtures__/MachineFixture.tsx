@@ -83,14 +83,12 @@ export default function MachineFixture() {
                 error={null}
                 harnessFilter={harness}
                 showAcknowledged={false}
-                toasts={[]}
                 onToggleShowAcknowledged={() => {}}
                 onFixAll={() => {}}
                 onFixOne={() => {}}
                 onAcknowledge={() => {}}
                 onUnacknowledge={() => {}}
                 onRescan={() => {}}
-                onDismissToast={() => {}}
               />
             </div>
           ) : (

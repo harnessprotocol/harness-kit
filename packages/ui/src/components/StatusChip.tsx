@@ -29,7 +29,7 @@ export function StatusChip({
 }: StatusChipProps) {
   const cls = ["hk-chip", VARIANT_CLASS[variant], className].filter(Boolean).join(" ");
   return (
-    <span className={cls} role="status" {...rest}>
+    <span className={cls} {...rest}>
       {!hideDot && <span className="hk-chip-dot" aria-hidden="true" />}
       {children}
     </span>

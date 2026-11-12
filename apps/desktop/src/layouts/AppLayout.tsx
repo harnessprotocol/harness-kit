@@ -126,11 +126,15 @@ function NavChildren({ entry, configFiles }: { entry: NavEntry; configFiles: str
  * paths forever.
  */
 export function isSectionActive(
-  section: { path: string },
+  section: { path: string; children?: { path: string }[]; owns?: string[] },
   location: { pathname: string; search: string },
 ): boolean {
   const [sectionPath, sectionQuery] = section.path.split("?");
-  if (!location.pathname.startsWith(sectionPath)) return false;
+  // A section owns its children's routes (and their sub-routes), not just its
+  // landing path: /harness/mcp is Claude Code, /harness/sync is Profile (AC-61).
+  const within = (p: string) => location.pathname === p || location.pathname.startsWith(`${p}/`);
+  const owned = [sectionPath, ...(section.children ?? []).map((c) => c.path), ...(section.owns ?? [])];
+  if (!owned.some(within)) return false;
   const params = new URLSearchParams(location.search);
   const marker = sectionQuery?.split("=")[0];
   if (marker !== undefined) return params.get(marker) !== null;
@@ -286,6 +290,10 @@ function AppShell() {
       <div className="flex flex-1 overflow-hidden">
         {/* Sidebar wrapper — controls collapse animation */}
         <div
+          // Collapsed is width 0 + overflow hidden: without inert the links
+          // stay in the tab order and the accessibility tree (AC-61).
+          inert={sidebarCollapsed}
+          aria-hidden={sidebarCollapsed ? true : undefined}
           style={{
             width: sidebarCollapsed ? 0 : "var(--sidebar-width)",
             flexShrink: 0,
@@ -407,6 +415,7 @@ function AppShell() {
             >
               <button
                 onClick={() => navigate(SETTINGS.path)}
+                aria-current={prefsActive ? "page" : undefined}
                 style={{
                   display: "flex",
                   alignItems: "center",

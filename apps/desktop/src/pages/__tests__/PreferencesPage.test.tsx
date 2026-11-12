@@ -125,7 +125,7 @@ describe("PreferencesPage in the command palette (AC-21)", () => {
     );
     const palette = screen.getByRole("dialog", { name: "Command palette" });
     // One entry: the page's replaces the app-wide one.
-    const toggles = within(palette).getAllByRole("button", { name: "Toggle light / dark theme" });
+    const toggles = within(palette).getAllByRole("option", { name: "Toggle light / dark theme" });
     expect(toggles).toHaveLength(1);
     fireEvent.click(toggles[0]);
 

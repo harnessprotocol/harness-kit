@@ -18,6 +18,7 @@ export type { DiffViewerProps, DiffLine, DiffOp } from "./components/DiffViewer.
 
 export { Modal } from "./components/Modal.js";
 export type { ModalProps } from "./components/Modal.js";
+export { useDialogFocus } from "./components/useDialogFocus.js";
 
 export { Toast, ToastViewport } from "./components/Toast.js";
 export type { ToastProps, ToastViewportProps, ToastItem, ToastVariant } from "./components/Toast.js";

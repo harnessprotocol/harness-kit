@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { FileText, X } from "lucide-react";
 import { PROFILES } from "../lib/profiles";
 import type { HarnessProfile } from "../lib/profiles";
 import { listCustomProfiles, getCustomProfile, deleteCustomProfile } from "../lib/tauri";
 import type { CustomProfile } from "../lib/tauri";
-import { ErrorNotice } from "@harness-kit/ui";
+import { ErrorNotice, useDialogFocus } from "@harness-kit/ui";
 import { errorDetails } from "../lib/error-details";
 
 interface ProfilePickerModalProps {
@@ -21,6 +21,9 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<{ id: string; details: string } | null>(null);
   const [loadError, setLoadError] = useState<{ profile: CustomProfile; details: string } | null>(null);
+
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(open, dialogRef);
 
   useEffect(() => {
     if (!open) return;
@@ -92,6 +95,11 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
         >
           <motion.div
             key="profile-picker-modal"
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="profile-picker-title"
+            tabIndex={-1}
             initial={{ opacity: 0, scale: 0.97, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.97, y: 12 }}
@@ -119,7 +127,7 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
               flexShrink: 0,
             }}>
               <div>
-                <p style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: "var(--fg-base)" }}>
+                <p id="profile-picker-title" style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: "var(--fg-base)" }}>
                   Choose a profile
                 </p>
                 <p style={{ margin: "2px 0 0", fontSize: "11px", color: "var(--fg-muted)" }}>

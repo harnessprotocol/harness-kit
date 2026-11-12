@@ -11,8 +11,8 @@
   --bg-sidebar-solid: #FFFFFF;
   --fg-base: #1A1714;
   --fg-muted: #57514A;
-  --fg-subtle: #8B8479;
-  --fg-placeholder: #A8A199;
+  --fg-subtle: #655F55;
+  --fg-placeholder: #716A60;
   --border-base: rgba(20, 15, 10, 0.06);
   --border-strong: rgba(20, 15, 10, 0.10);
   --border-subtle: rgba(20, 15, 10, 0.03);
@@ -22,6 +22,10 @@
   --accent-fg: #1668A6;
   --accent-text: #1668A6;
   --accent-glow: rgba(46, 155, 230, 0.25);
+  --accent-fill: #1D6FB0;
+  --success-text: #1B6F47;
+  --warning-text: #7A5000;
+  --danger-text: #B3262C;
   /* design-tokens:light:end */
 
   /* Category accents */
@@ -151,7 +155,7 @@
   white-space: nowrap;
 }
 
-.hk-portability-ledger strong[data-tone="danger"] { color: var(--danger); }
+.hk-portability-ledger strong[data-tone="danger"] { color: var(--danger-text); }
 
 .hk-portability-body {
   display: flex;
@@ -271,7 +275,7 @@
 
 .hk-conflict-ledger-title p {
   margin: 0 0 3px;
-  color: var(--danger);
+  color: var(--danger-text);
   font: 650 10px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -365,7 +369,7 @@
 }
 /* Light theme: --warning on its own tint is ~2:1 at 10.5px; mix toward the body colour for ~4.8:1. */
 .hk-cell[data-variant="differs"] { background: var(--warning-light); color: color-mix(in srgb, var(--warning) 50%, var(--fg-base)); }
-.dark .hk-cell[data-variant="differs"] { color: var(--warning); }
+.dark .hk-cell[data-variant="differs"] { color: var(--warning-text); }
 .hk-cell[data-variant="none"],
 .hk-cell[data-variant="unmanaged"] { color: var(--fg-subtle); opacity: 0.55; }
 .hk-cell[data-variant="unknown"] { background: var(--bg-elevated); color: var(--fg-muted); }
@@ -440,8 +444,8 @@
   --bg-sidebar-solid: #1B191E;
   --fg-base: #EDEAE6;
   --fg-muted: #A29C95;
-  --fg-subtle: #6C665F;
-  --fg-placeholder: #514C46;
+  --fg-subtle: #968F88;
+  --fg-placeholder: #8A847D;
   --border-base: rgba(255, 255, 255, 0.05);
   --border-strong: rgba(255, 255, 255, 0.09);
   --border-subtle: rgba(255, 255, 255, 0.03);
@@ -451,6 +455,10 @@
   --accent-fg: #6BC0F5;
   --accent-text: #6BC0F5;
   --accent-glow: rgba(46, 155, 230, 0.35);
+  --accent-fill: #1D6FB0;
+  --success-text: #4CC08A;
+  --warning-text: #E0A33D;
+  --danger-text: #FF7A7E;
   /* design-tokens:dark:end */
 
   /* Category accents */
@@ -919,7 +927,7 @@ body {
 
 .btn-danger {
   border-color: var(--danger);
-  color: var(--danger);
+  color: var(--danger-text);
   font-weight: 600;
 }
 

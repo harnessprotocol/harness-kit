@@ -1534,11 +1534,11 @@ describe("MachinePage commands in the palette (AC-21)", () => {
   }
 
   function paletteOption(name: string | RegExp) {
-    return within(screen.getByRole("dialog", { name: "Command palette" })).getByRole("button", { name });
+    return within(screen.getByRole("dialog", { name: "Command palette" })).getByRole("option", { name });
   }
 
   function queryPaletteOption(name: string | RegExp) {
-    return within(screen.getByRole("dialog", { name: "Command palette" })).queryByRole("button", { name });
+    return within(screen.getByRole("dialog", { name: "Command palette" })).queryByRole("option", { name });
   }
 
   it("Rescan runs the page's own scan again", async () => {

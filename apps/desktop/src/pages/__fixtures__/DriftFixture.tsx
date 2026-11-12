@@ -17,14 +17,12 @@ export default function DriftFixture() {
       error={null}
       harnessFilter={null}
       showAcknowledged={false}
-      toasts={[]}
       onToggleShowAcknowledged={() => {}}
       onFixAll={() => {}}
       onFixOne={() => {}}
       onAcknowledge={() => {}}
       onUnacknowledge={() => {}}
       onRescan={() => {}}
-      onDismissToast={() => {}}
     />
   );
 }

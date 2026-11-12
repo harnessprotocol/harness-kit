@@ -404,8 +404,9 @@ export default function PluginsPage() {
                     }
                     navigate(`/harness/plugins/${encodeURIComponent(plugin.name)}`);
                   }}
-                  onContextMenu={(e) => {
-                    setContextMenu({ x: e.clientX, y: e.clientY, plugin });
+                  menuOpen={contextMenu?.plugin.name === plugin.name}
+                  onContextMenu={(at) => {
+                    setContextMenu({ ...at, plugin });
                   }}
                 />
               ))}

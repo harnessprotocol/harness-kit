@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { toggleTheme } from "../lib/theme";
 import { useCommands } from "../lib/commands";
@@ -44,6 +44,7 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const listId = useId();
 
   const registered = useCommands();
 
@@ -127,6 +128,9 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
     if (e.key === "Escape") {
       e.preventDefault();
       onClose();
+    } else if (e.key === "Tab") {
+      // The input is the palette's only tab stop: keep focus inside the modal.
+      e.preventDefault();
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
       const next = filtered[Math.min(selected + 1, filtered.length - 1)];
@@ -185,6 +189,11 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
           }}
           placeholder="Type a command or search…"
           aria-label="Command palette search"
+          role="combobox"
+          aria-expanded="true"
+          aria-controls={listId}
+          aria-autocomplete="list"
+          aria-activedescendant={filtered[selected] ? `${listId}-${selected}` : undefined}
           style={{
             border: "none",
             outline: "none",
@@ -195,9 +204,9 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
           }}
         />
         <div style={{ height: "1px", background: "var(--separator)" }} />
-        <div style={{ overflowY: "auto", padding: "6px" }}>
+        <div id={listId} role="listbox" aria-label="Commands" style={{ overflowY: "auto", padding: "6px" }}>
           {filtered.length === 0 && (
-            <div style={{ padding: "20px", textAlign: "center", color: "var(--fg-subtle)", fontSize: "13px" }}>
+            <div role="presentation" style={{ padding: "20px", textAlign: "center", color: "var(--fg-subtle)", fontSize: "13px" }}>
               No matching commands
             </div>
           )}
@@ -206,9 +215,10 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
             lastGroup = cmd.group;
             const isSel = i === selected;
             return (
-              <div key={cmd.id}>
+              <div key={cmd.id} role="presentation">
                 {showGroup && (
                   <div
+                    role="presentation"
                     style={{
                       fontSize: "10px",
                       fontWeight: 700,
@@ -221,8 +231,10 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
                     {cmd.group}
                   </div>
                 )}
-                <button
-                  type="button"
+                <div
+                  id={`${listId}-${i}`}
+                  role="option"
+                  aria-selected={isSel}
                   aria-disabled={cmd.disabled ? "true" : undefined}
                   onMouseEnter={() => setSelectedId(cmd.id)}
                   onClick={() => {
@@ -248,7 +260,7 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
                   {cmd.hint && (
                     <span style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>{cmd.hint}</span>
                   )}
-                </button>
+                </div>
               </div>
             );
           })}

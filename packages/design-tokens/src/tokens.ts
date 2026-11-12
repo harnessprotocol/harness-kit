@@ -34,6 +34,12 @@ export interface ModeTokens {
   accentFg: string;
   accentText: string;
   accentGlow: string;
+  /** Fill behind white text (primary button): AA, unlike `accent`. */
+  accentFill: string;
+  /** Status colors as TEXT on their own tint over any surface (AA). */
+  successText: string;
+  warningText: string;
+  dangerText: string;
 }
 
 export interface Palette {
@@ -50,8 +56,8 @@ export const palette: Palette = {
     bgSidebarSolid: "#FFFFFF",
     fgBase: "#1A1714",
     fgMuted: "#57514A",
-    fgSubtle: "#8B8479",
-    fgPlaceholder: "#A8A199",
+    fgSubtle: "#655F55",      // 5.7:1 on bg-base, 6.3 surface, 5.3 elevated (was 3.3)
+    fgPlaceholder: "#716A60", // 4.8:1 on bg-base, 5.3 surface (was 2.5)
     borderBase: "rgba(20, 15, 10, 0.06)",
     borderStrong: "rgba(20, 15, 10, 0.10)",
     borderSubtle: "rgba(20, 15, 10, 0.03)",
@@ -61,6 +67,10 @@ export const palette: Palette = {
     accentFg: "#1668A6",      // azure TEXT on light must use this (AA on white)
     accentText: "#1668A6",    // #2E9BE6 fails small-text contrast on light
     accentGlow: "rgba(46, 155, 230, 0.25)",
+    accentFill: "#1D6FB0",    // white text on it: 5.3:1 (#2E9BE6 gave 3.0:1)
+    successText: "#1B6F47",
+    warningText: "#7A5000",
+    dangerText: "#B3262C",
   },
   dark: {
     bgBase: "#131215",       // warm graphite — NOT slate
@@ -70,8 +80,8 @@ export const palette: Palette = {
     bgSidebarSolid: "#1B191E",
     fgBase: "#EDEAE6",        // warm off-white
     fgMuted: "#A29C95",
-    fgSubtle: "#6C665F",
-    fgPlaceholder: "#514C46",
+    fgSubtle: "#968F88",      // 5.9:1 on bg-base, 5.5 surface, 5.0 elevated (was 3.3)
+    fgPlaceholder: "#8A847D", // 5.1:1 on bg-base, 4.7 surface (was 2.1)
     borderBase: "rgba(255, 255, 255, 0.05)",
     borderStrong: "rgba(255, 255, 255, 0.09)",
     borderSubtle: "rgba(255, 255, 255, 0.03)",
@@ -81,6 +91,10 @@ export const palette: Palette = {
     accentFg: "#6BC0F5",      // azure text on dark, AA on --bg-base
     accentText: "#6BC0F5",
     accentGlow: "rgba(46, 155, 230, 0.35)",
+    accentFill: "#1D6FB0",
+    successText: "#4CC08A",
+    warningText: "#E0A33D",
+    dangerText: "#FF7A7E",
   },
 };
 
@@ -104,6 +118,10 @@ export const CSS_VARS: ReadonlyArray<readonly [keyof ModeTokens, string]> = [
   ["accentFg", "--accent-fg"],
   ["accentText", "--accent-text"],
   ["accentGlow", "--accent-glow"],
+  ["accentFill", "--accent-fill"],
+  ["successText", "--success-text"],
+  ["warningText", "--warning-text"],
+  ["dangerText", "--danger-text"],
 ];
 
 /** Render a mode's tokens as indented CSS custom-property declarations. */

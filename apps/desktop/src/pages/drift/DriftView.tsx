@@ -1,4 +1,4 @@
-import { Button, StatusChip, DiffViewer, EmptyState, ErrorNotice, ToastViewport, type ToastItem } from "@harness-kit/ui";
+import { Button, StatusChip, DiffViewer, EmptyState, ErrorNotice } from "@harness-kit/ui";
 import { ChevronRight, ShieldCheck } from "lucide-react";
 import { ADAPTER_META } from "../fleet/adapter-meta";
 import { driftItemKey, type ScopedDriftItem, type ScopeStatus } from "./drift-data";
@@ -26,14 +26,12 @@ export interface DriftViewProps {
   error: string | null;
   harnessFilter: string | null;
   showAcknowledged: boolean;
-  toasts: ToastItem[];
   onToggleShowAcknowledged: () => void;
   onFixAll: () => void;
   onFixOne: (entry: ScopedDriftItem) => void;
   onAcknowledge: (entry: ScopedDriftItem) => void;
   onUnacknowledge: (entry: ScopedDriftItem) => void;
   onRescan: () => void;
-  onDismissToast: (id: string) => void;
   portability?: DesktopPortabilitySnapshot | null;
   /** What each scanned scope's harness.yaml is (AC-55); empty before a scan lands. */
   scopeStatuses?: ScopeStatus[];
@@ -84,14 +82,12 @@ export function DriftView({
   error,
   harnessFilter,
   showAcknowledged,
-  toasts,
   onToggleShowAcknowledged,
   onFixAll,
   onFixOne,
   onAcknowledge,
   onUnacknowledge,
   onRescan,
-  onDismissToast,
   portability = null,
   scopeStatuses = [],
 }: DriftViewProps) {
@@ -273,8 +269,6 @@ export function DriftView({
           </div>
         );
       })}
-
-      <ToastViewport toasts={toasts} onDismiss={onDismissToast} />
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { ToastItem } from "@harness-kit/ui";
+import { useToast } from "../../components/ToastProvider";
 import {
   buildDriftScopes,
   collectDrift,
@@ -49,17 +49,13 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fixTarget, setFixTarget] = useState<ScopedDriftItem[] | null>(null);
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [showAcknowledged, setShowAcknowledged] = useState(false);
   const [portability, setPortability] = useState<DesktopPortabilitySnapshot | null>(null);
   const [scanned, setScanned] = useState(false);
   const [scopeStatuses, setScopeStatuses] = useState<ScopeStatus[]>([]);
 
-  const pushToast = useCallback((toast: Omit<ToastItem, "id">) => {
-    const id = `${Date.now()}-${Math.random()}`;
-    setToasts((prev) => [...prev, { ...toast, id }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
-  }, []);
+  // The app's one toast stack (AppLayout's ToastProvider, always-mounted live region).
+  const pushToast = useToast();
 
   // Only the latest scan lands: a project change can start one while another runs.
   const loadSeq = useRef(0);
@@ -170,14 +166,12 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
         error={error}
         harnessFilter={harnessFilter}
         showAcknowledged={showAcknowledged}
-        toasts={toasts}
         onToggleShowAcknowledged={() => setShowAcknowledged((v) => !v)}
         onFixAll={() => setFixTarget(filtered.filter((e) => isRepairable(e.item.class)))}
         onFixOne={(entry) => setFixTarget([entry])}
         onAcknowledge={handleAcknowledge}
         onUnacknowledge={handleUnacknowledge}
         onRescan={load}
-        onDismissToast={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))}
         portability={portability}
         scopeStatuses={scopeStatuses}
       />

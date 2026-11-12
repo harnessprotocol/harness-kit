@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Button, ErrorNotice } from "@harness-kit/ui";
 import { ArrowRight, X } from "lucide-react";
 import type { GridRow, MachineDiff, MachineGap, SurfaceId } from "@harness-kit/core";
@@ -74,8 +74,23 @@ export function RowDrawer({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
 
+  // Focus moves into the drawer on open and returns to the cell that opened
+  // it on close (AC-61). Not a trap: the drawer is not modal.
+  const drawerRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const opener = document.activeElement;
+    drawerRef.current?.focus({ preventScroll: true });
+    return () => {
+      const active = document.activeElement;
+      const leftInDrawer = !active || active === document.body || (drawerRef.current?.contains(active) ?? false);
+      if (leftInDrawer && opener instanceof HTMLElement && opener.isConnected) opener.focus();
+    };
+  }, []);
+
   return (
     <aside
+      ref={drawerRef}
+      tabIndex={-1}
       data-testid="machine-row-drawer"
       aria-label={`${row.name} details`}
       style={{
@@ -87,6 +102,7 @@ export function RowDrawer({
         bottom: 0,
         width: "var(--hk-drawer-width)",
         zIndex: 60,
+        outline: "none", // focus lands here on open (tabIndex -1), not a tab stop
         display: "flex",
         flexDirection: "column",
         background: "var(--bg-surface)",

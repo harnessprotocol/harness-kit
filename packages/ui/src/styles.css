@@ -51,7 +51,7 @@
 }
 
 .hk-btn-primary {
-  background: var(--accent);
+  background: var(--accent-fill);
   color: #fff;
 }
 .hk-btn-primary:hover:not(:disabled) {
@@ -192,9 +192,9 @@
   color: var(--fg-base);
   line-height: 1.2;
 }
-.hk-summary-value[data-tone="warning"] { color: var(--warning); }
-.hk-summary-value[data-tone="danger"] { color: var(--danger); }
-.hk-summary-value[data-tone="success"] { color: var(--success); }
+.hk-summary-value[data-tone="warning"] { color: var(--warning-text); }
+.hk-summary-value[data-tone="danger"] { color: var(--danger-text); }
+.hk-summary-value[data-tone="success"] { color: var(--success-text); }
 .hk-summary-value[data-tone="accent"] { color: var(--accent-text); }
 /* A cell with onSelect is a toggle button (e.g. a grid filter). */
 button.hk-summary-cell {
@@ -277,11 +277,11 @@ button.hk-summary-cell[data-active="true"] .hk-summary-label { color: var(--acce
   border-radius: 50%;
   flex-shrink: 0;
 }
-.hk-chip-success { background: var(--success-light); color: var(--success); }
+.hk-chip-success { background: var(--success-light); color: var(--success-text); }
 .hk-chip-success .hk-chip-dot { background: var(--success); }
-.hk-chip-warning { background: var(--warning-light); color: var(--warning); }
+.hk-chip-warning { background: var(--warning-light); color: var(--warning-text); }
 .hk-chip-warning .hk-chip-dot { background: var(--warning); }
-.hk-chip-danger { background: var(--danger-light); color: var(--danger); }
+.hk-chip-danger { background: var(--danger-light); color: var(--danger-text); }
 .hk-chip-danger .hk-chip-dot { background: var(--danger); }
 .hk-chip-subtle { background: var(--bg-elevated); color: var(--fg-subtle); }
 .hk-chip-subtle .hk-chip-dot { background: var(--fg-subtle); }
@@ -316,13 +316,13 @@ button.hk-summary-cell[data-active="true"] .hk-summary-label { color: var(--acce
   background: var(--success-light);
 }
 .hk-diff-line[data-op="add"] .hk-diff-gutter {
-  color: var(--success);
+  color: var(--success-text);
 }
 .hk-diff-line[data-op="remove"] {
   background: var(--danger-light);
 }
 .hk-diff-line[data-op="remove"] .hk-diff-gutter {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 .hk-diff-line[data-op="context"] {
   color: var(--fg-muted);
@@ -930,8 +930,8 @@ button.hk-summary-cell[data-active="true"] .hk-summary-label { color: var(--acce
   font-variant-numeric: tabular-nums;
   line-height: 1.15;
 }
-.hk-onboard-stat-value[data-tone="warning"] { color: var(--warning); }
-.hk-onboard-stat-value[data-tone="danger"] { color: var(--danger); }
+.hk-onboard-stat-value[data-tone="warning"] { color: var(--warning-text); }
+.hk-onboard-stat-value[data-tone="danger"] { color: var(--danger-text); }
 .hk-onboard-stat-label {
   margin-top: 5px;
   font-size: 10.5px;
@@ -996,7 +996,7 @@ button.hk-summary-cell[data-active="true"] .hk-summary-label { color: var(--acce
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
   white-space: nowrap;
 }
-.hk-onboard-source-drift[data-tone="warning"] { color: var(--warning); }
+.hk-onboard-source-drift[data-tone="warning"] { color: var(--warning-text); }
 
 .hk-onboard-convergence-lines {
   width: 32px;
