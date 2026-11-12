@@ -102,6 +102,48 @@ describe("MachineGrid cell clicks (AC-57)", () => {
   });
 });
 
+describe("MachineGrid instructions row (AC-57)", () => {
+  const instructionsRow = MACHINE_FIXTURE_INVENTORY.rows.find((row) => row.kind === "instructions")!;
+
+  it("shows instructions as one 'User instructions' row, not one per file", () => {
+    renderGrid();
+    expect(MACHINE_FIXTURE_INVENTORY.rows.filter((row) => row.kind === "instructions")).toHaveLength(1);
+    expect(screen.getByText("User instructions")).toBeInTheDocument();
+    expect(screen.queryByText("CLAUDE.md")).toBeNull();
+  });
+
+  it("a copied-to cell is present, and no '+ copy' chip is left on the row", () => {
+    const copied = {
+      ...MACHINE_FIXTURE_INVENTORY,
+      rows: MACHINE_FIXTURE_INVENTORY.rows.map((row) =>
+        row.key === instructionsRow.key
+          ? {
+              ...row,
+              cells: {
+                ...row.cells,
+                codex: {
+                  status: "present" as const,
+                  effectiveDigest: "sha256:0000000000",
+                  entries: [
+                    {
+                      scope: "user" as const,
+                      digest: "sha256:0000000000",
+                      provenance: { file: "~/.codex/AGENTS.md", formatId: "markdown-instructions" as const },
+                    },
+                  ],
+                },
+              },
+            }
+          : row,
+      ),
+    };
+    render(<MachineGrid inventory={copied} selectedRowKey={null} onRowClick={vi.fn()} />);
+    const cell = screen.getByTestId(`cell-${instructionsRow.key}-codex`);
+    expect(cell).toHaveAttribute("data-status", "present");
+    expect(cell).not.toHaveTextContent("+ copy");
+  });
+});
+
 describe("MachineGrid not-installed surfaces (AC-59)", () => {
   const total = MACHINE_FIXTURE_INVENTORY.surfaces.length;
   const hidden = MACHINE_FIXTURE_INVENTORY.surfaces.filter((s) => !s.detected).map((s) => s.id);

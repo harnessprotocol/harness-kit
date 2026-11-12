@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { applyCellAction, CellActionError } from "../src/write/apply-cell-action.js";
 import { planCellAction } from "../src/write/plan-cell-action.js";
+import { buildMachineInventory } from "../src/observe/machine-inventory.js";
 import { createHomeTransactionRoot } from "../src/surfaces/write-scope.js";
 import { MockFsProvider } from "./helpers/mock-fs.js";
 
@@ -115,5 +116,50 @@ describe("cell action apply gate (AC-34, AC-17)", () => {
     // Written paths are root-relative, and the backup lands in the home root.
     expect(result.written).toEqual([".cursor/mcp.json"]);
     expect(fs.getFile("/home/user/.harness/backups/apply/.cursor/mcp.json")).toBeDefined();
+  });
+});
+
+describe("instructions copy leaves no gap on rescan (AC-57)", () => {
+  const instructionsMachine = () =>
+    new MockFsProvider({
+      "/home/user/.claude/CLAUDE.md": "# House rules\n\nBe kind.\n",
+      "/home/user/.codex/config.toml": 'model = "gpt-5"\n',
+    });
+
+  it("an applied copy of User instructions into Codex's AGENTS.md closes the gap", async () => {
+    const fs = instructionsMachine();
+    const before = await buildMachineInventory(fs, OPTS);
+    const gap = before.gaps.find((g) => g.row === "instructions:user instructions");
+    expect(gap?.missingOn).toContain("codex");
+
+    const planned = await planCellAction(
+      fs,
+      { kind: "instructions", name: "User instructions", from: "claude-code", to: "codex", scope: "user" },
+      OPTS,
+    );
+    expect(planned.supported).toBe(true);
+    const result = await applyCellAction(planned, context(fs), { homeRoot: "/home/user" });
+    expect(result.committed).toBe(true);
+    // What lands is a harness:sync marker block, not a file copy.
+    expect(fs.getFile("/home/user/.codex/AGENTS.md")).toContain("<!-- BEGIN harness:sync:");
+
+    const after = await buildMachineInventory(fs, OPTS);
+    const row = after.rows.find((r) => r.key === "instructions:user instructions")!;
+    expect(row.cells.codex.status).toBe("present");
+    expect(after.gaps.find((g) => g.row === "instructions:user instructions")).toBeUndefined();
+  });
+
+  it("refuses a Project instructions row requested at user scope instead of writing the user file", async () => {
+    const fs = new MockFsProvider({
+      "/home/user/.codex/config.toml": 'model = "gpt-5"\n',
+      "/project/CLAUDE.md": "# Project only\n",
+    });
+    const planned = await planCellAction(
+      fs,
+      { kind: "instructions", name: "Project instructions", from: "claude-code", to: "codex", scope: "user" },
+      { ...OPTS, projectRoot: "/project" },
+    );
+    expect(planned.supported).toBe(false);
+    expect(planned.changes).toEqual([]);
   });
 });

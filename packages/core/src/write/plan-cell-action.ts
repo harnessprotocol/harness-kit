@@ -19,7 +19,7 @@ import { isRecord } from "../utils/is-record.js";
 import { planStoreWrite, unsupportedKindReason } from "./write-store.js";
 import { diffCanonicalForms } from "../observe/machine-inventory.js";
 import type { FieldDelta } from "../observe/machine-inventory.js";
-import { normalizeResource } from "../observe/normalize.js";
+import { instructionsRowName, normalizeResource } from "../observe/normalize.js";
 import { planPluginAction } from "../plugins/broker.js";
 import type { BrokerPlan } from "../plugins/broker.js";
 import type { PlannedFileChange } from "./write-store.js";
@@ -188,8 +188,15 @@ async function findEntry(
       projectRoot: opts.projectRoot,
       homeRoot: opts.homeRoot,
     });
+    // Instructions match by row name (per scope), not by file name: the grid's
+    // "User instructions" row spans CLAUDE.md, AGENTS.md and the rest.
     const matches = result.entries.filter(
-      (candidate) => candidate.kind === kind && candidate.name.toLowerCase() === wanted,
+      (candidate) =>
+        candidate.kind === kind &&
+        (kind === "instructions"
+          ? instructionsRowName(candidate.scope ?? store.scope)
+          : candidate.name
+        ).toLowerCase() === wanted,
     );
     // Ordering STORES project-first is not enough when one store's format
     // emits both scopes — Claude Code declares plugins in a single user-scope
@@ -221,6 +228,17 @@ export async function planCellAction(
    */
   registry: readonly SurfaceDescriptor[] = SURFACES,
 ): Promise<CellActionPlan> {
+  // An instructions row is per scope, and the write goes to the request's
+  // scope. A "Project instructions" row requested at user scope would copy
+  // project text into the user's own file, so refuse it.
+  if (
+    request.kind === "instructions" &&
+    request.name.trim().toLowerCase() !== instructionsRowName(request.scope).toLowerCase()
+  ) {
+    return refuse(
+      `'${request.name}' is not a ${request.scope}-scope instructions row — copy it at its own scope.`,
+    );
+  }
   const found = await findEntry(fs, request.from, request.kind, request.name, opts, registry);
   if (!found) {
     return refuse(

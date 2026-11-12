@@ -6,7 +6,6 @@ import { COMPILE_SURFACE_IDS, compile, detectPlatforms, isCompileSurface, parseH
 import type { CompileResult, DetectedPlatform, SurfaceId } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
 import {
-  readHarnessFile,
   syncCreateBackup,
   syncFileExists,
   syncListBackups,
@@ -14,7 +13,8 @@ import {
 } from "../../lib/tauri";
 import type { BackupManifest } from "../../lib/tauri";
 import { SyncFsProvider } from "../../lib/sync-fs";
-import { grantProjectDir, useProjectDir } from "../../lib/project-dir";
+import { grantProjectDir, projectDirLabel, useProjectDir } from "../../lib/project-dir";
+import { describeHarnessSource, readHarnessSource } from "../../lib/harness-source";
 import SyncPreview from "./sync/SyncPreview";
 import { useRegisterCommands } from "../../lib/commands";
 import { errorDetails } from "../../lib/error-details";
@@ -53,6 +53,16 @@ export default function SyncPage() {
   const projectDir = currentProject ?? "";
   const [dirValid, setDirValid] = useState(false);
   const [dirChecking, setDirChecking] = useState(false);
+  // AC-55: what is compiled is the project's committed harness.yaml (the team
+  // baseline). Without one, and with no project chosen, it is the personal
+  // ~/.claude/harness.yaml; a project that has none keeps getting the personal
+  // profile compiled into it, as before.
+  const [personalFallback, setPersonalFallback] = useState(false);
+  const source = describeHarnessSource(currentProject);
+  const sourceLabel =
+    personalFallback && currentProject
+      ? `Personal profile → ${projectDirLabel(currentProject)}`
+      : source.label;
 
   // Platforms
   const [detectedPlatforms, setDetectedPlatforms] = useState<DetectedPlatform[]>([]);
@@ -75,14 +85,32 @@ export default function SyncPage() {
   const [backups, setBackups] = useState<BackupManifest[]>([]);
 
   // Load harness file
+  // A read still in flight for the previous project must not land on the new one.
+  const loadGeneration = useRef(0);
   const loadHarness = useCallback(() => {
+    const generation = ++loadGeneration.current;
     setHarnessLoading(true);
     setHarnessError(null);
-    readHarnessFile()
+    // Nothing from the previous scope may be previewed while this one loads.
+    setHarnessContent(null);
+    setHarnessPath(null);
+    setPersonalFallback(false);
+    readHarnessSource(currentProject)
+      .then(async (projectResult) => {
+        // A project without a committed harness.yaml keeps the personal
+        // profile; a file that could not be read rejects above instead.
+        if (projectResult.found || !currentProject) return projectResult;
+        const personal = await readHarnessSource(null);
+        if (generation === loadGeneration.current) setPersonalFallback(personal.found);
+        return personal;
+      })
       .then((result) => {
+        if (generation !== loadGeneration.current) return;
         if (result.found && result.content) {
           setHarnessContent(result.content);
           setHarnessPath(result.path);
+          setHarnessName("default");
+          setHarnessDescription(null);
           try {
             const { config } = parseHarness(result.content);
             setHarnessName(config.metadata?.name ?? "default");
@@ -94,12 +122,15 @@ export default function SyncPage() {
         }
       })
       .catch((e) => {
+        if (generation !== loadGeneration.current) return;
         setHarnessContent(null);
         setHarnessPath(null);
         setHarnessError(errorDetails(e));
       })
-      .finally(() => setHarnessLoading(false));
-  }, []);
+      .finally(() => {
+        if (generation === loadGeneration.current) setHarnessLoading(false);
+      });
+  }, [currentProject]);
 
   useEffect(() => { loadHarness(); }, [loadHarness]);
   useEffect(() => { syncListBackups().then(setBackups).catch(() => {}); }, []);
@@ -306,6 +337,9 @@ export default function SyncPage() {
           <Card style={{ display: "flex", alignItems: "center", gap: "16px" }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <SectionLabel>Harness Source</SectionLabel>
+              <div data-testid="compile-source" style={{ fontSize: "11px", color: "var(--fg-muted)", marginBottom: "4px" }}>
+                {sourceLabel}
+              </div>
               <div style={{ display: "flex", alignItems: "baseline", gap: "8px", flexWrap: "wrap" }}>
                 <span style={{ fontSize: "14px", fontWeight: 600, color: "var(--fg-base)" }}>{harnessName}</span>
                 {harnessDescription && (

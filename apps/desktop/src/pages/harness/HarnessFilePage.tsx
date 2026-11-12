@@ -1,7 +1,9 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Card, ErrorNotice, Input } from "@harness-kit/ui";
-import { readHarnessFile, writeHarnessFile, saveCustomProfile } from "../../lib/tauri";
+import { writeHarnessFile, saveCustomProfile } from "../../lib/tauri";
+import { describeHarnessSource, readHarnessSource } from "../../lib/harness-source";
+import { projectDirLabel, useProjectDir } from "../../lib/project-dir";
 import { importPersonalHarness } from "../../lib/personal-inventory";
 import { parseHarness, validateHarnessYaml } from "@harness-kit/core";
 import type { HarnessConfig, ValidationResult } from "@harness-kit/core";
@@ -52,19 +54,45 @@ export default function HarnessFilePage() {
   const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
   const [profileSavedMsg, setProfileSavedMsg] = useState(false);
 
+  // AC-55: Profile follows the title-bar project. With one chosen it shows that
+  // project's committed harness.yaml (the team baseline), read-only; without
+  // one it is the editable personal ~/.claude/harness.yaml.
+  const [projectDir] = useProjectDir();
+  const source = describeHarnessSource(projectDir);
+  const readOnly = source.kind === "project";
+
+  // A read still in flight for the previous project must not land on the new one.
+  const loadGeneration = useRef(0);
   const loadHarness = useCallback(() => {
+    const generation = ++loadGeneration.current;
     setLoading(true);
-    readHarnessFile()
+    setFetchError(null);
+    readHarnessSource(projectDir)
       .then((result) => {
+        if (generation !== loadGeneration.current) return;
         setFound(result.found);
         setDiskContent(result.content);
         setFilePath(result.path);
       })
-      .catch((e) => setFetchError(errorDetails(e)))
-      .finally(() => setLoading(false));
-  }, []);
+      .catch((e) => {
+        if (generation !== loadGeneration.current) return;
+        setFound(false);
+        setDiskContent(null);
+        setFilePath(null);
+        setFetchError(errorDetails(e));
+      })
+      .finally(() => {
+        if (generation === loadGeneration.current) setLoading(false);
+      });
+  }, [projectDir]);
 
-  useEffect(() => { loadHarness(); }, [loadHarness]);
+  useEffect(() => {
+    // A new scope starts from the formatted view: the editor belongs to the
+    // personal file and holds its text.
+    setView("formatted");
+    setSaveError(null);
+    loadHarness();
+  }, [loadHarness]);
 
   const saveable = editorContent !== (diskContent ?? "") && view === "editor";
 
@@ -280,27 +308,35 @@ export default function HarnessFilePage() {
   // ── Render ────────────────────────────────────────────────────
 
   const isFullHeight = view === "editor" && found;
-  const viewModes = getAvailableViewModes("harness.yaml", true);
+  const viewModes = getAvailableViewModes("harness.yaml", true).filter(
+    (mode) => !readOnly || mode.key !== "editor",
+  );
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+      {/* Eyebrow — a full shared PageHeader arrives in a later phase; this
+          small-caps kicker follows the same convention as SectionLabel in
+          SyncPage.tsx until then. The scope is always named: which
+          harness.yaml this page shows depends on the title-bar project. */}
+      <div style={{ padding: "6px 12px 0 36px", flexShrink: 0, display: "flex", gap: "8px", alignItems: "baseline" }}>
+        <span style={{
+          fontSize: "10px",
+          fontWeight: 600,
+          color: "var(--fg-subtle)",
+          textTransform: "uppercase",
+          letterSpacing: "0.5px",
+        }}>
+          Profile
+        </span>
+        <span data-testid="profile-scope" style={{ fontSize: "11px", color: "var(--fg-muted)" }}>
+          {source.label}
+          {readOnly && " (read-only)"}
+        </span>
+      </div>
+
       {/* Standardized toolbar */}
       {found && !loading && (
         <>
-          {/* Eyebrow — a full shared PageHeader arrives in a later phase; this
-              small-caps kicker follows the same convention as SectionLabel
-              in SyncPage.tsx until then. */}
-          <div style={{ padding: "6px 12px 0 36px", flexShrink: 0 }}>
-            <span style={{
-              fontSize: "10px",
-              fontWeight: 600,
-              color: "var(--fg-subtle)",
-              textTransform: "uppercase",
-              letterSpacing: "0.5px",
-            }}>
-              Profile
-            </span>
-          </div>
           <EditorToolbar
             filePath="harness.yaml"
             subtitle={filePath ?? undefined}
@@ -352,7 +388,19 @@ export default function HarnessFilePage() {
         )}
 
         {/* Empty state — no harness found, not yet in editor */}
-        {!loading && !fetchError && !found && view !== "editor" && (
+        {!loading && !fetchError && !found && readOnly && (
+          <Card padding="lg" style={{ maxWidth: "540px", marginTop: "4px" }}>
+            <h2 style={{ fontSize: "15px", fontWeight: 600, color: "var(--fg-base)", margin: "0 0 6px" }}>
+              No harness.yaml in {projectDirLabel(projectDir ?? "")}
+            </h2>
+            <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0, lineHeight: "1.5" }}>
+              The team baseline is the <code style={{ fontFamily: "ui-monospace, monospace", fontSize: "12px" }}>harness.yaml</code> committed
+              at the project root. Add one there, or clear the project in the title bar to work on your personal profile.
+            </p>
+          </Card>
+        )}
+
+        {!loading && !fetchError && !found && !readOnly && view !== "editor" && (
           <Card padding="lg" style={{ textAlign: "center", maxWidth: "540px", marginTop: "4px" }}>
             <h2 style={{ fontSize: "15px", fontWeight: 600, color: "var(--fg-base)", margin: "0 0 6px" }}>
               No harness.yaml found

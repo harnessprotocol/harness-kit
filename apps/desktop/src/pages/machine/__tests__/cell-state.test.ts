@@ -57,9 +57,9 @@ describe("rowCellVariants on the fixture", () => {
   it("marks absent cells not in any gap as absent", () => {
     // copilot-cli is undetected, so the engine never lists it as closable.
     expect(variantsFor("mcp-server:github")["copilot-cli"]).toBe("absent");
-    // instructions:claude.md has no gap entry at all.
-    expect(variantsFor("instructions:claude.md").codex).toBe("absent");
-    expect(variantsFor("instructions:claude.md").gemini).toBe("absent");
+    // instructions:user instructions has no gap entry at all.
+    expect(variantsFor("instructions:user instructions").codex).toBe("absent");
+    expect(variantsFor("instructions:user instructions").gemini).toBe("absent");
   });
 
   it("maps not-applicable, unmanaged and unknown to their own variants", () => {
