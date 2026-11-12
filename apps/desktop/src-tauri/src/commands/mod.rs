@@ -25,3 +25,5 @@ pub mod harnesses;
 pub mod feedback;
 pub mod fs_scope;
 pub mod fs_guarded;
+#[cfg(test)]
+mod ipc_contract;

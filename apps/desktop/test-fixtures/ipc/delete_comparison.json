@@ -1,0 +1,14 @@
+{
+  "command": "delete_comparison",
+  "calls": [
+    {
+      "fn": "deleteComparison",
+      "args": [
+        "c-1"
+      ],
+      "payload": {
+        "id": "c-1"
+      }
+    }
+  ]
+}

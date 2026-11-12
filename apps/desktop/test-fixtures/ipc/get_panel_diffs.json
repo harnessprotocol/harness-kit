@@ -1,0 +1,16 @@
+{
+  "command": "get_panel_diffs",
+  "calls": [
+    {
+      "fn": "getPanelDiffs",
+      "args": [
+        "c-1",
+        "p-1"
+      ],
+      "payload": {
+        "comparisonId": "c-1",
+        "panelId": "p-1"
+      }
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "command": "import_plugin_from_path",
+  "calls": [
+    {
+      "fn": "importPluginFromPath",
+      "args": [
+        null
+      ],
+      "payload": {
+        "sourcePath": null
+      }
+    },
+    {
+      "fn": "importPluginFromPath",
+      "args": [
+        "/Users/u/Downloads/demo"
+      ],
+      "payload": {
+        "sourcePath": "/Users/u/Downloads/demo"
+      }
+    }
+  ]
+}

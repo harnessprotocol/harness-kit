@@ -1,0 +1,14 @@
+{
+  "command": "uninstall_plugin",
+  "calls": [
+    {
+      "fn": "uninstallPlugin",
+      "args": [
+        "demo@harness-kit"
+      ],
+      "payload": {
+        "name": "demo@harness-kit"
+      }
+    }
+  ]
+}

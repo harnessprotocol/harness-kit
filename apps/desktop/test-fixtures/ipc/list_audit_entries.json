@@ -1,0 +1,29 @@
+{
+  "command": "list_audit_entries",
+  "calls": [
+    {
+      "fn": "listAuditEntries",
+      "args": [
+        50,
+        0,
+        "permissions"
+      ],
+      "payload": {
+        "limit": 50,
+        "offset": 0,
+        "category": "permissions"
+      }
+    },
+    {
+      "fn": "listAuditEntries",
+      "args": [
+        50,
+        100
+      ],
+      "payload": {
+        "limit": 50,
+        "offset": 100
+      }
+    }
+  ]
+}

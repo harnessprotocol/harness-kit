@@ -1,0 +1,18 @@
+{
+  "command": "push_file_history",
+  "calls": [
+    {
+      "fn": "pushFileHistory",
+      "args": [
+        "demo",
+        "/Users/u/.claude/plugins/cache/harness-kit/demo/1.0.0/SKILL.md",
+        "# demo"
+      ],
+      "payload": {
+        "pluginName": "demo",
+        "filePath": "/Users/u/.claude/plugins/cache/harness-kit/demo/1.0.0/SKILL.md",
+        "content": "# demo"
+      }
+    }
+  ]
+}

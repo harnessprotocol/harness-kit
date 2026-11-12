@@ -1,0 +1,27 @@
+{
+  "command": "acknowledge_drift",
+  "calls": [
+    {
+      "fn": "acknowledgeDriftItem",
+      "args": [
+        {
+          "scopeRoot": "/Users/u/work/app",
+          "adapter": "claude-code",
+          "path": ".claude/settings.json",
+          "harnessName": "team",
+          "slot": "mcp:github"
+        }
+      ],
+      "payload": {
+        "ack": {
+          "scopeRoot": "/Users/u/work/app",
+          "adapter": "claude-code",
+          "path": ".claude/settings.json",
+          "harnessName": "team",
+          "slot": "mcp:github",
+          "acknowledgedAt": "2026-01-01T00:00:00.000Z"
+        }
+      }
+    }
+  ]
+}

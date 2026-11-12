@@ -1,0 +1,10 @@
+{
+  "command": "check_plugin_updates",
+  "calls": [
+    {
+      "fn": "checkPluginUpdates",
+      "args": [],
+      "payload": null
+    }
+  ]
+}

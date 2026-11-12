@@ -1,0 +1,10 @@
+{
+  "command": "list_sessions_summary",
+  "calls": [
+    {
+      "fn": "listSessionsSummary",
+      "args": [],
+      "payload": null
+    }
+  ]
+}

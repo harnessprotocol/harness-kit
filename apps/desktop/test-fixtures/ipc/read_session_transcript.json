@@ -1,0 +1,16 @@
+{
+  "command": "read_session_transcript",
+  "calls": [
+    {
+      "fn": "readSessionTranscript",
+      "args": [
+        "sess-1",
+        "-Users-u-work-app"
+      ],
+      "payload": {
+        "sessionId": "sess-1",
+        "project": "-Users-u-work-app"
+      }
+    }
+  ]
+}

@@ -836,6 +836,26 @@ mod tests {
     }
 
     #[test]
+    fn dot_dot_is_refused_inside_and_around_declared_stores() {
+        // A `..` segment can hop out of a declared directory, or into one from
+        // outside, even when the textual prefix looks declared.
+        for path in [
+            ".claude/skills/../../.ssh/id_rsa",
+            ".claude/skills/review/../../../.zshrc",
+            ".claude/../.claude.json",
+            "foo/../.claude.json",
+            "..",
+            ".claude/skills/..",
+            ".harness/backups/../harness.db",
+            ".harness/backups/x/../../device.json",
+            ".claude\\skills\\..\\..\\.ssh\\id_rsa",
+        ] {
+            assert!(!is_declared_store(path), "{path} should be rejected");
+            assert!(!is_declared_project_store(path), "{path} should be rejected as a project store");
+        }
+    }
+
+    #[test]
     fn a_directory_shaped_path_is_refused_not_written_as_a_file() {
         let home = tempfile::TempDir::new().unwrap();
         for path in [

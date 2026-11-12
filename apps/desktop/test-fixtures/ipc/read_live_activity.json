@@ -1,0 +1,10 @@
+{
+  "command": "read_live_activity",
+  "calls": [
+    {
+      "fn": "readLiveActivity",
+      "args": [],
+      "payload": null
+    }
+  ]
+}

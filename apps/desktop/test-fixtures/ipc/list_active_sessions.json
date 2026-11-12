@@ -1,0 +1,10 @@
+{
+  "command": "list_active_sessions",
+  "calls": [
+    {
+      "fn": "listActiveSessions",
+      "args": [],
+      "payload": null
+    }
+  ]
+}

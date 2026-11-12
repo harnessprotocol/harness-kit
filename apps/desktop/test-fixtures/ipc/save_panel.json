@@ -1,0 +1,22 @@
+{
+  "command": "save_panel",
+  "calls": [
+    {
+      "fn": "savePanel",
+      "args": [
+        "p-1",
+        "c-1",
+        "claude",
+        "Claude Code",
+        "sonnet"
+      ],
+      "payload": {
+        "id": "p-1",
+        "comparisonId": "c-1",
+        "harnessId": "claude",
+        "harnessName": "Claude Code",
+        "model": "sonnet"
+      }
+    }
+  ]
+}

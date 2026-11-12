@@ -263,6 +263,44 @@ describe("file transactions", () => {
     expect(JSON.parse(fs.getFile("/project/.harness/backups/test/transaction.json")!).status).toBe("rolled-back");
   });
 
+  it("removes a file the transaction created when a later write fails", async () => {
+    class FailSecondRenameFs extends MockFsProvider {
+      override async renameFile(from: string, to: string): Promise<void> {
+        if (to === "/project/b.txt") throw new Error("injected write failure");
+        await super.renameFile(from, to);
+      }
+    }
+    const fs = new FailSecondRenameFs({ "/project/b.txt": "b0" });
+    const result = await applyFileTransaction(
+      [
+        { path: "created.txt", before: null, after: "new" },
+        { path: "b.txt", before: "b0", after: "b1" },
+      ],
+      { fs, timestamp: "created-fail" },
+    );
+    expect(result.committed).toBe(false);
+    expect(result.rolledBack).toContain("created.txt");
+    expect(await fs.exists("/project/created.txt")).toBe(false);
+    expect(fs.getFile("/project/b.txt")).toBe("b0");
+    expect(
+      JSON.parse(fs.getFile("/project/.harness/backups/created-fail/transaction.json")!).status,
+    ).toBe("rolled-back");
+  });
+
+  it("rolling back a committed transaction deletes the file it created", async () => {
+    const fs = new MockFsProvider({});
+    const applied = await applyFileTransaction(
+      [{ path: "created.txt", before: null, after: "new" }],
+      { fs, timestamp: "create" },
+    );
+    expect(applied.committed).toBe(true);
+    expect(fs.getFile("/project/created.txt")).toBe("new");
+    const manifest = JSON.parse(fs.getFile("/project/.harness/backups/create/transaction.json")!);
+    const rolledBack = await rollbackFileTransaction(manifest, { fs, timestamp: "undo-create" });
+    expect(rolledBack.committed).toBe(true);
+    expect(await fs.exists("/project/created.txt")).toBe(false);
+  });
+
   it("rolls back a committed transaction but refuses to overwrite later edits", async () => {
     const fs = new MockFsProvider({ "/project/a.txt": "a0" });
     const applied = await applyFileTransaction(

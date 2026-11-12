@@ -1,0 +1,14 @@
+{
+  "command": "clear_audit_entries",
+  "calls": [
+    {
+      "fn": "clearAuditEntries",
+      "args": [
+        "2026-01-01"
+      ],
+      "payload": {
+        "beforeDate": "2026-01-01"
+      }
+    }
+  ]
+}

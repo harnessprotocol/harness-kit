@@ -1,0 +1,16 @@
+{
+  "command": "save_custom_profile",
+  "calls": [
+    {
+      "fn": "saveCustomProfile",
+      "args": [
+        "team",
+        "name: team\n"
+      ],
+      "payload": {
+        "id": "team",
+        "content": "name: team\n"
+      }
+    }
+  ]
+}

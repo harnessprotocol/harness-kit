@@ -1,0 +1,16 @@
+{
+  "command": "sync_read_dir",
+  "calls": [
+    {
+      "fn": "syncReadDir",
+      "args": [
+        "/Users/u/work/app",
+        ".claude/skills"
+      ],
+      "payload": {
+        "projectDir": "/Users/u/work/app",
+        "dirPath": ".claude/skills"
+      }
+    }
+  ]
+}

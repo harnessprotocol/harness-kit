@@ -1,0 +1,10 @@
+{
+  "command": "detect_harnesses",
+  "calls": [
+    {
+      "fn": "detectHarnesses",
+      "args": [],
+      "payload": null
+    }
+  ]
+}

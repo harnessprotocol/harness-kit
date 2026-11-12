@@ -1,0 +1,22 @@
+{
+  "command": "save_comparison",
+  "calls": [
+    {
+      "fn": "saveComparison",
+      "args": [
+        "c-1",
+        "Title",
+        "Fix the bug",
+        "/Users/u/work/app",
+        "deadbeef"
+      ],
+      "payload": {
+        "id": "c-1",
+        "title": "Title",
+        "prompt": "Fix the bug",
+        "workingDir": "/Users/u/work/app",
+        "pinnedCommit": "deadbeef"
+      }
+    }
+  ]
+}

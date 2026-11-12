@@ -1,0 +1,21 @@
+{
+  "command": "compute_live_stats",
+  "calls": [
+    {
+      "fn": "computeLiveStats",
+      "args": [],
+      "payload": {
+        "sinceDate": null
+      }
+    },
+    {
+      "fn": "computeLiveStats",
+      "args": [
+        "2026-01-01"
+      ],
+      "payload": {
+        "sinceDate": "2026-01-01"
+      }
+    }
+  ]
+}

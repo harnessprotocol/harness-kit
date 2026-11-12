@@ -1,0 +1,14 @@
+{
+  "command": "grant_project_scope",
+  "calls": [
+    {
+      "fn": "grantProjectScope",
+      "args": [
+        "/Users/u/work/app"
+      ],
+      "payload": {
+        "path": "/Users/u/work/app"
+      }
+    }
+  ]
+}

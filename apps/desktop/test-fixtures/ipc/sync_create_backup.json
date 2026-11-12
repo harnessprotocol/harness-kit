@@ -1,0 +1,28 @@
+{
+  "command": "sync_create_backup",
+  "calls": [
+    {
+      "fn": "syncCreateBackup",
+      "args": [
+        "/Users/u/work/app",
+        "team",
+        [
+          "claude-code"
+        ],
+        [
+          "CLAUDE.md"
+        ]
+      ],
+      "payload": {
+        "projectDir": "/Users/u/work/app",
+        "harnessName": "team",
+        "platforms": [
+          "claude-code"
+        ],
+        "filePaths": [
+          "CLAUDE.md"
+        ]
+      }
+    }
+  ]
+}

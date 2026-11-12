@@ -1,0 +1,10 @@
+{
+  "command": "list_required_env",
+  "calls": [
+    {
+      "fn": "listRequiredEnv",
+      "args": [],
+      "payload": null
+    }
+  ]
+}

@@ -9,13 +9,15 @@ const invoke = vi.hoisted(() => vi.fn());
 const lstat = vi.hoisted(() => vi.fn());
 const mkdir = vi.hoisted(() => vi.fn());
 const writeTextFile = vi.hoisted(() => vi.fn());
+const existsPlugin = vi.hoisted(() => vi.fn());
+import errors from "../../../test-fixtures/errors.json";
 
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 vi.mock("@tauri-apps/api/path", () => ({ homeDir: async () => "/home/user" }));
 vi.mock("@tauri-apps/plugin-fs", () => ({
   readTextFile: async () => "",
   writeTextFile,
-  exists: async () => true,
+  exists: existsPlugin,
   readDir: async () => [],
   lstat,
   mkdir,
@@ -35,6 +37,31 @@ describe("TauriFsProvider", () => {
     invoke.mockResolvedValue(undefined);
     lstat.mockReset();
     mkdir.mockReset();
+    existsPlugin.mockReset();
+    existsPlugin.mockResolvedValue(true);
+  });
+
+  it("treats exists() on a forbidden path as absent, using the string the runtime really rejects with", async () => {
+    // The fs plugin rejects with a bare string, not an Error.
+    existsPlugin.mockRejectedValue(errors.forbiddenPath);
+    const fs = new TauriFsProvider("/home/user");
+    await expect(fs.exists("/home/user/.zshrc")).resolves.toBe(false);
+    expect(existsPlugin).toHaveBeenCalledWith("/home/user/.zshrc");
+  });
+
+  it("returns the plugin's answer when exists() is allowed", async () => {
+    const fs = new TauriFsProvider("/home/user");
+    existsPlugin.mockResolvedValueOnce(true).mockResolvedValueOnce(false);
+    await expect(fs.exists("/home/user/.claude")).resolves.toBe(true);
+    await expect(fs.exists("/home/user/.claude/nope")).resolves.toBe(false);
+  });
+
+  it("surfaces the real ACL-denied string from a guarded write unchanged", async () => {
+    invoke.mockRejectedValue(errors.commandNotAllowed);
+    const fs = new TauriFsProvider("/home/user");
+    await expect(fs.writeFile("/home/user/.claude/a.harness-tmp-1", "x")).rejects.toBe(
+      errors.commandNotAllowed,
+    );
   });
 
   it("renames through the guarded Rust command", async () => {

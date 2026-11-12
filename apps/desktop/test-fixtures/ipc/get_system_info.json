@@ -1,0 +1,10 @@
+{
+  "command": "get_system_info",
+  "calls": [
+    {
+      "fn": "getSystemInfo",
+      "args": [],
+      "payload": null
+    }
+  ]
+}

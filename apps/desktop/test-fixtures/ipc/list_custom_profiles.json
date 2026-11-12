@@ -1,0 +1,10 @@
+{
+  "command": "list_custom_profiles",
+  "calls": [
+    {
+      "fn": "listCustomProfiles",
+      "args": [],
+      "payload": null
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "command": "sync_restore_backup",
+  "calls": [
+    {
+      "fn": "syncRestoreBackup",
+      "args": [
+        "b-1"
+      ],
+      "payload": {
+        "backupId": "b-1"
+      }
+    }
+  ]
+}

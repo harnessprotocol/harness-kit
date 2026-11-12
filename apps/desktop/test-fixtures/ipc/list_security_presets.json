@@ -1,0 +1,10 @@
+{
+  "command": "list_security_presets",
+  "calls": [
+    {
+      "fn": "listSecurityPresets",
+      "args": [],
+      "payload": null
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "command": "update_permissions",
+  "calls": [
+    {
+      "fn": "updatePermissions",
+      "args": [
+        {
+          "tools": { "allow": ["Read"], "deny": ["Bash(rm:*)"], "ask": [] },
+          "paths": { "writable": ["/Users/u/work/app"], "readonly": [".env"] },
+          "network": { "allowedHosts": ["github.com"] }
+        },
+        "abc123"
+      ],
+      "payload": {
+        "permissions": {
+          "tools": { "allow": ["Read"], "deny": ["Bash(rm:*)"], "ask": [] },
+          "paths": { "writable": ["/Users/u/work/app"], "readonly": [".env"] },
+          "network": { "allowedHosts": ["github.com"] }
+        },
+        "expectedSha256": "abc123"
+      }
+    }
+  ]
+}

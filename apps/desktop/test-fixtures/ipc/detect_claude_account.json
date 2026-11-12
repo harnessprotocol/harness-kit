@@ -1,0 +1,10 @@
+{
+  "command": "detect_claude_account",
+  "calls": [
+    {
+      "fn": "detectClaudeAccount",
+      "args": [],
+      "payload": null
+    }
+  ]
+}

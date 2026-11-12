@@ -1,0 +1,16 @@
+{
+  "command": "update_comparison_title",
+  "calls": [
+    {
+      "fn": "updateComparisonTitle",
+      "args": [
+        "c-1",
+        "New"
+      ],
+      "payload": {
+        "id": "c-1",
+        "title": "New"
+      }
+    }
+  ]
+}

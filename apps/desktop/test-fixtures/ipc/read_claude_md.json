@@ -1,0 +1,14 @@
+{
+  "command": "read_claude_md",
+  "calls": [
+    {
+      "fn": "readClaudeMd",
+      "args": [
+        "/Users/u/.claude/CLAUDE.md"
+      ],
+      "payload": {
+        "path": "/Users/u/.claude/CLAUDE.md"
+      }
+    }
+  ]
+}

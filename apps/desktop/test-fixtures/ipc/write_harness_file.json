@@ -1,0 +1,25 @@
+{
+  "command": "write_harness_file",
+  "calls": [
+    {
+      "fn": "writeHarnessFile",
+      "args": [
+        "name: team\n",
+        "abc123"
+      ],
+      "payload": {
+        "content": "name: team\n",
+        "expectedSha256": "abc123"
+      }
+    },
+    {
+      "fn": "writeHarnessFile",
+      "args": [
+        "name: team\n"
+      ],
+      "payload": {
+        "content": "name: team\n"
+      }
+    }
+  ]
+}
