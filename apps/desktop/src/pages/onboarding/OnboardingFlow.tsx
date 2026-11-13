@@ -1,6 +1,6 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useRef } from "react";
 import { ArrowRight, Search } from "lucide-react";
-import { Button, Card, ErrorNotice, StatusChip } from "@harness-kit/ui";
+import { Button, Card, ErrorNotice, StatusChip, useDialogFocus } from "@harness-kit/ui";
 import type { SprawlReveal } from "./onboarding-data";
 
 const MonacoEditor = lazy(() => import("../../components/plugin-explorer/MonacoEditor"));
@@ -46,8 +46,18 @@ export function OnboardingFlow({
   onSkip,
   onRetry,
 }: OnboardingFlowProps) {
+  const shellRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(true, shellRef);
   return (
-    <div className="hk-onboard-shell">
+    <div
+      ref={shellRef}
+      className="hk-onboard-shell"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Set up Harness Kit"
+      tabIndex={-1}
+      style={{ outline: "none" }}
+    >
       <div className="hk-onboard-frame">
         <div className="hk-onboard-skip">
           <Button variant="ghost" size="sm" onClick={onSkip} disabled={writing}>
@@ -344,7 +354,7 @@ function ConfirmStep({
           {writing ? "Writing…" : "Write harness.yaml"}
         </Button>
         <Button variant="ghost" onClick={onExploreReadOnly} disabled={writing}>
-          Explore read-only
+          Skip for now
         </Button>
       </div>
       <p className="hk-onboard-confirm-note">Nothing is written until you confirm.</p>

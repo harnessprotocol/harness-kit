@@ -1,0 +1,10 @@
+{
+  "command": "list_drift_acknowledgements",
+  "calls": [
+    {
+      "fn": "getAcknowledgedDriftItems",
+      "args": [],
+      "payload": null
+    }
+  ]
+}

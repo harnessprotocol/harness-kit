@@ -3,6 +3,8 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import OnboardingPage from "../OnboardingPage";
 import { loadedDigest } from "../../../lib/loaded-digest";
+import type { ImportProjectResult } from "@harness-kit/core";
+import { withInventorySections } from "../onboarding-data";
 import { ONBOARDING_FIXTURE_RESULT, ONBOARDING_FIXTURE_LOW_COUNT } from "../../__fixtures__/onboarding-fixture-data";
 
 // ── Mocks ──────────────────────────────────────────────────────
@@ -12,6 +14,19 @@ const mockImportMachine = vi.fn();
 vi.mock("@harness-kit/core", () => ({
   importMachine: (...args: unknown[]) => mockImportMachine(...args),
 }));
+
+// AC-56: the file comes from the machine inventory. This stands in for the
+// grid's data; it deliberately differs from the adapter scan's servers.
+const mockImportPersonalHarness = vi.fn();
+vi.mock("../../../lib/personal-inventory", () => ({
+  importPersonalHarness: (...args: unknown[]) => mockImportPersonalHarness(...args),
+}));
+const INVENTORY_CONFIG = {
+  version: "1",
+  metadata: { name: "inv", description: "d" },
+  "mcp-servers": { fromGrid: { transport: "stdio", command: "grid-cmd" } },
+} as unknown as ImportProjectResult["harnessConfig"];
+const EXPECTED_YAML = withInventorySections(ONBOARDING_FIXTURE_RESULT, INVENTORY_CONFIG).harnessYaml;
 
 vi.mock("@tauri-apps/api/path", () => ({
   homeDir: vi.fn(() => Promise.resolve("/home/user")),
@@ -55,6 +70,18 @@ describe("OnboardingPage", () => {
     mockWriteHarnessFile.mockResolvedValue("~/.claude/harness.yaml");
     mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null });
     mockWriteConfigFile.mockResolvedValue(undefined);
+    mockImportPersonalHarness.mockResolvedValue({ harnessConfig: INVENTORY_CONFIG, harnessYaml: "", inventory: {} });
+  });
+
+  it("writes the servers the machine inventory shows, not the adapter scan's (AC-56)", async () => {
+    mockImportMachine.mockResolvedValue(ONBOARDING_FIXTURE_RESULT);
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(await screen.findByRole("button", { name: /preview harness\.yaml/i }, { timeout: 3000 }));
+    const preview = await screen.findByTestId("monaco-stub");
+    expect(preview).toHaveTextContent("fromGrid");
+    expect(preview).not.toHaveTextContent("postgres");
+    expect(mockImportPersonalHarness).toHaveBeenCalledTimes(1);
   });
 
   it("runs the scan step then advances to the sprawl reveal with real counts", async () => {
@@ -107,11 +134,11 @@ describe("OnboardingPage", () => {
     expect(mockWriteHarnessFile).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: /^write harness\.yaml$/i }));
-    await waitFor(() => expect(mockWriteHarnessFile).toHaveBeenCalledWith(ONBOARDING_FIXTURE_RESULT.harnessYaml));
+    await waitFor(() => expect(mockWriteHarnessFile).toHaveBeenCalledWith(EXPECTED_YAML));
     await waitFor(() => expect(onFinish).toHaveBeenCalled());
   });
 
-  it("explore read-only finishes without writing anything", async () => {
+  it("skip for now finishes without writing anything", async () => {
     mockImportMachine.mockResolvedValue(ONBOARDING_FIXTURE_RESULT);
     const user = userEvent.setup();
     const { onFinish } = renderPage();
@@ -121,7 +148,7 @@ describe("OnboardingPage", () => {
     });
     await user.click(screen.getByRole("button", { name: /preview harness\.yaml/i }));
     await user.click(await screen.findByRole("button", { name: /^continue$/i }));
-    await user.click(await screen.findByRole("button", { name: /explore read-only/i }));
+    await user.click(await screen.findByRole("button", { name: /skip for now/i }));
 
     expect(mockWriteHarnessFile).not.toHaveBeenCalled();
     expect(onFinish).toHaveBeenCalled();
@@ -200,7 +227,7 @@ describe("OnboardingPage", () => {
     it("writes directly when no file exists", async () => {
       const { user, onFinish } = await toConfirm();
       await user.click(await screen.findByRole("button", { name: /^write harness\.yaml$/i }));
-      await waitFor(() => expect(mockWriteHarnessFile).toHaveBeenCalledWith(ONBOARDING_FIXTURE_RESULT.harnessYaml));
+      await waitFor(() => expect(mockWriteHarnessFile).toHaveBeenCalledWith(EXPECTED_YAML));
       expect(mockWriteConfigFile).not.toHaveBeenCalled();
       await waitFor(() => expect(onFinish).toHaveBeenCalled());
     });
@@ -208,7 +235,7 @@ describe("OnboardingPage", () => {
     it("skips the write when the existing file is identical", async () => {
       mockReadHarnessFile.mockResolvedValue({
         found: true,
-        content: ONBOARDING_FIXTURE_RESULT.harnessYaml,
+        content: EXPECTED_YAML,
         path: TARGET,
       });
       const { user, onFinish } = await toConfirm();
@@ -247,7 +274,7 @@ describe("OnboardingPage", () => {
       await waitFor(() => expect(onFinish).toHaveBeenCalled());
       expect(mockWriteHarnessFile).toHaveBeenCalledTimes(1);
       expect(mockWriteHarnessFile).toHaveBeenCalledWith(
-        ONBOARDING_FIXTURE_RESULT.harnessYaml,
+        EXPECTED_YAML,
         await loadedDigest("version: old\n"),
       );
       expect(mockWriteConfigFile).not.toHaveBeenCalled();

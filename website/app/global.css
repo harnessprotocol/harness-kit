@@ -58,8 +58,8 @@ body {
   --bg-sidebar-solid: #FFFFFF;
   --fg-base: #1A1714;
   --fg-muted: #57514A;
-  --fg-subtle: #8B8479;
-  --fg-placeholder: #A8A199;
+  --fg-subtle: #655F55;
+  --fg-placeholder: #716A60;
   --border-base: rgba(20, 15, 10, 0.06);
   --border-strong: rgba(20, 15, 10, 0.10);
   --border-subtle: rgba(20, 15, 10, 0.03);
@@ -69,6 +69,10 @@ body {
   --accent-fg: #1668A6;
   --accent-text: #1668A6;
   --accent-glow: rgba(46, 155, 230, 0.25);
+  --accent-fill: #1D6FB0;
+  --success-text: #1B6F47;
+  --warning-text: #7A5000;
+  --danger-text: #B3262C;
   /* design-tokens:light:end */
 
   /* Status colors — shared across themes, NOT the accent (DESIGN.md §2) */
@@ -126,8 +130,8 @@ body {
   --bg-sidebar-solid: #1B191E;
   --fg-base: #EDEAE6;
   --fg-muted: #A29C95;
-  --fg-subtle: #6C665F;
-  --fg-placeholder: #514C46;
+  --fg-subtle: #968F88;
+  --fg-placeholder: #8A847D;
   --border-base: rgba(255, 255, 255, 0.05);
   --border-strong: rgba(255, 255, 255, 0.09);
   --border-subtle: rgba(255, 255, 255, 0.03);
@@ -137,6 +141,10 @@ body {
   --accent-fg: #6BC0F5;
   --accent-text: #6BC0F5;
   --accent-glow: rgba(46, 155, 230, 0.35);
+  --accent-fill: #1D6FB0;
+  --success-text: #4CC08A;
+  --warning-text: #E0A33D;
+  --danger-text: #FF7A7E;
   /* design-tokens:dark:end */
 
   /* Status colors — shared across themes, NOT the accent (DESIGN.md §2) */

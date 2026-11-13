@@ -256,6 +256,30 @@ jobs:
       - name: Production-build smoke (blank-screen guard)
         run: pnpm --filter harness-kit-desktop test:e2e:preview
 
+      # smoke.spec (route content, Machine/Drift views) and console-hunt (no console
+      # errors on any route) run against the dev server with the mocked Tauri bridge.
+      - name: Smoke and console-hunt e2e (dev server)
+        run: pnpm --filter harness-kit-desktop test:e2e
+
+  # AC-60: the surface_write guard and the IPC contract also run on macOS, where
+  # is_declared_store picks the macOS write scope and paths are case-insensitive.
+  desktop-macos-rust:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      - name: Rust test (surface_write, IPC contract, capability smoke)
+        working-directory: apps/desktop/src-tauri
+        run: |
+          cargo test --lib -- surface_write ipc_contract
+          cargo test --test capability_smoke
+
   docs-build:
     runs-on: ubuntu-latest
     steps:

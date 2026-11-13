@@ -2481,6 +2481,12 @@
           "markdownDescription": "Enables the list_audit_entries command without any pre-configured scope."
         },
         {
+          "description": "Enables the list_changes command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-list-changes",
+          "markdownDescription": "Enables the list_changes command without any pre-configured scope."
+        },
+        {
           "description": "Enables the list_claude_dir command without any pre-configured scope.",
           "type": "string",
           "const": "allow-list-claude-dir",
@@ -2685,12 +2691,6 @@
           "markdownDescription": "Enables the save_panel command without any pre-configured scope."
         },
         {
-          "description": "Enables the scan_claude_config command without any pre-configured scope.",
-          "type": "string",
-          "const": "allow-scan-claude-config",
-          "markdownDescription": "Enables the scan_claude_config command without any pre-configured scope."
-        },
-        {
           "description": "Enables the set_keychain_secret command without any pre-configured scope.",
           "type": "string",
           "const": "allow-set-keychain-secret",
@@ -2767,6 +2767,12 @@
           "type": "string",
           "const": "allow-unacknowledge-drift-item",
           "markdownDescription": "Enables the unacknowledge_drift_item command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the undo_change command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-undo-change",
+          "markdownDescription": "Enables the undo_change command without any pre-configured scope."
         },
         {
           "description": "Enables the uninstall_plugin command without any pre-configured scope.",
@@ -3105,6 +3111,12 @@
           "markdownDescription": "Denies the list_audit_entries command without any pre-configured scope."
         },
         {
+          "description": "Denies the list_changes command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-list-changes",
+          "markdownDescription": "Denies the list_changes command without any pre-configured scope."
+        },
+        {
           "description": "Denies the list_claude_dir command without any pre-configured scope.",
           "type": "string",
           "const": "deny-list-claude-dir",
@@ -3309,12 +3321,6 @@
           "markdownDescription": "Denies the save_panel command without any pre-configured scope."
         },
         {
-          "description": "Denies the scan_claude_config command without any pre-configured scope.",
-          "type": "string",
-          "const": "deny-scan-claude-config",
-          "markdownDescription": "Denies the scan_claude_config command without any pre-configured scope."
-        },
-        {
           "description": "Denies the set_keychain_secret command without any pre-configured scope.",
           "type": "string",
           "const": "deny-set-keychain-secret",
@@ -3391,6 +3397,12 @@
           "type": "string",
           "const": "deny-unacknowledge-drift-item",
           "markdownDescription": "Denies the unacknowledge_drift_item command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the undo_change command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-undo-change",
+          "markdownDescription": "Denies the undo_change command without any pre-configured scope."
         },
         {
           "description": "Denies the uninstall_plugin command without any pre-configured scope.",

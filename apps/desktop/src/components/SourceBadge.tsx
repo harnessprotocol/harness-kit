@@ -3,7 +3,7 @@ export default function SourceBadge({ marketplace }: { marketplace?: string }) {
     return (
       <span style={{
         fontSize: "10px", fontWeight: 500, padding: "1px 7px", borderRadius: "10px",
-        background: "var(--warning-light)", color: "var(--warning)",
+        background: "var(--warning-light)", color: "var(--warning-text)",
         border: "1px solid var(--warning-light)", whiteSpace: "nowrap",
       }}>
         local

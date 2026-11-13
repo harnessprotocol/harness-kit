@@ -1,0 +1,22 @@
+{
+  "command": "update_panel_result",
+  "calls": [
+    {
+      "fn": "updatePanelResult",
+      "args": [
+        "c-1",
+        "p-1",
+        0,
+        1234,
+        "completed"
+      ],
+      "payload": {
+        "comparisonId": "c-1",
+        "panelId": "p-1",
+        "exitCode": 0,
+        "durationMs": 1234,
+        "status": "completed"
+      }
+    }
+  ]
+}

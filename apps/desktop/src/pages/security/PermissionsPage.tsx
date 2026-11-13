@@ -399,7 +399,7 @@ function CurrentConfigSummary({
   } else if (mode === "auto") {
     detail = <span style={{ color: "var(--fg-muted)" }}>AI classifiers approve non-destructive actions.</span>;
   } else if (tools.length === 0) {
-    detail = <span style={{ color: "var(--danger)" }}>No tools selected — all actions will prompt.</span>;
+    detail = <span style={{ color: "var(--danger-text)" }}>No tools selected — all actions will prompt.</span>;
   } else {
     detail = (
       <span style={{ color: "var(--fg-muted)", fontFamily: "ui-monospace, monospace", fontSize: "11px" }}>
@@ -1124,9 +1124,9 @@ export default function PermissionsPage() {
                 {(() => {
                   const allTools = [...permissions.tools.allow, ...permissions.tools.deny, ...permissions.tools.ask];
                   const rows: { key: "allow" | "deny" | "ask"; label: string; color: string; chipColor: "green" | "red" | "amber" }[] = [
-                    { key: "allow", label: "Allow", color: "var(--success)", chipColor: "green" },
-                    { key: "deny",  label: "Deny",  color: "var(--danger)",  chipColor: "red"   },
-                    { key: "ask",   label: "Ask",   color: "var(--warning)", chipColor: "amber" },
+                    { key: "allow", label: "Allow", color: "var(--success-text)", chipColor: "green" },
+                    { key: "deny",  label: "Deny",  color: "var(--danger-text)",  chipColor: "red"   },
+                    { key: "ask",   label: "Ask",   color: "var(--warning-text)", chipColor: "amber" },
                   ];
                   return (
                     <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -1175,7 +1175,7 @@ export default function PermissionsPage() {
                   return (
                     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "20px" }}>
                       <div>
-                        <p style={{ fontSize: "11px", fontWeight: 600, color: "var(--success)", margin: "0 0 6px" }}>Writable</p>
+                        <p style={{ fontSize: "11px", fontWeight: 600, color: "var(--success-text)", margin: "0 0 6px" }}>Writable</p>
                         {permissions.paths.writable.length > 0 && (
                           <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "4px" }}>
                             {permissions.paths.writable.map((p) => (
@@ -1186,7 +1186,7 @@ export default function PermissionsPage() {
                         <SuggestInput onAdd={(v) => addToList("writable", v)} placeholder="Add path…" suggestions={PATH_SUGGESTIONS} existing={allPaths} />
                       </div>
                       <div>
-                        <p style={{ fontSize: "11px", fontWeight: 600, color: "var(--warning)", margin: "0 0 6px" }}>Read-only</p>
+                        <p style={{ fontSize: "11px", fontWeight: 600, color: "var(--warning-text)", margin: "0 0 6px" }}>Read-only</p>
                         {permissions.paths.readonly.length > 0 && (
                           <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "4px" }}>
                             {permissions.paths.readonly.map((p) => (

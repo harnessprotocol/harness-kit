@@ -16,10 +16,11 @@ import type {
   SurfaceScope,
 } from "../surfaces/types.js";
 import { isRecord } from "../utils/is-record.js";
+import { findAnySyncBlock, textOutsideSyncBlock } from "../compile/markers.js";
 import { planStoreWrite, unsupportedKindReason } from "./write-store.js";
 import { diffCanonicalForms } from "../observe/machine-inventory.js";
 import type { FieldDelta } from "../observe/machine-inventory.js";
-import { normalizeResource } from "../observe/normalize.js";
+import { instructionsRowName, normalizeResource } from "../observe/normalize.js";
 import { planPluginAction } from "../plugins/broker.js";
 import type { BrokerPlan } from "../plugins/broker.js";
 import type { PlannedFileChange } from "./write-store.js";
@@ -87,6 +88,12 @@ export interface CellActionPlan {
    * the deferral that created it was about never silently choosing a winner.
    */
   overwrites?: FieldDelta[];
+  /**
+   * Instructions cells only: what the target's file already holds. A copy
+   * writes only the harness block and keeps the rest, so the wording depends on
+   * whether the target has a block and/or text of its own outside one.
+   */
+  targetInstructions?: { hasBlock: boolean; hasOwnText: boolean };
   /**
    * Set for `plugin` cells only. A plugin is not installed by writing a
    * config store — it goes through the surface's own installer, or is
@@ -188,8 +195,15 @@ async function findEntry(
       projectRoot: opts.projectRoot,
       homeRoot: opts.homeRoot,
     });
+    // Instructions match by row name (per scope), not by file name: the grid's
+    // "User instructions" row spans CLAUDE.md, AGENTS.md and the rest.
     const matches = result.entries.filter(
-      (candidate) => candidate.kind === kind && candidate.name.toLowerCase() === wanted,
+      (candidate) =>
+        candidate.kind === kind &&
+        (kind === "instructions"
+          ? instructionsRowName(candidate.scope ?? store.scope)
+          : candidate.name
+        ).toLowerCase() === wanted,
     );
     // Ordering STORES project-first is not enough when one store's format
     // emits both scopes — Claude Code declares plugins in a single user-scope
@@ -221,6 +235,17 @@ export async function planCellAction(
    */
   registry: readonly SurfaceDescriptor[] = SURFACES,
 ): Promise<CellActionPlan> {
+  // An instructions row is per scope, and the write goes to the request's
+  // scope. A "Project instructions" row requested at user scope would copy
+  // project text into the user's own file, so refuse it.
+  if (
+    request.kind === "instructions" &&
+    request.name.trim().toLowerCase() !== instructionsRowName(request.scope).toLowerCase()
+  ) {
+    return refuse(
+      `'${request.name}' is not a ${request.scope}-scope instructions row — copy it at its own scope.`,
+    );
+  }
   const found = await findEntry(fs, request.from, request.kind, request.name, opts, registry);
   if (!found) {
     return refuse(
@@ -336,6 +361,18 @@ export async function planCellAction(
       ? diffAgainstExisting(request.kind, existing.entry.value, found.entry.value)
       : null;
 
+  const existingText =
+    request.kind === "instructions" && existing !== null && isRecord(existing.entry.value)
+      ? existing.entry.value.content
+      : undefined;
+  const targetInstructions =
+    typeof existingText === "string" && existingText.trim() !== ""
+      ? {
+          hasBlock: findAnySyncBlock(existingText) !== null,
+          hasOwnText: textOutsideSyncBlock(existingText).trim() !== "",
+        }
+      : null;
+
   return {
     supported: true,
     changes,
@@ -344,6 +381,7 @@ export async function planCellAction(
     value: found.entry.value,
     loss,
     ...(overwrites !== null ? { overwrites } : {}),
+    ...(targetInstructions !== null ? { targetInstructions } : {}),
     requiresConfirmation: hasGenuineLoss(loss) || overwrites !== null,
     source,
     target,

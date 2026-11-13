@@ -1,0 +1,10 @@
+{
+  "command": "list_installed_plugins",
+  "calls": [
+    {
+      "fn": "listInstalledPlugins",
+      "args": [],
+      "payload": null
+    }
+  ]
+}

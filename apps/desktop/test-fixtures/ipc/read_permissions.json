@@ -1,0 +1,10 @@
+{
+  "command": "read_permissions",
+  "calls": [
+    {
+      "fn": "readPermissions",
+      "args": [],
+      "payload": null
+    }
+  ]
+}

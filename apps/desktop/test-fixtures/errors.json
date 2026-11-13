@@ -1,0 +1,8 @@
+{
+  "_comment": "Error values as the Tauri runtime delivers them to the webview: bare strings, not Error objects. Unit mocks reject with these so a handler that reads err.message is caught. The first two come from the fs plugin and the ACL; the rest are the shape of a Rust command returning Err(String).",
+  "forbiddenPath": "forbidden path: /Users/someone/.zshrc, maybe it is not allowed on the scope for `allow-exists` permission in your capability configuration file",
+  "aclDenied": "fs.write_text_file not allowed. Permissions associated with this command: fs:allow-write-file, fs:default, fs:write-all",
+  "commandNotAllowed": "Command guarded_write_file not allowed by ACL",
+  "rustRefusal": "refused: the file changed on disk since it was read (expected sha256 does not match)",
+  "ioError": "No such file or directory (os error 2)"
+}

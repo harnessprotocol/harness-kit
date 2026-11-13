@@ -107,7 +107,7 @@ export function RegistryEnrollment({ inventory }: { inventory: Omit<InventorySna
       } else {
         setStatus("error");
         setFailure({
-          title: "Couldn't sync with the registry",
+          title: "Couldn't reach the registry",
           details: errorDetails(error),
           action: { label: "Retry", onClick: () => void sync(activeToken, preferredOrganization) },
         });

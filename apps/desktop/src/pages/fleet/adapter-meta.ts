@@ -3,12 +3,12 @@ import type { HarnessInfo } from "@harness-kit/shared";
 
 /**
  * Display metadata for each core AdapterId — name + a short mono monogram
- * (DESIGN.md §6.3 Fleet matrix: "mono monogram tile + name + mono version").
+ * (a mono monogram tile, the name, and a mono version).
  *
  * `harnessInfoId` cross-references the Rust `detect_harnesses()` probe (a
  * different, coarser id scheme) so we can show a CLI version string sourced
- * from that existing probe rather than re-probing in core (core's fleet
- * report never populates FleetCell.version — see packages/core/src/fleet/report.ts).
+ * from that existing probe rather than re-probing in core (core's report
+ * never populates FleetCell.version — see packages/core/src/fleet/report.ts).
  * Adapters with no corresponding detectHarnesses() entry (agents-md, pi) show
  * no version — that's honest, not a bug.
  */

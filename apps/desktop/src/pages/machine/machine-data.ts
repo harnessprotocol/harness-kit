@@ -33,7 +33,7 @@ export interface MachineScanResult {
  * `scanRoot` is the optional project directory; null = machine-only
  * observation (user-scope stores only). A project dir needs a runtime FS
  * scope grant first (the static capability only covers known $HOME config
- * roots) — mirroring Fleet, a failed grant drops the project from the scan
+ * roots) — as in drift-data.ts, a failed grant drops the project from the scan
  * rather than failing the whole inventory, but the degradation is reported
  * so the page can surface it instead of silently under-reporting.
  */

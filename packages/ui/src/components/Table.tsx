@@ -20,8 +20,8 @@ export interface TableProps<T> extends TableHTMLAttributes<HTMLTableElement> {
 
 /**
  * Dense data table / matrix. Row height 46px (DESIGN.md §4), hover tint via
- * --hover-bg, selected via --accent-light. Suitable for the Fleet matrix
- * (harnesses x scopes) or any list/grid of records.
+ * --hover-bg, selected via --accent-light. Suitable for any list or grid of
+ * records.
  */
 export function Table<T>({
   columns,

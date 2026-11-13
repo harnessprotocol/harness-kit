@@ -9,10 +9,13 @@ interface PluginRowProps {
   index: number;
   isLast: boolean;
   onClick: () => void;
-  onContextMenu: (e: React.MouseEvent) => void;
+  /** Right-click, or the row's menu button; `x`/`y` is where to anchor the menu. */
+  onContextMenu: (at: { x: number; y: number }) => void;
+  /** True while this row's menu is open (drives the menu button's aria-expanded). */
+  menuOpen?: boolean;
 }
 
-export default function PluginRow({ plugin, update, index, isLast, onClick, onContextMenu }: PluginRowProps) {
+export default function PluginRow({ plugin, update, index, isLast, onClick, onContextMenu, menuOpen = false }: PluginRowProps) {
   const counts = formatComponentCounts(plugin.component_counts);
 
   return (
@@ -23,7 +26,7 @@ export default function PluginRow({ plugin, update, index, isLast, onClick, onCo
       onClick={onClick}
       onContextMenu={(e) => {
         e.preventDefault();
-        onContextMenu(e);
+        onContextMenu({ x: e.clientX, y: e.clientY });
       }}
       style={{
         display: "flex", alignItems: "center", gap: "12px",
@@ -37,9 +40,15 @@ export default function PluginRow({ plugin, update, index, isLast, onClick, onCo
       {/* Left zone: name, description, counts, tags */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-          <span style={{ fontSize: "13px", fontWeight: 500, color: "var(--fg-base)" }}>
+          {/* The keyboard way in: a native button, so Enter and Space work.
+              Its click bubbles to the row's onClick, which opens the plugin. */}
+          <button
+            type="button"
+            className="hk-reset-btn"
+            style={{ fontSize: "13px", fontWeight: 500, color: "var(--fg-base)", cursor: "pointer", textAlign: "left" }}
+          >
             {plugin.name}
-          </span>
+          </button>
           <SourceBadge marketplace={plugin.marketplace} />
         </div>
 
@@ -67,6 +76,23 @@ export default function PluginRow({ plugin, update, index, isLast, onClick, onCo
           </div>
         )}
       </div>
+
+      {/* Menu button: the keyboard and touch way to the right-click actions */}
+      <button
+        type="button"
+        className="hk-reset-btn"
+        aria-label={`Actions for ${plugin.name}`}
+        aria-haspopup="menu"
+        aria-expanded={menuOpen}
+        onClick={(e) => {
+          e.stopPropagation();
+          const r = e.currentTarget.getBoundingClientRect();
+          onContextMenu({ x: r.left, y: r.bottom });
+        }}
+        style={{ flexShrink: 0, padding: "4px 6px", color: "var(--fg-muted)", cursor: "pointer", fontSize: "14px", lineHeight: 1 }}
+      >
+        <span aria-hidden="true">⋯</span>
+      </button>
 
       {/* Right zone: version + date */}
       <div style={{ flexShrink: 0, textAlign: "right" }}>

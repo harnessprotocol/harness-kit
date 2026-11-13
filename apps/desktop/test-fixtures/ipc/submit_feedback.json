@@ -1,0 +1,28 @@
+{
+  "command": "submit_feedback",
+  "calls": [
+    {
+      "fn": "submitFeedback",
+      "args": [
+        "bug",
+        "It broke",
+        "Details",
+        {
+          "os": "macos",
+          "osVersion": "15.1",
+          "arch": "aarch64",
+          "appVersion": "0.13.0"
+        }
+      ],
+      "payload": {
+        "category": "bug",
+        "title": "It broke",
+        "description": "Details",
+        "os": "macos",
+        "osVersion": "15.1",
+        "arch": "aarch64",
+        "appVersion": "0.13.0"
+      }
+    }
+  ]
+}

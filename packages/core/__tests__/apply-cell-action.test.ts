@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { applyCellAction, CellActionError } from "../src/write/apply-cell-action.js";
 import { planCellAction } from "../src/write/plan-cell-action.js";
+import { buildMachineInventory } from "../src/observe/machine-inventory.js";
 import { createHomeTransactionRoot } from "../src/surfaces/write-scope.js";
 import { MockFsProvider } from "./helpers/mock-fs.js";
 
@@ -115,5 +116,136 @@ describe("cell action apply gate (AC-34, AC-17)", () => {
     // Written paths are root-relative, and the backup lands in the home root.
     expect(result.written).toEqual([".cursor/mcp.json"]);
     expect(fs.getFile("/home/user/.harness/backups/apply/.cursor/mcp.json")).toBeDefined();
+  });
+});
+
+describe("instructions copy leaves no gap on rescan (AC-57)", () => {
+  const instructionsMachine = () =>
+    new MockFsProvider({
+      "/home/user/.claude/CLAUDE.md": "# House rules\n\nBe kind.\n",
+      "/home/user/.codex/config.toml": 'model = "gpt-5"\n',
+    });
+
+  it("an applied copy of User instructions into Codex's AGENTS.md closes the gap", async () => {
+    const fs = instructionsMachine();
+    const before = await buildMachineInventory(fs, OPTS);
+    const gap = before.gaps.find((g) => g.row === "instructions:user instructions");
+    expect(gap?.missingOn).toContain("codex");
+
+    const planned = await planCellAction(
+      fs,
+      { kind: "instructions", name: "User instructions", from: "claude-code", to: "codex", scope: "user" },
+      OPTS,
+    );
+    expect(planned.supported).toBe(true);
+    const result = await applyCellAction(planned, context(fs), { homeRoot: "/home/user" });
+    expect(result.committed).toBe(true);
+    // What lands is a harness:sync marker block, not a file copy.
+    expect(fs.getFile("/home/user/.codex/AGENTS.md")).toContain("<!-- BEGIN harness:sync:");
+
+    const after = await buildMachineInventory(fs, OPTS);
+    const row = after.rows.find((r) => r.key === "instructions:user instructions")!;
+    expect(row.cells.codex.status).toBe("present");
+    expect(after.gaps.find((g) => g.row === "instructions:user instructions")).toBeUndefined();
+  });
+
+  const copy = async (
+    fs: MockFsProvider,
+    from: "claude-code" | "codex",
+    to: "claude-code" | "codex",
+    stamp: string,
+  ) => {
+    const planned = await planCellAction(
+      fs,
+      { kind: "instructions", name: "User instructions", from, to, scope: "user" },
+      OPTS,
+    );
+    // Confirmation is part of the product flow for a target that has its own
+    // text; the test acts as the user who confirmed it.
+    const result = await applyCellAction(planned, context(fs, stamp), {
+      homeRoot: "/home/user",
+      confirmed: planned.requiresConfirmation,
+    });
+    return { planned, result };
+  };
+  const userRow = async (fs: MockFsProvider) =>
+    (await buildMachineInventory(fs, OPTS)).rows.find((r) => r.key === "instructions:user instructions")!;
+  const sync = (text: string) => (text.match(/BEGIN harness:sync/g) ?? []).length;
+
+  it("copy into an empty target rescans as the same content, and a repeat is a no-op", async () => {
+    const fs = instructionsMachine();
+    await copy(fs, "claude-code", "codex", "a");
+    const row = await userRow(fs);
+    expect(row.cells.codex.status).toBe("present");
+    expect(row.cells.codex.effectiveDigest).toBe(row.cells["claude-code"].effectiveDigest);
+    expect((await buildMachineInventory(fs, OPTS)).diffs).toEqual([]);
+    const again = await copy(fs, "claude-code", "codex", "b");
+    expect(again.planned.noop).toBe(true);
+  });
+
+  it("copy into a target with its own prose keeps the prose, asks first, and rescans as differing", async () => {
+    const fs = new MockFsProvider({
+      ...instructionsMachine().getAllFiles(),
+      "/home/user/.codex/AGENTS.md": "# Codex notes\n\nMine.\n",
+    });
+    const first = await copy(fs, "claude-code", "codex", "a");
+    expect(first.planned.requiresConfirmation).toBe(true);
+    const text = fs.getFile("/home/user/.codex/AGENTS.md")!;
+    expect(text).toContain("Mine.");
+    expect(text).toContain("BEGIN harness:sync:user-instructions");
+    // The target's own text is a real difference from the source.
+    const row = await userRow(fs);
+    expect(row.cells.codex.effectiveDigest).not.toBe(row.cells["claude-code"].effectiveDigest);
+    // A repeat leaves the block as it is.
+    expect((await copy(fs, "claude-code", "codex", "b")).planned.noop).toBe(true);
+  });
+
+  it("a source with prose and a block copies all of it", async () => {
+    const fs = new MockFsProvider({
+      ...instructionsMachine().getAllFiles(),
+      "/home/user/.claude/CLAUDE.md":
+        "# Alpha\n\nProse one.\n\n<!-- BEGIN harness:sync:user-instructions -->\nShared.\n<!-- END harness:sync:user-instructions -->\n",
+    });
+    await copy(fs, "claude-code", "codex", "a");
+    const codex = fs.getFile("/home/user/.codex/AGENTS.md")!;
+    expect(codex).toContain("Prose one.");
+    expect(codex).toContain("Shared.");
+    expect(sync(codex)).toBe(1);
+    const row = await userRow(fs);
+    expect(row.cells.codex.effectiveDigest).toBe(row.cells["claude-code"].effectiveDigest);
+  });
+
+  it("copying back and forth never nests blocks", async () => {
+    const fs = new MockFsProvider({
+      ...instructionsMachine().getAllFiles(),
+      "/home/user/.codex/AGENTS.md": "# Beta\n",
+    });
+    await copy(fs, "claude-code", "codex", "a");
+    // Claude's own text changes; the codex copy is now the older one.
+    const edited = new MockFsProvider({
+      ...fs.getAllFiles(),
+      "/home/user/.claude/CLAUDE.md": "# Alpha two\n",
+    });
+    await copy(edited, "codex", "claude-code", "b");
+    expect(sync(edited.getFile("/home/user/.claude/CLAUDE.md")!)).toBe(1);
+    await copy(edited, "claude-code", "codex", "c");
+    const codex = edited.getFile("/home/user/.codex/AGENTS.md")!;
+    expect(sync(codex)).toBe(1);
+    expect(codex).toContain("# Beta");
+    expect(codex.match(/END harness:sync/g)).toHaveLength(1);
+  });
+
+  it("refuses a Project instructions row requested at user scope instead of writing the user file", async () => {
+    const fs = new MockFsProvider({
+      "/home/user/.codex/config.toml": 'model = "gpt-5"\n',
+      "/project/CLAUDE.md": "# Project only\n",
+    });
+    const planned = await planCellAction(
+      fs,
+      { kind: "instructions", name: "Project instructions", from: "claude-code", to: "codex", scope: "user" },
+      { ...OPTS, projectRoot: "/project" },
+    );
+    expect(planned.supported).toBe(false);
+    expect(planned.changes).toEqual([]);
   });
 });

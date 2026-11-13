@@ -1,0 +1,14 @@
+{
+  "command": "read_session_facet",
+  "calls": [
+    {
+      "fn": "readSessionFacet",
+      "args": [
+        "sess-1"
+      ],
+      "payload": {
+        "sessionId": "sess-1"
+      }
+    }
+  ]
+}

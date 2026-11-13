@@ -227,7 +227,7 @@ test.describe("⌘K affordance and page commands (AC-21)", () => {
     await cmdk.click();
     const palette = appPage.getByRole("dialog", { name: "Command palette" });
     await expect(palette).toBeVisible();
-    await expect(palette.getByRole("button").first()).toHaveText("Rescan this machine");
+    await expect(palette.getByRole("option").first()).toHaveText("Rescan this machine");
     await expect(palette.getByText("This page")).toBeVisible();
 
     await appPage.keyboard.press("Escape");

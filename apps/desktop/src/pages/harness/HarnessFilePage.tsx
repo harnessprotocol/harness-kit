@@ -1,10 +1,14 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button, Card, ErrorNotice, Input } from "@harness-kit/ui";
-import { readHarnessFile, scanClaudeConfig, writeHarnessFile, saveCustomProfile } from "../../lib/tauri";
+import { writeHarnessFile, saveCustomProfile } from "../../lib/tauri";
+import { describeHarnessSource, readHarnessSource } from "../../lib/harness-source";
+import { LEGACY_HARNESS_NOTICE } from "../../lib/legacy-harness-notice";
+import { projectDirLabel, useProjectDir } from "../../lib/project-dir";
+import { importPersonalHarness } from "../../lib/personal-inventory";
 import { parseHarness, validateHarnessYaml } from "@harness-kit/core";
 import type { HarnessConfig, ValidationResult } from "@harness-kit/core";
-import { generateHarnessYaml, HARNESS_TEMPLATE } from "../../lib/harness-generator";
+import { HARNESS_TEMPLATE } from "../../lib/harness-generator";
 import type { HarnessProfile } from "../../lib/profiles";
 import { getAvailableViewModes } from "../../lib/viewModes";
 import { useRegisterCommands } from "../../lib/commands";
@@ -34,6 +38,9 @@ export default function HarnessFilePage() {
   const [filePath, setFilePath] = useState<string | null>(null);
   const [view, setView] = useState<View>("formatted");
 
+  // A file at ~/harness.yaml with none at ~/.claude/harness.yaml (existence only).
+  const [legacyHomeFile, setLegacyHomeFile] = useState(false);
+
   // Editor state
   const [editorContent, setEditorContent] = useState("");
   const [saving, setSaving] = useState(false);
@@ -51,19 +58,47 @@ export default function HarnessFilePage() {
   const [profileSaveError, setProfileSaveError] = useState<string | null>(null);
   const [profileSavedMsg, setProfileSavedMsg] = useState(false);
 
+  // AC-55: Profile follows the title-bar project. With one chosen it shows that
+  // project's committed harness.yaml (the team baseline), read-only; without
+  // one it is the editable personal ~/.claude/harness.yaml.
+  const [projectDir] = useProjectDir();
+  const source = describeHarnessSource(projectDir);
+  const readOnly = source.kind === "project";
+
+  // A read still in flight for the previous project must not land on the new one.
+  const loadGeneration = useRef(0);
   const loadHarness = useCallback(() => {
+    const generation = ++loadGeneration.current;
     setLoading(true);
-    readHarnessFile()
+    setFetchError(null);
+    readHarnessSource(projectDir)
       .then((result) => {
+        if (generation !== loadGeneration.current) return;
         setFound(result.found);
+        setLegacyHomeFile(result.legacy_home_file === true);
         setDiskContent(result.content);
         setFilePath(result.path);
       })
-      .catch((e) => setFetchError(errorDetails(e)))
-      .finally(() => setLoading(false));
-  }, []);
+      .catch((e) => {
+        if (generation !== loadGeneration.current) return;
+        setFound(false);
+        setLegacyHomeFile(false);
+        setDiskContent(null);
+        setFilePath(null);
+        setFetchError(errorDetails(e));
+      })
+      .finally(() => {
+        if (generation === loadGeneration.current) setLoading(false);
+      });
+  }, [projectDir]);
 
-  useEffect(() => { loadHarness(); }, [loadHarness]);
+  useEffect(() => {
+    // A new scope starts from the formatted view: the editor belongs to the
+    // personal file and holds its text.
+    setView("formatted");
+    setSaveError(null);
+    loadHarness();
+  }, [loadHarness]);
 
   const saveable = editorContent !== (diskContent ?? "") && view === "editor";
 
@@ -93,8 +128,9 @@ export default function HarnessFilePage() {
     setSaving(true);
     setSaveError(null);
     try {
-      // AC-50: only the file at the write target counts as "loaded". When the
-      // page loaded ~/harness.yaml instead, ~/.claude/harness.yaml was absent.
+      // AC-50: the digest is of the file at the write target; `undefined`
+      // when the page found no file there (AC-55: the personal profile is
+      // ~/.claude/harness.yaml and nothing else).
       const expected = filePath === "~/.claude/harness.yaml" ? await loadedDigest(diskContent) : undefined;
       const savedPath = await writeHarnessFile(editorContent, expected);
       setDiskContent(editorContent);
@@ -152,9 +188,12 @@ export default function HarnessFilePage() {
     setGenerating(true);
     setGenerateError(null);
     try {
-      const scan = await scanClaudeConfig();
-      const { yaml } = generateHarnessYaml(scan);
-      openEditor(yaml);
+      // AC-56: the same machine inventory the Machine grid shows.
+      const { harnessYaml } = await importPersonalHarness({
+        name: "my-harness",
+        description: "Generated from existing Claude Code configuration.",
+      });
+      openEditor(harnessYaml);
     } catch (e) {
       // Stay on the empty state: opening the blank template here would hide
       // the failure behind an editor that looks like a scan result.
@@ -204,17 +243,17 @@ export default function HarnessFilePage() {
 
   const toolbarActions = found && !loading ? (
     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-      {/* Sync */}
+      {/* Compile */}
       <Button
         variant="ghost"
         size="sm"
         onClick={() => navigate("/harness/sync")}
-        title="Sync harness.yaml to platform config files"
+        title="Compile harness.yaml to your projects"
       >
         <svg width="11" height="11" viewBox="0 0 20 20" fill="currentColor" style={{ marginRight: 4 }}>
           <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
         </svg>
-        Sync
+        Compile
       </Button>
       {/* Save as Profile */}
       <div style={{ position: "relative" }}>
@@ -275,27 +314,35 @@ export default function HarnessFilePage() {
   // ── Render ────────────────────────────────────────────────────
 
   const isFullHeight = view === "editor" && found;
-  const viewModes = getAvailableViewModes("harness.yaml", true);
+  const viewModes = getAvailableViewModes("harness.yaml", true).filter(
+    (mode) => !readOnly || mode.key !== "editor",
+  );
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+      {/* Eyebrow — a full shared PageHeader arrives in a later phase; this
+          small-caps kicker follows the same convention as SectionLabel in
+          SyncPage.tsx until then. The scope is always named: which
+          harness.yaml this page shows depends on the title-bar project. */}
+      <div style={{ padding: "6px 12px 0 36px", flexShrink: 0, display: "flex", gap: "8px", alignItems: "baseline" }}>
+        <span style={{
+          fontSize: "10px",
+          fontWeight: 600,
+          color: "var(--fg-subtle)",
+          textTransform: "uppercase",
+          letterSpacing: "0.5px",
+        }}>
+          Profile
+        </span>
+        <span data-testid="profile-scope" style={{ fontSize: "11px", color: "var(--fg-muted)" }}>
+          {source.label}
+          {readOnly && " (read-only)"}
+        </span>
+      </div>
+
       {/* Standardized toolbar */}
       {found && !loading && (
         <>
-          {/* Eyebrow — a full shared PageHeader arrives in a later phase; this
-              small-caps kicker follows the same convention as SectionLabel
-              in SyncPage.tsx until then. */}
-          <div style={{ padding: "6px 12px 0 36px", flexShrink: 0 }}>
-            <span style={{
-              fontSize: "10px",
-              fontWeight: 600,
-              color: "var(--fg-subtle)",
-              textTransform: "uppercase",
-              letterSpacing: "0.5px",
-            }}>
-              Profile
-            </span>
-          </div>
           <EditorToolbar
             filePath="harness.yaml"
             subtitle={filePath ?? undefined}
@@ -347,7 +394,29 @@ export default function HarnessFilePage() {
         )}
 
         {/* Empty state — no harness found, not yet in editor */}
-        {!loading && !fetchError && !found && view !== "editor" && (
+        {!loading && !fetchError && !found && readOnly && (
+          <Card padding="lg" style={{ maxWidth: "540px", marginTop: "4px" }}>
+            <h2 style={{ fontSize: "15px", fontWeight: 600, color: "var(--fg-base)", margin: "0 0 6px" }}>
+              No harness.yaml in {projectDirLabel(projectDir ?? "")}
+            </h2>
+            <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0, lineHeight: "1.5" }}>
+              The team baseline is the <code style={{ fontFamily: "ui-monospace, monospace", fontSize: "12px" }}>harness.yaml</code> committed
+              at the project root. Add one there, or clear the project in the title bar to work on your personal profile.
+            </p>
+          </Card>
+        )}
+
+        {!loading && !fetchError && !found && !readOnly && legacyHomeFile && (
+          <p
+            role="note"
+            data-testid="legacy-harness-notice"
+            style={{ fontSize: "13px", color: "var(--fg-muted)", margin: "0 0 12px" }}
+          >
+            {LEGACY_HARNESS_NOTICE}
+          </p>
+        )}
+
+        {!loading && !fetchError && !found && !readOnly && view !== "editor" && (
           <Card padding="lg" style={{ textAlign: "center", maxWidth: "540px", marginTop: "4px" }}>
             <h2 style={{ fontSize: "15px", fontWeight: 600, color: "var(--fg-base)", margin: "0 0 6px" }}>
               No harness.yaml found

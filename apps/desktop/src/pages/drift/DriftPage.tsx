@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import type { ToastItem } from "@harness-kit/ui";
+import { useToast } from "../../components/ToastProvider";
 import {
   buildDriftScopes,
   collectDrift,
+  describeScopes,
   driftItemKey,
   summarizeDrift,
   type DriftSummary,
+  type ScopeStatus,
   type ScopedDriftItem,
 } from "./drift-data";
 import { isRepairable } from "./classification";
@@ -17,6 +19,7 @@ import {
   migrateDriftAcknowledgements,
   unacknowledgeDriftItem,
   getAcknowledgedDriftItems,
+  readHarnessFile,
 } from "../../lib/tauri";
 import { errorDetails } from "../../lib/error-details";
 import { appDataDir, join as joinPath } from "@tauri-apps/api/path";
@@ -24,6 +27,15 @@ import { buildDesktopPortabilitySnapshot, type DesktopPortabilitySnapshot } from
 import { useProjectDir } from "../../lib/project-dir";
 
 export type { DriftSummary };
+
+/** Existence of ~/harness.yaml, reported by the Rust side as a boolean; the file is never read. */
+async function hasLegacyHomeFile(): Promise<boolean> {
+  try {
+    return (await readHarnessFile()).legacy_home_file === true;
+  } catch {
+    return false;
+  }
+}
 
 export interface DriftPageProps {
   /** Rendered inside the Machine view (AC-18) rather than as a page. */
@@ -47,16 +59,14 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [fixTarget, setFixTarget] = useState<ScopedDriftItem[] | null>(null);
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [showAcknowledged, setShowAcknowledged] = useState(false);
   const [portability, setPortability] = useState<DesktopPortabilitySnapshot | null>(null);
   const [scanned, setScanned] = useState(false);
+  const [scopeStatuses, setScopeStatuses] = useState<ScopeStatus[]>([]);
+  const [legacyHomeFile, setLegacyHomeFile] = useState(false);
 
-  const pushToast = useCallback((toast: Omit<ToastItem, "id">) => {
-    const id = `${Date.now()}-${Math.random()}`;
-    setToasts((prev) => [...prev, { ...toast, id }]);
-    setTimeout(() => setToasts((prev) => prev.filter((t) => t.id !== id)), 4000);
-  }, []);
+  // The app's one toast stack (AppLayout's ToastProvider, always-mounted live region).
+  const pushToast = useToast();
 
   // Only the latest scan lands: a project change can start one while another runs.
   const loadSeq = useRef(0);
@@ -77,13 +87,22 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
         .then((dir) => joinPath(dir, "comparator.db"))
         .then((legacy) => migrateDriftAcknowledgements(legacy))
         .catch(() => 0);
-      const [collected, ackRows, portabilitySnapshot] = await Promise.all([
-        collectDrift(scopes),
+      const [{ collected, statuses }, ackRows, portabilitySnapshot] = await Promise.all([
+        collectDrift(scopes).then(async (collected) => ({
+          collected,
+          statuses: await describeScopes(scopes, collected),
+        })),
         getAcknowledgedDriftItems().catch(() => []),
         home ? buildDesktopPortabilitySnapshot(home, project) : Promise.resolve(null),
       ]);
       if (seq !== loadSeq.current) return;
       setEntries(collected);
+      setScopeStatuses(statuses);
+      setLegacyHomeFile(
+        statuses.some((s) => s.scope.kind === "global" && s.state === "no-file") &&
+          (await hasLegacyHomeFile()),
+      );
+      if (seq !== loadSeq.current) return;
       setPortability(portabilitySnapshot);
       setAcknowledged(
         new Set(ackRows.map((a) => [a.scopeRoot, a.adapter, a.path, a.harnessName, a.slot].join("::"))),
@@ -163,15 +182,15 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
         error={error}
         harnessFilter={harnessFilter}
         showAcknowledged={showAcknowledged}
-        toasts={toasts}
         onToggleShowAcknowledged={() => setShowAcknowledged((v) => !v)}
         onFixAll={() => setFixTarget(filtered.filter((e) => isRepairable(e.item.class)))}
         onFixOne={(entry) => setFixTarget([entry])}
         onAcknowledge={handleAcknowledge}
         onUnacknowledge={handleUnacknowledge}
         onRescan={load}
-        onDismissToast={(id) => setToasts((prev) => prev.filter((t) => t.id !== id))}
         portability={portability}
+        scopeStatuses={scopeStatuses}
+        legacyHomeFile={legacyHomeFile}
       />
 
       <FixPreviewModal

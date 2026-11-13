@@ -1,0 +1,16 @@
+{
+  "command": "read_file_history",
+  "calls": [
+    {
+      "fn": "readFileHistory",
+      "args": [
+        "demo",
+        "/Users/u/.claude/plugins/cache/harness-kit/demo/1.0.0/SKILL.md"
+      ],
+      "payload": {
+        "pluginName": "demo",
+        "filePath": "/Users/u/.claude/plugins/cache/harness-kit/demo/1.0.0/SKILL.md"
+      }
+    }
+  ]
+}

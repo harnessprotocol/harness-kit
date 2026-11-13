@@ -1,0 +1,29 @@
+{
+  "command": "write_config_file",
+  "calls": [
+    {
+      "fn": "writeConfigFile",
+      "args": [
+        "/Users/u/.claude/CLAUDE.md",
+        "hi",
+        "abc123"
+      ],
+      "payload": {
+        "path": "/Users/u/.claude/CLAUDE.md",
+        "content": "hi",
+        "expectedSha256": "abc123"
+      }
+    },
+    {
+      "fn": "writeConfigFile",
+      "args": [
+        "/Users/u/.claude/CLAUDE.md",
+        "hi"
+      ],
+      "payload": {
+        "path": "/Users/u/.claude/CLAUDE.md",
+        "content": "hi"
+      }
+    }
+  ]
+}

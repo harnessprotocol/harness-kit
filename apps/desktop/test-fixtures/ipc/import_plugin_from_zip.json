@@ -1,0 +1,23 @@
+{
+  "command": "import_plugin_from_zip",
+  "calls": [
+    {
+      "fn": "importPluginFromZip",
+      "args": [
+        null
+      ],
+      "payload": {
+        "zipPath": null
+      }
+    },
+    {
+      "fn": "importPluginFromZip",
+      "args": [
+        "/Users/u/Downloads/demo.zip"
+      ],
+      "payload": {
+        "zipPath": "/Users/u/Downloads/demo.zip"
+      }
+    }
+  ]
+}

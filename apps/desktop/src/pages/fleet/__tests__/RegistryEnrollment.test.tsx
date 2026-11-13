@@ -36,7 +36,7 @@ describe("RegistryEnrollment failures (AC-20)", () => {
     fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch")).mockImplementation(() => json([]));
     render(<RegistryEnrollment inventory={inventory} />);
 
-    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't sync with the registry");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't reach the registry");
     // The raw network text is only in Details, not the status line.
     expect(screen.getByText("Failed to fetch")).not.toBeVisible();
     expect(screen.queryByRole("button", { name: "Refresh assignment" })).not.toBeInTheDocument();

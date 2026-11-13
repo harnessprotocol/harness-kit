@@ -50,6 +50,39 @@ fn is_state_path(normalized: &str) -> bool {
     normalized.starts_with(".harness/backups/")
 }
 
+/// Transaction ids this app session's `apply_surface_transaction` itself wrote
+/// a committed manifest for. In memory only, so it empties on restart: the
+/// apply and the `record_transaction` that follows it are one call chain in
+/// core's `recordAppliedTransaction`, so a restart between them loses the
+/// ledger row (the apply still stands, and the manifest is on disk) but can
+/// never leave a record that is accepted without its apply.
+#[derive(Default)]
+pub struct CommittedTransactions(std::sync::Mutex<std::collections::HashSet<String>>);
+
+impl CommittedTransactions {
+    pub(crate) fn insert(&self, id: &str) {
+        self.0.lock().unwrap_or_else(|e| e.into_inner()).insert(id.to_string());
+    }
+
+    pub(crate) fn contains(&self, id: &str) -> bool {
+        self.0.lock().unwrap_or_else(|e| e.into_inner()).contains(id)
+    }
+}
+
+/// The transaction id a write commits: the file is
+/// `.harness/backups/<id>/transaction.json` and its content says
+/// `"status":"committed"`.
+fn committed_id(file: &SurfaceFileWrite) -> Option<String> {
+    let relative = file.relative_path.replace('\\', "/");
+    let rest = relative.strip_prefix(".harness/backups/")?;
+    let (id, name) = rest.split_once('/')?;
+    if name != "transaction.json" || id.is_empty() {
+        return None;
+    }
+    let document: serde_json::Value = serde_json::from_str(file.content.as_deref()?).ok()?;
+    (document.get("status")?.as_str()? == "committed").then(|| id.to_string())
+}
+
 /// Whether a home-relative path is a config store the registry declares.
 /// Segment-aware in both directions: ".claude.json.bak" is not ".claude.json",
 /// and ".claude/skillsets/x" is not inside ".claude/skills".
@@ -183,14 +216,32 @@ struct Target {
 /// written: the batch stops there with an error that says it was replaced,
 /// and lists it among the files already written.
 #[tauri::command]
-pub fn apply_surface_transaction(files: Vec<SurfaceFileWrite>) -> Result<Vec<String>, String> {
+pub fn apply_surface_transaction(
+    committed: tauri::State<'_, CommittedTransactions>,
+    files: Vec<SurfaceFileWrite>,
+) -> Result<Vec<String>, String> {
     let home = dirs::home_dir().ok_or("Could not resolve home directory")?;
-    apply_surface_transaction_in(&home, files)
+    apply_and_note_commits(&committed, &home, files)
+}
+
+/// The command body: apply, and only on success remember which transactions
+/// this call committed.
+pub(crate) fn apply_and_note_commits(
+    committed: &CommittedTransactions,
+    home: &Path,
+    files: Vec<SurfaceFileWrite>,
+) -> Result<Vec<String>, String> {
+    let ids: Vec<String> = files.iter().filter_map(committed_id).collect();
+    let written = apply_surface_transaction_in(home, files)?;
+    for id in ids {
+        committed.insert(&id);
+    }
+    Ok(written)
 }
 
 /// The command body with the home directory injected, so tests run against a
 /// tempdir instead of the real home (and never mutate the process-global HOME).
-fn apply_surface_transaction_in(
+pub(crate) fn apply_surface_transaction_in(
     home: &Path,
     files: Vec<SurfaceFileWrite>,
 ) -> Result<Vec<String>, String> {
@@ -832,6 +883,26 @@ mod tests {
     fn rejects_traversal_and_absolute_forms() {
         for path in ["../.ssh/id_rsa", "/etc/passwd", "~/.zshrc", ".claude/../../x", ""] {
             assert!(!is_declared_store(path), "{} should be rejected", path);
+        }
+    }
+
+    #[test]
+    fn dot_dot_is_refused_inside_and_around_declared_stores() {
+        // A `..` segment can hop out of a declared directory, or into one from
+        // outside, even when the textual prefix looks declared.
+        for path in [
+            ".claude/skills/../../.ssh/id_rsa",
+            ".claude/skills/review/../../../.zshrc",
+            ".claude/../.claude.json",
+            "foo/../.claude.json",
+            "..",
+            ".claude/skills/..",
+            ".harness/backups/../harness.db",
+            ".harness/backups/x/../../device.json",
+            ".claude\\skills\\..\\..\\.ssh\\id_rsa",
+        ] {
+            assert!(!is_declared_store(path), "{path} should be rejected");
+            assert!(!is_declared_project_store(path), "{path} should be rejected as a project store");
         }
     }
 

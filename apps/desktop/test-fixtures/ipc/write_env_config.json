@@ -1,0 +1,30 @@
+{
+  "command": "write_env_config",
+  "calls": [
+    {
+      "fn": "writeEnvConfig",
+      "args": [
+        [
+          {
+            "name": "GITHUB_TOKEN",
+            "description": "GitHub access",
+            "value": "",
+            "pluginName": "demo"
+          }
+        ],
+        "absent"
+      ],
+      "payload": {
+        "entries": [
+          {
+            "name": "GITHUB_TOKEN",
+            "description": "GitHub access",
+            "value": "",
+            "pluginName": "demo"
+          }
+        ],
+        "expectedSha256": "absent"
+      }
+    }
+  ]
+}

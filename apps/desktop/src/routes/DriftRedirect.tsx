@@ -6,8 +6,8 @@ import { withView } from "../pages/machine/machine-view-model";
  * Governed by specs/ux-consolidation/spec.md AC-6 (retired routes redirect
  * and keep the query the destination reads), AC-7 (a harness in the query
  * opens Drift filtered to it) and AC-18 (Drift is a view of Machine). DriftPage
- * reads `harness` from the URL, and dropping it here made every Fleet row
- * click arrive unfiltered.
+ * reads `harness` from the URL, and dropping it here made every link that
+ * names a harness arrive unfiltered.
  */
 export function DriftRedirect() {
   const { search } = useLocation();

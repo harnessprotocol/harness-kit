@@ -1,0 +1,14 @@
+{
+  "command": "get_comparison",
+  "calls": [
+    {
+      "fn": "getComparison",
+      "args": [
+        "c-1"
+      ],
+      "payload": {
+        "id": "c-1"
+      }
+    }
+  ]
+}

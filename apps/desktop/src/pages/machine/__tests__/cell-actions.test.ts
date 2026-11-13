@@ -71,8 +71,10 @@ describe("applyCellActionViaTauri records a rollback point", () => {
     const [, changes, input] = recordAppliedTransaction.mock.calls[0] as unknown as [
       unknown,
       Array<{ root: string; path: string; before: string | null; after: string | null }>,
-      { manifestRoot: string; surfaces: string[]; identityKeys: string[] },
+      { manifestRoot: string; surfaces: string[]; identityKeys: string[]; copiedFrom?: string },
     ];
+    // Rust writes the audit entry (from, to, what, when) from this.
+    expect(input.copiedFrom).toBe("claude-code");
     // roots is derived from these — an empty array here is the M2 bug.
     expect(changes).toEqual([
       { root: "home", path: ".cursor/mcp.json", before: "{}", after: '{"a":1}' },

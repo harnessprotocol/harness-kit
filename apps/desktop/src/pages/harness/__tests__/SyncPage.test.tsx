@@ -45,11 +45,19 @@ vi.mock("../../../lib/harness-generator", () => ({
   HARNESS_TEMPLATE: 'version: "1"\n# template',
 }));
 
+// The chosen project's committed harness.yaml (AC-55): `null` means the
+// project has none. Every project in these tests holds the same content.
+let projectHarness: string | null = 'version: "1"';
 vi.mock("../../../lib/sync-fs", () => ({
   // Must be constructible — SyncPage calls `new SyncFsProvider(dir)`, and an
   // arrow-function implementation throws "not a constructor" under `new`.
-  SyncFsProvider: vi.fn(function SyncFsProvider() { return {}; }),
+  SyncFsProvider: vi.fn(function SyncFsProvider(this: Record<string, unknown>) {
+    this.joinPath = (...segs: string[]) => segs.join("/");
+    this.exists = async (p: string) => projectHarness !== null && p.endsWith("/harness.yaml");
+    this.readFile = async () => projectHarness;
+  }),
 }));
+vi.mock("../../../lib/harness-fs", () => ({ TauriFsProvider: vi.fn() }));
 
 // framer-motion: render children without animation
 vi.mock("framer-motion", () => ({
@@ -85,6 +93,7 @@ function renderPage() {
 describe("SyncPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    projectHarness = 'version: "1"';
     mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null });
     mockSyncFileExists.mockResolvedValue(false);
     mockSyncListBackups.mockResolvedValue([]);
@@ -193,16 +202,16 @@ describe("SyncPage", () => {
     );
     const palette = () => within(screen.getByRole("dialog", { name: "Command palette" }));
     await screen.findByText(/Directory found/i);
-    const preview = palette().getByRole("button", { name: "Preview compile changes" });
+    const preview = palette().getByRole("option", { name: "Preview compile changes" });
     await waitFor(() => expect(preview).not.toHaveAttribute("aria-disabled"));
-    expect(palette().queryByRole("button", { name: /Apply/ })).not.toBeInTheDocument();
+    expect(palette().queryByRole("option", { name: /Apply/ })).not.toBeInTheDocument();
 
     fireEvent.click(preview);
     await waitFor(() => expect(compile).toHaveBeenCalledTimes(1));
     expect(await screen.findByRole("button", { name: "Apply 1 file" })).toBeInTheDocument();
-    expect(palette().getByRole("button", { name: "Apply 1 compiled file" })).not.toHaveAttribute("aria-disabled");
+    expect(palette().getByRole("option", { name: "Apply 1 compiled file" })).not.toHaveAttribute("aria-disabled");
     // Preview is off outside the idle phase, button and command alike.
-    expect(palette().getByRole("button", { name: "Preview compile changes" })).toHaveAttribute("aria-disabled", "true");
+    expect(palette().getByRole("option", { name: "Preview compile changes" })).toHaveAttribute("aria-disabled", "true");
   });
 
   it("a failed preview names what failed, raw error behind Details, and Retry previews again (AC-20)", async () => {
@@ -277,7 +286,7 @@ describe("SyncPage", () => {
 
       // The old preview is gone, button and command alike, and nothing was written.
       expect(screen.queryByRole("button", { name: /^Apply/ })).not.toBeInTheDocument();
-      expect(palette().queryByRole("button", { name: /^Apply/ })).not.toBeInTheDocument();
+      expect(palette().queryByRole("option", { name: /^Apply/ })).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Preview Changes" })).toBeEnabled();
       expect(syncCreateBackup).not.toHaveBeenCalled();
       expect(syncWriteFiles).not.toHaveBeenCalled();
@@ -287,7 +296,7 @@ describe("SyncPage", () => {
       expect(vi.mocked(compile).mock.calls[1][1]).toEqual(["cursor"]);
       fireEvent.click(await screen.findByRole("button", { name: "Apply 1 file" }));
 
-      await screen.findByText("Sync complete");
+      await screen.findByText("Compile complete");
       expect(syncCreateBackup).toHaveBeenCalledTimes(1);
       expect(syncCreateBackup).toHaveBeenCalledWith("/repo/stale", "default", ["cursor"], []);
       expect(syncWriteFiles).toHaveBeenCalledTimes(1);
@@ -353,11 +362,11 @@ describe("SyncPage", () => {
       return settle;
     }
 
-    it("does not show Sync complete on the new project when an old apply succeeds", async () => {
+    it("does not show Compile complete on the new project when an old apply succeeds", async () => {
       const settle = await applyThenSwitchProject();
       await act(async () => { settle.resolve(); });
 
-      expect(screen.queryByText("Sync complete")).not.toBeInTheDocument();
+      expect(screen.queryByText("Compile complete")).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Preview Changes" })).toBeEnabled();
       // The backup the old apply took still shows up in the list.
       await waitFor(() => expect(mockSyncListBackups).toHaveBeenCalled());
@@ -371,6 +380,71 @@ describe("SyncPage", () => {
       expect(screen.queryByRole("button", { name: /^Apply/ })).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Preview Changes" })).toBeEnabled();
       await waitFor(() => expect(mockSyncListBackups).toHaveBeenCalled());
+    });
+  });
+
+  describe("harness source follows the title-bar project (AC-55)", () => {
+    beforeEach(() => {
+      mockSyncFileExists.mockResolvedValue(true);
+      act(() => setCurrentProjectDir(null));
+    });
+
+    it("names the personal profile when no project is chosen", async () => {
+      mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.claude/harness.yaml" });
+      renderPage();
+      expect(await screen.findByTestId("compile-source")).toHaveTextContent("Personal profile");
+    });
+
+    it("compiles the project's committed harness.yaml, not the personal one", async () => {
+      projectHarness = 'version: "1"\nmetadata:\n  name: team\n';
+      mockReadHarnessFile.mockResolvedValue({ found: true, content: "personal", path: "/home/user/.claude/harness.yaml" });
+      vi.mocked(detectPlatforms).mockResolvedValueOnce([
+        { platform: "cursor", indicators: [".cursor"], needsConfirmation: false },
+      ]);
+      vi.mocked(compile).mockResolvedValueOnce({ harnessName: "team", targets: ["cursor"], files: [], warnings: [] } as never);
+      setCurrentProjectDir("/work/acme");
+      renderPage();
+
+      expect(await screen.findByTestId("compile-source")).toHaveTextContent("Team baseline · acme");
+      expect(screen.getByText("/work/acme/harness.yaml")).toBeInTheDocument();
+      await screen.findByText(/Directory found/i);
+      const previewButton = screen.getByRole("button", { name: "Preview Changes" });
+      await waitFor(() => expect(previewButton).toBeEnabled());
+      fireEvent.click(previewButton);
+
+      await waitFor(() => expect(compile).toHaveBeenCalledTimes(1));
+      expect(vi.mocked(compile).mock.calls[0][0]).toBe('version: "1"\nmetadata:\n  name: team\n');
+      expect(mockReadHarnessFile).not.toHaveBeenCalled();
+    });
+
+    it("compiles the personal profile into a project that has no harness.yaml, and says so", async () => {
+      projectHarness = null;
+      mockReadHarnessFile.mockResolvedValue({ found: true, content: "personal", path: "/home/user/.claude/harness.yaml" });
+      vi.mocked(detectPlatforms).mockResolvedValueOnce([
+        { platform: "cursor", indicators: [".cursor"], needsConfirmation: false },
+      ]);
+      vi.mocked(compile).mockResolvedValueOnce({ harnessName: "default", targets: ["cursor"], files: [], warnings: [] } as never);
+      setCurrentProjectDir("/work/acme");
+      renderPage();
+
+      expect(await screen.findByTestId("compile-source")).toHaveTextContent("Personal profile → acme");
+      expect(screen.getByText("/home/user/.claude/harness.yaml")).toBeInTheDocument();
+      await screen.findByText(/Directory found/i);
+      const previewButton = screen.getByRole("button", { name: "Preview Changes" });
+      await waitFor(() => expect(previewButton).toBeEnabled());
+      fireEvent.click(previewButton);
+      await waitFor(() => expect(compile).toHaveBeenCalledTimes(1));
+      expect(vi.mocked(compile).mock.calls[0][0]).toBe("personal");
+    });
+
+    it("says there is nothing to compile when neither the project nor the personal profile has one", async () => {
+      projectHarness = null;
+      mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null });
+      setCurrentProjectDir("/work/acme");
+      renderPage();
+
+      expect(await screen.findByText("No harness.yaml found")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Preview Changes" })).not.toBeInTheDocument();
     });
   });
 

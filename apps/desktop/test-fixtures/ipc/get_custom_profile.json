@@ -1,0 +1,14 @@
+{
+  "command": "get_custom_profile",
+  "calls": [
+    {
+      "fn": "getCustomProfile",
+      "args": [
+        "team"
+      ],
+      "payload": {
+        "id": "team"
+      }
+    }
+  ]
+}

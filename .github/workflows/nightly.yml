@@ -129,6 +129,61 @@ jobs:
           path: ${{ steps.dmg.outputs.path }}
           retention-days: 1
 
+  # AC-60. tauri-driver has no macOS WebKit driver, so the app cannot be driven by
+  # WebDriver here. Two checks stand in: (1) the real tauri.conf.json, capability file
+  # and ACL manifest on Tauri's mock runtime, which runs the same ACL resolver the
+  # packaged app does; (2) the built .app is launched on a macOS runner and must stay
+  # alive for 20 seconds. (2) proves the bundle starts (database init, plugin setup,
+  # window creation); it does not click through the UI, which the Playwright suites
+  # cover against a mocked bridge.
+  real-app-smoke:
+    needs: [build-desktop]
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/desktop/src-tauri
+
+      - name: Capability and IPC contract tests on the real config (mock runtime)
+        working-directory: apps/desktop/src-tauri
+        run: |
+          cargo test --test capability_smoke
+          cargo test --lib -- ipc_contract surface_write
+
+      - name: Download the built desktop app
+        uses: actions/download-artifact@v8
+        with:
+          name: desktop-darwin-arm64
+
+      - name: Launch the built app
+        run: |
+          set -euo pipefail
+          MOUNT="$(mktemp -d)"
+          hdiutil attach HarnessKit-nightly-darwin-arm64.dmg -mountpoint "$MOUNT" -nobrowse -quiet
+          APP="$(find "$MOUNT" -maxdepth 1 -name '*.app' | head -1)"
+          if [[ -z "$APP" ]]; then
+            echo "::error::No .app inside the DMG"
+            exit 1
+          fi
+          EXE="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleExecutable' "$APP/Contents/Info.plist")"
+          # A throwaway HOME keeps the app off the runner's real config directories.
+          export HOME="$(mktemp -d)"
+          "$APP/Contents/MacOS/$EXE" > "$RUNNER_TEMP/app.log" 2>&1 &
+          PID=$!
+          sleep 20
+          if ! kill -0 "$PID" 2>/dev/null; then
+            echo "::error::The app exited within 20 seconds of launch"
+            cat "$RUNNER_TEMP/app.log"
+            exit 1
+          fi
+          echo "App still running after 20 seconds (pid $PID)"
+          kill "$PID" || true
+          cat "$RUNNER_TEMP/app.log"
+
   publish:
     needs: [build-cli-standalone, build-desktop]
     runs-on: ubuntu-latest
@@ -226,7 +281,7 @@ jobs:
   # A scheduled workflow fails where nobody is looking — this one was red for
   # four nights before anyone noticed. Surface it as an issue instead.
   report-failure:
-    needs: [build-cli-standalone, build-desktop, publish]
+    needs: [build-cli-standalone, build-desktop, real-app-smoke, publish]
     if: failure() && github.event_name == 'schedule'
     runs-on: ubuntu-latest
     permissions:

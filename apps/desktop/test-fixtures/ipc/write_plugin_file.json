@@ -1,0 +1,29 @@
+{
+  "command": "write_plugin_file",
+  "calls": [
+    {
+      "fn": "writePluginFile",
+      "args": [
+        "/Users/u/.claude/plugins/cache/harness-kit/demo/1.0.0/SKILL.md",
+        "# demo",
+        "abc123"
+      ],
+      "payload": {
+        "filePath": "/Users/u/.claude/plugins/cache/harness-kit/demo/1.0.0/SKILL.md",
+        "content": "# demo",
+        "expectedSha256": "abc123"
+      }
+    },
+    {
+      "fn": "writePluginFile",
+      "args": [
+        "/Users/u/.claude/plugins/cache/harness-kit/demo/1.0.0/SKILL.md",
+        "# demo"
+      ],
+      "payload": {
+        "filePath": "/Users/u/.claude/plugins/cache/harness-kit/demo/1.0.0/SKILL.md",
+        "content": "# demo"
+      }
+    }
+  ]
+}

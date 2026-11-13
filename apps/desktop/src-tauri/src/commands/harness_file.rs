@@ -14,6 +14,10 @@ pub struct HarnessFileResult {
     pub found: bool,
     pub content: Option<String>,
     pub path: Option<String>,
+    /// True when `~/.claude/harness.yaml` is absent but a file sits at
+    /// `~/harness.yaml`, where older builds read it. A boolean only: that file
+    /// is never read.
+    pub legacy_home_file: bool,
 }
 
 #[tauri::command]
@@ -27,13 +31,11 @@ fn read_harness_file_in(home_raw: &Path) -> Result<HarnessFileResult, String> {
     // compare correctly against the canonicalized candidate paths below.
     let home = home_raw.canonicalize().unwrap_or(home_raw);
 
-    // Search priority:
-    // 1. ~/.claude/harness.yaml
-    // 2. ~/harness.yaml
-    let candidates = [
-        home.join(".claude").join("harness.yaml"),
-        home.join("harness.yaml"),
-    ];
+    // The personal profile is ~/.claude/harness.yaml and nothing else (AC-55).
+    // Drift, Profile, Compile and onboarding all read this one path; a
+    // ~/harness.yaml is not a harness.yaml to any of them, so it is not
+    // read here either.
+    let candidates = [home.join(".claude").join("harness.yaml")];
 
     for path in &candidates {
         // Use canonicalize() as the existence check — eliminates the TOCTOU
@@ -54,13 +56,21 @@ fn read_harness_file_in(home_raw: &Path) -> Result<HarnessFileResult, String> {
             found: true,
             content: Some(content),
             path: Some(display_path),
+            legacy_home_file: false,
         });
     }
+
+    // Existence only, so the UI can say the file is where it no longer looks.
+    // Its content is never read.
+    let legacy_home_file = std::fs::symlink_metadata(home.join("harness.yaml"))
+        .map(|m| m.is_file())
+        .unwrap_or(false);
 
     Ok(HarnessFileResult {
         found: false,
         content: None,
         path: None,
+        legacy_home_file,
     })
 }
 
@@ -93,58 +103,6 @@ fn write_harness_file_in(
     Ok("~/.claude/harness.yaml".to_string())
 }
 
-/// Scan ~/.claude/ for existing Claude Code configuration that can be used
-/// to generate a harness.yaml.
-///
-/// Claude Code stores MCP servers in mcp.json (no dot prefix) and
-/// permissions in settings.local.json under the `permissions` key.
-#[derive(serde::Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ClaudeConfigScan {
-    /// Raw content of mcp.json / .mcp.json — whichever was found first.
-    pub mcp_servers_json: Option<String>,
-    /// Raw content of settings.local.json or settings.json — whichever was found first.
-    pub settings_json: Option<String>,
-    /// Which MCP file was found, for display in the UI.
-    pub mcp_source: Option<String>,
-    /// Which settings file was found, for display in the UI.
-    pub settings_source: Option<String>,
-}
-
-#[tauri::command]
-pub fn scan_claude_config() -> Result<ClaudeConfigScan, String> {
-    scan_claude_config_in(&home_dir()?)
-}
-
-fn scan_claude_config_in(home: &Path) -> Result<ClaudeConfigScan, String> {
-    let claude_dir = home.join(".claude");
-
-    // MCP servers: mcp.json is the current Claude Code location; .mcp.json is a legacy fallback.
-    let (mcp_servers_json, mcp_source) = [
-        (claude_dir.join("mcp.json"), "~/.claude/mcp.json"),
-        (claude_dir.join(".mcp.json"), "~/.claude/.mcp.json"),
-    ]
-    .into_iter()
-    .find_map(|(path, label)| {
-        std::fs::read_to_string(&path).ok().map(|c| (Some(c), Some(label.to_string())))
-    })
-    .unwrap_or((None, None));
-
-    // Permissions: settings.local.json has per-user overrides (allow/deny/ask);
-    // fall back to settings.json for users without a local file.
-    let (settings_json, settings_source) = [
-        (claude_dir.join("settings.local.json"), "~/.claude/settings.local.json"),
-        (claude_dir.join("settings.json"), "~/.claude/settings.json"),
-    ]
-    .into_iter()
-    .find_map(|(path, label)| {
-        std::fs::read_to_string(&path).ok().map(|c| (Some(c), Some(label.to_string())))
-    })
-    .unwrap_or((None, None));
-
-    Ok(ClaudeConfigScan { mcp_servers_json, settings_json, mcp_source, settings_source })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -172,12 +130,36 @@ mod tests {
     }
 
     #[test]
-    fn read_harness_file_falls_back_to_home_root() {
+    fn read_harness_file_ignores_a_file_at_the_home_root() {
         let dir = TempDir::new().unwrap();
         std::fs::write(dir.path().join("harness.yaml"), "version: \"1\"\n").unwrap();
         let result = read_harness_file_in(dir.path()).unwrap();
+        assert!(!result.found);
+        assert!(result.content.is_none());
+    }
+
+    #[test]
+    fn read_harness_file_reports_a_home_root_file_as_existence_only() {
+        let dir = TempDir::new().unwrap();
+        std::fs::write(dir.path().join("harness.yaml"), "secret: x\n").unwrap();
+        let result = read_harness_file_in(dir.path()).unwrap();
+        assert!(result.legacy_home_file);
+        // Existence only: the content is never read or returned.
+        assert!(result.content.is_none());
+        let json = serde_json::to_string(&result).unwrap();
+        assert!(!json.contains("secret"));
+    }
+
+    #[test]
+    fn read_harness_file_reports_no_legacy_file_when_claude_dir_has_one_or_none_exists() {
+        let dir = TempDir::new().unwrap();
+        assert!(!read_harness_file_in(dir.path()).unwrap().legacy_home_file);
+        std::fs::write(dir.path().join("harness.yaml"), "a: 1\n").unwrap();
+        std::fs::create_dir(dir.path().join(".claude")).unwrap();
+        std::fs::write(dir.path().join(".claude/harness.yaml"), "b: 2\n").unwrap();
+        let result = read_harness_file_in(dir.path()).unwrap();
         assert!(result.found);
-        assert_eq!(result.path.unwrap(), "~/harness.yaml");
+        assert!(!result.legacy_home_file);
     }
 
     #[test]
@@ -252,28 +234,5 @@ mod tests {
         let digest = super::super::surface_write::loaded_text_digest("old\n");
         write_harness_file_in(dir.path(), "new\n".to_string(), Some(&digest)).unwrap();
         assert_ne!(std::fs::metadata(&file).unwrap().ino(), before);
-    }
-
-    #[test]
-    fn scan_claude_config_returns_none_when_files_absent() {
-        let dir = TempDir::new().unwrap();
-        std::fs::create_dir(dir.path().join(".claude")).unwrap();
-        let result = scan_claude_config_in(dir.path()).unwrap();
-        assert!(result.mcp_servers_json.is_none());
-        assert!(result.settings_json.is_none());
-    }
-
-    #[test]
-    fn scan_claude_config_reads_mcp_and_settings() {
-        let dir = TempDir::new().unwrap();
-        let claude = dir.path().join(".claude");
-        std::fs::create_dir(&claude).unwrap();
-        std::fs::write(claude.join("mcp.json"), r#"{"mcpServers":{}}"#).unwrap();
-        std::fs::write(claude.join("settings.local.json"), r#"{"permissions":{"allow":[]}}"#).unwrap();
-        let result = scan_claude_config_in(dir.path()).unwrap();
-        assert!(result.mcp_servers_json.is_some());
-        assert_eq!(result.mcp_source.unwrap(), "~/.claude/mcp.json");
-        assert!(result.settings_json.is_some());
-        assert_eq!(result.settings_source.unwrap(), "~/.claude/settings.local.json");
     }
 }

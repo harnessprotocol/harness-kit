@@ -45,36 +45,36 @@ const features = [
     icon: <ObserveIcon />,
     title: 'Observe',
     description:
-      'Every session, every tool call, every minute. Observatory and Memory show you what your AI actually did, so you can trust it, tune it, or prove it.',
+      'The Machine grid shows what each tool on your computer has set up and where they differ. Usage shows Claude Code sessions, tool calls and tokens.',
   },
   {
     icon: <ShareIcon />,
     title: 'Share',
     description:
-      "Your whole setup fits in one file. Hand it to a teammate and they're running exactly what you run — same plugins, same skills, same workflows.",
+      'Your setup fits in one harness.yaml. A project can commit its own as the team baseline, and Drift shows where a machine has moved away from it.',
   },
 ];
 
 const showcaseCards = [
   {
-    section: 'observatory' as const,
-    title: 'Observatory',
-    desc: 'Every session, every tool call, every minute. Trends you can point at when someone asks "is this thing working."',
+    section: 'machine' as const,
+    title: 'Machine',
+    desc: 'One grid of every MCP server, skill, instruction file and plugin across your AI tools. Click a cell to copy a missing one across.',
   },
   {
-    section: 'memory' as const,
-    title: 'Memory',
-    desc: 'A knowledge graph your AI can orient itself in. Teammates, decisions, conventions — persistent across every tool.',
+    section: 'drift' as const,
+    title: 'Drift',
+    desc: 'Compare harness.yaml with the files compiled from it. Each fix shows a preview before anything is written.',
+  },
+  {
+    section: 'profile' as const,
+    title: 'Profile',
+    desc: 'Edit harness.yaml and compile it into a project. A project can commit its own as the team baseline.',
   },
   {
     section: 'comparator' as const,
     title: 'Comparator',
-    desc: 'Run the same prompt across Claude Code, Cursor, and Copilot side by side. Find what works.',
-  },
-  {
-    section: 'parity' as const,
-    title: 'Harness Parity',
-    desc: 'After you compile, confirm every connected AI tool ended up with the same plugins, MCP servers, and skills — and catch drift.',
+    desc: 'In Labs. Run the same prompt across Claude Code, Cursor, and Copilot side by side.',
   },
 ];
 
@@ -126,7 +126,7 @@ export default function HomePage() {
 
         {/* Product hero — the app is the hero */}
         <div className="mx-auto max-w-5xl px-4 pb-10 sm:px-6">
-          <DesktopMock interactive defaultSection="observatory" />
+          <DesktopMock interactive defaultSection="machine" />
         </div>
 
         {/* Surface callouts — what's inside, directly beneath the mock */}

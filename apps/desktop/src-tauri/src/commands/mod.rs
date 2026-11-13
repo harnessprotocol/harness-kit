@@ -16,6 +16,7 @@ pub mod harness_file;
 pub mod profiles;
 pub mod harness_state;
 pub mod surface_write;
+pub mod changes;
 pub mod sync;
 pub mod parity;
 pub mod pairwise;
@@ -25,3 +26,5 @@ pub mod harnesses;
 pub mod feedback;
 pub mod fs_scope;
 pub mod fs_guarded;
+#[cfg(test)]
+mod ipc_contract;

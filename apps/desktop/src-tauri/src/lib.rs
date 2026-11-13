@@ -68,6 +68,7 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
         .manage(database)
+        .manage(commands::surface_write::CommittedTransactions::default())
         .invoke_handler(tauri::generate_handler![
             // Plugins
             commands::plugins::list_installed_plugins,
@@ -90,7 +91,6 @@ pub fn run() {
             // Harness File
             commands::harness_file::read_harness_file,
             commands::harness_file::write_harness_file,
-            commands::harness_file::scan_claude_config,
             // Custom Profiles
             commands::profiles::list_custom_profiles,
             commands::profiles::get_custom_profile,
@@ -172,6 +172,8 @@ pub fn run() {
             commands::harness_state::get_highest_bundle_number,
             commands::harness_state::record_bundle_number,
             commands::harness_state::record_transaction,
+            commands::changes::list_changes,
+            commands::changes::undo_change,
             commands::harness_state::migrate_drift_acknowledgements,
             commands::harness_state::acknowledge_drift,
             commands::harness_state::unacknowledge_drift,
@@ -179,9 +181,9 @@ pub fn run() {
             commands::sync::sync_create_backup,
             commands::sync::sync_list_backups,
             commands::sync::sync_restore_backup,
-            // Harness detection (used by Fleet)
+            // Harness detection (used by Comparator's setup)
             commands::harnesses::detect_harnesses,
-            // Runtime FS scope grants (used by Fleet/Drift's project scope)
+            // Runtime FS scope grants (used by the project scope of Machine, Drift and Compile)
             commands::fs_scope::grant_project_scope,
             commands::fs_scope::choose_project_dir,
             // Guarded write/rename/remove for the webview's TauriFsProvider

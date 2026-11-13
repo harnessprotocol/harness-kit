@@ -17,8 +17,8 @@ const VARIANT_CLASS: Record<StatusChipVariant, string> = {
 
 /**
  * Tinted background + colored text + a 6px dot. Never a solid-fill pill
- * (DESIGN.md §2/§7). Used for drift/sync/conflict states across Fleet, Drift,
- * Configure.
+ * (DESIGN.md §2/§7). Used for drift/sync/conflict states in Machine and
+ * Drift.
  */
 export function StatusChip({
   variant = "subtle",
@@ -29,7 +29,7 @@ export function StatusChip({
 }: StatusChipProps) {
   const cls = ["hk-chip", VARIANT_CLASS[variant], className].filter(Boolean).join(" ");
   return (
-    <span className={cls} role="status" {...rest}>
+    <span className={cls} {...rest}>
       {!hideDot && <span className="hk-chip-dot" aria-hidden="true" />}
       {children}
     </span>

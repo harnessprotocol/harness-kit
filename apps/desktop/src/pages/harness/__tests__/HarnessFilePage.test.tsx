@@ -4,20 +4,37 @@ import { MemoryRouter } from "react-router-dom";
 import HarnessFilePage from "../HarnessFilePage";
 import { CommandPalette } from "../../../components/CommandPalette";
 import { loadedDigest } from "../../../lib/loaded-digest";
+import { setCurrentProjectDir } from "../../../lib/project-dir";
 
 // ── Mocks ──────────────────────────────────────────────────────
 
 const mockReadHarnessFile = vi.fn();
 const mockWriteHarnessFile = vi.fn();
-const mockScanClaudeConfig = vi.fn();
+const mockGrantProjectScope = vi.fn();
 vi.mock("../../../lib/tauri", () => ({
   readHarnessFile: () => mockReadHarnessFile(),
   writeHarnessFile: (content: string, expectedSha256?: string) => mockWriteHarnessFile(content, expectedSha256),
-  scanClaudeConfig: () => mockScanClaudeConfig(),
+  grantProjectScope: (dir: string) => mockGrantProjectScope(dir),
+}));
+
+// A chosen project is read through the sync bridge; these are its files.
+const projectFiles: Record<string, string> = {};
+vi.mock("../../../lib/sync-fs", () => ({
+  SyncFsProvider: vi.fn(function SyncFsProvider(this: Record<string, unknown>) {
+    this.joinPath = (...segs: string[]) => segs.join("/");
+    this.exists = async (p: string) => p in projectFiles;
+    this.readFile = async (p: string) => projectFiles[p];
+  }),
+}));
+vi.mock("../../../lib/harness-fs", () => ({ TauriFsProvider: vi.fn() }));
+
+// AC-56: "Generate from Claude Code setup" builds from the machine inventory.
+const mockImportPersonalHarness = vi.fn();
+vi.mock("../../../lib/personal-inventory", () => ({
+  importPersonalHarness: () => mockImportPersonalHarness(),
 }));
 
 vi.mock("../../../lib/harness-generator", () => ({
-  generateHarnessYaml: () => ({ yaml: "version: \"1\"\n# generated\n" }),
   HARNESS_TEMPLATE: "# template\n",
 }));
 
@@ -109,14 +126,19 @@ describe("HarnessFilePage", () => {
     );
   });
 
-  it("sends no digest when the page loaded ~/harness.yaml, since the write target was absent (AC-50)", async () => {
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"\n', path: "~/harness.yaml" });
-    mockWriteHarnessFile.mockResolvedValue("~/.claude/harness.yaml");
+  it("tells the user a ~/harness.yaml needs moving when ~/.claude/harness.yaml is absent", async () => {
+    mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null, legacy_home_file: true });
     renderPage();
-    fireEvent.click(await screen.findByText("Editor"));
-    fireEvent.change(await screen.findByTestId("fake-editor"), { target: { value: "edited\n" } });
-    fireEvent.keyDown(window, { key: "s", metaKey: true });
-    await waitFor(() => expect(mockWriteHarnessFile).toHaveBeenCalledWith("edited\n", undefined));
+    expect(await screen.findByTestId("legacy-harness-notice")).toHaveTextContent(
+      "Found ~/harness.yaml. Harness Kit now reads ~/.claude/harness.yaml; move the file there.",
+    );
+  });
+
+  it("shows no legacy notice when there is no file at ~/harness.yaml", async () => {
+    mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null });
+    renderPage();
+    await screen.findByText("No harness.yaml found");
+    expect(screen.queryByTestId("legacy-harness-notice")).not.toBeInTheDocument();
   });
 
   it("names a changed-on-disk refusal and offers Reload from disk (AC-50)", async () => {
@@ -148,11 +170,11 @@ describe("HarnessFilePage", () => {
     fireEvent.click(await screen.findByText("Editor"));
     const editor = await screen.findByTestId("fake-editor");
     // Nothing changed yet: listed, but off like the Save button.
-    expect(palette().getByRole("button", { name: /Save harness\.yaml/ })).toHaveAttribute("aria-disabled", "true");
+    expect(palette().getByRole("option", { name: /Save harness\.yaml/ })).toHaveAttribute("aria-disabled", "true");
 
     fireEvent.change(editor, { target: { value: 'version: "1"\nmetadata:\n  name: first\n' } });
     fireEvent.change(editor, { target: { value: 'version: "1"\nmetadata:\n  name: second\n' } });
-    const save = palette().getByRole("button", { name: /Save harness\.yaml/ });
+    const save = palette().getByRole("option", { name: /Save harness\.yaml/ });
     expect(save).not.toHaveAttribute("aria-disabled");
     fireEvent.click(save);
 
@@ -181,9 +203,9 @@ describe("HarnessFilePage", () => {
 
   it("keeps a failed scan on the empty state with the error and Retry scan, not the template (AC-20)", async () => {
     mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null });
-    mockScanClaudeConfig
+    mockImportPersonalHarness
       .mockRejectedValueOnce("permission denied: ~/.claude")
-      .mockResolvedValue({});
+      .mockResolvedValue({ harnessYaml: 'version: "1"\n# generated\n' });
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: "Generate from Claude Code setup" }));
 
@@ -196,7 +218,55 @@ describe("HarnessFilePage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Retry scan" }));
     const editor = await screen.findByTestId("fake-editor");
     expect(editor).toHaveValue('version: "1"\n# generated\n');
-    expect(mockScanClaudeConfig).toHaveBeenCalledTimes(2);
+    expect(mockImportPersonalHarness).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+});
+
+describe("HarnessFilePage follows the title-bar project (AC-55)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    for (const key of Object.keys(projectFiles)) delete projectFiles[key];
+    mockGrantProjectScope.mockResolvedValue(undefined);
+    act(() => setCurrentProjectDir(null));
+  });
+
+  it("labels the personal profile when no project is chosen", async () => {
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"\n', path: "~/.claude/harness.yaml" });
+    renderPage();
+    expect(await screen.findByTestId("profile-scope")).toHaveTextContent("Personal profile");
+  });
+
+  it("shows the project's committed harness.yaml, read-only, with the scope in the header", async () => {
+    projectFiles["/work/acme/harness.yaml"] = 'version: "1"\nmetadata:\n  name: team\n';
+    act(() => setCurrentProjectDir("/work/acme"));
+    renderPage();
+    expect(await screen.findByText("/work/acme/harness.yaml")).toBeInTheDocument();
+    expect(screen.getByTestId("profile-scope")).toHaveTextContent("Team baseline · acme");
+    expect(mockReadHarnessFile).not.toHaveBeenCalled();
+    // No Editor view, so nothing here can write to the project file.
+    expect(screen.queryByText("Editor")).toBeNull();
+    expect(screen.getByText(/read-only/i)).toBeInTheDocument();
+  });
+
+  it("says the project has no harness.yaml and offers no personal-profile actions", async () => {
+    act(() => setCurrentProjectDir("/work/acme"));
+    renderPage();
+    expect(await screen.findByText(/No harness\.yaml in acme/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Generate from Claude Code setup" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Create from scratch" })).toBeNull();
+    expect(screen.getByTestId("profile-scope")).toHaveTextContent("Team baseline · acme");
+  });
+
+  it("returns to the personal profile when the project is cleared", async () => {
+    projectFiles["/work/acme/harness.yaml"] = 'version: "1"\n';
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"\n', path: "~/.claude/harness.yaml" });
+    act(() => setCurrentProjectDir("/work/acme"));
+    renderPage();
+    await screen.findByText("/work/acme/harness.yaml");
+    act(() => setCurrentProjectDir(null));
+    expect(await screen.findByText("~/.claude/harness.yaml")).toBeInTheDocument();
+    expect(screen.getByTestId("profile-scope")).toHaveTextContent("Personal profile");
+    expect(screen.getByText("Editor")).toBeInTheDocument();
   });
 });

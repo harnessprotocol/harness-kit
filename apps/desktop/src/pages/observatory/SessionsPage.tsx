@@ -10,10 +10,10 @@ import { errorDetails } from "../../lib/error-details";
 // ── Outcome badge ──────────────────────────────────────────────
 
 const OUTCOME_COLORS: Record<string, { bg: string; color: string }> = {
-  fully_achieved:    { bg: "var(--success-light)",  color: "var(--success)" },
+  fully_achieved:    { bg: "var(--success-light)",  color: "var(--success-text)" },
   mostly_achieved:   { bg: "var(--accent-light)",   color: "var(--accent-text)" },
-  partially_achieved: { bg: "var(--warning-light)",  color: "var(--warning)" },
-  not_achieved:      { bg: "var(--danger-light)",   color: "var(--danger)" },
+  partially_achieved: { bg: "var(--warning-light)",  color: "var(--warning-text)" },
+  not_achieved:      { bg: "var(--danger-light)",   color: "var(--danger-text)" },
 };
 
 function OutcomeBadge({ outcome }: { outcome: string }) {
@@ -150,7 +150,7 @@ function TranscriptRow({ entry }: { entry: TranscriptEntry }) {
               padding: "1px 5px",
               borderRadius: "4px",
               background: "var(--success-light)",
-              color: "var(--success)",
+              color: "var(--success-text)",
               fontWeight: 500,
             }}>
               {name}
@@ -254,10 +254,10 @@ function SessionDetail({
           fontWeight: 500,
         }}>
           <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-            <span style={{ color: "var(--warning)" }}>{formatNumber(transcript.totalOutputTokens)}</span> tokens out
+            <span style={{ color: "var(--warning-text)" }}>{formatNumber(transcript.totalOutputTokens)}</span> tokens out
           </span>
           <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-            <span style={{ color: "var(--success)" }}>{formatNumber(transcript.totalToolCalls)}</span> tool calls
+            <span style={{ color: "var(--success-text)" }}>{formatNumber(transcript.totalToolCalls)}</span> tool calls
           </span>
           <span>{transcript.modelsUsed.map(shortModelName).join(", ")}</span>
           {transcript.subagentCount > 0 && (
@@ -266,7 +266,7 @@ function SessionDetail({
             </span>
           )}
           {transcript.truncated && (
-            <span style={{ color: "var(--warning)" }}>truncated</span>
+            <span style={{ color: "var(--warning-text)" }}>truncated</span>
           )}
         </div>
       )}

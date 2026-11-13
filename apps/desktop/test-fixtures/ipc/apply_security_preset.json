@@ -1,0 +1,31 @@
+{
+  "command": "apply_security_preset",
+  "calls": [
+    {
+      "fn": "applySecurityPreset",
+      "args": [
+        "strict",
+        "abc123",
+        [
+          "Bash(rm:*)"
+        ]
+      ],
+      "payload": {
+        "presetId": "strict",
+        "expectedSha256": "abc123",
+        "confirmedDropDeny": [
+          "Bash(rm:*)"
+        ]
+      }
+    },
+    {
+      "fn": "applySecurityPreset",
+      "args": [
+        "strict"
+      ],
+      "payload": {
+        "presetId": "strict"
+      }
+    }
+  ]
+}

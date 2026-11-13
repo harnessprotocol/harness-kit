@@ -1,0 +1,30 @@
+{
+  "command": "save_file_diffs",
+  "calls": [
+    {
+      "fn": "saveFileDiffs",
+      "args": [
+        "c-1",
+        "p-1",
+        [
+          {
+            "filePath": "a.ts",
+            "diffText": "@@",
+            "changeType": "modified"
+          }
+        ]
+      ],
+      "payload": {
+        "comparisonId": "c-1",
+        "panelId": "p-1",
+        "diffs": [
+          {
+            "filePath": "a.ts",
+            "diffText": "@@",
+            "changeType": "modified"
+          }
+        ]
+      }
+    }
+  ]
+}

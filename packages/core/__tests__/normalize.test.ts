@@ -400,6 +400,49 @@ describe("normalizeResource — instructions", () => {
     });
     expect(a.digest).toBe(b.digest);
   });
+
+  it("identity is the scope, not the file name (AC-57)", () => {
+    const make = (name: string, scope: "user" | "project") =>
+      normalizeResource({
+        surface: "codex",
+        kind: "instructions",
+        scope,
+        name,
+        value: { content: "x" },
+        provenance: { file: `/somewhere/${name}`, formatId: "markdown-instructions" },
+      });
+    expect(make("CLAUDE.md", "user").identityKey).toBe("instructions:user instructions");
+    expect(make("AGENTS.md", "user").identityKey).toBe("instructions:user instructions");
+    expect(make("AGENTS.md", "user").name).toBe("User instructions");
+    expect(make("AGENTS.md", "project").identityKey).toBe("instructions:project instructions");
+    expect(make("AGENTS.md", "project").name).toBe("Project instructions");
+    // The file stays visible as provenance.
+    expect(make("AGENTS.md", "user").provenance.file).toBe("/somewhere/AGENTS.md");
+  });
+
+  it("digests the whole file with only the harness:sync marker lines removed", () => {
+    const make = (content: string) =>
+      normalizeResource({
+        surface: "codex",
+        kind: "instructions",
+        scope: "user",
+        name: "AGENTS.md",
+        value: { content },
+        provenance: { file: "/h/AGENTS.md", formatId: "markdown-instructions" },
+      }).digest;
+    const block = "<!-- BEGIN harness:sync:user-instructions -->\nBe kind.\n<!-- END harness:sync:user-instructions -->";
+    expect(make(block)).toBe(make("Be kind."));
+    // Prose outside the block counts: it is not the same instructions.
+    expect(make(`# Mine\n\n${block}\n`)).not.toBe(make("Be kind."));
+    expect(make(`# Mine\n\n${block}\n`)).toBe(make("# Mine\n\nBe kind."));
+    // Editing prose outside a block shows as a change.
+    expect(make(`# Mine\n\n${block}\n`)).not.toBe(make(`# Mine edited\n\n${block}\n`));
+    // A block an older build named after the source file reads the same.
+    expect(make("<!-- BEGIN harness:sync:CLAUDE.md -->\nBe kind.\n<!-- END harness:sync:CLAUDE.md -->")).toBe(
+      make("Be kind."),
+    );
+    expect(make(block)).not.toBe(make("Be rude."));
+  });
 });
 
 describe("identity", () => {

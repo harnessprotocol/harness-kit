@@ -347,7 +347,7 @@ fn update_permissions_at(
     Ok((old_perms, settings_digest_at(path)?))
 }
 
-fn log_audit(
+pub(crate) fn log_audit(
     db: &Db,
     event_type: &str,
     category: &str,

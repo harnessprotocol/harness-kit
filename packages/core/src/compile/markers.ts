@@ -43,6 +43,60 @@ export function findMarkerBlock(
   return null;
 }
 
+export interface SyncBlockLocation extends MarkerBlockLocation {
+  slot: string;
+}
+
+/**
+ * The first `harness:sync:<slot>` block in a file, whatever its slot, or null.
+ * Cross-surface instruction copies write one; older copies used the source
+ * file's basename as the slot, so the slot is not assumed.
+ */
+export function findAnySyncBlock(fileContent: string): SyncBlockLocation | null {
+  const lines = fileContent.split("\n");
+  const begin = /^<!-- BEGIN harness:sync:([^ ]+) -->$/;
+  for (let i = 0; i < lines.length; i++) {
+    const match = lines[i].trim().match(begin);
+    if (!match) continue;
+    const endTag = `<!-- END harness:sync:${match[1]} -->`;
+    for (let j = i + 1; j < lines.length; j++) {
+      if (lines[j].trim() === endTag) {
+        return {
+          slot: match[1],
+          startLine: i,
+          endLine: j,
+          content: lines.slice(i + 1, j).join("\n"),
+        };
+      }
+    }
+  }
+  return null;
+}
+
+const SYNC_MARKER_LINE = /^<!-- (?:BEGIN|END) harness:sync:[^ ]+ -->$/;
+
+/**
+ * The instruction text a file carries for cross-surface comparison and for
+ * copying: the whole file with only the `harness:sync` BEGIN/END marker lines
+ * removed. Text inside a block and text outside both count, so the user's own
+ * prose is never invisible to a comparison or silently left out of a copy,
+ * and a copy of a file that holds a block never nests markers.
+ */
+export function syncedInstructionsContent(fileContent: string): string {
+  return fileContent
+    .split("\n")
+    .filter((line) => !SYNC_MARKER_LINE.test(line.trim()))
+    .join("\n");
+}
+
+/** The file's text outside its first `harness:sync` block (the whole file when it has none). */
+export function textOutsideSyncBlock(fileContent: string): string {
+  const block = findAnySyncBlock(fileContent);
+  if (!block) return fileContent;
+  const lines = fileContent.split("\n");
+  return [...lines.slice(0, block.startLine), ...lines.slice(block.endLine + 1)].join("\n");
+}
+
 export function replaceMarkerBlock(
   fileContent: string,
   name: string,

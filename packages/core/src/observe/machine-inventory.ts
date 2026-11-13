@@ -265,10 +265,11 @@ function effectiveResource(resources: NormalizedResource[]): NormalizedResource 
  * a cell for EVERY observed surface (including undetected ones — the grid
  * lists all 11 columns and the UI greys undetected ones).
  *
- * Note on instructions rows: identity is file-based (Task 9) — CLAUDE.md
- * and AGENTS.md have different identityKeys and land in separate rows even
- * when their content overlaps. Content-level cross-file instruction
- * comparison is post-M1.
+ * Note on instructions rows: identity is per scope (AC-57) — CLAUDE.md,
+ * AGENTS.md and the like share one "User instructions" row, and the
+ * project-scope files share one "Project instructions" row. A file holding
+ * only a `harness:sync` block, which a copy writes, counts as present.
+ * Differing content shows as a diff between the cells.
  */
 export function computeMachineInventory(
   observations: SurfaceObservation[],

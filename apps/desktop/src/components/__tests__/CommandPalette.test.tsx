@@ -46,18 +46,18 @@ function renderAt(path: string, onClose = vi.fn()) {
 }
 
 function option(name: string | RegExp) {
-  return within(screen.getByRole("dialog", { name: "Command palette" })).getByRole("button", { name });
+  return within(screen.getByRole("dialog", { name: "Command palette" })).getByRole("option", { name });
 }
 
 function queryOption(name: string | RegExp) {
-  return within(screen.getByRole("dialog", { name: "Command palette" })).queryByRole("button", { name });
+  return within(screen.getByRole("dialog", { name: "Command palette" })).queryByRole("option", { name });
 }
 
 describe("CommandPalette page commands (AC-21)", () => {
   it("lists a page's commands first, under This page, only while that page is mounted", () => {
     renderAt("/alpha");
     const dialog = screen.getByRole("dialog", { name: "Command palette" });
-    const labels = within(dialog).getAllByRole("button").map((button) => button.textContent);
+    const labels = within(dialog).getAllByRole("option").map((button) => button.textContent);
     expect(labels[0]).toBe("Do the alpha thing");
     expect(within(dialog).getByText(PAGE_GROUP)).toBeInTheDocument();
 
@@ -79,7 +79,7 @@ describe("CommandPalette page commands (AC-21)", () => {
   it("finds a page command by its keywords and runs it with Enter", () => {
     onAlphaAction.mockClear();
     renderAt("/alpha");
-    const input = screen.getByRole("textbox", { name: "Command palette search" });
+    const input = screen.getByRole("combobox", { name: "Command palette search" });
     fireEvent.change(input, { target: { value: "frobni" } });
     expect(option("Do the alpha thing")).toBeInTheDocument();
     fireEvent.keyDown(input, { key: "Enter" });
@@ -93,7 +93,7 @@ describe("CommandPalette page commands (AC-21)", () => {
     expect(blocked).toHaveAttribute("aria-disabled", "true");
     fireEvent.click(blocked);
 
-    const input = screen.getByRole("textbox", { name: "Command palette search" });
+    const input = screen.getByRole("combobox", { name: "Command palette search" });
     fireEvent.change(input, { target: { value: "blocked" } });
     fireEvent.keyDown(input, { key: "Enter" });
     expect(onBlocked).not.toHaveBeenCalled();
@@ -131,14 +131,14 @@ describe("CommandPalette highlight", () => {
     }
     onAlphaAction.mockClear();
     const view = render(<Tree grown={false} />);
-    const input = screen.getByRole("textbox", { name: "Command palette search" });
+    const input = screen.getByRole("combobox", { name: "Command palette search" });
     fireEvent.change(input, { target: { value: "alpha thing" } });
     // Highlight "Do the alpha thing" explicitly (down to "Blocked…", back up).
     fireEvent.keyDown(input, { key: "ArrowDown" });
     fireEvent.keyDown(input, { key: "ArrowUp" });
 
     view.rerender(<Tree grown />);
-    expect(within(screen.getByRole("dialog")).getAllByRole("button")[0]).toHaveTextContent("Grown alpha thing");
+    expect(within(screen.getByRole("dialog")).getAllByRole("option")[0]).toHaveTextContent("Grown alpha thing");
     fireEvent.keyDown(input, { key: "Enter" });
     expect(onGrown).not.toHaveBeenCalled();
     expect(onAlphaAction).toHaveBeenCalledTimes(1);
@@ -173,7 +173,7 @@ describe("CommandPalette focus", () => {
     const trigger = screen.getByRole("button", { name: "open palette" });
     trigger.focus();
     fireEvent.click(trigger);
-    const input = screen.getByRole("textbox", { name: "Command palette search" });
+    const input = screen.getByRole("combobox", { name: "Command palette search" });
     await waitFor(() => expect(input).toHaveFocus());
     return { trigger, input };
   }
@@ -193,5 +193,37 @@ describe("CommandPalette focus", () => {
     fireEvent.keyDown(input, { key: "Enter" });
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Notes" })).toHaveFocus();
+  });
+});
+
+// AC-61: the palette is a combobox driving a listbox.
+describe("CommandPalette listbox semantics (AC-61)", () => {
+  it("exposes the input as a combobox that controls a listbox of options", () => {
+    renderAt("/alpha");
+    const input = screen.getByRole("combobox", { name: "Command palette search" });
+    const list = screen.getByRole("listbox");
+    expect(input).toHaveAttribute("aria-controls", list.id);
+    expect(input).toHaveAttribute("aria-expanded", "true");
+    expect(within(list).getAllByRole("option").length).toBeGreaterThan(1);
+  });
+
+  it("tracks the highlighted option with aria-activedescendant and aria-selected", () => {
+    renderAt("/alpha");
+    const input = screen.getByRole("combobox", { name: "Command palette search" });
+    const options = screen.getAllByRole("option");
+    expect(options[0]).toHaveAttribute("aria-selected", "true");
+    expect(input).toHaveAttribute("aria-activedescendant", options[0].id);
+    fireEvent.keyDown(input, { key: "ArrowDown" });
+    const after = screen.getAllByRole("option");
+    expect(after[0]).toHaveAttribute("aria-selected", "false");
+    expect(after[1]).toHaveAttribute("aria-selected", "true");
+    expect(input).toHaveAttribute("aria-activedescendant", after[1].id);
+  });
+
+  it("keeps Tab inside the palette", () => {
+    renderAt("/alpha");
+    const input = screen.getByRole("combobox", { name: "Command palette search" });
+    // Not defaultPrevented would let focus leave the modal for the page behind.
+    expect(fireEvent.keyDown(input, { key: "Tab" })).toBe(false);
   });
 });

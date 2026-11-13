@@ -1,0 +1,10 @@
+{
+  "command": "read_hooks",
+  "calls": [
+    {
+      "fn": "readHooks",
+      "args": [],
+      "payload": null
+    }
+  ]
+}

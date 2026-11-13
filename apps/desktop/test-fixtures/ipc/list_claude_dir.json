@@ -1,0 +1,10 @@
+{
+  "command": "list_claude_dir",
+  "calls": [
+    {
+      "fn": "listClaudeDir",
+      "args": [],
+      "payload": null
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "command": "get_history_size",
+  "calls": [
+    {
+      "fn": "getHistorySize",
+      "args": [],
+      "payload": null
+    }
+  ]
+}

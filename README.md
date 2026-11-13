@@ -194,19 +194,24 @@ See the [Secrets Management guide](website/content/docs/guides/secrets-managemen
 
 ## 🖥️ Desktop App
 
-A Tauri desktop control plane for your AI coding harnesses — config console with reverse-import and drift-repair. No external services required for any core path.
+A Tauri desktop app that shows what each AI coding tool on your machine has configured, and lets you copy a missing piece from one tool to another. It reads local files. No external service is needed.
 
-- **Sync engine** — compiles `harness.yaml` to platform configs
-- **Plugin explorer** — browse and manage installed plugins
-- **Marketplace** — embedded plugin browser for discovering and installing from the marketplace
-- **Observatory** — live session dashboard with stats and transcripts, reading local `~/.claude` data
-- **Comparator** — structured evaluation workbench: configure harnesses, run side-by-side comparisons, review file diffs, and judge results across a 4-phase workflow, local-only
-- **Harness editor** — inline editing with custom profiles
-- **Parity** — cross-platform feature parity tracking across AI coding tools
-- **Fleet and Drift** — layered capture/apply previews, capability losses, reconciliation conflicts, governed rollout status, and local rollback history
-- **Security** — permissions editor, secrets management, and audit logging
+- **Machine** is the home screen. A grid lists every MCP server, skill, instruction file and plugin across the tools it finds, with one column per tool. Click a cell to open a drawer that shows where the resource lives, how copies differ, and a copy action from one tool to another. Tools that are not installed are hidden until you choose "Show all".
+- **Drift** is a view inside Machine. It compares your `harness.yaml` with the files compiled from it, shows a diff for each item, and previews a fix before writing anything.
+- **Profile** edits `harness.yaml` and compiles it into a project. With no project chosen, Profile and Compile use your personal `~/.claude/harness.yaml`. With a project chosen in the title bar, they use that project's committed `harness.yaml` as the team baseline.
+- **Claude Code** holds the editors for that tool: Instructions, MCP servers, Plugins, Hooks, Permissions, and Usage (sessions, tool calls and tokens read from `~/.claude`).
+- **Marketplace** browses the plugin catalog.
+- **Settings** holds preferences, secrets and the activity log.
+- **Comparator** runs the same prompt across tools side by side. It is off until you turn it on in Settings under Labs.
 
-See [`apps/desktop/`](apps/desktop/) for build instructions. The desktop app is a separate product from the plugin marketplace.
+How it handles your files:
+
+- Copies, Compile and Drift fixes show a preview before they write. Backups and rollback points for files in your home folder go to `~/.harness/backups/`, and for a project to that project's `.harness/backups/`.
+- The app has no shell access. Folder choices, plugin imports and exports use native dialogs.
+- Security presets merge into your permissions and list any deny rule they would remove before writing.
+- Dialogs trap focus and return it on close, menus work from the keyboard, and text colors meet WCAG AA contrast.
+
+To build or run it, see [CONTRIBUTING.md](CONTRIBUTING.md) (`pnpm dev:desktop`). Design rules are in [`apps/desktop/DESIGN.md`](apps/desktop/DESIGN.md). The desktop app is a separate product from the plugin marketplace.
 
 ## 🌐 Cross-Platform
 

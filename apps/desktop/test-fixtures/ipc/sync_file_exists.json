@@ -1,0 +1,16 @@
+{
+  "command": "sync_file_exists",
+  "calls": [
+    {
+      "fn": "syncFileExists",
+      "args": [
+        "/Users/u/work/app",
+        "CLAUDE.md"
+      ],
+      "payload": {
+        "projectDir": "/Users/u/work/app",
+        "filePath": "CLAUDE.md"
+      }
+    }
+  ]
+}

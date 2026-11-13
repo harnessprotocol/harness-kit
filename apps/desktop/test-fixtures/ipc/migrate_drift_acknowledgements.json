@@ -1,0 +1,14 @@
+{
+  "command": "migrate_drift_acknowledgements",
+  "calls": [
+    {
+      "fn": "migrateDriftAcknowledgements",
+      "args": [
+        "/Users/u/.harness-kit/comparator.db"
+      ],
+      "payload": {
+        "legacyDb": "/Users/u/.harness-kit/comparator.db"
+      }
+    }
+  ]
+}

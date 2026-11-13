@@ -1,0 +1,10 @@
+{
+  "command": "read_harness_file",
+  "calls": [
+    {
+      "fn": "readHarnessFile",
+      "args": [],
+      "payload": null
+    }
+  ]
+}

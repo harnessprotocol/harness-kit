@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useDialogFocus } from "@harness-kit/ui";
 import { open } from "@tauri-apps/plugin-shell";
 import {
   getSystemInfo, submitFeedback,
@@ -43,6 +44,17 @@ export default function FeedbackModal({ open: isOpen, onClose }: Props) {
     getSystemInfo().then(setSysInfo).catch(() => {});
   }, [isOpen]);
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(isOpen, dialogRef);
+  useEffect(() => {
+    if (!isOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const canSubmit =
@@ -85,12 +97,21 @@ export default function FeedbackModal({ open: isOpen, onClose }: Props) {
 
   return createPortal(
     <div style={overlay} onClick={onClose}>
-      <div style={card} onClick={e => e.stopPropagation()}>
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="feedback-dialog-title"
+        tabIndex={-1}
+        style={{ ...card, outline: "none" }}
+        onClick={e => e.stopPropagation()}
+      >
         {/* Header */}
         <div style={{ padding: "16px 20px 12px", borderBottom: "1px solid var(--border-base)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)" }}>Send Feedback</span>
+          <span id="feedback-dialog-title" style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)" }}>Send Feedback</span>
           <button
             onClick={onClose}
+            aria-label="Close"
             style={{ background: "none", border: "none", cursor: "pointer", color: "var(--fg-muted)", padding: "2px", lineHeight: 1 }}
           >
             <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">

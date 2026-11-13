@@ -1,0 +1,10 @@
+{
+  "command": "read_stats_cache",
+  "calls": [
+    {
+      "fn": "readStatsCache",
+      "args": [],
+      "payload": null
+    }
+  ]
+}

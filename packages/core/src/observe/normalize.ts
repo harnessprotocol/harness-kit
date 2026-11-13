@@ -3,6 +3,7 @@ import type { StoreFormatId, SurfaceId, SurfaceScope } from "../surfaces/types.j
 import { digestValue } from "../portability/resource-model.js";
 import { looksLikeSecret, sanitizeCommandArgs, sanitizeUrl } from "../portability/secrets.js";
 import { isRecord } from "../utils/is-record.js";
+import { syncedInstructionsContent } from "../compile/markers.js";
 import type { ObservedResource, SurfaceObservation } from "./observe-surface.js";
 import type { InstructionsStoreValue, SkillStoreValue } from "./read-store.js";
 import type { PluginStoreValue } from "../codecs/plugin-shapes.js";
@@ -33,7 +34,8 @@ export interface NormalizedResource {
   surface: SurfaceId;
   kind: HarnessResourceKind;
   /** Original, case-preserved name as observed (display form; identityKey
-   * holds the case-collapsed join key). */
+   * holds the case-collapsed join key). For `instructions` it is the
+   * per-scope row name, not the file name (see `instructionsRowName`). */
   name: string;
   /**
    * `${kind}:${name.toLowerCase().trim()}` — cross-surface identity. The
@@ -195,14 +197,20 @@ function canonicalizeSkill(value: unknown): unknown {
 
 /**
  * instructions canonical form: `{ content }`, whitespace-normalized.
- * Identity stays the resource's reported (file-based) name — cross-surface
- * instruction identity is content-level and deferred to Task 10's diffing.
+ * Identity is per scope (`instructionsRowName`), set in `normalizeResource`;
+ * the content here feeds the digest and the diff between surfaces.
  */
 function canonicalizeInstructions(value: unknown): unknown {
   if (!isRecord(value)) return deepCanonical(value);
   const instructions = value as Partial<InstructionsStoreValue>;
   return {
-    content: typeof instructions.content === "string" ? normalizeText(instructions.content) : "",
+    // The whole file counts, with only the `harness:sync` marker lines removed:
+    // they are Harness Kit's bookkeeping, but text inside and outside a block
+    // is the user's instructions, and a difference in either is a difference.
+    content:
+      typeof instructions.content === "string"
+        ? normalizeText(syncedInstructionsContent(instructions.content))
+        : "",
   };
 }
 
@@ -256,14 +264,27 @@ const CANONICALIZERS: Record<HarnessResourceKind, Canonicalizer> = {
 
 // ── public API ──────────────────────────────────────────────────
 
+/**
+ * The row name for an instructions file. Every surface keeps its instructions
+ * in a differently named file (CLAUDE.md, AGENTS.md, copilot-instructions.md),
+ * so a file-based identity put one surface's copy in a row the source never
+ * shared: a copy the app reported as done left the gap open (AC-57). Identity
+ * is the scope instead; the file stays in `provenance`.
+ */
+export function instructionsRowName(scope: SurfaceScope): string {
+  return scope === "user" ? "User instructions" : "Project instructions";
+}
+
 /** Normalize one observed resource into its canonical, digested form. */
 export function normalizeResource(resource: ObservedResource): NormalizedResource {
   const canonicalForm = CANONICALIZERS[resource.kind](resource.value);
+  const name =
+    resource.kind === "instructions" ?instructionsRowName(resource.scope) : resource.name;
   return {
     surface: resource.surface,
     kind: resource.kind,
-    name: resource.name,
-    identityKey: `${resource.kind}:${resource.name.toLowerCase().trim()}`,
+    name,
+    identityKey: `${resource.kind}:${name.toLowerCase().trim()}`,
     scope: resource.scope,
     canonicalForm,
     digest: digestValue(canonicalForm),

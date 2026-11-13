@@ -1,0 +1,14 @@
+{
+  "command": "delete_custom_profile",
+  "calls": [
+    {
+      "fn": "deleteCustomProfile",
+      "args": [
+        "team"
+      ],
+      "payload": {
+        "id": "team"
+      }
+    }
+  ]
+}

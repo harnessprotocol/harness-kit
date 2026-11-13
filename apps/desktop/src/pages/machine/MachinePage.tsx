@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, EmptyState, ErrorNotice } from "@harness-kit/ui";
 import { ChevronRight, ScanSearch } from "lucide-react";
-import type { GridRow, MachineInventory } from "@harness-kit/core";
+import type { GridRow, MachineInventory, SurfaceId } from "@harness-kit/core";
 import { errorDetails } from "../../lib/error-details";
 import { surfaceLabel } from "../../lib/surface-labels";
 import { useProjectDir } from "../../lib/project-dir";
@@ -22,11 +22,11 @@ import DriftPage from "../drift/DriftPage";
 
 /**
  * Machine (Task 14): cross-surface inventory of this machine, whose row
- * drawer applies changes between surfaces. Defaults to machine-only
- * observation (no project directory). The project comes from the title bar's
- * selector (AC-17, lib/project-dir.ts): choosing one adds project-scope
- * stores to the scan, and every change starts a new scan with nothing
- * selected.
+ * drawer applies changes between surfaces. The project comes from the title
+ * bar's selector (AC-17, lib/project-dir.ts). The last project chosen is
+ * restored at launch and adds project-scope stores to the scan; with none
+ * chosen the scan is machine-only. Every change of project starts a new scan
+ * with nothing selected.
  *
  * Two views share the page head and summary strip (spec AC-18, design D6):
  * the surface grid and Drift against harness.yaml, chosen by `?view=`
@@ -38,6 +38,8 @@ export default function MachinePage() {
   const [error, setError] = useState<string | null>(null);
   const [projectDir] = useProjectDir();
   const [selectedRow, setSelectedRow] = useState<GridRow | null>(null);
+  // The cell clicked to open the drawer: its surface is the drawer's first "To" choice (AC-57).
+  const [clickedSurface, setClickedSurface] = useState<SurfaceId | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
   const [projectDegraded, setProjectDegraded] = useState(false);
 
@@ -215,7 +217,7 @@ export default function MachinePage() {
             padding: "6px 10px",
             borderRadius: 6,
             background: "var(--warning-light)",
-            color: "var(--warning)",
+            color: "var(--warning-text)",
             fontSize: 11.5,
           }}
         >
@@ -295,7 +297,10 @@ export default function MachinePage() {
                         inventory={{ ...inventory, rows: shownRows }}
                         variants={variants}
                         selectedRowKey={selectedRow?.key ?? null}
-                        onRowClick={(row) => setSelectedRow(row)}
+                        onRowClick={(row, surface) => {
+                          setSelectedRow(row);
+                          setClickedSurface(surface ?? null);
+                        }}
                       />
                     </div>
                   )}
@@ -391,6 +396,7 @@ export default function MachinePage() {
           diffs={rowDiffs}
           gaps={inventory?.gaps ?? []}
           surfaceOrder={inventory?.surfaces.map((surface) => surface.id) ?? []}
+          initialTarget={clickedSurface ?? undefined}
           onClose={() => setSelectedRow(null)}
           onApplied={() => load(projectDir, true)}
         />

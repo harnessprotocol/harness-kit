@@ -1,0 +1,10 @@
+{
+  "command": "read_env_config",
+  "calls": [
+    {
+      "fn": "readEnvConfig",
+      "args": [],
+      "payload": null
+    }
+  ]
+}

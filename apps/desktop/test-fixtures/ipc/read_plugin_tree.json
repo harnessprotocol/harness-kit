@@ -1,0 +1,14 @@
+{
+  "command": "read_plugin_tree",
+  "calls": [
+    {
+      "fn": "readPluginTree",
+      "args": [
+        "/Users/u/.claude/plugins/cache/harness-kit/demo/1.0.0"
+      ],
+      "payload": {
+        "pluginPath": "/Users/u/.claude/plugins/cache/harness-kit/demo/1.0.0"
+      }
+    }
+  ]
+}

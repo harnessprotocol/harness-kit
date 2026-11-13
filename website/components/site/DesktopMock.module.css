@@ -404,7 +404,7 @@
 .permDeny  { background: rgba(239,68,68,0.15);   color: #ef4444; }
 .permRule  { font-family: ui-monospace, monospace; font-size: 11px; color: var(--fg-base); }
 
-/* ── Parity: table ── */
+/* ── Machine grid: table (cells use the parity* colors) ── */
 .parityTable {
   width: 100%;
   border-collapse: collapse;
@@ -429,6 +429,8 @@
 .parityCheck   { color: var(--accent); font-weight: 700; }
 .parityPartial { color: #f59e0b; }
 .parityNone    { color: var(--fg-subtle); }
+.gridCopy      { color: var(--fg-muted); }
+.gridKind      { font-size: 9.5px; color: var(--fg-subtle); }
 
 /* ── Board: kanban ── */
 .boardCols {

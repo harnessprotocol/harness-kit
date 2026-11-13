@@ -1,0 +1,16 @@
+{
+  "command": "sync_read_file",
+  "calls": [
+    {
+      "fn": "syncReadFile",
+      "args": [
+        "/Users/u/work/app",
+        "CLAUDE.md"
+      ],
+      "payload": {
+        "projectDir": "/Users/u/work/app",
+        "filePath": "CLAUDE.md"
+      }
+    }
+  ]
+}

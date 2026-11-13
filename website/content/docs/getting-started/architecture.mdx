@@ -56,10 +56,10 @@ The full schema also supports top-level skills, architecture constraints, policy
 
 ## Desktop App
 
-The desktop app is a management console with a single sidebar: Machine, Profile, Claude Code, and Marketplace, plus Settings pinned at the bottom. It reads your harness configuration, provides observability into what your AI tools are doing, and gives you direct control over the pieces that are hard to manage from a terminal.
+The desktop app is a management console with a single sidebar: Machine, Profile, Claude Code, and Marketplace, plus Settings pinned at the bottom. It reads your harness configuration and shows what each AI tool has set up. Copies between tools, Compile and Drift fixes show a preview before they write and keep a backup under `~/.harness/backups/` or the project's `.harness/backups/`. The app has no shell access, and folder choices, plugin imports and exports use native dialogs.
 
-- **Machine** — home; a cross-surface grid of every AI-harness resource detected on your machine (and, once you point it at a project directory, that project's resources too), with drift repair against harness.yaml embedded as a collapsible section below the grid. After updating to v0.13.0, pick the project folder once more.
-- **Profile** — view, edit, and compile your harness.yaml
+- **Machine** — home; a cross-surface grid of every AI-harness resource detected on your machine (and, once you choose a project folder in the title bar, that project's resources too). Click a cell to open a drawer and copy a resource from one tool to another. Tools that are not installed are hidden until you choose "Show all". Drift repair against harness.yaml is a second view, a tab next to the grid. After updating to v0.13.0, pick the project folder once more. See [Machine](/docs/apps/machine).
+- **Profile** — view, edit, and compile your harness.yaml. With no project chosen it is your personal `~/.claude/harness.yaml`; with a project chosen it is that project's committed harness.yaml, the team baseline, shown read-only.
 - **Claude Code** — Instructions, MCP servers, Plugins, Hooks, Permissions, and Usage (session telemetry: every session, every tool call, token usage, timeline, trends) — all scoped to that one surface
 - **Marketplace** — browse and install plugins from the registry
 - **Settings** — preferences, secrets management, and the activity log live here as tabs; there's no separate top-level Security section

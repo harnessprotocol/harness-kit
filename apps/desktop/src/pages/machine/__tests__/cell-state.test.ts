@@ -57,9 +57,9 @@ describe("rowCellVariants on the fixture", () => {
   it("marks absent cells not in any gap as absent", () => {
     // copilot-cli is undetected, so the engine never lists it as closable.
     expect(variantsFor("mcp-server:github")["copilot-cli"]).toBe("absent");
-    // instructions:claude.md has no gap entry at all.
-    expect(variantsFor("instructions:claude.md").codex).toBe("absent");
-    expect(variantsFor("instructions:claude.md").gemini).toBe("absent");
+    // instructions:user instructions has no gap entry at all.
+    expect(variantsFor("instructions:user instructions").codex).toBe("absent");
+    expect(variantsFor("instructions:user instructions").gemini).toBe("absent");
   });
 
   it("maps not-applicable, unmanaged and unknown to their own variants", () => {
@@ -165,5 +165,28 @@ describe("inventoryVariants", () => {
     for (const row of inventory.rows) {
       expect(variants.get(row.key)).toEqual(rowCellVariants(row, inventory.gaps, surfaceOrder));
     }
+  });
+});
+
+describe("rowCellVariants: '+ copy' only where the app can apply (AC-57)", () => {
+  const pluginRow: GridRow = {
+    key: "plugin:board@harness-kit",
+    kind: "plugin",
+    name: "board@harness-kit",
+    cells: {
+      "claude-code": present("sha256:aa"),
+      codex: { status: "absent", entries: [] },
+    } as unknown as Record<SurfaceId, GridCell>,
+  };
+  const gaps = [{ row: pluginRow.key, presentOn: ["claude-code"], missingOn: ["codex"] }] as never;
+
+  it("shows a plugin gap as absent, because the drawer cannot run an installer", () => {
+    expect(rowCellVariants(pluginRow, gaps, ["claude-code", "codex"]).codex).toBe("absent");
+  });
+
+  it("still shows an mcp-server gap as '+ copy'", () => {
+    const row = { ...pluginRow, key: "mcp-server:x", kind: "mcp-server" as const, name: "x" };
+    const mcpGaps = [{ row: row.key, presentOn: ["claude-code"], missingOn: ["codex"] }] as never;
+    expect(rowCellVariants(row, mcpGaps, ["claude-code", "codex"]).codex).toBe("gap");
   });
 });

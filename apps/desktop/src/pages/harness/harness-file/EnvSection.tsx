@@ -11,7 +11,7 @@ const requiredBadgeStyle: CSSProperties = {
   padding: "1px 6px",
   borderRadius: "10px",
   background: "var(--danger-light)",
-  color: "var(--danger)",
+  color: "var(--danger-text)",
 };
 
 const sensitiveBadgeStyle: CSSProperties = {

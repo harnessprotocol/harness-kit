@@ -25,7 +25,10 @@ const NETWORK_TRANSPORTS = new Set(["http", "sse", "ws"]);
  * so both paths translate the common shapes identically.
  */
 export function reverseTranslateServer(entry: McpJsonEntry): McpServer | null {
-  const type = entry.type ?? "stdio";
+  // Precedence: an explicit `type` wins. With no `type`, `command` means
+  // stdio and a `url` without a `command` means a remote (http) server —
+  // Cursor and Claude Code both write url entries with no `type`.
+  const type = entry.type ?? (entry.url && !entry.command ? "http" : "stdio");
 
   if (type === "stdio") {
     if (!entry.command) return null;
@@ -38,10 +41,11 @@ export function reverseTranslateServer(entry: McpJsonEntry): McpServer | null {
     return server;
   }
 
-  if (NETWORK_TRANSPORTS.has(type)) {
-    if (!entry.url) return null;
+  // Any non-stdio type that carries a url is remote. Known transports keep
+  // their name; spellings like "streamable-http" read as http.
+  if (entry.url) {
     const server: McpServer = {
-      transport: type as "http" | "sse" | "ws",
+      transport: NETWORK_TRANSPORTS.has(type) ? (type as "http" | "sse" | "ws") : "http",
       url: entry.url,
       ...(entry.headers ? { headers: entry.headers } : {}),
     };

@@ -1,0 +1,10 @@
+{
+  "command": "list_marketplaces",
+  "calls": [
+    {
+      "fn": "listMarketplaces",
+      "args": [],
+      "payload": null
+    }
+  ]
+}

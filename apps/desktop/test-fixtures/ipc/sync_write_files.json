@@ -1,0 +1,26 @@
+{
+  "command": "sync_write_files",
+  "calls": [
+    {
+      "fn": "syncWriteFiles",
+      "args": [
+        "/Users/u/work/app",
+        [
+          {
+            "relativePath": "CLAUDE.md",
+            "content": "hi"
+          }
+        ]
+      ],
+      "payload": {
+        "projectDir": "/Users/u/work/app",
+        "files": [
+          {
+            "relativePath": "CLAUDE.md",
+            "content": "hi"
+          }
+        ]
+      }
+    }
+  ]
+}

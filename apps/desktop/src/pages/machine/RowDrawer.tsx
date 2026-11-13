@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Button, ErrorNotice } from "@harness-kit/ui";
 import { ArrowRight, X } from "lucide-react";
 import type { GridRow, MachineDiff, MachineGap, SurfaceId } from "@harness-kit/core";
@@ -42,9 +42,23 @@ export interface RowDrawerProps {
   onClose: () => void;
   /** Re-scan after a successful apply so the grid reflects the write. */
   onApplied?: () => void;
+  /**
+   * The surface of the grid cell that was clicked (AC-57): the first choice
+   * for "To". Ignored when that surface cannot receive a copy from the chosen
+   * source (it holds the same content, or cannot take this resource).
+   */
+  initialTarget?: SurfaceId;
 }
 
-export function RowDrawer({ row, diffs, gaps, surfaceOrder, onClose, onApplied }: RowDrawerProps) {
+export function RowDrawer({
+  row,
+  diffs,
+  gaps,
+  surfaceOrder,
+  onClose,
+  onApplied,
+  initialTarget,
+}: RowDrawerProps) {
   const presentSurfaces = Object.entries(row.cells).filter(
     ([, cell]) => cell.status === "present",
   );
@@ -60,8 +74,23 @@ export function RowDrawer({ row, diffs, gaps, surfaceOrder, onClose, onApplied }
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
 
+  // Focus moves into the drawer on open and returns to the cell that opened
+  // it on close (AC-61). Not a trap: the drawer is not modal.
+  const drawerRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const opener = document.activeElement;
+    drawerRef.current?.focus({ preventScroll: true });
+    return () => {
+      const active = document.activeElement;
+      const leftInDrawer = !active || active === document.body || (drawerRef.current?.contains(active) ?? false);
+      if (leftInDrawer && opener instanceof HTMLElement && opener.isConnected) opener.focus();
+    };
+  }, []);
+
   return (
     <aside
+      ref={drawerRef}
+      tabIndex={-1}
       data-testid="machine-row-drawer"
       aria-label={`${row.name} details`}
       style={{
@@ -73,6 +102,7 @@ export function RowDrawer({ row, diffs, gaps, surfaceOrder, onClose, onApplied }
         bottom: 0,
         width: "var(--hk-drawer-width)",
         zIndex: 60,
+        outline: "none", // focus lands here on open (tabIndex -1), not a tab stop
         display: "flex",
         flexDirection: "column",
         background: "var(--bg-surface)",
@@ -255,13 +285,16 @@ export function RowDrawer({ row, diffs, gaps, surfaceOrder, onClose, onApplied }
         </div>
       )}
 
-      {/* Keyed by row: another row's source and target choices must not carry over. */}
+      {/* Keyed by row and clicked cell: another row's source and target choices
+          must not carry over, and a click on another cell of this row starts
+          over with that cell as the target. */}
       <RowActions
-        key={row.key}
+        key={`${row.key}|${initialTarget ?? ""}`}
         row={row}
         gaps={gaps}
         surfaceOrder={surfaceOrder}
         onApplied={onApplied}
+        initialTarget={initialTarget}
       />
     </aside>
   );
@@ -288,11 +321,13 @@ function RowActions({
   gaps,
   surfaceOrder,
   onApplied,
+  initialTarget,
 }: {
   row: GridRow;
   gaps: MachineGap[];
   surfaceOrder: SurfaceId[];
   onApplied?: () => void;
+  initialTarget?: SurfaceId;
 }) {
   const sources = inSurfaceOrder(presentSources(row), surfaceOrder);
   // AC-15: default to the copy holding the row's baseline digest, the one the
@@ -315,7 +350,7 @@ function RowActions({
   const diffTargets =
     source === undefined ? [] : inSurfaceOrder(divergentTargets(row, source), surfaceOrder);
   const targets = [...gapTargets, ...diffTargets];
-  const [chosenTarget, setTarget] = useState<SurfaceId | null>(null);
+  const [chosenTarget, setTarget] = useState<SurfaceId | null>(initialTarget ?? null);
   const target: SurfaceId | "" =
     chosenTarget !== null && targets.includes(chosenTarget) ? chosenTarget : (targets[0] ?? "");
   // Whether ANY source has something to copy. A source whose digest is
@@ -425,7 +460,7 @@ function RowActions({
     return (
       <div style={{ marginTop: "auto", padding: "14px 18px 18px", fontSize: 12, opacity: 0.7 }}>
         {!anyTargets
-          ? "Present on every surface that supports it — nothing to sync."
+          ? "Present on every surface that supports it — nothing to copy."
           : "Not present on any surface — nothing to copy from."}
       </div>
     );
@@ -535,7 +570,9 @@ function RowActions({
             aria-label={
               view.plan.overwrites === undefined
                 ? "Acknowledge capability loss"
-                : "Acknowledge overwriting the target's version"
+                : row.kind === "instructions"
+                  ? "Acknowledge updating the Harness Kit block"
+                  : "Acknowledge overwriting the target's version"
             }
           />
           {view.plan.overwrites === undefined ? (
@@ -549,11 +586,23 @@ function RowActions({
             // action was deferred from M2 because a one-click copy would
             // silently pick a winner.
             <span data-testid="overwrite-warning">
-              {surfaceLabel(target as SurfaceId)} already has this. Applying replaces its
-              version:{" "}
-              {view.plan.overwrites
-                .map((delta) => `${delta.path} (${delta.kind})`)
-                .join(", ")}
+              {row.kind === "instructions" ? (
+                <>
+                  {view.plan.targetInstructions?.hasBlock
+                    ? view.plan.targetInstructions.hasOwnText
+                      ? `${surfaceLabel(target as SurfaceId)} already has a Harness Kit block and text of its own outside it. Applying updates the block; the text outside it stays, so the two will still differ.`
+                      : `${surfaceLabel(target as SurfaceId)} already has a Harness Kit block with different content. Applying updates that block.`
+                    : `${surfaceLabel(target as SurfaceId)} already has its own instructions. Applying adds a Harness Kit block; its text stays, so the two will still differ.`}
+                </>
+              ) : (
+                <>
+                  {surfaceLabel(target as SurfaceId)} already has this. Applying replaces its
+                  version:{" "}
+                  {view.plan.overwrites
+                    .map((delta) => `${delta.path} (${delta.kind})`)
+                    .join(", ")}
+                </>
+              )}
             </span>
           )}
         </label>

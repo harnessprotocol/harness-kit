@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import type { GridRow } from "@harness-kit/core";
+import type { GridRow, SurfaceId } from "@harness-kit/core";
 import { MachineGrid } from "../machine/MachineGrid";
 import {
   MachineFilterStatus,
@@ -33,6 +33,7 @@ export default function MachineFixture() {
   const [selectedRow, setSelectedRow] = useState<GridRow | null>(
     inventory.rows.find((row) => row.key === "mcp-server:github") ?? null,
   );
+  const [clickedSurface, setClickedSurface] = useState<SurfaceId | null>(null);
   const clearSelection = useCallback(() => setSelectedRow(null), []);
   const { view, setView, drift, drawerRow, regionRef, harness } = useMachineView({
     selectedRow,
@@ -82,14 +83,12 @@ export default function MachineFixture() {
                 error={null}
                 harnessFilter={harness}
                 showAcknowledged={false}
-                toasts={[]}
                 onToggleShowAcknowledged={() => {}}
                 onFixAll={() => {}}
                 onFixOne={() => {}}
                 onAcknowledge={() => {}}
                 onUnacknowledge={() => {}}
                 onRescan={() => {}}
-                onDismissToast={() => {}}
               />
             </div>
           ) : (
@@ -105,7 +104,10 @@ export default function MachineFixture() {
                   inventory={{ ...inventory, rows: shownRows }}
                   variants={variants}
                   selectedRowKey={selectedRow?.key ?? null}
-                  onRowClick={(row) => setSelectedRow(row)}
+                  onRowClick={(row, surface) => {
+                    setSelectedRow(row);
+                    setClickedSurface(surface ?? null);
+                  }}
                 />
               </div>
             </>
@@ -118,6 +120,7 @@ export default function MachineFixture() {
           diffs={inventory.diffs.filter((diff) => diff.row === drawerRow.key)}
           gaps={inventory.gaps}
           surfaceOrder={inventory.surfaces.map((surface) => surface.id)}
+          initialTarget={clickedSurface ?? undefined}
           onClose={() => setSelectedRow(null)}
         />
       )}

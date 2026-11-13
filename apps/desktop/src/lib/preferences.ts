@@ -170,6 +170,19 @@ export function setLab(key: LabsKey, on: boolean) {
   window.dispatchEvent(new CustomEvent("harness-kit-prefs-changed"));
 }
 
+// The reconciliation ledger's internals (layers, conflicts, capability
+// totals, rollback points) are a Labs view, off by default. It is not a nav
+// entry, so it stays out of LabsFlags.
+const KEY_LABS_LEDGER = KEY_LABS_PREFIX + "ledger";
+
+export function getLedgerLab(): boolean {
+  return localStorage.getItem(KEY_LABS_LEDGER) === "true";
+}
+
+export function setLedgerLab(on: boolean) {
+  localStorage.setItem(KEY_LABS_LEDGER, String(on));
+}
+
 // ── Permission Mode ───────────────────────────────────────────
 
 export type PermissionMode = "skip" | "auto" | "allowed-tools";

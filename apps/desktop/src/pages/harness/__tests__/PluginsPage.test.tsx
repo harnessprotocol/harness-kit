@@ -356,7 +356,7 @@ describe("PluginsPage drag-to-import (Tauri drag-drop event)", () => {
     );
     await waitFor(() => expect(screen.queryByText("Loading…")).not.toBeInTheDocument());
     const option = () =>
-      within(screen.getByRole("dialog", { name: "Command palette" })).getByRole("button", {
+      within(screen.getByRole("dialog", { name: "Command palette" })).getByRole("option", {
         name: "Import plugin from folder…",
       });
     expect(option()).not.toHaveAttribute("aria-disabled");

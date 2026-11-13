@@ -123,9 +123,9 @@ export const MACHINE_FIXTURE_INVENTORY: MachineInventory = {
       },
     },
     {
-      key: "instructions:claude.md",
+      key: "instructions:user instructions",
       kind: "instructions",
-      name: "CLAUDE.md",
+      name: "User instructions",
       cells: {
         "claude-code": {
           status: "present",

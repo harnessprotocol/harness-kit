@@ -47,7 +47,7 @@ export default function ValidationBanner({ result }: ValidationBannerProps) {
   };
 
   return (
-    <Card padding="sm" style={{ color: "var(--danger)", fontSize: "13px" }}>
+    <Card padding="sm" style={{ color: "var(--danger-text)", fontSize: "13px" }}>
       <span style={{ fontWeight: 600 }}>Validation errors:</span>
       <ul style={listStyle}>
         {shown.map((err, i) => (

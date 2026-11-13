@@ -13,6 +13,8 @@ export interface NavEntry {
   /** ⌘<n>. Only top-level, non-labs entries carry one. */
   shortcut?: number;
   children?: NavChild[];
+  /** Route prefixes beyond `path` and the children that still belong to this section. */
+  owns?: string[];
   /** Shown only while the matching labs flag is on. */
   labs?: LabsKey;
 }
@@ -34,6 +36,7 @@ export const NAV: NavEntry[] = [
   },
   {
     id: "claude-code", label: "Claude Code", path: "/harness/claude-md", icon: SquareTerminal, shortcut: 3,
+    owns: ["/harness/config"], // the Config Files list under the section's children
     children: [
       { label: "Instructions", path: "/harness/claude-md" },
       { label: "MCP servers", path: "/harness/mcp" },

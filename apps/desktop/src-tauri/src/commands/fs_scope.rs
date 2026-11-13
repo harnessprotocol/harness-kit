@@ -67,9 +67,10 @@ pub(crate) fn is_home_or_ancestor(candidate: &Path, home: &Path) -> bool {
 ///
 /// The static capability (capabilities/default.json) only ever lists known
 /// harness config roots under `$HOME` — it intentionally does not grant
-/// `$HOME/**`. Fleet/Drift's project scope is an arbitrary directory the user
-/// picked via a folder dialog (see SyncPage's `open({ directory: true })` and
-/// `getCurrentProjectDir()`), so it can't be listed ahead of time. This
+/// `$HOME/**`. The project scope of Machine, Drift and Compile is an arbitrary
+/// directory the user picked in the title bar's native folder dialog (see
+/// `choose_project_dir` and `getCurrentProjectDir()`), so it can't be listed
+/// ahead of time. This
 /// command extends the runtime scope to cover exactly that directory
 /// (not retroactively trusting any other path). The scope itself lasts one
 /// launch, so this must be called again each launch before the project scope

@@ -9,7 +9,7 @@ const MOCK_PLUGINS = getAllPlugins()
   .slice(0, 6)
   .map((p) => ({ name: p.name, desc: p.description }));
 
-type SectionId = 'harness' | 'marketplace' | 'observatory' | 'comparator' | 'security' | 'parity';
+type SectionId = 'machine' | 'profile' | 'claude-code' | 'marketplace' | 'comparator';
 
 interface DesktopMockProps {
   interactive?: boolean;
@@ -17,17 +17,40 @@ interface DesktopMockProps {
   compact?: boolean;
 }
 
+// The sidebar mirrors the app: Machine, Profile, Claude Code, Marketplace, and
+// Comparator under Labs (apps/desktop/src/nav.ts). The pane contents are
+// illustrative sample data, not a capture of a real machine.
 const SECTIONS = [
   {
-    group: 'CORE',
+    group: 'WORKSPACE',
     items: [
       {
-        id: 'harness',
-        label: 'Harness',
-        title: 'Harness — harness.yaml',
+        id: 'machine',
+        label: 'Machine',
+        title: 'Machine',
+        icon: (
+          <svg viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M2 4.25A2.25 2.25 0 014.25 2h11.5A2.25 2.25 0 0118 4.25v8.5A2.25 2.25 0 0115.75 15h-3.105a3.501 3.501 0 001.1 1.677A.75.75 0 0113.26 18H6.74a.75.75 0 01-.484-1.323A3.501 3.501 0 007.355 15H4.25A2.25 2.25 0 012 12.75v-8.5zm1.5 0a.75.75 0 01.75-.75h11.5a.75.75 0 01.75.75v7.5a.75.75 0 01-.75.75H4.25a.75.75 0 01-.75-.75v-7.5z" clipRule="evenodd" />
+          </svg>
+        ),
+      },
+      {
+        id: 'profile',
+        label: 'Profile',
+        title: 'Profile — harness.yaml',
         icon: (
           <svg viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+          </svg>
+        ),
+      },
+      {
+        id: 'claude-code',
+        label: 'Claude Code',
+        title: 'Claude Code — Permissions',
+        icon: (
+          <svg viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M3.25 3A2.25 2.25 0 001 5.25v9.5A2.25 2.25 0 003.25 17h13.5A2.25 2.25 0 0019 14.75v-9.5A2.25 2.25 0 0016.75 3H3.25zm.943 8.752a.75.75 0 01.055-1.06L6.128 9l-1.88-1.693a.75.75 0 111.004-1.114l2.5 2.25a.75.75 0 010 1.114l-2.5 2.25a.75.75 0 01-1.06-.055zM9.75 10.25a.75.75 0 000 1.5h2.5a.75.75 0 000-1.5h-2.5z" clipRule="evenodd" />
           </svg>
         ),
       },
@@ -44,18 +67,8 @@ const SECTIONS = [
     ],
   },
   {
-    group: 'INSIGHTS',
+    group: 'LABS',
     items: [
-      {
-        id: 'observatory',
-        label: 'Observatory',
-        title: 'Observatory',
-        icon: (
-          <svg viewBox="0 0 20 20" fill="currentColor">
-            <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
-          </svg>
-        ),
-      },
       {
         id: 'comparator',
         label: 'Comparator',
@@ -68,36 +81,30 @@ const SECTIONS = [
       },
     ],
   },
-  {
-    group: 'SYSTEM',
-    items: [
-      {
-        id: 'security',
-        label: 'Security',
-        title: 'Security — Permissions',
-        icon: (
-          <svg viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-          </svg>
-        ),
-      },
-      {
-        id: 'parity',
-        label: 'Parity',
-        title: 'Parity — Cross-harness',
-        icon: (
-          <svg viewBox="0 0 20 20" fill="currentColor">
-            <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-            <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm9.707 5.707a1 1 0 00-1.414-1.414L9 12.586l-1.293-1.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-          </svg>
-        ),
-      },
-    ],
-  },
 ];
 
 // Flatten all items for lookup
 const ALL_ITEMS = SECTIONS.flatMap((g) => g.items);
+
+// Cell states from the app's Machine grid (cell-state.ts).
+type Cell = 'user' | 'project' | 'copy' | 'differs' | 'none';
+
+const GRID_TOOLS = ['Claude Code', 'Cursor', 'Codex'];
+
+const GRID_ROWS: { kind: string; name: string; cells: Cell[] }[] = [
+  { kind: 'MCP server', name: 'github', cells: ['user', 'user', 'user'] },
+  { kind: 'MCP server', name: 'postgres', cells: ['user', 'copy', 'differs'] },
+  { kind: 'Skill', name: 'review', cells: ['user', 'project', 'copy'] },
+  { kind: 'Plugin', name: 'research@harness-kit', cells: ['user', 'none', 'copy'] },
+];
+
+const CELL_LABEL: Record<Cell, string> = {
+  user: 'user',
+  project: 'project',
+  copy: '+ copy',
+  differs: 'differs',
+  none: '—',
+};
 
 function getTitleForSection(id: SectionId) {
   return ALL_ITEMS.find((i) => i.id === id)?.title ?? 'Harness Kit';
@@ -105,7 +112,7 @@ function getTitleForSection(id: SectionId) {
 
 export function DesktopMock({
   interactive = true,
-  defaultSection = 'observatory',
+  defaultSection = 'machine',
   compact = false,
 }: DesktopMockProps) {
   const [activeSection, setActiveSection] = useState(defaultSection);
@@ -230,50 +237,54 @@ export function DesktopMock({
 
         {/* Content panes */}
         <div className={styles.paneWrap}>
-          {/* Observatory */}
-          <div className={`${styles.pane} ${activeSection === 'observatory' ? styles.paneActive : ''}`}>
-            <div className={styles.paneTitle}>Observatory</div>
-            <div className={styles.paneSubtitle}>This week · all tools</div>
-            <div className={styles.metricRow}>
-              <div className={styles.metricCard}>
-                <div className={styles.metricLabel}>Sessions</div>
-                <div className={styles.metricValue}>1,247</div>
-                <div className={styles.metricDelta}>+12.4% wk</div>
-              </div>
-              <div className={styles.metricCard}>
-                <div className={styles.metricLabel}>Tool calls</div>
-                <div className={styles.metricValue}>8,390</div>
-                <div className={styles.metricDelta}>+6.1% wk</div>
-              </div>
-              <div className={styles.metricCard}>
-                <div className={styles.metricLabel}>Avg duration</div>
-                <div className={styles.metricValue}>34m</div>
-                <div className={styles.metricDelta}>−2m wk</div>
-              </div>
-            </div>
-            <div className={styles.chartCard}>
-              <div className={styles.chartHeader}>
-                <div className={styles.chartTitle}>Sessions over time</div>
-                <div className={styles.chartLegend}>7d · 30d · 90d</div>
-              </div>
-              <svg className={styles.chartSvg} viewBox="0 0 400 140" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="dm-lg1" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.45" />
-                    <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                <path d="M0,110 L30,95 L60,100 L90,80 L120,85 L150,60 L180,65 L210,45 L240,55 L270,35 L300,40 L330,25 L360,30 L400,15 L400,140 L0,140 Z" fill="url(#dm-lg1)" />
-                <path d="M0,110 L30,95 L60,100 L90,80 L120,85 L150,60 L180,65 L210,45 L240,55 L270,35 L300,40 L330,25 L360,30 L400,15" fill="none" stroke="var(--accent)" strokeWidth="2" />
-                <circle cx="400" cy="15" r="3.5" fill="var(--accent)" />
-              </svg>
-            </div>
+          {/* Machine */}
+          <div className={`${styles.pane} ${activeSection === 'machine' ? styles.paneActive : ''}`}>
+            <div className={styles.paneTitle}>Machine</div>
+            <div className={styles.paneSubtitle}>Every resource, across the tools installed here</div>
+            <table className={styles.parityTable}>
+              <thead>
+                <tr>
+                  <th>Resource</th>
+                  {GRID_TOOLS.map((tool) => (
+                    <th key={tool}>{tool}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {GRID_ROWS.map((row) => (
+                  <tr key={row.name}>
+                    <td>
+                      {row.name}
+                      <span className={styles.gridKind}> {row.kind}</span>
+                    </td>
+                    {row.cells.map((cell, i) => (
+                      <td key={GRID_TOOLS[i]}>
+                        <span
+                          className={
+                            cell === 'user' || cell === 'project'
+                              ? styles.parityCheck
+                              : cell === 'differs'
+                                ? styles.parityPartial
+                                : cell === 'copy'
+                                  ? styles.gridCopy
+                                  : styles.parityNone
+                          }
+                        >
+                          {CELL_LABEL[cell]}
+                        </span>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className={styles.paneSubtitle}>Tools that are not installed are hidden. Click a cell to copy.</div>
           </div>
 
-          {/* Harness */}
-          <div className={`${styles.pane} ${styles.paneHarness} ${activeSection === 'harness' ? styles.paneActive : ''}`}>
+          {/* Profile */}
+          <div className={`${styles.pane} ${styles.paneHarness} ${activeSection === 'profile' ? styles.paneActive : ''}`}>
             <pre className={styles.paneHarnessCode}>
-              <span className={styles.yamlComment}># harness.yaml — the one file that travels with you</span>{'\n'}
+              <span className={styles.yamlComment}># ~/.claude/harness.yaml — your personal profile</span>{'\n'}
               <span className={styles.yamlKey}>version:</span> <span className={styles.yamlNum}>1</span>{'\n\n'}
               <span className={styles.yamlKey}>plugins:</span>{'\n'}
               {'  '}<span className={styles.yamlDash}>-</span> <span className={styles.yamlStr}>research@harness-kit</span>{'\n'}
@@ -292,6 +303,30 @@ export function DesktopMock({
               {'  '}<span className={styles.yamlDash}>-</span> <span className={styles.yamlStr}>debugging</span>{'\n'}
               {'  '}<span className={styles.yamlDash}>-</span> <span className={styles.yamlStr}>writing-plans</span>
             </pre>
+          </div>
+
+          {/* Claude Code */}
+          <div className={`${styles.pane} ${activeSection === 'claude-code' ? styles.paneActive : ''}`}>
+            <div className={styles.paneTitle}>Permissions</div>
+            <div className={styles.paneSubtitle}>Claude Code · allow, ask and deny rules</div>
+            <div className={styles.permTable}>
+              {[
+                { status: 'allow', rule: 'Bash(pnpm *)' },
+                { status: 'allow', rule: 'Read(~/repos/**)' },
+                { status: 'allow', rule: 'WebFetch(api.github.com)' },
+                { status: 'ask',   rule: 'Bash(git push origin *)' },
+                { status: 'ask',   rule: 'Write(~/.zshrc)' },
+                { status: 'deny',  rule: 'Read(~/.ssh/**)' },
+                { status: 'deny',  rule: 'Bash(rm -rf /**)' },
+              ].map((row, i) => (
+                <div key={i} className={styles.permRow}>
+                  <span className={`${styles.permStatus} ${row.status === 'allow' ? styles.permAllow : row.status === 'ask' ? styles.permAsk : styles.permDeny}`}>
+                    {row.status}
+                  </span>
+                  <span className={styles.permRule}>{row.rule}</span>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Marketplace */}
@@ -334,63 +369,6 @@ export function DesktopMock({
               <div className={styles.termLine}>Proposing refactor…</div>
               <div className={`${styles.termLine} ${styles.termCursor}`}>running tests</div>
             </div>
-          </div>
-
-          {/* Security */}
-          <div className={`${styles.pane} ${activeSection === 'security' ? styles.paneActive : ''}`}>
-            <div className={styles.paneTitle}>Permissions</div>
-            <div className={styles.paneSubtitle}>Claude Code · auto-allow rules</div>
-            <div className={styles.permTable}>
-              {[
-                { status: 'allow', rule: 'Bash(pnpm *)' },
-                { status: 'allow', rule: 'Read(~/repos/**)' },
-                { status: 'allow', rule: 'WebFetch(api.github.com)' },
-                { status: 'ask',   rule: 'Bash(git push origin *)' },
-                { status: 'ask',   rule: 'Write(~/.zshrc)' },
-                { status: 'deny',  rule: 'Read(~/.ssh/**)' },
-                { status: 'deny',  rule: 'Bash(rm -rf /**)' },
-              ].map((row, i) => (
-                <div key={i} className={styles.permRow}>
-                  <span className={`${styles.permStatus} ${row.status === 'allow' ? styles.permAllow : row.status === 'ask' ? styles.permAsk : styles.permDeny}`}>
-                    {row.status}
-                  </span>
-                  <span className={styles.permRule}>{row.rule}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Parity */}
-          <div className={`${styles.pane} ${activeSection === 'parity' ? styles.paneActive : ''}`}>
-            <div className={styles.paneTitle}>Cross-harness parity</div>
-            <div className={styles.paneSubtitle}>What runs where, right now</div>
-            <table className={styles.parityTable}>
-              <thead>
-                <tr>
-                  <th>Tool</th>
-                  <th>Plugins</th>
-                  <th>MCP</th>
-                  <th>Hooks</th>
-                  <th>Skills</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[
-                  { tool: 'Claude Code', plugins: '✓', mcp: '✓', hooks: '✓', skills: '✓' },
-                  { tool: 'Cursor',      plugins: '✓', mcp: '✓', hooks: '—', skills: '◐' },
-                  { tool: 'Copilot',     plugins: '✓', mcp: '—', hooks: '—', skills: '◐' },
-                  { tool: 'Windsurf',    plugins: '◐', mcp: '—', hooks: '—', skills: '—' },
-                ].map((row) => (
-                  <tr key={row.tool}>
-                    <td>{row.tool}</td>
-                    <td><span className={row.plugins === '✓' ? styles.parityCheck : row.plugins === '◐' ? styles.parityPartial : styles.parityNone}>{row.plugins}</span></td>
-                    <td><span className={row.mcp === '✓' ? styles.parityCheck : row.mcp === '◐' ? styles.parityPartial : styles.parityNone}>{row.mcp}</span></td>
-                    <td><span className={row.hooks === '✓' ? styles.parityCheck : row.hooks === '◐' ? styles.parityPartial : styles.parityNone}>{row.hooks}</span></td>
-                    <td><span className={row.skills === '✓' ? styles.parityCheck : row.skills === '◐' ? styles.parityPartial : styles.parityNone}>{row.skills}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
           </div>
 
         </div>

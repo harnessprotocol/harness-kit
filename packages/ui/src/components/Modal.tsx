@@ -1,5 +1,6 @@
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, type ReactNode } from "react";
 import { X } from "lucide-react";
+import { useDialogFocus } from "./useDialogFocus";
 
 export interface ModalProps {
   open: boolean;
@@ -18,16 +19,9 @@ export interface ModalProps {
  */
 export function Modal({ open, onClose, title, children, footer, ariaLabel }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<Element | null>(null);
+  const titleId = useId();
 
-  useEffect(() => {
-    if (open) {
-      triggerRef.current = document.activeElement;
-      requestAnimationFrame(() => dialogRef.current?.focus());
-    } else if (triggerRef.current instanceof HTMLElement) {
-      triggerRef.current.focus();
-    }
-  }, [open]);
+  useDialogFocus(open, dialogRef);
 
   useEffect(() => {
     if (!open) return;
@@ -50,14 +44,14 @@ export function Modal({ open, onClose, title, children, footer, ariaLabel }: Mod
         role="dialog"
         aria-modal="true"
         aria-label={typeof title === "string" ? undefined : ariaLabel}
-        aria-labelledby={typeof title === "string" ? "hk-modal-title" : undefined}
+        aria-labelledby={typeof title === "string" ? titleId : undefined}
         tabIndex={-1}
         className="hk-modal"
         onMouseDown={(e) => e.stopPropagation()}
       >
         {title && (
           <div className="hk-modal-header">
-            <div id="hk-modal-title" className="hk-modal-title">
+            <div id={titleId} className="hk-modal-title">
               {title}
             </div>
             <button

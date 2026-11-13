@@ -21,8 +21,8 @@ const ToastContext = createContext<PushToast>(() => {});
 
 /**
  * The app's toast stack (design D15), mounted once in AppLayout. New pages
- * call `useToast()`. Drift still keeps its own state and viewport until
- * Phase 4 migrates it, so on Machine the two stacks share the corner.
+ * call `useToast()`, Drift included. The viewport is one always-mounted
+ * live region.
  */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastItem[]>([]);

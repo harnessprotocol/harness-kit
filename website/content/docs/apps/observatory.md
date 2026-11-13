@@ -1,12 +1,15 @@
 ---
-title: Observatory
+title: Usage
 ---
 
-# Observatory
+# Usage
 
-Observatory is a session monitoring dashboard that reads directly from Claude Code's
-local data files. It requires no configuration — open it and your usage history is
-already there.
+Usage is the session dashboard for Claude Code. It was called Observatory in earlier
+releases and now sits under **Claude Code** in the sidebar, as the last item after
+Permissions. It reads Claude Code's local data files and needs no setup. Open it and
+your usage history is already there.
+
+Usage covers Claude Code only. It does not read data from other tools.
 
 ## Data Sources
 
@@ -57,8 +60,8 @@ and return to the global range.
 
 ## Budget Guard
 
-Set a daily token or cost limit in Preferences. When today's usage exceeds the limit,
-a red alert banner appears above the stat cards.
+Set a daily token or cost limit under **Claude Code › Permissions**. When today's usage
+exceeds the limit, an alert banner appears above the stat cards.
 
 ## Refresh
 

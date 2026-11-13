@@ -1,0 +1,14 @@
+{
+  "command": "undo_change",
+  "calls": [
+    {
+      "fn": "undoChange",
+      "args": [
+        "2026-11-01T10-00-00-000Z-app"
+      ],
+      "payload": {
+        "transactionId": "2026-11-01T10-00-00-000Z-app"
+      }
+    }
+  ]
+}

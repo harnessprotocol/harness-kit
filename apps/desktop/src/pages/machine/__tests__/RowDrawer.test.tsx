@@ -128,6 +128,44 @@ describe("RowDrawer from → to (AC-15)", () => {
   });
 });
 
+describe("RowDrawer clicked-cell target (AC-57)", () => {
+  beforeEach(() => {
+    vi.mocked(buildCellAction).mockClear();
+  });
+
+  function drawer(initialTarget?: SurfaceId) {
+    return (
+      <RowDrawer
+        row={makeRow()}
+        diffs={[]}
+        gaps={GEMINI_GAP}
+        surfaceOrder={SURFACE_ORDER}
+        initialTarget={initialTarget}
+        onClose={vi.fn()}
+      />
+    );
+  }
+
+  it("starts with the clicked surface as the target, not the first gap", async () => {
+    render(drawer("claude-code"));
+    expect(targetSelect().value).toBe("claude-code");
+    await waitFor(() => expect(lastPlan()).toEqual(["codex", "claude-code"]));
+  });
+
+  it("falls back to the default target when the clicked surface cannot be one", () => {
+    // cursor holds the baseline digest: nothing to copy onto it from codex.
+    render(drawer("cursor"));
+    expect(targetSelect().value).toBe("gemini");
+  });
+
+  it("moves to a different clicked cell on the same row", () => {
+    const { rerender } = render(drawer("claude-code"));
+    expect(targetSelect().value).toBe("claude-code");
+    rerender(drawer("gemini"));
+    expect(targetSelect().value).toBe("gemini");
+  });
+});
+
 describe("RowDrawer apply never runs a stale plan", () => {
   beforeEach(() => {
     vi.mocked(buildCellAction).mockClear();

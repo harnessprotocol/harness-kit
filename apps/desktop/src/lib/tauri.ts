@@ -128,6 +128,8 @@ export interface HarnessFileResult {
   found: boolean;
   content: string | null;
   path: string | null;
+  /** A file sits at ~/harness.yaml and none at ~/.claude/harness.yaml. Existence only; never read. */
+  legacy_home_file?: boolean;
 }
 
 export async function readHarnessFile(): Promise<HarnessFileResult> {
@@ -137,17 +139,6 @@ export async function readHarnessFile(): Promise<HarnessFileResult> {
 /** `expectedSha256`: digest of the loaded ~/.claude/harness.yaml (`loadedDigest`); omit when it did not exist. */
 export async function writeHarnessFile(content: string, expectedSha256?: string): Promise<string> {
   return invoke<string>("write_harness_file", { content, expectedSha256 });
-}
-
-export interface ClaudeConfigScan {
-  mcpServersJson: string | null;
-  settingsJson: string | null;
-  mcpSource: string | null;
-  settingsSource: string | null;
-}
-
-export async function scanClaudeConfig(): Promise<ClaudeConfigScan> {
-  return invoke<ClaudeConfigScan>("scan_claude_config");
 }
 
 // ── Custom Profile commands ───────────────────────────────────
@@ -231,7 +222,7 @@ export async function detectHarnesses(): Promise<HarnessInfo[]> {
  * directory, in-memory for this app session. The static capability
  * (capabilities/default.json) only lists known harness config roots under
  * $HOME — it never grants a blanket $HOME/** scope — so callers that need
- * TauriFsProvider access to an arbitrary project dir (Fleet, Drift) must
+ * TauriFsProvider access to an arbitrary project dir (Machine, Drift, Profile) must
  * grant it here first.
  */
 export async function grantProjectScope(path: string): Promise<void> {
@@ -325,6 +316,46 @@ export async function listAuditEntries(
 
 export async function clearAuditEntries(beforeDate: string): Promise<void> {
   return invoke<void>("clear_audit_entries", { beforeDate });
+}
+
+// ── Changes (Settings > Activity) ────────────────────────────
+
+/** One change the app made, from the rollback ledger. */
+export interface ChangeEntry {
+  transactionId: string;
+  appliedAt: string;
+  surfaces: string[];
+  kinds: string[];
+  identityKeys: string[];
+  /** Home-relative paths the change touched. */
+  files: string[];
+  /** The surface a Machine copy came from, when the change was one. */
+  copiedFrom: string | null;
+  status: "applied" | "undone" | "unavailable";
+  undoable: boolean;
+  /** Why Undo is not offered, in words for the user. */
+  reason: string | null;
+}
+
+export interface UndoOutcome {
+  transactionId: string;
+  files: string[];
+  /** Set when the files were restored but the change was not marked undone. */
+  warning: string | null;
+}
+
+/** Recent changes, newest first. Read-only. */
+export async function listChanges(limit?: number): Promise<ChangeEntry[]> {
+  return invoke<ChangeEntry[]>("list_changes", { limit });
+}
+
+/**
+ * Undo one change by id. Rust looks up the change, verifies every file still
+ * holds what the change left, and restores the previous content; the webview
+ * supplies nothing but the id.
+ */
+export async function undoChange(transactionId: string): Promise<UndoOutcome> {
+  return invoke<UndoOutcome>("undo_change", { transactionId });
 }
 
 // ── Sync commands ────────────────────────────────────────────

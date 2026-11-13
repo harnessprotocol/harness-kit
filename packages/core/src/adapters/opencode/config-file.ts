@@ -3,6 +3,7 @@ import type { FileAction, HarnessConfig, McpServer } from "../../types.js";
 import { readJsonOrDefault } from "../../utils/read-json.js";
 import type { OpenCodeConfigFile, OpenCodeMcpEntry } from "./types.js";
 import { buildOpenCodePermission } from "./permissions.js";
+import { assertNoSecretPlaceholder } from "../../compile/mcp-servers.js";
 
 const OPENCODE_CONFIG_FILE = "opencode.json";
 
@@ -66,6 +67,7 @@ export async function compileOpenCodeConfigFile(
     const existingMcp = existing.mcp ?? {};
     const mergedMcp: Record<string, OpenCodeMcpEntry> = { ...existingMcp };
     for (const [name, server] of Object.entries(mcpServers)) {
+      assertNoSecretPlaceholder(name, server);
       if (name in existingMcp) {
         warnings.push(
           `${OPENCODE_CONFIG_FILE} already defines mcp server '${name}'. The reconciled harness definition will replace it.`,

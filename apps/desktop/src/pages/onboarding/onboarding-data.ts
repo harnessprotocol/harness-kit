@@ -1,6 +1,8 @@
+import { stringify as stringifyYaml } from "yaml";
 import type {
   AdapterFindingsSummary,
   AdapterId,
+  HarnessConfig,
   ImportConflict,
   ImportProjectResult,
 } from "@harness-kit/core";
@@ -150,4 +152,25 @@ export function buildSprawlReveal(result: ImportProjectResult): SprawlReveal {
     conflicts: conflictRows,
     isLowHarnessCount: detected.length <= 1,
   };
+}
+
+/**
+ * AC-56: the harness.yaml onboarding writes takes its MCP servers and
+ * permissions from the machine inventory (the grid's data), not from the
+ * per-adapter scan. The scan still supplies the findings the reveal shows and
+ * the sections the inventory does not cover (instructions, skills); the
+ * scan's own `mcp-servers` and `permissions` are replaced, never merged, so
+ * the file cannot list a server the grid does not.
+ */
+export function withInventorySections(
+  scan: ImportProjectResult,
+  inventoryConfig: HarnessConfig,
+): ImportProjectResult {
+  const { "mcp-servers": _scanServers, permissions: _scanPermissions, ...rest } = scan.harnessConfig;
+  const harnessConfig: HarnessConfig = {
+    ...rest,
+    ...(inventoryConfig["mcp-servers"] ? { "mcp-servers": inventoryConfig["mcp-servers"] } : {}),
+    ...(inventoryConfig.permissions ? { permissions: inventoryConfig.permissions } : {}),
+  };
+  return { ...scan, harnessConfig, harnessYaml: stringifyYaml(harnessConfig, { lineWidth: 0 }) };
 }

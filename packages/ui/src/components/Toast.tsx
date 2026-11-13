@@ -25,7 +25,7 @@ const ICON: Record<ToastVariant, ReactNode> = {
 export function Toast({ toast, onDismiss }: ToastProps) {
   const variant = toast.variant ?? "info";
   return (
-    <div className="hk-toast" data-variant={variant} role={variant === "danger" ? "alert" : "status"}>
+    <div className="hk-toast" data-variant={variant} role={variant === "danger" ? "alert" : undefined}>
       <span className="hk-toast-icon" aria-hidden="true">
         {ICON[variant]}
       </span>
@@ -55,9 +55,10 @@ export interface ToastViewportProps {
 
 /** Fixed bottom-right stack. Mount once at the app root. */
 export function ToastViewport({ toasts, onDismiss }: ToastViewportProps) {
-  if (toasts.length === 0) return null;
+  // Always mounted, even empty: a live region that appears together with its
+  // first message is often not announced. role="log" is polite and additive.
   return (
-    <div className="hk-toast-viewport">
+    <div className="hk-toast-viewport" role="log" aria-label="Notifications" data-empty={toasts.length === 0 ? "true" : undefined}>
       {/* The newest three: a warning stays until dismissed, and must not
           hide a fresh toast behind it. */}
       {toasts.slice(-3).map((t) => (

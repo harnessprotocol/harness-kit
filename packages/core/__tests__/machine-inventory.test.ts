@@ -358,12 +358,11 @@ describe("row display name", () => {
   });
 });
 
-describe("instructions rows (file-based identity)", () => {
-  it("CLAUDE.md (claude-code) and AGENTS.md (codex) land in SEPARATE rows even with identical content", () => {
-    // Instruction identity is file-based (Task 9): different filenames mean
-    // different identityKeys, so same-content files across surfaces are
-    // separate rows. Content-level cross-file instruction comparison
-    // (matching CLAUDE.md against AGENTS.md) is post-M1.
+describe("instructions rows (one per scope, AC-57)", () => {
+  it("CLAUDE.md (claude-code) and AGENTS.md (codex) share ONE 'User instructions' row", () => {
+    // Each surface keeps its instructions in a differently named file, so a
+    // file-based identity made every copy leave a gap in the row it came
+    // from. Identity is the scope instead; the file stays in provenance.
     const content = { content: "Shared house rules." };
     const inventory = computeMachineInventory([
       obs("claude-code", [
@@ -374,14 +373,48 @@ describe("instructions rows (file-based identity)", () => {
       ]),
     ]);
 
-    const claudeRow = row(inventory, "instructions:claude.md");
-    const agentsRow = row(inventory, "instructions:agents.md");
-    expect(claudeRow.name).toBe("CLAUDE.md");
-    expect(agentsRow.name).toBe("AGENTS.md");
-    expect(claudeRow.cells["claude-code"].status).toBe("present");
-    expect(claudeRow.cells.codex.status).toBe("absent");
-    expect(agentsRow.cells.codex.status).toBe("present");
-    // Separate rows ⇒ no diff is computed between the two files.
+    const instructionRows = inventory.rows.filter((r) => r.kind === "instructions");
+    expect(instructionRows.map((r) => r.key)).toEqual(["instructions:user instructions"]);
+    const shared = instructionRows[0]!;
+    expect(shared.name).toBe("User instructions");
+    expect(shared.cells["claude-code"].status).toBe("present");
+    expect(shared.cells.codex.status).toBe("present");
+    expect(shared.cells.codex.entries[0]!.provenance.file).toBe(`${HOME}/.codex/AGENTS.md`);
+    expect(inventory.gaps).toEqual([]);
     expect(inventory.diffs).toEqual([]);
+  });
+
+  it("user-scope and project-scope instructions are separate rows", () => {
+    const inventory = computeMachineInventory([
+      obs("claude-code", [
+        { kind: "instructions", scope: "user", name: "CLAUDE.md", value: { content: "a" } },
+        { kind: "instructions", scope: "project", name: "CLAUDE.md", value: { content: "b" } },
+      ]),
+      obs("codex", []),
+    ]);
+    expect(inventory.rows.map((r) => [r.key, r.name])).toEqual([
+      ["instructions:project instructions", "Project instructions"],
+      ["instructions:user instructions", "User instructions"],
+    ]);
+  });
+
+  it("a file holding only a harness:sync marker block counts as present", () => {
+    const block = "<!-- BEGIN harness:sync:CLAUDE.md -->\nShared house rules.\n<!-- END harness:sync:CLAUDE.md -->\n";
+    const inventory = computeMachineInventory([
+      obs("claude-code", [{ kind: "instructions", name: "CLAUDE.md", value: { content: "Shared house rules." } }]),
+      obs("codex", [{ kind: "instructions", name: "AGENTS.md", value: { content: block } }]),
+    ]);
+    expect(row(inventory, "instructions:user instructions").cells.codex.status).toBe("present");
+    expect(inventory.gaps).toEqual([]);
+  });
+
+  it("an instructions gap is still a gap where the target has no instructions file", () => {
+    const inventory = computeMachineInventory([
+      obs("claude-code", [{ kind: "instructions", name: "CLAUDE.md", value: { content: "x" } }]),
+      obs("codex", []),
+    ]);
+    expect(inventory.gaps.map((g) => [g.row, g.missingOn])).toEqual([
+      ["instructions:user instructions", ["codex"]],
+    ]);
   });
 });

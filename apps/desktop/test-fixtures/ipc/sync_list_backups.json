@@ -1,0 +1,10 @@
+{
+  "command": "sync_list_backups",
+  "calls": [
+    {
+      "fn": "syncListBackups",
+      "args": [],
+      "payload": null
+    }
+  ]
+}
