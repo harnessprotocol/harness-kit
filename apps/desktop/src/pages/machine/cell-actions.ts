@@ -163,9 +163,9 @@ export async function applyCellActionViaTauri(
   }
   const home = await homeDir();
   // Namespaced: the CLI mints ids from the same clock with the same format,
-  // and record_transaction does ON CONFLICT DO UPDATE — so a same-millisecond
-  // collision would silently overwrite one apply's rollback point with the
-  // other's, and they would share a backups/<ts>/ directory too.
+  // and record_transaction refuses a second, different row for an id
+  // (ON CONFLICT DO NOTHING) — so a same-millisecond collision would fail the
+  // second apply's record, and the two would share a backups/<ts>/ directory.
   const timestamp = `${new Date().toISOString().replace(/[:.]/g, "-")}-app`;
   const prefix = home.endsWith("/") ? home : `${home}/`;
   // The drawer only ever applies at user scope, so every change is home-rooted

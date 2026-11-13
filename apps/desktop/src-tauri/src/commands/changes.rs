@@ -458,9 +458,17 @@ fn undo_audit_entry(record: &TransactionRecord, files: &[String]) -> AuditDraft 
 mod tests {
     use super::*;
     use crate::commands::harness_state::{record_transaction_at, record_transaction_audited};
-    use crate::commands::surface_write::set_test_home;
+    use crate::commands::surface_write::{apply_and_note_commits, set_test_home, CommittedTransactions};
     use std::fs;
     use std::path::PathBuf;
+
+    /// `record_transaction_audited` for a record whose apply "happened" in this
+    /// session: its id is in the committed set.
+    fn audited(db: &Db, f: &Fixture, row: TransactionRecord) -> Result<(), String> {
+        let committed = CommittedTransactions::default();
+        committed.insert(&row.transaction_id);
+        record_transaction_audited(db, &committed, f.home.path(), &f.db, row)
+    }
 
     struct Fixture {
         home: tempfile::TempDir,
@@ -757,7 +765,7 @@ mod tests {
         row.copied_from = Some("claude-code".to_string());
         write_manifest(&f, "copy1", "committed");
 
-        record_transaction_audited(&db, f.home.path(), &f.db, row).unwrap();
+        audited(&db, &f, row).unwrap();
 
         let rows = audit_rows(&db);
         assert_eq!(rows.len(), 1);
@@ -780,7 +788,7 @@ mod tests {
         let f = fixture();
         let data = tempfile::tempdir().unwrap();
         let db = crate::db::init(data.path()).unwrap();
-        record_transaction_audited(&db, f.home.path(), &f.db, record(&f, "page-save", "2026-11-03T09:00:00.000Z")).unwrap();
+        audited(&db, &f, record(&f, "page-save", "2026-11-03T09:00:00.000Z")).unwrap();
         assert!(audit_rows(&db).is_empty());
         assert_eq!(list_transactions_at(&f.db, None).unwrap().len(), 1);
     }
@@ -802,7 +810,7 @@ mod tests {
     fn assert_refused_and_unlogged(f: &Fixture, row: TransactionRecord) {
         let data = tempfile::tempdir().unwrap();
         let db = crate::db::init(data.path()).unwrap();
-        assert!(record_transaction_audited(&db, f.home.path(), &f.db, row).is_err());
+        assert!(audited(&db, f, row).is_err());
         assert!(audit_rows(&db).is_empty());
         assert!(!f.db.exists() || list_transactions_at(&f.db, None).unwrap().is_empty());
     }
@@ -862,7 +870,84 @@ mod tests {
         let db = crate::db::init(data.path()).unwrap();
         let mut row = record(&f, "all", "2026-11-03T09:00:00.000Z");
         row.surfaces = SURFACE_IDS.iter().map(|s| s.to_string()).collect();
-        record_transaction_audited(&db, f.home.path(), &f.db, row).unwrap();
+        audited(&db, &f, row).unwrap();
+    }
+
+    fn webview_write(path: &str, content: &str) -> crate::commands::surface_write::SurfaceFileWrite {
+        serde_json::from_value(serde_json::json!({
+            "relativePath": path, "content": content, "expectedSha256": null
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn a_forged_manifest_without_a_commit_through_apply_cannot_back_a_copy() {
+        // The webview writes the manifest file straight onto disk (here:
+        // directly), never through apply_surface_transaction's commit path.
+        let f = fixture();
+        let data = tempfile::tempdir().unwrap();
+        let db = crate::db::init(data.path()).unwrap();
+        write_manifest(&f, "forged", "committed");
+        let committed = CommittedTransactions::default();
+        let err = record_transaction_audited(&db, &committed, f.home.path(), &f.db, copy_row(&f, "forged"))
+            .unwrap_err();
+        assert!(err.contains("not applied by this app session"), "{err}");
+        assert!(audit_rows(&db).is_empty());
+        assert!(!f.db.exists() || list_transactions_at(&f.db, None).unwrap().is_empty());
+    }
+
+    #[test]
+    fn only_a_committed_manifest_written_by_apply_marks_the_id() {
+        let f = fixture();
+        let committed = CommittedTransactions::default();
+        let manifest = |status: &str| serde_json::json!({ "status": status }).to_string();
+        for (path, content) in [
+            (".harness/backups/p/transaction.json", manifest("prepared")),
+            (".harness/backups/q/other.json", manifest("committed")),
+            (".harness/backups/r/transaction.json", "not json".to_string()),
+        ] {
+            apply_and_note_commits(&committed, f.home.path(), vec![webview_write(path, &content)]).unwrap();
+        }
+        assert!(!committed.contains("p") && !committed.contains("q") && !committed.contains("r"));
+        apply_and_note_commits(
+            &committed,
+            f.home.path(),
+            vec![webview_write(".harness/backups/ok/transaction.json", &manifest("committed"))],
+        )
+        .unwrap();
+        assert!(committed.contains("ok"));
+    }
+
+    #[test]
+    fn a_failed_apply_marks_nothing() {
+        let f = fixture();
+        let committed = CommittedTransactions::default();
+        let body = serde_json::json!({ "status": "committed" }).to_string();
+        let result = apply_and_note_commits(
+            &committed,
+            f.home.path(),
+            vec![
+                webview_write(".harness/backups/bad/transaction.json", &body),
+                webview_write("not/a/declared/store", "x"),
+            ],
+        );
+        assert!(result.is_err());
+        assert!(!committed.contains("bad"));
+    }
+
+    #[test]
+    fn an_identical_replay_logs_the_audit_entry_once() {
+        let f = fixture();
+        let data = tempfile::tempdir().unwrap();
+        let db = crate::db::init(data.path()).unwrap();
+        write_manifest(&f, "twice", "committed");
+        let committed = CommittedTransactions::default();
+        committed.insert("twice");
+        for _ in 0..2 {
+            record_transaction_audited(&db, &committed, f.home.path(), &f.db, copy_row(&f, "twice")).unwrap();
+        }
+        assert_eq!(audit_rows(&db).len(), 1);
+        assert_eq!(list_transactions_at(&f.db, None).unwrap().len(), 1);
     }
 
     #[test]
@@ -873,7 +958,7 @@ mod tests {
         for bad in ["", "a b", "x\ny", &"z".repeat(65), "Copied everything"] {
             let mut row = record(&f, "bad", "2026-11-03T09:00:00.000Z");
             row.copied_from = Some(bad.to_string());
-            assert!(record_transaction_audited(&db, f.home.path(), &f.db, row).is_err(), "{bad:?}");
+            assert!(audited(&db, &f, row).is_err(), "{bad:?}");
         }
         assert!(audit_rows(&db).is_empty());
         assert!(!f.db.exists() || list_transactions_at(&f.db, None).unwrap().is_empty());

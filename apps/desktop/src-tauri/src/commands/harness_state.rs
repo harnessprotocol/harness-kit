@@ -684,10 +684,11 @@ pub(crate) fn migrate_drift_acknowledgements_at(
 #[tauri::command]
 pub fn record_transaction(
     db: tauri::State<'_, crate::db::Db>,
+    committed: tauri::State<'_, super::surface_write::CommittedTransactions>,
     record: TransactionRecord,
 ) -> Result<(), String> {
     let home = dirs::home_dir().ok_or("Could not resolve home directory")?;
-    record_transaction_audited(&db, &home, &state_path()?, record)
+    record_transaction_audited(&db, &committed, &home, &state_path()?, record)
 }
 
 /// {@link record_transaction_at}, plus the audit entry a Machine copy owes.
@@ -698,10 +699,19 @@ pub fn record_transaction(
 /// whole record rather than logging something the app did not do.
 pub(crate) fn record_transaction_audited(
     db: &crate::db::Db,
+    committed: &super::surface_write::CommittedTransactions,
     home: &std::path::Path,
     path: &std::path::Path,
     record: TransactionRecord,
 ) -> Result<(), String> {
+    // A manifest file alone proves nothing (the webview can write one), so the
+    // id must be one this session's apply command committed.
+    if !committed.contains(&record.transaction_id) {
+        return Err(format!(
+            "Transaction {} was not applied by this app session, so it is not recorded.",
+            record.transaction_id
+        ));
+    }
     // The webview is not trusted: every surface id must be one the registry
     // declares, and a copy must be backed by a committed manifest on disk.
     super::changes::check_surfaces(&record)?;
@@ -709,8 +719,9 @@ pub(crate) fn record_transaction_audited(
     if audit.is_some() {
         super::changes::require_committed_manifest(home, &record)?;
     }
-    record_transaction_at(path, record)?;
-    if let Some(entry) = audit {
+    let inserted = record_transaction_at(path, record)?;
+    // An identical replay inserts nothing and so logs nothing.
+    if let (true, Some(entry)) = (inserted, audit) {
         super::security::log_audit(
             db,
             "machine_copy",
@@ -730,7 +741,7 @@ pub(crate) fn record_transaction_audited(
 pub(crate) fn record_transaction_at(
     path: &std::path::Path,
     record: TransactionRecord,
-) -> Result<(), String> {
+) -> Result<bool, String> {
     validate_record(&record)?;
     let conn = open_at(path)?;
     let payload = serde_json::to_string(&RecordPayload {
@@ -791,7 +802,7 @@ pub(crate) fn record_transaction_at(
             ));
         }
     }
-    Ok(())
+    Ok(inserted > 0)
 }
 
 /// Recorded transactions, newest first.

@@ -68,6 +68,7 @@ pub fn run() {
         .plugin(tauri_plugin_window_state::Builder::default().build())
         .plugin(tauri_plugin_dialog::init())
         .manage(database)
+        .manage(commands::surface_write::CommittedTransactions::default())
         .invoke_handler(tauri::generate_handler![
             // Plugins
             commands::plugins::list_installed_plugins,
