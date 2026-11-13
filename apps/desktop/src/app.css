@@ -373,6 +373,12 @@
 .hk-cell[data-variant="none"],
 .hk-cell[data-variant="unmanaged"] { color: var(--fg-subtle); opacity: 0.55; }
 .hk-cell[data-variant="unknown"] { background: var(--bg-elevated); color: var(--fg-muted); }
+/* Team baseline column (AC-26): accent for what the team requires, the
+   warning tint (as "differs") for what this machine lacks. */
+.hk-cell[data-variant="required"] { background: var(--accent-light); color: var(--accent-text); }
+.hk-cell[data-variant="baseline-missing"] { background: var(--warning-light); color: color-mix(in srgb, var(--warning) 50%, var(--fg-base)); }
+.dark .hk-cell[data-variant="baseline-missing"] { color: var(--warning-text); }
+.hk-baseline-col { background: color-mix(in srgb, var(--accent-light) 35%, transparent); }
 
 .hk-grid-legend {
   display: flex;
@@ -1480,5 +1486,25 @@ body {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* Compile to project (AC-24): the form and the preview sit side by side,
+   stacking to one column when the window is narrow. */
+.hk-compile-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+.hk-compile-grid > div {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+@media (max-width: 1000px) {
+  .hk-compile-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }

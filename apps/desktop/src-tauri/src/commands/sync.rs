@@ -229,7 +229,7 @@ fn refuse_symlink_components(root: &Path, relative: &str) -> Result<(), String> 
 /// The result has the replaced file's mode (the temp file starts owner-only,
 /// which would otherwise lock out a shared project file), or 0644 for a file
 /// that did not exist.
-fn write_file_atomically(dest: &Path, bytes: &[u8]) -> Result<(), String> {
+pub(crate) fn write_file_atomically(dest: &Path, bytes: &[u8]) -> Result<(), String> {
     use std::io::Write;
     #[cfg(unix)]
     let mode = {

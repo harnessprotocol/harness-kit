@@ -36,7 +36,12 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
 
 // ── Main page ─────────────────────────────────────────────────
 
-export default function SyncPage() {
+interface SyncPageProps {
+  /** Rendered inside Profile's "Compile to project" tab: Profile owns the header. */
+  embedded?: boolean;
+}
+
+export default function SyncPage({ embedded = false }: SyncPageProps = {}) {
   const navigate = useNavigate();
   // Harness file state
   const [harnessContent, setHarnessContent] = useState<string | null>(null);
@@ -290,9 +295,10 @@ export default function SyncPage() {
 
   return (
     <>
-      <div style={{ padding: "20px 24px", display: "flex", flexDirection: "column", gap: "16px", maxWidth: "720px" }}>
+      <div style={{ padding: embedded ? "4px 0 24px" : "20px 24px", display: "flex", flexDirection: "column", gap: "16px" }}>
 
         {/* Header */}
+        {!embedded && (
         <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
           <div>
             <h1 style={{ fontSize: "17px", fontWeight: 600, letterSpacing: "-0.3px", color: "var(--fg-base)", margin: 0 }}>
@@ -308,7 +314,10 @@ export default function SyncPage() {
             Edit harness.yaml
           </Button>
         </div>
+        )}
 
+        <div className="hk-compile-grid">
+        <div>
         {/* harness.yaml couldn't be read */}
         {!harnessLoading && harnessError && (
           <ErrorNotice
@@ -440,6 +449,14 @@ export default function SyncPage() {
           </Card>
         )}
 
+        </div>
+        <div className="hk-compile-preview">
+        {/* The preview sits beside the form (AC-24), not below it. */}
+        {phase === "idle" && !previewError && harnessContent && (
+          <p data-testid="compile-preview-hint" style={{ margin: 0, fontSize: "13px", color: "var(--fg-subtle)" }}>
+            The files each surface would get appear here, before anything is written.
+          </p>
+        )}
         {/* Preview error */}
         {previewError && (
           <ErrorNotice
@@ -499,6 +516,8 @@ export default function SyncPage() {
             onRestored={() => syncListBackups().then(setBackups).catch(() => {})}
           />
         )}
+        </div>
+        </div>
 
       </div>
 

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { lazy } from "react";
 import userEvent from "@testing-library/user-event";
-import { PageBoundary } from "../PageBoundary";
+import { PageBoundary, pageBoundaryKey } from "../PageBoundary";
 
 let consoleErrorSpy: ReturnType<typeof vi.spyOn>;
 beforeEach(() => { consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {}); });
@@ -93,5 +93,16 @@ describe("PageBoundary", () => {
       expect(screen.getByText("Safe content")).toBeInTheDocument();
       expect(reload).not.toHaveBeenCalled();
     });
+  });
+});
+
+describe("pageBoundaryKey", () => {
+  it("gives Profile's two tabs one key so switching tabs does not remount the page", () => {
+    expect(pageBoundaryKey("/harness/file")).toBe(pageBoundaryKey("/harness/file/compile"));
+  });
+
+  it("leaves every other path its own key", () => {
+    expect(pageBoundaryKey("/harness/plugins")).toBe("/harness/plugins");
+    expect(pageBoundaryKey("/harness/filesystem")).toBe("/harness/filesystem");
   });
 });

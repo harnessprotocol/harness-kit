@@ -1,9 +1,12 @@
 import type { CSSProperties } from "react";
 import type { HarnessMetadata } from "@harness-kit/core";
 import SectionCard from "./SectionCard";
+import { TextField } from "./fields";
+import type { OnPatch } from "./fields";
 
 interface MetadataSectionProps {
   metadata: HarnessMetadata;
+  onPatch?: OnPatch;
 }
 
 const pillStyle: CSSProperties = {
@@ -15,7 +18,35 @@ const pillStyle: CSSProperties = {
   lineHeight: "16px",
 };
 
-export default function MetadataSection({ metadata }: MetadataSectionProps) {
+export default function MetadataSection({ metadata, onPatch }: MetadataSectionProps) {
+  const set = (key: string) => onPatch && ((next: string) => onPatch({ op: "set", path: ["metadata", key], value: next.trim() }));
+
+  if (onPatch) {
+    return (
+      <SectionCard label="Metadata" explanation="Identity and ownership of this harness profile.">
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <TextField label="Name" value={metadata.name ?? ""} mono onCommit={set("name")} />
+          <TextField label="Description" value={metadata.description ?? ""} onCommit={set("description")} />
+          <TextField label="Version" value={metadata.version ?? ""} onCommit={set("version")} />
+          <TextField label="License" value={metadata.license ?? ""} onCommit={set("license")} />
+          <TextField
+            label="Author"
+            value={metadata.author?.name ?? ""}
+            onCommit={(next) => onPatch({ op: "set", path: ["metadata", "author", "name"], value: next.trim() })}
+          />
+          <TextField
+            label="Tags (comma separated)"
+            value={(metadata.tags ?? []).join(", ")}
+            onCommit={(next) => {
+              const tags = next.split(",").map((t) => t.trim()).filter(Boolean);
+              onPatch({ op: "set", path: ["metadata", "tags"], value: tags.length ? tags : undefined });
+            }}
+          />
+        </div>
+      </SectionCard>
+    );
+  }
+
   return (
     <SectionCard
       label="Metadata"

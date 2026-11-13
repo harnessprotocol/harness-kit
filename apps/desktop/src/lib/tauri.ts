@@ -141,6 +141,19 @@ export async function writeHarnessFile(content: string, expectedSha256?: string)
   return invoke<string>("write_harness_file", { content, expectedSha256 });
 }
 
+/**
+ * Share (AC-25): Rust opens the native Save dialog and writes `contents` to
+ * the path the user picks. The page never names the path. Resolves the saved
+ * path, or null when the user cancels.
+ */
+export async function saveShareFile(
+  kind: "harness-yaml" | "agent-prompt",
+  suggestedName: string,
+  contents: string,
+): Promise<string | null> {
+  return invoke<string | null>("save_share_file", { kind, suggestedName, contents });
+}
+
 // ── Custom Profile commands ───────────────────────────────────
 
 export interface CustomProfile {

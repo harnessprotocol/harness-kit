@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent, within, act } from "@testing-library/react";
 import { MemoryRouter, useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
-import { buildMachineInventory } from "@harness-kit/core";
+import { baselineCoverage, buildMachineInventory } from "@harness-kit/core";
 import MachinePage from "../MachinePage";
 import { applyCellActionViaTauri } from "../cell-actions";
 import { ToastProvider } from "../../../components/ToastProvider";
@@ -58,6 +58,10 @@ vi.mock("../../../lib/definitions.js", () => ({
 
 vi.mock("@harness-kit/core", async () => ({
   buildMachineInventory: vi.fn(),
+  // The Team baseline column (AC-26): tests set what the baseline parses to
+  // and which entries core reports as covered.
+  parseHarness: vi.fn((text: string) => ({ config: JSON.parse(text), warnings: [] })),
+  baselineCoverage: vi.fn(() => []),
   getSurface: vi.fn((id: string) => ({
     id,
     label: id,
@@ -79,6 +83,11 @@ vi.mock("@harness-kit/core", async () => ({
   // TauriFsProvider (lib/harness-fs) pulls these from core
   posixJoin: vi.fn((...args: string[]) => args.join("/")),
   posixDirname: vi.fn((p: string) => p.split("/").slice(0, -1).join("/")),
+}));
+
+const mockReadHarnessSource = vi.fn();
+vi.mock("../../../lib/harness-source", () => ({
+  readHarnessSource: (...args: unknown[]) => mockReadHarnessSource(...args),
 }));
 
 const mockGrantProjectScope = vi.fn();
@@ -374,6 +383,10 @@ describe("MachinePage", () => {
     vi.mocked(buildMachineInventory).mockReset();
     vi.mocked(buildMachineInventory).mockResolvedValue(makeInventory() as never);
     mockGrantProjectScope.mockResolvedValue(undefined);
+    mockReadHarnessSource.mockReset();
+    mockReadHarnessSource.mockResolvedValue({ found: false, content: null, path: "/repo/harness.yaml" });
+    vi.mocked(baselineCoverage).mockReset();
+    vi.mocked(baselineCoverage).mockReturnValue([]);
     vi.mocked(collectDrift).mockReset();
     vi.mocked(collectDrift).mockResolvedValue([]);
   });
@@ -1595,5 +1608,141 @@ describe("MachinePage commands in the palette (AC-21)", () => {
 
     fireEvent.keyDown(window, { key: "Escape" });
     await waitFor(() => expect(queryPaletteOption(/Copy CLI command/)).not.toBeInTheDocument());
+  });
+  describe("Team baseline column (AC-26)", () => {
+    afterEach(() => {
+      act(() => setCurrentProjectDir(null));
+      localStorage.clear();
+    });
+
+    const ENTRIES = [
+      {
+        kind: "mcp-server",
+        identityKey: "mcp-server:postgres",
+        name: "postgres",
+        status: "present",
+        rowKeys: ["mcp-server:postgres"],
+        missingOn: [],
+      },
+      {
+        kind: "skill",
+        identityKey: "skill:deploy",
+        name: "deploy",
+        status: "missing",
+        rowKeys: [],
+        missingOn: ["codex"],
+      },
+    ];
+
+    function chooseProject(content: string | Error | null) {
+      if (content instanceof Error) mockReadHarnessSource.mockRejectedValue(content);
+      else if (content === null)
+        mockReadHarnessSource.mockResolvedValue({ found: false, content: null, path: "/repo/harness.yaml" });
+      else mockReadHarnessSource.mockResolvedValue({ found: true, content, path: "/repo/harness.yaml" });
+      localStorage.setItem("harness-kit-current-project", "/repo");
+    }
+
+    it("has no column and no notice without a project", async () => {
+      renderPage();
+      await screen.findByTestId("machine-grid");
+      expect(screen.queryByTestId("baseline-col")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("team-baseline-notice")).not.toBeInTheDocument();
+      expect(mockReadHarnessSource).not.toHaveBeenCalled();
+    });
+
+    it("has no column and no notice when the project has no harness.yaml", async () => {
+      chooseProject(null);
+      renderPage();
+      await screen.findByTestId("machine-grid");
+      await waitFor(() => expect(mockReadHarnessSource).toHaveBeenCalledWith("/repo"));
+      expect(screen.queryByTestId("baseline-col")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("team-baseline-notice")).not.toBeInTheDocument();
+    });
+
+    it("shows the column right after Resource, with required cells and a synthetic missing-here row", async () => {
+      chooseProject("{}");
+      vi.mocked(baselineCoverage).mockReturnValue(ENTRIES as never);
+      renderPage();
+      const head = await screen.findByTestId("baseline-col");
+      expect(head).toHaveTextContent("Team baseline");
+      const headers = within(head.parentElement!).getAllByRole("columnheader").map((th) => th.textContent);
+      expect(headers[0]).toBe("Resource");
+      expect(headers[1]).toBe("Team baseline");
+
+      expect(screen.getByTestId("baseline-mcp-server:postgres")).toHaveTextContent("required");
+      expect(screen.getByTestId("baseline-skill:reviewer")).toBeEmptyDOMElement();
+
+      // The synthetic row: kind and name from the entry, every surface cell empty.
+      expect(screen.getByTestId("baseline-skill:deploy")).toHaveTextContent("missing here");
+      expect(screen.getByTestId("machine-row-skill:deploy")).toHaveTextContent("deploy");
+      for (const id of DETECTED) {
+        const cell = screen.getByTestId(`cell-skill:deploy-${id}`);
+        expect(cell).toHaveAttribute("data-variant", "absent");
+        expect(cell).toBeEmptyDOMElement();
+      }
+      // It joins the existing Skills section, after the real skill row.
+      const keys = gridRowKeys();
+      expect(keys.indexOf("skill:deploy")).toBe(keys.indexOf("skill:reviewer") + 1);
+      // The legend gains the two baseline variants.
+      const legend = screen.getByTestId("machine-grid-legend");
+      expect(legend.querySelector('.hk-cell[data-variant="required"]')).not.toBeNull();
+      expect(legend.querySelector('.hk-cell[data-variant="baseline-missing"]')).not.toBeNull();
+    });
+
+    it("hides the synthetic rows under a gaps filter", async () => {
+      chooseProject("{}");
+      vi.mocked(baselineCoverage).mockReturnValue(ENTRIES as never);
+      renderPage();
+      await screen.findByTestId("baseline-skill:deploy");
+      fireEvent.click(stripCell("Gaps"));
+      await waitFor(() => expect(gridRowKeys()).toEqual(["mcp-server:postgres"]));
+    });
+
+    it("shows a short notice and no column when harness.yaml is unreadable", async () => {
+      chooseProject(new Error("permission denied"));
+      renderPage();
+      const notice = await screen.findByTestId("team-baseline-notice");
+      expect(notice).toHaveTextContent("permission denied");
+      expect(screen.getByTestId("machine-grid")).toBeInTheDocument();
+      expect(screen.queryByTestId("baseline-col")).not.toBeInTheDocument();
+    });
+
+    it("drops the previous project's column when the next project's scan fails", async () => {
+      chooseProject("{}");
+      vi.mocked(baselineCoverage).mockReturnValue(ENTRIES as never);
+      renderPage();
+      await screen.findByTestId("baseline-col");
+      vi.mocked(buildMachineInventory).mockRejectedValue(new Error("scan failed"));
+      act(() => setCurrentProjectDir("/other"));
+      await screen.findByText(/scan failed/);
+      expect(screen.queryByTestId("baseline-col")).not.toBeInTheDocument();
+    });
+
+    it("shows the notice when harness.yaml does not parse", async () => {
+      chooseProject("not json");
+      renderPage();
+      expect(await screen.findByTestId("team-baseline-notice")).toBeInTheDocument();
+      expect(screen.queryByTestId("baseline-col")).not.toBeInTheDocument();
+    });
+
+    it("opens a missing-here row with the CLI fallback, never an Apply", async () => {
+      chooseProject("{}");
+      vi.mocked(baselineCoverage).mockReturnValue(ENTRIES as never);
+      const writeText = vi.fn(async () => undefined);
+      Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+      renderPage();
+      fireEvent.click(await screen.findByTestId("machine-row-skill:deploy"));
+      const drawer = await screen.findByTestId("machine-row-drawer");
+      expect(within(drawer).getByTestId("baseline-missing-actions")).toHaveTextContent("baseline declares deploy");
+      expect(within(drawer).queryByRole("button", { name: "Apply" })).not.toBeInTheDocument();
+      fireEvent.click(within(drawer).getByRole("button", { name: "Copy CLI command" }));
+      await waitFor(() =>
+        expect(writeText).toHaveBeenCalledWith(
+          "cd /repo && npx -p @harnessprotocol/cli harness-kit install harness.yaml && npx -p @harnessprotocol/cli harness-kit compile harness.yaml",
+        ),
+      );
+      // The selection survives: the filter hook does not drop a baseline-only row.
+      expect(screen.getByTestId("machine-row-drawer")).toBeInTheDocument();
+    });
   });
 });

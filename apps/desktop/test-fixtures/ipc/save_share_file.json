@@ -1,0 +1,15 @@
+{
+  "command": "save_share_file",
+  "calls": [
+    {
+      "fn": "saveShareFile",
+      "args": ["harness-yaml", "team", "version: '1'\n"],
+      "payload": { "kind": "harness-yaml", "suggestedName": "team", "contents": "version: '1'\n" }
+    },
+    {
+      "fn": "saveShareFile",
+      "args": ["agent-prompt", "team", "Set up the harness profile.\n"],
+      "payload": { "kind": "agent-prompt", "suggestedName": "team", "contents": "Set up the harness profile.\n" }
+    }
+  ]
+}

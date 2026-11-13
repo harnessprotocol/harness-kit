@@ -1,9 +1,12 @@
 import type { CSSProperties } from "react";
 import type { HarnessPermissions } from "@harness-kit/core";
 import SectionCard from "./SectionCard";
+import { StringListEditor } from "./fields";
+import type { OnPatch } from "./fields";
 
 interface PermissionsSectionProps {
   permissions: HarnessPermissions;
+  onPatch?: OnPatch;
 }
 
 // ── Tool categorization ──────────────────────────────────────
@@ -138,7 +141,28 @@ function ToolGroupDisplay({ groups, badgeStyle }: { groups: ToolGroup[]; badgeSt
 
 // ── Component ────────────────────────────────────────────────
 
-export default function PermissionsSection({ permissions }: PermissionsSectionProps) {
+export default function PermissionsSection({ permissions, onPatch }: PermissionsSectionProps) {
+  if (onPatch) {
+    const { tools, paths, network } = permissions;
+    const lists: Array<[string, string[], string[], string]> = [
+      ["Allowed tools", tools?.allow ?? [], ["permissions", "tools", "allow"], "Tool"],
+      ["Denied tools", tools?.deny ?? [], ["permissions", "tools", "deny"], "Tool"],
+      ["Tools that ask first", tools?.ask ?? [], ["permissions", "tools", "ask"], "Tool"],
+      ["Writable paths", paths?.writable ?? [], ["permissions", "paths", "writable"], "Path"],
+      ["Read-only paths", paths?.readonly ?? [], ["permissions", "paths", "readonly"], "Path"],
+      ["Allowed hosts", network?.["allowed-hosts"] ?? [], ["permissions", "network", "allowed-hosts"], "Host"],
+    ];
+    return (
+      <SectionCard label="Permissions" explanation="Tool access controls, writable paths, and network rules.">
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+          {lists.map(([label, items, path, itemLabel]) => (
+            <StringListEditor key={label} label={label} items={items} path={path} onPatch={onPatch} itemLabel={itemLabel} />
+          ))}
+        </div>
+      </SectionCard>
+    );
+  }
+
   const { tools, paths, network } = permissions;
   const hasTools = tools && (tools.allow?.length || tools.deny?.length || tools.ask?.length);
   const hasPaths = paths && (paths.writable?.length || paths.readonly?.length);

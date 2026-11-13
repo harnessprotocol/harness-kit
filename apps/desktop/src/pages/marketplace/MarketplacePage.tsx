@@ -14,6 +14,7 @@ import {
 } from "../../lib/marketplace/data";
 import MarkdownPanel from "../../components/MarkdownPanel";
 import { TrustBadge, CategoryBadge } from "./components/PluginBadges";
+import { InstallCard } from "./components/InstallTo";
 
 const ALL_PLUGINS = getAllPlugins();
 const ALL_CATEGORIES = getCategories();
@@ -386,31 +387,8 @@ export default function MarketplacePage() {
             <div style={{ display: "flex", gap: "24px", alignItems: "flex-start" }}>
               {/* Main column */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                {/* Install command */}
-                <Card padding="sm" style={{ marginBottom: "16px" }}>
-                  <p style={{
-                    fontSize: "10px",
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    color: "var(--fg-subtle)",
-                    margin: "0 0 6px",
-                  }}>
-                    Install
-                  </p>
-                  <code style={{
-                    display: "block",
-                    background: "var(--bg-base)",
-                    borderRadius: "5px",
-                    padding: "7px 9px",
-                    fontSize: "10px",
-                    fontFamily: "ui-monospace, monospace",
-                    color: "var(--accent-text)",
-                    wordBreak: "break-all",
-                  }}>
-                    {detail.installCommand}
-                  </code>
-                </Card>
+                {/* Install command + Install to … (AC-27) */}
+                <InstallCard plugin={detail} />
 
                 {/* Required environment variables */}
                 {detail.requiresEnv.length > 0 && (

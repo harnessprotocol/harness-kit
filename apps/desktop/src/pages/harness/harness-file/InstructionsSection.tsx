@@ -1,9 +1,13 @@
 import type { CSSProperties } from "react";
 import type { HarnessInstructions } from "@harness-kit/core";
+import { Select } from "@harness-kit/ui";
 import SectionCard from "./SectionCard";
+import { TextField } from "./fields";
+import type { OnPatch } from "./fields";
 
 interface InstructionsSectionProps {
   instructions: HarnessInstructions;
+  onPatch?: OnPatch;
 }
 
 const subLabelStyle: CSSProperties = {
@@ -43,7 +47,39 @@ const slots: Array<{ key: "operational" | "behavioral" | "identity"; label: stri
   { key: "identity", label: "Identity" },
 ];
 
-export default function InstructionsSection({ instructions }: InstructionsSectionProps) {
+export default function InstructionsSection({ instructions, onPatch }: InstructionsSectionProps) {
+  if (onPatch) {
+    return (
+      <SectionCard
+        label="Instructions"
+        explanation="Text injected into CLAUDE.md, AGENT.md, or equivalent at harness import time."
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {slots.map(({ key, label }) => (
+            <TextField
+              key={key}
+              label={label}
+              multiline
+              value={instructions[key] ?? ""}
+              onCommit={(next) => onPatch({ op: "set", path: ["instructions", key], value: next })}
+            />
+          ))}
+          <Select
+            label="Import mode"
+            value={instructions["import-mode"] ?? ""}
+            onChange={(e) => onPatch({ op: "set", path: ["instructions", "import-mode"], value: e.target.value })}
+            options={[
+              { value: "", label: "Default" },
+              { value: "merge", label: "merge" },
+              { value: "replace", label: "replace" },
+              { value: "skip", label: "skip" },
+            ]}
+          />
+        </div>
+      </SectionCard>
+    );
+  }
+
   const hasContent = slots.some(({ key }) => instructions[key] != null);
 
   return (

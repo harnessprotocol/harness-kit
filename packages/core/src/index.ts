@@ -269,8 +269,9 @@ export type {
   Recommendation,
   RecommendationSource,
   RecommendOptions,
+  BaselineCoverageEntry,
 } from "./observe/recommendations.js";
-export { recommend } from "./observe/recommendations.js";
+export { recommend, baselineCoverage } from "./observe/recommendations.js";
 
 // ── Observe (Task 8): descriptor-driven surface observation ───
 //
@@ -560,6 +561,8 @@ export type {
   SecretSanitizationResult,
 } from "./portability/secrets.js";
 export { sanitizeCapturedSecrets } from "./portability/secrets.js";
+export { buildProfileShare, buildProfilePrompt } from "./portability/share.js";
+export type { ProfileShare } from "./portability/share.js";
 export {
   createCapsuleManifest,
   validateCapsule,

@@ -17,7 +17,7 @@ describe("nav declaration", () => {
   it("Profile and Claude Code list their children in order", () => {
     const profile = NAV.find((e) => e.id === "profile");
     const claudeCode = NAV.find((e) => e.id === "claude-code");
-    expect(profile?.children?.map((c) => c.path)).toEqual(["/harness/file", "/harness/sync"]);
+    expect(profile?.children?.map((c) => c.path)).toEqual(["/harness/file", "/harness/file/compile"]);
     expect(claudeCode?.children?.map((c) => c.path)).toEqual([
       "/harness/claude-md", "/harness/mcp", "/harness/plugins", "/harness/hooks", "/harness/permissions", "/observatory",
     ]);

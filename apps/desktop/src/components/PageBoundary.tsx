@@ -81,6 +81,15 @@ function PageLoader() {
   );
 }
 
+/**
+ * What the page boundary remounts on. Profile's tabs (`/harness/file` and
+ * `/harness/file/compile`) are one page, so they share a key: switching tabs
+ * must not remount it and discard the unsaved editor buffer.
+ */
+export function pageBoundaryKey(pathname: string): string {
+  return pathname === "/harness/file" || pathname.startsWith("/harness/file/") ? "/harness/file" : pathname;
+}
+
 interface PageBoundaryProps {
   children: React.ReactNode;
   /** Changing this key forces the boundary to remount (e.g. on navigation). */

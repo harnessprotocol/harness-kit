@@ -7,6 +7,10 @@ interface ResizableSplitProps {
   minWidth?: number;
   maxWidth?: number;
   storageKey?: string;
+  /** Reserve this many px for the right panel: the left never grows past the rest. */
+  minRightWidth?: number;
+  /** Names the divider for assistive tech. */
+  handleLabel?: string;
 }
 
 /**
@@ -20,6 +24,8 @@ export default function ResizableSplit({
   minWidth = 160,
   maxWidth = 520,
   storageKey,
+  minRightWidth,
+  handleLabel = "Resize panels",
 }: ResizableSplitProps) {
   const [width, setWidth] = useState(() => {
     if (storageKey) {
@@ -29,6 +35,15 @@ export default function ResizableSplit({
     }
     return defaultWidth;
   });
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  // The widest the left panel can be: maxWidth, and what is left after minRightWidth.
+  // The CSS clamps the same way; the state must too, or keys would grow it unseen.
+  const widest = useCallback(() => {
+    const container = containerRef.current?.clientWidth ?? 0;
+    if (minRightWidth === undefined || container === 0) return maxWidth;
+    return Math.max(minWidth, Math.min(maxWidth, container - minRightWidth));
+  }, [maxWidth, minWidth, minRightWidth]);
 
   const dragging = useRef(false);
   const startX = useRef(0);
@@ -47,7 +62,7 @@ export default function ResizableSplit({
   useEffect(() => {
     function onMove(e: MouseEvent) {
       if (!dragging.current) return;
-      const next = Math.min(maxWidth, Math.max(minWidth, startWidth.current + e.clientX - startX.current));
+      const next = Math.min(widest(), Math.max(minWidth, startWidth.current + e.clientX - startX.current));
       setWidth(next);
     }
     function onUp() {
@@ -61,7 +76,25 @@ export default function ResizableSplit({
       window.removeEventListener("mousemove", onMove);
       window.removeEventListener("mouseup", onUp);
     };
-  }, [width, minWidth, maxWidth, storageKey]);
+  }, [width, minWidth, widest, storageKey]);
+
+  // Keyboard: arrows move the divider, Home/End jump to the limits.
+  const onKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const step = e.shiftKey ? 64 : 16;
+      let next: number | null = null;
+      if (e.key === "ArrowLeft") next = width - step;
+      else if (e.key === "ArrowRight") next = width + step;
+      else if (e.key === "Home") next = minWidth;
+      else if (e.key === "End") next = widest();
+      if (next === null) return;
+      e.preventDefault();
+      setWidth(Math.min(widest(), Math.max(minWidth, next)));
+    },
+    [width, minWidth, widest],
+  );
+
+  const [handleFocused, setHandleFocused] = useState(false);
 
   // Persist on unmount
   useEffect(
@@ -72,25 +105,45 @@ export default function ResizableSplit({
   );
 
   return (
-    <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
+    <div ref={containerRef} style={{ display: "flex", height: "100%", overflow: "hidden" }}>
       {/* Left panel */}
-      <div style={{ width, flexShrink: 0, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+      <div
+        style={{
+          width,
+          flexShrink: 0,
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          maxWidth: minRightWidth === undefined ? undefined : `calc(100% - ${minRightWidth}px)`,
+        }}
+      >
         {left}
       </div>
 
       {/* Drag handle */}
       <div
+        role="separator"
+        aria-orientation="vertical"
+        aria-label={handleLabel}
+        aria-valuenow={width}
+        aria-valuemin={minWidth}
+        aria-valuemax={maxWidth}
+        tabIndex={0}
+        onKeyDown={onKeyDown}
+        onFocus={() => setHandleFocused(true)}
+        onBlur={() => setHandleFocused(false)}
         onMouseDown={onMouseDown}
         style={{
           width: 4,
           flexShrink: 0,
           cursor: "col-resize",
-          background: "transparent",
+          background: handleFocused ? "var(--accent)" : "transparent",
+          outline: "none",
           transition: "background 0.12s",
           zIndex: 1,
         }}
         onMouseEnter={(e) => { e.currentTarget.style.background = "var(--accent)"; }}
-        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = handleFocused ? "var(--accent)" : "transparent"; }}
       />
 
       {/* Right panel */}

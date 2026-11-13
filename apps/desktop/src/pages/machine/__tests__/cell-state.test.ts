@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { GridCell, GridRow, SurfaceId } from "@harness-kit/core";
 import { MACHINE_FIXTURE_INVENTORY } from "../../__fixtures__/machine-fixture-data";
 import {
+  BASELINE_LEGEND_VARIANTS,
   CELL_VARIANTS,
   LEGEND_VARIANTS,
   inventoryVariants,
@@ -152,9 +153,10 @@ describe("CELL_VARIANTS table", () => {
     expect(LEGEND_VARIANTS).not.toContain("absent");
   });
 
-  it("lists every other variant in the legend exactly once", () => {
+  it("lists every other variant in the legend exactly once, the Team baseline ones in their own list", () => {
     const others = (Object.keys(CELL_VARIANTS) as Array<keyof typeof CELL_VARIANTS>).filter((v) => v !== "absent");
-    expect([...LEGEND_VARIANTS].sort()).toEqual(others.sort());
+    expect([...LEGEND_VARIANTS, ...BASELINE_LEGEND_VARIANTS].sort()).toEqual(others.sort());
+    expect(BASELINE_LEGEND_VARIANTS).toEqual(["required", "baseline-missing"]);
   });
 });
 
