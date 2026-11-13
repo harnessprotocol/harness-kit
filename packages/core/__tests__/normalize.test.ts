@@ -420,7 +420,7 @@ describe("normalizeResource — instructions", () => {
     expect(make("AGENTS.md", "user").provenance.file).toBe("/somewhere/AGENTS.md");
   });
 
-  it("a harness:sync block digests as its content, with or without the user's own prose", () => {
+  it("digests the whole file with only the harness:sync marker lines removed", () => {
     const make = (content: string) =>
       normalizeResource({
         surface: "codex",
@@ -432,7 +432,11 @@ describe("normalizeResource — instructions", () => {
       }).digest;
     const block = "<!-- BEGIN harness:sync:user-instructions -->\nBe kind.\n<!-- END harness:sync:user-instructions -->";
     expect(make(block)).toBe(make("Be kind."));
-    expect(make(`# Mine\n\n${block}\n`)).toBe(make("Be kind."));
+    // Prose outside the block counts: it is not the same instructions.
+    expect(make(`# Mine\n\n${block}\n`)).not.toBe(make("Be kind."));
+    expect(make(`# Mine\n\n${block}\n`)).toBe(make("# Mine\n\nBe kind."));
+    // Editing prose outside a block shows as a change.
+    expect(make(`# Mine\n\n${block}\n`)).not.toBe(make(`# Mine edited\n\n${block}\n`));
     // A block an older build named after the source file reads the same.
     expect(make("<!-- BEGIN harness:sync:CLAUDE.md -->\nBe kind.\n<!-- END harness:sync:CLAUDE.md -->")).toBe(
       make("Be kind."),

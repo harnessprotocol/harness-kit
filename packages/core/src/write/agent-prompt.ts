@@ -175,7 +175,11 @@ export function buildAgentPrompt(
     // resource with different content — telling an agent it is missing is a
     // false premise, and saying nothing about the replacement hides the part
     // that destroys work.
-    plan.overwrites === undefined
+    request.kind === "instructions" && plan.targetInstructions
+      ? plan.targetInstructions.hasBlock
+        ? `${target.label} ALREADY has a harness-managed instructions block${plan.targetInstructions.hasOwnText ? " and text of its own outside it" : " with different content"}. Update only that block with ${source.label}'s instructions and leave the text outside it as it is.`
+        : `${target.label} already has its own instructions file, with no harness block. Add or update only the harness block (<!-- BEGIN harness:sync:... --> to <!-- END harness:sync:... -->) with ${source.label}'s instructions and leave the rest of the file as it is.`
+      : plan.overwrites === undefined
       ? `It is already configured in ${source.label} and missing from ${target.label}. Reproduce it using ${target.label}'s own configuration — do not copy ${source.label}'s file format verbatim.`
       : request.kind === "instructions"
         ? `${target.label} ALREADY has a harness-managed instructions block with different content. Update only that block with ${source.label}'s instructions and leave the text outside it as it is.`

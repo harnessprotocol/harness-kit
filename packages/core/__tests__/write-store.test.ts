@@ -158,7 +158,7 @@ describe("store write executors (AC-12, AC-13)", () => {
     expect(after).toContain("Use tabs.");
   });
 
-  it("never nests: a source that carries a sync block copies only the block's content", async () => {
+  it("never nests: a source with prose and a sync block copies all of it, minus the marker lines", async () => {
     const fs = new MockFsProvider({ "/home/user/.codex/AGENTS.md": "mine\n" });
     const plan = await planStoreWrite(
       fs,
@@ -177,7 +177,11 @@ describe("store write executors (AC-12, AC-13)", () => {
     const after = plan.changes[0]!.after!;
     expect(after.match(/BEGIN harness:sync/g)).toHaveLength(1);
     expect(after).toContain("Use tabs.");
-    expect(after).not.toContain("own prose");
+    expect(after).toContain("own prose");
+    expect(after.match(/END harness:sync/g)).toHaveLength(1);
+    // The target's block holds the source's prose and block text, no nested markers.
+    const block = after.slice(after.indexOf("<!-- BEGIN"));
+    expect(block).toContain("own prose");
   });
 
   it("replaces an existing instruction block rather than appending a second", async () => {

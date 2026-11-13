@@ -204,10 +204,9 @@ function canonicalizeInstructions(value: unknown): unknown {
   if (!isRecord(value)) return deepCanonical(value);
   const instructions = value as Partial<InstructionsStoreValue>;
   return {
-    // A file holding a `harness:sync` block compares as that block's content:
-    // the markers are Harness Kit's bookkeeping, and the user's own prose
-    // around them is not what a copy carries. Without this a copied row's
-    // digest differed from its source forever.
+    // The whole file counts, with only the `harness:sync` marker lines removed:
+    // they are Harness Kit's bookkeeping, but text inside and outside a block
+    // is the user's instructions, and a difference in either is a difference.
     content:
       typeof instructions.content === "string"
         ? normalizeText(syncedInstructionsContent(instructions.content))

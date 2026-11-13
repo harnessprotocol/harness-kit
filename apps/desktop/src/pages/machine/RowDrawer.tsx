@@ -588,8 +588,11 @@ function RowActions({
             <span data-testid="overwrite-warning">
               {row.kind === "instructions" ? (
                 <>
-                  {surfaceLabel(target as SurfaceId)} already has a Harness Kit block here.
-                  Applying updates that block; text outside it stays.
+                  {view.plan.targetInstructions?.hasBlock
+                    ? view.plan.targetInstructions.hasOwnText
+                      ? `${surfaceLabel(target as SurfaceId)} already has a Harness Kit block and text of its own outside it. Applying updates the block; the text outside it stays, so the two will still differ.`
+                      : `${surfaceLabel(target as SurfaceId)} already has a Harness Kit block with different content. Applying updates that block.`
+                    : `${surfaceLabel(target as SurfaceId)} already has its own instructions. Applying adds a Harness Kit block; its text stays, so the two will still differ.`}
                 </>
               ) : (
                 <>

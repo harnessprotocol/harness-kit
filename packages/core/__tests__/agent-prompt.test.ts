@@ -140,4 +140,26 @@ describe("agent prompt generation (AC-11, AC-35, AC-22)", () => {
     expect(prompt).toContain("leave the text outside it");
     expect(prompt).not.toContain("Replace its version");
   });
+
+  it("does not call instructions missing when the target has its own file but no harness block", async () => {
+    const fs = new MockFsProvider({
+      "/home/user/.claude/CLAUDE.md": "# House rules\n\nBe kind.\n",
+      "/home/user/.codex/config.toml": 'model = "gpt-5"\n',
+      "/home/user/.codex/AGENTS.md": "# Codex notes\n\nMine.\n",
+    });
+    const request = {
+      kind: "instructions" as const,
+      name: "User instructions",
+      from: "claude-code" as const,
+      to: "codex" as const,
+      scope: "user" as const,
+    };
+    const plan = await planCellAction(fs, request, OPTS);
+    expect(plan.requiresConfirmation).toBe(true);
+    const prompt = buildAgentPrompt(plan, request);
+    expect(prompt).not.toContain("missing from");
+    expect(prompt).toContain("its own instructions");
+    expect(prompt).toContain("only the harness block");
+    expect(prompt).toContain("leave the rest");
+  });
 });

@@ -160,7 +160,12 @@ describe("instructions copy leaves no gap on rescan (AC-57)", () => {
       { kind: "instructions", name: "User instructions", from, to, scope: "user" },
       OPTS,
     );
-    const result = await applyCellAction(planned, context(fs, stamp), { homeRoot: "/home/user" });
+    // Confirmation is part of the product flow for a target that has its own
+    // text; the test acts as the user who confirmed it.
+    const result = await applyCellAction(planned, context(fs, stamp), {
+      homeRoot: "/home/user",
+      confirmed: planned.requiresConfirmation,
+    });
     return { planned, result };
   };
   const userRow = async (fs: MockFsProvider) =>
@@ -178,18 +183,36 @@ describe("instructions copy leaves no gap on rescan (AC-57)", () => {
     expect(again.planned.noop).toBe(true);
   });
 
-  it("copy into a target with its own prose keeps the prose and rescans as the same", async () => {
+  it("copy into a target with its own prose keeps the prose, asks first, and rescans as differing", async () => {
     const fs = new MockFsProvider({
       ...instructionsMachine().getAllFiles(),
       "/home/user/.codex/AGENTS.md": "# Codex notes\n\nMine.\n",
     });
-    await copy(fs, "claude-code", "codex", "a");
+    const first = await copy(fs, "claude-code", "codex", "a");
+    expect(first.planned.requiresConfirmation).toBe(true);
     const text = fs.getFile("/home/user/.codex/AGENTS.md")!;
     expect(text).toContain("Mine.");
     expect(text).toContain("BEGIN harness:sync:user-instructions");
+    // The target's own text is a real difference from the source.
+    const row = await userRow(fs);
+    expect(row.cells.codex.effectiveDigest).not.toBe(row.cells["claude-code"].effectiveDigest);
+    // A repeat leaves the block as it is.
+    expect((await copy(fs, "claude-code", "codex", "b")).planned.noop).toBe(true);
+  });
+
+  it("a source with prose and a block copies all of it", async () => {
+    const fs = new MockFsProvider({
+      ...instructionsMachine().getAllFiles(),
+      "/home/user/.claude/CLAUDE.md":
+        "# Alpha\n\nProse one.\n\n<!-- BEGIN harness:sync:user-instructions -->\nShared.\n<!-- END harness:sync:user-instructions -->\n",
+    });
+    await copy(fs, "claude-code", "codex", "a");
+    const codex = fs.getFile("/home/user/.codex/AGENTS.md")!;
+    expect(codex).toContain("Prose one.");
+    expect(codex).toContain("Shared.");
+    expect(sync(codex)).toBe(1);
     const row = await userRow(fs);
     expect(row.cells.codex.effectiveDigest).toBe(row.cells["claude-code"].effectiveDigest);
-    expect((await copy(fs, "claude-code", "codex", "b")).planned.noop).toBe(true);
   });
 
   it("copying back and forth never nests blocks", async () => {

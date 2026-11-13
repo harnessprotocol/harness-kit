@@ -73,15 +73,28 @@ export function findAnySyncBlock(fileContent: string): SyncBlockLocation | null 
   return null;
 }
 
+const SYNC_MARKER_LINE = /^<!-- (?:BEGIN|END) harness:sync:[^ ]+ -->$/;
+
 /**
- * The instruction text a file carries for cross-surface comparison: the inside
- * of its `harness:sync` block when it has one (the part a copy wrote and keeps
- * current), else the whole file. A file with the user's own prose plus a block
- * therefore compares as the block, so a copied row reads as the same as its
- * source, and copying such a file onward never nests a block.
+ * The instruction text a file carries for cross-surface comparison and for
+ * copying: the whole file with only the `harness:sync` BEGIN/END marker lines
+ * removed. Text inside a block and text outside both count, so the user's own
+ * prose is never invisible to a comparison or silently left out of a copy,
+ * and a copy of a file that holds a block never nests markers.
  */
 export function syncedInstructionsContent(fileContent: string): string {
-  return findAnySyncBlock(fileContent)?.content ?? fileContent;
+  return fileContent
+    .split("\n")
+    .filter((line) => !SYNC_MARKER_LINE.test(line.trim()))
+    .join("\n");
+}
+
+/** The file's text outside its first `harness:sync` block (the whole file when it has none). */
+export function textOutsideSyncBlock(fileContent: string): string {
+  const block = findAnySyncBlock(fileContent);
+  if (!block) return fileContent;
+  const lines = fileContent.split("\n");
+  return [...lines.slice(0, block.startLine), ...lines.slice(block.endLine + 1)].join("\n");
 }
 
 export function replaceMarkerBlock(
