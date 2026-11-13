@@ -97,13 +97,13 @@ From the adversarial review of main at 047e79d1 ("Harness Kit Red Team"). These 
 - [x] AC-52: WHEN the webview is granted capabilities THE SYSTEM SHALL grant only what production code calls (no shell execute, spawn, stdin or kill), SHALL bind project-scope grants to paths the native dialog returned, and SHALL keep every path-taking command inside its declared roots.
 - [x] AC-53: WHEN Compile writes into a project THE SYSTEM SHALL refuse any path component that is a symbolic link, dangling or not.
 - [x] AC-54: WHEN a secret is stored THE SYSTEM SHALL NOT pass its value on a command line.
-- [ ] AC-55: WHEN Drift, Profile, Compile or onboarding read `harness.yaml` THE SYSTEM SHALL use `~/.claude/harness.yaml` as the personal profile and the selected project's committed `harness.yaml` as that project's team baseline, and Drift SHALL distinguish "no harness.yaml", "could not read", "never compiled" and "clean".
-- [ ] AC-56: WHEN onboarding or "Generate from Claude Code setup" builds a `harness.yaml` THE SYSTEM SHALL derive it from the same machine inventory the grid shows.
-- [ ] AC-57: WHEN a grid cell is clicked THE SYSTEM SHALL open the drawer with that cell's surface as the target, SHALL show "+ copy" only where the drawer can apply, and a copy the app reports as done SHALL leave no gap in that cell.
-- [ ] AC-58: WHEN an MCP config entry carries a `url` THE SYSTEM SHALL read it as a remote server.
-- [ ] AC-59: WHEN the Machine grid renders THE SYSTEM SHALL hide surfaces that are not installed by default, with a control to show all of them.
-- [ ] AC-60: WHEN a webview IPC payload or a plugin permission changes THE SYSTEM SHALL fail CI if the Rust command no longer accepts that payload or the capability no longer grants that call, and a nightly job SHALL launch the real app on macOS.
-- [ ] AC-61: WHEN text renders on any surface THE SYSTEM SHALL meet WCAG AA contrast in both themes, every modal SHALL trap focus and return it on close, and the sidebar SHALL mark the current section on every route.
+- [x] AC-55: WHEN Drift, Profile, Compile or onboarding read `harness.yaml` THE SYSTEM SHALL use `~/.claude/harness.yaml` as the personal profile and the selected project's committed `harness.yaml` as that project's team baseline, and Drift SHALL distinguish "no harness.yaml", "could not read", "never compiled" and "clean".
+- [x] AC-56: WHEN onboarding or "Generate from Claude Code setup" builds a `harness.yaml` THE SYSTEM SHALL derive it from the same machine inventory the grid shows.
+- [x] AC-57: WHEN a grid cell is clicked THE SYSTEM SHALL open the drawer with that cell's surface as the target, SHALL show "+ copy" only where the drawer can apply, and a copy the app reports as done SHALL leave no gap in that cell.
+- [x] AC-58: WHEN an MCP config entry carries a `url` THE SYSTEM SHALL read it as a remote server.
+- [x] AC-59: WHEN the Machine grid renders THE SYSTEM SHALL hide surfaces that are not installed by default, with a control to show all of them.
+- [x] AC-60: WHEN a webview IPC payload or a plugin permission changes THE SYSTEM SHALL fail CI if the Rust command no longer accepts that payload or the capability no longer grants that call, and a nightly job SHALL launch the real app on macOS.
+- [x] AC-61: WHEN text renders on any surface THE SYSTEM SHALL meet WCAG AA contrast in both themes, every modal SHALL trap focus and return it on close, and the sidebar SHALL mark the current section on every route.
 
 ### Unchanged behavior
 
