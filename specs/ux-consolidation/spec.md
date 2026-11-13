@@ -52,15 +52,15 @@ Format: EARS (`WHEN … THE SYSTEM SHALL …`). Each criterion cites the audit f
 
 ### Profile (harness.yaml)
 
-- [ ] AC-22: WHEN Profile opens and no harness.yaml exists THE SYSTEM SHALL offer "Scan this machine" as the primary action, run the machine import, and show the synthesized YAML for review before writing. *(M7, P3; closes cross-harness AC-23 for the desktop)*
-- [ ] AC-23: WHEN a harness.yaml exists THE SYSTEM SHALL show the YAML editor and a structured panel side by side, and an edit in the panel SHALL update the YAML and vice versa. *(M7, P3)*
-- [ ] AC-24: WHEN the user compiles THE SYSTEM SHALL present today's Sync flow as "Compile to project" inside Profile, with the preview rendered beside the form rather than below it. *(m6, P1 for the move, P3 for the layout)*
-- [ ] AC-25: WHEN the user chooses Share THE SYSTEM SHALL produce a secret-sanitized harness.yaml export and an agent prompt that recreates the profile on another machine, using the existing sanitizer semantics. *(P3)*
-- [ ] AC-26: WHEN a team baseline path is configured THE SYSTEM SHALL render "Team baseline" as a column of the Machine grid, marking each declared resource "required" and each absent one "missing here", and SHALL offer the drawer's copy action to close each missing cell. *(P3, [Q4]; reuses cross-harness AC-10)*
+- [x] AC-22: WHEN Profile opens and no harness.yaml exists THE SYSTEM SHALL offer "Scan this machine" as the primary action, run the machine import, and show the synthesized YAML for review before writing. *(M7, P3; closes cross-harness AC-23 for the desktop)*
+- [x] AC-23: WHEN a harness.yaml exists THE SYSTEM SHALL show the YAML editor and a structured panel side by side, and an edit in the panel SHALL update the YAML and vice versa. *(M7, P3)*
+- [x] AC-24: WHEN the user compiles THE SYSTEM SHALL present today's Sync flow as "Compile to project" inside Profile, with the preview rendered beside the form rather than below it. *(m6, P1 for the move, P3 for the layout)*
+- [x] AC-25: WHEN the user chooses Share THE SYSTEM SHALL produce a secret-sanitized harness.yaml export and an agent prompt that recreates the profile on another machine, using the existing sanitizer semantics. *(P3)*
+- [x] AC-26: WHEN a team baseline path is configured THE SYSTEM SHALL render "Team baseline" as a column of the Machine grid, marking each declared resource "required" and each absent one "missing here", and SHALL offer the drawer's copy action to close each missing cell. *(P3, [Q4]; reuses cross-harness AC-10)*
 
 ### Marketplace, plugins and MCP
 
-- [ ] AC-27: WHEN a marketplace plugin detail renders THE SYSTEM SHALL offer "Install to …" with a surface picker that yields the same three action surfaces as the Machine drawer (direct apply where a driver exists, the CLI command, the agent prompt) and a copy control on the install command. *(B5, P3)*
+- [x] AC-27: WHEN a marketplace plugin detail renders THE SYSTEM SHALL offer "Install to …" with a surface picker that yields the same three action surfaces as the Machine drawer (direct apply where a driver exists, the CLI command, the agent prompt) and a copy control on the install command. *(B5, P3; no surface has an in-app plugin driver yet, so Apply shows why it is off and the CLI command and prompt carry the install)*
 - [x] AC-28: WHEN the marketplace catalog renders THE SYSTEM SHALL state when the catalog was generated and SHALL NOT describe a bundled snapshot as a live registry. *(B5, P1)*
 - [x] AC-29: WHEN a folder is dragged over the Plugins page THE SYSTEM SHALL either import it through the Tauri drag-drop event or show no drop overlay at all. *(M14, P2)*
 - [x] AC-30: WHEN the MCP servers page renders THE SYSTEM SHALL read the store paths from the surface registry, SHALL show the teaching empty state when no store exists, and SHALL offer adding and editing a server through a form rather than only raw JSON. *(B3, P2)*
