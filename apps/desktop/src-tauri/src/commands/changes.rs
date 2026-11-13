@@ -340,6 +340,55 @@ fn is_surface_id(text: &str) -> bool {
             .all(|c| c.is_ascii_alphanumeric() || c == '-' || c == '_' || c == '.')
 }
 
+/// The surface registry's ids (`SURFACE_IDS` in packages/core/src/surfaces/
+/// types.ts). Rust cannot read the TypeScript registry, so a vitest test
+/// (`surface-ids-rust.test.ts`) fails if this list drifts from it.
+pub(crate) const SURFACE_IDS: [&str; 11] = [
+    "claude-code",
+    "claude-desktop",
+    "copilot-vscode",
+    "copilot-cli",
+    "codex",
+    "cursor",
+    "pi",
+    "opencode",
+    "windsurf",
+    "gemini",
+    "junie",
+];
+
+/// Every surface a webview-supplied record names must be a registry id.
+pub(crate) fn check_surfaces(record: &TransactionRecord) -> Result<(), String> {
+    let known = |id: &str| SURFACE_IDS.contains(&id);
+    if let Some(from) = &record.copied_from {
+        if !known(from) {
+            return Err("copiedFrom is not a surface the registry declares".to_string());
+        }
+    }
+    if record.surfaces.iter().any(|s| !known(s)) {
+        return Err("surfaces names a surface the registry does not declare".to_string());
+    }
+    Ok(())
+}
+
+/// A copy's audit entry is written only when the engine's manifest for this
+/// transaction is on disk and committed. The row's own claims are checked with
+/// the same pinned-path rules Undo uses, and the manifest must sit in the
+/// folder named for the transaction, so one real manifest cannot back a
+/// second, invented transaction id.
+pub(crate) fn require_committed_manifest(home: &Path, record: &TransactionRecord) -> Result<(), String> {
+    let relative = manifest_relative(home, record)?;
+    let folder = relative.split('/').nth(2).unwrap_or_default();
+    if folder != record.transaction_id {
+        return Err("The manifest does not belong to this transaction.".to_string());
+    }
+    let (manifest, _) = read_manifest(home, record)?;
+    if manifest.status != "committed" {
+        return Err("The transaction is not committed, so no copy is recorded.".to_string());
+    }
+    Ok(())
+}
+
 /// What a change was about, for a sentence: `mcp-server github`, or a count.
 fn describe(record: &TransactionRecord) -> String {
     let names: Vec<String> = record
@@ -602,17 +651,21 @@ mod tests {
     fn undo_refuses_a_row_whose_manifest_path_leaves_the_backup_folder() {
         let f = fixture();
         write(&f, "outside/transaction.json", "{}");
-        for path in [
+        for (i, path) in [
             "../outside/transaction.json",
             ".harness/backups/../../outside/transaction.json",
             ".harness/harness.db",
             "outside/transaction.json",
             ".harness/backups/a/b/transaction.json",
-        ] {
-            let mut row = record(&f, "evil", "2026-11-01T10:00:00.000Z");
+        ]
+        .iter()
+        .enumerate()
+        {
+            let id = format!("evil{i}");
+            let mut row = record(&f, &id, "2026-11-01T10:00:00.000Z");
             row.manifest_path = path.to_string();
             record_transaction_at(&f.db, row).unwrap();
-            let error = undo_change_at(&f.db, f.home.path(), "evil").unwrap_err();
+            let error = undo_change_at(&f.db, f.home.path(), &id).unwrap_err();
             assert!(error.contains("outside the app's backup folder"), "{path}: {error}");
         }
     }
@@ -702,8 +755,9 @@ mod tests {
         let db = crate::db::init(data.path()).unwrap();
         let mut row = record(&f, "copy1", "2026-11-03T09:00:00.000Z");
         row.copied_from = Some("claude-code".to_string());
+        write_manifest(&f, "copy1", "committed");
 
-        record_transaction_audited(&db, &f.db, row).unwrap();
+        record_transaction_audited(&db, f.home.path(), &f.db, row).unwrap();
 
         let rows = audit_rows(&db);
         assert_eq!(rows.len(), 1);
@@ -726,9 +780,89 @@ mod tests {
         let f = fixture();
         let data = tempfile::tempdir().unwrap();
         let db = crate::db::init(data.path()).unwrap();
-        record_transaction_audited(&db, &f.db, record(&f, "page-save", "2026-11-03T09:00:00.000Z")).unwrap();
+        record_transaction_audited(&db, f.home.path(), &f.db, record(&f, "page-save", "2026-11-03T09:00:00.000Z")).unwrap();
         assert!(audit_rows(&db).is_empty());
         assert_eq!(list_transactions_at(&f.db, None).unwrap().len(), 1);
+    }
+
+    fn write_manifest(f: &Fixture, id: &str, status: &str) {
+        let manifest = serde_json::json!({
+            "version": 2, "timestamp": id, "status": status,
+            "changes": [{ "root": "home", "path": ".claude.json", "before": null, "after": "{}" }],
+        });
+        write(f, &format!(".harness/backups/{id}/transaction.json"), &manifest.to_string());
+    }
+
+    fn copy_row(f: &Fixture, id: &str) -> TransactionRecord {
+        let mut row = record(f, id, "2026-11-03T09:00:00.000Z");
+        row.copied_from = Some("claude-code".to_string());
+        row
+    }
+
+    fn assert_refused_and_unlogged(f: &Fixture, row: TransactionRecord) {
+        let data = tempfile::tempdir().unwrap();
+        let db = crate::db::init(data.path()).unwrap();
+        assert!(record_transaction_audited(&db, f.home.path(), &f.db, row).is_err());
+        assert!(audit_rows(&db).is_empty());
+        assert!(!f.db.exists() || list_transactions_at(&f.db, None).unwrap().is_empty());
+    }
+
+    #[test]
+    fn a_copy_with_no_manifest_on_disk_is_refused_and_unlogged() {
+        let f = fixture();
+        assert_refused_and_unlogged(&f, copy_row(&f, "forged"));
+    }
+
+    #[test]
+    fn a_copy_whose_manifest_is_not_committed_is_refused_and_unlogged() {
+        for status in ["prepared", "rolled-back"] {
+            let f = fixture();
+            write_manifest(&f, "half", status);
+            assert_refused_and_unlogged(&f, copy_row(&f, "half"));
+        }
+    }
+
+    #[test]
+    fn a_copy_cannot_borrow_another_transactions_manifest() {
+        let f = fixture();
+        write_manifest(&f, "real", "committed");
+        let mut row = copy_row(&f, "forged");
+        row.manifest_path = ".harness/backups/real/transaction.json".to_string();
+        assert_refused_and_unlogged(&f, row);
+    }
+
+    #[test]
+    fn surfaces_the_registry_does_not_know_are_refused() {
+        let f = fixture();
+        write_manifest(&f, "c1", "committed");
+        let mut from = copy_row(&f, "c1");
+        from.copied_from = Some("not-a-surface".to_string());
+        assert_refused_and_unlogged(&f, from);
+        let mut to = copy_row(&f, "c1");
+        to.surfaces = vec!["codex".to_string(), "evil".to_string()];
+        assert_refused_and_unlogged(&f, to);
+        // A plain page-save record names surfaces too, so the check is not copy-only.
+        let mut plain = record(&f, "c1", "2026-11-03T09:00:00.000Z");
+        plain.surfaces = vec!["evil".to_string()];
+        assert_refused_and_unlogged(&f, plain);
+    }
+
+    #[test]
+    fn a_record_naming_more_surfaces_than_exist_is_refused() {
+        let f = fixture();
+        let mut row = record(&f, "many", "2026-11-03T09:00:00.000Z");
+        row.surfaces = vec!["codex".to_string(); 33];
+        assert_refused_and_unlogged(&f, row);
+    }
+
+    #[test]
+    fn every_registry_surface_id_is_accepted() {
+        let f = fixture();
+        let data = tempfile::tempdir().unwrap();
+        let db = crate::db::init(data.path()).unwrap();
+        let mut row = record(&f, "all", "2026-11-03T09:00:00.000Z");
+        row.surfaces = SURFACE_IDS.iter().map(|s| s.to_string()).collect();
+        record_transaction_audited(&db, f.home.path(), &f.db, row).unwrap();
     }
 
     #[test]
@@ -739,7 +873,7 @@ mod tests {
         for bad in ["", "a b", "x\ny", &"z".repeat(65), "Copied everything"] {
             let mut row = record(&f, "bad", "2026-11-03T09:00:00.000Z");
             row.copied_from = Some(bad.to_string());
-            assert!(record_transaction_audited(&db, &f.db, row).is_err(), "{bad:?}");
+            assert!(record_transaction_audited(&db, f.home.path(), &f.db, row).is_err(), "{bad:?}");
         }
         assert!(audit_rows(&db).is_empty());
         assert!(!f.db.exists() || list_transactions_at(&f.db, None).unwrap().is_empty());
@@ -758,7 +892,7 @@ mod tests {
     #[test]
     fn the_copy_source_survives_the_ledger_round_trip() {
         let f = fixture();
-        commit(&f, "a", "2026-11-01T10:00:00.000Z", ".claude.json", Some("{}"), "{\"a\":1}");
+        write_manifest(&f, "a", "committed");
         let mut row = record(&f, "a", "2026-11-01T10:00:00.000Z");
         row.copied_from = Some("claude-code".to_string());
         record_transaction_at(&f.db, row).unwrap();

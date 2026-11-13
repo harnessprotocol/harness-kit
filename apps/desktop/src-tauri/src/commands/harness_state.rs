@@ -240,6 +240,8 @@ fn migrate_locked(conn: &Connection) -> Result<(), String> {
 const MAX_FIELD_BYTES: usize = 4096;
 /// Most entries accepted in any one list field.
 const MAX_LIST_ENTRIES: usize = 256;
+/// Most surfaces one record may name.
+const MAX_SURFACES: usize = 32;
 
 /// Bound what a webview can put in the ledger.
 ///
@@ -262,6 +264,12 @@ fn validate_record(record: &TransactionRecord) -> Result<(), String> {
     }
     if record.transaction_id.trim().is_empty() {
         return Err("transactionId must not be empty".to_string());
+    }
+    // The registry holds 11 surfaces and a record names each at most once, so
+    // 32 leaves room for growth while refusing a padded list. The generic
+    // 256-entry cap above already bounds identityKeys.
+    if record.surfaces.len() > MAX_SURFACES {
+        return Err(format!("surfaces exceeds {} entries", MAX_SURFACES));
     }
     for (name, list) in [
         ("roots", &record.roots),
@@ -678,7 +686,8 @@ pub fn record_transaction(
     db: tauri::State<'_, crate::db::Db>,
     record: TransactionRecord,
 ) -> Result<(), String> {
-    record_transaction_audited(&db, &state_path()?, record)
+    let home = dirs::home_dir().ok_or("Could not resolve home directory")?;
+    record_transaction_audited(&db, &home, &state_path()?, record)
 }
 
 /// {@link record_transaction_at}, plus the audit entry a Machine copy owes.
@@ -689,10 +698,17 @@ pub fn record_transaction(
 /// whole record rather than logging something the app did not do.
 pub(crate) fn record_transaction_audited(
     db: &crate::db::Db,
+    home: &std::path::Path,
     path: &std::path::Path,
     record: TransactionRecord,
 ) -> Result<(), String> {
+    // The webview is not trusted: every surface id must be one the registry
+    // declares, and a copy must be backed by a committed manifest on disk.
+    super::changes::check_surfaces(&record)?;
     let audit = super::changes::copy_audit_entry(&record)?;
+    if audit.is_some() {
+        super::changes::require_committed_manifest(home, &record)?;
+    }
     record_transaction_at(path, record)?;
     if let Some(entry) = audit {
         super::security::log_audit(
@@ -727,28 +743,54 @@ pub(crate) fn record_transaction_at(
     let roots = serde_json::to_string(&record.roots)
         .map_err(|e| format!("Failed to serialize roots: {}", e))?;
 
-    conn.execute(
-        "INSERT INTO transactions
-           (transaction_id, applied_at, roots, manifest_path, manifest_root, backup_dir, payload)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
-         ON CONFLICT(transaction_id) DO UPDATE SET
-           applied_at = excluded.applied_at,
-           roots = excluded.roots,
-           manifest_path = excluded.manifest_path,
-           manifest_root = excluded.manifest_root,
-           backup_dir = excluded.backup_dir,
-           payload = excluded.payload",
-        rusqlite::params![
-            record.transaction_id,
-            record.applied_at,
-            roots,
-            record.manifest_path,
-            record.manifest_root,
-            record.backup_dir,
-            payload
-        ],
-    )
-    .map_err(|e| format!("Failed to record transaction: {}", e))?;
+    // A row is written once. The old upsert let any later call rewrite a real
+    // row's surfaces, kinds or source, which changes what the Changes list
+    // tells the user happened. Legitimate callers record each apply exactly
+    // once (core's `recordAppliedTransaction`), so a repeat is either an
+    // identical retry, which passes, or an overwrite, which does not.
+    let inserted = conn
+        .execute(
+            "INSERT INTO transactions
+               (transaction_id, applied_at, roots, manifest_path, manifest_root, backup_dir, payload)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+             ON CONFLICT(transaction_id) DO NOTHING",
+            rusqlite::params![
+                record.transaction_id,
+                record.applied_at,
+                roots,
+                record.manifest_path,
+                record.manifest_root,
+                record.backup_dir,
+                payload
+            ],
+        )
+        .map_err(|e| format!("Failed to record transaction: {}", e))?;
+    if inserted == 0 {
+        let same: i64 = conn
+            .query_row(
+                "SELECT COUNT(*) FROM transactions
+                  WHERE transaction_id = ?1 AND applied_at = ?2 AND roots = ?3
+                    AND manifest_path = ?4 AND manifest_root = ?5 AND backup_dir = ?6
+                    AND payload = ?7",
+                rusqlite::params![
+                    record.transaction_id,
+                    record.applied_at,
+                    roots,
+                    record.manifest_path,
+                    record.manifest_root,
+                    record.backup_dir,
+                    payload
+                ],
+                |row| row.get(0),
+            )
+            .map_err(|e| format!("Failed to check the existing transaction: {}", e))?;
+        if same == 0 {
+            return Err(format!(
+                "Transaction {} is already recorded with different contents",
+                record.transaction_id
+            ));
+        }
+    }
     Ok(())
 }
 
@@ -1112,15 +1154,31 @@ mod tests {
     }
 
     #[test]
-    fn is_idempotent_on_the_same_transaction_id() {
+    fn re_recording_an_identical_row_is_a_no_op() {
         let path = scratch("idempotent");
         record_transaction_at(&path, record("dup")).unwrap();
-        let mut second = record("dup");
-        second.surfaces = vec!["codex".to_string()];
-        record_transaction_at(&path, second).unwrap();
-        let listed = list_transactions_at(&path, None).unwrap();
-        assert_eq!(listed.len(), 1);
-        assert_eq!(listed[0].surfaces, vec!["codex".to_string()]);
+        record_transaction_at(&path, record("dup")).unwrap();
+        assert_eq!(list_transactions_at(&path, None).unwrap().len(), 1);
+        std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
+    fn a_different_payload_for_an_existing_transaction_id_is_refused() {
+        let path = scratch("overwrite");
+        record_transaction_at(&path, record("dup")).unwrap();
+        let first = list_transactions_at(&path, None).unwrap();
+        let mut forged = record("dup");
+        forged.surfaces = vec!["codex".to_string()];
+        forged.copied_from = Some("claude-code".to_string());
+        assert!(record_transaction_at(&path, forged).unwrap_err().contains("already recorded"));
+        let mut moved = record("dup");
+        moved.manifest_path = ".harness/backups/other/transaction.json".to_string();
+        assert!(record_transaction_at(&path, moved).is_err());
+        let after = list_transactions_at(&path, None).unwrap();
+        assert_eq!(after.len(), 1);
+        assert_eq!(after[0].surfaces, first[0].surfaces);
+        assert_eq!(after[0].copied_from, first[0].copied_from);
+        assert_eq!(after[0].manifest_path, first[0].manifest_path);
         std::fs::remove_file(&path).ok();
     }
 
