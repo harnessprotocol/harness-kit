@@ -12,7 +12,7 @@ import { parseHarness, validateHarnessYaml } from "@harness-kit/core";
 import type { HarnessConfig, ValidationResult } from "@harness-kit/core";
 import { HARNESS_TEMPLATE } from "../../lib/harness-generator";
 import type { HarnessProfile } from "../../lib/profiles";
-import { applyYamlPatch } from "../../lib/harness-yaml-patch";
+import { applyYamlPatch, remapPatch } from "../../lib/harness-yaml-patch";
 import type { YamlPatch } from "../../lib/harness-yaml-patch";
 import { getAvailableViewModes } from "../../lib/viewModes";
 import { useRegisterCommands } from "../../lib/commands";
@@ -74,7 +74,14 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
   const [profilePickerOpen, setProfilePickerOpen] = useState(false);
 
   // AC-23: the structured panel reads this text, a moment behind the editor.
-  const [panelText, setPanelText] = useState("");
+  const [panelText, setPanelTextState] = useState("");
+  // The text the panel shows (or is about to), readable between renders.
+  const panelTextRef = useRef("");
+  const setPanelText = useCallback((text: string) => {
+    panelTextRef.current = text;
+    setPanelTextState(text);
+  }, []);
+  const savingRef = useRef(false);
   const [patchError, setPatchError] = useState<string | null>(null);
   const [loadTick, setLoadTick] = useState(0);
   const [shareOpen, setShareOpen] = useState(false);
@@ -117,6 +124,8 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
         setDiskContent(null);
         setFilePath(null);
         setFetchError(errorDetails(e));
+        // The user's choice to discard applied to this read, which failed.
+        forceLoad.current = false;
       })
       .finally(() => {
         if (generation === loadGeneration.current) setLoading(false);
@@ -151,6 +160,8 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
   const [pendingDisk, setPendingDisk] = useState<string | null>(null);
 
   function applyDisk(text: string) {
+    // A keystroke just before this must not re-read its stale text into the panel.
+    if (panelTimer.current) clearTimeout(panelTimer.current);
     syncedRef.current = text;
     setBuffer(text);
     setPanelText(text);
@@ -188,7 +199,20 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
   // A panel edit patches the YAML text, so Monaco shows it and comments stay.
   function handlePatch(patch: YamlPatch) {
     try {
-      const next = applyYamlPatch(bufferRef.current, patch);
+      // The panel can be up to PANEL_DEBOUNCE_MS behind the editor, and its
+      // index paths refer to what it showed: point them at the same entries.
+      const current = bufferRef.current;
+      const shown = panelTextRef.current;
+      const stale = shown !== current;
+      if (stale && panelTimer.current) clearTimeout(panelTimer.current);
+      let resolved: YamlPatch;
+      try {
+        resolved = stale ? remapPatch(shown, current, patch) : patch;
+      } catch (e) {
+        setPanelText(current);
+        throw new Error(`${errorDetails(e)}. The panel has refreshed; try the edit again.`);
+      }
+      const next = applyYamlPatch(current, resolved);
       if (panelTimer.current) clearTimeout(panelTimer.current);
       setBuffer(next);
       setPanelText(next);
@@ -224,7 +248,11 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
   const share = useMemo<{ config: HarnessConfig | null; error: string | null }>(() => {
     if (!found || !shareSource) return { config: null, error: null };
     try {
-      return { config: parseHarness(shareSource).config, error: null };
+      const config = parseHarness(shareSource).config as unknown;
+      if (typeof config !== "object" || config === null || Array.isArray(config)) {
+        return { config: null, error: "The top level of harness.yaml is not a mapping." };
+      }
+      return { config: config as HarnessConfig, error: null };
     } catch (e) {
       return { config: null, error: errorDetails(e) };
     }
@@ -233,7 +261,9 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
   // ── Save ──────────────────────────────────────────────────────
 
   const handleSave = useCallback(async () => {
-    if (saving || !saveable) return;
+    // A ref: a second save sent before this render's `saving` updates must be ignored.
+    if (savingRef.current || !saveable) return;
+    savingRef.current = true;
     setSaving(true);
     setSaveError(null);
     // What is written is what the buffer holds now, not what this render saw.
@@ -242,7 +272,10 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
       // AC-50: the digest is of the file at the write target; `undefined`
       // when the page found no file there (AC-55: the personal profile is
       // ~/.claude/harness.yaml and nothing else).
-      const expected = filePath === "~/.claude/harness.yaml" ? await loadedDigest(diskContent) : undefined;
+      // It is of the text the buffer was last in step with, never of a disk
+      // version still waiting in `pendingDisk`: Save must not overwrite that
+      // one without asking.
+      const expected = filePath === "~/.claude/harness.yaml" ? await loadedDigest(syncedRef.current ?? diskContent) : undefined;
       const savedPath = await writeHarnessFile(content, expected);
       setDiskContent(content);
       // An edit made while the write ran stays in the buffer; the panel follows it.
@@ -254,9 +287,10 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
     } catch (e) {
       setSaveError(errorDetails(e));
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
-  }, [saving, saveable, filePath, diskContent]);
+  }, [saveable, filePath, diskContent, setPanelText]);
 
   // Cmd+S while the editor is open. A panel field commits on blur, so blur it
   // first (synchronously) or the save would leave out what is being typed.
@@ -441,7 +475,7 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
   const viewModes = readOnly ? getAvailableViewModes("harness.yaml", true).filter((mode) => mode.key !== "editor") : [];
   const fullHeight = showFile && split && !loading;
   const shareReason = share.error
-    ? "Share is unavailable: harness.yaml does not parse yet. Fix it in the editor first."
+    ? `Share is unavailable: harness.yaml does not parse as a profile yet (${share.error}). Fix it in the editor first.`
     : !share.config
       ? "Share is unavailable: harness.yaml is empty."
       : null;
@@ -575,7 +609,7 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
         <div style={{ padding: "0 24px 8px", flexShrink: 0 }} data-testid="pending-disk-notice">
           <ErrorNotice
             title="harness.yaml was re-read from disk"
-            details="The editor still shows your unsaved edits. Load the disk version to discard them."
+            details="The editor still shows your unsaved edits. Save will not overwrite the disk version without asking. Load the disk version to discard your edits."
             action={{ label: "Discard edits and load from disk", onClick: () => applyDisk(pendingDisk) }}
           />
         </div>

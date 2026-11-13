@@ -126,3 +126,27 @@ describe("applyYamlPatch", () => {
     });
   });
 });
+
+describe("applyYamlPatch adversarial-review regressions", () => {
+  it("keeps CRLF line endings", () => {
+    const crlf = 'version: "2"\r\nmetadata:\r\n  name: demo\r\n';
+    const out = applyYamlPatch(crlf, { op: "set", path: ["metadata", "name"], value: "x" });
+    expect(out).toBe('version: "2"\r\nmetadata:\r\n  name: x\r\n');
+  });
+
+  it("does not read block-scalar content when inferring list style", () => {
+    const text = "operational: |\n  Steps:\n  - one\n  - two\nplugins:\n  - name: a\n    source: s\n";
+    const out = applyYamlPatch(text, { op: "append", path: ["plugins"], value: { name: "b", source: "t" } });
+    expect(out).toContain("plugins:\n  - name: a");
+    expect(out).toContain("\n  - name: b");
+  });
+
+  it("refuses a root scalar document", () => {
+    expect(() => applyYamlPatch("hello world\n", { op: "set", path: ["a"], value: 1 })).toThrow(YamlPatchError);
+  });
+
+  it("keeps the header comment when a removal empties the root", () => {
+    const out = applyYamlPatch("# header\nname: x\n", { op: "remove", path: ["name"] });
+    expect(out).toContain("# header");
+  });
+});

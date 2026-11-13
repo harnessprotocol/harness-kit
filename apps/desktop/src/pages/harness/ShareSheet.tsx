@@ -1,6 +1,6 @@
-import { useId, useMemo, useState } from "react";
-import type { CSSProperties, KeyboardEvent } from "react";
-import { Button, Modal } from "@harness-kit/ui";
+import { Component, useId, useMemo, useState } from "react";
+import type { CSSProperties, KeyboardEvent, ReactNode } from "react";
+import { Button, ErrorNotice, Modal } from "@harness-kit/ui";
 import { buildProfilePrompt, buildProfileShare } from "@harness-kit/core";
 import type { HarnessConfig } from "@harness-kit/core";
 import { saveShareFile } from "../../lib/tauri";
@@ -42,19 +42,72 @@ interface ShareSheetProps {
 }
 
 /** The Share sheet (AC-25): the sanitized harness.yaml and the agent prompt, each to copy or save. */
-export default function ShareSheet({ open, onClose, config }: ShareSheetProps) {
+export default function ShareSheet(props: ShareSheetProps) {
+  return (
+    <ShareBoundary resetKey={props.config} onClose={props.onClose} open={props.open}>
+      <ShareSheetInner {...props} />
+    </ShareBoundary>
+  );
+}
+
+/** A render error in the sheet must not unmount the page and its unsaved buffer. */
+class ShareBoundary extends Component<
+  { resetKey: unknown; open: boolean; onClose: () => void; children: ReactNode },
+  { failed: boolean; key: unknown }
+> {
+  state = { failed: false, key: this.props.resetKey };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  static getDerivedStateFromProps(props: { resetKey: unknown }, state: { failed: boolean; key: unknown }) {
+    return props.resetKey !== state.key ? { failed: false, key: props.resetKey } : null;
+  }
+
+  componentDidCatch(error: unknown) {
+    console.error("[ShareSheet]", error);
+  }
+
+  render() {
+    if (!this.state.failed) return this.props.children;
+    return (
+      <Modal open={this.props.open} onClose={this.props.onClose} title="Share this profile">
+        <ErrorNotice title="Couldn't build the share" details="Your YAML is untouched. Fix it in the editor and try again." />
+      </Modal>
+    );
+  }
+}
+
+function ShareSheetInner({ open, onClose, config }: ShareSheetProps) {
   const toast = useToast();
   const [kind, setKind] = useState<ShareKind>("harness-yaml");
   const [saving, setSaving] = useState(false);
   const tabsId = useId();
 
-  const share = useMemo(() => (open ? buildProfileShare(config) : null), [open, config]);
-  const prompt = useMemo(() => (open ? buildProfilePrompt(config) : ""), [open, config]);
-  if (!share) return null;
+  const built = useMemo(() => {
+    if (!open) return null;
+    try {
+      return { share: buildProfileShare(config), prompt: buildProfilePrompt(config), error: null };
+    } catch (e) {
+      return { share: null, prompt: "", error: errorDetails(e) };
+    }
+  }, [open, config]);
+  if (!built) return null;
+  if (!built.share) {
+    return (
+      <Modal open={open} onClose={onClose} title="Share this profile">
+        <ErrorNotice title="Couldn't build the share" details={built.error ?? undefined} />
+      </Modal>
+    );
+  }
+  const share = built.share;
+  const prompt = built.prompt;
 
   const text = kind === "harness-yaml" ? share.yaml : prompt;
   const tab = TABS.find((t) => t.kind === kind)!;
-  const name = config.metadata?.name?.trim() || "harness";
+  const rawName = config.metadata?.name as unknown;
+  const name = (typeof rawName === "string" || typeof rawName === "number" ? String(rawName).trim() : "") || "harness";
 
   async function copy() {
     try {

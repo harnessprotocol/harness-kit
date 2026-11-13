@@ -552,3 +552,116 @@ describe("Profile Share (AC-25)", () => {
     expect(share).toHaveAccessibleDescription(/does not parse/);
   });
 });
+
+describe("Profile editor: adversarial-review regressions", () => {
+  const EXTERNAL = PERSONAL.replace("my-harness", "external-name");
+  const ENV_FILE = 'version: "2"\nmetadata:\n  name: my-harness\nenv:\n  - name: AAA\n    description: first\n  - name: BBB\n    description: second\n';
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    for (const key of Object.keys(projectFiles)) delete projectFiles[key];
+    act(() => setCurrentProjectDir(null));
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: PERSONAL, path: "~/.claude/harness.yaml" });
+  });
+
+  // The project changes and comes back: the personal file is read again.
+  async function reloadFromDisk() {
+    projectFiles["/work/acme/harness.yaml"] = PERSONAL;
+    act(() => setCurrentProjectDir("/work/acme"));
+    await screen.findByText(/\(read-only\)/);
+    act(() => setCurrentProjectDir(null));
+  }
+
+  it("Save while a changed disk version is pending sends the digest of the text the buffer was synced with", async () => {
+    mockWriteHarnessFile.mockRejectedValue("Refusing to write 'x': it changed on disk since it was read");
+    renderPage();
+    const editor = await screen.findByTestId("fake-editor");
+    await nameField();
+    fireEvent.change(editor, { target: { value: PERSONAL.replace("my-harness", "unsaved-name") } });
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: EXTERNAL, path: "~/.claude/harness.yaml" });
+    await reloadFromDisk();
+    await screen.findByTestId("pending-disk-notice");
+    expect(screen.getByTestId("pending-disk-notice")).toHaveTextContent(/will not overwrite/i);
+    fireEvent.keyDown(window, { key: "s", metaKey: true });
+    await waitFor(() => expect(mockWriteHarnessFile).toHaveBeenCalledTimes(1));
+    expect(mockWriteHarnessFile.mock.calls[0][1]).toBe(await loadedDigest(PERSONAL));
+    expect(mockWriteHarnessFile.mock.calls[0][1]).not.toBe(await loadedDigest(EXTERNAL));
+    expect(await screen.findByRole("button", { name: "Reload from disk" })).toBeInTheDocument();
+  });
+
+  it("Discard edits clears the panel debounce so a stale keystroke does not overwrite the panel", async () => {
+    renderPage();
+    const editor = await screen.findByTestId("fake-editor");
+    await nameField();
+    fireEvent.change(editor, { target: { value: PERSONAL.replace("my-harness", "first-edit") } });
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: EXTERNAL, path: "~/.claude/harness.yaml" });
+    await reloadFromDisk();
+    const notice = await screen.findByTestId("pending-disk-notice");
+    fireEvent.change(screen.getByTestId("fake-editor"), { target: { value: PERSONAL.replace("my-harness", "late-keystroke") } });
+    fireEvent.click(within(notice).getByRole("button", { name: /Discard edits/ }));
+    await act(async () => { await new Promise((r) => setTimeout(r, 400)); });
+    expect(screen.getByRole("textbox", { name: /^Name$/ })).toHaveValue("external-name");
+  });
+
+  it("a failed Reload from disk does not let a later unrelated load discard unsaved edits", async () => {
+    mockWriteHarnessFile.mockRejectedValue("Refusing to write 'x': it changed on disk since it was read");
+    renderPage();
+    const editor = await screen.findByTestId("fake-editor");
+    await nameField();
+    fireEvent.change(editor, { target: { value: PERSONAL.replace("my-harness", "unsaved-name") } });
+    fireEvent.keyDown(window, { key: "s", metaKey: true });
+    mockReadHarnessFile.mockReset();
+    mockReadHarnessFile.mockRejectedValueOnce(new Error("boom"));
+    fireEvent.click(await screen.findByRole("button", { name: "Reload from disk" }));
+    await screen.findByText("Couldn't read harness.yaml");
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: EXTERNAL, path: "~/.claude/harness.yaml" });
+    await reloadFromDisk();
+    expect((await screen.findByTestId("fake-editor") as HTMLTextAreaElement).value).toContain("unsaved-name");
+    expect(await screen.findByTestId("pending-disk-notice")).toBeInTheDocument();
+  });
+
+  it("a panel remove right after an editor edit that shifts the list removes the intended entry", async () => {
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: ENV_FILE, path: "~/.claude/harness.yaml" });
+    renderPage();
+    const editor = await screen.findByTestId("fake-editor");
+    await screen.findByRole("button", { name: "Remove variable AAA" });
+    const shifted = ENV_FILE.replace("env:\n", "env:\n  - name: NEW\n    description: inserted\n");
+    fireEvent.change(editor, { target: { value: shifted } });
+    fireEvent.click(screen.getByRole("button", { name: "Remove variable AAA" }));
+    const value = (screen.getByTestId("fake-editor") as HTMLTextAreaElement).value;
+    expect(value).not.toContain("AAA");
+    expect(value).toContain("NEW");
+    expect(value).toContain("BBB");
+  });
+
+  it("a second save sent before the page re-renders is ignored", async () => {
+    mockWriteHarnessFile.mockReturnValue(new Promise(() => {}));
+    renderPage();
+    const editor = await screen.findByTestId("fake-editor");
+    await nameField();
+    fireEvent.change(editor, { target: { value: PERSONAL.replace("my-harness", "edited") } });
+    const press = () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "s", metaKey: true, cancelable: true }));
+    press();
+    press();
+    await act(async () => {});
+    expect(mockWriteHarnessFile).toHaveBeenCalledTimes(1);
+  });
+
+  for (const [label, content] of [
+    ["env as a scalar", "env: foo\n"],
+    ["env holding null", "env: [null]\n"],
+    ["a numeric metadata.name", "metadata:\n  name: 123\n"],
+    ["a list root", "- a\n- b\n"],
+  ] as const) {
+    it(`Share does not take down the page for ${label}`, async () => {
+      mockReadHarnessFile.mockResolvedValue({ found: true, content, path: "~/.claude/harness.yaml" });
+      renderPage();
+      const editor = await screen.findByTestId("fake-editor");
+      fireEvent.change(editor, { target: { value: `${content}# unsaved\n` } });
+      const share = await screen.findByRole("button", { name: "Share" });
+      if (!(share as HTMLButtonElement).disabled) fireEvent.click(share);
+      await act(async () => {});
+      expect((screen.getByTestId("fake-editor") as HTMLTextAreaElement).value).toBe(`${content}# unsaved\n`);
+    });
+  }
+});

@@ -144,3 +144,13 @@ describe("ShareSheet (AC-25)", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
+
+describe("ShareSheet with malformed configs", () => {
+  it("shows an error notice inside the sheet when the share cannot be built, and a numeric name does not throw", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const bad = { version: "1", env: "foo", metadata: { name: 123 } } as unknown as HarnessConfig;
+    renderSheet(bad);
+    expect(screen.getByRole("dialog", { name: "Share this profile" })).toBeInTheDocument();
+    vi.restoreAllMocks();
+  });
+});
