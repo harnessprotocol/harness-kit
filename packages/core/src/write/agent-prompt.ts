@@ -177,7 +177,9 @@ export function buildAgentPrompt(
     // that destroys work.
     plan.overwrites === undefined
       ? `It is already configured in ${source.label} and missing from ${target.label}. Reproduce it using ${target.label}'s own configuration — do not copy ${source.label}'s file format verbatim.`
-      : `${target.label} ALREADY has this, with different content. Replace its version with ${source.label}'s, using ${target.label}'s own configuration — do not copy ${source.label}'s file format verbatim.`,
+      : request.kind === "instructions"
+        ? `${target.label} ALREADY has a harness-managed instructions block with different content. Update only that block with ${source.label}'s instructions and leave the text outside it as it is.`
+        : `${target.label} ALREADY has this, with different content. Replace its version with ${source.label}'s, using ${target.label}'s own configuration — do not copy ${source.label}'s file format verbatim.`,
     "",
     `Target configuration: ${targetFile}`,
     `Scope: ${request.scope === "user" ? "user/global (applies everywhere)" : "this project only"}`,
