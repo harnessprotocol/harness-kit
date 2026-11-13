@@ -258,3 +258,42 @@ describe("RowDrawer Escape", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("RowDrawer for a row only the team baseline declares (AC-26)", () => {
+  const baselineRow = {
+    key: "skill:deploy",
+    kind: "skill",
+    name: "deploy",
+    cells: Object.fromEntries(SURFACE_ORDER.map((id) => [id, { status: "absent", entries: [] }])),
+  } as unknown as GridRow;
+
+  beforeEach(() => {
+    vi.mocked(buildCellAction).mockClear();
+  });
+
+  it("shows the compile command with a Copy button and no Apply or source and target selects", async () => {
+    const writeText = vi.fn(async () => undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    render(
+      <RowDrawer
+        row={baselineRow}
+        diffs={[]}
+        gaps={[]}
+        surfaceOrder={SURFACE_ORDER}
+        onClose={vi.fn()}
+        baselineMissing={{ projectDir: "/work/app" }}
+      />,
+    );
+    const cli = "npx -p @harnessprotocol/cli harness-kit";
+    const command = `cd /work/app && ${cli} install harness.yaml && ${cli} compile harness.yaml`;
+    const actions = screen.getByTestId("baseline-missing-actions");
+    expect(within(actions).getByText(command)).toBeInTheDocument();
+    expect(actions).toHaveTextContent("baseline declares deploy");
+    expect(screen.queryByRole("button", { name: "Apply" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("From")).not.toBeInTheDocument();
+    expect(buildCellAction).not.toHaveBeenCalled();
+    fireEvent.click(within(actions).getByRole("button", { name: "Copy CLI command" }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledWith(command));
+    expect(await screen.findByRole("status")).toHaveTextContent("CLI command copied.");
+  });
+});

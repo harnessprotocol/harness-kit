@@ -16,6 +16,7 @@ import {
 } from "./cell-actions";
 import type { CellActionView } from "./cell-actions";
 import { rowBaselineSource } from "./cell-state";
+import { baselineCompileCommand } from "./team-baseline";
 
 /**
  * Side drawer for one grid row: per-surface entries (scope + provenance),
@@ -48,6 +49,12 @@ export interface RowDrawerProps {
    * source (it holds the same content, or cannot take this resource).
    */
   initialTarget?: SurfaceId;
+  /**
+   * Set for a row that exists only because the team baseline declares it
+   * (AC-26): the machine has no source surface to copy from, so the drawer
+   * offers the CLI that compiles the baseline instead of Apply.
+   */
+  baselineMissing?: { projectDir: string };
 }
 
 export function RowDrawer({
@@ -58,6 +65,7 @@ export function RowDrawer({
   onClose,
   onApplied,
   initialTarget,
+  baselineMissing,
 }: RowDrawerProps) {
   const presentSurfaces = Object.entries(row.cells).filter(
     ([, cell]) => cell.status === "present",
@@ -288,14 +296,18 @@ export function RowDrawer({
       {/* Keyed by row and clicked cell: another row's source and target choices
           must not carry over, and a click on another cell of this row starts
           over with that cell as the target. */}
-      <RowActions
-        key={`${row.key}|${initialTarget ?? ""}`}
-        row={row}
-        gaps={gaps}
-        surfaceOrder={surfaceOrder}
-        onApplied={onApplied}
-        initialTarget={initialTarget}
-      />
+      {baselineMissing ? (
+        <BaselineMissingActions row={row} projectDir={baselineMissing.projectDir} />
+      ) : (
+        <RowActions
+          key={`${row.key}|${initialTarget ?? ""}`}
+          row={row}
+          gaps={gaps}
+          surfaceOrder={surfaceOrder}
+          onApplied={onApplied}
+          initialTarget={initialTarget}
+        />
+      )}
     </aside>
   );
 }
@@ -310,6 +322,61 @@ function inSurfaceOrder(ids: SurfaceId[], order: SurfaceId[]): SurfaceId[] {
 }
 
 const selectStyle = { minWidth: 0 } as const;
+
+/**
+ * A row the team baseline declares and this machine has nowhere (AC-26).
+ * There is no source surface, so there is no copy and no direct apply: the
+ * way to close it is compiling the baseline with the CLI.
+ */
+function BaselineMissingActions({ row, projectDir }: { row: GridRow; projectDir: string }) {
+  const [status, setStatus] = useState<string | null>(null);
+  const [failure, setFailure] = useState<string | null>(null);
+  const command = baselineCompileCommand(projectDir);
+  const copy = useCallback(async () => {
+    setFailure(null);
+    try {
+      await navigator.clipboard.writeText(command);
+      setStatus("CLI command copied.");
+    } catch (error) {
+      setStatus(null);
+      setFailure(errorDetails(error));
+    }
+  }, [command]);
+  return (
+    <div
+      data-testid="baseline-missing-actions"
+      style={{ padding: "0 18px 18px", display: "flex", flexDirection: "column", gap: 8 }}
+    >
+      <div
+        style={{
+          fontSize: 10,
+          fontWeight: 650,
+          letterSpacing: "0.05em",
+          textTransform: "uppercase",
+          color: "var(--fg-subtle)",
+        }}
+      >
+        Team baseline
+      </div>
+      <p style={{ fontSize: 12, margin: 0 }}>
+        The team baseline declares {row.name}, and this machine has it on no surface, so there is
+        nothing to copy from. Compile the baseline to add it:
+      </p>
+      <code style={{ fontSize: 11, opacity: 0.8, wordBreak: "break-all" }}>{command}</code>
+      <div>
+        <Button variant="ghost" size="sm" onClick={copy}>
+          Copy CLI command
+        </Button>
+      </div>
+      {failure && <ErrorNotice title="Couldn't copy" details={failure} />}
+      {status && (
+        <p style={{ fontSize: 12, margin: 0 }} role="status">
+          {status}
+        </p>
+      )}
+    </div>
+  );
+}
 
 /**
  * The three action surfaces for one row (AC-11, AC-28). The displayed CLI

@@ -364,7 +364,7 @@ describe("sidebar marks the current section (AC-61)", () => {
   const ROUTES: Array<[string, string]> = [
     ["/machine", "Machine"],
     ["/harness/file", "Profile"],
-    ["/harness/sync", "Profile"],
+    ["/harness/file/compile", "Profile"],
     ["/harness/claude-md", "Claude Code"],
     ["/harness/mcp", "Claude Code"],
     ["/harness/plugins", "Claude Code"],

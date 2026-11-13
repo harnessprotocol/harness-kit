@@ -11,7 +11,7 @@ import { initTheme } from "../lib/theme";
 import { initPreferences, getLabs } from "../lib/preferences";
 import { CommandPalette } from "../components/CommandPalette";
 import { useClaudeFileList } from "../hooks/useClaudeFileList";
-import { PageBoundary } from "../components/PageBoundary";
+import { PageBoundary, pageBoundaryKey } from "../components/PageBoundary";
 import { ToastProvider } from "../components/ToastProvider";
 import { ProjectSelector } from "../components/ProjectSelector";
 import { NAV, SETTINGS, visibleNav, type NavEntry } from "../nav";
@@ -46,7 +46,9 @@ function NavChildren({ entry, configFiles }: { entry: NavEntry; configFiles: str
         <NavLink
           key={item.path}
           to={item.path}
-          end={item.path === "/harness/plugins" ? false : undefined}
+          // Compile to project lives under /harness/file/…, so harness.yaml must
+          // match its own path only.
+          end={item.path === "/harness/plugins" ? false : item.path === "/harness/file" ? true : undefined}
           className={({ isActive }) => `sidebar-subitem${isActive ? " active" : ""}`}
           style={focusedIndex === idx ? { outline: "2px solid var(--accent)", outlineOffset: "-2px", borderRadius: "5px" } : undefined}
         >
@@ -456,7 +458,7 @@ function AppShell() {
 
         {/* Main content */}
         <main className="flex-1 overflow-y-auto" style={{ background: "var(--bg-base)" }}>
-          <PageBoundary locationKey={location.pathname}>
+          <PageBoundary locationKey={pageBoundaryKey(location.pathname)}>
             <Outlet />
           </PageBoundary>
         </main>

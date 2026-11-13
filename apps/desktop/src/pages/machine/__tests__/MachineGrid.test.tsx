@@ -213,3 +213,60 @@ describe("MachineGrid not-installed surfaces (AC-59)", () => {
     expect(screen.getByTestId("surface-col-claude-code")).toBeInTheDocument();
   });
 });
+
+describe("MachineGrid Team baseline column (AC-26)", () => {
+  const baselineCells = new Map<string, "required" | "missing-here">([
+    ["mcp-server:github", "required"],
+    ["skill:code-review", "missing-here"],
+  ]);
+
+  it("has no column without baselineCells", () => {
+    renderGrid();
+    expect(screen.queryByTestId("baseline-col")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("baseline-mcp-server:github")).not.toBeInTheDocument();
+  });
+
+  it("adds a named column header right after Resource", () => {
+    render(
+      <MachineGrid
+        inventory={MACHINE_FIXTURE_INVENTORY}
+        selectedRowKey={null}
+        onRowClick={vi.fn()}
+        baselineCells={baselineCells}
+      />,
+    );
+    const headers = screen.getAllByRole("columnheader").map((th) => th.textContent);
+    expect(headers.indexOf("Team baseline")).toBe(headers.indexOf("Resource") + 1);
+  });
+
+  it("shows required, missing here and empty cells, and lists the variants in the legend", () => {
+    render(
+      <MachineGrid
+        inventory={MACHINE_FIXTURE_INVENTORY}
+        selectedRowKey={null}
+        onRowClick={vi.fn()}
+        baselineCells={baselineCells}
+      />,
+    );
+    expect(screen.getByTestId("baseline-mcp-server:github")).toHaveTextContent("required");
+    expect(screen.getByTestId("baseline-skill:code-review")).toHaveTextContent("missing here");
+    expect(screen.getByTestId("baseline-plugin:board@harness-kit")).toBeEmptyDOMElement();
+    const legend = screen.getByTestId("machine-grid-legend");
+    expect(within(legend).getByText(CELL_VARIANTS.required.label)).toBeInTheDocument();
+    expect(within(legend).getByText(CELL_VARIANTS["baseline-missing"].label)).toBeInTheDocument();
+  });
+
+  it("opens the row when its baseline cell is clicked", () => {
+    const onRowClick = vi.fn();
+    render(
+      <MachineGrid
+        inventory={MACHINE_FIXTURE_INVENTORY}
+        selectedRowKey={null}
+        onRowClick={onRowClick}
+        baselineCells={baselineCells}
+      />,
+    );
+    fireEvent.click(screen.getByTestId("baseline-mcp-server:github"));
+    expect(onRowClick).toHaveBeenCalledWith(expect.objectContaining({ key: "mcp-server:github" }));
+  });
+});

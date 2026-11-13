@@ -31,7 +31,7 @@ export const NAV: NavEntry[] = [
     id: "profile", label: "Profile", path: "/harness/file", icon: FileCode, shortcut: 2,
     children: [
       { label: "harness.yaml", path: "/harness/file" },
-      { label: "Compile to project", path: "/harness/sync" },
+      { label: "Compile to project", path: "/harness/file/compile" },
     ],
   },
   {

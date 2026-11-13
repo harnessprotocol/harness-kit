@@ -4,7 +4,14 @@ import { Store } from "lucide-react";
 import type { GridCell, GridRow, MachineInventory, SurfaceId } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
 import { KIND_LABELS, familyGroups, shortDigest } from "./machine-view-model";
-import { CELL_VARIANTS, LEGEND_VARIANTS, rowCellVariants, type CellVariant } from "./cell-state";
+import {
+  BASELINE_LEGEND_VARIANTS,
+  CELL_VARIANTS,
+  LEGEND_VARIANTS,
+  rowCellVariants,
+  type CellVariant,
+} from "./cell-state";
+import type { BaselineCellState } from "./team-baseline";
 
 /**
  * The cross-surface Machine grid: 11 surface columns grouped by product
@@ -63,6 +70,13 @@ const RESOURCE_COL_WIDTH = 180;
 // Wide enough for a cell chip (46px + padding) and a short label; longer
 // labels truncate. Below RESOURCE + this × columns the grid scrolls.
 const SURFACE_COL_MIN_WIDTH = 84;
+// The Team baseline column holds "missing here", the longest chip.
+const BASELINE_COL_WIDTH = 104;
+
+const BASELINE_VARIANT: Record<BaselineCellState, CellVariant> = {
+  required: "required",
+  "missing-here": "baseline-missing",
+};
 
 // Surface-header badges. Shared with the legend, which shows a sample of each.
 const HEADER_BADGE_STYLE: CSSProperties = {
@@ -88,10 +102,11 @@ const MARKETPLACE_BADGE_STYLE: CSSProperties = {
 };
 
 /** Key to the chips and the header badges, under the grid (AC-13). */
-function GridLegend() {
+function GridLegend({ withBaseline }: { withBaseline: boolean }) {
+  const variants = withBaseline ? [...LEGEND_VARIANTS, ...BASELINE_LEGEND_VARIANTS] : LEGEND_VARIANTS;
   return (
     <div className="hk-grid-legend" data-testid="machine-grid-legend">
-      {LEGEND_VARIANTS.map((variant) => (
+      {variants.map((variant) => (
         <span key={variant} className="hk-grid-legend-item">
           <span className="hk-cell" data-variant={variant} aria-hidden="true">
             {CELL_VARIANTS[variant].chip}
@@ -125,6 +140,11 @@ export interface MachineGridProps {
   onRowClick: (row: GridRow, surface?: SurfaceId) => void;
   /** Precomputed variants by row key (see `inventoryVariants`). Computed per row when omitted. */
   variants?: Map<string, Record<SurfaceId, CellVariant>>;
+  /**
+   * The Team baseline column (AC-26): shown when given. A row key maps to
+   * "required" or "missing here"; a row not in the map shows an empty cell.
+   */
+  baselineCells?: Map<string, BaselineCellState>;
 }
 
 export function MachineGrid({
@@ -132,7 +152,11 @@ export function MachineGrid({
   selectedRowKey,
   onRowClick,
   variants: variantsByRow,
+  baselineCells,
 }: MachineGridProps) {
+  const withBaseline = baselineCells !== undefined;
+  const baselineWidth = withBaseline ? BASELINE_COL_WIDTH : 0;
+  const leadColumns = withBaseline ? 2 : 1;
   // AC-59: surfaces that are not installed are hidden until asked for. With
   // none installed, hiding them would leave an empty grid, so all show.
   const [showAll, setShowAll] = useState(false);
@@ -203,11 +227,12 @@ export function MachineGrid({
             borderCollapse: "collapse",
             tableLayout: "fixed",
             width: "100%",
-            minWidth: RESOURCE_COL_WIDTH + SURFACE_COL_MIN_WIDTH * surfaceOrder.length,
+            minWidth: RESOURCE_COL_WIDTH + baselineWidth + SURFACE_COL_MIN_WIDTH * surfaceOrder.length,
           }}
         >
           <colgroup>
             <col style={{ width: RESOURCE_COL_WIDTH }} />
+            {withBaseline && <col style={{ width: BASELINE_COL_WIDTH }} />}
             {surfaceOrder.map((id) => (
               <col key={id} />
             ))}
@@ -216,6 +241,7 @@ export function MachineGrid({
             {/* Product-family group header row */}
             <tr>
               <th aria-hidden="true" style={{ padding: 0 }} />
+              {withBaseline && <th aria-hidden="true" style={{ padding: 0 }} />}
               {groups.map((group) => (
                 <th
                   key={group.family}
@@ -244,6 +270,17 @@ export function MachineGrid({
               >
                 Resource
               </th>
+              {withBaseline && (
+                <th
+                  scope="col"
+                  data-testid="baseline-col"
+                  className="hk-baseline-col"
+                  title="Declared by this project's committed harness.yaml"
+                  style={{ ...headCellStyle, color: "var(--accent-text)" }}
+                >
+                  Team baseline
+                </th>
+              )}
               {surfaceOrder.map((id) => {
                 const detected = detectedById.get(id) ?? false;
                 const skipped = skippedById.get(id) ?? 0;
@@ -332,12 +369,14 @@ export function MachineGrid({
                   inventory.gaps,
                   inventory.surfaces.map((surface) => surface.id),
                 );
+              const baselineState = baselineCells?.get(row.key);
+              const baselineVariant = baselineState ? BASELINE_VARIANT[baselineState] : undefined;
               return (
                 <Fragment key={row.key}>
                   {newKind && (
                     <tr>
                       <td
-                        colSpan={surfaceOrder.length + 1}
+                        colSpan={surfaceOrder.length + leadColumns}
                         style={{
                           padding: "12px 8px 4px",
                           fontSize: 10,
@@ -382,6 +421,24 @@ export function MachineGrid({
                     >
                       {row.name}
                     </td>
+                    {withBaseline && (
+                      <td
+                        data-testid={`baseline-${row.key}`}
+                        data-variant={baselineVariant}
+                        className="hk-baseline-col"
+                        style={{ padding: "6px 8px", textAlign: "center" }}
+                      >
+                        {baselineVariant && (
+                          <span
+                            className="hk-cell"
+                            data-variant={baselineVariant}
+                            title={CELL_VARIANTS[baselineVariant].label}
+                          >
+                            {CELL_VARIANTS[baselineVariant].chip}
+                          </span>
+                        )}
+                      </td>
+                    )}
                     {surfaceOrder.map((id) => {
                       const detected = detectedById.get(id) ?? false;
                       return (
@@ -413,7 +470,7 @@ export function MachineGrid({
           </tbody>
         </table>
       </div>
-      <GridLegend />
+      <GridLegend withBaseline={withBaseline} />
     </div>
   );
 }

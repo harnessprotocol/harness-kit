@@ -1,13 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button, EmptyState, ErrorNotice } from "@harness-kit/ui";
 import { ChevronRight, ScanSearch } from "lucide-react";
-import type { GridRow, MachineInventory, SurfaceId } from "@harness-kit/core";
+import type { GridRow, MachineInventory, SurfaceDescriptor, SurfaceId } from "@harness-kit/core";
 import { errorDetails } from "../../lib/error-details";
 import { surfaceLabel } from "../../lib/surface-labels";
 import { useProjectDir } from "../../lib/project-dir";
 import { useRegisterCommands } from "../../lib/commands";
 import { filterRows } from "./machine-view-model";
 import { loadMachineInventory } from "./machine-data";
+import {
+  NO_TEAM_BASELINE,
+  buildTeamBaselineView,
+  readTeamBaseline,
+  withSyntheticRows,
+  type TeamBaselineState,
+} from "./team-baseline";
 import { MachineGrid } from "./MachineGrid";
 import {
   MachineFilterStatus,
@@ -42,6 +49,10 @@ export default function MachinePage() {
   const [clickedSurface, setClickedSurface] = useState<SurfaceId | null>(null);
   const [showSkipped, setShowSkipped] = useState(false);
   const [projectDegraded, setProjectDegraded] = useState(false);
+  // The project's committed harness.yaml (AC-26), read with each scan, and the
+  // registry that scan used, which baseline coverage must share.
+  const [teamBaseline, setTeamBaseline] = useState<TeamBaselineState>(NO_TEAM_BASELINE);
+  const [registry, setRegistry] = useState<SurfaceDescriptor[] | undefined>(undefined);
 
   /**
    * `keepSelection` (after an apply) refreshes whatever row is selected WHEN
@@ -62,8 +73,11 @@ export default function MachinePage() {
     if (!keepSelection) setSelectedRow(null);
     try {
       const result = await loadMachineInventory(dir);
+      const baseline = await readTeamBaseline(dir);
       if (seq !== loadSeq.current) return;
       setInventory(result.inventory);
+      setTeamBaseline(baseline);
+      setRegistry(result.registry);
       setProjectDegraded(result.projectDegraded);
       if (keepSelection) {
         setSelectedRow((current) =>
@@ -71,7 +85,12 @@ export default function MachinePage() {
         );
       }
     } catch (err) {
-      if (seq === loadSeq.current) setError(errorDetails(err));
+      if (seq === loadSeq.current) {
+        setError(errorDetails(err));
+        // The baseline belongs to the project this scan was for; a failed scan
+        // must not leave the previous project's column on the grid.
+        setTeamBaseline(NO_TEAM_BASELINE);
+      }
     } finally {
       if (seq === loadSeq.current) setLoading(false);
     }
@@ -95,9 +114,22 @@ export default function MachinePage() {
     // The strip arrives with the first scan, above the view region.
     layoutSettled: !(loading && !inventory),
   });
+  const baselineView = useMemo(
+    () =>
+      inventory && teamBaseline.status === "ready"
+        ? buildTeamBaselineView(inventory, teamBaseline.config, registry)
+        : null,
+    [inventory, teamBaseline, registry],
+  );
+  // A row that only the baseline declares is not in the inventory, so the
+  // filter hook must not treat it as a vanished selection.
+  const selectedBaselineOnly =
+    selectedRow !== null &&
+    baselineView?.cells.get(selectedRow.key) === "missing-here" &&
+    !(inventory?.rows.some((row) => row.key === selectedRow.key) ?? false);
   const { filter, setFilter, variants, shownRows } = useMachineFilter(
     inventory,
-    selectedRow?.key ?? null,
+    selectedRow && !selectedBaselineOnly ? selectedRow.key : null,
     clearSelection,
   );
   // The grid's filter is not in force while Drift shows: no cell reads as
@@ -177,6 +209,15 @@ export default function MachinePage() {
     [loading, view, filterCounts, shownFilter],
   );
 
+  // Baseline-only rows are not gaps or differs, so a filter hides them.
+  const gridRows = useMemo(
+    () =>
+      baselineView && shownFilter === "all"
+        ? withSyntheticRows(shownRows, baselineView.syntheticRows)
+        : shownRows,
+    [baselineView, shownFilter, shownRows],
+  );
+
   const rowDiffs = useMemo(
     () =>
       inventory && selectedRow
@@ -222,6 +263,22 @@ export default function MachinePage() {
           }}
         >
           Project directory could not be scanned — showing machine-only results.
+        </div>
+      )}
+
+      {teamBaseline.status === "unavailable" && (
+        <div
+          data-testid="team-baseline-notice"
+          style={{
+            marginBottom: 12,
+            padding: "6px 10px",
+            borderRadius: 6,
+            background: "var(--warning-light)",
+            color: "var(--warning-text)",
+            fontSize: 11.5,
+          }}
+        >
+          Team baseline not shown: this project&apos;s harness.yaml could not be read ({teamBaseline.message}).
         </div>
       )}
 
@@ -283,7 +340,7 @@ export default function MachinePage() {
 
               {inventory && (
                 <>
-                  {inventory.rows.length === 0 ? (
+                  {inventory.rows.length === 0 && gridRows.length === 0 ? (
                     <div style={{ marginTop: 20 }}>
                       <EmptyState
                         icon={<ScanSearch size={28} strokeWidth={1.5} />}
@@ -294,7 +351,8 @@ export default function MachinePage() {
                   ) : (
                     <div style={{ marginTop: 20 }}>
                       <MachineGrid
-                        inventory={{ ...inventory, rows: shownRows }}
+                        inventory={{ ...inventory, rows: gridRows }}
+                        baselineCells={baselineView?.cells}
                         variants={variants}
                         selectedRowKey={selectedRow?.key ?? null}
                         onRowClick={(row, surface) => {
@@ -397,6 +455,7 @@ export default function MachinePage() {
           gaps={inventory?.gaps ?? []}
           surfaceOrder={inventory?.surfaces.map((surface) => surface.id) ?? []}
           initialTarget={clickedSurface ?? undefined}
+          baselineMissing={selectedBaselineOnly && projectDir ? { projectDir } : undefined}
           onClose={() => setSelectedRow(null)}
           onApplied={() => load(projectDir, true)}
         />

@@ -13,7 +13,10 @@ export type CellVariant =
   | "absent"
   | "none"
   | "unmanaged"
-  | "unknown";
+  | "unknown"
+  // Team baseline column only (AC-26); never a surface cell.
+  | "required"
+  | "baseline-missing";
 
 export interface CellVariantInfo {
   /** Text inside the chip; null renders an empty cell. */
@@ -32,7 +35,12 @@ export const CELL_VARIANTS: Record<CellVariant, CellVariantInfo> = {
   none: { chip: "—", label: "no such concept" },
   unmanaged: { chip: "·", label: "not managed locally" },
   unknown: { chip: "?", label: "unknown, store hidden" },
+  required: { chip: "required", label: "declared by the team baseline, and on this machine" },
+  "baseline-missing": { chip: "missing here", label: "declared by the team baseline, on no surface here" },
 };
+
+/** Legend entries added while the Team baseline column shows. */
+export const BASELINE_LEGEND_VARIANTS: readonly CellVariant[] = ["required", "baseline-missing"];
 
 /** Variants shown in the legend, in display order (absent is the blank cell and is not listed). */
 export const LEGEND_VARIANTS: readonly CellVariant[] = [

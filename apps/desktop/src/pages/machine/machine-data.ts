@@ -1,7 +1,7 @@
 import { homeDir } from "@tauri-apps/api/path";
 import { buildMachineInventory } from "@harness-kit/core";
 import { resolveDesktopDefinitions } from "../../lib/definitions.js";
-import type { MachineInventory } from "@harness-kit/core";
+import type { MachineInventory, SurfaceDescriptor } from "@harness-kit/core";
 import { TauriFsProvider } from "../../lib/harness-fs";
 import { grantProjectDir } from "../../lib/project-dir";
 
@@ -23,6 +23,8 @@ export interface MachineScanResult {
   /** True when a project directory was requested but its runtime FS scope
    * grant failed — the inventory is machine-only and the UI should say so. */
   projectDegraded: boolean;
+  /** The surface registry the inventory used; baseline coverage must use the same one. */
+  registry: SurfaceDescriptor[];
 }
 
 /**
@@ -57,5 +59,9 @@ export async function loadMachineInventory(scanRoot: string | null): Promise<Mac
     },
     definitions.surfaces,
   );
-  return { inventory, projectDegraded: Boolean(scanRoot) && projectRoot === null };
+  return {
+    inventory,
+    projectDegraded: Boolean(scanRoot) && projectRoot === null,
+    registry: definitions.surfaces,
+  };
 }

@@ -16,7 +16,6 @@ const McpServersPage = lazy(() => import("./pages/harness/McpServersPage"));
 const PluginExplorerPage = lazy(() => import("./pages/harness/PluginExplorerPage"));
 const ClaudeMdPage = lazy(() => import("./pages/harness/ClaudeMdPage"));
 const ConfigFilePage = lazy(() => import("./pages/harness/ConfigFilePage"));
-const SyncPage = lazy(() => import("./pages/harness/SyncPage"));
 const MarketplacePage = lazy(() => import("./pages/marketplace/MarketplacePage"));
 const DashboardPage = lazy(() => import("./pages/observatory/DashboardPage"));
 const SessionsPage = lazy(() => import("./pages/observatory/SessionsPage"));
@@ -87,13 +86,17 @@ export default function App() {
             <Route path="fleet" element={<FleetRedirect />} />
 
             {/* Harness Manager */}
-            <Route path="harness/file" element={<HarnessFilePage />} />
+            {/* AC-24: harness.yaml and Compile are tabs of one page. One route serves
+                both (`/harness/file` and `/harness/file/compile`) so switching tabs
+                keeps the page, and its unsaved edits, mounted. */}
+            <Route path="harness/file/*" element={<HarnessFilePage />} />
             <Route path="harness/plugins" element={<PluginsPage />} />
             <Route path="harness/plugins/:pluginName" element={<PluginExplorerPage />} />
             <Route path="harness/mcp" element={<McpServersPage />} />
             <Route path="harness/hooks" element={<HooksPage />} />
             <Route path="harness/claude-md" element={<ClaudeMdPage />} />
-            <Route path="harness/sync" element={<SyncPage />} />
+            {/* The old Sync path lands on Profile's Compile tab. */}
+            <Route path="harness/sync" element={<Navigate to="/harness/file/compile" replace />} />
             {/* Retired route (AC-41) */}
             <Route path="harness/settings" element={<Navigate to="/harness/file" replace />} />
             <Route path="harness/config/:filename" element={<ConfigFilePage />} />
