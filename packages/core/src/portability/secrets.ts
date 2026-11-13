@@ -21,6 +21,11 @@ const CREDENTIAL_VALUE = /(?:-----BEGIN [A-Z ]*PRIVATE KEY-----|\bBearer\s+[A-Za
 const SENSITIVE_FLAG = /^--?(?:authorization|token|auth[-_]?token|api[-_]?key|access[-_]?token|access[-_]?key|client[-_]?secret|password|passwd|private[-_]?key|secret)$/i;
 const INLINE_SENSITIVE_FLAG = /^(--?(?:authorization|token|auth[-_]?token|api[-_]?key|access[-_]?token|access[-_]?key|client[-_]?secret|password|passwd|private[-_]?key|secret)=)(.+)$/i;
 
+/** Is this value an env/secret reference (`$X`, `${X}`, `env:X`, `secret://…`) rather than secret material? */
+export function isSecretReference(value: string): boolean {
+  return REFERENCE.test(value);
+}
+
 /**
  * Value-level secret heuristic, shared with observe/normalize.ts: does this
  * key/value pair look like credential material? Reuses the same key-name and
