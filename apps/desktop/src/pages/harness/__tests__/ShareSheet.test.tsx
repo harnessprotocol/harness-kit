@@ -4,13 +4,14 @@ import type { HarnessConfig } from "@harness-kit/core";
 import { buildProfilePrompt, buildProfileShare } from "@harness-kit/core";
 import ShareSheet from "../ShareSheet";
 import { ToastProvider } from "../../../components/ToastProvider";
+import { fakeSecret } from "../../../test-utils/fake-secret";
 
 const mockSaveShareFile = vi.fn();
 vi.mock("../../../lib/tauri", () => ({
   saveShareFile: (...args: unknown[]) => mockSaveShareFile(...args),
 }));
 
-const SECRET = "ghp_abcdefghijklmnopqrstuvwxyz0123456789";
+const SECRET = fakeSecret("ghp_", "abcdefghijklmnopqrstuvwxyz0123456789");
 const withSecret: HarnessConfig = {
   version: "1",
   metadata: { name: "alice-setup", description: "Alice's tools" },

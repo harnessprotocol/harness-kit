@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { normalizeResource, normalizeObservation } from "../src/observe/normalize.js";
 import type { ObservedResource, SurfaceObservation } from "../src/observe/observe-surface.js";
+import { fakeSecret } from "./helpers/fake-secret.js";
 
 function mcpResource(
   value: unknown,
@@ -192,7 +193,7 @@ describe("normalizeResource — mcp-server inline secrets", () => {
 
   it("an element matching a credential value shape is placeholdered", () => {
     const a = normalizeResource(
-      mcpResource({ command: "run", args: ["ghp_abcdefghijklmnopqrstu", "input.txt"] }),
+      mcpResource({ command: "run", args: [fakeSecret("ghp_", "abcdefghijklmnopqrstu"), "input.txt"] }),
     );
     expect((a.canonicalForm as { args: string[] }).args).toEqual(["<secret>", "input.txt"]);
   });
@@ -260,7 +261,7 @@ describe("normalizeResource — url query/path secrets", () => {
 
   it("placeholders credential-shaped query values under non-sensitive names; keyspace-like names stay verbatim", () => {
     const cred = normalizeResource(
-      mcpResource({ transport: "http", url: "https://x.test/mcp?blob=ghp_abcdefghijklmnopqrstu" }),
+      mcpResource({ transport: "http", url: `https://x.test/mcp?blob=${fakeSecret("ghp_", "abcdefghijklmnopqrstu")}` }),
     );
     expect((cred.canonicalForm as { url: string }).url).toBe("https://x.test/mcp?blob=<secret>");
     const plain = normalizeResource(
@@ -280,7 +281,7 @@ describe("normalizeResource — widened value shapes and key tokens", () => {
     );
     expect((jwt.canonicalForm as { env: Record<string, string> }).env.SOME_VAR).toBe("<secret>");
     const slack = normalizeResource(
-      mcpResource({ command: "run", env: { SOME_VAR: "xoxb-123456789012-abcdefghij" } }),
+      mcpResource({ command: "run", env: { SOME_VAR: fakeSecret("xoxb-", "123456789012-abcdefghij") } }),
     );
     expect((slack.canonicalForm as { env: Record<string, string> }).env.SOME_VAR).toBe("<secret>");
   });
@@ -304,7 +305,7 @@ describe("normalizeResource — widened value shapes and key tokens", () => {
       mcpResource({
         command: "run",
         env: {
-          NESTED: { token: "ghp_abcdefghijklmnopqrstu", note: "hello" } as unknown as string,
+          NESTED: { token: fakeSecret("ghp_", "abcdefghijklmnopqrstu"), note: "hello" } as unknown as string,
         },
       }),
     );

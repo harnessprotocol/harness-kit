@@ -5,6 +5,7 @@ import { buildMachineInventory } from "../src/observe/machine-inventory.js";
 import { validateHarness } from "../src/schema/validate.js";
 import type { ObserveOptions } from "../src/observe/observe-surface.js";
 import { MockFsProvider } from "./helpers/mock-fs.js";
+import { fakeSecret } from "./helpers/fake-secret.js";
 
 const HOME = "/home/user";
 const OPTS: ObserveOptions = { projectRoot: null, homeRoot: HOME, platform: "darwin" };
@@ -14,13 +15,13 @@ const CLAUDE_JSON = JSON.stringify({
     github: {
       command: "npx",
       args: ["-y", "gh-mcp"],
-      env: { GITHUB_TOKEN: "ghp_abcdefghijklmnopqrstuvwxyz0123456789", PORT: "5432" },
+      env: { GITHUB_TOKEN: fakeSecret("ghp_", "abcdefghijklmnopqrstuvwxyz0123456789"), PORT: "5432" },
     },
     remote: { type: "http", url: "https://example.com/mcp" },
     authed: {
       type: "http",
       url: "https://authed.example.com/mcp",
-      headers: { Authorization: "Bearer ghp_abcdefghijklmnopqrstuvwxyz0123456789", "X-Region": "us" },
+      headers: { Authorization: `Bearer ${fakeSecret("ghp_", "abcdefghijklmnopqrstuvwxyz0123456789")}`, "X-Region": "us" },
     },
   },
 });

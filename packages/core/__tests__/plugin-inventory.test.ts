@@ -16,6 +16,7 @@ import { planCellAction, syncCliCommand } from "../src/write/plan-cell-action.js
 import { buildAgentPrompt } from "../src/write/agent-prompt.js";
 import { applyCellAction } from "../src/write/apply-cell-action.js";
 import { MockFsProvider } from "./helpers/mock-fs.js";
+import { fakeSecret } from "./helpers/fake-secret.js";
 
 /**
  * Plugin and marketplace enumeration (AC-4).
@@ -511,7 +512,7 @@ describe("marketplace sources cannot carry credentials off the machine", () => {
   // credentials is the shape both surfaces genuinely record for a private
   // marketplace, and `harness-kit status --json` is what users paste into
   // bug reports.
-  const TOKEN = "ghp_EXAMPLETOKEN0000000000000000000000";
+  const TOKEN = fakeSecret("ghp_", "EXAMPLETOKEN0000000000000000000000");
 
   async function sourcesFor(files: Record<string, string>, surface: "claude-code" | "codex") {
     const fs = new MockFsProvider(files, PROJECT, HOME);
