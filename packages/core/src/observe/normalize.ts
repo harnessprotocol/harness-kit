@@ -3,6 +3,7 @@ import type { StoreFormatId, SurfaceId, SurfaceScope } from "../surfaces/types.j
 import { digestValue } from "../portability/resource-model.js";
 import { looksLikeSecret, sanitizeCommandArgs, sanitizeUrl } from "../portability/secrets.js";
 import { isRecord } from "../utils/is-record.js";
+import { syncedInstructionsContent } from "../compile/markers.js";
 import type { ObservedResource, SurfaceObservation } from "./observe-surface.js";
 import type { InstructionsStoreValue, SkillStoreValue } from "./read-store.js";
 import type { PluginStoreValue } from "../codecs/plugin-shapes.js";
@@ -203,7 +204,14 @@ function canonicalizeInstructions(value: unknown): unknown {
   if (!isRecord(value)) return deepCanonical(value);
   const instructions = value as Partial<InstructionsStoreValue>;
   return {
-    content: typeof instructions.content === "string" ? normalizeText(instructions.content) : "",
+    // A file holding a `harness:sync` block compares as that block's content:
+    // the markers are Harness Kit's bookkeeping, and the user's own prose
+    // around them is not what a copy carries. Without this a copied row's
+    // digest differed from its source forever.
+    content:
+      typeof instructions.content === "string"
+        ? normalizeText(syncedInstructionsContent(instructions.content))
+        : "",
   };
 }
 

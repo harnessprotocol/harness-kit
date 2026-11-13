@@ -19,6 +19,7 @@ import {
   migrateDriftAcknowledgements,
   unacknowledgeDriftItem,
   getAcknowledgedDriftItems,
+  readHarnessFile,
 } from "../../lib/tauri";
 import { errorDetails } from "../../lib/error-details";
 import { appDataDir, join as joinPath } from "@tauri-apps/api/path";
@@ -26,6 +27,15 @@ import { buildDesktopPortabilitySnapshot, type DesktopPortabilitySnapshot } from
 import { useProjectDir } from "../../lib/project-dir";
 
 export type { DriftSummary };
+
+/** Existence of ~/harness.yaml, reported by the Rust side as a boolean; the file is never read. */
+async function hasLegacyHomeFile(): Promise<boolean> {
+  try {
+    return (await readHarnessFile()).legacy_home_file === true;
+  } catch {
+    return false;
+  }
+}
 
 export interface DriftPageProps {
   /** Rendered inside the Machine view (AC-18) rather than as a page. */
@@ -53,6 +63,7 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
   const [portability, setPortability] = useState<DesktopPortabilitySnapshot | null>(null);
   const [scanned, setScanned] = useState(false);
   const [scopeStatuses, setScopeStatuses] = useState<ScopeStatus[]>([]);
+  const [legacyHomeFile, setLegacyHomeFile] = useState(false);
 
   // The app's one toast stack (AppLayout's ToastProvider, always-mounted live region).
   const pushToast = useToast();
@@ -87,6 +98,11 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
       if (seq !== loadSeq.current) return;
       setEntries(collected);
       setScopeStatuses(statuses);
+      setLegacyHomeFile(
+        statuses.some((s) => s.scope.kind === "global" && s.state === "no-file") &&
+          (await hasLegacyHomeFile()),
+      );
+      if (seq !== loadSeq.current) return;
       setPortability(portabilitySnapshot);
       setAcknowledged(
         new Set(ackRows.map((a) => [a.scopeRoot, a.adapter, a.path, a.harnessName, a.slot].join("::"))),
@@ -174,6 +190,7 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
         onRescan={load}
         portability={portability}
         scopeStatuses={scopeStatuses}
+        legacyHomeFile={legacyHomeFile}
       />
 
       <FixPreviewModal

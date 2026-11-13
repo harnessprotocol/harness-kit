@@ -11,6 +11,31 @@ function makeConfig(servers: HarnessConfig["mcp-servers"] = {}): HarnessConfig {
   };
 }
 
+describe("compileMcpServers placeholder guard", () => {
+  it("refuses a literal <secret> env value, naming the server and key", async () => {
+    const config = makeConfig({
+      github: { transport: "stdio", command: "npx", env: { GITHUB_TOKEN: "<secret>" } },
+    });
+    await expect(compileMcpServers(config, ["claude-code"], new MockFsProvider())).rejects.toThrow(
+      /'github'.*env\.GITHUB_TOKEN/,
+    );
+  });
+
+  it("refuses a <secret> header value, and passes ${NAME} references through verbatim", async () => {
+    const bad = makeConfig({
+      api: { transport: "http", url: "https://x.test/mcp", headers: { Authorization: "Bearer <secret>" } },
+    });
+    await expect(compileMcpServers(bad, ["claude-code"], new MockFsProvider())).rejects.toThrow(
+      /'api'.*headers\.Authorization/,
+    );
+    const good = makeConfig({
+      github: { transport: "stdio", command: "npx", env: { GITHUB_TOKEN: "${GITHUB_TOKEN}" } },
+    });
+    const { files } = await compileMcpServers(good, ["claude-code"], new MockFsProvider());
+    expect(JSON.parse(files[0]!.content).mcpServers.github.env.GITHUB_TOKEN).toBe("${GITHUB_TOKEN}");
+  });
+});
+
 describe("compileMcpServers", () => {
   it("creates MCP JSON files for each target", async () => {
     const fs = new MockFsProvider();

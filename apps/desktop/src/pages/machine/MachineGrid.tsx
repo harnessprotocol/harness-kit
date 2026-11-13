@@ -261,13 +261,24 @@ export function MachineGrid({
                       ...(detected ? {} : { opacity: 0.45 }),
                     }}
                   >
-                    <span style={{ display: "inline-flex", alignItems: "center", gap: 4, maxWidth: "100%" }}>
-                      <span
-                        data-testid={`surface-label-${id}`}
-                        style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                      >
-                        {surfaceLabel(id)}
-                      </span>
+                    {/* The label owns its line, so a narrow column never cuts it to
+                        make room for the badges; they sit on their own line below. */}
+                    <div
+                      data-testid={`surface-label-${id}`}
+                      style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                    >
+                      {surfaceLabel(id)}
+                    </div>
+                    <div
+                      style={{
+                        display: skipped > 0 || marketplaces !== null ? "flex" : "none",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexWrap: "wrap",
+                        gap: 4,
+                        marginTop: 2,
+                      }}
+                    >
                       {skipped > 0 && (
                         <span
                           title={`${skipped} skipped ${skipped === 1 ? "entry" : "entries"} — see diagnostics below`}
@@ -290,7 +301,7 @@ export function MachineGrid({
                           {marketplaces.length}
                         </span>
                       )}
-                    </span>
+                    </div>
                     {!detected && (
                       <div
                         style={{

@@ -570,7 +570,9 @@ function RowActions({
             aria-label={
               view.plan.overwrites === undefined
                 ? "Acknowledge capability loss"
-                : "Acknowledge overwriting the target's version"
+                : row.kind === "instructions"
+                  ? "Acknowledge updating the Harness Kit block"
+                  : "Acknowledge overwriting the target's version"
             }
           />
           {view.plan.overwrites === undefined ? (
@@ -584,11 +586,20 @@ function RowActions({
             // action was deferred from M2 because a one-click copy would
             // silently pick a winner.
             <span data-testid="overwrite-warning">
-              {surfaceLabel(target as SurfaceId)} already has this. Applying replaces its
-              version:{" "}
-              {view.plan.overwrites
-                .map((delta) => `${delta.path} (${delta.kind})`)
-                .join(", ")}
+              {row.kind === "instructions" ? (
+                <>
+                  {surfaceLabel(target as SurfaceId)} already has a Harness Kit block here.
+                  Applying updates that block; text outside it stays.
+                </>
+              ) : (
+                <>
+                  {surfaceLabel(target as SurfaceId)} already has this. Applying replaces its
+                  version:{" "}
+                  {view.plan.overwrites
+                    .map((delta) => `${delta.path} (${delta.kind})`)
+                    .join(", ")}
+                </>
+              )}
             </span>
           )}
         </label>

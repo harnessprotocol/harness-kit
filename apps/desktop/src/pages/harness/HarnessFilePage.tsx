@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button, Card, ErrorNotice, Input } from "@harness-kit/ui";
 import { writeHarnessFile, saveCustomProfile } from "../../lib/tauri";
 import { describeHarnessSource, readHarnessSource } from "../../lib/harness-source";
+import { LEGACY_HARNESS_NOTICE } from "../../lib/legacy-harness-notice";
 import { projectDirLabel, useProjectDir } from "../../lib/project-dir";
 import { importPersonalHarness } from "../../lib/personal-inventory";
 import { parseHarness, validateHarnessYaml } from "@harness-kit/core";
@@ -36,6 +37,9 @@ export default function HarnessFilePage() {
   const [diskContent, setDiskContent] = useState<string | null>(null);
   const [filePath, setFilePath] = useState<string | null>(null);
   const [view, setView] = useState<View>("formatted");
+
+  // A file at ~/harness.yaml with none at ~/.claude/harness.yaml (existence only).
+  const [legacyHomeFile, setLegacyHomeFile] = useState(false);
 
   // Editor state
   const [editorContent, setEditorContent] = useState("");
@@ -71,12 +75,14 @@ export default function HarnessFilePage() {
       .then((result) => {
         if (generation !== loadGeneration.current) return;
         setFound(result.found);
+        setLegacyHomeFile(result.legacy_home_file === true);
         setDiskContent(result.content);
         setFilePath(result.path);
       })
       .catch((e) => {
         if (generation !== loadGeneration.current) return;
         setFound(false);
+        setLegacyHomeFile(false);
         setDiskContent(null);
         setFilePath(null);
         setFetchError(errorDetails(e));
@@ -398,6 +404,16 @@ export default function HarnessFilePage() {
               at the project root. Add one there, or clear the project in the title bar to work on your personal profile.
             </p>
           </Card>
+        )}
+
+        {!loading && !fetchError && !found && !readOnly && legacyHomeFile && (
+          <p
+            role="note"
+            data-testid="legacy-harness-notice"
+            style={{ fontSize: "13px", color: "var(--fg-muted)", margin: "0 0 12px" }}
+          >
+            {LEGACY_HARNESS_NOTICE}
+          </p>
         )}
 
         {!loading && !fetchError && !found && !readOnly && view !== "editor" && (

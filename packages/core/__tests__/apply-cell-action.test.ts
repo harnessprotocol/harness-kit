@@ -149,6 +149,69 @@ describe("instructions copy leaves no gap on rescan (AC-57)", () => {
     expect(after.gaps.find((g) => g.row === "instructions:user instructions")).toBeUndefined();
   });
 
+  const copy = async (
+    fs: MockFsProvider,
+    from: "claude-code" | "codex",
+    to: "claude-code" | "codex",
+    stamp: string,
+  ) => {
+    const planned = await planCellAction(
+      fs,
+      { kind: "instructions", name: "User instructions", from, to, scope: "user" },
+      OPTS,
+    );
+    const result = await applyCellAction(planned, context(fs, stamp), { homeRoot: "/home/user" });
+    return { planned, result };
+  };
+  const userRow = async (fs: MockFsProvider) =>
+    (await buildMachineInventory(fs, OPTS)).rows.find((r) => r.key === "instructions:user instructions")!;
+  const sync = (text: string) => (text.match(/BEGIN harness:sync/g) ?? []).length;
+
+  it("copy into an empty target rescans as the same content, and a repeat is a no-op", async () => {
+    const fs = instructionsMachine();
+    await copy(fs, "claude-code", "codex", "a");
+    const row = await userRow(fs);
+    expect(row.cells.codex.status).toBe("present");
+    expect(row.cells.codex.effectiveDigest).toBe(row.cells["claude-code"].effectiveDigest);
+    expect((await buildMachineInventory(fs, OPTS)).diffs).toEqual([]);
+    const again = await copy(fs, "claude-code", "codex", "b");
+    expect(again.planned.noop).toBe(true);
+  });
+
+  it("copy into a target with its own prose keeps the prose and rescans as the same", async () => {
+    const fs = new MockFsProvider({
+      ...instructionsMachine().getAllFiles(),
+      "/home/user/.codex/AGENTS.md": "# Codex notes\n\nMine.\n",
+    });
+    await copy(fs, "claude-code", "codex", "a");
+    const text = fs.getFile("/home/user/.codex/AGENTS.md")!;
+    expect(text).toContain("Mine.");
+    expect(text).toContain("BEGIN harness:sync:user-instructions");
+    const row = await userRow(fs);
+    expect(row.cells.codex.effectiveDigest).toBe(row.cells["claude-code"].effectiveDigest);
+    expect((await copy(fs, "claude-code", "codex", "b")).planned.noop).toBe(true);
+  });
+
+  it("copying back and forth never nests blocks", async () => {
+    const fs = new MockFsProvider({
+      ...instructionsMachine().getAllFiles(),
+      "/home/user/.codex/AGENTS.md": "# Beta\n",
+    });
+    await copy(fs, "claude-code", "codex", "a");
+    // Claude's own text changes; the codex copy is now the older one.
+    const edited = new MockFsProvider({
+      ...fs.getAllFiles(),
+      "/home/user/.claude/CLAUDE.md": "# Alpha two\n",
+    });
+    await copy(edited, "codex", "claude-code", "b");
+    expect(sync(edited.getFile("/home/user/.claude/CLAUDE.md")!)).toBe(1);
+    await copy(edited, "claude-code", "codex", "c");
+    const codex = edited.getFile("/home/user/.codex/AGENTS.md")!;
+    expect(sync(codex)).toBe(1);
+    expect(codex).toContain("# Beta");
+    expect(codex.match(/END harness:sync/g)).toHaveLength(1);
+  });
+
   it("refuses a Project instructions row requested at user scope instead of writing the user file", async () => {
     const fs = new MockFsProvider({
       "/home/user/.codex/config.toml": 'model = "gpt-5"\n',

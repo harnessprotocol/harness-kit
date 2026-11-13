@@ -17,6 +17,11 @@ const CLAUDE_JSON = JSON.stringify({
       env: { GITHUB_TOKEN: "ghp_abcdefghijklmnopqrstuvwxyz0123456789", PORT: "5432" },
     },
     remote: { type: "http", url: "https://example.com/mcp" },
+    authed: {
+      type: "http",
+      url: "https://authed.example.com/mcp",
+      headers: { Authorization: "Bearer ghp_abcdefghijklmnopqrstuvwxyz0123456789", "X-Region": "us" },
+    },
   },
 });
 const SETTINGS = JSON.stringify({
@@ -45,7 +50,7 @@ describe("importFromInventory (AC-56)", () => {
       .map((r) => r.name)
       .sort();
     expect(Object.keys(result.harnessConfig["mcp-servers"] ?? {}).sort()).toEqual(gridServers);
-    expect(gridServers).toEqual(["github", "remote"]);
+    expect(gridServers).toEqual(["authed", "github", "remote"]);
   });
 
   it("never reads the retired ~/.claude/mcp.json", async () => {
@@ -58,16 +63,24 @@ describe("importFromInventory (AC-56)", () => {
     expect(result.inventory).toEqual(await buildMachineInventory(fs(), OPTS));
   });
 
-  it("writes stdio and network servers, with secrets replaced by the inventory's placeholder", async () => {
+  it("writes secrets as ${NAME} references, never the literal <secret> placeholder", async () => {
     const { harnessConfig, harnessYaml } = await importFromInventory(fs(), OPTS);
     const servers = harnessConfig["mcp-servers"]!;
     expect(servers.github).toMatchObject({ transport: "stdio", command: "npx", args: ["-y", "gh-mcp"] });
+    // An env secret references the env var of the same name.
     expect((servers.github as { env: Record<string, string> }).env).toEqual({
-      GITHUB_TOKEN: "<secret>",
+      GITHUB_TOKEN: "${GITHUB_TOKEN}",
       PORT: "5432",
+    });
+    // A header secret gets a derived name, SERVER_HEADER, upper-snake-cased. The sanitizer
+    // replaces the whole header value, so a "Bearer " prefix is not recoverable here.
+    expect((servers.authed as { headers: Record<string, string> }).headers).toEqual({
+      Authorization: "${AUTHED_AUTHORIZATION}",
+      "X-Region": "us",
     });
     expect(servers.remote).toMatchObject({ transport: "http", url: "https://example.com/mcp" });
     expect(harnessYaml).not.toContain("ghp_");
+    expect(harnessYaml).not.toContain("<secret>");
   });
 
   it("carries Claude Code permissions", async () => {

@@ -152,8 +152,32 @@ describe("store write executors (AC-12, AC-13)", () => {
     const after = plan.changes[0]!.after!;
     expect(after).toContain("# My own notes");
     expect(after).toContain("Keep me.");
-    expect(after).toContain("BEGIN harness:sync:house-style");
+    // The slot is the scope's, not the source file's name.
+    expect(after).toContain("BEGIN harness:sync:user-instructions");
+    expect(after).not.toContain("house-style");
     expect(after).toContain("Use tabs.");
+  });
+
+  it("never nests: a source that carries a sync block copies only the block's content", async () => {
+    const fs = new MockFsProvider({ "/home/user/.codex/AGENTS.md": "mine\n" });
+    const plan = await planStoreWrite(
+      fs,
+      store({ kind: "instructions", formatId: "markdown-instructions", path: ".codex/AGENTS.md" }),
+      "/home/user/.codex/AGENTS.md",
+      {
+        kind: "instructions",
+        name: "User instructions",
+        value: {
+          content:
+            "own prose\n\n<!-- BEGIN harness:sync:user-instructions -->\nUse tabs.\n<!-- END harness:sync:user-instructions -->\n",
+        },
+      },
+    );
+    if (!plan.supported) throw new Error("expected supported");
+    const after = plan.changes[0]!.after!;
+    expect(after.match(/BEGIN harness:sync/g)).toHaveLength(1);
+    expect(after).toContain("Use tabs.");
+    expect(after).not.toContain("own prose");
   });
 
   it("replaces an existing instruction block rather than appending a second", async () => {
@@ -171,7 +195,9 @@ describe("store write executors (AC-12, AC-13)", () => {
     const after = plan.changes[0]!.after!;
     expect(after).toContain("Use tabs.");
     expect(after).not.toContain("Use spaces.");
-    expect(after.match(/BEGIN harness:sync:house-style/g)).toHaveLength(1);
+    // A block an older build wrote under the source file's name moves onto the scope slot.
+    expect(after.match(/BEGIN harness:sync/g)).toHaveLength(1);
+    expect(after).toContain("BEGIN harness:sync:user-instructions");
   });
 
   it("removing one instruction block leaves a name-prefixed sibling intact", async () => {

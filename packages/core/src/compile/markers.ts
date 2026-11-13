@@ -43,6 +43,47 @@ export function findMarkerBlock(
   return null;
 }
 
+export interface SyncBlockLocation extends MarkerBlockLocation {
+  slot: string;
+}
+
+/**
+ * The first `harness:sync:<slot>` block in a file, whatever its slot, or null.
+ * Cross-surface instruction copies write one; older copies used the source
+ * file's basename as the slot, so the slot is not assumed.
+ */
+export function findAnySyncBlock(fileContent: string): SyncBlockLocation | null {
+  const lines = fileContent.split("\n");
+  const begin = /^<!-- BEGIN harness:sync:([^ ]+) -->$/;
+  for (let i = 0; i < lines.length; i++) {
+    const match = lines[i].trim().match(begin);
+    if (!match) continue;
+    const endTag = `<!-- END harness:sync:${match[1]} -->`;
+    for (let j = i + 1; j < lines.length; j++) {
+      if (lines[j].trim() === endTag) {
+        return {
+          slot: match[1],
+          startLine: i,
+          endLine: j,
+          content: lines.slice(i + 1, j).join("\n"),
+        };
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * The instruction text a file carries for cross-surface comparison: the inside
+ * of its `harness:sync` block when it has one (the part a copy wrote and keeps
+ * current), else the whole file. A file with the user's own prose plus a block
+ * therefore compares as the block, so a copied row reads as the same as its
+ * source, and copying such a file onward never nests a block.
+ */
+export function syncedInstructionsContent(fileContent: string): string {
+  return findAnySyncBlock(fileContent)?.content ?? fileContent;
+}
+
 export function replaceMarkerBlock(
   fileContent: string,
   name: string,

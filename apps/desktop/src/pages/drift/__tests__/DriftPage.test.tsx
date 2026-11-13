@@ -65,7 +65,9 @@ vi.mock("../../../lib/tauri", () => ({
   unacknowledgeDriftItem: vi.fn(),
   getAcknowledgedDriftItems: () => mockGetAcknowledgedDriftItems(),
   migrateDriftAcknowledgements: vi.fn(() => Promise.resolve(0)),
+  readHarnessFile: () => mockReadHarnessFile(),
 }));
+const mockReadHarnessFile = vi.fn();
 
 function renderPage() {
   return render(
@@ -85,6 +87,7 @@ describe("DriftPage", () => {
     mockValidateHarness.mockReturnValue({ valid: true });
     mockGetAcknowledgedDriftItems.mockResolvedValue([]);
     mockGrantProjectScope.mockResolvedValue(undefined);
+    mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null });
   });
 
   it("shows the empty state when there is no drift", async () => {
@@ -105,6 +108,24 @@ describe("DriftPage", () => {
       );
       expect(screen.queryByText("No drift detected")).not.toBeInTheDocument();
       expect(mockDetectDrift).not.toHaveBeenCalled();
+    });
+
+    it("tells the user to move ~/harness.yaml when only that file exists", async () => {
+      absentPaths.add("/home/user/.claude/harness.yaml");
+      mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null, legacy_home_file: true });
+      mockDetectDrift.mockResolvedValue(EMPTY);
+      renderPage();
+      expect(await screen.findByTestId("drift-scope-notes")).toHaveTextContent(
+        "Found ~/harness.yaml. Harness Kit now reads ~/.claude/harness.yaml; move the file there.",
+      );
+    });
+
+    it("shows no move notice when ~/.claude/harness.yaml exists", async () => {
+      mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null, legacy_home_file: true });
+      mockDetectDrift.mockResolvedValue(EMPTY);
+      renderPage();
+      await screen.findByText("No drift detected");
+      expect(screen.queryByText(/Found ~\/harness.yaml/)).not.toBeInTheDocument();
     });
 
     it("says 'could not read' when the file exists but cannot be read", async () => {

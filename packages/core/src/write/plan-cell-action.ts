@@ -16,6 +16,7 @@ import type {
   SurfaceScope,
 } from "../surfaces/types.js";
 import { isRecord } from "../utils/is-record.js";
+import { findAnySyncBlock } from "../compile/markers.js";
 import { planStoreWrite, unsupportedKindReason } from "./write-store.js";
 import { diffCanonicalForms } from "../observe/machine-inventory.js";
 import type { FieldDelta } from "../observe/machine-inventory.js";
@@ -431,6 +432,13 @@ function diffAgainstExisting(
       value,
       provenance: { file: "", formatId: "json-generic" },
     }).canonicalForm;
+  // An instructions copy writes a Harness Kit block and leaves the rest of the
+  // file alone. A target file with no such block loses nothing, so there is
+  // nothing to confirm; only an existing block's content is replaced.
+  if (kind === "instructions") {
+    const text = isRecord(existingValue) ? existingValue.content : undefined;
+    if (typeof text !== "string" || findAnySyncBlock(text) === null) return null;
+  }
   const deltas = diffCanonicalForms(canonical(existingValue), canonical(incomingValue));
   return deltas.length > 0 ? deltas : null;
 }

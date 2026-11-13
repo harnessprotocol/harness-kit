@@ -1,7 +1,13 @@
 import { translateServer } from "../adapters/opencode/config-file.js";
 import { writeCodexMcp } from "../codecs/toml-codex.js";
 import type { CodexMcpValue } from "../codecs/toml-codex.js";
-import { appendMarkerBlock, findMarkerBlock, replaceMarkerBlock } from "../compile/markers.js";
+import {
+  appendMarkerBlock,
+  buildMarkerBlock,
+  findAnySyncBlock,
+  findMarkerBlock,
+  syncedInstructionsContent,
+} from "../compile/markers.js";
 import { translateServer as translateMcpJson } from "../compile/mcp-servers.js";
 import type { FsProvider } from "../fs-provider.js";
 import type { HarnessResourceKind } from "../portability/types.js";
@@ -216,15 +222,20 @@ async function writeMarkdownInstructions(
 
   const before = await readBefore(fs, path);
   const current = before ?? "";
+  // One block per file, named for the scope rather than the source file, so a
+  // copy from CLAUDE.md into AGENTS.md and back addresses the same block.
+  const slot = `${store.scope}-instructions`;
   if (edit.value === null) {
-    if (!findMarkerBlock(current, MARKER_NAME, edit.name)) {
+    // Blocks an older build wrote under the source file's name still count.
+    const removeSlot = findMarkerBlock(current, MARKER_NAME, slot) ? slot : edit.name;
+    if (!findMarkerBlock(current, MARKER_NAME, removeSlot)) {
       return { supported: true, changes: [] };
     }
     // Exact marker match, not startsWith: removing "api" was stripping the
     // markers off "api-extra", turning managed content into unmanaged prose
     // and making the next sync append a duplicate block.
-    const beginTag = `<!-- BEGIN harness:${MARKER_NAME}:${edit.name} -->`;
-    const endTag = `<!-- END harness:${MARKER_NAME}:${edit.name} -->`;
+    const beginTag = `<!-- BEGIN harness:${MARKER_NAME}:${removeSlot} -->`;
+    const endTag = `<!-- END harness:${MARKER_NAME}:${removeSlot} -->`;
     const lines = current.split("\n");
     const begin = lines.findIndex((line) => line.trim() === beginTag);
     const end = lines.findIndex((line, index) => index > begin && line.trim() === endTag);
@@ -239,9 +250,22 @@ async function writeMarkdownInstructions(
   if (typeof value.content !== "string") {
     return unsupported(`instructions '${edit.name}' have no content to write.`);
   }
-  const after = findMarkerBlock(current, MARKER_NAME, edit.name)
-    ? replaceMarkerBlock(current, MARKER_NAME, edit.name, value.content)
-    : appendMarkerBlock(current, MARKER_NAME, edit.name, value.content);
+  // The source may itself carry a block (it was a copy target once); copy what
+  // the block holds, never the markers, so blocks do not nest.
+  const content = syncedInstructionsContent(value.content);
+  const existingBlock = findAnySyncBlock(current);
+  let after: string;
+  if (existingBlock) {
+    // Replace the block in place, moving a legacy-named one onto the scope slot.
+    const lines = current.split("\n");
+    after = [
+      ...lines.slice(0, existingBlock.startLine),
+      buildMarkerBlock(MARKER_NAME, slot, content),
+      ...lines.slice(existingBlock.endLine + 1),
+    ].join("\n");
+  } else {
+    after = appendMarkerBlock(current, MARKER_NAME, slot, content);
+  }
   return { supported: true, changes: [{ path, before, after }] };
 }
 

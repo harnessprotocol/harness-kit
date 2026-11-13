@@ -419,6 +419,26 @@ describe("normalizeResource — instructions", () => {
     // The file stays visible as provenance.
     expect(make("AGENTS.md", "user").provenance.file).toBe("/somewhere/AGENTS.md");
   });
+
+  it("a harness:sync block digests as its content, with or without the user's own prose", () => {
+    const make = (content: string) =>
+      normalizeResource({
+        surface: "codex",
+        kind: "instructions",
+        scope: "user",
+        name: "AGENTS.md",
+        value: { content },
+        provenance: { file: "/h/AGENTS.md", formatId: "markdown-instructions" },
+      }).digest;
+    const block = "<!-- BEGIN harness:sync:user-instructions -->\nBe kind.\n<!-- END harness:sync:user-instructions -->";
+    expect(make(block)).toBe(make("Be kind."));
+    expect(make(`# Mine\n\n${block}\n`)).toBe(make("Be kind."));
+    // A block an older build named after the source file reads the same.
+    expect(make("<!-- BEGIN harness:sync:CLAUDE.md -->\nBe kind.\n<!-- END harness:sync:CLAUDE.md -->")).toBe(
+      make("Be kind."),
+    );
+    expect(make(block)).not.toBe(make("Be rude."));
+  });
 });
 
 describe("identity", () => {

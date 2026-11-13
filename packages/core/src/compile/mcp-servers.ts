@@ -7,6 +7,7 @@ import type {
 } from "../types.js";
 import { readJsonOrDefault } from "../utils/read-json.js";
 import { getTarget } from "./targets.js";
+import { SECRET_PLACEHOLDER } from "../observe/normalize.js";
 
 export interface McpJsonEntry {
   type: string;
@@ -43,6 +44,32 @@ export function translateServer(server: McpServer): McpJsonEntry {
   return entry;
 }
 
+/**
+ * Refuse a server holding the inventory's `<secret>` placeholder in a value a
+ * server reads. It is a stand-in for a hidden credential, not a credential:
+ * emitting it would write a config that fails at connect time with no hint why.
+ */
+export function assertNoSecretPlaceholder(serverName: string, server: McpServer): void {
+  const fields: Array<[string, string]> =
+    server.transport === "stdio"
+      ? [
+          ...Object.entries(server.env ?? {}).map(([k, v]): [string, string] => [`env.${k}`, v]),
+          ...(server.args ?? []).map((v, i): [string, string] => [`args[${i}]`, v]),
+        ]
+      : [
+          ...Object.entries(server.headers ?? {}).map(([k, v]): [string, string] => [`headers.${k}`, v]),
+          ["url", server.url],
+        ];
+  for (const [field, value] of fields) {
+    if (typeof value === "string" && value.includes(SECRET_PLACEHOLDER)) {
+      throw new Error(
+        `MCP server '${serverName}': ${field} is the placeholder ${SECRET_PLACEHOLDER}, not a value. ` +
+          `Set it to a \${NAME} reference or the real value in harness.yaml before compiling.`,
+      );
+    }
+  }
+}
+
 export async function compileMcpServers(
   config: HarnessConfig,
   targets: SurfaceId[],
@@ -60,6 +87,7 @@ export async function compileMcpServers(
   // Translate all servers
   const translated: Record<string, McpJsonEntry> = {};
   for (const [name, server] of Object.entries(mcpServers)) {
+    assertNoSecretPlaceholder(name, server);
     translated[name] = translateServer(server);
   }
 

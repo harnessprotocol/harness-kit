@@ -5,6 +5,7 @@ import { driftItemKey, type ScopedDriftItem, type ScopeStatus } from "./drift-da
 import { CLASS_LABEL, CLASS_VARIANT, isRepairable } from "./classification";
 import { lineDiff, collapseToHunks } from "./line-diff";
 import { ConflictLedger } from "./ConflictLedger";
+import { LEGACY_HARNESS_NOTICE } from "../../lib/legacy-harness-notice";
 import type { DesktopPortabilitySnapshot } from "../fleet/portability-data";
 
 function groupKey(entry: ScopedDriftItem): string {
@@ -35,6 +36,8 @@ export interface DriftViewProps {
   portability?: DesktopPortabilitySnapshot | null;
   /** What each scanned scope's harness.yaml is (AC-55); empty before a scan lands. */
   scopeStatuses?: ScopeStatus[];
+  /** A file sits at ~/harness.yaml and none at ~/.claude/harness.yaml. */
+  legacyHomeFile?: boolean;
 }
 
 /** The scopes Drift could not honestly call clean: no file, unreadable, or never compiled. */
@@ -53,8 +56,9 @@ function attentionNotes(statuses: ScopeStatus[]): { key: string; text: string }[
   return notes;
 }
 
-function ScopeNotes({ statuses }: { statuses: ScopeStatus[] }) {
+function ScopeNotes({ statuses, legacyHomeFile }: { statuses: ScopeStatus[]; legacyHomeFile: boolean }) {
   const notes = attentionNotes(statuses);
+  if (legacyHomeFile) notes.push({ key: "legacy-home-harness", text: LEGACY_HARNESS_NOTICE });
   if (notes.length === 0) return null;
   return (
     <div data-testid="drift-scope-notes" style={{ marginBottom: 16 }}>
@@ -90,6 +94,7 @@ export function DriftView({
   onRescan,
   portability = null,
   scopeStatuses = [],
+  legacyHomeFile = false,
 }: DriftViewProps) {
   const visible = filteredEntries.filter((e) => showAcknowledged || !acknowledged.has(driftItemKey(e.scope, e.item)));
 
@@ -148,7 +153,7 @@ export function DriftView({
           // Some scope has no usable or no deployed harness.yaml: saying "no
           // drift" would claim a comparison that never happened (AC-55).
           <>
-            <ScopeNotes statuses={scopeStatuses} />
+            <ScopeNotes statuses={scopeStatuses} legacyHomeFile={legacyHomeFile} />
             <Button variant="ghost" onClick={onRescan}>
               Re-scan
             </Button>
@@ -194,7 +199,7 @@ export function DriftView({
 
       {error && <DriftError error={error} onRescan={onRescan} />}
 
-      <ScopeNotes statuses={scopeStatuses} />
+      <ScopeNotes statuses={scopeStatuses} legacyHomeFile={legacyHomeFile} />
 
       <ConflictLedger conflicts={portability?.conflicts ?? []} />
 

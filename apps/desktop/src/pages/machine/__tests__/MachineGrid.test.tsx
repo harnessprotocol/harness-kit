@@ -155,6 +155,20 @@ describe("MachineGrid column labels at narrow widths (2c.12)", () => {
     expect(label.style.overflow).toBe("hidden");
     expect(screen.getByTestId("machine-grid").style.tableLayout).toBe("fixed");
   });
+
+  it("puts badges on their own line so they never take room from the label", () => {
+    renderGrid();
+    const badges = screen.getAllByTestId(/^surface-marketplaces-/);
+    expect(badges.length).toBeGreaterThan(0);
+    for (const badge of badges) {
+      const id = badge.getAttribute("data-testid")!.replace("surface-marketplaces-", "");
+      const label = screen.getByTestId(`surface-label-${id}`);
+      expect(label.contains(badge)).toBe(false);
+      // The badge's container is a separate block below the label, not the label's own row.
+      expect(badge.parentElement).not.toBe(label.parentElement);
+      expect(label.parentElement).toBe(screen.getByTestId(`surface-col-${id}`));
+    }
+  });
 });
 
 describe("MachineGrid not-installed surfaces (AC-59)", () => {

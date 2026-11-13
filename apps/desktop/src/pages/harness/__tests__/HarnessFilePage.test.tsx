@@ -126,14 +126,19 @@ describe("HarnessFilePage", () => {
     );
   });
 
-  it("sends no digest when the page loaded ~/harness.yaml, since the write target was absent (AC-50)", async () => {
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"\n', path: "~/harness.yaml" });
-    mockWriteHarnessFile.mockResolvedValue("~/.claude/harness.yaml");
+  it("tells the user a ~/harness.yaml needs moving when ~/.claude/harness.yaml is absent", async () => {
+    mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null, legacy_home_file: true });
     renderPage();
-    fireEvent.click(await screen.findByText("Editor"));
-    fireEvent.change(await screen.findByTestId("fake-editor"), { target: { value: "edited\n" } });
-    fireEvent.keyDown(window, { key: "s", metaKey: true });
-    await waitFor(() => expect(mockWriteHarnessFile).toHaveBeenCalledWith("edited\n", undefined));
+    expect(await screen.findByTestId("legacy-harness-notice")).toHaveTextContent(
+      "Found ~/harness.yaml. Harness Kit now reads ~/.claude/harness.yaml; move the file there.",
+    );
+  });
+
+  it("shows no legacy notice when there is no file at ~/harness.yaml", async () => {
+    mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null });
+    renderPage();
+    await screen.findByText("No harness.yaml found");
+    expect(screen.queryByTestId("legacy-harness-notice")).not.toBeInTheDocument();
   });
 
   it("names a changed-on-disk refusal and offers Reload from disk (AC-50)", async () => {

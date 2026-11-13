@@ -14,6 +14,10 @@ pub struct HarnessFileResult {
     pub found: bool,
     pub content: Option<String>,
     pub path: Option<String>,
+    /// True when `~/.claude/harness.yaml` is absent but a file sits at
+    /// `~/harness.yaml`, where older builds read it. A boolean only: that file
+    /// is never read.
+    pub legacy_home_file: bool,
 }
 
 #[tauri::command]
@@ -52,13 +56,21 @@ fn read_harness_file_in(home_raw: &Path) -> Result<HarnessFileResult, String> {
             found: true,
             content: Some(content),
             path: Some(display_path),
+            legacy_home_file: false,
         });
     }
+
+    // Existence only, so the UI can say the file is where it no longer looks.
+    // Its content is never read.
+    let legacy_home_file = std::fs::symlink_metadata(home.join("harness.yaml"))
+        .map(|m| m.is_file())
+        .unwrap_or(false);
 
     Ok(HarnessFileResult {
         found: false,
         content: None,
         path: None,
+        legacy_home_file,
     })
 }
 
@@ -124,6 +136,30 @@ mod tests {
         let result = read_harness_file_in(dir.path()).unwrap();
         assert!(!result.found);
         assert!(result.content.is_none());
+    }
+
+    #[test]
+    fn read_harness_file_reports_a_home_root_file_as_existence_only() {
+        let dir = TempDir::new().unwrap();
+        std::fs::write(dir.path().join("harness.yaml"), "secret: x\n").unwrap();
+        let result = read_harness_file_in(dir.path()).unwrap();
+        assert!(result.legacy_home_file);
+        // Existence only: the content is never read or returned.
+        assert!(result.content.is_none());
+        let json = serde_json::to_string(&result).unwrap();
+        assert!(!json.contains("secret"));
+    }
+
+    #[test]
+    fn read_harness_file_reports_no_legacy_file_when_claude_dir_has_one_or_none_exists() {
+        let dir = TempDir::new().unwrap();
+        assert!(!read_harness_file_in(dir.path()).unwrap().legacy_home_file);
+        std::fs::write(dir.path().join("harness.yaml"), "a: 1\n").unwrap();
+        std::fs::create_dir(dir.path().join(".claude")).unwrap();
+        std::fs::write(dir.path().join(".claude/harness.yaml"), "b: 2\n").unwrap();
+        let result = read_harness_file_in(dir.path()).unwrap();
+        assert!(result.found);
+        assert!(!result.legacy_home_file);
     }
 
     #[test]

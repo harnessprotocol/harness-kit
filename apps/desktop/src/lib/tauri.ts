@@ -128,6 +128,8 @@ export interface HarnessFileResult {
   found: boolean;
   content: string | null;
   path: string | null;
+  /** A file sits at ~/harness.yaml and none at ~/.claude/harness.yaml. Existence only; never read. */
+  legacy_home_file?: boolean;
 }
 
 export async function readHarnessFile(): Promise<HarnessFileResult> {
