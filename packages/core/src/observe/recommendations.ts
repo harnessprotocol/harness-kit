@@ -118,6 +118,81 @@ function pluginNameOf(identityKey: string): string {
   return at > 0 ? withoutKind.slice(0, at) : withoutKind;
 }
 
+/** One resource the baseline declares, joined to the machine (UX AC-26). */
+export interface BaselineCoverageEntry {
+  kind: HarnessResourceKind;
+  /** `${kind}:${lowercased name}`, from the baseline's spelling. */
+  identityKey: string;
+  /** Display name as the baseline spells it. */
+  name: string;
+  /** "present": the machine has it on at least one surface. "missing": nowhere. */
+  status: "present" | "missing";
+  /**
+   * Grid rows that satisfy it. More than one when a bare plugin name matches
+   * the same plugin from two marketplaces; empty when it is missing.
+   */
+  rowKeys: string[];
+  /** Surfaces it could be added to, when missing; empty when present. */
+  missingOn: SurfaceId[];
+}
+
+/**
+ * Every resource the baseline declares, with whether this machine has it
+ * anywhere. The same "anywhere" rule recommend() uses for baseline gaps (it
+ * calls this), so the Machine grid's Team baseline column and
+ * `harness-kit status --baseline` always agree. Pure, and never throws on a
+ * malformed baseline.
+ */
+export function baselineCoverage(
+  inventory: MachineInventory,
+  baseline: HarnessConfig,
+  registry: readonly SurfaceDescriptor[] = SURFACES,
+): BaselineCoverageEntry[] {
+  // Rows the machine has somewhere, plus plugin rows by bare name.
+  const present = new Set<string>();
+  const pluginRowsByName = new Map<string, string[]>();
+  for (const row of inventory.rows) {
+    const anywhere = Object.values(row.cells).some((cell) => cell.status === "present");
+    if (!anywhere) continue;
+    present.add(row.key);
+    if (row.kind === "plugin") {
+      const name = pluginNameOf(row.key).toLowerCase();
+      pluginRowsByName.set(name, [...(pluginRowsByName.get(name) ?? []), row.key]);
+    }
+  }
+
+  const entries: BaselineCoverageEntry[] = [];
+  const seen = new Set<string>();
+  for (const declared of baselineResources(baseline)) {
+    const identityKey = `${declared.kind}:${declared.name.toLowerCase().trim()}`;
+    if (seen.has(identityKey)) continue;
+    seen.add(identityKey);
+    const rowKeys = present.has(identityKey)
+      ? [identityKey]
+      : declared.kind === "plugin"
+        ? [...(pluginRowsByName.get(declared.name.toLowerCase()) ?? [])]
+        : [];
+    if (rowKeys.length > 0) {
+      entries.push({ kind: declared.kind, identityKey, name: declared.name, status: "present", rowKeys, missingOn: [] });
+      continue;
+    }
+    // A baseline may pin the marketplace (`research@harness-kit`) or not
+    // (`research`). Unqualified means we cannot judge reachability, so
+    // every store-bearing surface stays a candidate.
+    const at = declared.name.lastIndexOf("@");
+    const marketplace = at > 0 && at < declared.name.length - 1 ? declared.name.slice(at + 1) : null;
+    entries.push({
+      kind: declared.kind,
+      identityKey,
+      name: declared.name,
+      status: "missing",
+      rowKeys: [],
+      missingOn: candidateSurfaces(inventory, declared.kind, marketplace, registry),
+    });
+  }
+  return entries;
+}
+
 export interface RecommendOptions {
   /** The team's parsed baseline profile, when one is configured. */
   baseline?: HarnessConfig | null;
@@ -140,39 +215,16 @@ export function recommend(
 
   const baseline = options.baseline ?? null;
   if (baseline !== null) {
-    // Everything the machine has, by kind, for the "anywhere" test.
-    const present = new Set<string>();
-    const presentPluginNames = new Set<string>();
-    for (const row of inventory.rows) {
-      const anywhere = Object.values(row.cells).some((cell) => cell.status === "present");
-      if (!anywhere) continue;
-      present.add(row.key);
-      if (row.kind === "plugin") presentPluginNames.add(pluginNameOf(row.key).toLowerCase());
-    }
-
-    const seen = new Set<string>();
-    for (const declared of baselineResources(baseline)) {
-      const identityKey = `${declared.kind}:${declared.name.toLowerCase().trim()}`;
-      if (seen.has(identityKey)) continue;
-      seen.add(identityKey);
-      const satisfied =
-        present.has(identityKey) ||
-        (declared.kind === "plugin" && presentPluginNames.has(declared.name.toLowerCase()));
-      if (satisfied) continue;
-      // A baseline may pin the marketplace (`research@harness-kit`) or not
-      // (`research`). Unqualified means we cannot judge reachability, so
-      // every store-bearing surface stays a candidate.
-      const at = declared.name.lastIndexOf("@");
-      const marketplace = at > 0 && at < declared.name.length - 1 ? declared.name.slice(at + 1) : null;
-      const candidates = candidateSurfaces(inventory, declared.kind, marketplace, registry);
+    for (const entry of baselineCoverage(inventory, baseline, registry)) {
+      if (entry.status !== "missing") continue;
       recommendations.push({
         source: "baseline-gap",
-        kind: declared.kind,
-        identityKey,
-        name: declared.name,
-        summary: `the baseline declares ${declared.kind} '${declared.name}' and this machine has it nowhere`,
+        kind: entry.kind,
+        identityKey: entry.identityKey,
+        name: entry.name,
+        summary: `the baseline declares ${entry.kind} '${entry.name}' and this machine has it nowhere`,
         presentOn: [],
-        missingOn: candidates,
+        missingOn: [...entry.missingOn],
       });
     }
   }
