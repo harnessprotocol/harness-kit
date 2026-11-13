@@ -27,6 +27,10 @@ jobs:
         # Protocol schema, SKILL.md frontmatter, README badge count.
         run: bash scripts/validate-manifests.sh
 
+      - name: No credential-shaped strings in tracked files
+        # Test fixtures use fakeSecret(prefix, body) so no whole token sits in the repo.
+        run: node scripts/check-token-literals.mjs
+
   plugin-validate:
     # Free gate: no model calls, no API key. `claude plugin validate` checks each
     # manifest plus its skills, agents and commands.
