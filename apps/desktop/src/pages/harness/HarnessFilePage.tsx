@@ -18,6 +18,8 @@ import { getAvailableViewModes } from "../../lib/viewModes";
 import { useRegisterCommands } from "../../lib/commands";
 import { errorDetails } from "../../lib/error-details";
 import { loadedDigest } from "../../lib/loaded-digest";
+import { clearProfileDraft, getProfileDraft, setProfileDraft } from "../../lib/profile-draft";
+import type { ProfileDraft } from "../../lib/profile-draft";
 import EditorToolbar from "../../components/file-explorer/EditorToolbar";
 import ValidationBanner from "./harness-file/ValidationBanner";
 import ProfilePanel from "./harness-file/ProfilePanel";
@@ -146,14 +148,29 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
   const editing = split || view === "editor";
   const saveable = editing && editorContent !== (diskContent ?? "");
 
-  function setBuffer(next: string) {
-    bufferRef.current = next;
-    setEditorContent(next);
-  }
-
   // The disk text the buffer was last in step with (null before the first load).
   // A buffer that differs from it holds unsaved edits.
   const syncedRef = useRef<string | null>(null);
+  // The file the draft store keys this buffer by; null where the store is not
+  // used (no editable personal file loaded, or the read-only team baseline).
+  const draftPath = useRef<string | null>(null);
+
+  // Mirror unsaved edits into the module-level store, so they outlive this page
+  // when another sidebar page unmounts it. Clean buffers remove the entry.
+  function recordDraft() {
+    const path = draftPath.current;
+    const synced = syncedRef.current;
+    if (path === null || synced === null) return;
+    if (bufferRef.current !== synced) setProfileDraft(path, { buffer: bufferRef.current, synced });
+    else clearProfileDraft(path);
+  }
+
+  function setBuffer(next: string) {
+    bufferRef.current = next;
+    setEditorContent(next);
+    recordDraft();
+  }
+
   // Set by an explicit "Reload from disk", which is the user's choice to discard.
   const forceLoad = useRef(false);
   // A disk version that arrived while the buffer held unsaved edits.
@@ -169,12 +186,39 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
     setPendingDisk(null);
   }
 
+  // Put a draft left by an earlier mount back as the dirty buffer. It stays
+  // synced with the text it was made from, so Save's conflict check still
+  // guards a disk file that has moved on since.
+  function restoreDraft(draft: ProfileDraft, disk: string) {
+    syncedRef.current = draft.synced;
+    setBuffer(draft.buffer);
+    setPanelText(draft.buffer);
+    setPatchError(null);
+    setPendingDisk(disk !== draft.synced ? disk : null);
+  }
+
   // A load (first, Reload from disk, a project change and back) replaces what
   // the editor holds, unless that would discard unsaved edits: then it asks.
   // A layout effect: no render shows the loaded file next to a not-yet-synced buffer.
   useLayoutEffect(() => {
-    if (!found || readOnly) return;
+    if (!found || readOnly) {
+      draftPath.current = null;
+      return;
+    }
     const text = diskContent ?? "";
+    draftPath.current = filePath;
+    // First load of this mount: edits left by a page that unmounted come back.
+    const draft = syncedRef.current === null && filePath !== null ? getProfileDraft(filePath) : undefined;
+    if (draft) {
+      forceLoad.current = false;
+      if (draft.buffer === text) {
+        // The disk now holds exactly what the draft held: nothing is unsaved.
+        applyDisk(text);
+      } else {
+        restoreDraft(draft, text);
+      }
+      return;
+    }
     const dirty = syncedRef.current !== null && bufferRef.current !== syncedRef.current && bufferRef.current !== text;
     if (dirty && !forceLoad.current) {
       setPendingDisk(text);
@@ -281,6 +325,9 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
       // An edit made while the write ran stays in the buffer; the panel follows it.
       setPanelText(bufferRef.current);
       syncedRef.current = content;
+      draftPath.current = savedPath;
+      // Clears the draft, or re-keys it to `content` if an edit landed mid-save.
+      recordDraft();
       setPendingDisk(null);
       setFilePath(savedPath);
       setFound(true);

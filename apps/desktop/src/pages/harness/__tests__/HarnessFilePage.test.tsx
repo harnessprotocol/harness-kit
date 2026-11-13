@@ -6,6 +6,10 @@ import HarnessFilePage from "../HarnessFilePage";
 import { CommandPalette } from "../../../components/CommandPalette";
 import { loadedDigest } from "../../../lib/loaded-digest";
 import { setCurrentProjectDir } from "../../../lib/project-dir";
+import { clearAllProfileDrafts, getProfileDraft } from "../../../lib/profile-draft";
+
+// The draft store is module-level: no test may inherit another's unsaved edits.
+beforeEach(() => clearAllProfileDrafts());
 
 // ── Mocks ──────────────────────────────────────────────────────
 
@@ -643,7 +647,12 @@ describe("Profile editor: adversarial-review regressions", () => {
     const press = () => window.dispatchEvent(new KeyboardEvent("keydown", { key: "s", metaKey: true, cancelable: true }));
     press();
     press();
-    await act(async () => {});
+    // Save awaits the digest before writing: wait for the first write, then
+    // give a second one every chance to arrive.
+    await waitFor(() => expect(mockWriteHarnessFile).toHaveBeenCalled());
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    });
     expect(mockWriteHarnessFile).toHaveBeenCalledTimes(1);
   });
 
@@ -664,4 +673,90 @@ describe("Profile editor: adversarial-review regressions", () => {
       expect((screen.getByTestId("fake-editor") as HTMLTextAreaElement).value).toBe(`${content}# unsaved\n`);
     });
   }
+});
+
+describe("Profile keeps unsaved edits when the page unmounts", () => {
+  const EXTERNAL = PERSONAL.replace("my-harness", "external-name");
+  const EDITED = PERSONAL.replace("my-harness", "unsaved-name");
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    for (const key of Object.keys(projectFiles)) delete projectFiles[key];
+    act(() => setCurrentProjectDir(null));
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: PERSONAL, path: "~/.claude/harness.yaml" });
+  });
+
+  function profileDraftCount() {
+    return getProfileDraft("~/.claude/harness.yaml") ? 1 : 0;
+  }
+
+  async function editThenLeave() {
+    const view = renderPage();
+    fireEvent.change(await screen.findByTestId("fake-editor"), { target: { value: EDITED } });
+    expect(profileDraftCount()).toBe(1);
+    view.unmount();
+  }
+
+  it("restores the edits, in the editor and the panel, after leaving and coming back", async () => {
+    await editThenLeave();
+    renderPage();
+    const editor = await screen.findByTestId("fake-editor");
+    await waitFor(() => expect((editor as HTMLTextAreaElement).value).toBe(EDITED));
+    await waitFor(() => expect(screen.getByRole("textbox", { name: /^Name$/ })).toHaveValue("unsaved-name"));
+    expect(screen.getByTitle("Unsaved changes")).toBeInTheDocument();
+    expect(screen.queryByTestId("pending-disk-notice")).toBeNull();
+  });
+
+  it("a save clears the draft", async () => {
+    mockWriteHarnessFile.mockResolvedValue("~/.claude/harness.yaml");
+    await editThenLeave();
+    renderPage();
+    await waitFor(() => expect((screen.getByTestId("fake-editor") as HTMLTextAreaElement).value).toBe(EDITED));
+    fireEvent.keyDown(window, { key: "s", metaKey: true });
+    await waitFor(() => expect(mockWriteHarnessFile).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(profileDraftCount()).toBe(0));
+  });
+
+  it("typing back to the synced text clears the draft", async () => {
+    renderPage();
+    const editor = await screen.findByTestId("fake-editor");
+    fireEvent.change(editor, { target: { value: EDITED } });
+    expect(profileDraftCount()).toBe(1);
+    fireEvent.change(editor, { target: { value: PERSONAL } });
+    expect(profileDraftCount()).toBe(0);
+  });
+
+  it("Discard edits clears the draft", async () => {
+    await editThenLeave();
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: EXTERNAL, path: "~/.claude/harness.yaml" });
+    renderPage();
+    const notice = await screen.findByTestId("pending-disk-notice");
+    fireEvent.click(within(notice).getByRole("button", { name: /Discard edits/ }));
+    await waitFor(() => expect((screen.getByTestId("fake-editor") as HTMLTextAreaElement).value).toBe(EXTERNAL));
+    expect(profileDraftCount()).toBe(0);
+  });
+
+  it("a draft synced to older text than the disk shows the notice, and Save sends the synced text's digest", async () => {
+    mockWriteHarnessFile.mockRejectedValue("Refusing to write 'x': it changed on disk since it was read");
+    await editThenLeave();
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: EXTERNAL, path: "~/.claude/harness.yaml" });
+    renderPage();
+    await screen.findByTestId("pending-disk-notice");
+    expect((screen.getByTestId("fake-editor") as HTMLTextAreaElement).value).toBe(EDITED);
+    fireEvent.keyDown(window, { key: "s", metaKey: true });
+    await waitFor(() => expect(mockWriteHarnessFile).toHaveBeenCalledTimes(1));
+    expect(mockWriteHarnessFile.mock.calls[0][1]).toBe(await loadedDigest(PERSONAL));
+    expect(mockWriteHarnessFile.mock.calls[0][1]).not.toBe(await loadedDigest(EXTERNAL));
+  });
+
+  it("the read-only team baseline never uses the store", async () => {
+    await editThenLeave();
+    projectFiles["/work/acme/harness.yaml"] = PERSONAL;
+    act(() => setCurrentProjectDir("/work/acme"));
+    renderPage();
+    await screen.findByText(/\(read-only\)/);
+    expect(getProfileDraft("~/.claude/harness.yaml")?.buffer).toBe(EDITED);
+    expect(screen.queryByTestId("fake-editor")).toBeNull();
+    act(() => setCurrentProjectDir(null));
+  });
 });

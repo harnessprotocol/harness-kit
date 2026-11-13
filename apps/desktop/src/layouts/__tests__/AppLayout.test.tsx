@@ -1,5 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
+import { clearAllProfileDrafts, clearProfileDraft, setProfileDraft } from "../../lib/profile-draft";
 import { invoke } from "@tauri-apps/api/core";
 import { MemoryRouter, useLocation } from "react-router-dom";
 import AppLayout from "../AppLayout";
@@ -424,5 +425,20 @@ describe("collapsed sidebar (AC-61)", () => {
     const open = document.querySelector("aside")!.parentElement!;
     expect(open).not.toHaveAttribute("inert");
     expect(open).not.toHaveAttribute("aria-hidden");
+  });
+});
+
+describe("Profile unsaved indicator", () => {
+  afterEach(() => act(() => clearAllProfileDrafts()));
+
+  it("shows on the Profile item only while a draft exists, with an accessible label", () => {
+    renderLayout();
+    expect(screen.queryByTestId("profile-unsaved-indicator")).toBeNull();
+    expect(screen.queryByText(/unsaved changes/i)).toBeNull();
+    act(() => setProfileDraft("~/.claude/harness.yaml", { buffer: "a", synced: "b" }));
+    expect(screen.getByTestId("profile-unsaved-indicator")).toBeInTheDocument();
+    expect(screen.getByText(/unsaved changes/i).closest('[role="link"]')).toHaveTextContent("Profile");
+    act(() => clearProfileDraft("~/.claude/harness.yaml"));
+    expect(screen.queryByTestId("profile-unsaved-indicator")).toBeNull();
   });
 });

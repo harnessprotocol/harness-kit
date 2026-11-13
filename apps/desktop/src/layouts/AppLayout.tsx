@@ -8,6 +8,7 @@ import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
 import { useArrowNavigation } from "../hooks/useArrowNavigation";
 import { useSidebarResize } from "../hooks/useSidebarResize";
 import { initTheme } from "../lib/theme";
+import { useHasProfileDraft } from "../lib/profile-draft";
 import { initPreferences, getLabs } from "../lib/preferences";
 import { CommandPalette } from "../components/CommandPalette";
 import { useClaudeFileList } from "../hooks/useClaudeFileList";
@@ -148,6 +149,39 @@ export function isSectionActive(
   });
 }
 
+/** Marks a sidebar item whose page holds unsaved edits. Read aloud as "unsaved changes". */
+function UnsavedDot() {
+  return (
+    <>
+      <span
+        aria-hidden="true"
+        data-testid="profile-unsaved-indicator"
+        style={{
+          display: "inline-block",
+          width: 6,
+          height: 6,
+          marginLeft: 6,
+          borderRadius: "50%",
+          background: "var(--warning)",
+          verticalAlign: "middle",
+        }}
+      />
+      <span
+        style={{
+          position: "absolute",
+          width: 1,
+          height: 1,
+          overflow: "hidden",
+          clip: "rect(0 0 0 0)",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {" (unsaved changes)"}
+      </span>
+    </>
+  );
+}
+
 /** The app shell, inside the one toast stack every page pushes to (design D15). */
 export default function AppLayout() {
   return (
@@ -206,6 +240,7 @@ function AppShell() {
   }, []);
 
   const entries = visibleNav(labs);
+  const hasProfileDraft = useHasProfileDraft();
 
   const prefsActive = location.pathname.startsWith(SETTINGS.path);
 
@@ -370,6 +405,7 @@ function AppShell() {
                       }
                     >
                       {entry.label}
+                      {entry.id === "profile" && hasProfileDraft && <UnsavedDot />}
                     </NavItem>
 
                     {active && entry.children && entry.children.length > 0 && (
