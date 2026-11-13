@@ -190,6 +190,7 @@
     "allow-detect-harnesses",
     "allow-grant-project-scope",
     "allow-choose-project-dir",
+    "allow-save-share-file",
     "allow-guarded-write-file",
     "allow-guarded-rename-file",
     "allow-guarded-remove-file",

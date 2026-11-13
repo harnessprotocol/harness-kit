@@ -201,6 +201,11 @@ fn check_value(ty: &str, v: &Value) -> Result<(), String> {
                 .map(|_| ())
                 .map_err(|e| e.to_string())
         }
+        "ShareKind" => {
+            return serde_json::from_value::<super::share::ShareKind>(v.clone())
+                .map(|_| ())
+                .map_err(|e| e.to_string())
+        }
         other => return Err(format!("no contract check for argument type `{other}`; add one to check_value")),
     };
     if ok {

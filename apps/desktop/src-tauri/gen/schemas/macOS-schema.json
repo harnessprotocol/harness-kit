@@ -2691,6 +2691,12 @@
           "markdownDescription": "Enables the save_panel command without any pre-configured scope."
         },
         {
+          "description": "Enables the save_share_file command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-save-share-file",
+          "markdownDescription": "Enables the save_share_file command without any pre-configured scope."
+        },
+        {
           "description": "Enables the set_keychain_secret command without any pre-configured scope.",
           "type": "string",
           "const": "allow-set-keychain-secret",
@@ -3319,6 +3325,12 @@
           "type": "string",
           "const": "deny-save-panel",
           "markdownDescription": "Denies the save_panel command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the save_share_file command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-save-share-file",
+          "markdownDescription": "Denies the save_share_file command without any pre-configured scope."
         },
         {
           "description": "Denies the set_keychain_secret command without any pre-configured scope.",

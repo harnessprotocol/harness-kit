@@ -186,6 +186,7 @@ pub fn run() {
             // Runtime FS scope grants (used by the project scope of Machine, Drift and Compile)
             commands::fs_scope::grant_project_scope,
             commands::fs_scope::choose_project_dir,
+            commands::share::save_share_file,
             // Guarded write/rename/remove for the webview's TauriFsProvider
             commands::fs_guarded::guarded_write_file,
             commands::fs_guarded::guarded_rename_file,
