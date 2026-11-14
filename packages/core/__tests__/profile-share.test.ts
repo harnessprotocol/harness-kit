@@ -2,6 +2,18 @@ import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 import { buildProfilePrompt, buildProfileShare } from "../src/portability/share.js";
 import type { HarnessConfig } from "../src/types.js";
+import { fakeSecret } from "./helpers/fake-secret.js";
+
+// Built at run time; see helpers/fake-secret.ts. None of these are real.
+const FAKE_GITHUB_TOKEN = fakeSecret("ghp_", "abcdefghijklmnopqrstuvwxyz0123456789");
+const FAKE_GITHUB_PAT = fakeSecret("github_pat_", "11ABCDEFG0123456789_abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRS");
+const FAKE_STRIPE_KEY = fakeSecret("sk_live_", "51HxStripeSecret0123");
+const FAKE_STRIPE_KEY_2 = fakeSecret("sk_live_", "SECRETFFF666abc");
+const FAKE_NPM_TOKEN = fakeSecret("npm_", "abcdefghijklmnopqrstuvwxyz0123456789");
+const FAKE_GITLAB_TOKEN = fakeSecret("glpat-", "abcdefghij0123456789");
+const FAKE_GOOGLE_KEY = fakeSecret("AIza", "SyA1234567890abcdefghijklmnopqrstuv");
+const FAKE_SLACK_WEBHOOK = fakeSecret("https://hooks.slack.com/services/", "T000/B000/XXXXsecretXXXXabcd");
+const FAKE_DISCORD_WEBHOOK = fakeSecret("https://discord.com/api/webhooks/", "123456/abcDEFsecretTOKENxyz");
 
 const profile = (extra: Partial<HarnessConfig> = {}): HarnessConfig => ({
   version: "1",
@@ -11,8 +23,8 @@ const profile = (extra: Partial<HarnessConfig> = {}): HarnessConfig => ({
     github: {
       transport: "stdio",
       command: "gh-mcp",
-      args: ["--token", "ghp_abcdefghijklmnopqrstuvwxyz0123456789"],
-      env: { GITHUB_TOKEN: "ghp_abcdefghijklmnopqrstuvwxyz0123456789" },
+      args: ["--token", FAKE_GITHUB_TOKEN],
+      env: { GITHUB_TOKEN: FAKE_GITHUB_TOKEN },
     },
   },
   ...extra,
@@ -21,7 +33,7 @@ const profile = (extra: Partial<HarnessConfig> = {}): HarnessConfig => ({
 describe("profile share export (AC-25)", () => {
   it("strips secret values with the capture sanitizer and declares what to set", () => {
     const share = buildProfileShare(profile());
-    expect(share.yaml).not.toContain("ghp_abcdefghijklmnopqrstuvwxyz0123456789");
+    expect(share.yaml).not.toContain(FAKE_GITHUB_TOKEN);
     expect(share.findings.length).toBeGreaterThan(0);
     const names = share.requiredEnv.map((entry) => entry.name);
     for (const finding of share.findings) expect(names).toContain(finding.variable);
@@ -66,7 +78,7 @@ describe("profile share export (AC-25)", () => {
 describe("profile agent prompt (AC-25)", () => {
   it("carries the sanitized harness.yaml and never the secret", () => {
     const prompt = buildProfilePrompt(profile());
-    expect(prompt).not.toContain("ghp_abcdefghijklmnopqrstuvwxyz0123456789");
+    expect(prompt).not.toContain(FAKE_GITHUB_TOKEN);
     expect(prompt).toContain("alice-setup");
     expect(prompt).toContain("gh-mcp");
   });
@@ -110,7 +122,7 @@ describe("profile agent prompt (AC-25)", () => {
 
 describe("profile share: adversarial secrets (review round)", () => {
   const LEAKS: Array<[string, Partial<HarnessConfig>, string]> = [
-    ["token-only URL userinfo", { "mcp-servers": { r: { transport: "sse", url: "https://ghp_abcdefghijklmnopqrstuvwxyz0123456789@host.example/mcp" } } }, "ghp_abcdefghijklmnopqrstuvwxyz0123456789"],
+    ["token-only URL userinfo", { "mcp-servers": { r: { transport: "sse", url: `https://${FAKE_GITHUB_TOKEN}@host.example/mcp` } } }, FAKE_GITHUB_TOKEN],
     ["user:password URL userinfo", { "mcp-servers": { r: { transport: "sse", url: "https://bob:hunter2pass@host.example/mcp" } } }, "hunter2pass"],
     ["URL fragment param", { "mcp-servers": { r: { transport: "sse", url: "https://h.example/cb#access_token=FRAGSECRET99" } } }, "FRAGSECRET99"],
     ["query secret inside an arg", { "mcp-servers": { r: { transport: "stdio", command: "npx", args: ["mcp-remote", "https://h.example/sse?api_key=ARGQSECRET77"] } } }, "ARGQSECRET77"],
@@ -122,7 +134,7 @@ describe("profile share: adversarial secrets (review round)", () => {
     ["header value after --header", { "mcp-servers": { r: { transport: "stdio", command: "x", args: ["--header", "X-API-Key: HDRSECRET64"] } } }, "HDRSECRET64"],
     ["docker -e KEY=value", { "mcp-servers": { r: { transport: "stdio", command: "docker", args: ["run", "-e", "API_KEY=DOCKERSECRET2", "img"] } } }, "DOCKERSECRET2"],
     ["JSON inside an arg", { "mcp-servers": { r: { transport: "stdio", command: "x", args: ['{"apiKey":"JSONARGSECRET3"}'] } } }, "JSONARGSECRET3"],
-    ["Stripe live key", { "mcp-servers": { r: { transport: "stdio", command: "x", env: { STRIPE_SK: "sk_live_51HxStripeSecret0123" } } } }, "sk_live_51HxStripeSecret0123"],
+    ["Stripe live key", { "mcp-servers": { r: { transport: "stdio", command: "x", env: { STRIPE_SK: FAKE_STRIPE_KEY } } } }, FAKE_STRIPE_KEY],
   ];
 
   for (const [label, extra, secret] of LEAKS) {
@@ -195,14 +207,14 @@ describe("profile share: second adversarial round", () => {
     ["KEY=value with &", prose("TOKEN=abc&TAILSECRET303"), "TAILSECRET303"],
     ["quoted value with spaces", prose('password="correct horse battery"'), "horse battery"],
     ["secret next to a reference", prose("export A=${HARNESS_A}; password=hunter2xyz"), "hunter2xyz"],
-    ["stripe key next to a reference", prose("Set ${HARNESS_FOO} then export STRIPE=sk_live_SECRETFFF666abc"), "sk_live_SECRETFFF666abc"],
+    ["stripe key next to a reference", prose(`Set \${HARNESS_FOO} then export STRIPE=${FAKE_STRIPE_KEY_2}`), FAKE_STRIPE_KEY_2],
     ["secret glued to a reference", prose("REALSECRETzz99${HARNESS_X}"), "REALSECRETzz99"],
-    ["github fine-grained PAT", prose("use github_pat_11ABCDEFG0123456789_abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRS"), "github_pat_11ABCDEFG0123456789"],
-    ["npm token", prose("npm_abcdefghijklmnopqrstuvwxyz0123456789"), "npm_abcdefghijklmnopqrstuvwxyz0123456789"],
-    ["gitlab token", prose("glpat-abcdefghij0123456789"), "glpat-abcdefghij0123456789"],
-    ["google api key", prose("AIzaSyA1234567890abcdefghijklmnopqrstuv"), "AIzaSyA1234567890abcdefghijklmnopqrstuv"],
-    ["slack webhook path", prose("post to https://hooks.slack.com/services/T000/B000/XXXXsecretXXXXabcd"), "XXXXsecretXXXXabcd"],
-    ["discord webhook path", prose("https://discord.com/api/webhooks/123456/abcDEFsecretTOKENxyz"), "abcDEFsecretTOKENxyz"],
+    ["github fine-grained PAT", prose(`use ${FAKE_GITHUB_PAT}`), FAKE_GITHUB_PAT.slice(0, 30)],
+    ["npm token", prose(FAKE_NPM_TOKEN), FAKE_NPM_TOKEN],
+    ["gitlab token", prose(FAKE_GITLAB_TOKEN), FAKE_GITLAB_TOKEN],
+    ["google api key", prose(FAKE_GOOGLE_KEY), FAKE_GOOGLE_KEY],
+    ["slack webhook path", prose(`post to ${FAKE_SLACK_WEBHOOK}`), "XXXXsecretXXXXabcd"],
+    ["discord webhook path", prose(FAKE_DISCORD_WEBHOOK), "abcDEFsecretTOKENxyz"],
     ["password with an empty user", prose("connect to https://:emptyUserPw99@h.example/db"), "emptyUserPw99"],
     ["number under a sensitive key", { "mcp-servers": { r: { transport: "stdio", command: "x", env: { PASSWORD: 987654321 as unknown as string } } } }, "987654321"],
     ["array under a sensitive key", { plugins: [{ name: "p", source: "o/r", config: { API_KEYS: ["LEAK10aaaa", "LEAK11bbbb"] } }] }, "LEAK10aaaa"],

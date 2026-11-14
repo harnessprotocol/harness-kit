@@ -153,6 +153,12 @@ Flag any SKILL.md content that contains:
 
 ---
 
+## Test fixtures that look like secrets
+
+Never write a whole token-shaped string (GitHub, Google, Stripe, npm, Slack, webhook URLs) into any file, even a fake one in a test. This repo is public: GitHub secret scanning raises a public-leak alert, and the string invites a closer look at the repo. Build fixtures with `fakeSecret(prefix, body)` (`packages/core/__tests__/helpers/fake-secret.ts`, `apps/desktop/src/test-utils/fake-secret.ts`). `scripts/check-token-literals.mjs` fails CI on a whole token.
+
+---
+
 ## Release checklist
 
 1. Bump `version` in `plugins/<name>/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` (must match)
