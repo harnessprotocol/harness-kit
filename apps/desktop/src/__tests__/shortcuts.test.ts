@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { NAV } from "../nav";
-import { SHORTCUTS, toAccelerator } from "../shortcuts";
+import { SHORTCUTS, domKey, toAccelerator } from "../shortcuts";
 
 describe("SHORTCUTS", () => {
   it("holds one global entry per NAV shortcut with the NAV label", () => {
@@ -32,5 +32,21 @@ describe("SHORTCUTS", () => {
 
   it("adds Shift to the accelerator", () => {
     expect(toAccelerator({ id: "x", label: "x", key: "p", meta: true, shift: true, scope: "global" })).toBe("CmdOrCtrl+Shift+P");
+  });
+
+  it("pins the DOM code and keyCode of every shortcut", () => {
+    expect(Object.fromEntries(SHORTCUTS.map((s) => [s.id, domKey(s)]))).toEqual({
+      "nav:machine": { code: "Digit1", keyCode: 49 },
+      "nav:profile": { code: "Digit2", keyCode: 50 },
+      "nav:claude-code": { code: "Digit3", keyCode: 51 },
+      "nav:marketplace": { code: "Digit4", keyCode: 52 },
+      settings: { code: "Comma", keyCode: 188 },
+      "command-palette": { code: "KeyK", keyCode: 75 },
+      "toggle-sidebar": { code: "Backslash", keyCode: 220 },
+      back: { code: "BracketLeft", keyCode: 219 },
+      forward: { code: "BracketRight", keyCode: 221 },
+      save: { code: "KeyS", keyCode: 83 },
+      "start-comparison": { code: "Enter", keyCode: 13 },
+    });
   });
 });

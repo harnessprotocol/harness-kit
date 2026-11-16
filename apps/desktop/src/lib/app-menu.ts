@@ -2,7 +2,7 @@ import { Menu, MenuItem, PredefinedMenuItem, Submenu } from "@tauri-apps/api/men
 import { open } from "@tauri-apps/plugin-shell";
 import { isTauriRuntimeAvailable } from "./tauri";
 import { detectDesktopPlatform } from "../pages/machine/machine-data";
-import { SHORTCUTS, toAccelerator, type Shortcut } from "../shortcuts";
+import { SHORTCUTS, domKey, toAccelerator, type Shortcut } from "../shortcuts";
 
 export const DOCS_URL = "https://harnesskit.ai/docs";
 
@@ -15,9 +15,14 @@ export const DOCS_URL = "https://harnesskit.ai/docs";
 function redispatch(s: Shortcut) {
   const active = document.activeElement;
   const target: EventTarget = active && active !== document.body ? active : document;
-  target.dispatchEvent(
-    new KeyboardEvent("keydown", { key: s.key, metaKey: true, shiftKey: !!s.shift, bubbles: true, cancelable: true }),
-  );
+  const { code, keyCode } = domKey(s);
+  const event = new KeyboardEvent("keydown", {
+    key: s.key, code, metaKey: true, shiftKey: !!s.shift, bubbles: true, cancelable: true,
+  });
+  // The constructor leaves keyCode and which at 0 in Chromium and WebKit.
+  Object.defineProperty(event, "keyCode", { get: () => keyCode });
+  Object.defineProperty(event, "which", { get: () => keyCode });
+  target.dispatchEvent(event);
 }
 
 export async function buildAppMenu(): Promise<Menu> {

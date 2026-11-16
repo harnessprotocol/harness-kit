@@ -41,6 +41,26 @@ export function toAccelerator(s: Shortcut): string {
   return ["CmdOrCtrl", ...(s.shift ? ["Shift"] : []), key].join("+");
 }
 
+const DOM_KEYS: Record<string, { code: string; keyCode: number }> = {
+  ",": { code: "Comma", keyCode: 188 },
+  "\\": { code: "Backslash", keyCode: 220 },
+  "[": { code: "BracketLeft", keyCode: 219 },
+  "]": { code: "BracketRight", keyCode: 221 },
+  Enter: { code: "Enter", keyCode: 13 },
+};
+
+/**
+ * The DOM `code` and legacy `keyCode` for a shortcut's key. Monaco resolves
+ * keys from `keyCode`, never `key`, so a synthetic keydown needs both.
+ */
+export function domKey(s: Shortcut): { code: string; keyCode: number } {
+  if (/^[0-9]$/.test(s.key)) return { code: `Digit${s.key}`, keyCode: 48 + Number(s.key) };
+  if (/^[a-z]$/i.test(s.key)) return { code: `Key${s.key.toUpperCase()}`, keyCode: s.key.toUpperCase().charCodeAt(0) };
+  const hit = DOM_KEYS[s.key];
+  if (!hit) throw new Error(`No DOM key mapping for shortcut key "${s.key}"`);
+  return hit;
+}
+
 export function matchesShortcut(s: Shortcut, e: KeyboardEvent): boolean {
   return (
     e.metaKey &&

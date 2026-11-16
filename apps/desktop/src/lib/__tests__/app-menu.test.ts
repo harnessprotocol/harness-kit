@@ -17,6 +17,8 @@ vi.mock("@tauri-apps/api/menu", () => ({
 
 import { buildAppMenu, installAppMenu, installAppMenuOnMac, resetAppMenuForTests, DOCS_URL } from "../app-menu";
 import { SHORTCUTS, toAccelerator } from "../../shortcuts";
+// @ts-expect-error monaco ships no types for its internal ESM modules
+import { StandardKeyboardEvent } from "../../../node_modules/monaco-editor/esm/vs/base/browser/keyboardEvent.js";
 
 async function build() {
   const menu = (await buildAppMenu()) as unknown as Node;
@@ -157,5 +159,29 @@ describe("app menu", () => {
     tauri.mockReturnValue(false);
     await installAppMenuOnMac();
     expect(setAsAppMenu).not.toHaveBeenCalled();
+  });
+
+  it("carries code and keyCode that Monaco resolves to the same chord as CtrlCmd+KeyS", async () => {
+    // Mounting Monaco in jsdom is not practical, so this runs the dispatched
+    // event through Monaco's own StandardKeyboardEvent key resolution.
+    const { sub } = await build();
+    let seen: KeyboardEvent | undefined;
+    const grab = (e: Event) => { seen = e as KeyboardEvent; };
+    document.addEventListener("keydown", grab);
+    try {
+      sub("View").items!.find((i) => i.text === "Save")!.action!();
+    } finally {
+      document.removeEventListener("keydown", grab);
+    }
+    expect(seen).toBeDefined();
+    expect([seen!.code, seen!.keyCode, seen!.which]).toEqual(["KeyS", 83, 83]);
+    const std = new StandardKeyboardEvent(seen!);
+    const chord = std.toKeyCodeChord();
+    // Monaco: KeyCode.KeyS is 49; the chord must be meta (CtrlCmd on macOS) + S.
+    expect(chord.keyCode).toBe(49);
+    expect(chord.metaKey).toBe(true);
+    expect(chord.ctrlKey).toBe(false);
+    expect(chord.shiftKey).toBe(false);
+    expect(chord.altKey).toBe(false);
   });
 });
