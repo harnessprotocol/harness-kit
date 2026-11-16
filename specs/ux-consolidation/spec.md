@@ -48,7 +48,7 @@ Format: EARS (`WHEN … THE SYSTEM SHALL …`). Each criterion cites the audit f
 - [x] AC-18: WHEN Drift is shown THE SYSTEM SHALL present it as a view of Machine reached from a "Drift vs harness.yaml" strip cell and a view toggle, not a collapsed accordion, and acknowledge and fix SHALL continue to work as specified by cross-harness-config-management AC-37. *(P2)*
 - [x] AC-19: WHEN the drawer is open THE SYSTEM SHALL keep every grid column reachable (the content insets or the grid scrolls beside the drawer); the drawer SHALL NOT cover columns. *(m5, P2)*
 - [x] AC-20: WHEN a scan or load fails THE SYSTEM SHALL say what failed and offer one action, with the raw error behind a "Details" disclosure; no page SHALL render a bare `String(err)`. *(m2, P2)*
-- [ ] AC-21: WHEN a page has actions THE SYSTEM SHALL register them in the command registry so ⌘K lists them while that page is open, and the title bar SHALL show a ⌘K affordance. *(M9, P2)* *Amended 2026-09-27: Phase 2b registers commands on Machine, Profile, Profile › Compile, Plugins and Settings, and adds the title-bar ⌘K button. The remaining pages (Drift acknowledge and fix, MCP servers, Hooks, Secrets, Profile "Save as profile") register in Phase 4, so AC-21 stays open until then.*
+- [x] AC-21: WHEN a page has actions THE SYSTEM SHALL register them in the command registry so ⌘K lists them while that page is open, and the title bar SHALL show a ⌘K affordance. *(M9, P2)* *Amended 2026-09-27: Phase 2b registers commands on Machine, Profile, Profile › Compile, Plugins and Settings, and adds the title-bar ⌘K button. The remaining pages (Drift acknowledge and fix, MCP servers, Hooks, Secrets, Profile "Save as profile") register in Phase 4, so AC-21 stays open until then.* *Done 2026-11-16 (Phase 4): Drift registers Fix all and its view toggles, MCP servers Add server, Hooks Open settings.json, Secrets Save all, Profile Save as profile. Drift acknowledge stays a per-row action: acknowledging silences one drift item and is a per-item judgment, so there is no "acknowledge all" command.*
 
 ### Profile (harness.yaml)
 
@@ -78,11 +78,11 @@ Format: EARS (`WHEN … THE SYSTEM SHALL …`). Each criterion cites the audit f
 
 - [x] AC-34: WHEN a control is labelled THE SYSTEM SHALL name what happens; no control SHALL be labelled "Recompile" unless it compiles, and no timestamp SHALL be shown for an action that did not occur. *(M6, P1)*
 - [x] AC-35: WHEN user-facing copy renders THE SYSTEM SHALL contain no exclamation marks, no emoji or text glyphs used as icons, and SHALL use CONTEXT.md vocabulary: "surface" (never "platform" or "target"), "harness" (never "agent" for a harness), one product name. *(m1, m3, P0/P1)*
-- [ ] AC-36: WHEN a themed property is set in page code THE SYSTEM SHALL use a token variable, and a lint SHALL fail the build on hex, rgb or hsl literals under `apps/desktop/src/pages` and `apps/desktop/src/components`. *(design-system debt, P4)*
-- [ ] AC-37: WHEN a modal, toast or tooltip is needed THE SYSTEM SHALL use `@harness-kit/ui` Modal, an app-level toast viewport and a `@harness-kit/ui` Tooltip; the seven desktop-local modal implementations SHALL be gone. *(design-system debt, P4)*
+- [x] AC-36: WHEN a themed property is set in page code THE SYSTEM SHALL use a token variable, and a lint SHALL fail the build on hex, rgb or hsl literals under `apps/desktop/src/pages` and `apps/desktop/src/components`. *(design-system debt, P4)* *Done 2026-11-16: `apps/desktop/scripts/lint-page-styles.mjs` runs before the desktop tests and in CI, and also covers `src/layouts`.*
+- [x] AC-37: WHEN a modal, toast or tooltip is needed THE SYSTEM SHALL use `@harness-kit/ui` Modal, an app-level toast viewport and a `@harness-kit/ui` Tooltip; the seven desktop-local modal implementations SHALL be gone. *(design-system debt, P4)* *Done 2026-11-16: toasts already used the app-level viewport. Feedback and the profile picker moved onto Modal; the style lint now rejects `aria-modal` and `title=` on elements. Two named exceptions keep their own overlay: onboarding (a full-window first-run screen whose skip must be deliberate, AC-33) and the command palette.*
 - [x] AC-38: WHEN the app launches THE SYSTEM SHALL load no webfont. *(design-system debt, P0)*
-- [ ] AC-39: WHEN CI runs the desktop job THE SYSTEM SHALL screenshot the fixture routes in dark and light at 1440 and 1024 and fail on any console error. *(DESIGN.md §8, P4)*
-- [ ] AC-40: WHEN the app runs on macOS THE SYSTEM SHALL provide a menu bar whose View and Help menus list every keyboard shortcut and the Docs link. *(m8, P4, [Q6])*
+- [x] AC-39: WHEN CI runs the desktop job THE SYSTEM SHALL screenshot the fixture routes in dark and light at 1440 and 1024 and fail on any console error. *(DESIGN.md §8, P4)*
+- [x] AC-40: WHEN the app runs on macOS THE SYSTEM SHALL provide a menu bar whose View and Help menus list every keyboard shortcut and the Docs link. *(m8, P4, [Q6])*
 - [x] AC-41: WHEN the release ships THE SYSTEM SHALL contain none of: the Agents page, Harness Resilience Profiles, FirstRunPermissionModal, ConfirmDialog, HarnessEditorModal, PluginExplorerModal, FileViewerPage, the `/harness/settings` page, `apps/desktop/src/components/ui/*`, the Board-era tokens, `--card-glass`, `--cat-purple`. *(M11, P0/P1)*
 - [x] AC-42: WHEN the Comparator results phase renders THE SYSTEM SHALL NOT show a rating derived from an exit code, and no copy SHALL promise "record results manually" unless a results form exists. *(B4, P1)*
 
@@ -169,7 +169,7 @@ Defaults are what the plan assumes until answered. Criteria tagged with the ques
 - [NEEDS CLARIFICATION: Q3. Keep the name "Machine" for the home (default) or rename it ("This computer", "Overview")? Default: keep, with the subtitle doing the explaining.]
 - Q4 (resolved 2026-09-27). Team baseline is git-only: the selected project's committed `harness.yaml`, read from the local checkout; URL fetch waits on the signed-definitions transport. The personal profile stays at `~/.claude/harness.yaml`. See AC-55.
 - Q5 (resolved). The Machine drawer is the only write path to Codex and Cursor. The editor group is named "Claude Code"; future surfaces become sibling groups.
-- [NEEDS CLARIFICATION: Q6. Native menu bar in Phase 4 (default) or earlier?]
+- Q6 (resolved 2026-11-16). The native menu bar shipped in Phase 4, macOS only.
 
 ### Decisions (2026-09-27)
 
