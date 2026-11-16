@@ -294,7 +294,7 @@ function ModeCard({ id: _id, label, flag, description, icon, accentColor, select
       style={{
         display: "flex", flexDirection: "column", alignItems: "flex-start",
         textAlign: "left", padding: "14px", cursor: "pointer",
-        background: selected ? `${accentColor}0d` : "var(--bg-surface)",
+        background: selected ? `color-mix(in srgb, ${accentColor} 5%, transparent)` : "var(--bg-surface)",
         border: selected
           ? `1.5px solid ${accentColor}`
           : "1.5px solid var(--border-base)",
@@ -342,8 +342,8 @@ function ModeCard({ id: _id, label, flag, description, icon, accentColor, select
         <code style={{
           fontSize: "10px", fontFamily: "ui-monospace, monospace",
           color: selected ? accentColor : "var(--fg-subtle)",
-          background: selected ? `${accentColor}14` : "var(--bg-base)",
-          border: `1px solid ${selected ? `${accentColor}30` : "var(--border-subtle)"}`,
+          background: selected ? `color-mix(in srgb, ${accentColor} 8%, transparent)` : "var(--bg-base)",
+          border: `1px solid ${selected ? `color-mix(in srgb, ${accentColor} 19%, transparent)` : "var(--border-subtle)"}`,
           borderRadius: "3px", padding: "1px 5px",
         }}>
           {flag}
@@ -425,7 +425,7 @@ function CurrentConfigSummary({
       </span>
       <span style={{
         fontSize: "11px", fontWeight: 600, color: modeColor,
-        background: `${modeColor}18`, padding: "1px 8px",
+        background: `color-mix(in srgb, ${modeColor} 9%, transparent)`, padding: "1px 8px",
         borderRadius: "10px", flexShrink: 0,
       }}>
         {modeLabel}

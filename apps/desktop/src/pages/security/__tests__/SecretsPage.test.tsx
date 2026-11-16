@@ -409,24 +409,24 @@ describe("SecretsPage — environment config", () => {
     expect(inputs.length).toBeGreaterThan(0);
   });
 
-  it("shows 'Save All' button when env config changes", async () => {
+  it("shows 'Save all' button when env config changes", async () => {
     renderPage();
     await screen.findByText("HARNESS_LOG_LEVEL");
 
     const inputs = screen.getAllByDisplayValue("info");
     fireEvent.change(inputs[0], { target: { value: "debug" } });
 
-    expect(await screen.findByRole("button", { name: "Save All" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Save all" })).toBeInTheDocument();
   });
 
-  it("clicking Save All calls writeEnvConfig", async () => {
+  it("clicking Save all calls writeEnvConfig", async () => {
     renderPage();
     await screen.findByText("HARNESS_LOG_LEVEL");
 
     const inputs = screen.getAllByDisplayValue("info");
     fireEvent.change(inputs[0], { target: { value: "debug" } });
 
-    const saveAllBtn = await screen.findByRole("button", { name: "Save All" });
+    const saveAllBtn = await screen.findByRole("button", { name: "Save all" });
     fireEvent.click(saveAllBtn);
 
     await waitFor(() => {
@@ -436,14 +436,14 @@ describe("SecretsPage — environment config", () => {
     expect(mockWriteEnvConfig.mock.calls[0][1]).toBe("e1");
   });
 
-  it("a second Save All sends the digest the first save returned", async () => {
+  it("a second Save all sends the digest the first save returned", async () => {
     renderPage();
     await screen.findByText("HARNESS_LOG_LEVEL");
     fireEvent.change(screen.getAllByDisplayValue("info")[0], { target: { value: "debug" } });
-    fireEvent.click(await screen.findByRole("button", { name: "Save All" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Save all" }));
     await waitFor(() => expect(mockWriteEnvConfig).toHaveBeenCalledTimes(1));
     fireEvent.change(screen.getAllByDisplayValue("debug")[0], { target: { value: "warn" } });
-    fireEvent.click(await screen.findByRole("button", { name: "Save All" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Save all" }));
     await waitFor(() => expect(mockWriteEnvConfig).toHaveBeenCalledTimes(2));
     expect(mockWriteEnvConfig.mock.calls[1][1]).toBe("e2");
   });
@@ -455,7 +455,7 @@ describe("SecretsPage — environment config", () => {
     renderPage();
     await screen.findByText("HARNESS_LOG_LEVEL");
     fireEvent.change(screen.getAllByDisplayValue("info")[0], { target: { value: "debug" } });
-    fireEvent.click(await screen.findByRole("button", { name: "Save All" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Save all" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("env.json changed on disk");
     mockReadEnvConfig.mockResolvedValue({ entries: [ENV_ENTRY, ENV_ENTRY_NO_PLUGIN], sha256: "e7" });
     fireEvent.click(screen.getByRole("button", { name: "Reload from disk" }));
@@ -508,14 +508,14 @@ describe("SecretsPage palette commands (AC-21)", () => {
     mockReadEnvConfig.mockResolvedValue({ entries: [ENV_ENTRY], sha256: "e1" });
   });
 
-  it("lists Save All only while the button shows, and saves like it", async () => {
+  it("lists Save all only while the button shows, and saves like it", async () => {
     render(<MemoryRouter><SecretsPage /><CommandProbe /></MemoryRouter>);
     await screen.findByText("HARNESS_LOG_LEVEL");
     expect(screen.queryByTestId("cmd-secrets.save-all")).not.toBeInTheDocument();
 
     fireEvent.change(screen.getAllByDisplayValue("info")[0], { target: { value: "debug" } });
     const command = await screen.findByTestId("cmd-secrets.save-all");
-    expect(command).toHaveTextContent("Save All");
+    expect(command).toHaveTextContent("Save all");
     expect(command).toHaveAttribute("data-disabled", "false");
 
     fireEvent.click(command);

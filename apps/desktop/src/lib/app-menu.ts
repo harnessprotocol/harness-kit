@@ -2,7 +2,8 @@ import { Menu, MenuItem, PredefinedMenuItem, Submenu } from "@tauri-apps/api/men
 import { open } from "@tauri-apps/plugin-shell";
 import { isTauriRuntimeAvailable } from "./tauri";
 import { detectDesktopPlatform } from "../pages/machine/machine-data";
-import { SHORTCUTS, domKey, toAccelerator, type Shortcut } from "../shortcuts";
+import { visibleShortcuts, domKey, toAccelerator, type Shortcut } from "../shortcuts";
+import { getLabs } from "./preferences";
 
 export const DOCS_URL = "https://harnesskit.ai/docs";
 
@@ -56,12 +57,23 @@ export async function buildAppMenu(): Promise<Menu> {
   });
 
   const viewItems = [];
-  for (const s of SHORTCUTS) {
+  for (const s of visibleShortcuts(getLabs())) {
     viewItems.push(
       await MenuItem.new({ id: `shortcut:${s.id}`, text: s.label, accelerator: toAccelerator(s), action: () => redispatch(s) }),
     );
   }
   const viewMenu = await Submenu.new({ text: "View", items: viewItems });
+
+  const windowMenu = await Submenu.new({
+    text: "Window",
+    items: [
+      await predefined("Minimize"),
+      await predefined("Maximize"),
+      await predefined("Fullscreen"),
+      await predefined("Separator"),
+      await predefined("CloseWindow"),
+    ],
+  });
 
   const helpMenu = await Submenu.new({
     text: "Help",
@@ -70,7 +82,7 @@ export async function buildAppMenu(): Promise<Menu> {
     ],
   });
 
-  return Menu.new({ items: [appMenu, editMenu, viewMenu, helpMenu] });
+  return Menu.new({ items: [appMenu, editMenu, viewMenu, windowMenu, helpMenu] });
 }
 
 let installing: Promise<void> | null = null;

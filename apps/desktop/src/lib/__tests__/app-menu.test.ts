@@ -16,7 +16,7 @@ vi.mock("@tauri-apps/api/menu", () => ({
 }));
 
 import { buildAppMenu, installAppMenu, installAppMenuOnMac, resetAppMenuForTests, DOCS_URL } from "../app-menu";
-import { SHORTCUTS, toAccelerator } from "../../shortcuts";
+import { SHORTCUTS, toAccelerator, visibleShortcuts } from "../../shortcuts";
 // @ts-expect-error monaco ships no types for its internal ESM modules
 import { StandardKeyboardEvent } from "../../../node_modules/monaco-editor/esm/vs/base/browser/keyboardEvent.js";
 
@@ -26,12 +26,19 @@ async function build() {
   return { menu, sub };
 }
 
-beforeEach(() => { vi.clearAllMocks(); tauri.mockReturnValue(true); platform.mockReturnValue("darwin"); resetAppMenuForTests(); });
+beforeEach(() => { localStorage.clear(); vi.clearAllMocks(); tauri.mockReturnValue(true); platform.mockReturnValue("darwin"); resetAppMenuForTests(); });
 
 describe("app menu", () => {
-  it("has App, Edit, View, Help in order", async () => {
+  it("has App, Edit, View, Window, Help in order", async () => {
     const { menu } = await build();
-    expect(menu.items!.map((i) => i.text)).toEqual(["Harness Kit", "Edit", "View", "Help"]);
+    expect(menu.items!.map((i) => i.text)).toEqual(["Harness Kit", "Edit", "View", "Window", "Help"]);
+  });
+
+  it("Window holds the predefined Minimize, Maximize, Fullscreen, then Close window", async () => {
+    const { sub } = await build();
+    const items = sub("Window").items!;
+    expect(items.every((i) => i.kind === "predefined")).toBe(true);
+    expect(items.map((i) => i.item)).toEqual(["Minimize", "Maximize", "Fullscreen", "Separator", "CloseWindow"]);
   });
 
   it("App holds the predefined About, Hide, Hide others, Show all, Quit", async () => {
@@ -51,10 +58,23 @@ describe("app menu", () => {
     );
   });
 
-  it("View holds one item per SHORTCUTS entry with its accelerator, in order", async () => {
+  it("View holds one item per visible shortcut with its accelerator, in order", async () => {
     const { sub } = await build();
     const items = sub("View").items!;
-    expect(items.map((i) => [i.text, i.accelerator])).toEqual(SHORTCUTS.map((s) => [s.label, toAccelerator(s)]));
+    expect(items.map((i) => [i.text, i.accelerator])).toEqual(
+      visibleShortcuts({ comparator: false }).map((s) => [s.label, toAccelerator(s)]),
+    );
+  });
+
+  it("View omits the Comparator shortcut while the comparator lab is off", async () => {
+    const { sub } = await build();
+    expect(sub("View").items!.map((i) => i.text)).not.toContain("Start comparison (Comparator)");
+  });
+
+  it("View lists the Comparator shortcut while the comparator lab is on", async () => {
+    localStorage.setItem("harness-kit-labs-comparator", "true");
+    const { sub } = await build();
+    expect(sub("View").items!.map((i) => i.text)).toEqual(SHORTCUTS.map((s) => s.label));
   });
 
   it("Help holds the docs link that opens the docs URL", async () => {

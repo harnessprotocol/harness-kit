@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { NAV } from "../nav";
-import { SHORTCUTS, domKey, toAccelerator } from "../shortcuts";
+import { SHORTCUTS, domKey, toAccelerator, visibleShortcuts } from "../shortcuts";
 
 describe("SHORTCUTS", () => {
   it("holds one global entry per NAV shortcut with the NAV label", () => {
@@ -48,5 +48,10 @@ describe("SHORTCUTS", () => {
       save: { code: "KeyS", keyCode: 83 },
       "start-comparison": { code: "Enter", keyCode: 13 },
     });
+  });
+
+  it("lists the Comparator shortcut only while the comparator lab is on", () => {
+    expect(visibleShortcuts({ comparator: false }).map((s) => s.id)).not.toContain("start-comparison");
+    expect(visibleShortcuts({ comparator: true }).map((s) => s.id)).toContain("start-comparison");
   });
 });

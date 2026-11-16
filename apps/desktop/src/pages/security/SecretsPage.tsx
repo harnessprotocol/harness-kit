@@ -114,12 +114,12 @@ export default function SecretsPage() {
     }
   }
 
-  // ⌘K (spec AC-21): Save All, listed while the button shows. Setting or
+  // ⌘K (spec AC-21): Save all, listed while the button shows. Setting or
   // deleting a secret is per row, so it stays out.
   const envSaveShown = !loading && envDirty;
   useRegisterCommands(
     envSaveShown
-      ? [{ id: "secrets.save-all", title: "Save All", group: "Secrets", keywords: ["environment", "env"], run: handleSaveEnv }]
+      ? [{ id: "secrets.save-all", title: "Save all", group: "Secrets", keywords: ["environment", "env"], run: handleSaveEnv }]
       : [],
     [envSaveShown],
   );
@@ -261,7 +261,7 @@ export default function SecretsPage() {
           </p>
           {envDirty && (
             <Button variant="primary" size="sm" onClick={handleSaveEnv}>
-              Save All
+              Save all
             </Button>
           )}
         </div>

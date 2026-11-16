@@ -1,4 +1,4 @@
-import { NAV, SETTINGS } from "./nav";
+import { NAV, SETTINGS, type LabsFlags, type LabsKey } from "./nav";
 
 export interface Shortcut {
   id: string;
@@ -13,6 +13,8 @@ export interface Shortcut {
    * are listed here so the menu bar shows them, but the page owns the handler.
    */
   scope: "global" | "page";
+  /** Listed only while the matching labs flag is on. */
+  labs?: LabsKey;
 }
 
 /** The one shortcut list. The menu bar and `useGlobalShortcuts` both read it. */
@@ -32,8 +34,13 @@ export const SHORTCUTS: readonly Shortcut[] = [
   { id: "back", label: "Back", key: "[", meta: true, scope: "global" },
   { id: "forward", label: "Forward", key: "]", meta: true, scope: "global" },
   { id: "save", label: "Save", key: "s", meta: true, scope: "page" },
-  { id: "start-comparison", label: "Start comparison (Comparator)", key: "Enter", meta: true, scope: "page" },
+  { id: "start-comparison", label: "Start comparison (Comparator)", key: "Enter", meta: true, scope: "page", labs: "comparator" },
 ];
+
+/** The shortcuts to list now: labs shortcuts appear only while their flag is on. */
+export function visibleShortcuts(labs: LabsFlags): Shortcut[] {
+  return SHORTCUTS.filter((s) => s.labs === undefined || labs[s.labs]);
+}
 
 /** Tauri accelerator string, e.g. "CmdOrCtrl+Shift+K". */
 export function toAccelerator(s: Shortcut): string {
