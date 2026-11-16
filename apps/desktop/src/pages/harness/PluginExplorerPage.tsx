@@ -53,7 +53,8 @@ export default function PluginExplorerPage() {
   }, [explorer.selectedPath]);
 
   // In-editor Cmd+S is handled by Monaco's registered action (which stops
-  // propagation); this listener covers focus outside the editor.
+  // propagation); this listener covers focus outside the editor. The native
+  // menu re-dispatches Cmd+S on the focused element, so both paths still work.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (!(e.metaKey || e.ctrlKey) || e.key !== "s") return;

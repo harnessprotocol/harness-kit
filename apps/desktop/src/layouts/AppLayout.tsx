@@ -7,8 +7,7 @@ import { Search } from "lucide-react";
 import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
 import { useArrowNavigation } from "../hooks/useArrowNavigation";
 import { useSidebarResize } from "../hooks/useSidebarResize";
-import { isTauriRuntimeAvailable } from "../lib/tauri";
-import { installAppMenu } from "../lib/app-menu";
+import { installAppMenuOnMac } from "../lib/app-menu";
 import { initTheme } from "../lib/theme";
 import { useHasProfileDraft } from "../lib/profile-draft";
 import { initPreferences, getLabs } from "../lib/preferences";
@@ -230,10 +229,9 @@ function AppShell() {
     return () => window.removeEventListener("harness-kit-prefs-changed", onPrefsChanged);
   }, []);
 
-  // Native menu bar (AC-40): installed once, desktop runtime only.
+  // Native menu bar (AC-40): macOS desktop runtime only, installed once.
   useEffect(() => {
-    if (!isTauriRuntimeAvailable()) return;
-    installAppMenu().catch((err) => console.error("[menu] install failed:", err));
+    installAppMenuOnMac().catch((err) => console.error("[menu] install failed:", err));
   }, []);
 
   const entries = visibleNav(labs);

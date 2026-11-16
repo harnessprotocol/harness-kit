@@ -1,16 +1,21 @@
 import { Menu, MenuItem, PredefinedMenuItem, Submenu } from "@tauri-apps/api/menu";
 import { open } from "@tauri-apps/plugin-shell";
+import { isTauriRuntimeAvailable } from "./tauri";
+import { detectDesktopPlatform } from "../pages/machine/machine-data";
 import { SHORTCUTS, toAccelerator, type Shortcut } from "../shortcuts";
 
 export const DOCS_URL = "https://harnesskit.ai/docs";
 
 /**
  * A native accelerator consumes the key before the webview sees it, so a menu
- * click re-dispatches it as a keydown on `document` (bubbling to `window`).
- * Document and window listeners both run, and each shortcut has one handler.
+ * click re-dispatches it as a keydown on the focused element (an editor, say),
+ * falling back to `document` when focus is on the body. It bubbles through
+ * document to window, so each listener sees it once.
  */
 function redispatch(s: Shortcut) {
-  document.dispatchEvent(
+  const active = document.activeElement;
+  const target: EventTarget = active && active !== document.body ? active : document;
+  target.dispatchEvent(
     new KeyboardEvent("keydown", { key: s.key, metaKey: true, shiftKey: !!s.shift, bubbles: true, cancelable: true }),
   );
 }
@@ -63,7 +68,29 @@ export async function buildAppMenu(): Promise<Menu> {
   return Menu.new({ items: [appMenu, editMenu, viewMenu, helpMenu] });
 }
 
-export async function installAppMenu(): Promise<void> {
-  const menu = await buildAppMenu();
-  await menu.setAsAppMenu();
+let installing: Promise<void> | null = null;
+
+/** Installs the menu once; a failed install resets so a later call retries. */
+export function installAppMenu(): Promise<void> {
+  if (!installing) {
+    installing = (async () => {
+      const menu = await buildAppMenu();
+      await menu.setAsAppMenu();
+    })().catch((err) => {
+      installing = null;
+      throw err;
+    });
+  }
+  return installing;
+}
+
+/** AC-40 is macOS-only: skip other platforms and the browser preview. */
+export function installAppMenuOnMac(): Promise<void> {
+  if (!isTauriRuntimeAvailable() || detectDesktopPlatform() !== "darwin") return Promise.resolve();
+  return installAppMenu();
+}
+
+/** Test seam: forget the cached install. */
+export function resetAppMenuForTests(): void {
+  installing = null;
 }

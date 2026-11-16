@@ -31,7 +31,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
   { id: "toggle-sidebar", label: "Toggle sidebar", key: "\\", meta: true, scope: "global" },
   { id: "back", label: "Back", key: "[", meta: true, scope: "global" },
   { id: "forward", label: "Forward", key: "]", meta: true, scope: "global" },
-  { id: "save", label: "Save (Profile, Plugin explorer)", key: "s", meta: true, scope: "page" },
+  { id: "save", label: "Save", key: "s", meta: true, scope: "page" },
   { id: "start-comparison", label: "Start comparison (Comparator)", key: "Enter", meta: true, scope: "page" },
 ];
 
