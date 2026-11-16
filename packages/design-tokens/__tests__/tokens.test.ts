@@ -15,7 +15,7 @@ describe("design tokens", () => {
     const names = CSS_VARS.map(([, name]) => name);
     expect(new Set(names).size).toBe(names.length);
     for (const name of names) {
-      expect(name).toMatch(/^--[a-z]+(-[a-z]+)*$/);
+      expect(name).toMatch(/^--[a-z][a-z0-9]*(-[a-z0-9]+)*$/);
     }
   });
 

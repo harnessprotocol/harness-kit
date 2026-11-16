@@ -43,7 +43,7 @@ export function TaskTypeSelector({ selected, onChange }: TaskTypeSelectorProps) 
               padding: "4px 12px",
               borderRadius: "16px",
               border: `1px solid ${active ? "var(--accent)" : "var(--border-base)"}`,
-              background: active ? "rgba(91,80,232,0.12)" : "var(--bg-elevated)",
+              background: active ? "var(--accent-light)" : "var(--bg-elevated)",
               color: active ? "var(--accent-text)" : "var(--fg-muted)",
               cursor: "pointer",
               transition: "all 100ms ease",

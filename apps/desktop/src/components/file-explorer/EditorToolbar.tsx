@@ -120,7 +120,7 @@ export default function EditorToolbar({
             borderRadius: "5px",
             border: "none",
             background: "var(--accent)",
-            color: "#fff",
+            color: "var(--fg-on-fill)",
             cursor: saving ? "not-allowed" : "pointer",
             opacity: saving ? 0.6 : 1,
             fontFamily: "inherit",

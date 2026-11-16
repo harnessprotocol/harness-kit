@@ -246,6 +246,10 @@ jobs:
       - name: Check Tauri capability coverage
         run: pnpm --filter harness-kit-desktop check:capabilities
 
+      # AC-36: no hex/rgb/hsl literals in page code; colours come from tokens.
+      - name: Lint page styles
+        run: pnpm --filter harness-kit-desktop lint:styles
+
       - name: Run desktop tests
         run: pnpm --filter harness-kit-desktop test
 

@@ -75,7 +75,7 @@ export default function FeedbackModal({ open: isOpen, onClose }: Props) {
     position: "fixed",
     inset: 0,
     zIndex: 9000,
-    background: "rgba(0,0,0,0.55)",
+    background: "var(--scrim)",
     backdropFilter: "blur(4px)",
     WebkitBackdropFilter: "blur(4px)",
     display: "flex",
@@ -92,7 +92,7 @@ export default function FeedbackModal({ open: isOpen, onClose }: Props) {
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
-    boxShadow: "var(--shadow-popover, 0 20px 60px rgba(0,0,0,0.4))",
+    boxShadow: "var(--shadow-popover)",
   };
 
   return createPortal(
@@ -140,7 +140,7 @@ export default function FeedbackModal({ open: isOpen, onClose }: Props) {
                         border: "1px solid",
                         borderColor: category === cat.id ? "var(--accent)" : "var(--border-base)",
                         background: category === cat.id ? "var(--accent)" : "transparent",
-                        color: category === cat.id ? "var(--accent-text, #fff)" : "var(--fg-muted)",
+                        color: category === cat.id ? "var(--accent-text)" : "var(--fg-muted)",
                         fontSize: "11px",
                         cursor: "pointer",
                         whiteSpace: "nowrap",
@@ -155,7 +155,7 @@ export default function FeedbackModal({ open: isOpen, onClose }: Props) {
               {/* Title */}
               <div>
                 <label style={{ display: "block", fontSize: "11px", fontWeight: 500, color: "var(--fg-muted)", marginBottom: "6px" }}>
-                  Title <span style={{ color: "var(--danger, #e53e3e)" }}>*</span>
+                  Title <span style={{ color: "var(--danger)" }}>*</span>
                 </label>
                 <input
                   type="text"
@@ -180,7 +180,7 @@ export default function FeedbackModal({ open: isOpen, onClose }: Props) {
               {/* Description */}
               <div>
                 <label style={{ display: "block", fontSize: "11px", fontWeight: 500, color: "var(--fg-muted)", marginBottom: "6px" }}>
-                  Description <span style={{ color: "var(--danger, #e53e3e)" }}>*</span>
+                  Description <span style={{ color: "var(--danger)" }}>*</span>
                 </label>
                 <textarea
                   value={description}
@@ -257,7 +257,7 @@ export default function FeedbackModal({ open: isOpen, onClose }: Props) {
                 borderRadius: "6px",
                 border: "none",
                 background: canSubmit ? "var(--accent)" : "var(--bg-surface)",
-                color: canSubmit ? "var(--accent-text, #fff)" : "var(--fg-subtle)",
+                color: canSubmit ? "var(--accent-text)" : "var(--fg-subtle)",
                 fontSize: "12px",
                 cursor: canSubmit ? "pointer" : "default",
                 fontWeight: 500,
@@ -298,7 +298,7 @@ function SuccessState({ result, onClose }: { result: FeedbackResult; onClose: ()
 
   return (
     <div style={{ textAlign: "center", padding: "16px 0" }}>
-      <svg width="32" height="32" viewBox="0 0 20 20" fill="var(--danger, #e53e3e)" style={{ marginBottom: "10px" }}>
+      <svg width="32" height="32" viewBox="0 0 20 20" fill="var(--danger)" style={{ marginBottom: "10px" }}>
         <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
       </svg>
       <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)", margin: "0 0 4px" }}>Submission failed</p>

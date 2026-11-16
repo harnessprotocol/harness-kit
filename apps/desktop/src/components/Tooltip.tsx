@@ -72,7 +72,7 @@ export default function Tooltip({ content, delay = 500, position = "top", childr
             zIndex: 9999,
             background: "var(--bg-elevated)",
             border: "1px solid var(--border-base)",
-            boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+            boxShadow: "var(--shadow-popover)",
             borderRadius: "6px",
             padding: "5px 9px",
             fontSize: "11px",

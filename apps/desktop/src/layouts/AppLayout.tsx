@@ -363,14 +363,14 @@ function AppShell() {
                   viewBox="0 0 32 32"
                   style={{ width: 22, height: 22, filter: "drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 50%, transparent))", flexShrink: 0 }}
                 >
-                  <rect width="32" height="32" rx="7" fill="#131215" />
-                  <g stroke="#6BC0F5" strokeWidth="2.8" strokeLinecap="round" fill="none">
+                  <rect width="32" height="32" rx="7" fill="var(--brand-mark-bg)" />
+                  <g stroke="var(--brand-mark-fg)" strokeWidth="2.8" strokeLinecap="round" fill="none">
                     <path d="M9 9.5 C 15 11, 17.5 13.5, 19.4 14.9" />
                     <path d="M9 22.5 C 15 21, 17.5 18.5, 19.4 17.1" />
                   </g>
-                  <circle cx="9" cy="9.5" r="1.9" fill="#6BC0F5" />
-                  <circle cx="9" cy="22.5" r="1.9" fill="#6BC0F5" />
-                  <circle cx="22" cy="16" r="3.3" fill="#6BC0F5" />
+                  <circle cx="9" cy="9.5" r="1.9" fill="var(--brand-mark-fg)" />
+                  <circle cx="9" cy="22.5" r="1.9" fill="var(--brand-mark-fg)" />
+                  <circle cx="22" cy="16" r="3.3" fill="var(--brand-mark-fg)" />
                 </svg>
                 <span style={{ fontSize: "13px", fontWeight: 600, letterSpacing: "-0.1px", color: "var(--fg-base)" }}>
                   Harness Kit

@@ -598,8 +598,8 @@ export default function SetupPhase({ onStart }: SetupPhaseProps) {
               alignItems: "center",
               gap: 8,
               padding: "8px 12px",
-              background: "rgba(234, 88, 12, 0.10)",
-              border: "1px solid rgba(234, 88, 12, 0.25)",
+              background: "color-mix(in srgb, var(--warning) 10%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--warning) 25%, transparent)",
               borderRadius: 6,
               fontSize: 11,
               fontFamily: fontStack,
@@ -620,7 +620,7 @@ export default function SetupPhase({ onStart }: SetupPhaseProps) {
           style={{
             ...styles.startBtn,
             background: canStart ? tokens.accent : tokens.borderBase,
-            color: canStart ? "#ffffff" : tokens.fgPlaceholder,
+            color: canStart ? "var(--fg-on-fill)" : tokens.fgPlaceholder,
             cursor: canStart ? "pointer" : "not-allowed",
             opacity: canStart ? 1 : 0.7,
           }}
@@ -772,7 +772,7 @@ function HarnessCard({
             justifyContent: "center",
           }}
         >
-          <svg width="8" height="8" viewBox="0 0 16 16" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="8" height="8" viewBox="0 0 16 16" fill="none" stroke="var(--fg-on-fill)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="3 8 7 12 13 4" />
           </svg>
         </div>

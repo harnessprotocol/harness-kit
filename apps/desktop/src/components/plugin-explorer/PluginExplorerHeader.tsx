@@ -112,7 +112,7 @@ export default function PluginExplorerHeader({
               transition={{ duration: 0.2 }}
               style={{
                 fontSize: "11px",
-                color: "var(--success, #22c55e)",
+                color: "var(--success)",
                 fontWeight: 500,
               }}
             >

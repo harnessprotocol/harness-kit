@@ -119,9 +119,9 @@ function Chip({ label, color, onRemove }: {
   onRemove: () => void;
 }) {
   const colors = {
-    green: { bg: "var(--success-light)", border: "rgba(22,163,74,0.22)", text: "var(--success)" },
-    red:   { bg: "var(--danger-light)",  border: "rgba(220,38,38,0.22)",  text: "var(--danger)" },
-    amber: { bg: "var(--warning-light)", border: "rgba(217,119,6,0.22)",  text: "var(--warning)" },
+    green: { bg: "var(--success-light)", border: "color-mix(in srgb, var(--success) 22%, transparent)", text: "var(--success)" },
+    red:   { bg: "var(--danger-light)",  border: "color-mix(in srgb, var(--danger) 22%, transparent)",  text: "var(--danger)" },
+    amber: { bg: "var(--warning-light)", border: "color-mix(in srgb, var(--warning) 22%, transparent)",  text: "var(--warning)" },
   };
   const c = colors[color];
   return (
@@ -322,7 +322,7 @@ function ModeCard({ id: _id, label, flag, description, icon, accentColor, select
             width: 16, height: 16, borderRadius: "50%",
             background: accentColor,
             display: "flex", alignItems: "center", justifyContent: "center",
-            color: "#fff", flexShrink: 0,
+            color: "var(--fg-on-fill)", flexShrink: 0,
           }}>
             <IconCheck />
           </div>

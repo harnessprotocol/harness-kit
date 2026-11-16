@@ -127,7 +127,7 @@ const styles = {
     border: "none",
     borderRadius: 6,
     background: tokens.accent,
-    color: "#ffffff",
+    color: "var(--fg-on-fill)",
     fontSize: 12,
     fontWeight: 500,
     fontFamily: fontStack,
@@ -336,9 +336,9 @@ function PhaseStepper({
         const dotStyle: React.CSSProperties = {
           ...styles.stepDot,
           ...(isDone
-            ? { background: tokens.success, color: "#fff", border: `2px solid ${tokens.success}` }
+            ? { background: tokens.success, color: "var(--fg-on-fill)", border: `2px solid ${tokens.success}` }
             : isActive
-              ? { background: tokens.accent, color: "#fff", border: `2px solid ${tokens.accent}` }
+              ? { background: tokens.accent, color: "var(--fg-on-fill)", border: `2px solid ${tokens.accent}` }
               : { background: "transparent", color: tokens.fgPlaceholder, border: `2px solid ${tokens.borderStrong}` }),
         };
 

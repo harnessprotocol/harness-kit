@@ -145,7 +145,7 @@ function MatcherBadge({ matcher }: { matcher?: string }) {
   return (
     <span style={{
       padding: "1px 6px", borderRadius: "4px", fontSize: "10px", fontWeight: 600,
-      background: "var(--accent-light, #1a1a2e)", color: "var(--accent)",
+      background: "var(--accent-light)", color: "var(--accent)",
       fontFamily: "ui-monospace, monospace", wordBreak: "break-all",
     }}>
       {matcher}

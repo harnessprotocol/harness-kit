@@ -48,14 +48,14 @@ const monoStack = 'ui-monospace, "SF Mono", monospace';
 // hues are reserved for the azure accent's visual territory in this direction).
 
 const HARNESS_COLORS = [
-  "#2E9BE6", // azure (accent)
-  "#0891b2", // cyan
-  "#d97706", // amber
-  "#dc2626", // red
-  "#16a34a", // green
-  "#b45309", // brown/copper
-  "#0d9488", // teal
-  "#ea580c", // orange
+  "var(--chart-1)", // azure (accent)
+  "var(--chart-2)", // cyan
+  "var(--chart-3)", // amber
+  "var(--chart-4)", // red
+  "var(--chart-5)", // green
+  "var(--chart-6)", // brown/copper
+  "var(--chart-7)", // teal
+  "var(--chart-8)", // orange
 ];
 
 // ── Styles ──────────────────────────────────────────────────
@@ -123,7 +123,7 @@ const styles = {
     fontSize: 12,
     fontWeight: 600,
     fontFamily: fontStack,
-    color: "#ffffff",
+    color: "var(--fg-on-fill)",
     background: tokens.accent,
     border: "none",
     borderRadius: 6,
@@ -688,7 +688,7 @@ export default function ResultsPhase({ active, onStartJudge }: ResultsPhaseProps
                           fontSize: 10,
                           fontWeight: 600,
                           fontFamily: monoStack,
-                          color: pct > 20 ? "#ffffff" : barColor,
+                          color: pct > 20 ? "var(--fg-on-fill)" : barColor,
                           whiteSpace: "nowrap" as const,
                           position: pct > 20 ? "relative" as const : "absolute" as const,
                           left: pct > 20 ? undefined : `calc(${Math.max(pct, 2)}% + 6px)`,

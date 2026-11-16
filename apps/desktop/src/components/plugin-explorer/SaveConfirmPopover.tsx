@@ -49,7 +49,7 @@ export default function SaveConfirmPopover({ variant, onConfirm, onCancel }: Sav
         marginTop: "6px",
         padding: "10px 14px",
         background: "var(--bg-elevated)",
-        border: "1px solid var(--warning, #f59e0b)",
+        border: "1px solid var(--warning)",
         borderRadius: "8px",
         boxShadow: "var(--shadow-md)",
         minWidth: "220px",
@@ -68,8 +68,8 @@ export default function SaveConfirmPopover({ variant, onConfirm, onCancel }: Sav
           <button
             className="btn btn-sm"
             style={{
-              borderColor: "var(--warning, #f59e0b)",
-              color: "var(--warning, #f59e0b)",
+              borderColor: "var(--warning)",
+              color: "var(--warning)",
             }}
             onClick={onConfirm}
           >

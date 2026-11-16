@@ -24,7 +24,7 @@ import BudgetAlertBanner from "../../components/observatory/BudgetAlertBanner";
 
 // Categorical chart palette distinguishing models — avoids indigo/purple/violet
 // per DESIGN.md §1 (those hues are reserved for the azure accent in this direction).
-const MODEL_COLORS = ["#22b1ec", "#d97706", "#10b981", "#3b82f6", "#06b6d4", "#e11d48"];
+const MODEL_COLORS = ["var(--chart-1)", "var(--chart-3)", "var(--chart-5)", "var(--chart-2)", "var(--chart-7)", "var(--chart-4)"];
 
 // ── Date range types ─────────────────────────────────────────
 
@@ -171,7 +171,7 @@ function useReducedMotion() {
 }
 
 function getAccentColor() {
-  return getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#2E9BE6";
+  return getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "var(--accent)";
 }
 
 // ── Stat card ────────────────────────────────────────────────
@@ -657,8 +657,8 @@ export default function DashboardPage() {
   const TOKEN_TYPE_COLORS: Record<string, string> = {
     Input: "var(--fg-subtle)",
     Output: accentColor,
-    "Cache Read": "#10b981",
-    "Cache Create": "#6C665F",
+    "Cache Read": "var(--chart-5)",
+    "Cache Create": "var(--fg-placeholder)",
   };
 
   const hourlyChartData = useMemo(() => {
