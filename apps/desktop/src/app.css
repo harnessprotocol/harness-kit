@@ -34,10 +34,10 @@
   --chart-3: #D97706;
   --chart-4: #DC2626;
   --chart-5: #16A34A;
-  --chart-6: #B45309;
-  --chart-7: #0D9488;
+  --chart-6: #BE185D;
+  --chart-7: #7C3AED;
   --chart-8: #EA580C;
-  --file-folder: #D97706;
+  --file-folder: #B45309;
   --file-md: #3B82F6;
   --file-py: #16A34A;
   --file-sh: #9333EA;
@@ -49,7 +49,7 @@
   --file-css: #0891B2;
   --file-toml: #EA580C;
   --file-txt: #6B7280;
-  --file-default: #9CA3AF;
+  --file-default: #6B7280;
   /* design-tokens:light:end */
 
   /* Category accents */
@@ -498,7 +498,7 @@
   --chart-4: #F87171;
   --chart-5: #4ADE80;
   --chart-6: #D08A4A;
-  --chart-7: #2DD4BF;
+  --chart-7: #A78BFA;
   --chart-8: #FB923C;
   --file-folder: #D97706;
   --file-md: #3B82F6;
