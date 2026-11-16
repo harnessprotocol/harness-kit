@@ -1,6 +1,8 @@
 import { describe, it, expect } from "vitest";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
 // @ts-expect-error — plain .mjs lint script, no types needed
-import { lintSource } from "../../scripts/lint-page-styles.mjs";
+import { lintSource, MODAL_OVERLAY_ALLOWLIST } from "../../scripts/lint-page-styles.mjs";
 
 type Finding = { file: string; line: number; rule: string; message: string };
 const lint = (text: string): Finding[] => lintSource("src/pages/X.tsx", text);
@@ -44,5 +46,33 @@ describe("lint-page-styles: color-literal", () => {
   it("reports each literal separately", () => {
     const found = lint('const s = ["#111", "#222"];\nconst t = "rgba(0,0,0,.5)";');
     expect(found.map((f) => f.line)).toEqual([1, 1, 2]);
+  });
+});
+
+describe("lint-page-styles: modal-overlay", () => {
+  it("flags aria-modal in a desktop file", () => {
+    const found = lint('export const A = () => <div role="dialog" aria-modal="true" />;');
+    expect(found).toHaveLength(1);
+    expect(found[0].rule).toBe("modal-overlay");
+  });
+
+  it("does not flag the shared Modal or the word in text", () => {
+    expect(lint('export const A = () => <Modal open onClose={f} title="x">y</Modal>;')).toEqual([]);
+    expect(lint('const s = "aria-modal";')).toEqual([]);
+  });
+
+  it("skips an allowlisted file", () => {
+    const path = Object.keys(MODAL_OVERLAY_ALLOWLIST)[0];
+    expect(lintSource(path, '<div aria-modal="true" />')).toEqual([]);
+  });
+
+  it("keeps every allowlist entry live: file exists, still has aria-modal, has a reason", () => {
+    const root = resolve(__dirname, "../..");
+    for (const [file, reason] of Object.entries(MODAL_OVERLAY_ALLOWLIST) as [string, string][]) {
+      expect(reason.length, `${file} needs a reason`).toBeGreaterThan(10);
+      const full = resolve(root, file);
+      expect(existsSync(full), `${file} no longer exists`).toBe(true);
+      expect(readFileSync(full, "utf8"), `${file} no longer has aria-modal`).toContain("aria-modal");
+    }
   });
 });

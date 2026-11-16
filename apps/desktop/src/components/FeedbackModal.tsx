@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { useDialogFocus } from "@harness-kit/ui";
+import { CheckCircle2, ChevronRight, CircleAlert } from "lucide-react";
+import { Modal } from "@harness-kit/ui";
 import { open } from "@tauri-apps/plugin-shell";
 import {
   getSystemInfo, submitFeedback,
@@ -40,22 +40,16 @@ export default function FeedbackModal({ open: isOpen, onClose }: Props) {
     setTitle("");
     setDescription("");
     setResult(null);
+    setSubmitting(false);
     setSysInfoExpanded(false);
     getSystemInfo().then(setSysInfo).catch(() => {});
   }, [isOpen]);
 
-  const dialogRef = useRef<HTMLDivElement>(null);
-  useDialogFocus(isOpen, dialogRef);
+  // Bumped on every open and close; a submit that finishes after either is dropped.
+  const session = useRef(0);
   useEffect(() => {
-    if (!isOpen) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
+    session.current += 1;
+  }, [isOpen]);
 
   const canSubmit =
     title.trim().length >= 3 &&
@@ -65,63 +59,49 @@ export default function FeedbackModal({ open: isOpen, onClose }: Props) {
 
   async function handleSubmit() {
     if (!canSubmit || !sysInfo) return;
+    const mine = session.current;
     setSubmitting(true);
-    const res = await submitFeedback(category, title, description, sysInfo);
+    let res: FeedbackResult;
+    try {
+      res = await submitFeedback(category, title, description, sysInfo);
+    } catch (err) {
+      res = { success: false, issueUrl: null, error: err instanceof Error ? err.message : String(err) };
+    }
+    if (session.current !== mine) return;
     setResult(res);
     setSubmitting(false);
   }
 
-  const overlay: React.CSSProperties = {
-    position: "fixed",
-    inset: 0,
-    zIndex: 9000,
-    background: "var(--scrim)",
-    backdropFilter: "blur(4px)",
-    WebkitBackdropFilter: "blur(4px)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-  };
-
-  const card: React.CSSProperties = {
-    width: "min(90vw, 500px)",
-    maxHeight: "85vh",
-    background: "var(--bg-elevated)",
-    border: "1px solid var(--border-base)",
-    borderRadius: "12px",
-    display: "flex",
-    flexDirection: "column",
-    overflow: "hidden",
-    boxShadow: "var(--shadow-popover)",
-  };
-
-  return createPortal(
-    <div style={overlay} onClick={onClose}>
-      <div
-        ref={dialogRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="feedback-dialog-title"
-        tabIndex={-1}
-        style={{ ...card, outline: "none" }}
-        onClick={e => e.stopPropagation()}
+  const footer = result ? undefined : (
+    <>
+      <button
+        onClick={onClose}
+        style={{ padding: "6px 14px", borderRadius: "6px", border: "1px solid var(--border-base)", background: "transparent", color: "var(--fg-muted)", fontSize: "12px", cursor: "pointer" }}
       >
-        {/* Header */}
-        <div style={{ padding: "16px 20px 12px", borderBottom: "1px solid var(--border-base)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <span id="feedback-dialog-title" style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)" }}>Send Feedback</span>
-          <button
-            onClick={onClose}
-            aria-label="Close"
-            style={{ background: "none", border: "none", cursor: "pointer", color: "var(--fg-muted)", padding: "2px", lineHeight: 1 }}
-          >
-            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
-          </button>
-        </div>
+        Cancel
+      </button>
+      <button
+        onClick={handleSubmit}
+        disabled={!canSubmit}
+        style={{
+          padding: "6px 14px",
+          borderRadius: "6px",
+          border: "none",
+          background: canSubmit ? "var(--accent)" : "var(--bg-surface)",
+          color: canSubmit ? "var(--fg-on-fill)" : "var(--fg-subtle)",
+          fontSize: "12px",
+          cursor: canSubmit ? "pointer" : "default",
+          fontWeight: 500,
+        }}
+      >
+        {submitting ? "Submitting…" : "Submit"}
+      </button>
+    </>
+  );
 
-        {/* Body */}
-        <div style={{ padding: "16px 20px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "14px" }}>
+  return (
+    <Modal open={isOpen} onClose={onClose} title="Send Feedback" size="md" footer={footer}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           {result ? (
             <SuccessState result={result} onClose={onClose} />
           ) : (
@@ -140,7 +120,7 @@ export default function FeedbackModal({ open: isOpen, onClose }: Props) {
                         border: "1px solid",
                         borderColor: category === cat.id ? "var(--accent)" : "var(--border-base)",
                         background: category === cat.id ? "var(--accent)" : "transparent",
-                        color: category === cat.id ? "var(--accent-text)" : "var(--fg-muted)",
+                        color: category === cat.id ? "var(--fg-on-fill)" : "var(--fg-muted)",
                         fontSize: "11px",
                         cursor: "pointer",
                         whiteSpace: "nowrap",
@@ -211,12 +191,10 @@ export default function FeedbackModal({ open: isOpen, onClose }: Props) {
                     onClick={() => setSysInfoExpanded(v => !v)}
                     style={{ background: "none", border: "none", cursor: "pointer", color: "var(--fg-subtle)", fontSize: "11px", padding: 0, display: "flex", alignItems: "center", gap: "4px" }}
                   >
-                    <svg
-                      width="10" height="10" viewBox="0 0 20 20" fill="currentColor"
+                    <ChevronRight
+                      size={16} strokeWidth={1.7} aria-hidden="true"
                       style={{ transform: sysInfoExpanded ? "rotate(90deg)" : "rotate(0deg)", transition: "transform 0.15s" }}
-                    >
-                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                    </svg>
+                    />
                     System info (auto-collected)
                   </button>
                   {sysInfoExpanded && (
@@ -238,38 +216,8 @@ export default function FeedbackModal({ open: isOpen, onClose }: Props) {
               )}
             </>
           )}
-        </div>
-
-        {/* Footer */}
-        {!result && (
-          <div style={{ padding: "12px 20px", borderTop: "1px solid var(--border-base)", display: "flex", justifyContent: "flex-end", gap: "8px" }}>
-            <button
-              onClick={onClose}
-              style={{ padding: "6px 14px", borderRadius: "6px", border: "1px solid var(--border-base)", background: "transparent", color: "var(--fg-muted)", fontSize: "12px", cursor: "pointer" }}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={!canSubmit}
-              style={{
-                padding: "6px 14px",
-                borderRadius: "6px",
-                border: "none",
-                background: canSubmit ? "var(--accent)" : "var(--bg-surface)",
-                color: canSubmit ? "var(--accent-text)" : "var(--fg-subtle)",
-                fontSize: "12px",
-                cursor: canSubmit ? "pointer" : "default",
-                fontWeight: 500,
-              }}
-            >
-              {submitting ? "Submitting…" : "Submit"}
-            </button>
-          </div>
-        )}
       </div>
-    </div>,
-    document.body,
+    </Modal>
   );
 }
 
@@ -277,9 +225,7 @@ function SuccessState({ result, onClose }: { result: FeedbackResult; onClose: ()
   if (result.success && result.issueUrl) {
     return (
       <div style={{ textAlign: "center", padding: "16px 0" }}>
-        <svg width="32" height="32" viewBox="0 0 20 20" fill="var(--accent)" style={{ marginBottom: "10px" }}>
-          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-        </svg>
+        <CheckCircle2 size={16} strokeWidth={1.7} aria-hidden="true" style={{ marginBottom: "10px", color: "var(--accent)" }} />
         <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)", margin: "0 0 6px" }}>Feedback sent</p>
         <button
           onClick={() => open(result.issueUrl!)}
@@ -298,9 +244,7 @@ function SuccessState({ result, onClose }: { result: FeedbackResult; onClose: ()
 
   return (
     <div style={{ textAlign: "center", padding: "16px 0" }}>
-      <svg width="32" height="32" viewBox="0 0 20 20" fill="var(--danger)" style={{ marginBottom: "10px" }}>
-        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-      </svg>
+      <CircleAlert size={16} strokeWidth={1.7} aria-hidden="true" style={{ marginBottom: "10px", color: "var(--danger)" }} />
       <p style={{ fontSize: "13px", fontWeight: 600, color: "var(--fg-base)", margin: "0 0 4px" }}>Submission failed</p>
       {result.error && (
         <p style={{ fontSize: "11px", color: "var(--fg-muted)", margin: "0 0 12px" }}>{result.error}</p>

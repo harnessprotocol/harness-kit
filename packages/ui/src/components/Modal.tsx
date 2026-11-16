@@ -10,6 +10,8 @@ export interface ModalProps {
   footer?: ReactNode;
   /** aria-label fallback when `title` isn't plain text. */
   ariaLabel?: string;
+  /** "md" is the default width; "lg" is min(90vw, 680px). */
+  size?: "md" | "lg";
 }
 
 /**
@@ -17,7 +19,7 @@ export interface ModalProps {
  * styles). Escape closes and returns focus to the trigger; overlay click
  * closes; focus is trapped within the dialog while open.
  */
-export function Modal({ open, onClose, title, children, footer, ariaLabel }: ModalProps) {
+export function Modal({ open, onClose, title, children, footer, ariaLabel, size = "md" }: ModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
 
@@ -46,7 +48,7 @@ export function Modal({ open, onClose, title, children, footer, ariaLabel }: Mod
         aria-label={typeof title === "string" ? undefined : ariaLabel}
         aria-labelledby={typeof title === "string" ? titleId : undefined}
         tabIndex={-1}
-        className="hk-modal"
+        className={size === "lg" ? "hk-modal hk-modal-lg" : "hk-modal"}
         onMouseDown={(e) => e.stopPropagation()}
       >
         {title && (

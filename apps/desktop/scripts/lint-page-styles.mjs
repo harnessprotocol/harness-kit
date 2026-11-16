@@ -7,6 +7,7 @@
 //
 // Rules (add new ones as functions in RULES; each returns LintFinding[]):
 //   color-literal  hex, rgb(a) and hsl(a) values in string or template text
+//   modal-overlay  an `aria-modal` JSX attribute: dialogs use @harness-kit/ui Modal
 //
 // `lintSource(path, text)` is exported so the rules are unit-tested (see
 // src/__tests__/lint-page-styles.test.ts). Run as a CLI it walks the source
@@ -59,7 +60,38 @@ function colorLiteralRule(file, sf) {
   return findings;
 }
 
-const RULES = [colorLiteralRule];
+/**
+ * Files that keep their own `aria-modal` on purpose, each with its reason.
+ * A test fails if an entry's file is gone or no longer has `aria-modal`.
+ */
+export const MODAL_OVERLAY_ALLOWLIST = {
+  "src/components/CommandPalette.tsx":
+    "Top-aligned keyboard-driven palette; does not fit Modal's title, body and footer shape.",
+  "src/pages/onboarding/OnboardingFlow.tsx":
+    "First-run full-window takeover, not a modal; skip must be deliberate (AC-33).",
+};
+
+/** @returns {LintFinding[]} */
+function modalOverlayRule(file, sf) {
+  if (Object.hasOwn(MODAL_OVERLAY_ALLOWLIST, file.replaceAll("\\", "/"))) return [];
+  const findings = [];
+  const visit = (node) => {
+    if (ts.isJsxAttribute(node) && node.name.getText(sf) === "aria-modal") {
+      const { line } = sf.getLineAndCharacterOfPosition(node.getStart(sf));
+      findings.push({
+        file,
+        line: line + 1,
+        rule: "modal-overlay",
+        message: "custom dialog overlay: use <Modal> from @harness-kit/ui",
+      });
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sf);
+  return findings;
+}
+
+const RULES = [colorLiteralRule, modalOverlayRule];
 
 /**
  * @param {string} path
