@@ -118,7 +118,10 @@ export function buildBridgeScript(responses: Record<string, unknown>): string {
         invoke: function(cmd, args) {
           return new Promise(function(resolve, reject) {
             const response = RESPONSES[cmd];
-            if (response !== undefined) {
+            if (cmd.indexOf('plugin:menu|') === 0) {
+              // Native menu API (AC-40): constructors resolve [rid, id]; other calls ignore the value.
+              setTimeout(function() { resolve([1, 'mock-menu']); }, 0);
+            } else if (response !== undefined) {
               setTimeout(function() { resolve(response); }, 0);
             } else {
               setTimeout(function() {

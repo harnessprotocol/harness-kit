@@ -266,8 +266,17 @@ jobs:
 
       # smoke.spec (route content, Machine/Drift views) and console-hunt (no console
       # errors on any route) run against the dev server with the mocked Tauri bridge.
-      - name: Smoke and console-hunt e2e (dev server)
+      - name: Smoke, console-hunt and screenshot e2e (dev server)
         run: pnpm --filter harness-kit-desktop test:e2e
+
+      # AC-39: fixture-route screenshots (both themes, two widths) for review.
+      - name: Upload fixture screenshots
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-screenshots
+          path: apps/desktop/e2e/screenshots/
+          if-no-files-found: warn
 
   # AC-60: the surface_write guard and the IPC contract also run on macOS, where
   # is_declared_store picks the macOS write scope and paths are case-insensitive.

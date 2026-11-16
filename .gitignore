@@ -21,6 +21,7 @@ coverage/
 # Playwright e2e artifacts
 apps/desktop/test-results/
 apps/desktop/playwright-report/
+apps/desktop/e2e/screenshots/
 
 # Website (Fumadocs)
 website/build/
