@@ -4,6 +4,7 @@ import { Webhook } from "lucide-react";
 import { Button, Card, EmptyState, ErrorNotice, Tooltip } from "@harness-kit/ui";
 import { useFileEditor } from "../../hooks/useFileEditor";
 import { errorDetails } from "../../lib/error-details";
+import { useRegisterCommands } from "../../lib/commands";
 import EditorToolbar from "../../components/file-explorer/EditorToolbar";
 
 const MonacoEditor = lazy(() => import("../../components/plugin-explorer/MonacoEditor"));
@@ -322,6 +323,20 @@ export default function HooksPage() {
   const navigate = useNavigate();
   const editor = useFileEditor(FILE_PATH);
   const [viewMode, setViewMode] = useState<"formatted" | "editor">("formatted");
+
+  // ⌘K (spec AC-21): the toolbar's one button.
+  useRegisterCommands(
+    [
+      {
+        id: "hooks.open-settings",
+        title: "settings.json",
+        group: "Hooks",
+        keywords: ["open", "editor", "settings"],
+        run: () => navigate(`/harness/config/${encodeURIComponent("settings.json")}`),
+      },
+    ],
+    [navigate],
+  );
 
   const toolbarActions = (
     <Button

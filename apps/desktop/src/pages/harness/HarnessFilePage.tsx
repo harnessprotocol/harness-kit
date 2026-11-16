@@ -362,21 +362,39 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
 
   // ⌘K (spec AC-21): Save while the editor is open, disabled when the
   // Save buttons are (nothing changed, or a save is running).
+  // "Save as profile" is the toolbar button's own toggle, listed while the
+  // toolbar shows (a harness.yaml is found and loaded).
   useRegisterCommands(
-    editing
-      ? [
-          {
-            id: "profile.save",
-            title: "Save harness.yaml",
-            group: "Profile",
-            keywords: ["write"],
-            shortcut: "⌘S",
-            disabled: !saveable || saving,
-            run: handleSave,
-          },
-        ]
-      : [],
-    [editing, saveable, saving],
+    [
+      ...(editing
+        ? [
+            {
+              id: "profile.save",
+              title: "Save harness.yaml",
+              group: "Profile",
+              keywords: ["write"],
+              shortcut: "⌘S",
+              disabled: !saveable || saving,
+              run: handleSave,
+            },
+          ]
+        : []),
+      ...(found && !loading
+        ? [
+            {
+              id: "profile.save-as-profile",
+              title: "Save as profile",
+              group: "Profile",
+              keywords: ["reusable", "custom profile"],
+              run: () => {
+                setProfileNameOpen((v) => !v);
+                setProfileSaveError(null);
+              },
+            },
+          ]
+        : []),
+    ],
+    [editing, saveable, saving, found, loading],
   );
 
   // ── Empty state actions ───────────────────────────────────────

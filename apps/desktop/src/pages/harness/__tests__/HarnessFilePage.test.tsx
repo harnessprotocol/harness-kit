@@ -4,6 +4,7 @@ import { MemoryRouter, Outlet, Route, Routes, useLocation } from "react-router-d
 import { PageBoundary, pageBoundaryKey } from "../../../components/PageBoundary";
 import HarnessFilePage from "../HarnessFilePage";
 import { CommandPalette } from "../../../components/CommandPalette";
+import { CommandProbe } from "../../../test-utils/CommandProbe";
 import { loadedDigest } from "../../../lib/loaded-digest";
 import { setCurrentProjectDir } from "../../../lib/project-dir";
 import { clearAllProfileDrafts, getProfileDraft } from "../../../lib/profile-draft";
@@ -758,5 +759,29 @@ describe("Profile keeps unsaved edits when the page unmounts", () => {
     expect(getProfileDraft("~/.claude/harness.yaml")?.buffer).toBe(EDITED);
     expect(screen.queryByTestId("fake-editor")).toBeNull();
     act(() => setCurrentProjectDir(null));
+  });
+
+  it("lists Save as profile while the toolbar button shows, opening the same name field (AC-21)", async () => {
+    mockReadHarnessFile.mockResolvedValue({
+      found: true,
+      content: 'version: "1"\n',
+      path: "~/.claude/harness.yaml",
+    });
+    render(<MemoryRouter><HarnessFilePage /><CommandProbe /></MemoryRouter>);
+    await screen.findByRole("button", { name: "Save as profile" });
+    const command = screen.getByTestId("cmd-profile.save-as-profile");
+    expect(command).toHaveTextContent("Save as profile");
+    expect(command).toHaveAttribute("data-disabled", "false");
+    expect(screen.queryByRole("textbox", { name: "Profile name" })).not.toBeInTheDocument();
+
+    fireEvent.click(command);
+    expect(await screen.findByRole("textbox", { name: "Profile name" })).toBeInTheDocument();
+  });
+
+  it("does not list Save as profile when there is no harness.yaml, where the button is hidden (AC-21)", async () => {
+    mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null });
+    render(<MemoryRouter><HarnessFilePage /><CommandProbe /></MemoryRouter>);
+    await screen.findByText(/No harness\.yaml found/i);
+    expect(screen.queryByTestId("cmd-profile.save-as-profile")).not.toBeInTheDocument();
   });
 });

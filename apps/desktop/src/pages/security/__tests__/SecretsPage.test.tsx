@@ -3,6 +3,7 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { KeychainSecretInfo, EnvConfigEntry } from "@harness-kit/shared";
 import SecretsPage from "../SecretsPage";
+import { CommandProbe } from "../../../test-utils/CommandProbe";
 
 // ── Mocks ─────────────────────────────────────────────────────
 
@@ -500,4 +501,27 @@ describe("SecretsPage — error handling", () => {
     fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
+
+describe("SecretsPage palette commands (AC-21)", () => {
+  beforeEach(() => {
+    mockListRequiredEnv.mockResolvedValue([]);
+    mockReadEnvConfig.mockResolvedValue({ entries: [ENV_ENTRY], sha256: "e1" });
+  });
+
+  it("lists Save All only while the button shows, and saves like it", async () => {
+    render(<MemoryRouter><SecretsPage /><CommandProbe /></MemoryRouter>);
+    await screen.findByText("HARNESS_LOG_LEVEL");
+    expect(screen.queryByTestId("cmd-secrets.save-all")).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getAllByDisplayValue("info")[0], { target: { value: "debug" } });
+    const command = await screen.findByTestId("cmd-secrets.save-all");
+    expect(command).toHaveTextContent("Save All");
+    expect(command).toHaveAttribute("data-disabled", "false");
+
+    fireEvent.click(command);
+    await waitFor(() => expect(mockWriteEnvConfig).toHaveBeenCalledTimes(1));
+    expect(mockWriteEnvConfig.mock.calls[0][1]).toBe("e1");
+    await waitFor(() => expect(screen.queryByTestId("cmd-secrets.save-all")).not.toBeInTheDocument());
+  });
+});
 });
