@@ -427,7 +427,7 @@ function SessionCard({
         {(hovered || confirmDelete) && (
           <Tooltip content="Delete session">
             <button
-              aria-label="Delete session"
+              aria-label={confirmDelete ? "Delete?" : "Delete session"}
               style={{
                 ...styles.deleteBtn,
                 ...(confirmDelete

@@ -50,15 +50,48 @@ describe("@harness-kit/ui Tooltip", () => {
     expect(screen.queryByRole("tooltip")).toBeNull();
   });
 
-  it("points the child's aria-describedby at the tooltip", () => {
-    vi.useFakeTimers();
-    render(<Tooltip content="Refresh"><button>Go</button></Tooltip>);
+  it("points the child's aria-describedby at the text before any hover", () => {
+    render(
+      <>
+        <Tooltip content="Refresh"><span data-testid="plain">x</span></Tooltip>
+        <Tooltip content="Nothing to do"><button disabled>Go</button></Tooltip>
+      </>,
+    );
+    const text = (el: HTMLElement) =>
+      el.getAttribute("aria-describedby")!.split(" ").map((i) => document.getElementById(i)?.textContent).join(" ");
+    expect(text(screen.getByTestId("plain"))).toBe("Refresh");
+    expect(text(screen.getByRole("button", { name: "Go" }))).toBe("Nothing to do");
+  });
+
+  it("keeps an existing aria-describedby", () => {
+    render(
+      <>
+        <p id="hint">Hint</p>
+        <Tooltip content="Refresh"><button aria-describedby="hint">Go</button></Tooltip>
+      </>,
+    );
+    const ids = screen.getByRole("button", { name: "Go" }).getAttribute("aria-describedby")!.split(" ");
+    expect(ids[0]).toBe("hint");
+    expect(ids).toHaveLength(2);
+    expect(document.getElementById(ids[1])).toHaveTextContent("Refresh");
+  });
+
+  it("keeps the same DOM node and focus when disabled flips", () => {
+    const ui = (disabled: boolean) => (
+      <Tooltip content="Refresh"><button disabled={disabled}>Go</button></Tooltip>
+    );
+    const { rerender } = render(ui(false));
     const btn = screen.getByRole("button", { name: "Go" });
-    fireEvent.focus(btn);
-    act(() => { vi.advanceTimersByTime(500); });
-    const tip = screen.getByRole("tooltip");
-    expect(tip.id).toBeTruthy();
-    expect(btn.getAttribute("aria-describedby")).toBe(tip.id);
+    btn.focus();
+    expect(btn).toHaveFocus();
+    rerender(ui(true));
+    expect(screen.getByRole("button", { name: "Go" })).toBe(btn);
+    rerender(ui(false));
+    expect(screen.getByRole("button", { name: "Go" })).toBe(btn);
+    expect(btn.isConnected).toBe(true);
+    btn.focus();
+    rerender(ui(false));
+    expect(btn).toHaveFocus();
   });
 
   it("still shows for a disabled child on hover", () => {

@@ -5,6 +5,7 @@ import {
   useId,
   useRef,
   useState,
+  type CSSProperties,
   type FocusEvent,
   type MouseEvent,
   type ReactElement,
@@ -33,6 +34,18 @@ const GAP = 6;
 // One tooltip at a time. Nested triggers (a badge inside a column header) both
 // start their timers on hover; the inner one starts last, so it wins.
 let dismissActive: (() => void) | null = null;
+
+const SR_ONLY: CSSProperties = {
+  position: "absolute",
+  width: 1,
+  height: 1,
+  margin: -1,
+  padding: 0,
+  overflow: "hidden",
+  clip: "rect(0 0 0 0)",
+  whiteSpace: "nowrap",
+  border: 0,
+};
 
 type Handler = ((e: never) => void) | undefined;
 
@@ -79,17 +92,21 @@ export function Tooltip({ content, children, side = "top", delay = 500 }: Toolti
 
   const childProps = children.props as {
     disabled?: boolean;
+    style?: CSSProperties;
+    "aria-describedby"?: string;
     onMouseEnter?: Handler;
     onMouseLeave?: Handler;
     onFocus?: Handler;
     onBlur?: Handler;
   };
-  const disabled = childProps.disabled === true;
+  // A child that takes a `disabled` prop is always wrapped, so toggling it never
+  // changes the tree shape (which would remount the child and drop focus).
+  // Disabled controls swallow mouse events; the wrapper takes the hover instead.
+  const canBeDisabled = childProps.disabled !== undefined;
 
-  const tip = visible
+  const visibleTip = visible
     ? createPortal(
         <span
-          id={id}
           role="tooltip"
           style={{
             position: "fixed",
@@ -115,9 +132,21 @@ export function Tooltip({ content, children, side = "top", delay = 500 }: Toolti
       )
     : null;
 
+  // Always present, visually hidden: the text reaches assistive tech even when
+  // the tooltip never shows (disabled or non-focusable targets).
+  const description = content
+    ? createPortal(
+        <span id={id} style={SR_ONLY}>
+          {content}
+        </span>,
+        document.body,
+      )
+    : null;
+
+  const existing = childProps["aria-describedby"];
   const described = cloneElement(children, {
-    "aria-describedby": visible ? id : (children.props["aria-describedby"] as string | undefined),
-    ...(disabled
+    ...(content ? { "aria-describedby": existing ? `${existing} ${id}` : id } : {}),
+    ...(canBeDisabled
       ? {}
       : {
           onMouseEnter: (e: MouseEvent<Element>) => {
@@ -128,34 +157,37 @@ export function Tooltip({ content, children, side = "top", delay = 500 }: Toolti
             childProps.onMouseLeave?.(e as never);
             hide();
           },
-          onFocus: (e: FocusEvent<Element>) => {
-            childProps.onFocus?.(e as never);
-            show(e.currentTarget);
-          },
-          onBlur: (e: FocusEvent<Element>) => {
-            childProps.onBlur?.(e as never);
-            hide();
-          },
         }),
+    onFocus: (e: FocusEvent<Element>) => {
+      childProps.onFocus?.(e as never);
+      show(e.currentTarget);
+    },
+    onBlur: (e: FocusEvent<Element>) => {
+      childProps.onBlur?.(e as never);
+      hide();
+    },
   });
 
-  if (disabled) {
+  if (canBeDisabled) {
+    const width = childProps.style?.width;
     return (
       <span
         tabIndex={-1}
-        style={{ display: "inline-flex" }}
+        style={{ display: width === "100%" ? "flex" : "inline-flex", width }}
         onMouseEnter={(e) => show(e.currentTarget)}
         onMouseLeave={hide}
       >
         {described}
-        {tip}
+        {visibleTip}
+        {description}
       </span>
     );
   }
   return (
     <>
       {described}
-      {tip}
+      {visibleTip}
+      {description}
     </>
   );
 }
