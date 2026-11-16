@@ -1,3 +1,5 @@
+import { Tooltip } from "@harness-kit/ui";
+
 interface EditorToolbarProps {
   filePath: string | null;
   isDirty?: boolean;
@@ -55,7 +57,9 @@ export default function EditorToolbar({
           }}>
             {basename(filePath)}
             {isDirty && (
-              <span style={{ color: "var(--warning)", marginLeft: "4px" }} title="Unsaved changes">●</span>
+              <Tooltip content="Unsaved changes">
+                <span role="img" aria-label="Unsaved changes" style={{ color: "var(--warning)", marginLeft: "4px" }}>●</span>
+              </Tooltip>
             )}
           </span>
           {subtitle && (

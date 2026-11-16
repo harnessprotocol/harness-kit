@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import type { HistoryEntry } from "../../lib/tauri";
+import { Tooltip } from "@harness-kit/ui";
 
 interface VersionHistoryPopoverProps {
   entries: HistoryEntry[];
@@ -42,23 +43,25 @@ export default function VersionHistoryPopover({ entries, loading, onRestore }: V
 
   return (
     <div ref={ref} style={{ position: "relative" }}>
-      <button
-        onClick={() => setOpen(!open)}
-        style={{
-          width: 28, height: 28, borderRadius: "6px",
-          border: "1px solid var(--border-base)",
-          background: "var(--bg-elevated)", color: "var(--fg-muted)",
-          cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-          fontSize: "13px",
-        }}
-        title="Version history"
-      >
-        {/* Clock icon */}
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
-          <circle cx="8" cy="8" r="6.5" />
-          <path d="M8 4.5V8l2.5 1.5" />
-        </svg>
-      </button>
+      <Tooltip content="Version history">
+        <button
+          aria-label="Version history"
+          onClick={() => setOpen(!open)}
+          style={{
+            width: 28, height: 28, borderRadius: "6px",
+            border: "1px solid var(--border-base)",
+            background: "var(--bg-elevated)", color: "var(--fg-muted)",
+            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: "13px",
+          }}
+        >
+          {/* Clock icon */}
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+            <circle cx="8" cy="8" r="6.5" />
+            <path d="M8 4.5V8l2.5 1.5" />
+          </svg>
+        </button>
+      </Tooltip>
 
       {open && (
         <div style={{

@@ -8,7 +8,7 @@ import {
   CartesianGrid, Tooltip, Legend,
   ResponsiveContainer,
 } from "recharts";
-import HKTooltip from "../../components/Tooltip";
+import { Tooltip as HKTooltip } from "@harness-kit/ui";
 import { ErrorNotice, Stat } from "@harness-kit/ui";
 import AccountStatusBadge from "../../components/AccountStatusBadge";
 import { useObservatoryData } from "../../hooks/useObservatoryData";
@@ -183,8 +183,10 @@ function StatCard({ tooltip, ...rest }: { label: string; value: string; sub?: st
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
       {tooltip ? (
-        <HKTooltip content={tooltip} position="bottom">
-          <Stat {...rest} />
+        <HKTooltip content={tooltip} side="bottom">
+          <div>
+            <Stat {...rest} />
+          </div>
         </HKTooltip>
       ) : (
         <Stat {...rest} />
@@ -764,42 +766,43 @@ export default function DashboardPage() {
           >
             Sessions →
           </Link>
-          <button
-            onClick={refresh}
-            disabled={isRefreshing}
-            title={scanNote ? `Last scan: ${scanNote}` : undefined}
-            aria-label={isRefreshing ? "Refreshing data" : "Refresh data"}
-            style={{
-              fontSize: "11px",
-              fontWeight: 500,
-              padding: "4px 12px",
-              borderRadius: "6px",
-              border: "1px solid var(--border-base)",
-              background: "var(--bg-surface)",
-              color: isRefreshing ? "var(--accent-text)" : "var(--fg-muted)",
-              cursor: isRefreshing ? "default" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "5px",
-              transition: "color 0.15s",
-            }}
-          >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
+          <HKTooltip content={scanNote ? `Last scan: ${scanNote}` : ""}>
+            <button
+              onClick={refresh}
+              disabled={isRefreshing}
+              aria-label={isRefreshing ? "Refreshing data" : "Refresh data"}
               style={{
-                color: "currentColor",
-                ...(isRefreshing && !reducedMotion ? { animation: "hk-spin 0.8s linear infinite" } : {}),
-                ...(isRefreshing && reducedMotion ? { opacity: 0.6 } : {}),
+                fontSize: "11px",
+                fontWeight: 500,
+                padding: "4px 12px",
+                borderRadius: "6px",
+                border: "1px solid var(--border-base)",
+                background: "var(--bg-surface)",
+                color: isRefreshing ? "var(--accent-text)" : "var(--fg-muted)",
+                cursor: isRefreshing ? "default" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                transition: "color 0.15s",
               }}
             >
-              <path d="M21 12a9 9 0 1 1-2.63-6.36" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              <path d="M21 3v6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            {isRefreshing ? "Refreshing…" : "Refresh"}
-          </button>
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                style={{
+                  color: "currentColor",
+                  ...(isRefreshing && !reducedMotion ? { animation: "hk-spin 0.8s linear infinite" } : {}),
+                  ...(isRefreshing && reducedMotion ? { opacity: 0.6 } : {}),
+                }}
+              >
+                <path d="M21 12a9 9 0 1 1-2.63-6.36" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M21 3v6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              {isRefreshing ? "Refreshing…" : "Refresh"}
+            </button>
+          </HKTooltip>
         </div>
       </div>
 

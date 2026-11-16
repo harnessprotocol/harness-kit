@@ -1,3 +1,5 @@
+import { Tooltip } from "@harness-kit/ui";
+
 interface LegendPayloadItem {
   value: string;
   color: string;
@@ -32,42 +34,43 @@ export default function InteractiveLegend({ payload, hidden, onToggle }: Interac
         const isHidden = hidden.has(value);
         return (
           <li key={value}>
-            <button
-              onClick={() => onToggle(value)}
-              aria-pressed={isHidden}
-              title={isHidden ? `Show ${value}` : `Hide ${value}`}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "5px",
-                background: "none",
-                border: "1px solid transparent",
-                cursor: "pointer",
-                padding: "2px 6px",
-                borderRadius: "4px",
-                opacity: isHidden ? 0.35 : 1,
-                transition: "opacity 0.15s",
-                color: "var(--fg-base)",
-                fontSize: "10px",
-                fontFamily: "inherit",
-                outline: "none",
-              }}
-              onFocus={(e) => { e.currentTarget.style.outline = "2px solid var(--accent)"; e.currentTarget.style.outlineOffset = "1px"; }}
-              onBlur={(e) => { e.currentTarget.style.outline = "none"; }}
-            >
-              <span
-                aria-hidden="true"
+            <Tooltip content={isHidden ? `Show ${value}` : `Hide ${value}`}>
+              <button
+                onClick={() => onToggle(value)}
+                aria-pressed={isHidden}
                 style={{
-                  display: "inline-block",
-                  width: "10px",
-                  height: "10px",
-                  borderRadius: "2px",
-                  background: color,
-                  flexShrink: 0,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "5px",
+                  background: "none",
+                  border: "1px solid transparent",
+                  cursor: "pointer",
+                  padding: "2px 6px",
+                  borderRadius: "4px",
+                  opacity: isHidden ? 0.35 : 1,
+                  transition: "opacity 0.15s",
+                  color: "var(--fg-base)",
+                  fontSize: "10px",
+                  fontFamily: "inherit",
+                  outline: "none",
                 }}
-              />
-              {value}
-            </button>
+                onFocus={(e) => { e.currentTarget.style.outline = "2px solid var(--accent)"; e.currentTarget.style.outlineOffset = "1px"; }}
+                onBlur={(e) => { e.currentTarget.style.outline = "none"; }}
+              >
+                <span
+                  aria-hidden="true"
+                  style={{
+                    display: "inline-block",
+                    width: "10px",
+                    height: "10px",
+                    borderRadius: "2px",
+                    background: color,
+                    flexShrink: 0,
+                  }}
+                />
+                {value}
+              </button>
+            </Tooltip>
           </li>
         );
       })}

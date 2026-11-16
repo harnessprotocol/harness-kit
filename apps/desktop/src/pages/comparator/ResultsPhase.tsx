@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { FileDiffRow } from "@harness-kit/shared";
 import type { ComparisonState } from "../../hooks/useComparator";
 import { getComparisonDiffs, getComparison } from "../../lib/tauri";
+import { Tooltip } from "@harness-kit/ui";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -489,23 +490,24 @@ export default function ResultsPhase({ active, onStartJudge }: ResultsPhaseProps
                       </span>
                     ) : null}
                     {p.acpMode && (
-                      <span
-                        style={{
-                          fontSize: "9px",
-                          fontWeight: 600,
-                          padding: "1px 5px",
-                          borderRadius: "3px",
-                          background: "var(--accent-light)",
-                          color: "var(--accent-text)",
-                          border: "1px solid var(--accent-glow)",
-                          marginLeft: 5,
-                          textTransform: "none" as const,
-                          letterSpacing: 0,
-                        }}
-                        title="Ran with ACP protocol"
-                      >
-                        ACP
-                      </span>
+                      <Tooltip content="Ran with ACP protocol">
+                        <span
+                          style={{
+                            fontSize: "9px",
+                            fontWeight: 600,
+                            padding: "1px 5px",
+                            borderRadius: "3px",
+                            background: "var(--accent-light)",
+                            color: "var(--accent-text)",
+                            border: "1px solid var(--accent-glow)",
+                            marginLeft: 5,
+                            textTransform: "none" as const,
+                            letterSpacing: 0,
+                          }}
+                        >
+                          ACP
+                        </span>
+                      </Tooltip>
                     )}
                   </th>
                 ))}
@@ -607,20 +609,21 @@ export default function ResultsPhase({ active, onStartJudge }: ResultsPhaseProps
                     onMouseLeave={() => setHoveredRow(null)}
                     style={hoveredRow === `file-${rowIdx}` ? { background: tokens.hoverBg } : undefined}
                   >
-                    <td
-                      style={{
-                        ...styles.tdMono,
-                        fontSize: 11,
-                        maxWidth: 320,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap" as const,
-                        borderBottom: rowIdx === fileMatrix.length - 1 ? "none" : styles.td.borderBottom,
-                      }}
-                      title={row.filePath}
-                    >
-                      {row.filePath}
-                    </td>
+                    <Tooltip content={row.filePath}>
+                      <td
+                        style={{
+                          ...styles.tdMono,
+                          fontSize: 11,
+                          maxWidth: 320,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap" as const,
+                          borderBottom: rowIdx === fileMatrix.length - 1 ? "none" : styles.td.borderBottom,
+                        }}
+                      >
+                        {row.filePath}
+                      </td>
+                    </Tooltip>
                     {panels.map((p) => {
                       const ct = row.changes.get(p.id);
                       return (
@@ -662,9 +665,11 @@ export default function ResultsPhase({ active, onStartJudge }: ResultsPhaseProps
 
               return (
                 <div key={p.id} style={styles.timelineRow}>
-                  <div style={styles.timelineLabel} title={p.harnessName}>
-                    {p.harnessName}
-                  </div>
+                  <Tooltip content={p.harnessName}>
+                    <div style={styles.timelineLabel}>
+                      {p.harnessName}
+                    </div>
+                  </Tooltip>
                   <div style={styles.timelineBarArea}>
                     <div
                       style={{

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Rows3 } from "lucide-react";
 import type { ComparisonPhase, ComparisonSummary, HarnessRecommendation, TaskType } from "@harness-kit/shared";
 import { invoke } from "@tauri-apps/api/core";
-import { Button, EmptyState } from "@harness-kit/ui";
+import { Button, EmptyState, Tooltip } from "@harness-kit/ui";
 import { useComparator } from "../../hooks/useComparator";
 import { PHASES, PHASE_INDEX, getPhaseStepStatuses } from "./phaseStepper";
 import SetupPhase from "./SetupPhase";
@@ -425,39 +425,41 @@ function SessionCard({
           {session.title || "Untitled comparison"}
         </span>
         {(hovered || confirmDelete) && (
-          <button
-            style={{
-              ...styles.deleteBtn,
-              ...(confirmDelete
-                ? { background: "var(--danger-light)", color: tokens.danger, width: "auto", padding: "0 4px" }
-                : deleteHovered
-                  ? { background: "var(--danger-light)", color: tokens.danger }
-                  : {}),
-            }}
-            title="Delete session"
-            onClick={(e) => {
-              e.stopPropagation();
-              if (confirmDelete) {
-                clearTimeout(confirmTimerRef.current);
-                setConfirmDelete(false);
-                onDelete();
-              } else {
-                setConfirmDelete(true);
-                confirmTimerRef.current = window.setTimeout(() => setConfirmDelete(false), 2000);
-              }
-            }}
-            onMouseEnter={() => setDeleteHovered(true)}
-            onMouseLeave={() => setDeleteHovered(false)}
-          >
-            {confirmDelete ? (
-              <span style={{ fontSize: 9, fontWeight: 600, color: tokens.danger }}>Delete?</span>
-            ) : (
-              <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <line x1="4" y1="4" x2="12" y2="12" />
-                <line x1="12" y1="4" x2="4" y2="12" />
-              </svg>
-            )}
-          </button>
+          <Tooltip content="Delete session">
+            <button
+              aria-label="Delete session"
+              style={{
+                ...styles.deleteBtn,
+                ...(confirmDelete
+                  ? { background: "var(--danger-light)", color: tokens.danger, width: "auto", padding: "0 4px" }
+                  : deleteHovered
+                    ? { background: "var(--danger-light)", color: tokens.danger }
+                    : {}),
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (confirmDelete) {
+                  clearTimeout(confirmTimerRef.current);
+                  setConfirmDelete(false);
+                  onDelete();
+                } else {
+                  setConfirmDelete(true);
+                  confirmTimerRef.current = window.setTimeout(() => setConfirmDelete(false), 2000);
+                }
+              }}
+              onMouseEnter={() => setDeleteHovered(true)}
+              onMouseLeave={() => setDeleteHovered(false)}
+            >
+              {confirmDelete ? (
+                <span style={{ fontSize: 9, fontWeight: 600, color: tokens.danger }}>Delete?</span>
+              ) : (
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <line x1="4" y1="4" x2="12" y2="12" />
+                  <line x1="12" y1="4" x2="4" y2="12" />
+                </svg>
+              )}
+            </button>
+          </Tooltip>
         )}
       </div>
       <div style={styles.sessionMeta}>
@@ -519,41 +521,42 @@ function ClearAllHeader({
   return (
     <div style={{ ...styles.sessionsHeader, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
       <span>Sessions</span>
-      <button
-        style={{
-          border: "none",
-          background: "transparent",
-          padding: "0 2px",
-          cursor: "pointer",
-          fontSize: 9,
-          fontWeight: 600,
-          fontFamily: fontStack,
-          letterSpacing: "0.04em",
-          color: confirm ? tokens.danger : tokens.fgPlaceholder,
-          transition: "color 150ms ease-out",
-          textTransform: "uppercase" as const,
-          lineHeight: 1,
-        }}
-        onClick={() => {
-          if (confirm) {
-            clearTimeout(timerRef.current);
-            setConfirm(false);
-            onClearAll();
-          } else {
-            setConfirm(true);
-            timerRef.current = window.setTimeout(() => setConfirm(false), 2500);
-          }
-        }}
-        onMouseEnter={(e) => {
-          if (!confirm) e.currentTarget.style.color = tokens.fgMuted;
-        }}
-        onMouseLeave={(e) => {
-          if (!confirm) e.currentTarget.style.color = tokens.fgPlaceholder;
-        }}
-        title="Delete all sessions"
-      >
-        {confirm ? "Sure?" : "Clear all"}
-      </button>
+      <Tooltip content="Delete all sessions">
+        <button
+          style={{
+            border: "none",
+            background: "transparent",
+            padding: "0 2px",
+            cursor: "pointer",
+            fontSize: 9,
+            fontWeight: 600,
+            fontFamily: fontStack,
+            letterSpacing: "0.04em",
+            color: confirm ? tokens.danger : tokens.fgPlaceholder,
+            transition: "color 150ms ease-out",
+            textTransform: "uppercase" as const,
+            lineHeight: 1,
+          }}
+          onClick={() => {
+            if (confirm) {
+              clearTimeout(timerRef.current);
+              setConfirm(false);
+              onClearAll();
+            } else {
+              setConfirm(true);
+              timerRef.current = window.setTimeout(() => setConfirm(false), 2500);
+            }
+          }}
+          onMouseEnter={(e) => {
+            if (!confirm) e.currentTarget.style.color = tokens.fgMuted;
+          }}
+          onMouseLeave={(e) => {
+            if (!confirm) e.currentTarget.style.color = tokens.fgPlaceholder;
+          }}
+        >
+          {confirm ? "Sure?" : "Clear all"}
+        </button>
+      </Tooltip>
     </div>
   );
 }

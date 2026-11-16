@@ -2,7 +2,7 @@ import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
 import { open } from "@tauri-apps/plugin-shell";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { NavItem } from "@harness-kit/ui";
+import { NavItem, Tooltip } from "@harness-kit/ui";
 import { Search } from "lucide-react";
 import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
 import { useArrowNavigation } from "../hooks/useArrowNavigation";
@@ -287,40 +287,47 @@ function AppShell() {
             pointerEvents: "none",
           }}
         />
-        <button className="titlebar-btn" onClick={toggleSidebar} title="Toggle sidebar (⌘\)" aria-label="Toggle sidebar (⌘\)">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <rect x="1" y="1" width="14" height="14" rx="2" />
-            <line x1="5" y1="1" x2="5" y2="15" />
-          </svg>
-        </button>
-        <button className="titlebar-btn" onClick={() => navigate(-1)} title="Back (⌘[)" aria-label="Back (⌘[)">
-          <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
-          </svg>
-        </button>
-        <button className="titlebar-btn" onClick={() => navigate(1)} title="Forward (⌘])" aria-label="Forward (⌘])">
-          <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
-          </svg>
-        </button>
+        <Tooltip content="Toggle sidebar (⌘\)">
+          <button className="titlebar-btn" onClick={toggleSidebar} aria-label="Toggle sidebar (⌘\)">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="1" y="1" width="14" height="14" rx="2" />
+              <line x1="5" y1="1" x2="5" y2="15" />
+            </svg>
+          </button>
+        </Tooltip>
+        <Tooltip content="Back (⌘[)">
+          <button className="titlebar-btn" onClick={() => navigate(-1)} aria-label="Back (⌘[)">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </Tooltip>
+        <Tooltip content="Forward (⌘])">
+          <button className="titlebar-btn" onClick={() => navigate(1)} aria-label="Forward (⌘])">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </Tooltip>
         {/* The one project-directory selector (spec AC-17): Machine, Drift and Compile read it */}
         <ProjectSelector />
         {/* ⌘K affordance (spec AC-21): the palette lists the open page's commands first.
             The name includes the visible "⌘K" so a spoken label matches (WCAG 2.5.3). */}
-        <button
-          type="button"
-          className="hk-titlebar-cmdk"
-          data-no-drag=""
-          onClick={() => setPaletteOpen(true)}
-          aria-label="Command palette ⌘K"
-          aria-keyshortcuts="Meta+K"
-          aria-haspopup="dialog"
-          aria-expanded={paletteOpen}
-          title="Command palette (⌘K)"
-        >
-          <Search size={12} strokeWidth={1.7} aria-hidden="true" />
-          <kbd className="hk-titlebar-cmdk-key">⌘K</kbd>
-        </button>
+        <Tooltip content="Command palette (⌘K)">
+          <button
+            type="button"
+            className="hk-titlebar-cmdk"
+            data-no-drag=""
+            onClick={() => setPaletteOpen(true)}
+            aria-label="Command palette ⌘K"
+            aria-keyshortcuts="Meta+K"
+            aria-haspopup="dialog"
+            aria-expanded={paletteOpen}
+          >
+            <Search size={12} strokeWidth={1.7} aria-hidden="true" />
+            <kbd className="hk-titlebar-cmdk-key">⌘K</kbd>
+          </button>
+        </Tooltip>
       </div>
 
       {/* Content area: sidebar + main */}

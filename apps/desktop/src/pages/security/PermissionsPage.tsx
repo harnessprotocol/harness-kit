@@ -4,7 +4,7 @@ import {
   listSecurityPresets, applySecurityPreset,
   detectClaudeAccount,
 } from "../../lib/tauri";
-import { ErrorNotice } from "@harness-kit/ui";
+import { ErrorNotice, Tooltip } from "@harness-kit/ui";
 import { errorDetails } from "../../lib/error-details";
 import { isChangedOnDisk } from "../../lib/loaded-digest";
 import type { PermissionsState, SecurityPreset } from "@harness-kit/shared";
@@ -532,19 +532,21 @@ function AllowedToolsSection({
                     boxSizing: "border-box",
                   }}
                 />
-                <button
-                  onClick={() => remove(name)}
-                  title={`Remove ${name}`}
-                  style={{
-                    border: "none", background: "none",
-                    color: "var(--fg-subtle)", cursor: "pointer",
-                    padding: "2px 4px", borderRadius: "3px",
-                    fontSize: "14px", lineHeight: 1,
-                    display: "flex", alignItems: "center",
-                  }}
-                >
-                  <IconRemove />
-                </button>
+                <Tooltip content={`Remove ${name}`}>
+                  <button
+                    aria-label={`Remove ${name}`}
+                    onClick={() => remove(name)}
+                    style={{
+                      border: "none", background: "none",
+                      color: "var(--fg-subtle)", cursor: "pointer",
+                      padding: "2px 4px", borderRadius: "3px",
+                      fontSize: "14px", lineHeight: 1,
+                      display: "flex", alignItems: "center",
+                    }}
+                  >
+                    <IconRemove />
+                  </button>
+                </Tooltip>
               </div>
             );
           })}
@@ -563,24 +565,24 @@ function AllowedToolsSection({
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
             {inactiveTools.map((tool) => (
-              <button
-                key={tool.name}
-                onClick={() => add(tool.name)}
-                title={tool.hint}
-                style={{
-                  display: "flex", alignItems: "center", gap: "4px",
-                  padding: "4px 9px",
-                  borderRadius: "5px",
-                  border: "1px solid var(--border-subtle)",
-                  background: "var(--bg-base)",
-                  cursor: "pointer",
-                  fontSize: "11px", color: "var(--fg-muted)",
-                  fontFamily: "ui-monospace, monospace",
-                }}
-              >
-                <span style={{ fontSize: "10px", opacity: 0.6 }}>+</span>
-                {tool.name}
-              </button>
+              <Tooltip content={tool.hint} key={tool.name}>
+                <button
+                  onClick={() => add(tool.name)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "4px",
+                    padding: "4px 9px",
+                    borderRadius: "5px",
+                    border: "1px solid var(--border-subtle)",
+                    background: "var(--bg-base)",
+                    cursor: "pointer",
+                    fontSize: "11px", color: "var(--fg-muted)",
+                    fontFamily: "ui-monospace, monospace",
+                  }}
+                >
+                  <span style={{ fontSize: "10px", opacity: 0.6 }}>+</span>
+                  {tool.name}
+                </button>
+              </Tooltip>
             ))}
           </div>
         </div>

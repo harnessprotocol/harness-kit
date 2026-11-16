@@ -8,6 +8,8 @@
 // Rules (add new ones as functions in RULES; each returns LintFinding[]):
 //   color-literal  hex, rgb(a) and hsl(a) values in string or template text
 //   modal-overlay  an `aria-modal` JSX attribute: dialogs use @harness-kit/ui Modal
+//   title-attribute  a `title` attribute on a lowercase (intrinsic) JSX element: use
+//                    @harness-kit/ui Tooltip. Component props named `title` pass.
 //
 // `lintSource(path, text)` is exported so the rules are unit-tested (see
 // src/__tests__/lint-page-styles.test.ts). Run as a CLI it walks the source
@@ -91,7 +93,32 @@ function modalOverlayRule(file, sf) {
   return findings;
 }
 
-const RULES = [colorLiteralRule, modalOverlayRule];
+/** @returns {LintFinding[]} */
+function titleAttributeRule(file, sf) {
+  const findings = [];
+  const visit = (node) => {
+    if (ts.isJsxAttribute(node) && node.name.getText(sf) === "title") {
+      const element = node.parent.parent;
+      const tag = (ts.isJsxOpeningElement(element) || ts.isJsxSelfClosingElement(element))
+        ? element.tagName.getText(sf)
+        : "";
+      if (/^[a-z]/.test(tag)) {
+        const { line } = sf.getLineAndCharacterOfPosition(node.getStart(sf));
+        findings.push({
+          file,
+          line: line + 1,
+          rule: "title-attribute",
+          message: `title attribute on <${tag}>: use <Tooltip> from @harness-kit/ui (and aria-label on icon-only buttons)`,
+        });
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sf);
+  return findings;
+}
+
+const RULES = [colorLiteralRule, modalOverlayRule, titleAttributeRule];
 
 /**
  * @param {string} path

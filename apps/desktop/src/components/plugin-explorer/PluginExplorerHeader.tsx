@@ -5,6 +5,7 @@ import type { HistoryEntry } from "../../lib/tauri";
 import ExportMenu from "./ExportMenu";
 import SaveConfirmPopover from "./SaveConfirmPopover";
 import VersionHistoryPopover from "./VersionHistoryPopover";
+import { Tooltip } from "@harness-kit/ui";
 
 interface PluginExplorerHeaderProps {
   plugin: InstalledPlugin;
@@ -130,19 +131,20 @@ export default function PluginExplorerHeader({
 
         <ExportMenu onExportZip={onExportZip} onExportFolder={onExportFolder} />
 
-        <button
-          onClick={onClose}
-          style={{
-            width: 28, height: 28, borderRadius: "6px",
-            border: "1px solid var(--border-base)",
-            background: "var(--bg-elevated)", color: "var(--fg-muted)",
-            cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
-          }}
-          title="Close"
-          aria-label="Close"
-        >
-          <X size={13} strokeWidth={1.7} aria-hidden="true" />
-        </button>
+        <Tooltip content="Close">
+          <button
+            onClick={onClose}
+            style={{
+              width: 28, height: 28, borderRadius: "6px",
+              border: "1px solid var(--border-base)",
+              background: "var(--bg-elevated)", color: "var(--fg-muted)",
+              cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center",
+            }}
+            aria-label="Close"
+          >
+            <X size={13} strokeWidth={1.7} aria-hidden="true" />
+          </button>
+        </Tooltip>
       </div>
     </div>
   );

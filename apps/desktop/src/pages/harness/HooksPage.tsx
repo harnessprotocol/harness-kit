@@ -1,7 +1,7 @@
 import { Suspense, lazy, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Webhook } from "lucide-react";
-import { Button, Card, EmptyState, ErrorNotice } from "@harness-kit/ui";
+import { Button, Card, EmptyState, ErrorNotice, Tooltip } from "@harness-kit/ui";
 import { useFileEditor } from "../../hooks/useFileEditor";
 import { errorDetails } from "../../lib/error-details";
 import EditorToolbar from "../../components/file-explorer/EditorToolbar";
@@ -172,16 +172,17 @@ function HookRow({ entry }: { entry: HookEntry }) {
           <path fillRule="evenodd" d="M2 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2V5zm3.293 1.293a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 01-1.414-1.414L7.586 10 5.293 7.707a1 1 0 010-1.414zM11 12a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
         </svg>
       )}
-      <code
-        title={cmd}
-        style={{
-          fontSize: "11px", fontFamily: "ui-monospace, monospace",
-          color: isScript ? "var(--accent)" : "var(--fg-muted)",
-          flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-        }}
-      >
-        {display}
-      </code>
+      <Tooltip content={cmd}>
+        <code
+          style={{
+            fontSize: "11px", fontFamily: "ui-monospace, monospace",
+            color: isScript ? "var(--accent)" : "var(--fg-muted)",
+            flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          }}
+        >
+          {display}
+        </code>
+      </Tooltip>
       {cmd !== display && (
         <span style={{
           fontSize: "10px", color: "var(--fg-subtle)", fontFamily: "ui-monospace, monospace",

@@ -76,3 +76,24 @@ describe("lint-page-styles: modal-overlay", () => {
     }
   });
 });
+
+describe("lint-page-styles: title-attribute", () => {
+  it("flags title on an intrinsic element", () => {
+    const found = lint('export const A = () => <button title="x">y</button>;');
+    expect(found).toHaveLength(1);
+    expect(found[0].rule).toBe("title-attribute");
+  });
+
+  it("flags a multi-line element with an expression title", () => {
+    const found = lint("export const A = () => (\n  <div\n    className=\"a\"\n    title={y}\n  />\n);");
+    expect(found).toHaveLength(1);
+    expect(found[0].rule).toBe("title-attribute");
+    expect(found[0].line).toBe(4);
+  });
+
+  it("does not flag component props or svg title elements", () => {
+    expect(lint('export const A = () => <Modal open onClose={f} title="x">y</Modal>;')).toEqual([]);
+    expect(lint('export const A = () => <EmptyState title="x" />;')).toEqual([]);
+    expect(lint("export const A = () => <svg><title>Icon</title></svg>;")).toEqual([]);
+  });
+});

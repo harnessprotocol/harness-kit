@@ -363,7 +363,7 @@ describe("Profile editor and panel side by side (AC-23)", () => {
     fireEvent.blur(name);
     expect((editor as HTMLTextAreaElement).value).toContain("name: renamed");
     expect((editor as HTMLTextAreaElement).value).toContain("# mine");
-    expect(screen.getByTitle("Unsaved changes")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Unsaved changes" })).toBeInTheDocument();
   });
 
   it("an editor edit re-reads into the panel", async () => {
@@ -415,7 +415,7 @@ describe("Profile editor and panel side by side (AC-23)", () => {
     expect((editor as HTMLTextAreaElement).value).toContain("during the save");
     expect(screen.getByRole("textbox", { name: /^Description$/ })).toHaveValue("during the save");
     // The edit made mid-save is still unsaved.
-    expect(screen.getByTitle("Unsaved changes")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Unsaved changes" })).toBeInTheDocument();
   });
 
   it("does not replace unsaved edits when a load lands; asks, and Discard loads the disk version", async () => {
@@ -482,7 +482,7 @@ describe("Profile tabs (AC-24)", () => {
     expect(screen.getByTestId("compile-unsaved-note")).toHaveTextContent("unsaved edits");
     fireEvent.click(screen.getByRole("tab", { name: "harness.yaml" }));
     expect((await screen.findByTestId("fake-editor") as HTMLTextAreaElement).value).toContain("unsaved-name");
-    expect(screen.getByTitle("Unsaved changes")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Unsaved changes" })).toBeInTheDocument();
   });
 
   it("the Compile tab has no unsaved note when nothing is unsaved", async () => {
@@ -703,7 +703,7 @@ describe("Profile keeps unsaved edits when the page unmounts", () => {
     const editor = await screen.findByTestId("fake-editor");
     await waitFor(() => expect((editor as HTMLTextAreaElement).value).toBe(EDITED));
     await waitFor(() => expect(screen.getByRole("textbox", { name: /^Name$/ })).toHaveValue("unsaved-name"));
-    expect(screen.getByTitle("Unsaved changes")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Unsaved changes" })).toBeInTheDocument();
     expect(screen.queryByTestId("pending-disk-notice")).toBeNull();
   });
 
