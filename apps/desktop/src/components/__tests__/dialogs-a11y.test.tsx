@@ -32,7 +32,7 @@ function Host({ which }: { which: "feedback" | "profiles" }) {
 }
 
 describe.each([
-  ["feedback", "Send Feedback"],
+  ["feedback", "Send feedback"],
   ["profiles", "Choose a profile"],
 ] as const)("%s dialog", (which, name) => {
   it("is a named modal dialog that takes focus", async () => {

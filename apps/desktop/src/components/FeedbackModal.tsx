@@ -10,9 +10,9 @@ import {
 // ── Constants ─────────────────────────────────────────────────
 
 const CATEGORIES = [
-  { id: "bug_report",       label: "Bug Report" },
-  { id: "feature_request",  label: "Feature Request" },
-  { id: "general_feedback", label: "General Feedback" },
+  { id: "bug_report",       label: "Bug report" },
+  { id: "feature_request",  label: "Feature request" },
+  { id: "general_feedback", label: "General feedback" },
   { id: "question",         label: "Question" },
 ] as const;
 
@@ -100,7 +100,7 @@ export default function FeedbackModal({ open: isOpen, onClose }: Props) {
   );
 
   return (
-    <Modal open={isOpen} onClose={onClose} title="Send Feedback" size="md" footer={footer}>
+    <Modal open={isOpen} onClose={onClose} title="Send feedback" size="md" footer={footer}>
       <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
           {result ? (
             <SuccessState result={result} onClose={onClose} />
