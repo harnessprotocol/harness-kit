@@ -7,6 +7,8 @@ import { Search } from "lucide-react";
 import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
 import { useArrowNavigation } from "../hooks/useArrowNavigation";
 import { useSidebarResize } from "../hooks/useSidebarResize";
+import { isTauriRuntimeAvailable } from "../lib/tauri";
+import { installAppMenu } from "../lib/app-menu";
 import { initTheme } from "../lib/theme";
 import { useHasProfileDraft } from "../lib/profile-draft";
 import { initPreferences, getLabs } from "../lib/preferences";
@@ -207,7 +209,8 @@ function AppShell() {
     });
   }, []);
 
-  useGlobalShortcuts({ navigate, toggleSidebar });
+  const togglePalette = useCallback(() => setPaletteOpen((v) => !v), []);
+  useGlobalShortcuts({ navigate, toggleSidebar, togglePalette });
   const { onMouseDown: onResizeMouseDown } = useSidebarResize();
   const { files: configFiles } = useClaudeFileList();
 
@@ -227,16 +230,10 @@ function AppShell() {
     return () => window.removeEventListener("harness-kit-prefs-changed", onPrefsChanged);
   }, []);
 
-  // Cmd+K opens the command palette from anywhere.
+  // Native menu bar (AC-40): installed once, desktop runtime only.
   useEffect(() => {
-    function handler(e: KeyboardEvent) {
-      if (e.metaKey && !e.shiftKey && (e.key === "k" || e.key === "K")) {
-        e.preventDefault();
-        setPaletteOpen((v) => !v);
-      }
-    }
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    if (!isTauriRuntimeAvailable()) return;
+    installAppMenu().catch((err) => console.error("[menu] install failed:", err));
   }, []);
 
   const entries = visibleNav(labs);
