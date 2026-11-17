@@ -93,6 +93,11 @@ function renderPage() {
 describe("SyncPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    // clearAllMocks keeps queued mock*Once values; a test that fails before
+    // using its own would hand them to the next test. mockReset drops the
+    // queue and restores the factory implementation.
+    vi.mocked(compile).mockReset();
+    vi.mocked(detectPlatforms).mockReset();
     projectHarness = 'version: "1"';
     mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null });
     mockSyncFileExists.mockResolvedValue(false);
@@ -202,7 +207,9 @@ describe("SyncPage", () => {
     );
     const palette = () => within(screen.getByRole("dialog", { name: "Command palette" }));
     await screen.findByText(/Directory found/i);
-    const preview = palette().getByRole("option", { name: "Preview compile changes" });
+    // SyncPage registers its commands in an effect, which can land after the
+    // directory check renders.
+    const preview = await palette().findByRole("option", { name: "Preview compile changes" });
     await waitFor(() => expect(preview).not.toHaveAttribute("aria-disabled"));
     expect(palette().queryByRole("option", { name: /Apply/ })).not.toBeInTheDocument();
 
