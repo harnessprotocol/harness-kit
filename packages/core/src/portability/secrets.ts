@@ -72,12 +72,21 @@ export const MAX_VARIABLE_NAME_LENGTH = 116;
 
 /** `HARNESS_` + the uppercased parts joined by `_`, truncated to the shared limit. */
 export function variableBase(parts: string[]): string {
-  const normalized = parts
-    .join("_")
-    .replace(/[^A-Za-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .toUpperCase();
+  const normalized = trimUnderscores(parts.join("_").replace(/[^A-Za-z0-9]+/g, "_")).toUpperCase();
   return `HARNESS_${normalized || "SECRET"}`.slice(0, MAX_VARIABLE_NAME_LENGTH);
+}
+
+/**
+ * Strip leading and trailing `_` in one linear pass. A `/_+$/` regex is
+ * quadratic on a long run of `_` (each start position rescans the run), and
+ * the parts come from config files other tools write.
+ */
+function trimUnderscores(value: string): string {
+  let start = 0;
+  let end = value.length;
+  while (start < end && value[start] === "_") start += 1;
+  while (end > start && value[end - 1] === "_") end -= 1;
+  return value.slice(start, end);
 }
 
 /** Return `base`, or `base_2`, `base_3`… when taken, and record the result in `taken`. */

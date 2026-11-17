@@ -631,6 +631,12 @@ describe("capture secret sanitization", () => {
     for (const n of names) expect(n.length).toBeLessThanOrEqual(MAX_VARIABLE_NAME_LENGTH + 2);
   });
 
+  it("trims leading and trailing runs of _ from the derived name", () => {
+    const run = "_".repeat(1_000);
+    expect(variableBase([`${run}my`, `api${run}!`])).toBe("HARNESS_MY_API");
+    expect(variableBase(["___"])).toBe("HARNESS_SECRET");
+  });
+
   it("keeps the 120 ceiling when a clash reaches _10", () => {
     const taken = new Set<string>();
     const base = variableBase(["k".repeat(200)]);
