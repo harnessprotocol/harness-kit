@@ -18,47 +18,47 @@ The Marketplace's "Install to …" card and the Machine drawer's plugin cells bo
 
 ### Process bridge
 
-- [ ] AC-1: WHEN the webview asks Rust to run a plugin installer THE SYSTEM SHALL run it only when the binary is `claude`, `copilot` or `codex` and the argument vector matches one of these shapes exactly:
+- [x] AC-1: WHEN the webview asks Rust to run a plugin installer THE SYSTEM SHALL run it only when the binary is `claude`, `copilot` or `codex` and the argument vector matches one of these shapes exactly: *(plugin_installer.rs)*
   - `claude plugin install|uninstall <id> [--scope user|project|local]`
   - `claude plugin marketplace add <owner>/<repo>`
   - `copilot plugin install|uninstall <id>`
   - `codex plugin add|remove <id> [--json]`
   where `<id>` is `name@marketplace` and each part matches `^[A-Za-z0-9][A-Za-z0-9._-]*$`, and `<owner>/<repo>` uses the same part pattern.
-- [ ] AC-2: WHEN a request fails AC-1 THE SYSTEM SHALL refuse it without spawning anything and return a refusal reason that names the rejected part.
-- [ ] AC-3: WHEN an installer runs THE SYSTEM SHALL spawn it with an argument vector and no shell, with stdin closed, and with `NO_COLOR=1` added to the inherited environment.
-- [ ] AC-4: WHEN a request carries a working directory THE SYSTEM SHALL run only if that directory is a project root the user granted in the native folder dialog; otherwise it SHALL refuse.
-- [ ] AC-5: WHEN an installer runs longer than 180 seconds THE SYSTEM SHALL kill it and return a timed-out result with the output so far.
-- [ ] AC-6: WHEN an installer writes more than 64 KiB to stdout or stderr THE SYSTEM SHALL keep the last 64 KiB of that stream.
-- [ ] AC-7: WHEN the webview asks whether an installer binary exists THE SYSTEM SHALL answer only for the three allowlisted names, by PATH lookup, without running the binary.
-- [ ] AC-8: THE SYSTEM SHALL never pass `-y`, `--yes`, `--config`, `--accept-command` or `--marketplace` to an installer, so a plugin that needs a person to confirm a command fails instead of being accepted silently.
+- [x] AC-2: WHEN a request fails AC-1 THE SYSTEM SHALL refuse it without spawning anything and return a refusal reason that names the rejected part. *(plugin_installer.rs)*
+- [x] AC-3: WHEN an installer runs THE SYSTEM SHALL spawn it with an argument vector and no shell, with stdin closed, and with `NO_COLOR=1` added to the inherited environment. *(plugin_installer.rs)*
+- [x] AC-4: WHEN a request carries a working directory THE SYSTEM SHALL run only if that directory is a project root the user granted in the native folder dialog; otherwise it SHALL refuse. *(plugin_installer.rs)*
+- [x] AC-5: WHEN an installer runs longer than 180 seconds THE SYSTEM SHALL kill it and return a timed-out result with the output so far. *(plugin_installer.rs)*
+- [x] AC-6: WHEN an installer writes more than 64 KiB to stdout or stderr THE SYSTEM SHALL keep the last 64 KiB of that stream. *(plugin_installer.rs)*
+- [x] AC-7: WHEN the webview asks whether an installer binary exists THE SYSTEM SHALL answer only for the three allowlisted names, by PATH lookup, without running the binary. *(plugin_installer.rs)*
+- [x] AC-8: THE SYSTEM SHALL never pass `-y`, `--yes`, `--config`, `--accept-command` or `--marketplace` to an installer, so a plugin that needs a person to confirm a command fails instead of being accepted silently. *(plugin_installer.rs)*
 
 ### Marketplace Apply
 
-- [ ] AC-9: WHEN the chosen surface has a supported native installer and its binary is on PATH THE SYSTEM SHALL enable Apply, and clicking it SHALL run the planned invocation shown beside the button.
-- [ ] AC-10: WHEN the chosen surface is Claude Code AND the catalog's marketplace name is not a key in `~/.claude/plugins/known_marketplaces.json` THE SYSTEM SHALL run `claude plugin marketplace add <catalog repo>` before the install, and SHALL stop with the add's error if it fails.
-- [ ] AC-11: WHEN the chosen surface is Pi or OpenCode THE SYSTEM SHALL enable Apply, and clicking it SHALL write each catalog skill as `<skills dir>/<plugin>/<skill dir>/SKILL.md`, rebuilding the `name` and `description` frontmatter from the catalog.
-- [ ] AC-12: WHILE an Apply runs THE SYSTEM SHALL disable the button and label it "Installing…".
-- [ ] AC-13: WHEN an Apply succeeds THE SYSTEM SHALL show a success toast naming the plugin and the surface; WHEN it fails or is refused THE SYSTEM SHALL show a warning toast with the reason.
-- [ ] AC-14: WHEN Apply is unavailable THE SYSTEM SHALL CONTINUE TO show why beside the button and keep Copy CLI command and Copy prompt working.
+- [x] AC-9: WHEN the chosen surface has a supported native installer and its binary is on PATH THE SYSTEM SHALL enable Apply, and clicking it SHALL run the planned invocation shown beside the button. *(install-to.ts + InstallTo.tsx)*
+- [x] AC-10: WHEN the chosen surface is Claude Code AND the catalog's marketplace name is not a key in `~/.claude/plugins/known_marketplaces.json` THE SYSTEM SHALL run `claude plugin marketplace add <catalog repo>` before the install, and SHALL stop with the add's error if it fails. *(install-to.ts + InstallTo.tsx)*
+- [x] AC-11: WHEN the chosen surface is Pi or OpenCode THE SYSTEM SHALL enable Apply, and clicking it SHALL write each catalog skill as `<skills dir>/<plugin>/<skill dir>/SKILL.md`, rebuilding the `name` and `description` frontmatter from the catalog. *(install-to.ts + InstallTo.tsx)*
+- [x] AC-12: WHILE an Apply runs THE SYSTEM SHALL disable the button and label it "Installing…". *(install-to.ts + InstallTo.tsx)*
+- [x] AC-13: WHEN an Apply succeeds THE SYSTEM SHALL show a success toast naming the plugin and the surface; WHEN it fails or is refused THE SYSTEM SHALL show a warning toast with the reason. *(install-to.ts + InstallTo.tsx)*
+- [x] AC-14: WHEN Apply is unavailable THE SYSTEM SHALL CONTINUE TO show why beside the button and keep Copy CLI command and Copy prompt working. *(install-to.ts + InstallTo.tsx)*
 
 ### Machine drawer Apply
 
-- [ ] AC-15: WHEN a drawer cell's plan carries a supported plugin action THE SYSTEM SHALL enable Apply and run it through `applyCellAction`'s plugin path with the Tauri process runner and file provider.
-- [ ] AC-16: WHEN a drawer plugin Apply succeeds THE SYSTEM SHALL show "Installed <name> on <surface>" and rescan, as AC-16 of ux-consolidation does for other resources.
-- [ ] AC-17: WHEN a drawer cell copies a plugin to Pi or OpenCode THE SYSTEM SHALL unpack from the Claude Code install path recorded for that plugin, as the CLI does.
+- [x] AC-15: WHEN a drawer cell's plan carries a supported plugin action THE SYSTEM SHALL enable Apply and run it through `applyCellAction`'s plugin path with the Tauri process runner and file provider. *(cell-actions.ts + RowDrawer.tsx)*
+- [x] AC-16: WHEN a drawer plugin Apply succeeds THE SYSTEM SHALL show "Installed <name> on <surface>" and rescan, as AC-16 of ux-consolidation does for other resources. *(cell-actions.ts + RowDrawer.tsx)*
+- [x] AC-17: WHEN a drawer cell copies a plugin to Pi or OpenCode THE SYSTEM SHALL unpack from the Claude Code install path recorded for that plugin, as the CLI does. *(cell-actions.ts + RowDrawer.tsx)*
 
 ### Unpack writes
 
-- [ ] AC-18: WHEN the unpack driver writes a SKILL.md THE SYSTEM SHALL write a `.harness-tmp-<suffix>` sibling and rename it over the target, so the guarded write commands accept it.
-- [ ] AC-19: WHEN any target SKILL.md already exists THE SYSTEM SHALL refuse the whole unpack before writing anything, naming the first existing file.
-- [ ] AC-20: WHEN an unpack succeeds THE SYSTEM SHALL say in its outcome that only SKILL.md files were written and a skill's other files (scripts, references) were not.
-- [ ] AC-21: WHEN the unpack driver is given catalog skills THE SYSTEM SHALL use them as the source and SHALL NOT require a source surface or recorded install path.
+- [x] AC-18: WHEN the unpack driver writes a SKILL.md THE SYSTEM SHALL write a `.harness-tmp-<suffix>` sibling and rename it over the target, so the guarded write commands accept it. *(unpack.ts)*
+- [x] AC-19: WHEN any target SKILL.md already exists THE SYSTEM SHALL refuse the whole unpack before writing anything, naming the first existing file. *(unpack.ts)*
+- [x] AC-20: WHEN an unpack succeeds THE SYSTEM SHALL say in its outcome that only SKILL.md files were written and a skill's other files (scripts, references) were not. *(unpack.ts)*
+- [x] AC-21: WHEN the unpack driver is given catalog skills THE SYSTEM SHALL use them as the source and SHALL NOT require a source surface or recorded install path. *(unpack.ts)*
 
 ### Unchanged behavior
 
-- [ ] AC-22: WHEN a drawer cell action is not a plugin THE SYSTEM SHALL CONTINUE TO apply it through the transaction engine with preimage checks and a rollback point.
-- [ ] AC-23: WHEN the CLI runs `surface sync` with a plugin unpack THE SYSTEM SHALL CONTINUE TO install it, now through temp-and-rename writes.
-- [ ] AC-24: THE SYSTEM SHALL CONTINUE TO deny the webview any general process-spawn or shell capability.
+- [x] AC-22: WHEN a drawer cell action is not a plugin THE SYSTEM SHALL CONTINUE TO apply it through the transaction engine with preimage checks and a rollback point. *(cell-actions.ts)*
+- [x] AC-23: WHEN the CLI runs `surface sync` with a plugin unpack THE SYSTEM SHALL CONTINUE TO install it, now through temp-and-rename writes. *(unpack.ts)*
+- [x] AC-24: THE SYSTEM SHALL CONTINUE TO deny the webview any general process-spawn or shell capability. *(capabilities/default.json)*
 
 ## Boundaries
 

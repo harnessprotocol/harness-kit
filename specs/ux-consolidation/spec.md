@@ -60,7 +60,7 @@ Format: EARS (`WHEN … THE SYSTEM SHALL …`). Each criterion cites the audit f
 
 ### Marketplace, plugins and MCP
 
-- [x] AC-27: WHEN a marketplace plugin detail renders THE SYSTEM SHALL offer "Install to …" with a surface picker that yields the same three action surfaces as the Machine drawer (direct apply where a driver exists, the CLI command, the agent prompt) and a copy control on the install command. *(B5, P3; no surface has an in-app plugin driver yet, so Apply shows why it is off and the CLI command and prompt carry the install)*
+- [x] AC-27: WHEN a marketplace plugin detail renders THE SYSTEM SHALL offer "Install to …" with a surface picker that yields the same three action surfaces as the Machine drawer (direct apply where a driver exists, the CLI command, the agent prompt) and a copy control on the install command. *(B5, P3; no surface has an in-app plugin driver yet, so Apply shows why it is off and the CLI command and prompt carry the install). Apply now runs through the plugin installer bridge; see [desktop-plugin-apply](../desktop-plugin-apply/spec.md).*
 - [x] AC-28: WHEN the marketplace catalog renders THE SYSTEM SHALL state when the catalog was generated and SHALL NOT describe a bundled snapshot as a live registry. *(B5, P1)*
 - [x] AC-29: WHEN a folder is dragged over the Plugins page THE SYSTEM SHALL either import it through the Tauri drag-drop event or show no drop overlay at all. *(M14, P2)*
 - [x] AC-30: WHEN the MCP servers page renders THE SYSTEM SHALL read the store paths from the surface registry, SHALL show the teaching empty state when no store exists, and SHALL offer adding and editing a server through a form rather than only raw JSON. *(B3, P2)*
