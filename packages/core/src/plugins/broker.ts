@@ -132,7 +132,14 @@ export type PluginActionOutcome =
       details?: Record<string, unknown>;
     }
   | { status: "refused"; reason: string }
-  | { status: "failed"; reason: string; stdout?: string; stderr?: string };
+  | {
+      status: "failed";
+      reason: string;
+      stdout?: string;
+      stderr?: string;
+      /** Files already written before the failure, so the caller can record or remove them. */
+      files?: string[];
+    };
 
 /**
  * Extract a short, useful failure line from installer output.

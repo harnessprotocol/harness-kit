@@ -606,6 +606,52 @@ describe("unpack from catalog skills (AC-18..AC-21, AC-23)", () => {
     });
   });
 
+  it("refuses duplicate skill directories without writing", async () => {
+    const { fs, writes } = recordingFs();
+    const outcome = await executePluginAction(planPluginAction(request), {
+      runner: new FakeRunner(),
+      fs,
+      now: "2026-09-07T00:00:00.000Z",
+      homeRoot: HOME,
+      catalogSkills: [
+        { dir: "dup", content: "one" },
+        { dir: "dup", content: "two" },
+      ],
+    });
+    expect(outcome.status).toBe("refused");
+    expect(outcome.status === "refused" ? outcome.reason : "").toContain("more than once");
+    expect(writes).toEqual([]);
+  });
+
+  it("removes the temp file and reports earlier files when a rename fails", async () => {
+    const { fs } = recordingFs();
+    const rename = fs.renameFile.bind(fs);
+    let n = 0;
+    fs.renameFile = async (a: string, b: string) => {
+      n += 1;
+      if (n === 2) throw new Error("EXDEV: boom");
+      return rename(a, b);
+    };
+    const removed: string[] = [];
+    const base = fs as unknown as { removeFile?: (p: string) => Promise<void> };
+    base.removeFile = async (p: string) => {
+      removed.push(p);
+    };
+    const outcome = await executePluginAction(planPluginAction(request), {
+      runner: new FakeRunner(),
+      fs,
+      now: "2026-09-07T00:00:00.000Z",
+      homeRoot: HOME,
+      catalogSkills,
+    });
+    expect(outcome.status).toBe("failed");
+    if (outcome.status !== "failed") return;
+    expect(outcome.reason).toContain("EXDEV");
+    expect(outcome.files).toEqual([`${STORE}/review/SKILL.md`]);
+    expect(removed.length).toBe(1);
+    expect(removed[0]).toContain("/plan/SKILL.md.harness-tmp-");
+  });
+
   it("catalogSkillContent JSON-quotes name and description", () => {
     const text = catalogSkillContent({
       name: "review",

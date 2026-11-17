@@ -129,9 +129,11 @@ export function planUnpackAction(
         // The contract is "never throws for an ordinary failure". A refusal or
         // an IO error mid-copy is ordinary.
         const message = error instanceof Error ? error.message : String(error);
+        const partial = error instanceof UnpackWriteFailed ? error.files : [];
         return {
           status: "failed",
           reason: `unpacking ${request.identity} stopped: ${message}`,
+          ...(partial.length > 0 ? { files: partial } : {}),
         };
       }
       if (written.length === 0) {
@@ -226,7 +228,12 @@ async function writeSkills(
     target: fs.joinPath(destination, skill.dir, "SKILL.md"),
     content: skill.content,
   }));
+  const seen = new Set<string>();
   for (const { target } of targets) {
+    if (seen.has(target)) {
+      throw new UnpackRefused(`${target} appears more than once in the plugin's skills; HarnessKit does not overwrite.`);
+    }
+    seen.add(target);
     if (!target.startsWith(prefix)) {
       throw new UnpackRefused(`refusing to write outside ${root}: ${target}`);
     }
@@ -241,12 +248,23 @@ async function writeSkills(
   for (const { target, content } of targets) {
     // Checked per file, AFTER any mkdir a previous iteration performed, so
     // a symlink appearing mid-run is caught rather than followed.
-    await assertNoSymlinkBoundary(fs, root, target.slice(prefix.length));
-    await fs.mkdir(fs.dirname(target), { recursive: true });
     const temp = `${target}.harness-tmp-${stamp}-${index}`;
     index += 1;
-    await fs.writeFile(temp, content);
-    await fs.renameFile(temp, target);
+    try {
+      await assertNoSymlinkBoundary(fs, root, target.slice(prefix.length));
+      await fs.mkdir(fs.dirname(target), { recursive: true });
+      await fs.writeFile(temp, content);
+      await fs.renameFile(temp, target);
+    } catch (error) {
+      // Best effort: do not leave the temp file behind. Its own failure is
+      // ignored so the original error is the one reported.
+      try {
+        await fs.removeFile?.(temp);
+      } catch {
+        /* ignore */
+      }
+      throw new UnpackWriteFailed(error instanceof Error ? error.message : String(error), written);
+    }
     written.push(target);
   }
   return written;
@@ -262,6 +280,17 @@ export function catalogSkillContent(skill: {
   body: string;
 }): string {
   return `---\nname: ${JSON.stringify(skill.name)}\ndescription: ${JSON.stringify(skill.description)}\n---\n\n${skill.body}`;
+}
+
+/** An IO failure mid-write, carrying the files already placed. */
+class UnpackWriteFailed extends Error {
+  constructor(
+    message: string,
+    readonly files: string[],
+  ) {
+    super(message);
+    this.name = "UnpackWriteFailed";
+  }
 }
 
 /** A refusal the driver reports rather than throwing out of the broker. */
