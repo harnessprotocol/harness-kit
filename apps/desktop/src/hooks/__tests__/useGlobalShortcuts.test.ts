@@ -79,3 +79,47 @@ describe("Escape does nothing", () => {
     expect(navigate).not.toHaveBeenCalled();
   });
 });
+
+// ── SHORTCUTS-driven (AC-40) ──────────────────────────────────
+
+import { SHORTCUTS } from "../../shortcuts";
+
+describe("handles exactly the global SHORTCUTS", () => {
+  function setup() {
+    const navigate = vi.fn();
+    const toggleSidebar = vi.fn();
+    const togglePalette = vi.fn();
+    renderHook(() => useGlobalShortcuts({ navigate: navigate as never, toggleSidebar, togglePalette }));
+    return { navigate, toggleSidebar, togglePalette };
+  }
+  const total = (m: ReturnType<typeof setup>) =>
+    m.navigate.mock.calls.length + m.toggleSidebar.mock.calls.length + m.togglePalette.mock.calls.length;
+
+  for (const s of SHORTCUTS.filter((x) => x.scope === "global")) {
+    it(`⌘${s.key} (${s.id}) acts once`, () => {
+      const m = setup();
+      fireEvent.keyDown(document, { metaKey: true, key: s.key });
+      expect(total(m)).toBe(1);
+    });
+  }
+
+  for (const s of SHORTCUTS.filter((x) => x.scope === "page")) {
+    it(`⌘${s.key} (${s.id}) is left to its page`, () => {
+      const m = setup();
+      fireEvent.keyDown(document, { metaKey: true, key: s.key });
+      expect(total(m)).toBe(0);
+    });
+  }
+
+  it("ignores unlisted ⌘-keys", () => {
+    const m = setup();
+    for (const key of ["a", "j", "9", "/", "z"]) fireEvent.keyDown(document, { metaKey: true, key });
+    expect(total(m)).toBe(0);
+  });
+
+  it("ignores the same keys without ⌘", () => {
+    const m = setup();
+    for (const s of SHORTCUTS) fireEvent.keyDown(document, { key: s.key });
+    expect(total(m)).toBe(0);
+  });
+});

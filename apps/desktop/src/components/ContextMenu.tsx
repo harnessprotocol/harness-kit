@@ -110,9 +110,9 @@ export default function ContextMenu({ x, y, items, onClose }: ContextMenuProps) 
               color: item.danger ? "var(--danger-text)" : "var(--fg-base)",
               cursor: "pointer",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = item.danger ? "rgba(220,38,38,0.08)" : "var(--hover-bg)")}
+            onMouseEnter={(e) => (e.currentTarget.style.background = item.danger ? "var(--danger-light)" : "var(--hover-bg)")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-            onFocus={(e) => (e.currentTarget.style.background = item.danger ? "rgba(220,38,38,0.08)" : "var(--hover-bg)")}
+            onFocus={(e) => (e.currentTarget.style.background = item.danger ? "var(--danger-light)" : "var(--hover-bg)")}
             onBlur={(e) => (e.currentTarget.style.background = "transparent")}
           >
             {item.label}

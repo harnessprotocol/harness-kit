@@ -98,3 +98,20 @@ describe("@harness-kit/ui Modal focus", () => {
     expect(screen.getByRole("dialog", { name: "Second" })).toBeInTheDocument();
   });
 });
+
+describe("@harness-kit/ui Modal size", () => {
+  it("is the default width unless size is lg", () => {
+    const { rerender } = render(
+      <Modal open onClose={() => {}} title="Default">
+        a
+      </Modal>,
+    );
+    expect(screen.getByRole("dialog")).not.toHaveClass("hk-modal-lg");
+    rerender(
+      <Modal open onClose={() => {}} title="Wide" size="lg">
+        a
+      </Modal>,
+    );
+    expect(screen.getByRole("dialog")).toHaveClass("hk-modal", "hk-modal-lg");
+  });
+});

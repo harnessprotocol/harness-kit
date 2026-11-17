@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Wrench, Pencil, Check, X as XIcon } from "lucide-react";
-import { Button, Card, EmptyState, ErrorNotice } from "@harness-kit/ui";
+import { Button, Card, EmptyState, ErrorNotice, Tooltip } from "@harness-kit/ui";
 import { COMPILE_SURFACE_IDS, compile, detectPlatforms, isCompileSurface, parseHarness } from "@harness-kit/core";
 import type { CompileResult, DetectedPlatform, SurfaceId } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
@@ -371,19 +371,20 @@ export default function SyncPage({ embedded = false }: SyncPageProps = {}) {
             <div>
               <SectionLabel>Project Directory</SectionLabel>
               {/* Read-only: the title bar's Project menu is the one place to choose it. */}
-              <div
-                data-testid="compile-project-dir"
-                title={projectDir || undefined}
-                style={{
-                  minWidth: 0, padding: "7px 10px", borderRadius: "6px",
-                  background: "var(--bg-elevated)", fontSize: "12px",
-                  fontFamily: projectDir ? "ui-monospace, monospace" : undefined,
-                  color: projectDir ? "var(--fg-base)" : "var(--fg-subtle)",
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
-                }}
-              >
-                {projectDir || "No project chosen. Choose one from the Project menu in the title bar."}
-              </div>
+              <Tooltip content={projectDir || ""}>
+                <div
+                  data-testid="compile-project-dir"
+                  style={{
+                    minWidth: 0, padding: "7px 10px", borderRadius: "6px",
+                    background: "var(--bg-elevated)", fontSize: "12px",
+                    fontFamily: projectDir ? "ui-monospace, monospace" : undefined,
+                    color: projectDir ? "var(--fg-base)" : "var(--fg-subtle)",
+                    overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  }}
+                >
+                  {projectDir || "No project chosen. Choose one from the Project menu in the title bar."}
+                </div>
+              </Tooltip>
 
               {/* Status */}
               {projectDir && !dirChecking && (

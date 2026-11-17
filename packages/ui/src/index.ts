@@ -46,3 +46,6 @@ export type { CommandPaletteProps, Command } from "./components/CommandPalette.j
 
 export { ErrorNotice } from "./components/ErrorNotice.js";
 export type { ErrorNoticeProps, ErrorNoticeAction, ErrorNoticeTone } from "./components/ErrorNotice.js";
+
+export { Tooltip } from "./components/Tooltip.js";
+export type { TooltipProps } from "./components/Tooltip.js";

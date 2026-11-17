@@ -2,11 +2,12 @@ import { Outlet, NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
 import { open } from "@tauri-apps/plugin-shell";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { NavItem } from "@harness-kit/ui";
+import { NavItem, Tooltip } from "@harness-kit/ui";
 import { Search } from "lucide-react";
 import { useGlobalShortcuts } from "../hooks/useGlobalShortcuts";
 import { useArrowNavigation } from "../hooks/useArrowNavigation";
 import { useSidebarResize } from "../hooks/useSidebarResize";
+import { installAppMenuOnMac } from "../lib/app-menu";
 import { initTheme } from "../lib/theme";
 import { useHasProfileDraft } from "../lib/profile-draft";
 import { initPreferences, getLabs } from "../lib/preferences";
@@ -207,7 +208,8 @@ function AppShell() {
     });
   }, []);
 
-  useGlobalShortcuts({ navigate, toggleSidebar });
+  const togglePalette = useCallback(() => setPaletteOpen((v) => !v), []);
+  useGlobalShortcuts({ navigate, toggleSidebar, togglePalette });
   const { onMouseDown: onResizeMouseDown } = useSidebarResize();
   const { files: configFiles } = useClaudeFileList();
 
@@ -227,16 +229,9 @@ function AppShell() {
     return () => window.removeEventListener("harness-kit-prefs-changed", onPrefsChanged);
   }, []);
 
-  // Cmd+K opens the command palette from anywhere.
+  // Native menu bar (AC-40): macOS desktop runtime only, installed once.
   useEffect(() => {
-    function handler(e: KeyboardEvent) {
-      if (e.metaKey && !e.shiftKey && (e.key === "k" || e.key === "K")) {
-        e.preventDefault();
-        setPaletteOpen((v) => !v);
-      }
-    }
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    installAppMenuOnMac().catch((err) => console.error("[menu] install failed:", err));
   }, []);
 
   const entries = visibleNav(labs);
@@ -287,40 +282,47 @@ function AppShell() {
             pointerEvents: "none",
           }}
         />
-        <button className="titlebar-btn" onClick={toggleSidebar} title="Toggle sidebar (⌘\)" aria-label="Toggle sidebar (⌘\)">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
-            <rect x="1" y="1" width="14" height="14" rx="2" />
-            <line x1="5" y1="1" x2="5" y2="15" />
-          </svg>
-        </button>
-        <button className="titlebar-btn" onClick={() => navigate(-1)} title="Back (⌘[)" aria-label="Back (⌘[)">
-          <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
-          </svg>
-        </button>
-        <button className="titlebar-btn" onClick={() => navigate(1)} title="Forward (⌘])" aria-label="Forward (⌘])">
-          <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
-          </svg>
-        </button>
+        <Tooltip content="Toggle sidebar (⌘\)">
+          <button className="titlebar-btn" onClick={toggleSidebar} aria-label="Toggle sidebar (⌘\)">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="1" y="1" width="14" height="14" rx="2" />
+              <line x1="5" y1="1" x2="5" y2="15" />
+            </svg>
+          </button>
+        </Tooltip>
+        <Tooltip content="Back (⌘[)">
+          <button className="titlebar-btn" onClick={() => navigate(-1)} aria-label="Back (⌘[)">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M12.79 5.23a.75.75 0 01-.02 1.06L8.832 10l3.938 3.71a.75.75 0 11-1.04 1.08l-4.5-4.25a.75.75 0 010-1.08l4.5-4.25a.75.75 0 011.06.02z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </Tooltip>
+        <Tooltip content="Forward (⌘])">
+          <button className="titlebar-btn" onClick={() => navigate(1)} aria-label="Forward (⌘])">
+            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M7.21 14.77a.75.75 0 01.02-1.06L11.168 10 7.23 6.29a.75.75 0 111.04-1.08l4.5 4.25a.75.75 0 010 1.08l-4.5 4.25a.75.75 0 01-1.06-.02z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </Tooltip>
         {/* The one project-directory selector (spec AC-17): Machine, Drift and Compile read it */}
         <ProjectSelector />
         {/* ⌘K affordance (spec AC-21): the palette lists the open page's commands first.
             The name includes the visible "⌘K" so a spoken label matches (WCAG 2.5.3). */}
-        <button
-          type="button"
-          className="hk-titlebar-cmdk"
-          data-no-drag=""
-          onClick={() => setPaletteOpen(true)}
-          aria-label="Command palette ⌘K"
-          aria-keyshortcuts="Meta+K"
-          aria-haspopup="dialog"
-          aria-expanded={paletteOpen}
-          title="Command palette (⌘K)"
-        >
-          <Search size={12} strokeWidth={1.7} aria-hidden="true" />
-          <kbd className="hk-titlebar-cmdk-key">⌘K</kbd>
-        </button>
+        <Tooltip content="Command palette (⌘K)">
+          <button
+            type="button"
+            className="hk-titlebar-cmdk"
+            data-no-drag=""
+            onClick={() => setPaletteOpen(true)}
+            aria-label="Command palette ⌘K"
+            aria-keyshortcuts="Meta+K"
+            aria-haspopup="dialog"
+            aria-expanded={paletteOpen}
+          >
+            <Search size={12} strokeWidth={1.7} aria-hidden="true" />
+            <kbd className="hk-titlebar-cmdk-key">⌘K</kbd>
+          </button>
+        </Tooltip>
       </div>
 
       {/* Content area: sidebar + main */}
@@ -363,14 +365,14 @@ function AppShell() {
                   viewBox="0 0 32 32"
                   style={{ width: 22, height: 22, filter: "drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 50%, transparent))", flexShrink: 0 }}
                 >
-                  <rect width="32" height="32" rx="7" fill="#131215" />
-                  <g stroke="#6BC0F5" strokeWidth="2.8" strokeLinecap="round" fill="none">
+                  <rect width="32" height="32" rx="7" fill="var(--brand-mark-bg)" />
+                  <g stroke="var(--brand-mark-fg)" strokeWidth="2.8" strokeLinecap="round" fill="none">
                     <path d="M9 9.5 C 15 11, 17.5 13.5, 19.4 14.9" />
                     <path d="M9 22.5 C 15 21, 17.5 18.5, 19.4 17.1" />
                   </g>
-                  <circle cx="9" cy="9.5" r="1.9" fill="#6BC0F5" />
-                  <circle cx="9" cy="22.5" r="1.9" fill="#6BC0F5" />
-                  <circle cx="22" cy="16" r="3.3" fill="#6BC0F5" />
+                  <circle cx="9" cy="9.5" r="1.9" fill="var(--brand-mark-fg)" />
+                  <circle cx="9" cy="22.5" r="1.9" fill="var(--brand-mark-fg)" />
+                  <circle cx="22" cy="16" r="3.3" fill="var(--brand-mark-fg)" />
                 </svg>
                 <span style={{ fontSize: "13px", fontWeight: 600, letterSpacing: "-0.1px", color: "var(--fg-base)" }}>
                   Harness Kit

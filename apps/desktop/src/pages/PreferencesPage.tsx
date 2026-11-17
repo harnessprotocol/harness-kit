@@ -391,7 +391,7 @@ function GeneralTab({ onOpenFeedback }: { onOpenFeedback: () => void }) {
               cursor: "pointer",
             }}
           >
-            Send Feedback
+            Send feedback
           </button>
         </SettingRow>
       </div>

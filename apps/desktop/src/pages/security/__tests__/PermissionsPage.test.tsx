@@ -512,3 +512,14 @@ describe("PermissionsPage — section labels", () => {
     expect(screen.getByText(/Network/)).toBeInTheDocument();
   });
 });
+
+describe("PermissionsPage — mode accent colours", () => {
+  it("tints the selected mode card with color-mix over the token variable", async () => {
+    renderPage();
+    const card = (await screen.findByText("--dangerously-skip-permissions")).closest("button")!;
+    const style = card.getAttribute("style") ?? "";
+    // `var(--warning)0d` is not valid CSS and the browser drops it.
+    expect(style).toContain("color-mix(in srgb, var(--warning) 5%, transparent)");
+    expect(style).not.toMatch(/var\(--[a-z-]+\)[0-9a-f]{2}\b/);
+  });
+});

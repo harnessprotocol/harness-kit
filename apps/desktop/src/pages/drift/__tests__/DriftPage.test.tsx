@@ -3,6 +3,7 @@ import { render, screen, waitFor, act, fireEvent } from "@testing-library/react"
 import { MemoryRouter } from "react-router-dom";
 import DriftPage from "../DriftPage";
 import { PROJECT_CHANGED_EVENT } from "../../../lib/project-dir";
+import { CommandProbe } from "../../../test-utils/CommandProbe";
 
 // ── Mocks ──────────────────────────────────────────────────────
 
@@ -262,5 +263,67 @@ describe("DriftPage", () => {
     act(() => storeProject("/repo/second"));
     await waitFor(() => expect(scannedRoots()).toContain("/repo/second"));
     expect(mockGrantProjectScope).toHaveBeenCalledWith("/repo/second");
+  });
+
+  describe("⌘K commands (AC-21)", () => {
+    const REPAIRABLE = {
+      class: "modified-inside-markers",
+      path: "CLAUDE.md",
+      adapter: "claude-code",
+      target: "claude-code",
+      harnessName: "test-harness",
+      slot: "operational",
+      expectedContent: "expected content",
+      detail: "content drifted from harness.yaml",
+    };
+    const OUTSIDE = { ...REPAIRABLE, class: "user-modified-outside", path: "other.md" };
+
+    function renderWithProbe() {
+      return render(
+        <MemoryRouter>
+          <DriftPage />
+          <CommandProbe />
+        </MemoryRouter>,
+      );
+    }
+
+    it("lists Fix all and the acknowledged toggle, mirroring the buttons, and runs them", async () => {
+      mockDetectDrift.mockResolvedValue({ items: [REPAIRABLE], hasDrift: true, byClass: {} });
+      renderWithProbe();
+      const fixAll = await screen.findByTestId("cmd-drift.fix-all");
+      expect(fixAll).toHaveTextContent("Fix all (1)");
+      expect(fixAll).toHaveAttribute("data-disabled", "false");
+      expect(screen.getByRole("button", { name: "Fix all (1)" })).toBeEnabled();
+
+      expect(screen.getByTestId("cmd-drift.toggle-acknowledged")).toHaveTextContent("Show acknowledged");
+      fireEvent.click(screen.getByTestId("cmd-drift.toggle-acknowledged"));
+      await waitFor(() =>
+        expect(screen.getByTestId("cmd-drift.toggle-acknowledged")).toHaveTextContent("Hide acknowledged"),
+      );
+      expect(screen.getByRole("button", { name: "Hide acknowledged" })).toBeInTheDocument();
+
+      // Same handler as the button: the fix preview opens.
+      fireEvent.click(fixAll);
+      expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    });
+
+    it("disables Fix all when nothing is repairable, like the button", async () => {
+      mockDetectDrift.mockResolvedValue({ items: [OUTSIDE], hasDrift: true, byClass: {} });
+      renderWithProbe();
+      const fixAll = await screen.findByTestId("cmd-drift.fix-all");
+      expect(fixAll).toHaveAttribute("data-disabled", "true");
+      expect(screen.getByRole("button", { name: "Fix all (0)" })).toBeDisabled();
+    });
+
+    it("lists Re-scan only where the Re-scan button shows, and runs the same scan", async () => {
+      mockDetectDrift.mockResolvedValue({ items: [], hasDrift: false, byClass: {} });
+      renderWithProbe();
+      await screen.findByText("No drift detected");
+      expect(screen.queryByTestId("cmd-drift.fix-all")).not.toBeInTheDocument();
+      const scans = () => mockGetAcknowledgedDriftItems.mock.calls.length;
+      const before = scans();
+      fireEvent.click(await screen.findByTestId("cmd-drift.rescan"));
+      await waitFor(() => expect(scans()).toBe(before + 1));
+    });
   });
 });

@@ -4,7 +4,7 @@ import {
   listSecurityPresets, applySecurityPreset,
   detectClaudeAccount,
 } from "../../lib/tauri";
-import { ErrorNotice } from "@harness-kit/ui";
+import { ErrorNotice, Tooltip } from "@harness-kit/ui";
 import { errorDetails } from "../../lib/error-details";
 import { isChangedOnDisk } from "../../lib/loaded-digest";
 import type { PermissionsState, SecurityPreset } from "@harness-kit/shared";
@@ -119,9 +119,9 @@ function Chip({ label, color, onRemove }: {
   onRemove: () => void;
 }) {
   const colors = {
-    green: { bg: "var(--success-light)", border: "rgba(22,163,74,0.22)", text: "var(--success)" },
-    red:   { bg: "var(--danger-light)",  border: "rgba(220,38,38,0.22)",  text: "var(--danger)" },
-    amber: { bg: "var(--warning-light)", border: "rgba(217,119,6,0.22)",  text: "var(--warning)" },
+    green: { bg: "var(--success-light)", border: "color-mix(in srgb, var(--success) 22%, transparent)", text: "var(--success)" },
+    red:   { bg: "var(--danger-light)",  border: "color-mix(in srgb, var(--danger) 22%, transparent)",  text: "var(--danger)" },
+    amber: { bg: "var(--warning-light)", border: "color-mix(in srgb, var(--warning) 22%, transparent)",  text: "var(--warning)" },
   };
   const c = colors[color];
   return (
@@ -294,7 +294,7 @@ function ModeCard({ id: _id, label, flag, description, icon, accentColor, select
       style={{
         display: "flex", flexDirection: "column", alignItems: "flex-start",
         textAlign: "left", padding: "14px", cursor: "pointer",
-        background: selected ? `${accentColor}0d` : "var(--bg-surface)",
+        background: selected ? `color-mix(in srgb, ${accentColor} 5%, transparent)` : "var(--bg-surface)",
         border: selected
           ? `1.5px solid ${accentColor}`
           : "1.5px solid var(--border-base)",
@@ -322,7 +322,7 @@ function ModeCard({ id: _id, label, flag, description, icon, accentColor, select
             width: 16, height: 16, borderRadius: "50%",
             background: accentColor,
             display: "flex", alignItems: "center", justifyContent: "center",
-            color: "#fff", flexShrink: 0,
+            color: "var(--fg-on-fill)", flexShrink: 0,
           }}>
             <IconCheck />
           </div>
@@ -342,8 +342,8 @@ function ModeCard({ id: _id, label, flag, description, icon, accentColor, select
         <code style={{
           fontSize: "10px", fontFamily: "ui-monospace, monospace",
           color: selected ? accentColor : "var(--fg-subtle)",
-          background: selected ? `${accentColor}14` : "var(--bg-base)",
-          border: `1px solid ${selected ? `${accentColor}30` : "var(--border-subtle)"}`,
+          background: selected ? `color-mix(in srgb, ${accentColor} 8%, transparent)` : "var(--bg-base)",
+          border: `1px solid ${selected ? `color-mix(in srgb, ${accentColor} 19%, transparent)` : "var(--border-subtle)"}`,
           borderRadius: "3px", padding: "1px 5px",
         }}>
           {flag}
@@ -425,7 +425,7 @@ function CurrentConfigSummary({
       </span>
       <span style={{
         fontSize: "11px", fontWeight: 600, color: modeColor,
-        background: `${modeColor}18`, padding: "1px 8px",
+        background: `color-mix(in srgb, ${modeColor} 9%, transparent)`, padding: "1px 8px",
         borderRadius: "10px", flexShrink: 0,
       }}>
         {modeLabel}
@@ -532,19 +532,21 @@ function AllowedToolsSection({
                     boxSizing: "border-box",
                   }}
                 />
-                <button
-                  onClick={() => remove(name)}
-                  title={`Remove ${name}`}
-                  style={{
-                    border: "none", background: "none",
-                    color: "var(--fg-subtle)", cursor: "pointer",
-                    padding: "2px 4px", borderRadius: "3px",
-                    fontSize: "14px", lineHeight: 1,
-                    display: "flex", alignItems: "center",
-                  }}
-                >
-                  <IconRemove />
-                </button>
+                <Tooltip content={`Remove ${name}`}>
+                  <button
+                    aria-label={`Remove ${name}`}
+                    onClick={() => remove(name)}
+                    style={{
+                      border: "none", background: "none",
+                      color: "var(--fg-subtle)", cursor: "pointer",
+                      padding: "2px 4px", borderRadius: "3px",
+                      fontSize: "14px", lineHeight: 1,
+                      display: "flex", alignItems: "center",
+                    }}
+                  >
+                    <IconRemove />
+                  </button>
+                </Tooltip>
               </div>
             );
           })}
@@ -563,24 +565,24 @@ function AllowedToolsSection({
           </p>
           <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
             {inactiveTools.map((tool) => (
-              <button
-                key={tool.name}
-                onClick={() => add(tool.name)}
-                title={tool.hint}
-                style={{
-                  display: "flex", alignItems: "center", gap: "4px",
-                  padding: "4px 9px",
-                  borderRadius: "5px",
-                  border: "1px solid var(--border-subtle)",
-                  background: "var(--bg-base)",
-                  cursor: "pointer",
-                  fontSize: "11px", color: "var(--fg-muted)",
-                  fontFamily: "ui-monospace, monospace",
-                }}
-              >
-                <span style={{ fontSize: "10px", opacity: 0.6 }}>+</span>
-                {tool.name}
-              </button>
+              <Tooltip content={tool.hint} key={tool.name}>
+                <button
+                  onClick={() => add(tool.name)}
+                  style={{
+                    display: "flex", alignItems: "center", gap: "4px",
+                    padding: "4px 9px",
+                    borderRadius: "5px",
+                    border: "1px solid var(--border-subtle)",
+                    background: "var(--bg-base)",
+                    cursor: "pointer",
+                    fontSize: "11px", color: "var(--fg-muted)",
+                    fontFamily: "ui-monospace, monospace",
+                  }}
+                >
+                  <span style={{ fontSize: "10px", opacity: 0.6 }}>+</span>
+                  {tool.name}
+                </button>
+              </Tooltip>
             ))}
           </div>
         </div>

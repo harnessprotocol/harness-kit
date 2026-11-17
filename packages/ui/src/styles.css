@@ -351,6 +351,9 @@ button.hk-summary-cell[data-active="true"] .hk-summary-label { color: var(--acce
   overflow: hidden;
   animation: hk-modal-in 200ms ease-out;
 }
+.hk-modal-lg {
+  width: min(90vw, 680px);
+}
 .hk-modal-header {
   display: flex;
   align-items: center;

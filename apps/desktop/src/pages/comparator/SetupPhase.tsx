@@ -3,6 +3,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { homeDir } from "@tauri-apps/api/path";
 import type { HarnessInfo } from "@harness-kit/shared";
 import { getHarness } from "../../lib/harness-definitions";
+import { Tooltip } from "@harness-kit/ui";
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -598,8 +599,8 @@ export default function SetupPhase({ onStart }: SetupPhaseProps) {
               alignItems: "center",
               gap: 8,
               padding: "8px 12px",
-              background: "rgba(234, 88, 12, 0.10)",
-              border: "1px solid rgba(234, 88, 12, 0.25)",
+              background: "color-mix(in srgb, var(--warning) 10%, transparent)",
+              border: "1px solid color-mix(in srgb, var(--warning) 25%, transparent)",
               borderRadius: 6,
               fontSize: 11,
               fontFamily: fontStack,
@@ -616,31 +617,32 @@ export default function SetupPhase({ onStart }: SetupPhaseProps) {
         )}
 
         {/* ── Start Button ───────────────────────────────────── */}
-        <button
-          style={{
-            ...styles.startBtn,
-            background: canStart ? tokens.accent : tokens.borderBase,
-            color: canStart ? "#ffffff" : tokens.fgPlaceholder,
-            cursor: canStart ? "pointer" : "not-allowed",
-            opacity: canStart ? 1 : 0.7,
-          }}
-          disabled={!canStart}
-          title={LIVE_EXECUTION_AVAILABLE ? undefined : "Live in-app execution isn't available in this build"}
-          onClick={handleStart}
-          onMouseEnter={(e) => {
-            if (!canStart) return;
-            e.currentTarget.style.background = tokens.accentFg;
-            e.currentTarget.style.transform = "scale(0.99)";
-          }}
-          onMouseLeave={(e) => {
-            if (!canStart) return;
-            e.currentTarget.style.background = tokens.accent;
-            e.currentTarget.style.transform = "scale(1)";
-          }}
-        >
-          <PlayIcon />
-          {LIVE_EXECUTION_AVAILABLE ? "Start Comparison" : "Live Execution Unavailable"}
-        </button>
+        <Tooltip content={LIVE_EXECUTION_AVAILABLE ? "" : "Live in-app execution isn't available in this build"}>
+          <button
+            style={{
+              ...styles.startBtn,
+              background: canStart ? tokens.accent : tokens.borderBase,
+              color: canStart ? "var(--fg-on-fill)" : tokens.fgPlaceholder,
+              cursor: canStart ? "pointer" : "not-allowed",
+              opacity: canStart ? 1 : 0.7,
+            }}
+            disabled={!canStart}
+            onClick={handleStart}
+            onMouseEnter={(e) => {
+              if (!canStart) return;
+              e.currentTarget.style.background = tokens.accentFg;
+              e.currentTarget.style.transform = "scale(0.99)";
+            }}
+            onMouseLeave={(e) => {
+              if (!canStart) return;
+              e.currentTarget.style.background = tokens.accent;
+              e.currentTarget.style.transform = "scale(1)";
+            }}
+          >
+            <PlayIcon />
+            {LIVE_EXECUTION_AVAILABLE ? "Start Comparison" : "Live Execution Unavailable"}
+          </button>
+        </Tooltip>
       </div>
     </div>
   );
@@ -708,22 +710,23 @@ function HarnessCard({
         <div style={{ ...styles.harnessStatusDot, background: dotColor }} />
         <span style={styles.harnessName}>{harness.name}</span>
         {getHarness(harness.id)?.protocol === "acp" && (
-          <span
-            style={{
-              fontSize: "9px",
-              fontWeight: 600,
-              letterSpacing: "0.05em",
-              padding: "1px 5px",
-              borderRadius: "3px",
-              background: "var(--accent-light)",
-              color: "var(--accent-text)",
-              border: "1px solid var(--accent-glow)",
-              textTransform: "uppercase" as const,
-            }}
-            title="ACP compatible — uses structured JSON-RPC events"
-          >
-            ACP
-          </span>
+          <Tooltip content="ACP compatible — uses structured JSON-RPC events">
+            <span
+              style={{
+                fontSize: "9px",
+                fontWeight: 600,
+                letterSpacing: "0.05em",
+                padding: "1px 5px",
+                borderRadius: "3px",
+                background: "var(--accent-light)",
+                color: "var(--accent-text)",
+                border: "1px solid var(--accent-glow)",
+                textTransform: "uppercase" as const,
+              }}
+            >
+              ACP
+            </span>
+          </Tooltip>
         )}
       </div>
       <span style={styles.harnessVersion}>{statusText}</span>
@@ -772,7 +775,7 @@ function HarnessCard({
             justifyContent: "center",
           }}
         >
-          <svg width="8" height="8" viewBox="0 0 16 16" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="8" height="8" viewBox="0 0 16 16" fill="none" stroke="var(--fg-on-fill)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="3 8 7 12 13 4" />
           </svg>
         </div>

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { FileDiffRow } from "@harness-kit/shared";
 import type { ComparisonState } from "../../hooks/useComparator";
 import { getComparisonDiffs, getComparison } from "../../lib/tauri";
+import { Tooltip } from "@harness-kit/ui";
 
 // ── Types ────────────────────────────────────────────────────
 
@@ -48,14 +49,14 @@ const monoStack = 'ui-monospace, "SF Mono", monospace';
 // hues are reserved for the azure accent's visual territory in this direction).
 
 const HARNESS_COLORS = [
-  "#2E9BE6", // azure (accent)
-  "#0891b2", // cyan
-  "#d97706", // amber
-  "#dc2626", // red
-  "#16a34a", // green
-  "#b45309", // brown/copper
-  "#0d9488", // teal
-  "#ea580c", // orange
+  "var(--chart-1)", // azure (accent)
+  "var(--chart-2)", // cyan
+  "var(--chart-3)", // amber
+  "var(--chart-4)", // red
+  "var(--chart-5)", // green
+  "var(--chart-6)", // brown/copper
+  "var(--chart-7)", // teal
+  "var(--chart-8)", // orange
 ];
 
 // ── Styles ──────────────────────────────────────────────────
@@ -123,7 +124,7 @@ const styles = {
     fontSize: 12,
     fontWeight: 600,
     fontFamily: fontStack,
-    color: "#ffffff",
+    color: "var(--fg-on-fill)",
     background: tokens.accent,
     border: "none",
     borderRadius: 6,
@@ -489,23 +490,24 @@ export default function ResultsPhase({ active, onStartJudge }: ResultsPhaseProps
                       </span>
                     ) : null}
                     {p.acpMode && (
-                      <span
-                        style={{
-                          fontSize: "9px",
-                          fontWeight: 600,
-                          padding: "1px 5px",
-                          borderRadius: "3px",
-                          background: "var(--accent-light)",
-                          color: "var(--accent-text)",
-                          border: "1px solid var(--accent-glow)",
-                          marginLeft: 5,
-                          textTransform: "none" as const,
-                          letterSpacing: 0,
-                        }}
-                        title="Ran with ACP protocol"
-                      >
-                        ACP
-                      </span>
+                      <Tooltip content="Ran with ACP protocol">
+                        <span
+                          style={{
+                            fontSize: "9px",
+                            fontWeight: 600,
+                            padding: "1px 5px",
+                            borderRadius: "3px",
+                            background: "var(--accent-light)",
+                            color: "var(--accent-text)",
+                            border: "1px solid var(--accent-glow)",
+                            marginLeft: 5,
+                            textTransform: "none" as const,
+                            letterSpacing: 0,
+                          }}
+                        >
+                          ACP
+                        </span>
+                      </Tooltip>
                     )}
                   </th>
                 ))}
@@ -607,20 +609,21 @@ export default function ResultsPhase({ active, onStartJudge }: ResultsPhaseProps
                     onMouseLeave={() => setHoveredRow(null)}
                     style={hoveredRow === `file-${rowIdx}` ? { background: tokens.hoverBg } : undefined}
                   >
-                    <td
-                      style={{
-                        ...styles.tdMono,
-                        fontSize: 11,
-                        maxWidth: 320,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap" as const,
-                        borderBottom: rowIdx === fileMatrix.length - 1 ? "none" : styles.td.borderBottom,
-                      }}
-                      title={row.filePath}
-                    >
-                      {row.filePath}
-                    </td>
+                    <Tooltip content={row.filePath}>
+                      <td
+                        style={{
+                          ...styles.tdMono,
+                          fontSize: 11,
+                          maxWidth: 320,
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap" as const,
+                          borderBottom: rowIdx === fileMatrix.length - 1 ? "none" : styles.td.borderBottom,
+                        }}
+                      >
+                        {row.filePath}
+                      </td>
+                    </Tooltip>
                     {panels.map((p) => {
                       const ct = row.changes.get(p.id);
                       return (
@@ -662,9 +665,11 @@ export default function ResultsPhase({ active, onStartJudge }: ResultsPhaseProps
 
               return (
                 <div key={p.id} style={styles.timelineRow}>
-                  <div style={styles.timelineLabel} title={p.harnessName}>
-                    {p.harnessName}
-                  </div>
+                  <Tooltip content={p.harnessName}>
+                    <div style={styles.timelineLabel}>
+                      {p.harnessName}
+                    </div>
+                  </Tooltip>
                   <div style={styles.timelineBarArea}>
                     <div
                       style={{
@@ -688,7 +693,7 @@ export default function ResultsPhase({ active, onStartJudge }: ResultsPhaseProps
                           fontSize: 10,
                           fontWeight: 600,
                           fontFamily: monoStack,
-                          color: pct > 20 ? "#ffffff" : barColor,
+                          color: pct > 20 ? "var(--fg-on-fill)" : barColor,
                           whiteSpace: "nowrap" as const,
                           position: pct > 20 ? "relative" as const : "absolute" as const,
                           left: pct > 20 ? undefined : `calc(${Math.max(pct, 2)}% + 6px)`,

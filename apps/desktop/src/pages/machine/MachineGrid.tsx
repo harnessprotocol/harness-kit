@@ -1,5 +1,5 @@
 import { Fragment, useState, type CSSProperties } from "react";
-import { Button } from "@harness-kit/ui";
+import { Button, Tooltip } from "@harness-kit/ui";
 import { Store } from "lucide-react";
 import type { GridCell, GridRow, MachineInventory, SurfaceId } from "@harness-kit/core";
 import { surfaceLabel } from "../../lib/surface-labels";
@@ -55,14 +55,15 @@ function CellChip({
   // absent — deliberately empty: the surface could hold this and does not.
   if (chip === null) return null;
   return (
-    <span
-      className="hk-cell"
-      data-variant={variant}
-      title={cellTitle(cell, kind, variant)}
-      aria-label={variant === "unmanaged" ? "unmanaged locally" : undefined}
-    >
-      {chip}
-    </span>
+    <Tooltip content={cellTitle(cell, kind, variant)}>
+      <span
+        className="hk-cell"
+        data-variant={variant}
+        aria-label={variant === "unmanaged" ? "unmanaged locally" : undefined}
+      >
+        {chip}
+      </span>
+    </Tooltip>
   );
 }
 
@@ -271,87 +272,88 @@ export function MachineGrid({
                 Resource
               </th>
               {withBaseline && (
-                <th
-                  scope="col"
-                  data-testid="baseline-col"
-                  className="hk-baseline-col"
-                  title="Declared by this project's committed harness.yaml"
-                  style={{ ...headCellStyle, color: "var(--accent-text)" }}
-                >
-                  Team baseline
-                </th>
+                <Tooltip content="Declared by this project's committed harness.yaml">
+                  <th
+                    scope="col"
+                    data-testid="baseline-col"
+                    className="hk-baseline-col"
+                    style={{ ...headCellStyle, color: "var(--accent-text)" }}
+                  >
+                    Team baseline
+                  </th>
+                </Tooltip>
               )}
               {surfaceOrder.map((id) => {
                 const detected = detectedById.get(id) ?? false;
                 const skipped = skippedById.get(id) ?? 0;
                 const marketplaces = marketplacesById.get(id) ?? null;
                 return (
-                  <th
-                    key={id}
-                    scope="col"
-                    data-testid={`surface-col-${id}`}
-                    data-detected={detected ? "true" : "false"}
-                    title={surfaceLabel(id)}
-                    style={{
-                      ...headCellStyle,
-                      overflow: "hidden",
-                      ...(detected ? {} : { opacity: 0.45 }),
-                    }}
-                  >
-                    {/* The label owns its line, so a narrow column never cuts it to
-                        make room for the badges; they sit on their own line below. */}
-                    <div
-                      data-testid={`surface-label-${id}`}
-                      style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                    >
-                      {surfaceLabel(id)}
-                    </div>
-                    <div
+                  <Tooltip content={surfaceLabel(id)} key={id}>
+                    <th
+                      scope="col"
+                      data-testid={`surface-col-${id}`}
+                      data-detected={detected ? "true" : "false"}
                       style={{
-                        display: skipped > 0 || marketplaces !== null ? "flex" : "none",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexWrap: "wrap",
-                        gap: 4,
-                        marginTop: 2,
+                        ...headCellStyle,
+                        overflow: "hidden",
+                        ...(detected ? {} : { opacity: 0.45 }),
                       }}
                     >
-                      {skipped > 0 && (
-                        <span
-                          title={`${skipped} skipped ${skipped === 1 ? "entry" : "entries"} — see diagnostics below`}
-                          style={SKIPPED_BADGE_STYLE}
-                        >
-                          {skipped}
-                        </span>
-                      )}
-                      {marketplaces !== null && (
-                        <span
-                          data-testid={`surface-marketplaces-${id}`}
-                          title={
-                            marketplaces.length === 0
-                              ? "no plugin marketplaces registered"
-                              : `${marketplaces.length} plugin ${marketplaces.length === 1 ? "marketplace" : "marketplaces"}: ${marketplaces.join(", ")}`
-                          }
-                          style={MARKETPLACE_BADGE_STYLE}
-                        >
-                          <Store size={11} strokeWidth={1.7} aria-hidden="true" />
-                          {marketplaces.length}
-                        </span>
-                      )}
-                    </div>
-                    {!detected && (
+                      {/* The label owns its line, so a narrow column never cuts it to
+                          make room for the badges; they sit on their own line below. */}
+                      <div
+                        data-testid={`surface-label-${id}`}
+                        style={{ minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                      >
+                        {surfaceLabel(id)}
+                      </div>
                       <div
                         style={{
-                          fontSize: 8.5,
-                          fontWeight: 500,
-                          color: "var(--fg-subtle)",
-                          marginTop: 1,
+                          display: skipped > 0 || marketplaces !== null ? "flex" : "none",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          flexWrap: "wrap",
+                          gap: 4,
+                          marginTop: 2,
                         }}
                       >
-                        not installed
+                        {skipped > 0 && (
+                          <Tooltip content={`${skipped} skipped ${skipped === 1 ? "entry" : "entries"} — see diagnostics below`}>
+                            <span
+                              style={SKIPPED_BADGE_STYLE}
+                            >
+                              {skipped}
+                            </span>
+                          </Tooltip>
+                        )}
+                        {marketplaces !== null && (
+                          <Tooltip content={marketplaces.length === 0
+                                ? "no plugin marketplaces registered"
+                                : `${marketplaces.length} plugin ${marketplaces.length === 1 ? "marketplace" : "marketplaces"}: ${marketplaces.join(", ")}`}>
+                            <span
+                              data-testid={`surface-marketplaces-${id}`}
+                              style={MARKETPLACE_BADGE_STYLE}
+                            >
+                              <Store size={11} strokeWidth={1.7} aria-hidden="true" />
+                              {marketplaces.length}
+                            </span>
+                          </Tooltip>
+                        )}
                       </div>
-                    )}
-                  </th>
+                      {!detected && (
+                        <div
+                          style={{
+                            fontSize: 8.5,
+                            fontWeight: 500,
+                            color: "var(--fg-subtle)",
+                            marginTop: 1,
+                          }}
+                        >
+                          not installed
+                        </div>
+                      )}
+                    </th>
+                  </Tooltip>
                 );
               })}
             </tr>
@@ -429,13 +431,14 @@ export function MachineGrid({
                         style={{ padding: "6px 8px", textAlign: "center" }}
                       >
                         {baselineVariant && (
-                          <span
-                            className="hk-cell"
-                            data-variant={baselineVariant}
-                            title={CELL_VARIANTS[baselineVariant].label}
-                          >
-                            {CELL_VARIANTS[baselineVariant].chip}
-                          </span>
+                          <Tooltip content={CELL_VARIANTS[baselineVariant].label}>
+                            <span
+                              className="hk-cell"
+                              data-variant={baselineVariant}
+                            >
+                              {CELL_VARIANTS[baselineVariant].chip}
+                            </span>
+                          </Tooltip>
                         )}
                       </td>
                     )}

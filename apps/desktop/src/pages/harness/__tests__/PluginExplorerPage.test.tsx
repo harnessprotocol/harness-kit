@@ -202,7 +202,7 @@ describe("PluginExplorerPage failures (AC-20)", () => {
     renderPage();
     fireEvent.click(await screen.findByText("run.sh"));
     fireEvent.click(await screen.findByText("edit"));
-    expect(screen.getByTitle("Unsaved changes")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Unsaved changes" })).toBeInTheDocument();
     fireEvent.click(screen.getByText("plugin.json"));
     expect(await screen.findByRole("alert")).toHaveTextContent("Couldn't save run.sh");
 

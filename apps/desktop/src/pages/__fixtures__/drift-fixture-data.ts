@@ -65,7 +65,7 @@ export const DRIFT_FIXTURE_ENTRIES: ScopedDriftItem[] = [
       adapter: "claude-code",
       target: "claude-code",
       harnessName: "harness-kit",
-      slot: "operational",
+      slot: "behavioral",
       detail: "content outside the marker block was hand-edited",
     },
   },

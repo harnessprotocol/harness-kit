@@ -40,6 +40,34 @@ export interface ModeTokens {
   successText: string;
   warningText: string;
   dangerText: string;
+  /** Modal backdrop behind dialogs and palettes. */
+  scrim: string;
+  /** Brand mark (app logo) tile and glyph; the same in both themes. */
+  brandMarkBg: string;
+  brandMarkFg: string;
+  /** Categorical data-series colours (charts, timelines), distinct hues. */
+  chart1: string;
+  chart2: string;
+  chart3: string;
+  chart4: string;
+  chart5: string;
+  chart6: string;
+  chart7: string;
+  chart8: string;
+  /** File-type icon colours in the plugin explorer. */
+  fileFolder: string;
+  fileMd: string;
+  filePy: string;
+  fileSh: string;
+  fileJson: string;
+  fileYaml: string;
+  fileHtml: string;
+  fileTs: string;
+  fileJs: string;
+  fileCss: string;
+  fileToml: string;
+  fileTxt: string;
+  fileDefault: string;
 }
 
 export interface Palette {
@@ -71,6 +99,30 @@ export const palette: Palette = {
     successText: "#1B6F47",
     warningText: "#7A5000",
     dangerText: "#B3262C",
+    scrim: "rgba(20, 15, 10, 0.45)",
+    brandMarkBg: "#131215",
+    brandMarkFg: "#6BC0F5",
+    chart1: "#2E9BE6",
+    chart2: "#0891B2",
+    chart3: "#D97706",
+    chart4: "#DC2626",
+    chart5: "#16A34A",
+    chart6: "#BE185D",
+    chart7: "#7C3AED",
+    chart8: "#EA580C",
+    fileFolder: "#B45309",
+    fileMd: "#3B82F6",
+    filePy: "#16A34A",
+    fileSh: "#9333EA",
+    fileJson: "#EA580C",
+    fileYaml: "#DB2777",
+    fileHtml: "#DC2626",
+    fileTs: "#2563EB",
+    fileJs: "#CA8A04",
+    fileCss: "#0891B2",
+    fileToml: "#EA580C",
+    fileTxt: "#6B7280",
+    fileDefault: "#6B7280",
   },
   dark: {
     bgBase: "#131215",       // warm graphite — NOT slate
@@ -95,6 +147,30 @@ export const palette: Palette = {
     successText: "#4CC08A",
     warningText: "#E0A33D",
     dangerText: "#FF7A7E",
+    scrim: "rgba(0, 0, 0, 0.6)",
+    brandMarkBg: "#131215",
+    brandMarkFg: "#6BC0F5",
+    chart1: "#2E9BE6",
+    chart2: "#22D3EE",
+    chart3: "#F59E0B",
+    chart4: "#F87171",
+    chart5: "#4ADE80",
+    chart6: "#D08A4A",
+    chart7: "#A78BFA",
+    chart8: "#FB923C",
+    fileFolder: "#D97706",
+    fileMd: "#3B82F6",
+    filePy: "#22C55E",
+    fileSh: "#A855F7",
+    fileJson: "#F97316",
+    fileYaml: "#EC4899",
+    fileHtml: "#EF4444",
+    fileTs: "#2563EB",
+    fileJs: "#EAB308",
+    fileCss: "#06B6D4",
+    fileToml: "#F97316",
+    fileTxt: "#6B7280",
+    fileDefault: "#9CA3AF",
   },
 };
 
@@ -122,6 +198,30 @@ export const CSS_VARS: ReadonlyArray<readonly [keyof ModeTokens, string]> = [
   ["successText", "--success-text"],
   ["warningText", "--warning-text"],
   ["dangerText", "--danger-text"],
+  ["scrim", "--scrim"],
+  ["brandMarkBg", "--brand-mark-bg"],
+  ["brandMarkFg", "--brand-mark-fg"],
+  ["chart1", "--chart-1"],
+  ["chart2", "--chart-2"],
+  ["chart3", "--chart-3"],
+  ["chart4", "--chart-4"],
+  ["chart5", "--chart-5"],
+  ["chart6", "--chart-6"],
+  ["chart7", "--chart-7"],
+  ["chart8", "--chart-8"],
+  ["fileFolder", "--file-folder"],
+  ["fileMd", "--file-md"],
+  ["filePy", "--file-py"],
+  ["fileSh", "--file-sh"],
+  ["fileJson", "--file-json"],
+  ["fileYaml", "--file-yaml"],
+  ["fileHtml", "--file-html"],
+  ["fileTs", "--file-ts"],
+  ["fileJs", "--file-js"],
+  ["fileCss", "--file-css"],
+  ["fileToml", "--file-toml"],
+  ["fileTxt", "--file-txt"],
+  ["fileDefault", "--file-default"],
 ];
 
 /** Render a mode's tokens as indented CSS custom-property declarations. */

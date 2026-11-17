@@ -6,6 +6,7 @@ import {
   FILE_EXPLORER_WIDTH_MIN,
   FILE_EXPLORER_WIDTH_MAX,
 } from "../../lib/preferences";
+import { Tooltip } from "@harness-kit/ui";
 
 interface SplitPaneProps {
   left: React.ReactNode;
@@ -105,30 +106,32 @@ export default function SplitPane({ left, right, collapsed, onToggleCollapsed }:
       {/* Right panel */}
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, minHeight: 0, position: "relative" }}>
         {/* Collapse toggle button */}
-        <button
-          onClick={onToggleCollapsed}
-          title={collapsed ? "Expand panel" : "Collapse panel"}
-          style={{
-            position: "absolute",
-            top: "8px",
-            left: "8px",
-            zIndex: 10,
-            width: "20px",
-            height: "20px",
-            borderRadius: "4px",
-            border: "1px solid var(--border-base)",
-            background: "var(--bg-elevated)",
-            color: "var(--fg-subtle)",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "10px",
-            padding: 0,
-          }}
-        >
-          {collapsed ? "\u203A" : "\u2039"}
-        </button>
+        <Tooltip content={collapsed ? "Expand panel" : "Collapse panel"}>
+          <button
+            aria-label={collapsed ? "Expand panel" : "Collapse panel"}
+            onClick={onToggleCollapsed}
+            style={{
+              position: "absolute",
+              top: "8px",
+              left: "8px",
+              zIndex: 10,
+              width: "20px",
+              height: "20px",
+              borderRadius: "4px",
+              border: "1px solid var(--border-base)",
+              background: "var(--bg-elevated)",
+              color: "var(--fg-subtle)",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "10px",
+              padding: 0,
+            }}
+          >
+            {collapsed ? "\u203A" : "\u2039"}
+          </button>
+        </Tooltip>
         {right}
       </div>
     </div>
