@@ -107,10 +107,7 @@ describe("readStore: json-mcpservers", () => {
     expect(issues.value).toEqual({ transport: "sse", url: "https://issues.example.com/sse" });
   });
 
-  it("pinned: a servers-rootKey store pointed at a mcpServers-shaped file yields zero entries plus one skipped diagnostic", async () => {
-    // Honest behavior: the file exists and clearly holds MCP servers, just
-    // under the other well-known root key — silence would hide a
-    // misconfiguration, so it is reported via skipped[], never guessed at.
+  it("pinned: a servers-rootKey store also reads leftover mcpServers entries (older harness-kit wrote them there)", async () => {
     const fs = fixtureFs("claude-desktop");
     const configStore = store(
       "copilot-vscode",
@@ -120,11 +117,8 @@ describe("readStore: json-mcpservers", () => {
 
     const result = await readStore(fs, configStore, path);
 
-    expect(result.entries).toEqual([]);
-    expect(result.skipped).toHaveLength(1);
-    expect(result.skipped[0].file).toBe(path);
-    expect(result.skipped[0].reason).toContain("'servers'");
-    expect(result.skipped[0].reason).toContain("'mcpServers'");
+    expect(result.entries.length).toBeGreaterThan(0);
+    expect(result.skipped).toEqual([]);
   });
 
   it("pinned: the sibling diagnostic does not fire when the sibling holds nothing MCP-shaped", async () => {

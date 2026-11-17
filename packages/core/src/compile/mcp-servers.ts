@@ -74,6 +74,33 @@ export function assertNoSecretPlaceholder(serverName: string, server: McpServer)
   }
 }
 
+/**
+ * VS Code reads only `servers`; older harness-kit wrote `mcpServers` into
+ * .vscode/mcp.json. For a target whose root key is not `mcpServers`, fold a
+ * leftover top-level `mcpServers` object into the root key (an entry already
+ * there wins) and drop the old key. Shared by compile and the Machine sync
+ * write path so both emit the same bytes.
+ */
+export function migrateLegacyMcpRoot(
+  doc: Record<string, unknown>,
+  rootKey: string,
+): { doc: Record<string, unknown>; moved: number } {
+  const legacy = doc.mcpServers;
+  if (rootKey === "mcpServers" || typeof legacy !== "object" || legacy === null || Array.isArray(legacy)) {
+    return { doc, moved: 0 };
+  }
+  const { mcpServers: _drop, ...rest } = doc;
+  const current = rest[rootKey];
+  const currentMap =
+    typeof current === "object" && current !== null && !Array.isArray(current)
+      ? (current as Record<string, unknown>)
+      : {};
+  return {
+    doc: { ...rest, [rootKey]: { ...(legacy as Record<string, unknown>), ...currentMap } },
+    moved: Object.keys(legacy).length,
+  };
+}
+
 export async function compileMcpServers(
   config: HarnessConfig,
   targets: SurfaceId[],
@@ -108,9 +135,18 @@ export async function compileMcpServers(
       translated[name] = translateServer(server, dialect);
     }
 
-    const { data: existing, existed } = await readJsonOrDefault<Record<string, Record<string, unknown>>>(
+    const { data: rawExisting, existed } = await readJsonOrDefault<Record<string, Record<string, unknown>>>(
       fs, fullPath, {},
     );
+    const { doc: existing, moved } = migrateLegacyMcpRoot(rawExisting, rootKey) as {
+      doc: Record<string, Record<string, unknown>>;
+      moved: number;
+    };
+    if (moved > 0) {
+      warnings.push(
+        `Moved ${moved} server(s) from "mcpServers" to "${rootKey}" in ${filePath} (VS Code reads only "${rootKey}").`,
+      );
+    }
 
     const existingServers =
       (existing[rootKey] as Record<string, unknown> | undefined) ?? {};

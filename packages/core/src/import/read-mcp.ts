@@ -1,5 +1,6 @@
 import type { FsProvider } from "../fs-provider.js";
 import type { AdapterId } from "../adapters/adapter.js";
+import { migrateLegacyMcpRoot } from "../compile/mcp-servers.js";
 import { getTarget } from "../compile/targets.js";
 import type { McpServer, SurfaceId } from "../types.js";
 import { fromDialect, type EnvRefDialect } from "../compile/env-refs.js";
@@ -96,7 +97,10 @@ export async function readMcpConfigFile(
     return { imported: null, skipped };
   }
 
-  const mcpServers = data[options.rootKey ?? "mcpServers"] as Record<string, McpJsonEntry> | undefined;
+  const rootKey = options.rootKey ?? "mcpServers";
+  // Older harness-kit wrote `mcpServers` into files whose root key is
+  // `servers`; read leftovers too (the root key wins) so nothing vanishes.
+  const mcpServers = migrateLegacyMcpRoot(data, rootKey).doc[rootKey] as Record<string, McpJsonEntry> | undefined;
   if (!mcpServers || Object.keys(mcpServers).length === 0) {
     return { imported: null, skipped };
   }

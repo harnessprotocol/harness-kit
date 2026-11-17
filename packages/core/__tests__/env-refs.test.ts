@@ -149,3 +149,49 @@ describe("normalize and secret detection", () => {
     expect(looksLikeSecret("API_KEY", "${env:API_KEY}")).toBe(false);
   });
 });
+
+describe("legacy mcpServers in a servers-root file", () => {
+  const legacyFile = JSON.stringify({
+    servers: { both: { type: "stdio", command: "new" } },
+    mcpServers: { both: { type: "stdio", command: "old" }, old: { type: "stdio", command: "old-cmd" } },
+  });
+  const one: HarnessConfig = {
+    version: "1",
+    metadata: { name: "t", description: "t" },
+    "mcp-servers": { fresh: { transport: "stdio", command: "f" } },
+  };
+
+  it("compile migrates into servers, warns, drops mcpServers; servers wins a clash", async () => {
+    const fs = new MockFsProvider({ "/project/.vscode/mcp.json": legacyFile });
+    const { files, warnings } = await compileMcpServers(one, ["copilot-vscode"], fs);
+    const out = JSON.parse(files[0]!.content);
+    expect(out.mcpServers).toBeUndefined();
+    expect(out.servers.both.command).toBe("new");
+    expect(out.servers.old.command).toBe("old-cmd");
+    expect(out.servers.fresh.command).toBe("f");
+    expect(warnings).toContain(
+      'Moved 2 server(s) from "mcpServers" to "servers" in .vscode/mcp.json (VS Code reads only "servers").',
+    );
+  });
+
+  it("import sees leftover entries, servers wins", async () => {
+    const fs = new MockFsProvider({ "/project/.vscode/mcp.json": legacyFile });
+    const { imported } = await readMcpConfigFile(fs, ".vscode/mcp.json", "copilot", { rootKey: "servers" });
+    expect(Object.keys(imported!.servers).sort()).toEqual(["both", "old"]);
+    expect((imported!.servers.both!.value as { command: string }).command).toBe("new");
+  });
+
+  it("compile and write-store bytes stay equal on a legacy file", async () => {
+    const fs = new MockFsProvider({ "/project/.vscode/mcp.json": legacyFile });
+    const { files } = await compileMcpServers(one, ["copilot-vscode"], fs);
+    const store = SURFACES.find((s) => s.id === "copilot-vscode")!.stores.find(
+      (s) => s.kind === "mcp-server" && s.scope === "project",
+    )!;
+    const plan = await planStoreWrite(fs, store, "/project/.vscode/mcp.json", {
+      kind: "mcp-server",
+      name: "fresh",
+      value: one["mcp-servers"]!.fresh!,
+    });
+    expect(plan.supported && plan.changes[0]!.after).toBe(files[0]!.content);
+  });
+});

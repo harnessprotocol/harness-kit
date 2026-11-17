@@ -8,7 +8,7 @@ import {
   findMarkerBlock,
   syncedInstructionsContent,
 } from "../compile/markers.js";
-import { translateServer as translateMcpJson } from "../compile/mcp-servers.js";
+import { migrateLegacyMcpRoot, translateServer as translateMcpJson } from "../compile/mcp-servers.js";
 import type { FsProvider } from "../fs-provider.js";
 import type { HarnessResourceKind } from "../portability/types.js";
 import type { ConfigStore, StoreFormatId } from "../surfaces/types.js";
@@ -107,7 +107,8 @@ async function writeJsonMcpServers(
   if (!isRecord(doc)) return unsupported(`${path} is not a JSON object.`);
 
   const rootKey = store.shape?.rootKey ?? DEFAULT_ROOT_KEY;
-  const existing = doc[rootKey];
+  doc = migrateLegacyMcpRoot(doc as Record<string, unknown>, rootKey).doc;
+  const existing = (doc as Record<string, unknown>)[rootKey];
   const servers = isRecord(existing) ? { ...existing } : {};
   if (edit.value === null) delete servers[edit.name];
   // The portable shape keys transport as `transport`; the native file keys it
@@ -117,7 +118,7 @@ async function writeJsonMcpServers(
 
   return {
     supported: true,
-    changes: [{ path, before, after: serializeJson({ ...doc, [rootKey]: servers }) }],
+    changes: [{ path, before, after: serializeJson({ ...(doc as Record<string, unknown>), [rootKey]: servers }) }],
   };
 }
 
