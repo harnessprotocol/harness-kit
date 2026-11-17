@@ -28,7 +28,7 @@ import type {
 import { NodeFsProvider } from "@harness-kit/core/node";
 import { defaultStatePath, SqliteStateStore } from "../state/sqlite-store.js";
 import { resolveDefinitions } from "../definitions/resolve-definitions.js";
-import { buildReconciliationContext, currentPlatform, resolvePersonalProfile, summarizePlan, warnLegacyProfile } from "./portability-common.js";
+import { announcePersonalProfile, buildReconciliationContext, currentPlatform, resolvePersonalProfile, summarizePlan } from "./portability-common.js";
 
 interface StatusFlags {
   json?: boolean;
@@ -243,7 +243,7 @@ export async function statusCommand(flags: StatusFlags): Promise<void> {
   if (flags.global) {
     const home = await projectFs.homedir();
     const personal = await resolvePersonalProfile(home);
-    if (personal.legacy) warnLegacyProfile();
+    announcePersonalProfile(personal);
     scopes.push({
       kind: "global" as const,
       label: "personal",

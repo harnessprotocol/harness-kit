@@ -2,7 +2,7 @@ import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { loadProfiles, resolvePersonalProfile } from "../src/commands/portability-common.js";
+import { loadProfiles, resetPersonalProfileNotices, resolvePersonalProfile } from "../src/commands/portability-common.js";
 import { captureCommand } from "../src/commands/capture.js";
 
 const profile = (name: string, scope: string) =>
@@ -16,6 +16,7 @@ describe.sequential("personal profile path", () => {
   let warn: ReturnType<typeof vi.spyOn>;
 
   beforeEach(async () => {
+    resetPersonalProfileNotices();
     root = await mkdtemp(join(tmpdir(), "harness-personal-"));
     home = join(root, "home");
     project = join(root, "project");
@@ -58,12 +59,21 @@ describe.sequential("personal profile path", () => {
     );
   });
 
-  it("the new path wins when both exist, without a warning", async () => {
+  it("the new path wins when both exist, and says once that the old one is ignored", async () => {
     await writeFile(join(home, ".claude/harness.yaml"), profile("old", "personal"));
     await writeFile(join(home, ".harness/harness.yaml"), profile("new", "personal"));
     const layers = await loadProfiles(join(project, "harness.yaml"), {});
     expect(layers.find((l) => l.scope === "personal")?.config.metadata.name).toBe("new");
-    expect(warn).not.toHaveBeenCalled();
+    await loadProfiles(join(project, "harness.yaml"), {});
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith("~/.claude/harness.yaml is ignored because ~/.harness/harness.yaml exists.");
+  });
+
+  it("prints the legacy-read warning at most once per process", async () => {
+    await writeFile(join(home, ".claude/harness.yaml"), profile("old", "personal"));
+    await loadProfiles(join(project, "harness.yaml"), {});
+    await loadProfiles(join(project, "harness.yaml"), {});
+    expect(warn).toHaveBeenCalledTimes(1);
   });
 
   it("never reads ~/harness.yaml", async () => {

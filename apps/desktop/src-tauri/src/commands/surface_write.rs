@@ -476,8 +476,8 @@ pub(crate) fn create_temp(dest: &Path) -> Result<(PathBuf, fs::File), String> {
 /// (`refuse_read_only`, in the validation pass, before anything is written):
 /// rename would otherwise quietly override a deliberate chmod 0400.
 ///
-/// Files under `.harness/` are always 0600 and the directories created for
-/// them 0700. Existing directories are left as they are.
+/// Backup files under `.harness/backups/` are always 0600 and the directories
+/// created for them 0700. Existing directories are left as they are.
 ///
 /// Any failure in 1–5 removes the temp file and leaves the destination as it
 /// was ([`WriteFailure::Unchanged`]). A failure in 6 comes after the file was

@@ -6,6 +6,8 @@ import {
   capabilityForResource,
   computeFileHash,
   importProjectValidated,
+  LEGACY_PERSONAL_PROFILE_PATH,
+  PERSONAL_PROFILE_PATH,
   parseHarness,
   profileToResources,
   readPortabilityState,
@@ -148,7 +150,14 @@ export async function buildDesktopPortabilitySnapshot(
   installationId = "desktop-unregistered",
 ): Promise<DesktopPortabilitySnapshot> {
   const homeFs = new TauriFsProvider(home);
-  const personal = await readProfile(homeFs, ".harness/harness.yaml", "personal");
+  // ~/.claude/harness.yaml is a read-only fallback when the new file is absent.
+  const newPersonalPath = homeFs.joinPath(homeFs.cwd(), PERSONAL_PROFILE_PATH);
+  const personalPath =
+    !(await homeFs.exists(newPersonalPath)) &&
+    (await homeFs.exists(homeFs.joinPath(homeFs.cwd(), LEGACY_PERSONAL_PROFILE_PATH)))
+      ? LEGACY_PERSONAL_PROFILE_PATH
+      : PERSONAL_PROFILE_PATH;
+  const personal = await readProfile(homeFs, personalPath, "personal");
   const targetFs = project ? new TauriFsProvider(project) : homeFs;
   const projectProfile = project ? await readProfile(targetFs, "harness.yaml", "project") : null;
   const profiles = [personal, projectProfile].filter((profile): profile is LayeredHarnessProfile => Boolean(profile));

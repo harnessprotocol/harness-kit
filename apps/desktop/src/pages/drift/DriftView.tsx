@@ -206,17 +206,17 @@ export function DriftView({
           </>
         ) : (
           <>
-          <ScopeNotes statuses={[]} legacyHomeFile={false} legacyNotes={legacyNotes} />
-          <EmptyState
-            icon={<ShieldCheck size={28} strokeWidth={1.5} />}
-            title="No drift detected"
-            description={`Every deployed config matches harness.yaml across Global${hasProject ? " and this project" : ""}. Compile from Profile after you next edit harness.yaml to keep it that way.`}
-            action={
-              <Button variant="ghost" onClick={onRescan}>
-                Re-scan
-              </Button>
-            }
-          />
+            <ScopeNotes statuses={[]} legacyHomeFile={false} legacyNotes={legacyNotes} />
+            <EmptyState
+              icon={<ShieldCheck size={28} strokeWidth={1.5} />}
+              title="No drift detected"
+              description={`Every deployed config matches harness.yaml across Global${hasProject ? " and this project" : ""}. Compile from Profile after you next edit harness.yaml to keep it that way.`}
+              action={
+                <Button variant="ghost" onClick={onRescan}>
+                  Re-scan
+                </Button>
+              }
+            />
           </>
         )}
       </div>

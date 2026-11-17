@@ -1,4 +1,3 @@
-import { LEGACY_CLAUDE_IGNORED_NOTICE, LEGACY_CLAUDE_PROFILE_NOTICE } from "../../lib/legacy-harness-notice";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useToast } from "../../components/ToastProvider";
@@ -26,31 +25,30 @@ import { errorDetails } from "../../lib/error-details";
 import { appDataDir, join as joinPath } from "@tauri-apps/api/path";
 import { buildDesktopPortabilitySnapshot, type DesktopPortabilitySnapshot } from "../fleet/portability-data";
 import { useProjectDir } from "../../lib/project-dir";
+import { LEGACY_CLAUDE_IGNORED_NOTICE, LEGACY_CLAUDE_PROFILE_NOTICE } from "../../lib/legacy-harness-notice";
 
 export type { DriftSummary };
 
-/** Existence of ~/harness.yaml, reported by the Rust side as a boolean; the file is never read. */
-async function hasLegacyHomeFile(): Promise<boolean> {
-  try {
-    return (await readHarnessFile()).legacy_home_file === true;
-  } catch {
-    return false;
-  }
-}
-
 /**
- * Notices about the legacy ~/.claude/harness.yaml, from what the Rust reader
- * reports: read as a fallback, or present but ignored beside the new file.
+ * What the Rust reader says about the legacy files, from one read: whether a
+ * ~/harness.yaml exists (existence only, never read) and notices about the
+ * legacy ~/.claude/harness.yaml (read as a fallback, or ignored beside the
+ * new file).
  */
-async function legacyClaudeNotices(): Promise<string[]> {
+async function readLegacyFlags(): Promise<{ homeFile: boolean; claudeNotes: string[] }> {
   try {
     const result = await readHarnessFile();
-    if (result.legacy_claude_file === true) return [LEGACY_CLAUDE_PROFILE_NOTICE];
-    if (result.legacy_claude_ignored === true) return [LEGACY_CLAUDE_IGNORED_NOTICE];
+    const claudeNotes =
+      result.legacy_claude_file === true
+        ? [LEGACY_CLAUDE_PROFILE_NOTICE]
+        : result.legacy_claude_ignored === true
+          ? [LEGACY_CLAUDE_IGNORED_NOTICE]
+          : [];
+    return { homeFile: result.legacy_home_file === true, claudeNotes };
   } catch {
     // Notices are a courtesy; Drift's own statuses already say what it could read.
+    return { homeFile: false, claudeNotes: [] };
   }
-  return [];
 }
 
 export interface DriftPageProps {
@@ -115,13 +113,10 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
       if (seq !== loadSeq.current) return;
       setEntries(collected);
       setScopeStatuses(statuses);
-      setLegacyHomeFile(
-        statuses.some((s) => s.scope.kind === "global" && s.state === "no-file") &&
-          (await hasLegacyHomeFile()),
-      );
+      const legacy = await readLegacyFlags();
       if (seq !== loadSeq.current) return;
-      setLegacyNotes(await legacyClaudeNotices());
-      if (seq !== loadSeq.current) return;
+      setLegacyHomeFile(statuses.some((s) => s.scope.kind === "global" && s.state === "no-file") && legacy.homeFile);
+      setLegacyNotes(legacy.claudeNotes);
       setPortability(portabilitySnapshot);
       setAcknowledged(
         new Set(ackRows.map((a) => [a.scopeRoot, a.adapter, a.path, a.harnessName, a.slot].join("::"))),

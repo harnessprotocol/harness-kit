@@ -29,9 +29,9 @@ import { rollbackCommand } from "./rollback.js";
 import { registryRequest } from "../registry-client.js";
 import {
   buildReconciliationContext,
+  announcePersonalProfile,
   readOptional,
   resolvePersonalProfile,
-  warnLegacyProfile,
   relativeInside,
   summarizePlan,
   timestamp,
@@ -262,7 +262,7 @@ export async function skillsPromoteCommand(directory: string, flags: PromoteFlag
   if (!flags.profile && scope === "personal") {
     const source = await resolvePersonalProfile(home);
     profileReadPath = source.readPath;
-    if (source.legacy) warnLegacyProfile();
+    announcePersonalProfile(source);
   }
   const profile = await loadPromotionProfile(profileReadPath, scope);
   const skill: HarnessSkillRef = {

@@ -2,6 +2,7 @@ import { basename, resolve } from "node:path";
 import { stringify } from "yaml";
 import {
   CURRENT_PROTOCOL_VERSION,
+  PERSONAL_PROFILE_PATH,
   applyFileTransaction,
   importProjectValidated,
   parseHarness,
@@ -10,13 +11,12 @@ import {
 } from "@harness-kit/core";
 import type { HarnessScope } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
-import { PERSONAL_PROFILE_PATH } from "@harness-kit/core";
 import {
+  announcePersonalProfile,
   readOptional,
   relativeInside,
   resolvePersonalProfile,
   timestamp,
-  warnLegacyProfile,
 } from "./portability-common.js";
 
 interface CaptureFlags {
@@ -44,8 +44,8 @@ export async function captureCommand(flags: CaptureFlags): Promise<void> {
   let priorText = before;
   if (scope === "personal" && !flags.output && before === null) {
     const source = await resolvePersonalProfile(root);
+    announcePersonalProfile(source);
     if (source.legacy) {
-      warnLegacyProfile();
       priorText = await readOptional(source.readPath);
     }
   }

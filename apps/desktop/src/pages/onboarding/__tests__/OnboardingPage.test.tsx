@@ -257,6 +257,23 @@ describe("OnboardingPage", () => {
       expect(mockWriteConfigFile).not.toHaveBeenCalled();
     });
 
+    it("a profile read from ~/.claude/harness.yaml is shown as a conflict, and Replace writes the new path without a digest", async () => {
+      mockReadHarnessFile.mockResolvedValue({
+        found: true,
+        content: "version: old\n",
+        path: "~/.claude/harness.yaml",
+        legacy_claude_file: true,
+      });
+      const { user, onFinish } = await toConfirm();
+      await user.click(await screen.findByRole("button", { name: /^write harness\.yaml$/i }));
+      expect(await screen.findByRole("button", { name: /^keep existing$/i })).toBeInTheDocument();
+      expect(screen.getByText(/old file is left as is/i)).toBeInTheDocument();
+      expect(mockWriteHarnessFile).not.toHaveBeenCalled();
+      await user.click(screen.getByRole("button", { name: /^replace/i }));
+      await waitFor(() => expect(mockWriteHarnessFile).toHaveBeenCalledWith(EXPECTED_YAML, undefined));
+      await waitFor(() => expect(onFinish).toHaveBeenCalled());
+    });
+
     it("the Replace dialog says the backup goes to ~/.harness/backups/user, not beside the file", async () => {
       mockReadHarnessFile.mockResolvedValue({ found: true, content: "version: old\n", path: TARGET });
       const { user } = await toConfirm();

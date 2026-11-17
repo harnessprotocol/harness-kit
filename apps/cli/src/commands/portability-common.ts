@@ -3,7 +3,10 @@ import { basename, dirname, isAbsolute, relative, resolve } from "node:path";
 import {
   COMPILE_SURFACE_IDS,
   EMPTY_PORTABILITY_STATE,
+  LEGACY_PERSONAL_PROFILE_PATH,
+  LEGACY_PERSONAL_PROFILE_WARNING,
   LEGACY_SURFACE_RENAMES,
+  PERSONAL_PROFILE_PATH,
   TARGET_ALIASES,
   resolveTargetAlias,
   capabilityForResource,
@@ -30,11 +33,6 @@ import type {
   SurfaceId,
 } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
-import {
-  LEGACY_PERSONAL_PROFILE_PATH,
-  LEGACY_PERSONAL_PROFILE_WARNING,
-  PERSONAL_PROFILE_PATH,
-} from "@harness-kit/core";
 
 export const ALL_TARGETS: readonly SurfaceId[] = COMPILE_SURFACE_IDS;
 
@@ -147,6 +145,8 @@ export interface PersonalProfileSource {
   writePath: string;
   /** True when `readPath` is the legacy `~/.claude/harness.yaml`. */
   legacy: boolean;
+  /** True when both files exist: the new one is read, the legacy one is ignored. */
+  legacyIgnored: boolean;
 }
 
 /**
@@ -156,14 +156,35 @@ export interface PersonalProfileSource {
  */
 export async function resolvePersonalProfile(home: string): Promise<PersonalProfileSource> {
   const writePath = resolve(home, PERSONAL_PROFILE_PATH);
-  if (await exists(writePath)) return { readPath: writePath, writePath, legacy: false };
   const legacyPath = resolve(home, LEGACY_PERSONAL_PROFILE_PATH);
-  if (await exists(legacyPath)) return { readPath: legacyPath, writePath, legacy: true };
-  return { readPath: writePath, writePath, legacy: false };
+  const legacyExists = await exists(legacyPath);
+  if (await exists(writePath)) return { readPath: writePath, writePath, legacy: false, legacyIgnored: legacyExists };
+  if (legacyExists) return { readPath: legacyPath, writePath, legacy: true, legacyIgnored: false };
+  return { readPath: writePath, writePath, legacy: false, legacyIgnored: false };
 }
 
-export function warnLegacyProfile(): void {
-  console.warn(LEGACY_PERSONAL_PROFILE_WARNING);
+export const LEGACY_PROFILE_IGNORED_NOTICE =
+  "~/.claude/harness.yaml is ignored because ~/.harness/harness.yaml exists.";
+
+let warnedLegacy = false;
+let warnedIgnored = false;
+
+/** Print the legacy-profile notice for `source`, at most once per process each. */
+export function announcePersonalProfile(source: PersonalProfileSource): void {
+  if (source.legacy && !warnedLegacy) {
+    warnedLegacy = true;
+    console.warn(LEGACY_PERSONAL_PROFILE_WARNING);
+  }
+  if (source.legacyIgnored && !warnedIgnored) {
+    warnedIgnored = true;
+    console.warn(LEGACY_PROFILE_IGNORED_NOTICE);
+  }
+}
+
+/** Test hook: forget which notices this process already printed. */
+export function resetPersonalProfileNotices(): void {
+  warnedLegacy = false;
+  warnedIgnored = false;
 }
 
 export async function loadProfiles(projectPath: string, flags: LayerFlags): Promise<LayeredHarnessProfile[]> {
@@ -175,7 +196,7 @@ export async function loadProfiles(projectPath: string, flags: LayerFlags): Prom
   if (!personalPath) {
     const source = await resolvePersonalProfile(home);
     personalPath = source.readPath;
-    if (source.legacy) warnLegacyProfile();
+    announcePersonalProfile(source);
   }
   const personal = await readProfile(personalPath, "personal", !flags.personal);
   if (personal) profiles.push(personal);

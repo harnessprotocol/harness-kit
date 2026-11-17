@@ -150,7 +150,7 @@ describe("HarnessFilePage", () => {
     );
   });
 
-  it("says the profile was read from ~/.claude/harness.yaml and saves to ~/.harness/harness.yaml without a digest", async () => {
+  it("says the profile was read from ~/.claude/harness.yaml, saves to ~/.harness/harness.yaml without a digest, then says the old file is ignored", async () => {
     mockReadHarnessFile.mockResolvedValue({
       found: true,
       content: 'version: "1"\n',
@@ -161,6 +161,16 @@ describe("HarnessFilePage", () => {
     renderPage();
     expect(await screen.findByTestId("legacy-claude-notice")).toHaveTextContent(
       "Your profile was read from ~/.claude/harness.yaml. Harness Kit now keeps it at ~/.harness/harness.yaml; saving writes it there. The old file is left as is.",
+    );
+    const EDITED = 'version: "1"\nmetadata:\n  name: edited\n';
+    fireEvent.change(await screen.findByTestId("fake-editor"), { target: { value: EDITED } });
+    fireEvent.keyDown(window, { key: "s", metaKey: true });
+    await waitFor(() => expect(mockWriteHarnessFile).toHaveBeenCalledTimes(1));
+    expect(mockWriteHarnessFile).toHaveBeenCalledWith(EDITED, undefined);
+    await waitFor(() =>
+      expect(screen.getByTestId("legacy-claude-notice")).toHaveTextContent(
+        "~/.claude/harness.yaml is ignored because ~/.harness/harness.yaml exists.",
+      ),
     );
   });
 
