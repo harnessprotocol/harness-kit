@@ -562,7 +562,7 @@ export type {
   SecretSanitizationFinding,
   SecretSanitizationResult,
 } from "./portability/secrets.js";
-export { sanitizeCapturedSecrets } from "./portability/secrets.js";
+export { sanitizeCapturedSecrets, uniqueVariableName, MAX_VARIABLE_NAME_LENGTH } from "./portability/secrets.js";
 export { buildProfileShare, buildProfilePrompt } from "./portability/share.js";
 export type { ProfileShare } from "./portability/share.js";
 export {

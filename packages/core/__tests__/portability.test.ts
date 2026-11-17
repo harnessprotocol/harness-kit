@@ -5,6 +5,8 @@ import {
   buildLossReport,
   rollbackFileTransaction,
   sanitizeCapturedSecrets,
+  uniqueVariableName,
+  MAX_VARIABLE_NAME_LENGTH,
   assertCapabilityMatrixComplete,
   buildInventorySnapshot,
   createCapsuleManifest,
@@ -576,6 +578,64 @@ describe("capture secret sanitization", () => {
     expect(JSON.stringify(result.config)).toContain("SAFE_MODE");
     expect(result.config.env).toHaveLength(2);
     expect(result.config.env?.every((entry) => entry.sensitive)).toBe(true);
+  });
+
+  it("gives colliding captured secrets distinct variables, each declared once", () => {
+    const result = sanitizeCapturedSecrets({
+      version: "2",
+      metadata: { name: "captured", description: "Captured" },
+      "mcp-servers": {
+        a: { transport: "stdio", command: "s", env: { "my-api-key": "first-literal", my_api_key: "second-literal" } },
+      },
+    });
+    const env = (result.config["mcp-servers"] as Record<string, { env: Record<string, string> }>).a.env;
+    expect(env["my-api-key"]).toBe("${HARNESS_MCP_SERVERS_A_ENV_MY_API_KEY}");
+    expect(env.my_api_key).toBe("${HARNESS_MCP_SERVERS_A_ENV_MY_API_KEY_2}");
+    expect(result.config.env?.map((e) => e.name)).toEqual([
+      "HARNESS_MCP_SERVERS_A_ENV_MY_API_KEY",
+      "HARNESS_MCP_SERVERS_A_ENV_MY_API_KEY_2",
+    ]);
+    for (const f of result.findings) {
+      expect(result.config.env?.find((e) => e.name === f.variable)?.description).toContain(f.path);
+    }
+  });
+
+  it("suffixes a three-way clash _2 and _3 in first-seen order", () => {
+    const result = sanitizeCapturedSecrets({
+      version: "2",
+      metadata: { name: "captured", description: "Captured" },
+      "mcp-servers": {
+        a: { transport: "stdio", command: "s", env: { "my-api-key": "l1", my_api_key: "l2", "my.api.key": "l3" } },
+      },
+    });
+    expect(result.findings.map((f) => f.variable)).toEqual([
+      "HARNESS_MCP_SERVERS_A_ENV_MY_API_KEY",
+      "HARNESS_MCP_SERVERS_A_ENV_MY_API_KEY_2",
+      "HARNESS_MCP_SERVERS_A_ENV_MY_API_KEY_3",
+    ]);
+  });
+
+  it("truncates long names so the suffix still fits under the shared limit", () => {
+    const long = "k".repeat(200);
+    const result = sanitizeCapturedSecrets({
+      version: "2",
+      metadata: { name: "captured", description: "Captured" },
+      "mcp-servers": {
+        a: { transport: "stdio", command: "s", env: { [`${long}-token`]: "l1" } },
+        b: { transport: "stdio", command: "s", env: { [`${long}_token`]: "l2" } },
+      },
+    });
+    const names = result.findings.map((f) => f.variable);
+    expect(new Set(names).size).toBe(2);
+    for (const n of names) expect(n.length).toBeLessThanOrEqual(MAX_VARIABLE_NAME_LENGTH + 2);
+  });
+
+  it("uniqueVariableName numbers clashes and records each result", () => {
+    const taken = new Set<string>();
+    expect(uniqueVariableName("HARNESS_MY_API", taken)).toBe("HARNESS_MY_API");
+    expect(uniqueVariableName("HARNESS_MY_API", taken)).toBe("HARNESS_MY_API_2");
+    expect(uniqueVariableName("HARNESS_MY_API", taken)).toBe("HARNESS_MY_API_3");
+    expect(MAX_VARIABLE_NAME_LENGTH).toBe(116);
   });
 
   it("replaces credential arguments and inline flags with declarations", () => {

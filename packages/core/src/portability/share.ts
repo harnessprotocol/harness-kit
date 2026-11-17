@@ -6,6 +6,8 @@ import {
   isSensitiveQueryParam,
   looksLikeSecret,
   sanitizeCapturedSecrets,
+  uniqueVariableName,
+  variableBase,
   type SecretSanitizationFinding,
 } from "./secrets.js";
 
@@ -112,15 +114,7 @@ class Scrubber {
 
   private ref(path: string[], hint?: string): string {
     const parts = hint === undefined ? path : [...path, hint];
-    const normalized = parts
-      .join("_")
-      .replace(/[^A-Za-z0-9]+/g, "_")
-      .replace(/^_+|_+$/g, "")
-      .toUpperCase();
-    const base = `HARNESS_${normalized || "SECRET"}`.slice(0, 116);
-    let variable = base;
-    for (let n = 2; this.used.has(variable); n += 1) variable = `${base}_${n}`;
-    this.used.add(variable);
+    const variable = uniqueVariableName(variableBase(parts), this.used);
     this.findings.push({ path: parts.join("."), variable });
     return `\${${variable}}`;
   }

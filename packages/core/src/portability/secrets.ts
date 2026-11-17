@@ -64,13 +64,28 @@ export function sanitizeCommandArgs(args: string[], placeholder: string): string
   });
 }
 
-function variableName(path: string[]): string {
-  const normalized = path
+/**
+ * Longest base name before a `_N` clash suffix. Every variable deriver shares
+ * it, and it leaves room for the suffix under the 120-character name limit.
+ */
+export const MAX_VARIABLE_NAME_LENGTH = 116;
+
+/** `HARNESS_` + the uppercased parts joined by `_`, truncated to the shared limit. */
+export function variableBase(parts: string[]): string {
+  const normalized = parts
     .join("_")
     .replace(/[^A-Za-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "")
     .toUpperCase();
-  return `HARNESS_${normalized || "SECRET"}`.slice(0, 120);
+  return `HARNESS_${normalized || "SECRET"}`.slice(0, MAX_VARIABLE_NAME_LENGTH);
+}
+
+/** Return `base`, or `base_2`, `base_3`… when taken, and record the result in `taken`. */
+export function uniqueVariableName(base: string, taken: Set<string>): string {
+  let variable = base;
+  for (let n = 2; taken.has(variable); n += 1) variable = `${base}_${n}`;
+  taken.add(variable);
+  return variable;
 }
 
 function isSecretPath(path: string[]): boolean {
@@ -82,17 +97,18 @@ function sanitizeValue(
   value: unknown,
   path: string[],
   findings: SecretSanitizationFinding[],
+  taken: Set<string>,
   forceSensitive = false,
 ): unknown {
   if (typeof value === "string") {
     const inline = value.match(INLINE_SENSITIVE_FLAG);
     if (inline && !REFERENCE.test(inline[2])) {
-      const variable = variableName(path);
+      const variable = uniqueVariableName(variableBase(path), taken);
       findings.push({ path: path.join("."), variable });
       return `${inline[1]}\${${variable}}`;
     }
     if ((forceSensitive || isSecretPath(path) || CREDENTIAL_VALUE.test(value)) && value.length > 0 && !REFERENCE.test(value)) {
-      const variable = variableName(path);
+      const variable = uniqueVariableName(variableBase(path), taken);
       findings.push({ path: path.join("."), variable });
       return `\${${variable}}`;
     }
@@ -102,6 +118,7 @@ function sanitizeValue(
       item,
       [...path, String(index)],
       findings,
+      taken,
       index > 0 && typeof value[index - 1] === "string" && SENSITIVE_FLAG.test(value[index - 1]),
     ));
   }
@@ -119,7 +136,7 @@ function sanitizeValue(
         .filter(([key]) => !(sensitiveEnvDeclaration && key === "default"))
         .map(([key, child]) => [
           key,
-          sanitizeValue(child, [...path, key], findings),
+          sanitizeValue(child, [...path, key], findings, taken),
         ]),
     );
   }
@@ -129,7 +146,8 @@ function sanitizeValue(
 /** Replace captured credential values with local variable declarations. */
 export function sanitizeCapturedSecrets(config: HarnessConfig): SecretSanitizationResult {
   const findings: SecretSanitizationFinding[] = [];
-  const sanitized = sanitizeValue(config, [], findings) as HarnessConfig;
+  const taken = new Set((config.env ?? []).map((entry) => entry.name));
+  const sanitized = sanitizeValue(config, [], findings, taken) as HarnessConfig;
   const declarations = new Map<string, EnvDeclaration>(
     (sanitized.env ?? []).map((entry) => [entry.name, entry]),
   );
