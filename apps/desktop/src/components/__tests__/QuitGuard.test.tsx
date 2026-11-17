@@ -12,9 +12,13 @@ vi.mock("@tauri-apps/api/event", () => ({
 }));
 
 const confirmQuit = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const quitRequestSeen = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const setUnsavedDrafts = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const writeHarnessFile = vi.hoisted(() => vi.fn());
 vi.mock("../../lib/tauri", () => ({
   confirmQuit,
+  quitRequestSeen,
+  setUnsavedDrafts,
   writeHarnessFile,
   isTauriRuntimeAvailable: () => true,
 }));
@@ -36,7 +40,9 @@ describe("QuitGuard", () => {
   beforeEach(() => {
     localStorage.clear();
     clearAllProfileDrafts();
-    confirmQuit.mockClear();
+    confirmQuit.mockReset();
+    confirmQuit.mockResolvedValue(undefined);
+    quitRequestSeen.mockClear();
     writeHarnessFile.mockReset();
   });
   afterEach(() => clearAllProfileDrafts());
@@ -60,7 +66,7 @@ describe("QuitGuard", () => {
     writeHarnessFile.mockResolvedValue(PATH);
     setProfileDraft(PATH, { buffer: "b", synced: "s" });
     await mountAndRequestQuit();
-    fireEvent.click(screen.getByRole("button", { name: "Save all" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save All" }));
     await waitFor(() => expect(confirmQuit).toHaveBeenCalledTimes(1));
     expect(writeHarnessFile).toHaveBeenCalledTimes(1);
     expect(getProfileDraft(PATH)).toBeUndefined();
@@ -70,7 +76,7 @@ describe("QuitGuard", () => {
     writeHarnessFile.mockRejectedValue("file changed on disk");
     setProfileDraft(PATH, { buffer: "b", synced: "s" });
     await mountAndRequestQuit();
-    fireEvent.click(screen.getByRole("button", { name: "Save all" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save All" }));
     await screen.findByText(/file changed on disk/);
     expect(confirmQuit).not.toHaveBeenCalled();
     expect(getProfileDraft(PATH)).toBeDefined();
@@ -80,9 +86,51 @@ describe("QuitGuard", () => {
   it("Discard drops the drafts and quits", async () => {
     setProfileDraft(PATH, { buffer: "b", synced: "s" });
     await mountAndRequestQuit();
-    fireEvent.click(screen.getByRole("button", { name: "Discard" }));
+    fireEvent.click(screen.getByRole("button", { name: "Don't Save" }));
     await waitFor(() => expect(confirmQuit).toHaveBeenCalledTimes(1));
     expect(getProfileDraft(PATH)).toBeUndefined();
+  });
+
+  it("acknowledges the quit request so Rust does not force-quit", async () => {
+    await mountAndRequestQuit();
+    expect(quitRequestSeen).toHaveBeenCalledTimes(1);
+  });
+
+  it("lists Don't Save first, then Cancel, then Save All", async () => {
+    setProfileDraft(PATH, { buffer: "b", synced: "s" });
+    await mountAndRequestQuit();
+    const labels = screen.getAllByRole("button").map((b) => b.textContent).filter((t) => t !== "");
+    expect(labels).toEqual(["Don't Save", "Cancel", "Save All"]);
+  });
+
+  it("Return triggers Save All", async () => {
+    writeHarnessFile.mockResolvedValue(PATH);
+    setProfileDraft(PATH, { buffer: "b", synced: "s" });
+    await mountAndRequestQuit();
+    fireEvent.keyDown(window, { key: "Enter" });
+    await waitFor(() => expect(confirmQuit).toHaveBeenCalledTimes(1));
+    expect(writeHarnessFile).toHaveBeenCalledTimes(1);
+  });
+
+  it("Escape is ignored while saving", async () => {
+    let finish: (v: string) => void = () => {};
+    writeHarnessFile.mockReturnValue(new Promise<string>((r) => { finish = r; }));
+    setProfileDraft(PATH, { buffer: "b", synced: "s" });
+    await mountAndRequestQuit();
+    fireEvent.click(screen.getByRole("button", { name: "Save All" }));
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.getByRole("dialog")).toBeTruthy();
+    await act(async () => { finish(PATH); });
+    await waitFor(() => expect(confirmQuit).toHaveBeenCalled());
+  });
+
+  it("shows the reason when quitting is refused, instead of an unhandled rejection", async () => {
+    confirmQuit.mockRejectedValue("exit refused");
+    setProfileDraft(PATH, { buffer: "b", synced: "s" });
+    await mountAndRequestQuit();
+    fireEvent.click(screen.getByRole("button", { name: "Don't Save" }));
+    await screen.findByText(/exit refused/);
+    expect(screen.getByRole("dialog")).toBeTruthy();
   });
 
   it("Cancel and Escape keep the app open and the drafts", async () => {

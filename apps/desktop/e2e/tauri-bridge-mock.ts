@@ -14,6 +14,8 @@ export const MOCK_RESPONSES: Record<string, unknown> = {
   },
   list_installed_plugins: [],
   confirm_quit: null,
+  set_unsaved_drafts: null,
+  quit_request_seen: null,
   which_plugin_installer: null,
   run_plugin_installer: { status: "spawn-failed", reason: "mock" },
   check_plugin_updates: [],

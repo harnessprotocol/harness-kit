@@ -1,7 +1,7 @@
 mod commands;
 mod db;
 
-use tauri::{Emitter, LogicalSize, Manager};
+use tauri::{LogicalSize, Manager};
 
 /// Detect the current git branch by running `git branch --show-current`
 /// from the process working directory. Returns `None` when not in a git
@@ -188,6 +188,8 @@ pub fn run() {
             commands::fs_scope::choose_project_dir,
             // Quit handshake: the webview answers a held close request
             commands::app_lifecycle::confirm_quit,
+            commands::app_lifecycle::set_unsaved_drafts,
+            commands::app_lifecycle::quit_request_seen,
             commands::share::save_share_file,
             // Guarded write/rename/remove for the webview's TauriFsProvider
             commands::fs_guarded::guarded_write_file,
@@ -216,11 +218,25 @@ pub fn run() {
                 // Closing the main window quits the app. Hold it and let the
                 // webview decide: it saves, discards, cancels, or answers
                 // `confirm_quit` at once when nothing is unsaved.
-                tauri::WindowEvent::CloseRequested { api, .. } if window.label() == "main" => {
+                // With nothing unsaved the close goes through untouched, so a dead
+                // or still-loading webview cannot trap the app. A webview that
+                // does not acknowledge in time is overruled by a watchdog.
+                tauri::WindowEvent::CloseRequested { api, .. }
+                    if window.label() == "main"
+                        && commands::app_lifecycle::current_quit_action()
+                            == commands::app_lifecycle::QuitAction::AskWebview =>
+                {
                     api.prevent_close();
-                    let _ = window.emit(commands::app_lifecycle::QUIT_REQUESTED_EVENT, ());
+                    commands::app_lifecycle::ask_webview(window.app_handle());
                 }
                 _ => {}
+            }
+        })
+        // The Quit item is created by the webview (src/lib/app-menu.ts); its
+        // click also reaches Rust, which can act when the webview cannot.
+        .on_menu_event(|app, event| {
+            if event.id().as_ref() == commands::app_lifecycle::QUIT_MENU_ID {
+                commands::app_lifecycle::request_quit(app);
             }
         })
         .setup(|app| {

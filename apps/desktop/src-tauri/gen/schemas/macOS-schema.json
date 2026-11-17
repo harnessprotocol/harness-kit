@@ -2565,6 +2565,12 @@
           "markdownDescription": "Enables the put_cached_definitions command without any pre-configured scope."
         },
         {
+          "description": "Enables the quit_request_seen command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-quit-request-seen",
+          "markdownDescription": "Enables the quit_request_seen command without any pre-configured scope."
+        },
+        {
           "description": "Enables the read_claude_md command without any pre-configured scope.",
           "type": "string",
           "const": "allow-read-claude-md",
@@ -2713,6 +2719,12 @@
           "type": "string",
           "const": "allow-set-keychain-secret",
           "markdownDescription": "Enables the set_keychain_secret command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the set_unsaved_drafts command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-set-unsaved-drafts",
+          "markdownDescription": "Enables the set_unsaved_drafts command without any pre-configured scope."
         },
         {
           "description": "Enables the submit_feedback command without any pre-configured scope.",
@@ -3219,6 +3231,12 @@
           "markdownDescription": "Denies the put_cached_definitions command without any pre-configured scope."
         },
         {
+          "description": "Denies the quit_request_seen command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-quit-request-seen",
+          "markdownDescription": "Denies the quit_request_seen command without any pre-configured scope."
+        },
+        {
           "description": "Denies the read_claude_md command without any pre-configured scope.",
           "type": "string",
           "const": "deny-read-claude-md",
@@ -3367,6 +3385,12 @@
           "type": "string",
           "const": "deny-set-keychain-secret",
           "markdownDescription": "Denies the set_keychain_secret command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_unsaved_drafts command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-set-unsaved-drafts",
+          "markdownDescription": "Denies the set_unsaved_drafts command without any pre-configured scope."
         },
         {
           "description": "Denies the submit_feedback command without any pre-configured scope.",

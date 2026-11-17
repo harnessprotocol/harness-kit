@@ -7,7 +7,7 @@ import { CommandPalette } from "../../../components/CommandPalette";
 import { CommandProbe } from "../../../test-utils/CommandProbe";
 import { loadedDigest } from "../../../lib/loaded-digest";
 import { setCurrentProjectDir } from "../../../lib/project-dir";
-import { clearAllProfileDrafts, getProfileDraft } from "../../../lib/profile-draft";
+import { clearAllProfileDrafts, getProfileDraft, setProfileDraft } from "../../../lib/profile-draft";
 
 // The draft store is module-level: no test may inherit another's unsaved edits.
 beforeEach(() => clearAllProfileDrafts());
@@ -743,6 +743,22 @@ describe("Profile keeps unsaved edits when the page unmounts", () => {
     await waitFor(() => expect(screen.getByRole("textbox", { name: /^Name$/ })).toHaveValue("unsaved-name"));
     expect(screen.getByRole("img", { name: "Unsaved changes" })).toBeInTheDocument();
     expect(screen.queryByTestId("pending-disk-notice")).toBeNull();
+  });
+
+  it("restores a draft migrated from the legacy path when the legacy file is the one read, and leaves one entry", async () => {
+    const legacyText = 'version: "1"\n';
+    setProfileDraft("~/.harness/harness.yaml", { buffer: EDITED, synced: legacyText });
+    mockReadHarnessFile.mockResolvedValue({
+      found: true,
+      content: legacyText,
+      path: "~/.claude/harness.yaml",
+      legacy_claude_file: true,
+    });
+    renderPage();
+    const editor = await screen.findByTestId("fake-editor");
+    await waitFor(() => expect((editor as HTMLTextAreaElement).value).toBe(EDITED));
+    expect(getProfileDraft("~/.harness/harness.yaml")).toBeUndefined();
+    expect(getProfileDraft("~/.claude/harness.yaml")?.buffer).toBe(EDITED);
   });
 
   it("a save clears the draft", async () => {

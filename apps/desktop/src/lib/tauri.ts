@@ -621,3 +621,13 @@ export function whichPluginInstaller(binary: string): Promise<string | null> {
 export function confirmQuit(): Promise<void> {
   return invoke<void>("confirm_quit");
 }
+
+/** Tells Rust whether unsaved drafts exist, so it can quit without the webview when none do. */
+export function setUnsavedDrafts(unsaved: boolean): Promise<void> {
+  return invoke<void>("set_unsaved_drafts", { unsaved });
+}
+
+/** Acknowledges a quit request; without it Rust force-quits after a short wait. */
+export function quitRequestSeen(): Promise<void> {
+  return invoke<void>("quit_request_seen");
+}

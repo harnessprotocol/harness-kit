@@ -1,6 +1,8 @@
 import { useSyncExternalStore } from "react";
 import { errorDetails } from "./error-details";
 import { saveProfileText } from "./profile-save";
+import { setUnsavedDrafts } from "./tauri";
+import { LEGACY_CLAUDE_PROFILE_DISPLAY, PERSONAL_PROFILE_DISPLAY } from "./legacy-harness-notice";
 
 /**
  * Unsaved Profile editor text, kept outside the page so leaving Profile for
@@ -33,7 +35,35 @@ function readStored(): Map<string, ProfileDraft> {
   } catch {
     // No storage, or unreadable: start with no drafts.
   }
+  return reconcileStored(out);
+}
+
+/**
+ * Stored drafts that can no longer be restored are dropped, or they would show
+ * the unsaved dot and prompt at every quit forever. The editor only ever
+ * writes ~/.harness/harness.yaml, and a draft belongs under that path or under
+ * the legacy ~/.claude/harness.yaml it was read from. Rule:
+ *  - a key that is neither is dropped (the project baseline is read-only and
+ *    never has a draft, so no other key is valid);
+ *  - a legacy-key draft moves to the personal key, unless one is already
+ *    there. The page then restores it against the current file, and Save's
+ *    digest check refuses it if that file has moved on.
+ */
+function reconcileStored(stored: Map<string, ProfileDraft>): Map<string, ProfileDraft> {
+  const out = new Map<string, ProfileDraft>();
+  const personal = stored.get(PERSONAL_PROFILE_DISPLAY);
+  const legacy = stored.get(LEGACY_CLAUDE_PROFILE_DISPLAY);
+  const kept = personal ?? legacy;
+  if (kept) out.set(PERSONAL_PROFILE_DISPLAY, kept);
   return out;
+}
+
+function pushUnsavedFlag(unsaved: boolean): void {
+  try {
+    void setUnsavedDrafts(unsaved).catch(() => {});
+  } catch {
+    // Outside Tauri there is no native side to tell.
+  }
 }
 
 function writeStored(): void {
@@ -48,11 +78,14 @@ const drafts = readStored();
 const listeners = new Set<() => void>();
 // useSyncExternalStore needs a snapshot that changes only when the answer does.
 let hasDraft = drafts.size > 0;
+// Rust decides a plain window close from this, so it is told at load and on every flip.
+pushUnsavedFlag(hasDraft);
 
 function notify(): void {
   const next = drafts.size > 0;
   if (next === hasDraft) return;
   hasDraft = next;
+  pushUnsavedFlag(next);
   for (const listener of [...listeners]) listener();
 }
 

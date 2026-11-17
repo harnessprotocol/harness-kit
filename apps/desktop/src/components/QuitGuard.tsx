@@ -2,7 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Button, Modal } from "@harness-kit/ui";
 import { clearProfileDraft, hasUnsavedDrafts, saveAllDrafts, unsavedDraftPaths } from "../lib/profile-draft";
 import { QUIT_REQUESTED_EVENT } from "../lib/app-menu";
-import { confirmQuit, isTauriRuntimeAvailable } from "../lib/tauri";
+import { confirmQuit, isTauriRuntimeAvailable, quitRequestSeen } from "../lib/tauri";
+import { errorDetails } from "../lib/error-details";
 
 /**
  * Answers the native quit request (⌘Q, the Quit menu item, closing the window).
@@ -13,6 +14,17 @@ export function QuitGuard() {
   const [paths, setPaths] = useState<string[] | null>(null);
   const [saving, setSaving] = useState(false);
   const [failures, setFailures] = useState<{ path: string; reason: string }[]>([]);
+  const [quitError, setQuitError] = useState<string | null>(null);
+
+  // Exits the app; if that is refused the dialog says why instead of hanging.
+  async function quit() {
+    try {
+      await confirmQuit();
+    } catch (e) {
+      setQuitError(errorDetails(e));
+      setPaths((p) => p ?? unsavedDraftPaths());
+    }
+  }
 
   useEffect(() => {
     if (!isTauriRuntimeAvailable()) return;
@@ -21,11 +33,14 @@ export function QuitGuard() {
     import("@tauri-apps/api/event")
       .then(({ listen }) =>
         listen(QUIT_REQUESTED_EVENT, () => {
+          // Without this Rust force-quits after a short wait.
+          void quitRequestSeen().catch(() => {});
           if (!hasUnsavedDrafts()) {
-            void confirmQuit();
+            void quit();
             return;
           }
           setFailures([]);
+          setQuitError(null);
           setPaths(unsavedDraftPaths());
         }),
       )
@@ -52,7 +67,7 @@ export function QuitGuard() {
     try {
       const { failed } = await saveAllDrafts();
       if (failed.length === 0) {
-        await confirmQuit();
+        await quit();
         return;
       }
       setFailures(failed);
@@ -64,8 +79,23 @@ export function QuitGuard() {
 
   function discard() {
     for (const path of unsavedDraftPaths()) clearProfileDraft(path);
-    void confirmQuit();
+    void quit();
   }
+
+  // Return is Save all. useDialogFocus moves focus into the dialog, so a
+  // button's autoFocus cannot be relied on to make it the default.
+  const open = paths !== null;
+  useEffect(() => {
+    if (!open) return;
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== "Enter" || e.repeat || saving) return;
+      e.preventDefault();
+      void saveAll();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, saving]);
 
   if (paths === null) return null;
   const count = paths.length;
@@ -77,9 +107,9 @@ export function QuitGuard() {
       title="Save changes before quitting?"
       footer={
         <>
-          <Button variant="primary" onClick={() => void saveAll()} disabled={saving} autoFocus>Save all</Button>
-          <Button onClick={discard} disabled={saving}>Discard</Button>
+          <Button onClick={discard} disabled={saving} style={{ marginRight: "auto" }}>Don't Save</Button>
           <Button onClick={cancel} disabled={saving}>Cancel</Button>
+          <Button variant="primary" onClick={() => void saveAll()} disabled={saving}>Save All</Button>
         </>
       }
     >
@@ -89,6 +119,7 @@ export function QuitGuard() {
           <li key={p}><code>{p}</code></li>
         ))}
       </ul>
+      {quitError && <div role="alert"><p>Could not quit: {quitError}</p></div>}
       {failures.length > 0 && (
         <div role="alert">
           {failures.map((f) => (

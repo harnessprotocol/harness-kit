@@ -7,8 +7,10 @@ import { writeHarnessFile, saveCustomProfile } from "../../lib/tauri";
 import { describeHarnessSource, readHarnessSource } from "../../lib/harness-source";
 import {
   LEGACY_CLAUDE_IGNORED_NOTICE,
+  LEGACY_CLAUDE_PROFILE_DISPLAY,
   LEGACY_CLAUDE_PROFILE_NOTICE,
   LEGACY_HARNESS_NOTICE,
+  PERSONAL_PROFILE_DISPLAY,
 } from "../../lib/legacy-harness-notice";
 import { projectDirLabel, useProjectDir } from "../../lib/project-dir";
 import { importPersonalHarness } from "../../lib/personal-inventory";
@@ -220,7 +222,12 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
     const text = diskContent ?? "";
     draftPath.current = filePath;
     // First load of this mount: edits left by a page that unmounted come back.
-    const draft = syncedRef.current === null && filePath !== null ? getProfileDraft(filePath) : undefined;
+    // A draft migrated from the legacy path sits under the personal key.
+    const migratedKey = filePath === LEGACY_CLAUDE_PROFILE_DISPLAY ? PERSONAL_PROFILE_DISPLAY : null;
+    const draft =
+      syncedRef.current === null && filePath !== null
+        ? getProfileDraft(filePath) ?? (migratedKey ? getProfileDraft(migratedKey) : undefined)
+        : undefined;
     if (draft) {
       forceLoad.current = false;
       if (draft.buffer === text) {
@@ -229,6 +236,8 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
       } else {
         restoreDraft(draft, text);
       }
+      // Re-keyed to the path being edited by setBuffer; drop the migrated key.
+      if (migratedKey && filePath !== migratedKey) clearProfileDraft(migratedKey);
       return;
     }
     const dirty = syncedRef.current !== null && bufferRef.current !== syncedRef.current && bufferRef.current !== text;

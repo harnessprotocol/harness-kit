@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const writeHarnessFile = vi.hoisted(() => vi.fn());
-vi.mock("../tauri", () => ({ writeHarnessFile }));
+const setUnsavedDrafts = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+vi.mock("../tauri", () => ({ writeHarnessFile, setUnsavedDrafts }));
 
 const KEY = "harness-kit:drafts:v1";
 const PATH = "~/.harness/harness.yaml";
@@ -37,10 +38,10 @@ describe("draft persistence", () => {
   it("ignores malformed stored data", async () => {
     localStorage.setItem(KEY, "{not json");
     expect((await load()).hasUnsavedDrafts()).toBe(false);
-    localStorage.setItem(KEY, JSON.stringify({ a: { buffer: 1 }, b: { buffer: "x", synced: "y" } }));
+    localStorage.setItem(KEY, JSON.stringify({ "~/.claude/harness.yaml": { buffer: 1 }, [PATH]: { buffer: "x", synced: "y" } }));
     const m = await load();
-    expect(m.getProfileDraft("a")).toBeUndefined();
-    expect(m.getProfileDraft("b")).toEqual({ buffer: "x", synced: "y" });
+    expect(m.unsavedDraftPaths()).toEqual([PATH]);
+    expect(m.getProfileDraft(PATH)).toEqual({ buffer: "x", synced: "y" });
   });
 
   it("keeps editing working when storage throws", async () => {
@@ -54,6 +55,60 @@ describe("draft persistence", () => {
     expect(m.getProfileDraft(PATH)).toEqual({ buffer: "b", synced: "s" });
     expect((await load()).hasUnsavedDrafts()).toBe(false);
     vi.unstubAllGlobals();
+  });
+});
+
+describe("Rust unsaved flag", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    setUnsavedDrafts.mockClear();
+  });
+
+  it("is told at load and on every flip", async () => {
+    const m = await load();
+    expect(setUnsavedDrafts).toHaveBeenLastCalledWith(false);
+    m.setProfileDraft(PATH, { buffer: "b", synced: "s" });
+    expect(setUnsavedDrafts).toHaveBeenLastCalledWith(true);
+    const calls = setUnsavedDrafts.mock.calls.length;
+    m.setProfileDraft(PATH, { buffer: "c", synced: "s" });
+    expect(setUnsavedDrafts).toHaveBeenCalledTimes(calls);
+    m.clearProfileDraft(PATH);
+    expect(setUnsavedDrafts).toHaveBeenLastCalledWith(false);
+  });
+
+  it("is true at load when drafts were restored", async () => {
+    localStorage.setItem(KEY, JSON.stringify({ [PATH]: { buffer: "b", synced: "s" } }));
+    await load();
+    expect(setUnsavedDrafts).toHaveBeenLastCalledWith(true);
+  });
+});
+
+describe("stale drafts at load", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("drops a draft under a key the editor cannot write", async () => {
+    localStorage.setItem(KEY, JSON.stringify({ "/repo/harness.yaml": { buffer: "b", synced: "s" } }));
+    expect((await load()).hasUnsavedDrafts()).toBe(false);
+  });
+
+  it("moves a legacy-path draft to the personal key", async () => {
+    localStorage.setItem(KEY, JSON.stringify({ "~/.claude/harness.yaml": { buffer: "b", synced: "s" } }));
+    const m = await load();
+    expect(m.unsavedDraftPaths()).toEqual([PATH]);
+    expect(m.getProfileDraft(PATH)).toEqual({ buffer: "b", synced: "s" });
+  });
+
+  it("keeps the personal draft when both exist", async () => {
+    localStorage.setItem(
+      KEY,
+      JSON.stringify({
+        "~/.claude/harness.yaml": { buffer: "old", synced: "s" },
+        [PATH]: { buffer: "new", synced: "s" },
+      }),
+    );
+    const m = await load();
+    expect(m.unsavedDraftPaths()).toEqual([PATH]);
+    expect(m.getProfileDraft(PATH)?.buffer).toBe("new");
   });
 });
 
