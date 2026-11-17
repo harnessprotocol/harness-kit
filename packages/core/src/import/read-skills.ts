@@ -68,6 +68,7 @@ export async function readAdapterSkills(
   adapter: AdapterId,
 ): Promise<ImportedFragment | null> {
   const skills: ImportedSkillRef[] = [];
+  const skipped: Array<{ file: string; reason: string }> = [];
   const seen = new Set<string>();
   const personal = projectRoot === (await fs.homedir());
   const directories = personal ? GLOBAL_SKILL_DIRS[adapter] : PROJECT_SKILL_DIRS[adapter];
@@ -76,11 +77,21 @@ export async function readAdapterSkills(
     const root = fs.joinPath(projectRoot, directory);
     if (!(await fs.exists(root))) continue;
     for (const file of (await findSkillFiles(root, fs, 8)).sort()) {
-      const content = await fs.readFile(file);
       const relative = relativeTo(projectRoot, file);
+      // One unreadable skill must not abort the scan. The desktop fs scope
+      // refuses a SKILL.md symlinked outside it ("forbidden path"), and a
+      // capsule over the size limits throws too; report the skill as skipped.
+      let content: string;
+      let directoryFiles: Awaited<ReturnType<typeof collectCapsuleFiles>>;
+      try {
+        content = await fs.readFile(file);
+        directoryFiles = await collectCapsuleFiles(fs, dirname(file));
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        skipped.push({ file: relative, reason: `could not read skill: ${reason}` });
+        continue;
+      }
       const name = frontmatterName(content, dirname(relative).split("/").pop() ?? "skill");
-      const sourceRoot = dirname(file);
-      const directoryFiles = await collectCapsuleFiles(fs, sourceRoot);
       const digest = skillDirectoryDigest(directoryFiles.map((entry) => ({
         path: entry.path,
         digest: computeFileHash(entry.content),
@@ -100,7 +111,12 @@ export async function readAdapterSkills(
     }
   }
 
-  return skills.length
-    ? { domain: "skills", config: {}, warnings: [], skills: { skills } }
-    : null;
+  if (!skills.length && !skipped.length) return null;
+  return {
+    domain: "skills",
+    config: {},
+    warnings: [],
+    ...(skills.length ? { skills: { skills } } : {}),
+    ...(skipped.length ? { skipped } : {}),
+  };
 }
