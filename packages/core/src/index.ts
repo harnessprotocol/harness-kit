@@ -63,6 +63,7 @@ export { compile, computeSourceFingerprint } from "./compile/compile.js";
 export { compileInstructions, getAllInstructionFilePaths, getSlotMappings } from "./compile/instructions.js";
 export { renderArchitecturalConstraints } from "./compile/architectural-constraints.js";
 export { compileMcpServers } from "./compile/mcp-servers.js";
+export { toDialect, fromDialect, type EnvRefDialect } from "./compile/env-refs.js";
 export { compileSkills } from "./compile/skills.js";
 export { compilePermissions, buildPermissionsText } from "./compile/permissions.js";
 export { resolveExtends } from "./compile/extends.js";
@@ -115,6 +116,11 @@ export {
   captureNativeExtensions,
   parseNativeExtensionBlock,
 } from "./portability/native-extensions.js";
+export {
+  PERSONAL_PROFILE_PATH,
+  LEGACY_PERSONAL_PROFILE_PATH,
+  LEGACY_PERSONAL_PROFILE_WARNING,
+} from "./portability/profile-path.js";
 export { scanPortableContent } from "./portability/capsule.js";
 export { scanHarnessArtifact } from "./portability/artifact-security.js";
 export { isLegacyFormat, isProtocolV2 } from "./utils/legacy.js";
@@ -561,7 +567,7 @@ export type {
   SecretSanitizationFinding,
   SecretSanitizationResult,
 } from "./portability/secrets.js";
-export { sanitizeCapturedSecrets } from "./portability/secrets.js";
+export { sanitizeCapturedSecrets, uniqueVariableName, variableBase, MAX_VARIABLE_NAME_LENGTH } from "./portability/secrets.js";
 export { buildProfileShare, buildProfilePrompt } from "./portability/share.js";
 export type { ProfileShare } from "./portability/share.js";
 export {

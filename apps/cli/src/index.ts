@@ -284,7 +284,7 @@ program
   .description("Three-way reconcile native state, the last-applied base, and layered profiles")
   .argument("[path]", "Project harness profile", "harness.yaml")
   .option("--organization <path>", "Organization profile")
-  .option("--personal <path>", "Personal profile (defaults to ~/.harness/harness.yaml when present)")
+  .option("--personal <path>", "Personal profile (defaults to ~/.harness/harness.yaml when present; ~/.claude/harness.yaml is a read-only fallback)")
   .option("--session <path>", "Ephemeral session overlay")
   .option("--target <targets>", "Comma-separated targets, or all", "all")
   .option("--resolve <conflict=choice>", "Resolve one conflict; may be repeated", collectResolution, [])
@@ -298,7 +298,7 @@ program
   .description("Preview or transactionally apply a reconciled whole-harness configuration")
   .argument("[path]", "Project harness profile", "harness.yaml")
   .option("--organization <path>", "Organization profile")
-  .option("--personal <path>", "Personal profile (defaults to ~/.harness/harness.yaml when present)")
+  .option("--personal <path>", "Personal profile (defaults to ~/.harness/harness.yaml when present; ~/.claude/harness.yaml is a read-only fallback)")
   .option("--session <path>", "Ephemeral session overlay (source-only unless a target has native support)")
   .option("--target <targets>", "Comma-separated targets, or all", "all")
   .option("--resolve <conflict=choice>", "Resolve one conflict; may be repeated", collectResolution, [])
@@ -322,7 +322,7 @@ program
 
 const addSkillLayerOptions = (command: Command): Command => command
   .option("--organization <path>", "Organization profile")
-  .option("--personal <path>", "Personal profile (defaults to ~/.harness/harness.yaml when present)")
+  .option("--personal <path>", "Personal profile (defaults to ~/.harness/harness.yaml when present; ~/.claude/harness.yaml is a read-only fallback)")
   .option("--session <path>", "Ephemeral session overlay")
   .option("--target <targets>", "Comma-separated targets, or all", "all")
   .option("--resolve <conflict=choice>", "Resolve one conflict; may be repeated", collectResolution, [])

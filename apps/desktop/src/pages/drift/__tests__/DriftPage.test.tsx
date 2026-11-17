@@ -88,7 +88,22 @@ describe("DriftPage", () => {
     mockValidateHarness.mockReturnValue({ valid: true });
     mockGetAcknowledgedDriftItems.mockResolvedValue([]);
     mockGrantProjectScope.mockResolvedValue(undefined);
-    mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null });
+    // Global's personal profile comes from Rust, which applies the legacy
+    // fallback; absent/unreadable paths drive the answer like they drive the fs.
+    mockReadHarnessFile.mockImplementation(async () => {
+      const fresh = "/home/user/.harness/harness.yaml";
+      const legacy = "/home/user/.claude/harness.yaml";
+      const body = 'version: "1"\nmetadata:\n  name: test-harness\n';
+      if (!absentPaths.has(fresh)) {
+        if (unreadablePaths.has(fresh)) throw new Error("EACCES: permission denied");
+        return { found: true, content: body, path: "~/.harness/harness.yaml" };
+      }
+      if (!absentPaths.has(legacy)) {
+        if (unreadablePaths.has(legacy)) throw new Error("EACCES: permission denied");
+        return { found: true, content: body, path: "~/.claude/harness.yaml", legacy_claude_file: true };
+      }
+      return { found: false, content: null, path: null };
+    });
   });
 
   it("shows the empty state when there is no drift", async () => {
@@ -100,29 +115,54 @@ describe("DriftPage", () => {
   describe("what the empty state claims (AC-55)", () => {
     const EMPTY = { items: [], hasDrift: false, byClass: {} };
 
-    it("says 'no harness.yaml', not 'No drift detected', when ~/.claude/harness.yaml is absent", async () => {
+    it("says 'no harness.yaml', not 'No drift detected', when ~/.harness/harness.yaml is absent", async () => {
+      absentPaths.add("/home/user/.harness/harness.yaml");
       absentPaths.add("/home/user/.claude/harness.yaml");
       mockDetectDrift.mockResolvedValue(EMPTY);
       renderPage();
       expect(await screen.findByTestId("drift-scope-notes")).toHaveTextContent(
-        "no harness.yaml at /home/user/.claude/harness.yaml",
+        "no harness.yaml at /home/user/.harness/harness.yaml",
       );
       expect(screen.queryByText("No drift detected")).not.toBeInTheDocument();
       expect(mockDetectDrift).not.toHaveBeenCalled();
     });
 
     it("tells the user to move ~/harness.yaml when only that file exists", async () => {
+      absentPaths.add("/home/user/.harness/harness.yaml");
       absentPaths.add("/home/user/.claude/harness.yaml");
       mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null, legacy_home_file: true });
       mockDetectDrift.mockResolvedValue(EMPTY);
       renderPage();
       expect(await screen.findByTestId("drift-scope-notes")).toHaveTextContent(
-        "Found ~/harness.yaml. Harness Kit now reads ~/.claude/harness.yaml; move the file there.",
+        "Found ~/harness.yaml. Harness Kit now reads ~/.harness/harness.yaml; move the file there.",
       );
     });
 
-    it("shows no move notice when ~/.claude/harness.yaml exists", async () => {
-      mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null, legacy_home_file: true });
+    it("tells the user the profile was read from ~/.claude/harness.yaml", async () => {
+      mockReadHarnessFile.mockResolvedValue({ found: true, content: "x", path: "~/.claude/harness.yaml", legacy_claude_file: true });
+      mockDetectDrift.mockResolvedValue(EMPTY);
+      renderPage();
+      expect(await screen.findByTestId("drift-scope-notes")).toHaveTextContent(
+        "Your profile was read from ~/.claude/harness.yaml. Harness Kit now keeps it at ~/.harness/harness.yaml; saving writes it there. The old file is left as is.",
+      );
+    });
+
+    it("says ~/.claude/harness.yaml is ignored when both files exist", async () => {
+      mockReadHarnessFile.mockResolvedValue({ found: true, content: "x", path: "~/.harness/harness.yaml", legacy_claude_ignored: true });
+      mockDetectDrift.mockResolvedValue(EMPTY);
+      renderPage();
+      expect(await screen.findByTestId("drift-scope-notes")).toHaveTextContent(
+        "~/.claude/harness.yaml is ignored because ~/.harness/harness.yaml exists.",
+      );
+    });
+
+    it("shows no move notice when ~/.harness/harness.yaml exists", async () => {
+      mockReadHarnessFile.mockResolvedValue({
+        found: true,
+        content: 'version: "1"\nmetadata:\n  name: test-harness\n',
+        path: "~/.harness/harness.yaml",
+        legacy_home_file: true,
+      });
       mockDetectDrift.mockResolvedValue(EMPTY);
       renderPage();
       await screen.findByText("No drift detected");
@@ -130,11 +170,11 @@ describe("DriftPage", () => {
     });
 
     it("says 'could not read' when the file exists but cannot be read", async () => {
-      unreadablePaths.add("/home/user/.claude/harness.yaml");
+      unreadablePaths.add("/home/user/.harness/harness.yaml");
       mockDetectDrift.mockResolvedValue(EMPTY);
       renderPage();
       expect(await screen.findByTestId("drift-scope-notes")).toHaveTextContent(
-        "could not read /home/user/.claude/harness.yaml (EACCES: permission denied)",
+        "could not read /home/user/.harness/harness.yaml (EACCES: permission denied)",
       );
       expect(screen.queryByText("No drift detected")).not.toBeInTheDocument();
     });

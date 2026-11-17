@@ -6,7 +6,7 @@ import { resolveDesktopDefinitions } from "./definitions";
 import { detectDesktopPlatform } from "../pages/machine/machine-data";
 
 /**
- * Build the personal harness.yaml (`~/.claude/harness.yaml`) from the same
+ * Build the personal harness.yaml (`~/.harness/harness.yaml`) from the same
  * machine inventory the Machine grid shows (AC-56): user-scope stores only,
  * the registry from the verified definitions bundle when one resolves, and the
  * same platform detection `loadMachineInventory` uses. No project is read, so

@@ -1,0 +1,10 @@
+{
+  "command": "quit_request_seen",
+  "calls": [
+    {
+      "fn": "quitRequestSeen",
+      "args": [],
+      "payload": null
+    }
+  ]
+}

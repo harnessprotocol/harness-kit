@@ -129,15 +129,19 @@ export interface HarnessFileResult {
   found: boolean;
   content: string | null;
   path: string | null;
-  /** A file sits at ~/harness.yaml and none at ~/.claude/harness.yaml. Existence only; never read. */
+  /** A file sits at ~/harness.yaml and none at ~/.harness/harness.yaml. Existence only; never read. */
   legacy_home_file?: boolean;
+  /** `content` was read from the legacy ~/.claude/harness.yaml because ~/.harness/harness.yaml is absent. */
+  legacy_claude_file?: boolean;
+  /** Both ~/.harness/harness.yaml and ~/.claude/harness.yaml exist; the old one is ignored. */
+  legacy_claude_ignored?: boolean;
 }
 
 export async function readHarnessFile(): Promise<HarnessFileResult> {
   return invoke<HarnessFileResult>("read_harness_file");
 }
 
-/** `expectedSha256`: digest of the loaded ~/.claude/harness.yaml (`loadedDigest`); omit when it did not exist. */
+/** `expectedSha256`: digest of the loaded ~/.harness/harness.yaml (`loadedDigest`); omit when it did not exist. */
 export async function writeHarnessFile(content: string, expectedSha256?: string): Promise<string> {
   return invoke<string>("write_harness_file", { content, expectedSha256 });
 }
@@ -608,4 +612,22 @@ export function runPluginInstaller(
 
 export function whichPluginInstaller(binary: string): Promise<string | null> {
   return invoke<string | null>("which_plugin_installer", { binary });
+}
+
+// ── Quit ─────────────────────────────────────────────────────
+// Rust holds the window open on a close request and asks the webview
+// (`app://quit-requested`); this is the webview's answer to go ahead.
+
+export function confirmQuit(): Promise<void> {
+  return invoke<void>("confirm_quit");
+}
+
+/** Tells Rust whether unsaved drafts exist, so it can quit without the webview when none do. */
+export function setUnsavedDrafts(unsaved: boolean): Promise<void> {
+  return invoke<void>("set_unsaved_drafts", { unsaved });
+}
+
+/** Acknowledges a quit request; without it Rust force-quits after a short wait. */
+export function quitRequestSeen(): Promise<void> {
+  return invoke<void>("quit_request_seen");
 }

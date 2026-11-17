@@ -7,7 +7,7 @@ import { CommandPalette } from "../../../components/CommandPalette";
 import { CommandProbe } from "../../../test-utils/CommandProbe";
 import { loadedDigest } from "../../../lib/loaded-digest";
 import { setCurrentProjectDir } from "../../../lib/project-dir";
-import { clearAllProfileDrafts, getProfileDraft } from "../../../lib/profile-draft";
+import { clearAllProfileDrafts, getProfileDraft, setProfileDraft } from "../../../lib/profile-draft";
 
 // The draft store is module-level: no test may inherit another's unsaved edits.
 beforeEach(() => clearAllProfileDrafts());
@@ -110,12 +110,12 @@ describe("HarnessFilePage", () => {
     mockReadHarnessFile.mockResolvedValue({
       found: true,
       content: 'version: "1"\nmetadata:\n  name: my-harness\n',
-      path: "~/.claude/harness.yaml",
+      path: "~/.harness/harness.yaml",
     });
     renderPage();
     await waitFor(() => {
       // The file path now appears in the EditorToolbar subtitle
-      expect(screen.getByText("~/.claude/harness.yaml")).toBeInTheDocument();
+      expect(screen.getByText("~/.harness/harness.yaml")).toBeInTheDocument();
     });
   });
 
@@ -123,9 +123,9 @@ describe("HarnessFilePage", () => {
     mockReadHarnessFile.mockResolvedValue({
       found: true,
       content: 'version: "1"\n',
-      path: "~/.claude/harness.yaml",
+      path: "~/.harness/harness.yaml",
     });
-    mockWriteHarnessFile.mockResolvedValue("~/.claude/harness.yaml");
+    mockWriteHarnessFile.mockResolvedValue("~/.harness/harness.yaml");
     renderPage();
     const editor = await screen.findByTestId("fake-editor");
     fireEvent.change(editor, { target: { value: 'version: "1"\nmetadata:\n  name: edited\n' } });
@@ -142,11 +142,48 @@ describe("HarnessFilePage", () => {
     );
   });
 
-  it("tells the user a ~/harness.yaml needs moving when ~/.claude/harness.yaml is absent", async () => {
+  it("tells the user a ~/harness.yaml needs moving when ~/.harness/harness.yaml is absent", async () => {
     mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null, legacy_home_file: true });
     renderPage();
     expect(await screen.findByTestId("legacy-harness-notice")).toHaveTextContent(
-      "Found ~/harness.yaml. Harness Kit now reads ~/.claude/harness.yaml; move the file there.",
+      "Found ~/harness.yaml. Harness Kit now reads ~/.harness/harness.yaml; move the file there.",
+    );
+  });
+
+  it("says the profile was read from ~/.claude/harness.yaml, saves to ~/.harness/harness.yaml without a digest, then says the old file is ignored", async () => {
+    mockReadHarnessFile.mockResolvedValue({
+      found: true,
+      content: 'version: "1"\n',
+      path: "~/.claude/harness.yaml",
+      legacy_claude_file: true,
+    });
+    mockWriteHarnessFile.mockResolvedValue("~/.harness/harness.yaml");
+    renderPage();
+    expect(await screen.findByTestId("legacy-claude-notice")).toHaveTextContent(
+      "Your profile was read from ~/.claude/harness.yaml. Harness Kit now keeps it at ~/.harness/harness.yaml; saving writes it there. The old file is left as is.",
+    );
+    const EDITED = 'version: "1"\nmetadata:\n  name: edited\n';
+    fireEvent.change(await screen.findByTestId("fake-editor"), { target: { value: EDITED } });
+    fireEvent.keyDown(window, { key: "s", metaKey: true });
+    await waitFor(() => expect(mockWriteHarnessFile).toHaveBeenCalledTimes(1));
+    expect(mockWriteHarnessFile).toHaveBeenCalledWith(EDITED, undefined);
+    await waitFor(() =>
+      expect(screen.getByTestId("legacy-claude-notice")).toHaveTextContent(
+        "~/.claude/harness.yaml is ignored because ~/.harness/harness.yaml exists.",
+      ),
+    );
+  });
+
+  it("says ~/.claude/harness.yaml is ignored when both files exist", async () => {
+    mockReadHarnessFile.mockResolvedValue({
+      found: true,
+      content: 'version: "1"\n',
+      path: "~/.harness/harness.yaml",
+      legacy_claude_ignored: true,
+    });
+    renderPage();
+    expect(await screen.findByTestId("legacy-claude-notice")).toHaveTextContent(
+      "~/.claude/harness.yaml is ignored because ~/.harness/harness.yaml exists.",
     );
   });
 
@@ -158,7 +195,7 @@ describe("HarnessFilePage", () => {
   });
 
   it("names a changed-on-disk refusal and offers Reload from disk (AC-50)", async () => {
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"\n', path: "~/.claude/harness.yaml" });
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"\n', path: "~/.harness/harness.yaml" });
     mockWriteHarnessFile.mockRejectedValue("Refusing to write 'x': it changed on disk since it was read");
     renderPage();
     fireEvent.change(await screen.findByTestId("fake-editor"), { target: { value: 'version: "1"\nmetadata:\n  name: edited\n' } });
@@ -172,9 +209,9 @@ describe("HarnessFilePage", () => {
     mockReadHarnessFile.mockResolvedValue({
       found: true,
       content: 'version: "1"\n',
-      path: "~/.claude/harness.yaml",
+      path: "~/.harness/harness.yaml",
     });
-    mockWriteHarnessFile.mockResolvedValue("~/.claude/harness.yaml");
+    mockWriteHarnessFile.mockResolvedValue("~/.harness/harness.yaml");
     render(
       <MemoryRouter>
         <HarnessFilePage />
@@ -248,7 +285,7 @@ describe("HarnessFilePage follows the title-bar project (AC-55)", () => {
   });
 
   it("labels the personal profile when no project is chosen", async () => {
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"\n', path: "~/.claude/harness.yaml" });
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"\n', path: "~/.harness/harness.yaml" });
     renderPage();
     expect(await screen.findByTestId("profile-scope")).toHaveTextContent("Personal profile");
   });
@@ -277,12 +314,12 @@ describe("HarnessFilePage follows the title-bar project (AC-55)", () => {
 
   it("returns to the personal profile when the project is cleared", async () => {
     projectFiles["/work/acme/harness.yaml"] = 'version: "1"\n';
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"\n', path: "~/.claude/harness.yaml" });
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"\n', path: "~/.harness/harness.yaml" });
     act(() => setCurrentProjectDir("/work/acme"));
     renderPage();
     await screen.findByText("/work/acme/harness.yaml");
     act(() => setCurrentProjectDir(null));
-    expect(await screen.findByText("~/.claude/harness.yaml")).toBeInTheDocument();
+    expect(await screen.findByText("~/.harness/harness.yaml")).toBeInTheDocument();
     expect(screen.getByTestId("profile-scope")).toHaveTextContent("Personal profile");
     expect(await screen.findByTestId("fake-editor")).toBeInTheDocument();
   });
@@ -310,8 +347,8 @@ describe("Profile with no harness.yaml: scan, review, write (AC-22)", () => {
     expect(await screen.findByTestId("fake-editor-readonly")).toHaveValue(PERSONAL);
     expect(mockWriteHarnessFile).not.toHaveBeenCalled();
 
-    mockWriteHarnessFile.mockResolvedValue("~/.claude/harness.yaml");
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: PERSONAL, path: "~/.claude/harness.yaml" });
+    mockWriteHarnessFile.mockResolvedValue("~/.harness/harness.yaml");
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: PERSONAL, path: "~/.harness/harness.yaml" });
     fireEvent.click(screen.getByRole("button", { name: "Write harness.yaml" }));
 
     await waitFor(() => expect(mockWriteHarnessFile).toHaveBeenCalledWith(PERSONAL, undefined));
@@ -345,7 +382,7 @@ describe("Profile editor and panel side by side (AC-23)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     act(() => setCurrentProjectDir(null));
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: PERSONAL, path: "~/.claude/harness.yaml" });
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: PERSONAL, path: "~/.harness/harness.yaml" });
   });
 
   it("shows the editor and the structured panel together", async () => {
@@ -375,7 +412,7 @@ describe("Profile editor and panel side by side (AC-23)", () => {
   });
 
   it("saves a panel edit through the same save flow", async () => {
-    mockWriteHarnessFile.mockResolvedValue("~/.claude/harness.yaml");
+    mockWriteHarnessFile.mockResolvedValue("~/.harness/harness.yaml");
     renderPage();
     await screen.findByTestId("fake-editor");
     const name = await nameField();
@@ -388,7 +425,7 @@ describe("Profile editor and panel side by side (AC-23)", () => {
   });
 
   it("Cmd+S while typing in a panel field saves with that field's draft", async () => {
-    mockWriteHarnessFile.mockResolvedValue("~/.claude/harness.yaml");
+    mockWriteHarnessFile.mockResolvedValue("~/.harness/harness.yaml");
     renderPage();
     await screen.findByTestId("fake-editor");
     const name = await nameField();
@@ -412,7 +449,7 @@ describe("Profile editor and panel side by side (AC-23)", () => {
     const description = screen.getByRole("textbox", { name: /^Description$/ });
     fireEvent.change(description, { target: { value: "during the save" } });
     fireEvent.blur(description);
-    await act(async () => finish("~/.claude/harness.yaml"));
+    await act(async () => finish("~/.harness/harness.yaml"));
     expect((editor as HTMLTextAreaElement).value).toContain("during the save");
     expect(screen.getByRole("textbox", { name: /^Description$/ })).toHaveValue("during the save");
     // The edit made mid-save is still unsaved.
@@ -449,7 +486,7 @@ describe("Profile tabs (AC-24)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     act(() => setCurrentProjectDir(null));
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: PERSONAL, path: "~/.claude/harness.yaml" });
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: PERSONAL, path: "~/.harness/harness.yaml" });
   });
 
   // The app's shape: one route for both tabs, inside a boundary keyed as AppLayout keys it.
@@ -519,7 +556,7 @@ describe("Profile Share (AC-25)", () => {
   });
 
   it("is in the header once a harness.yaml is loaded, and opens the sheet", async () => {
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: PERSONAL, path: "~/.claude/harness.yaml" });
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: PERSONAL, path: "~/.harness/harness.yaml" });
     renderPage();
     fireEvent.click(await screen.findByRole("button", { name: "Share" }));
     expect(await screen.findByRole("dialog", { name: "Share this profile" })).toBeInTheDocument();
@@ -527,7 +564,7 @@ describe("Profile Share (AC-25)", () => {
   });
 
   it("is disabled, with the reason, when harness.yaml exists but is empty", async () => {
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: "", path: "~/.claude/harness.yaml" });
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: "", path: "~/.harness/harness.yaml" });
     renderPage();
     const share = await screen.findByRole("button", { name: "Share" });
     expect(share).toBeDisabled();
@@ -549,7 +586,7 @@ describe("Profile Share (AC-25)", () => {
   });
 
   it("is disabled, with the reason, while the YAML does not parse", async () => {
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: PERSONAL, path: "~/.claude/harness.yaml" });
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: PERSONAL, path: "~/.harness/harness.yaml" });
     renderPage();
     fireEvent.change(await screen.findByTestId("fake-editor"), { target: { value: "a: [unclosed" } });
     const share = screen.getByRole("button", { name: "Share" });
@@ -566,7 +603,7 @@ describe("Profile editor: adversarial-review regressions", () => {
     vi.clearAllMocks();
     for (const key of Object.keys(projectFiles)) delete projectFiles[key];
     act(() => setCurrentProjectDir(null));
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: PERSONAL, path: "~/.claude/harness.yaml" });
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: PERSONAL, path: "~/.harness/harness.yaml" });
   });
 
   // The project changes and comes back: the personal file is read again.
@@ -583,7 +620,7 @@ describe("Profile editor: adversarial-review regressions", () => {
     const editor = await screen.findByTestId("fake-editor");
     await nameField();
     fireEvent.change(editor, { target: { value: PERSONAL.replace("my-harness", "unsaved-name") } });
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: EXTERNAL, path: "~/.claude/harness.yaml" });
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: EXTERNAL, path: "~/.harness/harness.yaml" });
     await reloadFromDisk();
     await screen.findByTestId("pending-disk-notice");
     expect(screen.getByTestId("pending-disk-notice")).toHaveTextContent(/will not overwrite/i);
@@ -599,7 +636,7 @@ describe("Profile editor: adversarial-review regressions", () => {
     const editor = await screen.findByTestId("fake-editor");
     await nameField();
     fireEvent.change(editor, { target: { value: PERSONAL.replace("my-harness", "first-edit") } });
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: EXTERNAL, path: "~/.claude/harness.yaml" });
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: EXTERNAL, path: "~/.harness/harness.yaml" });
     await reloadFromDisk();
     const notice = await screen.findByTestId("pending-disk-notice");
     fireEvent.change(screen.getByTestId("fake-editor"), { target: { value: PERSONAL.replace("my-harness", "late-keystroke") } });
@@ -619,14 +656,14 @@ describe("Profile editor: adversarial-review regressions", () => {
     mockReadHarnessFile.mockRejectedValueOnce(new Error("boom"));
     fireEvent.click(await screen.findByRole("button", { name: "Reload from disk" }));
     await screen.findByText("Couldn't read harness.yaml");
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: EXTERNAL, path: "~/.claude/harness.yaml" });
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: EXTERNAL, path: "~/.harness/harness.yaml" });
     await reloadFromDisk();
     expect((await screen.findByTestId("fake-editor") as HTMLTextAreaElement).value).toContain("unsaved-name");
     expect(await screen.findByTestId("pending-disk-notice")).toBeInTheDocument();
   });
 
   it("a panel remove right after an editor edit that shifts the list removes the intended entry", async () => {
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: ENV_FILE, path: "~/.claude/harness.yaml" });
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: ENV_FILE, path: "~/.harness/harness.yaml" });
     renderPage();
     const editor = await screen.findByTestId("fake-editor");
     await screen.findByRole("button", { name: "Remove variable AAA" });
@@ -664,7 +701,7 @@ describe("Profile editor: adversarial-review regressions", () => {
     ["a list root", "- a\n- b\n"],
   ] as const) {
     it(`Share does not take down the page for ${label}`, async () => {
-      mockReadHarnessFile.mockResolvedValue({ found: true, content, path: "~/.claude/harness.yaml" });
+      mockReadHarnessFile.mockResolvedValue({ found: true, content, path: "~/.harness/harness.yaml" });
       renderPage();
       const editor = await screen.findByTestId("fake-editor");
       fireEvent.change(editor, { target: { value: `${content}# unsaved\n` } });
@@ -684,11 +721,11 @@ describe("Profile keeps unsaved edits when the page unmounts", () => {
     vi.clearAllMocks();
     for (const key of Object.keys(projectFiles)) delete projectFiles[key];
     act(() => setCurrentProjectDir(null));
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: PERSONAL, path: "~/.claude/harness.yaml" });
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: PERSONAL, path: "~/.harness/harness.yaml" });
   });
 
   function profileDraftCount() {
-    return getProfileDraft("~/.claude/harness.yaml") ? 1 : 0;
+    return getProfileDraft("~/.harness/harness.yaml") ? 1 : 0;
   }
 
   async function editThenLeave() {
@@ -708,8 +745,24 @@ describe("Profile keeps unsaved edits when the page unmounts", () => {
     expect(screen.queryByTestId("pending-disk-notice")).toBeNull();
   });
 
+  it("restores a draft migrated from the legacy path when the legacy file is the one read, and leaves one entry", async () => {
+    const legacyText = 'version: "1"\n';
+    setProfileDraft("~/.harness/harness.yaml", { buffer: EDITED, synced: legacyText });
+    mockReadHarnessFile.mockResolvedValue({
+      found: true,
+      content: legacyText,
+      path: "~/.claude/harness.yaml",
+      legacy_claude_file: true,
+    });
+    renderPage();
+    const editor = await screen.findByTestId("fake-editor");
+    await waitFor(() => expect((editor as HTMLTextAreaElement).value).toBe(EDITED));
+    expect(getProfileDraft("~/.harness/harness.yaml")).toBeUndefined();
+    expect(getProfileDraft("~/.claude/harness.yaml")?.buffer).toBe(EDITED);
+  });
+
   it("a save clears the draft", async () => {
-    mockWriteHarnessFile.mockResolvedValue("~/.claude/harness.yaml");
+    mockWriteHarnessFile.mockResolvedValue("~/.harness/harness.yaml");
     await editThenLeave();
     renderPage();
     await waitFor(() => expect((screen.getByTestId("fake-editor") as HTMLTextAreaElement).value).toBe(EDITED));
@@ -729,7 +782,7 @@ describe("Profile keeps unsaved edits when the page unmounts", () => {
 
   it("Discard edits clears the draft", async () => {
     await editThenLeave();
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: EXTERNAL, path: "~/.claude/harness.yaml" });
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: EXTERNAL, path: "~/.harness/harness.yaml" });
     renderPage();
     const notice = await screen.findByTestId("pending-disk-notice");
     fireEvent.click(within(notice).getByRole("button", { name: /Discard edits/ }));
@@ -740,7 +793,7 @@ describe("Profile keeps unsaved edits when the page unmounts", () => {
   it("a draft synced to older text than the disk shows the notice, and Save sends the synced text's digest", async () => {
     mockWriteHarnessFile.mockRejectedValue("Refusing to write 'x': it changed on disk since it was read");
     await editThenLeave();
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: EXTERNAL, path: "~/.claude/harness.yaml" });
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: EXTERNAL, path: "~/.harness/harness.yaml" });
     renderPage();
     await screen.findByTestId("pending-disk-notice");
     expect((screen.getByTestId("fake-editor") as HTMLTextAreaElement).value).toBe(EDITED);
@@ -756,7 +809,7 @@ describe("Profile keeps unsaved edits when the page unmounts", () => {
     act(() => setCurrentProjectDir("/work/acme"));
     renderPage();
     await screen.findByText(/\(read-only\)/);
-    expect(getProfileDraft("~/.claude/harness.yaml")?.buffer).toBe(EDITED);
+    expect(getProfileDraft("~/.harness/harness.yaml")?.buffer).toBe(EDITED);
     expect(screen.queryByTestId("fake-editor")).toBeNull();
     act(() => setCurrentProjectDir(null));
   });
@@ -765,7 +818,7 @@ describe("Profile keeps unsaved edits when the page unmounts", () => {
     mockReadHarnessFile.mockResolvedValue({
       found: true,
       content: 'version: "1"\n',
-      path: "~/.claude/harness.yaml",
+      path: "~/.harness/harness.yaml",
     });
     render(<MemoryRouter><HarnessFilePage /><CommandProbe /></MemoryRouter>);
     await screen.findByRole("button", { name: "Save as profile" });

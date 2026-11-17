@@ -1,0 +1,10 @@
+{
+  "command": "set_unsaved_drafts",
+  "calls": [
+    {
+      "fn": "setUnsavedDrafts",
+      "args": [true],
+      "payload": { "unsaved": true }
+    }
+  ]
+}

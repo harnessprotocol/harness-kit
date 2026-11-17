@@ -25,15 +25,29 @@ import { errorDetails } from "../../lib/error-details";
 import { appDataDir, join as joinPath } from "@tauri-apps/api/path";
 import { buildDesktopPortabilitySnapshot, type DesktopPortabilitySnapshot } from "../fleet/portability-data";
 import { useProjectDir } from "../../lib/project-dir";
+import { LEGACY_CLAUDE_IGNORED_NOTICE, LEGACY_CLAUDE_PROFILE_NOTICE } from "../../lib/legacy-harness-notice";
 
 export type { DriftSummary };
 
-/** Existence of ~/harness.yaml, reported by the Rust side as a boolean; the file is never read. */
-async function hasLegacyHomeFile(): Promise<boolean> {
+/**
+ * What the Rust reader says about the legacy files, from one read: whether a
+ * ~/harness.yaml exists (existence only, never read) and notices about the
+ * legacy ~/.claude/harness.yaml (read as a fallback, or ignored beside the
+ * new file).
+ */
+async function readLegacyFlags(): Promise<{ homeFile: boolean; claudeNotes: string[] }> {
   try {
-    return (await readHarnessFile()).legacy_home_file === true;
+    const result = await readHarnessFile();
+    const claudeNotes =
+      result.legacy_claude_file === true
+        ? [LEGACY_CLAUDE_PROFILE_NOTICE]
+        : result.legacy_claude_ignored === true
+          ? [LEGACY_CLAUDE_IGNORED_NOTICE]
+          : [];
+    return { homeFile: result.legacy_home_file === true, claudeNotes };
   } catch {
-    return false;
+    // Notices are a courtesy; Drift's own statuses already say what it could read.
+    return { homeFile: false, claudeNotes: [] };
   }
 }
 
@@ -64,6 +78,7 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
   const [scanned, setScanned] = useState(false);
   const [scopeStatuses, setScopeStatuses] = useState<ScopeStatus[]>([]);
   const [legacyHomeFile, setLegacyHomeFile] = useState(false);
+  const [legacyNotes, setLegacyNotes] = useState<string[]>([]);
 
   // The app's one toast stack (AppLayout's ToastProvider, always-mounted live region).
   const pushToast = useToast();
@@ -98,11 +113,10 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
       if (seq !== loadSeq.current) return;
       setEntries(collected);
       setScopeStatuses(statuses);
-      setLegacyHomeFile(
-        statuses.some((s) => s.scope.kind === "global" && s.state === "no-file") &&
-          (await hasLegacyHomeFile()),
-      );
+      const legacy = await readLegacyFlags();
       if (seq !== loadSeq.current) return;
+      setLegacyHomeFile(statuses.some((s) => s.scope.kind === "global" && s.state === "no-file") && legacy.homeFile);
+      setLegacyNotes(legacy.claudeNotes);
       setPortability(portabilitySnapshot);
       setAcknowledged(
         new Set(ackRows.map((a) => [a.scopeRoot, a.adapter, a.path, a.harnessName, a.slot].join("::"))),
@@ -191,6 +205,7 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
         portability={portability}
         scopeStatuses={scopeStatuses}
         legacyHomeFile={legacyHomeFile}
+        legacyNotes={legacyNotes}
       />
 
       <FixPreviewModal

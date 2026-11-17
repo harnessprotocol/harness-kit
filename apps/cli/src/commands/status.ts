@@ -6,9 +6,11 @@ import {
   buildFleetReport,
   computeMachineInventory,
   getSurface,
+  LEGACY_PERSONAL_PROFILE_PATH,
   normalizeObservation,
   observeAllSurfaces,
   parseHarness,
+  PERSONAL_PROFILE_PATH,
   PRODUCT_FAMILIES,
   recommend,
 } from "@harness-kit/core";
@@ -26,7 +28,7 @@ import type {
 import { NodeFsProvider } from "@harness-kit/core/node";
 import { defaultStatePath, SqliteStateStore } from "../state/sqlite-store.js";
 import { resolveDefinitions } from "../definitions/resolve-definitions.js";
-import { buildReconciliationContext, currentPlatform, summarizePlan } from "./portability-common.js";
+import { announcePersonalProfile, buildReconciliationContext, currentPlatform, resolvePersonalProfile, summarizePlan } from "./portability-common.js";
 
 interface StatusFlags {
   json?: boolean;
@@ -240,11 +242,13 @@ export async function statusCommand(flags: StatusFlags): Promise<void> {
   const scopes: FleetScopeInput[] = [{ kind: "project", label: projectLabel, fs: projectFs }];
   if (flags.global) {
     const home = await projectFs.homedir();
+    const personal = await resolvePersonalProfile(home);
+    announcePersonalProfile(personal);
     scopes.push({
       kind: "global" as const,
       label: "personal",
       fs: new NodeFsProvider(home),
-      profilePath: ".harness/harness.yaml",
+      profilePath: personal.legacy ? LEGACY_PERSONAL_PROFILE_PATH : PERSONAL_PROFILE_PATH,
     });
   }
 

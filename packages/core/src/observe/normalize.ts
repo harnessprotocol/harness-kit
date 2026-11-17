@@ -3,6 +3,7 @@ import type { StoreFormatId, SurfaceId, SurfaceScope } from "../surfaces/types.j
 import { digestValue } from "../portability/resource-model.js";
 import { looksLikeSecret, sanitizeCommandArgs, sanitizeUrl } from "../portability/secrets.js";
 import { isRecord } from "../utils/is-record.js";
+import { fromDialect } from "../compile/env-refs.js";
 import { syncedInstructionsContent } from "../compile/markers.js";
 import type { ObservedResource, SurfaceObservation } from "./observe-surface.js";
 import type { InstructionsStoreValue, SkillStoreValue } from "./read-store.js";
@@ -152,8 +153,9 @@ type Canonicalizer = (value: unknown) => unknown;
  * upstream filters: everything those readers emit semantically is either
  * whitelisted here or provenance-only by design.
  */
-function canonicalizeMcpServer(value: unknown): unknown {
-  if (!isRecord(value)) return deepCanonical(value);
+function canonicalizeMcpServer(raw: unknown): unknown {
+  if (!isRecord(raw)) return deepCanonical(raw);
+  const value = unifyEnvRefs(raw);
 
   const explicit = value.transport ?? value.type;
   const transport =
@@ -177,6 +179,23 @@ function canonicalizeMcpServer(value: unknown): unknown {
   if (typeof value.bearerTokenEnvVar === "string") result.bearerTokenEnvVar = value.bearerTokenEnvVar;
   if (value.enabled === false) result.enabled = false;
   return result;
+}
+
+/**
+ * Rewrite `${env:NAME}` to `${NAME}` in every string a server reads, so a
+ * Cursor/VS Code entry and the same entry on another surface digest alike.
+ */
+function unifyEnvRefs(server: Record<string, unknown>): Record<string, unknown> {
+  const str = (v: unknown) => (typeof v === "string" ? fromDialect(v) : v);
+  const map = (m: unknown) =>
+    isRecord(m) ? Object.fromEntries(Object.entries(m).map(([k, v]) => [k, str(v)])) : m;
+  return {
+    ...server,
+    ...(Array.isArray(server.args) ? { args: server.args.map(str) } : {}),
+    ...(server.env !== undefined ? { env: map(server.env) } : {}),
+    ...(server.headers !== undefined ? { headers: map(server.headers) } : {}),
+    ...(server.url !== undefined ? { url: str(server.url) } : {}),
+  };
 }
 
 /**

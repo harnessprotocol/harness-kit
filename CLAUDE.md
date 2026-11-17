@@ -159,6 +159,12 @@ Never write a whole token-shaped string (GitHub, Google, Stripe, npm, Slack, web
 
 ---
 
+## Personal profile and env references
+
+The personal profile lives at `~/.harness/harness.yaml` (`PERSONAL_PROFILE_PATH` in core). `~/.claude/harness.yaml` is a read-only fallback; never write it. The desktop reads it only through the Rust `read_harness_file` command, because the webview fs scope does not cover `~/.harness/harness.yaml`.
+
+Cursor and VS Code get `${env:NAME}`; harness.yaml and every other target keep `${NAME}`. The dialect is surface/target metadata (`envRefDialect`); VS Code predefined variables like `${workspaceFolder}` are never rewritten.
+
 ## Desktop process bridge
 
 The only process the webview can start is an allowlisted plugin installer through `run_plugin_installer` (`apps/desktop/src-tauri/src/commands/plugin_installer.rs`). Widening the allowlist (a binary, verb or flag) is ask-first. `marketplace add` is pinned to `CATALOG_SOURCE` (`harnessprotocol/harness-kit`); if the owner or name in `.claude-plugin/marketplace.json` changes, update that constant or Apply cannot add the marketplace.

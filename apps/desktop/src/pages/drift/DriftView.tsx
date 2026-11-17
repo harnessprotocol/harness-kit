@@ -37,8 +37,10 @@ export interface DriftViewProps {
   portability?: DesktopPortabilitySnapshot | null;
   /** What each scanned scope's harness.yaml is (AC-55); empty before a scan lands. */
   scopeStatuses?: ScopeStatus[];
-  /** A file sits at ~/harness.yaml and none at ~/.claude/harness.yaml. */
+  /** A file sits at ~/harness.yaml and none at ~/.harness/harness.yaml. */
   legacyHomeFile?: boolean;
+  /** Notices about the legacy ~/.claude/harness.yaml (read as a fallback, or ignored). */
+  legacyNotes?: string[];
 }
 
 /** The scopes Drift could not honestly call clean: no file, unreadable, or never compiled. */
@@ -57,9 +59,18 @@ function attentionNotes(statuses: ScopeStatus[]): { key: string; text: string }[
   return notes;
 }
 
-function ScopeNotes({ statuses, legacyHomeFile }: { statuses: ScopeStatus[]; legacyHomeFile: boolean }) {
+function ScopeNotes({
+  statuses,
+  legacyHomeFile,
+  legacyNotes,
+}: {
+  statuses: ScopeStatus[];
+  legacyHomeFile: boolean;
+  legacyNotes: string[];
+}) {
   const notes = attentionNotes(statuses);
   if (legacyHomeFile) notes.push({ key: "legacy-home-harness", text: LEGACY_HARNESS_NOTICE });
+  legacyNotes.forEach((text, i) => notes.push({ key: `legacy-claude-${i}`, text }));
   if (notes.length === 0) return null;
   return (
     <div data-testid="drift-scope-notes" style={{ marginBottom: 16 }}>
@@ -96,6 +107,7 @@ export function DriftView({
   portability = null,
   scopeStatuses = [],
   legacyHomeFile = false,
+  legacyNotes = [],
 }: DriftViewProps) {
   const visible = filteredEntries.filter((e) => showAcknowledged || !acknowledged.has(driftItemKey(e.scope, e.item)));
 
@@ -187,22 +199,25 @@ export function DriftView({
           // Some scope has no usable or no deployed harness.yaml: saying "no
           // drift" would claim a comparison that never happened (AC-55).
           <>
-            <ScopeNotes statuses={scopeStatuses} legacyHomeFile={legacyHomeFile} />
+            <ScopeNotes statuses={scopeStatuses} legacyHomeFile={legacyHomeFile} legacyNotes={legacyNotes} />
             <Button variant="ghost" onClick={onRescan}>
               Re-scan
             </Button>
           </>
         ) : (
-          <EmptyState
-            icon={<ShieldCheck size={28} strokeWidth={1.5} />}
-            title="No drift detected"
-            description={`Every deployed config matches harness.yaml across Global${hasProject ? " and this project" : ""}. Compile from Profile after you next edit harness.yaml to keep it that way.`}
-            action={
-              <Button variant="ghost" onClick={onRescan}>
-                Re-scan
-              </Button>
-            }
-          />
+          <>
+            <ScopeNotes statuses={[]} legacyHomeFile={false} legacyNotes={legacyNotes} />
+            <EmptyState
+              icon={<ShieldCheck size={28} strokeWidth={1.5} />}
+              title="No drift detected"
+              description={`Every deployed config matches harness.yaml across Global${hasProject ? " and this project" : ""}. Compile from Profile after you next edit harness.yaml to keep it that way.`}
+              action={
+                <Button variant="ghost" onClick={onRescan}>
+                  Re-scan
+                </Button>
+              }
+            />
+          </>
         )}
       </div>
     );
@@ -233,7 +248,7 @@ export function DriftView({
 
       {error && <DriftError error={error} onRescan={onRescan} />}
 
-      <ScopeNotes statuses={scopeStatuses} legacyHomeFile={legacyHomeFile} />
+      <ScopeNotes statuses={scopeStatuses} legacyHomeFile={legacyHomeFile} legacyNotes={legacyNotes} />
 
       <ConflictLedger conflicts={portability?.conflicts ?? []} />
 

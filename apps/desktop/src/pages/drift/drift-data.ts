@@ -10,6 +10,7 @@ import {
 import { TauriFsProvider } from "../../lib/harness-fs";
 import { grantProjectDir, projectDirLabel } from "../../lib/project-dir";
 import { errorDetails } from "../../lib/error-details";
+import { readHarnessFile } from "../../lib/tauri";
 
 export interface DriftScope {
   kind: "global" | "project";
@@ -55,14 +56,46 @@ export function summarizeDrift(entries: ScopedDriftItem[], acknowledged: Readonl
 
 /**
  * The harness.yaml a scope is compared against (AC-55): Global is the personal
- * profile at `~/.claude/harness.yaml`, the same file Profile, Compile and
+ * profile at `~/.harness/harness.yaml`, the same file Profile, Compile and
  * onboarding use; a project is its own committed `harness.yaml`, the team
  * baseline. Never `~/harness.yaml`.
  */
 export function scopeHarnessPath(scope: DriftScope): string {
   return scope.kind === "global"
-    ? scope.fs.joinPath(scope.root, ".claude", "harness.yaml")
+    ? scope.fs.joinPath(scope.root, ".harness", "harness.yaml")
     : scope.fs.joinPath(scope.root, "harness.yaml");
+}
+
+interface ScopeRead {
+  found: boolean;
+  /** Absolute path of the file read, or of the file a save would create. */
+  path: string;
+  read: () => Promise<string>;
+}
+
+/**
+ * Locate the file a scope is actually read from. Global goes through the Rust
+ * `read_harness_file` command, the reader Profile uses: the webview fs scope
+ * does not cover `~/.harness/harness.yaml`, so an fs `exists` there is false
+ * for a file that is present. It falls back to the legacy
+ * `~/.claude/harness.yaml` (read only) when the new file is absent. A project
+ * is read through its own fs.
+ */
+async function locateScopeFile(scope: DriftScope): Promise<ScopeRead> {
+  const path = scopeHarnessPath(scope);
+  if (scope.kind !== "global") {
+    return { found: await scope.fs.exists(path), path, read: () => scope.fs.readFile(path) };
+  }
+  const result = await readHarnessFile();
+  if (!result.found || result.content === null) return { found: false, path, read: async () => "" };
+  const actual = result.legacy_claude_file ? scope.fs.joinPath(scope.root, ".claude", "harness.yaml") : path;
+  const content = result.content;
+  return { found: true, path: actual, read: async () => content };
+}
+
+/** The file a scope is read from; see `locateScopeFile`. */
+export async function resolveScopeHarnessPath(scope: DriftScope): Promise<string> {
+  return (await locateScopeFile(scope)).path;
 }
 
 /**
@@ -87,11 +120,16 @@ type ScopeFile =
   | { state: "ok"; config: HarnessConfig };
 
 async function loadScopeFile(scope: DriftScope): Promise<ScopeFile> {
-  const path = scopeHarnessPath(scope);
-  if (!(await scope.fs.exists(path))) return { state: "no-file" };
+  let located: ScopeRead;
+  try {
+    located = await locateScopeFile(scope);
+  } catch (err) {
+    return { state: "unreadable", detail: errorDetails(err) };
+  }
+  if (!located.found) return { state: "no-file" };
   let yamlString: string;
   try {
-    yamlString = await scope.fs.readFile(path);
+    yamlString = await located.read();
   } catch (err) {
     return { state: "unreadable", detail: errorDetails(err) };
   }
@@ -161,7 +199,12 @@ export async function collectDrift(scopes: DriftScope[]): Promise<ScopedDriftIte
 export async function describeScopes(scopes: DriftScope[], entries: ScopedDriftItem[]): Promise<ScopeStatus[]> {
   const statuses: ScopeStatus[] = [];
   for (const scope of scopes) {
-    const path = scopeHarnessPath(scope);
+    let path: string;
+    try {
+      path = await resolveScopeHarnessPath(scope);
+    } catch {
+      path = scopeHarnessPath(scope);
+    }
     const file = await loadScopeFile(scope);
     if (file.state === "no-file") {
       statuses.push({ scope, state: "no-file", path });

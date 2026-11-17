@@ -1,5 +1,6 @@
 import type { FsProvider } from "../fs-provider.js";
 import { digestValue } from "./resource-model.js";
+import { SECRET_REFERENCE } from "./secrets.js";
 import type {
   CapsuleManifest,
   CapsuleValidationFinding,
@@ -38,7 +39,6 @@ function capsuleDigest(manifest: Omit<CapsuleManifest, "digest">): ReleaseDigest
 }
 
 const CREDENTIAL_ASSIGNMENT = /(?:^|[\s,{])["']?(?:authorization|token|auth[-_]?token|api[-_]?key|access[-_]?token|access[-_]?key|client[-_]?secret|password|passwd|private[-_]?key|secret|cookie)["']?\s*[:=]\s*([^\n,}]+)/gim;
-const SECRET_REFERENCE = /^(?:\$[A-Za-z_][A-Za-z0-9_]*|\$\{[A-Za-z_][A-Za-z0-9_]*\}|env:[A-Za-z_][A-Za-z0-9_]*|secret:\/\/[^\s]+)$/;
 
 function containsLiteralCredentialAssignment(content: string): boolean {
   for (const match of content.matchAll(CREDENTIAL_ASSIGNMENT)) {

@@ -186,6 +186,10 @@ pub fn run() {
             // Runtime FS scope grants (used by the project scope of Machine, Drift and Compile)
             commands::fs_scope::grant_project_scope,
             commands::fs_scope::choose_project_dir,
+            // Quit handshake: the webview answers a held close request
+            commands::app_lifecycle::confirm_quit,
+            commands::app_lifecycle::set_unsaved_drafts,
+            commands::app_lifecycle::quit_request_seen,
             commands::share::save_share_file,
             // Guarded write/rename/remove for the webview's TauriFsProvider
             commands::fs_guarded::guarded_write_file,
@@ -206,9 +210,33 @@ pub fn run() {
         ])
         // The OS reports a drop to the native layer; remember the paths here
         // so plugin import can accept only paths the user actually dropped.
-        .on_window_event(|_window, event| {
-            if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event {
-                commands::plugin_explorer::record_dropped_paths(paths);
+        .on_window_event(|window, event| {
+            match event {
+                tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) => {
+                    commands::plugin_explorer::record_dropped_paths(paths);
+                }
+                // Closing the main window quits the app. Hold it and let the
+                // webview decide: it saves, discards, cancels, or answers
+                // `confirm_quit` at once when nothing is unsaved.
+                // With nothing unsaved the close goes through untouched, so a dead
+                // or still-loading webview cannot trap the app. A webview that
+                // does not acknowledge in time is overruled by a watchdog.
+                tauri::WindowEvent::CloseRequested { api, .. }
+                    if window.label() == "main"
+                        && commands::app_lifecycle::current_quit_action()
+                            == commands::app_lifecycle::QuitAction::AskWebview =>
+                {
+                    api.prevent_close();
+                    commands::app_lifecycle::ask_webview(window.app_handle());
+                }
+                _ => {}
+            }
+        })
+        // The Quit item is created by the webview (src/lib/app-menu.ts); its
+        // click also reaches Rust, which can act when the webview cannot.
+        .on_menu_event(|app, event| {
+            if event.id().as_ref() == commands::app_lifecycle::QUIT_MENU_ID {
+                commands::app_lifecycle::request_quit(app);
             }
         })
         .setup(|app| {

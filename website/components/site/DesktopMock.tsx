@@ -284,7 +284,7 @@ export function DesktopMock({
           {/* Profile */}
           <div className={`${styles.pane} ${styles.paneHarness} ${activeSection === 'profile' ? styles.paneActive : ''}`}>
             <pre className={styles.paneHarnessCode}>
-              <span className={styles.yamlComment}># ~/.claude/harness.yaml — your personal profile</span>{'\n'}
+              <span className={styles.yamlComment}># ~/.harness/harness.yaml — your personal profile</span>{'\n'}
               <span className={styles.yamlKey}>version:</span> <span className={styles.yamlNum}>1</span>{'\n\n'}
               <span className={styles.yamlKey}>plugins:</span>{'\n'}
               {'  '}<span className={styles.yamlDash}>-</span> <span className={styles.yamlStr}>research@harness-kit</span>{'\n'}

@@ -111,6 +111,9 @@ fn main() {
                 // Runtime FS scope grants (used by Fleet/Drift's project scope)
                 "grant_project_scope",
                 "choose_project_dir",
+                "confirm_quit",
+                "set_unsaved_drafts",
+                "quit_request_seen",
                 // Share: Rust opens the Save dialog; the path never comes from the page
                 "save_share_file",
                 // Guarded write/rename/remove for the webview's TauriFsProvider

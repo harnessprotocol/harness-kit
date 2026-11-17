@@ -85,14 +85,15 @@ describe("profile agent prompt (AC-25)", () => {
 
   it("tells the agent where the file goes and to ask before replacing one", () => {
     const prompt = buildProfilePrompt(profile());
-    expect(prompt).toContain("~/.claude/harness.yaml");
+    expect(prompt).toContain("~/.harness/harness.yaml");
+    expect(prompt).not.toContain("~/.claude/harness.yaml");
     expect(prompt).toMatch(/ask .*before replac/i);
   });
 
   it("uses the CLI to install and compile instead of hand-editing tool configs", () => {
     const prompt = buildProfilePrompt(profile());
-    expect(prompt).toContain("npx -p @harnessprotocol/cli harness-kit install ~/.claude/harness.yaml");
-    expect(prompt).toContain("npx -p @harnessprotocol/cli harness-kit compile ~/.claude/harness.yaml");
+    expect(prompt).toContain("npx -p @harnessprotocol/cli harness-kit install ~/.harness/harness.yaml");
+    expect(prompt).toContain("npx -p @harnessprotocol/cli harness-kit compile ~/.harness/harness.yaml");
     expect(prompt).toMatch(/do not hand-edit/i);
   });
 

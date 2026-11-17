@@ -60,7 +60,7 @@ export default function SyncPage({ embedded = false }: SyncPageProps = {}) {
   const [dirChecking, setDirChecking] = useState(false);
   // AC-55: what is compiled is the project's committed harness.yaml (the team
   // baseline). Without one, and with no project chosen, it is the personal
-  // ~/.claude/harness.yaml; a project that has none keeps getting the personal
+  // ~/.harness/harness.yaml; a project that has none keeps getting the personal
   // profile compiled into it, as before.
   const [personalFallback, setPersonalFallback] = useState(false);
   const source = describeHarnessSource(currentProject);

@@ -28,7 +28,7 @@ export interface OnboardingPageProps {
  * screenshot-tested with fixture data with no live backend.
  */
 /** Where `write_harness_file` puts the file; the only path onboarding can overwrite. */
-const WRITE_TARGET = "~/.claude/harness.yaml";
+const WRITE_TARGET = "~/.harness/harness.yaml";
 
 export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
   const [step, setStep] = useState<OnboardingStep>("scan");
@@ -39,7 +39,7 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
   const [writing, setWriting] = useState(false);
   const [writeError, setWriteError] = useState<string | null>(null);
   // Set when the target file already exists with different content (AC-51).
-  const [conflict, setConflict] = useState<{ existing: string } | null>(null);
+  const [conflict, setConflict] = useState<{ existing: string; fromLegacy: boolean } | null>(null);
   const startedAt = useRef<number>(Date.now());
   // Bumped by Retry; the scan effect is keyed on it so a rerun goes back
   // through the scan step (AC-32). handleRetry resets the scan state.
@@ -122,12 +122,17 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
       // AC-51: never replace an existing harness.yaml unseen. A read failure
       // aborts the write rather than risk clobbering a file we couldn't read.
       const current = await readHarnessFile();
-      if (current.found && current.path === WRITE_TARGET) {
-        if (current.content === result.harnessYaml) {
+      // A profile read from the legacy ~/.claude/harness.yaml is an existing
+      // profile too: the user sees the diff before it is superseded.
+      const fromLegacy = current.found && current.legacy_claude_file === true;
+      if (current.found && (current.path === WRITE_TARGET || fromLegacy)) {
+        // Identical content at the target needs no write; identical content at
+        // the legacy path still has to be written to the new one.
+        if (!fromLegacy && current.content === result.harnessYaml) {
           onFinish();
           return;
         }
-        setConflict({ existing: current.content ?? "" });
+        setConflict({ existing: current.content ?? "", fromLegacy });
         return;
       }
       await writeHarnessFile(result.harnessYaml);
@@ -151,7 +156,12 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
     try {
       // Rust backs up the existing file before replacing it, and refuses when
       // it no longer matches the digest of the file the user was shown.
-      await writeHarnessFile(result.harnessYaml, await loadedDigest(conflict.existing));
+      // The digest is of the file at the write target; the legacy file is not
+      // the target, so nothing is checked and nothing there is overwritten.
+      await writeHarnessFile(
+        result.harnessYaml,
+        conflict.fromLegacy ? undefined : await loadedDigest(conflict.existing),
+      );
       setConflict(null);
       onFinish();
     } catch (err) {
@@ -211,8 +221,18 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
         }
       >
         <p style={{ fontSize: 12.5, color: "var(--fg-subtle)", marginBottom: 10 }}>
-          {WRITE_TARGET} differs from what onboarding would write. Replacing first copies the current
-          file to ~/.harness/backups/user/&lt;timestamp&gt;/.claude/harness.yaml, not next to the file.
+          {conflict?.fromLegacy ? (
+            <>
+              Your profile is at ~/.claude/harness.yaml and differs from what onboarding would write.
+              Replacing writes the new profile to {WRITE_TARGET}. The old file is left as is; nothing is
+              overwritten there.
+            </>
+          ) : (
+            <>
+              {WRITE_TARGET} differs from what onboarding would write. Replacing first copies the current
+              file to ~/.harness/backups/user/&lt;timestamp&gt;/.harness/harness.yaml, not next to the file.
+            </>
+          )}
         </p>
         {conflict && result && (
           <DiffViewer lines={collapseToHunks(lineDiff(conflict.existing, result.harnessYaml))} />

@@ -1,10 +1,12 @@
 import { Menu, MenuItem, PredefinedMenuItem, Submenu } from "@tauri-apps/api/menu";
 import { open } from "@tauri-apps/plugin-shell";
+import { emit } from "@tauri-apps/api/event";
 import { isTauriRuntimeAvailable } from "./tauri";
 import { detectDesktopPlatform } from "../pages/machine/machine-data";
 import { visibleShortcuts, domKey, toAccelerator, type Shortcut } from "../shortcuts";
 import { getLabs } from "./preferences";
 
+export const QUIT_REQUESTED_EVENT = "app://quit-requested";
 export const DOCS_URL = "https://harnesskit.ai/docs";
 
 /**
@@ -39,7 +41,14 @@ export async function buildAppMenu(): Promise<Menu> {
       await predefined("HideOthers"),
       await predefined("ShowAll"),
       await predefined("Separator"),
-      await predefined("Quit"),
+      // Not the predefined Quit: that exits at once. This one asks the webview,
+      // which prompts when drafts are unsaved (the same path as a window close).
+      await MenuItem.new({
+        id: "app:quit",
+        text: "Quit Harness Kit",
+        accelerator: "CmdOrCtrl+Q",
+        action: () => { void emit(QUIT_REQUESTED_EVENT); },
+      }),
     ],
   });
 

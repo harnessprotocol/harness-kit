@@ -107,10 +107,7 @@ describe("readStore: json-mcpservers", () => {
     expect(issues.value).toEqual({ transport: "sse", url: "https://issues.example.com/sse" });
   });
 
-  it("pinned: a servers-rootKey store pointed at a mcpServers-shaped file yields zero entries plus one skipped diagnostic", async () => {
-    // Honest behavior: the file exists and clearly holds MCP servers, just
-    // under the other well-known root key — silence would hide a
-    // misconfiguration, so it is reported via skipped[], never guessed at.
+  it("pinned: a servers-rootKey store also reads leftover mcpServers entries (older harness-kit wrote them there)", async () => {
     const fs = fixtureFs("claude-desktop");
     const configStore = store(
       "copilot-vscode",
@@ -120,11 +117,27 @@ describe("readStore: json-mcpservers", () => {
 
     const result = await readStore(fs, configStore, path);
 
-    expect(result.entries).toEqual([]);
-    expect(result.skipped).toHaveLength(1);
-    expect(result.skipped[0].file).toBe(path);
-    expect(result.skipped[0].reason).toContain("'servers'");
-    expect(result.skipped[0].reason).toContain("'mcpServers'");
+    expect(result.skipped).toEqual([]);
+    expect(result.entries.map((e) => e.name).sort()).toEqual(["filesystem", "github"]);
+    const filesystem = result.entries.find((e) => e.name === "filesystem")!;
+    expect(filesystem.value).toEqual({
+      transport: "stdio",
+      command: "npx",
+      args: ["-y", "@modelcontextprotocol/server-filesystem", "/Users/someone/Documents"],
+    });
+    const github = result.entries.find((e) => e.name === "github")!.value as {
+      transport: string;
+      command: string;
+      args: string[];
+      env: Record<string, string>;
+    };
+    expect(github).toMatchObject({
+      transport: "stdio",
+      command: "docker",
+      args: ["run", "-i", "--rm", "ghcr.io/github/github-mcp-server"],
+    });
+    expect(Object.keys(github.env)).toEqual(["GITHUB_PERSONAL_ACCESS_TOKEN"]);
+    expect(github.env.GITHUB_PERSONAL_ACCESS_TOKEN.startsWith("ghp_FAKE")).toBe(true);
   });
 
   it("pinned: the sibling diagnostic does not fire when the sibling holds nothing MCP-shaped", async () => {

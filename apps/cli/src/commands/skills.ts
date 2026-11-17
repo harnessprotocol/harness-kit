@@ -4,6 +4,7 @@ import { basename, relative, resolve } from "node:path";
 import { stringify } from "yaml";
 import {
   CURRENT_PROTOCOL_VERSION,
+  PERSONAL_PROFILE_PATH,
   TARGETS,
   applyFileTransaction,
   collectCapsuleFiles,
@@ -28,7 +29,9 @@ import { rollbackCommand } from "./rollback.js";
 import { registryRequest } from "../registry-client.js";
 import {
   buildReconciliationContext,
+  announcePersonalProfile,
   readOptional,
+  resolvePersonalProfile,
   relativeInside,
   summarizePlan,
   timestamp,
@@ -252,8 +255,16 @@ export async function skillsPromoteCommand(directory: string, flags: PromoteFlag
     return;
   }
   const cacheRoot = resolve(home, ".harness/cache/resources", digest);
-  const profilePath = resolve(flags.profile ?? (scope === "personal" ? resolve(home, ".harness/harness.yaml") : "harness.yaml"));
-  const profile = await loadPromotionProfile(profilePath, scope);
+  const profilePath = resolve(flags.profile ?? (scope === "personal" ? resolve(home, PERSONAL_PROFILE_PATH) : "harness.yaml"));
+  // Promoting into the default personal profile starts from the legacy file
+  // when only that exists; the write still goes to `profilePath`.
+  let profileReadPath = profilePath;
+  if (!flags.profile && scope === "personal") {
+    const source = await resolvePersonalProfile(home);
+    profileReadPath = source.readPath;
+    announcePersonalProfile(source);
+  }
+  const profile = await loadPromotionProfile(profileReadPath, scope);
   const skill: HarnessSkillRef = {
     name,
     source,

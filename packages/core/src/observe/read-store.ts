@@ -8,6 +8,7 @@ import type {
 } from "../surfaces/types.js";
 import type { HarnessResourceKind } from "../portability/types.js";
 import { isRecord } from "../utils/is-record.js";
+import { migrateLegacyMcpRoot } from "../compile/mcp-servers.js";
 import { reverseTranslateServer, type McpJsonEntry } from "../import/read-mcp.js";
 import { frontmatterName, frontmatterDescription } from "../import/read-skills.js";
 import { readCodexMarketplaces, readCodexMcp, readCodexPlugins } from "../codecs/toml-codex.js";
@@ -271,7 +272,9 @@ async function readJsonMcpServersStore(
   }
 
   const rootKey = store.shape?.rootKey ?? "mcpServers";
-  const rootValue = doc[rootKey];
+  // Leftover `mcpServers` in a `servers`-root file (older harness-kit wrote
+  // it) is read too; the root key wins on a name clash.
+  const rootValue = migrateLegacyMcpRoot(doc, rootKey).doc[rootKey];
 
   if (rootValue === undefined) {
     // Pinned behavior: an absent root key normally means "no MCP servers
@@ -320,7 +323,7 @@ async function readJsonMcpServersStore(
       });
       continue;
     }
-    const reversed = reverseTranslateServer(entry as McpJsonEntry);
+    const reversed = reverseTranslateServer(entry as McpJsonEntry, store.shape?.envRefDialect);
     if (!reversed) {
       skipped.push({
         file: absolutePath,

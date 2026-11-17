@@ -7,7 +7,7 @@ import { appendMarkerBlock, findMarkerBlock, replaceMarkerBlock } from "../../co
 import type { AdapterContext, AdapterCapabilities, FilePlan, HarnessAdapter, DriftReport } from "../adapter.js";
 import type { ImportedFragment } from "../../import/types.js";
 import { readInstructionFileAsOpaqueBlock } from "../../import/read-instructions.js";
-import { readMcpConfigFile } from "../../import/read-mcp.js";
+import { mcpReadOptions, readMcpConfigFile } from "../../import/read-mcp.js";
 import { detectInstructionDrift, toDriftReport } from "../../fix/detect.js";
 
 const TARGET = "copilot-vscode" as const;
@@ -164,6 +164,7 @@ async function importConfig(ctx: AdapterContext): Promise<ImportedFragment[]> {
     ctx.fs,
     ".vscode/mcp.json",
     "copilot",
+    mcpReadOptions(TARGET),
   );
   if (mcpServers) {
     fragments.push({

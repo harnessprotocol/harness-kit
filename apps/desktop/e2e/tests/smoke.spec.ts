@@ -19,8 +19,8 @@ test.describe("Navigation smoke tests", () => {
   test("Harness File page shows file path from mock", async ({ appPage }) => {
     await appPage.goto("/harness/file");
     await appPage.waitForLoadState("networkidle");
-    // Mock returns path ~/.claude/harness.yaml
-    await expect(appPage.getByText(/\.claude\/harness\.yaml/)).toBeVisible();
+    // Mock returns path ~/.harness/harness.yaml
+    await expect(appPage.getByText(/\.harness\/harness\.yaml/)).toBeVisible();
   });
 
   test("Plugins page renders without error", async ({ appPage }) => {

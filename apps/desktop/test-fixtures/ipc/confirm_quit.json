@@ -1,0 +1,10 @@
+{
+  "command": "confirm_quit",
+  "calls": [
+    {
+      "fn": "confirmQuit",
+      "args": [],
+      "payload": null
+    }
+  ]
+}

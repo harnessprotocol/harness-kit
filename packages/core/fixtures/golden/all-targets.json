@@ -39,7 +39,7 @@
       "platform": "cursor",
       "slot": "mcp-servers",
       "action": "create",
-      "content": "{\n  \"mcpServers\": {\n    \"postgres\": {\n      \"type\": \"stdio\",\n      \"command\": \"uvx\",\n      \"args\": [\n        \"mcp-server-postgres\",\n        \"${DB_CONNECTION_STRING}\"\n      ]\n    }\n  }\n}\n"
+      "content": "{\n  \"mcpServers\": {\n    \"postgres\": {\n      \"type\": \"stdio\",\n      \"command\": \"uvx\",\n      \"args\": [\n        \"mcp-server-postgres\",\n        \"${env:DB_CONNECTION_STRING}\"\n      ]\n    }\n  }\n}\n"
     },
     {
       "path": ".cursor/rules/behavioral.mdc",
@@ -95,7 +95,7 @@
       "platform": "copilot-vscode",
       "slot": "mcp-servers",
       "action": "create",
-      "content": "{\n  \"mcpServers\": {\n    \"postgres\": {\n      \"type\": \"stdio\",\n      \"command\": \"uvx\",\n      \"args\": [\n        \"mcp-server-postgres\",\n        \"${DB_CONNECTION_STRING}\"\n      ]\n    }\n  }\n}\n"
+      "content": "{\n  \"servers\": {\n    \"postgres\": {\n      \"type\": \"stdio\",\n      \"command\": \"uvx\",\n      \"args\": [\n        \"mcp-server-postgres\",\n        \"${env:DB_CONNECTION_STRING}\"\n      ]\n    }\n  }\n}\n"
     },
     {
       "path": "AGENT.md",

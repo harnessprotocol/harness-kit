@@ -75,8 +75,10 @@ Drift scans when you open the tab, not before.
 
 ## Which `harness.yaml`
 
-There is one personal profile, `~/.claude/harness.yaml`. Profile, Compile, Drift and
-first-run setup all read that same file. A project can also commit its own
+There is one personal profile, `~/.harness/harness.yaml`. Profile, Compile, Drift,
+first-run setup and the `harness-kit` CLI all use that same file. If it is absent,
+the app reads an older `~/.claude/harness.yaml` as a fallback and tells you so; saving
+always writes the new path and leaves the old file alone. A project can also commit its own
 `harness.yaml` as the team baseline. With a project chosen in the title bar, Profile and
 Compile show and compile that project's file, and Profile shows it read-only. Drift
 compares your machine against the personal file and, when a project is chosen, the

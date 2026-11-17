@@ -1,4 +1,5 @@
 import type { HarnessResourceKind } from "../portability/types.js";
+import type { EnvRefDialect } from "../compile/env-refs.js";
 import type { NativePluginInstaller } from "../plugins/installer.js";
 
 /**
@@ -116,6 +117,8 @@ export interface ConfigStore {
   shape?: {
     /** Root object key holding the server map (default "mcpServers"). */
     rootKey?: string;
+    /** Env-reference spelling the tool resolves (default "plain": `${NAME}`; "vscode": `${env:NAME}`). */
+    envRefDialect?: EnvRefDialect;
     /**
      * The path is a directory of instruction files (*.md/*.mdc), not a single
      * file — e.g. Cursor's .cursor/rules. Executor support lands separately.

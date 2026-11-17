@@ -6,6 +6,8 @@ import {
   capabilityForResource,
   computeFileHash,
   importProjectValidated,
+  LEGACY_PERSONAL_PROFILE_PATH,
+  PERSONAL_PROFILE_PATH,
   parseHarness,
   profileToResources,
   readPortabilityState,
@@ -27,6 +29,7 @@ import type {
   PortabilityState,
 } from "@harness-kit/core";
 import { TauriFsProvider } from "../../lib/harness-fs";
+import { readHarnessFile } from "../../lib/tauri";
 
 const TARGETS: SurfaceId[] = [...COMPILE_SURFACE_IDS];
 
@@ -45,15 +48,9 @@ export interface DesktopPortabilitySnapshot {
   rollout: { status: "not-enrolled" | "current" | "pending" | "paused" | "rolled-back"; detail: string };
 }
 
-async function readProfile(
-  fs: TauriFsProvider,
-  path: string,
-  scope: HarnessScope,
-): Promise<LayeredHarnessProfile | null> {
-  const fullPath = fs.joinPath(fs.cwd(), path);
-  if (!(await fs.exists(fullPath))) return null;
+function parseProfile(text: string, fullPath: string, scope: HarnessScope): LayeredHarnessProfile {
   try {
-    const { config } = parseHarness(await fs.readFile(fullPath));
+    const { config } = parseHarness(text);
     const validation = validateHarness(config);
     if (!validation.valid) {
       throw new Error(`${fullPath} is invalid: ${validation.errors.map((error) => `${error.path} ${error.message}`).join("; ")}`);
@@ -65,6 +62,33 @@ async function readProfile(
   } catch (error) {
     throw new Error(`could not read ${scope} portability profile: ${error instanceof Error ? error.message : String(error)}`);
   }
+}
+
+async function readProfile(
+  fs: TauriFsProvider,
+  path: string,
+  scope: HarnessScope,
+): Promise<LayeredHarnessProfile | null> {
+  const fullPath = fs.joinPath(fs.cwd(), path);
+  if (!(await fs.exists(fullPath))) return null;
+  try {
+    return parseProfile(await fs.readFile(fullPath), fullPath, scope);
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith("could not read ")) throw error;
+    throw new Error(`could not read ${scope} portability profile: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+/**
+ * The personal profile, read through the Rust `read_harness_file` command (the
+ * reader Profile uses, with its legacy fallback). The webview fs scope does not
+ * cover ~/.harness/harness.yaml, so an fs read would report it absent.
+ */
+async function readPersonalProfile(fs: TauriFsProvider): Promise<LayeredHarnessProfile | null> {
+  const result = await readHarnessFile();
+  if (!result.found || result.content === null) return null;
+  const relative = result.legacy_claude_file ? LEGACY_PERSONAL_PROFILE_PATH : PERSONAL_PROFILE_PATH;
+  return parseProfile(result.content, fs.joinPath(fs.cwd(), relative), "personal");
 }
 
 function normalizeCurrent(resources: HarnessResource[], base: HarnessResource[]): HarnessResource[] {
@@ -148,7 +172,7 @@ export async function buildDesktopPortabilitySnapshot(
   installationId = "desktop-unregistered",
 ): Promise<DesktopPortabilitySnapshot> {
   const homeFs = new TauriFsProvider(home);
-  const personal = await readProfile(homeFs, ".harness/harness.yaml", "personal");
+  const personal = await readPersonalProfile(homeFs);
   const targetFs = project ? new TauriFsProvider(project) : homeFs;
   const projectProfile = project ? await readProfile(targetFs, "harness.yaml", "project") : null;
   const profiles = [personal, projectProfile].filter((profile): profile is LayeredHarnessProfile => Boolean(profile));
