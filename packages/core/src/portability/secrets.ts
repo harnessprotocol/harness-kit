@@ -16,12 +16,14 @@ export interface SecretSanitizationResult {
 // The token boundary is "start/end or a non-alphanumeric" — `\b` treats `_`
 // as a word character, so it would miss MY_KEY.
 const SENSITIVE_KEY = /(?:authorization|token|api[-_]?key|access[-_]?key|client[-_]?secret|password|passwd|private[-_]?key|secret|(?:^|[^a-z0-9])(?:key|pat|auth|credentials?)(?:[^a-z0-9]|$))/i;
-const REFERENCE = /^(?:\$[A-Za-z_][A-Za-z0-9_]*|\$\{[A-Za-z_][A-Za-z0-9_]*\}|env:[A-Za-z_][A-Za-z0-9_]*|secret:\/\/[^\s]+)$/;
+/** Shared by capsule.ts and native-extensions.ts. Accepts `$X`, `${X}`, `${env:X}`, `env:X`, `secret://…`. */
+export const SECRET_REFERENCE = /^(?:\$[A-Za-z_][A-Za-z0-9_]*|\$\{(?:env:)?[A-Za-z_][A-Za-z0-9_]*\}|env:[A-Za-z_][A-Za-z0-9_]*|secret:\/\/[^\s]+)$/;
+const REFERENCE = SECRET_REFERENCE;
 const CREDENTIAL_VALUE = /(?:-----BEGIN [A-Z ]*PRIVATE KEY-----|\bBearer\s+[A-Za-z0-9._~+/=-]{8,}|\bgh[pousr]_[A-Za-z0-9]{20,}|\bsk-[A-Za-z0-9_-]{16,}|\bAKIA[A-Z0-9]{16}\b|:\/\/[^\s/:]+:[^\s/@]+@|\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b|\bxox[baprs]-[A-Za-z0-9-]{10,})/;
 const SENSITIVE_FLAG = /^--?(?:authorization|token|auth[-_]?token|api[-_]?key|access[-_]?token|access[-_]?key|client[-_]?secret|password|passwd|private[-_]?key|secret)$/i;
 const INLINE_SENSITIVE_FLAG = /^(--?(?:authorization|token|auth[-_]?token|api[-_]?key|access[-_]?token|access[-_]?key|client[-_]?secret|password|passwd|private[-_]?key|secret)=)(.+)$/i;
 
-/** Is this value an env/secret reference (`$X`, `${X}`, `env:X`, `secret://…`) rather than secret material? */
+/** Is this value an env/secret reference (`$X`, `${X}`, `${env:X}`, `env:X`, `secret://…`) rather than secret material? */
 export function isSecretReference(value: string): boolean {
   return REFERENCE.test(value);
 }

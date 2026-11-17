@@ -320,7 +320,7 @@ async function readJsonMcpServersStore(
       });
       continue;
     }
-    const reversed = reverseTranslateServer(entry as McpJsonEntry);
+    const reversed = reverseTranslateServer(entry as McpJsonEntry, store.shape?.envRefDialect);
     if (!reversed) {
       skipped.push({
         file: absolutePath,

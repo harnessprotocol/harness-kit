@@ -1,6 +1,8 @@
 import type { FsProvider } from "../fs-provider.js";
 import type { AdapterId } from "../adapters/adapter.js";
-import type { McpServer } from "../types.js";
+import { getTarget } from "../compile/targets.js";
+import type { McpServer, SurfaceId } from "../types.js";
+import { fromDialect, type EnvRefDialect } from "../compile/env-refs.js";
 import { readJsonOrDefault } from "../utils/read-json.js";
 import type { ImportedMcpServers, Provenance } from "./types.js";
 
@@ -24,7 +26,13 @@ const NETWORK_TRANSPORTS = new Set(["http", "sse", "ws"]);
  * Exported for reuse by the read-side store executors (observe/read-store.ts)
  * so both paths translate the common shapes identically.
  */
-export function reverseTranslateServer(entry: McpJsonEntry): McpServer | null {
+export function reverseTranslateServer(
+  entry: McpJsonEntry,
+  dialect: EnvRefDialect = "plain",
+): McpServer | null {
+  const d = (v: string) => (dialect === "vscode" ? fromDialect(v) : v);
+  const dMap = (m: Record<string, string>) =>
+    Object.fromEntries(Object.entries(m).map(([k, v]) => [k, typeof v === "string" ? d(v) : v]));
   // Precedence: an explicit `type` wins. With no `type`, `command` means
   // stdio and a `url` without a `command` means a remote (http) server —
   // Cursor and Claude Code both write url entries with no `type`.
@@ -35,8 +43,8 @@ export function reverseTranslateServer(entry: McpJsonEntry): McpServer | null {
     const server: McpServer = {
       transport: "stdio",
       command: entry.command,
-      ...(entry.args ? { args: entry.args } : {}),
-      ...(entry.env ? { env: entry.env } : {}),
+      ...(entry.args ? { args: entry.args.map((a) => (typeof a === "string" ? d(a) : a)) } : {}),
+      ...(entry.env ? { env: dMap(entry.env) } : {}),
     };
     return server;
   }
@@ -46,13 +54,22 @@ export function reverseTranslateServer(entry: McpJsonEntry): McpServer | null {
   if (entry.url) {
     const server: McpServer = {
       transport: NETWORK_TRANSPORTS.has(type) ? (type as "http" | "sse" | "ws") : "http",
-      url: entry.url,
-      ...(entry.headers ? { headers: entry.headers } : {}),
+      url: d(entry.url),
+      ...(entry.headers ? { headers: dMap(entry.headers) } : {}),
     };
     return server;
   }
 
   return null;
+}
+
+/** Root key and env-ref dialect for a compile target's MCP file, from target metadata. */
+export function mcpReadOptions(target: SurfaceId): { rootKey?: string; envRefDialect?: EnvRefDialect } {
+  const t = getTarget(target);
+  return {
+    ...(t.mcpRootKey ? { rootKey: t.mcpRootKey } : {}),
+    ...(t.envRefDialect ? { envRefDialect: t.envRefDialect } : {}),
+  };
 }
 
 /**
@@ -69,6 +86,7 @@ export async function readMcpConfigFile(
   fs: FsProvider,
   relPath: string,
   adapter: AdapterId,
+  options: { rootKey?: string; envRefDialect?: EnvRefDialect } = {},
 ): Promise<{ imported: ImportedMcpServers | null; skipped: Array<{ file: string; reason: string }> }> {
   const fullPath = fs.joinPath(fs.cwd(), relPath);
   const { data, existed } = await readJsonOrDefault<Record<string, unknown>>(fs, fullPath, {});
@@ -78,7 +96,7 @@ export async function readMcpConfigFile(
     return { imported: null, skipped };
   }
 
-  const mcpServers = data.mcpServers as Record<string, McpJsonEntry> | undefined;
+  const mcpServers = data[options.rootKey ?? "mcpServers"] as Record<string, McpJsonEntry> | undefined;
   if (!mcpServers || Object.keys(mcpServers).length === 0) {
     return { imported: null, skipped };
   }
@@ -86,7 +104,7 @@ export async function readMcpConfigFile(
   const servers: Record<string, Provenance<McpServer>> = {};
 
   for (const [name, entry] of Object.entries(mcpServers)) {
-    const reversed = reverseTranslateServer(entry);
+    const reversed = reverseTranslateServer(entry, options.envRefDialect);
     if (!reversed) {
       skipped.push({
         file: relPath,

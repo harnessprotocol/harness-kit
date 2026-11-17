@@ -7,6 +7,7 @@ import type {
 } from "../types.js";
 import { readJsonOrDefault } from "../utils/read-json.js";
 import { getTarget } from "./targets.js";
+import { toDialect, type EnvRefDialect } from "./env-refs.js";
 import { SECRET_PLACEHOLDER } from "../observe/normalize.js";
 
 export interface McpJsonEntry {
@@ -25,22 +26,25 @@ export interface McpJsonEntry {
  * portable shape verbatim would emit our internal `transport` key into the
  * user's config.
  */
-export function translateServer(server: McpServer): McpJsonEntry {
+export function translateServer(server: McpServer, dialect: EnvRefDialect = "plain"): McpJsonEntry {
+  const d = (v: string) => toDialect(v, dialect);
+  const dMap = (m: Record<string, string>) =>
+    Object.fromEntries(Object.entries(m).map(([k, v]) => [k, d(v)]));
   if (server.transport === "stdio") {
     const entry: McpJsonEntry = {
       type: "stdio",
       command: server.command,
     };
-    if (server.args) entry.args = server.args;
-    if (server.env) entry.env = server.env;
+    if (server.args) entry.args = server.args.map(d);
+    if (server.env) entry.env = dMap(server.env);
     return entry;
   }
   // Network transports (http, sse, ws)
   const entry: McpJsonEntry = {
     type: server.transport,
-    url: server.url,
+    url: d(server.url),
   };
-  if (server.headers) entry.headers = server.headers;
+  if (server.headers) entry.headers = dMap(server.headers);
   return entry;
 }
 
@@ -84,11 +88,8 @@ export async function compileMcpServers(
   const files: FileAction[] = [];
   const warnings: string[] = [];
 
-  // Translate all servers
-  const translated: Record<string, McpJsonEntry> = {};
   for (const [name, server] of Object.entries(mcpServers)) {
     assertNoSecretPlaceholder(name, server);
-    translated[name] = translateServer(server);
   }
 
   for (const target of targets) {
@@ -100,13 +101,19 @@ export async function compileMcpServers(
       continue;
     }
     const fullPath = fs.joinPath(cwd, filePath);
+    const rootKey = integration.mcpRootKey ?? "mcpServers";
+    const dialect = integration.envRefDialect ?? "plain";
+    const translated: Record<string, McpJsonEntry> = {};
+    for (const [name, server] of Object.entries(mcpServers)) {
+      translated[name] = translateServer(server, dialect);
+    }
 
     const { data: existing, existed } = await readJsonOrDefault<Record<string, Record<string, unknown>>>(
       fs, fullPath, {},
     );
 
     const existingServers =
-      (existing.mcpServers as Record<string, unknown> | undefined) ?? {};
+      (existing[rootKey] as Record<string, unknown> | undefined) ?? {};
 
     // Merge: add new servers, keep existing ones
     const merged = { ...existingServers };
@@ -122,7 +129,7 @@ export async function compileMcpServers(
       serverCount++;
     }
 
-    const output = { ...existing, mcpServers: merged };
+    const output = { ...existing, [rootKey]: merged };
     const content = JSON.stringify(output, null, 2) + "\n";
 
     files.push({

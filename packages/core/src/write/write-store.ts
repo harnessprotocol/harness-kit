@@ -113,7 +113,7 @@ async function writeJsonMcpServers(
   // The portable shape keys transport as `transport`; the native file keys it
   // as `type`. Writing the portable value verbatim would leak an internal
   // field into the user's config.
-  else servers[edit.name] = translateMcpJson(edit.value as McpServer);
+  else servers[edit.name] = translateMcpJson(edit.value as McpServer, store.shape?.envRefDialect);
 
   return {
     supported: true,

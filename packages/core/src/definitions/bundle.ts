@@ -188,6 +188,12 @@ function validateStore(value: unknown, path: string): ConfigStore {
     if (value.shape.rootKey !== undefined) {
       shape.rootKey = requireString(value.shape.rootKey, `${path}.shape.rootKey`);
     }
+    if (value.shape.envRefDialect !== undefined) {
+      if (value.shape.envRefDialect !== "plain" && value.shape.envRefDialect !== "vscode") {
+        fail(`${path}.shape.envRefDialect must be "plain" or "vscode" (got ${describe(value.shape.envRefDialect)})`);
+      }
+      shape.envRefDialect = value.shape.envRefDialect;
+    }
     if (value.shape.directory !== undefined) {
       if (value.shape.directory !== true) {
         fail(`${path}.shape.directory must be true when present (got ${describe(value.shape.directory)})`);

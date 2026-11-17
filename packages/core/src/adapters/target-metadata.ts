@@ -1,3 +1,4 @@
+import type { EnvRefDialect } from "../compile/env-refs.js";
 import type { CompileSurfaceId, SurfaceId } from "../types.js";
 
 /**
@@ -26,6 +27,10 @@ export interface IntegrationTarget {
   /** Project-level MCP config file. null = global-only or not applicable. */
   mcpConfigFile: string | null;
   mcpConfigFormat: "json" | "toml" | null;
+  /** Root object key holding the server map in mcpConfigFile. Default "mcpServers". */
+  mcpRootKey?: string;
+  /** Env-reference spelling the tool resolves in mcpConfigFile. Default "plain" (`${NAME}`). */
+  envRefDialect?: EnvRefDialect;
   /**
    * Tool reads skillsDir natively — no special deploy step needed beyond writing the file.
    * For tools that resolve skills directly from the directory rather than via install commands.
@@ -55,6 +60,7 @@ export const TARGETS: IntegrationTarget[] = [
     instructionFile: ".cursor/rules/harness.mdc",
     mcpConfigFile: ".cursor/mcp.json",
     mcpConfigFormat: "json",
+    envRefDialect: "vscode",
   },
   {
     id: "copilot-vscode",
@@ -69,6 +75,8 @@ export const TARGETS: IntegrationTarget[] = [
     instructionFile: ".github/copilot-instructions.md",
     mcpConfigFile: ".vscode/mcp.json",
     mcpConfigFormat: "json",
+    mcpRootKey: "servers",
+    envRefDialect: "vscode",
   },
   {
     id: "codex",

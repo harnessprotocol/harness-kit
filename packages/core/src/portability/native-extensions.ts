@@ -4,6 +4,7 @@ import type { CompileSurfaceId, HarnessVendorConfig, SurfaceId } from "../types.
 import { computeFileHash } from "../compile/check.js";
 import { redactInventoryConfig } from "./inventory.js";
 import { digestValue } from "./resource-model.js";
+import { SECRET_REFERENCE } from "./secrets.js";
 import type { ReleaseDigest } from "./types.js";
 
 export interface NativeExtensionFile {
@@ -46,7 +47,6 @@ const EXTRA_SETTING_FILES: Partial<Record<SurfaceId, Array<{ path: string; omit:
 const NORMALIZED_MCP_TARGETS = new Set<SurfaceId>(["claude-code", "cursor", "copilot-vscode", "gemini", "junie"]);
 
 const CREDENTIAL_ASSIGNMENT = /(?:^|[\s,{])["']?(?:authorization|token|auth[-_]?token|api[-_]?key|access[-_]?token|access[-_]?key|client[-_]?secret|password|passwd|private[-_]?key|secret|cookie)["']?\s*[:=]\s*([^\n,}]+)/gim;
-const SECRET_REFERENCE = /^(?:\$[A-Za-z_][A-Za-z0-9_]*|\$\{[A-Za-z_][A-Za-z0-9_]*\}|env:[A-Za-z_][A-Za-z0-9_]*|secret:\/\/[^\s]+)$/;
 
 function safeRelative(path: string): boolean {
   return path.length > 0 && !path.startsWith("/") && !path.startsWith("~") && !path.includes("\\") &&

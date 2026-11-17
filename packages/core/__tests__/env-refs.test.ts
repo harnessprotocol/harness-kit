@@ -1,0 +1,151 @@
+import { describe, expect, it } from "vitest";
+import { fromDialect, toDialect } from "../src/compile/env-refs.js";
+import { compileMcpServers } from "../src/compile/mcp-servers.js";
+import { readMcpConfigFile } from "../src/import/read-mcp.js";
+import { normalizeResource } from "../src/observe/normalize.js";
+import type { ObservedResource } from "../src/observe/observe-surface.js";
+import { planStoreWrite } from "../src/write/write-store.js";
+import { isSecretReference, looksLikeSecret } from "../src/portability/secrets.js";
+import { SURFACES } from "../src/surfaces/registry.js";
+import type { HarnessConfig } from "../src/types.js";
+import { MockFsProvider } from "./helpers/mock-fs.js";
+
+const config: HarnessConfig = {
+  version: "1",
+  metadata: { name: "test", description: "test" },
+  "mcp-servers": {
+    github: {
+      transport: "stdio",
+      command: "npx",
+      args: ["--token=${GITHUB_TOKEN}", "plain"],
+      env: { GITHUB_TOKEN: "${GITHUB_TOKEN}", INPUT: "${input:x}" },
+    },
+    api: {
+      transport: "http",
+      url: "https://${HOST}/mcp",
+      headers: { Authorization: "Bearer ${API_TOKEN}", Already: "${env:ALREADY}" },
+    },
+  },
+};
+
+describe("toDialect / fromDialect", () => {
+  it("rewrites ${NAME} for vscode, leaves everything else alone", () => {
+    expect(toDialect("${A}", "vscode")).toBe("${env:A}");
+    expect(toDialect("x-${A}-${B_1}", "vscode")).toBe("x-${env:A}-${env:B_1}");
+    expect(toDialect("${env:A}", "vscode")).toBe("${env:A}");
+    expect(toDialect("${input:a}", "vscode")).toBe("${input:a}");
+    expect(toDialect("${workspaceFolder:x}", "vscode")).toBe("${workspaceFolder:x}");
+    expect(toDialect("$A", "vscode")).toBe("$A");
+    expect(toDialect("${A}", "plain")).toBe("${A}");
+  });
+  it("fromDialect rewrites ${env:NAME} to ${NAME}", () => {
+    expect(fromDialect("${env:A} and ${env:B}")).toBe("${A} and ${B}");
+    expect(fromDialect("${input:a}")).toBe("${input:a}");
+    expect(fromDialect("${A}")).toBe("${A}");
+  });
+});
+
+describe("compile emits per-target env references", () => {
+  it("cursor and copilot get ${env:NAME} in env, headers, args and url; claude-code stays verbatim", async () => {
+    const { files } = await compileMcpServers(config, ["claude-code", "cursor", "copilot-vscode"], new MockFsProvider());
+    const cc = JSON.parse(files.find((f) => f.platform === "claude-code")!.content).mcpServers;
+    expect(cc.github.env.GITHUB_TOKEN).toBe("${GITHUB_TOKEN}");
+    expect(cc.api.url).toBe("https://${HOST}/mcp");
+    expect(cc.api.headers.Already).toBe("${env:ALREADY}");
+
+    const cursor = JSON.parse(files.find((f) => f.platform === "cursor")!.content).mcpServers;
+    const vscode = JSON.parse(files.find((f) => f.platform === "copilot-vscode")!.content).servers;
+    for (const s of [cursor, vscode]) {
+      expect(s.github.env.GITHUB_TOKEN).toBe("${env:GITHUB_TOKEN}");
+      expect(s.github.env.INPUT).toBe("${input:x}");
+      expect(s.github.args[0]).toBe("--token=${env:GITHUB_TOKEN}");
+      expect(s.api.url).toBe("https://${env:HOST}/mcp");
+      expect(s.api.headers.Authorization).toBe("Bearer ${env:API_TOKEN}");
+      expect(s.api.headers.Already).toBe("${env:ALREADY}");
+    }
+  });
+
+  it("writes .vscode/mcp.json under servers and preserves an existing servers object", async () => {
+    const fs = new MockFsProvider({
+      "/project/.vscode/mcp.json": JSON.stringify({
+        inputs: [],
+        servers: { keep: { type: "stdio", command: "keep-cmd" } },
+      }),
+    });
+    const { files } = await compileMcpServers(config, ["copilot-vscode"], fs);
+    const out = JSON.parse(files[0]!.content);
+    expect(out.mcpServers).toBeUndefined();
+    expect(out.inputs).toEqual([]);
+    expect(Object.keys(out.servers).sort()).toEqual(["api", "github", "keep"]);
+  });
+});
+
+describe("write path matches compile byte for byte", () => {
+  it("planStoreWrite for the cursor and vscode stores equals compileMcpServers output", async () => {
+    const { files } = await compileMcpServers(
+      { ...config, "mcp-servers": { github: config["mcp-servers"]!.github! } },
+      ["cursor", "copilot-vscode"],
+      new MockFsProvider(),
+    );
+    for (const [surface, path] of [
+      ["cursor", ".cursor/mcp.json"],
+      ["copilot-vscode", ".vscode/mcp.json"],
+    ] as const) {
+      const store = SURFACES.find((s) => s.id === surface)!.stores.find((s) => s.kind === "mcp-server" && s.scope === "project")!;
+      const plan = await planStoreWrite(new MockFsProvider(), store, `/project/${path}`, {
+        kind: "mcp-server",
+        name: "github",
+        value: config["mcp-servers"]!.github!,
+      });
+      expect(plan.supported).toBe(true);
+      if (!plan.supported) continue;
+      expect(plan.changes[0]!.after).toBe(files.find((f) => f.platform === surface)!.content);
+    }
+  });
+});
+
+describe("import reads the dialect and root key", () => {
+  it("a Cursor file imports as ${NAME}", async () => {
+    const fs = new MockFsProvider({
+      "/project/.cursor/mcp.json": JSON.stringify({
+        mcpServers: { g: { command: "x", args: ["${env:A}"], env: { T: "${env:T}" } } },
+      }),
+    });
+    const { imported } = await readMcpConfigFile(fs, ".cursor/mcp.json", "cursor", { envRefDialect: "vscode" });
+    const v = imported!.servers.g!.value as { args: string[]; env: Record<string, string> };
+    expect(v.args).toEqual(["${A}"]);
+    expect(v.env.T).toBe("${T}");
+  });
+  it("reads servers from .vscode/mcp.json", async () => {
+    const fs = new MockFsProvider({
+      "/project/.vscode/mcp.json": JSON.stringify({
+        servers: { g: { type: "http", url: "https://${env:H}/m" } },
+      }),
+    });
+    const { imported } = await readMcpConfigFile(fs, ".vscode/mcp.json", "copilot", {
+      rootKey: "servers",
+      envRefDialect: "vscode",
+    });
+    expect((imported!.servers.g!.value as { url: string }).url).toBe("https://${H}/m");
+  });
+});
+
+describe("normalize and secret detection", () => {
+  const res = (value: unknown): ObservedResource => ({
+    surface: "cursor",
+    kind: "mcp-server",
+    scope: "project",
+    name: "g",
+    value,
+    provenance: { file: "/p/.cursor/mcp.json", formatId: "json-mcpservers" },
+  });
+  it("treats ${X} and ${env:X} as equal", () => {
+    const a = normalizeResource(res({ command: "x", args: ["--a=${X}"], env: { Y: "${Y}" }, url: undefined }));
+    const b = normalizeResource(res({ command: "x", args: ["--a=${env:X}"], env: { Y: "${env:Y}" } }));
+    expect(a.digest).toBe(b.digest);
+  });
+  it("looksLikeSecret treats ${env:X} as a reference", () => {
+    expect(isSecretReference("${env:API_KEY}")).toBe(true);
+    expect(looksLikeSecret("API_KEY", "${env:API_KEY}")).toBe(false);
+  });
+});

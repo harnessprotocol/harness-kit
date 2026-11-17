@@ -137,7 +137,7 @@ const SURFACE_TABLE: Record<SurfaceId, Omit<SurfaceDescriptor, "id">> = {
         scope: "project",
         formatId: "json-mcpservers",
         path: ".vscode/mcp.json",
-        shape: { rootKey: "servers" },
+        shape: { rootKey: "servers", envRefDialect: "vscode" },
       },
       { kind: "instructions", scope: "project", formatId: "markdown-instructions", path: ".github/copilot-instructions.md" },
       { kind: "skill", scope: "project", formatId: "skills-dir", path: ".github/skills" },
@@ -151,7 +151,7 @@ const SURFACE_TABLE: Record<SurfaceId, Omit<SurfaceDescriptor, "id">> = {
           linux: ".config/Code/User/mcp.json",
           win32: "AppData/Roaming/Code/User/mcp.json",
         },
-        shape: { rootKey: "servers" },
+        shape: { rootKey: "servers", envRefDialect: "vscode" },
         // VS Code profiles keep per-profile copies of User/ — inventory from
         // the default profile dir may be incomplete.
         needsConfirmation: true,
@@ -243,11 +243,11 @@ const SURFACE_TABLE: Record<SurfaceId, Omit<SurfaceDescriptor, "id">> = {
       { scope: "user", path: ".cursor" },
     ],
     stores: [
-      { kind: "mcp-server", scope: "user", formatId: "json-mcpservers", path: ".cursor/mcp.json" },
+      { kind: "mcp-server", scope: "user", formatId: "json-mcpservers", path: ".cursor/mcp.json", shape: { envRefDialect: "vscode" } },
       { kind: "skill", scope: "user", formatId: "skills-dir", path: ".cursor/skills" },
       { kind: "skill", scope: "user", formatId: "skills-dir", path: ".agents/skills" },
       { kind: "permissions", scope: "user", formatId: "json-generic", path: ".cursor/cli-config.json" },
-      { kind: "mcp-server", scope: "project", formatId: "json-mcpservers", path: ".cursor/mcp.json" },
+      { kind: "mcp-server", scope: "project", formatId: "json-mcpservers", path: ".cursor/mcp.json", shape: { envRefDialect: "vscode" } },
       {
         kind: "instructions",
         scope: "project",
