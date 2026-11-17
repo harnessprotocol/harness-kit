@@ -6,6 +6,7 @@ import {
   rollbackFileTransaction,
   sanitizeCapturedSecrets,
   uniqueVariableName,
+  variableBase,
   MAX_VARIABLE_NAME_LENGTH,
   assertCapabilityMatrixComplete,
   buildInventorySnapshot,
@@ -628,6 +629,44 @@ describe("capture secret sanitization", () => {
     const names = result.findings.map((f) => f.variable);
     expect(new Set(names).size).toBe(2);
     for (const n of names) expect(n.length).toBeLessThanOrEqual(MAX_VARIABLE_NAME_LENGTH + 2);
+  });
+
+  it("keeps the 120 ceiling when a clash reaches _10", () => {
+    const taken = new Set<string>();
+    const base = variableBase(["k".repeat(200)]);
+    const names = Array.from({ length: 10 }, () => uniqueVariableName(base, taken));
+    expect(names[9].endsWith("_10")).toBe(true);
+    for (const n of names) expect(n.length).toBeLessThanOrEqual(120);
+  });
+
+  it("keeps names stable when the captured config is re-sanitized with its env carried over", () => {
+    const capture = (env?: HarnessConfig["env"]): HarnessConfig => ({
+      version: "2",
+      metadata: { name: "captured", description: "Captured" },
+      ...(env ? { env } : {}),
+      "mcp-servers": {
+        a: { transport: "stdio", command: "s", env: { "my-api-key": "l1", my_api_key: "l2" } },
+      },
+    });
+    const first = sanitizeCapturedSecrets(capture());
+    const second = sanitizeCapturedSecrets(capture(first.config.env));
+    const third = sanitizeCapturedSecrets(capture(second.config.env));
+    expect(second.findings).toEqual(first.findings);
+    expect(third.findings).toEqual(first.findings);
+    expect(third.config.env).toEqual(first.config.env);
+    expect(third.config.env).toHaveLength(2);
+  });
+
+  it("still suffixes a different field whose name matches an existing declaration", () => {
+    const result = sanitizeCapturedSecrets({
+      version: "2",
+      metadata: { name: "captured", description: "Captured" },
+      env: [{ name: "HARNESS_MCP_SERVERS_A_ENV_API_KEY", description: "Mine", required: true, sensitive: true }],
+      "mcp-servers": {
+        a: { transport: "stdio", command: "s", env: { API_KEY: "literal" } },
+      },
+    });
+    expect(result.findings[0].variable).toBe("HARNESS_MCP_SERVERS_A_ENV_API_KEY_2");
   });
 
   it("uniqueVariableName numbers clashes and records each result", () => {

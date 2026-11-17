@@ -88,6 +88,23 @@ export function uniqueVariableName(base: string, taken: Set<string>): string {
   return variable;
 }
 
+const DECLARED_FIELD = /^Local credential for captured field (.+)\.$/;
+
+/**
+ * The variable for a captured field. A field already declared by an earlier
+ * capture (its declaration description names the path) keeps that variable, so
+ * re-capture is stable; any other field gets a name no declaration or earlier
+ * finding uses.
+ */
+function nameFor(path: string[], taken: Set<string>, known: Map<string, string>): string {
+  const existing = known.get(path.join("."));
+  if (existing !== undefined) {
+    taken.add(existing);
+    return existing;
+  }
+  return uniqueVariableName(variableBase(path), taken);
+}
+
 function isSecretPath(path: string[]): boolean {
   const key = path.at(-1) ?? "";
   return SENSITIVE_KEY.test(key) || path.some((segment) => segment.toLowerCase() === "headers");
@@ -98,17 +115,18 @@ function sanitizeValue(
   path: string[],
   findings: SecretSanitizationFinding[],
   taken: Set<string>,
+  known: Map<string, string>,
   forceSensitive = false,
 ): unknown {
   if (typeof value === "string") {
     const inline = value.match(INLINE_SENSITIVE_FLAG);
     if (inline && !REFERENCE.test(inline[2])) {
-      const variable = uniqueVariableName(variableBase(path), taken);
+      const variable = nameFor(path, taken, known);
       findings.push({ path: path.join("."), variable });
       return `${inline[1]}\${${variable}}`;
     }
     if ((forceSensitive || isSecretPath(path) || CREDENTIAL_VALUE.test(value)) && value.length > 0 && !REFERENCE.test(value)) {
-      const variable = uniqueVariableName(variableBase(path), taken);
+      const variable = nameFor(path, taken, known);
       findings.push({ path: path.join("."), variable });
       return `\${${variable}}`;
     }
@@ -119,6 +137,7 @@ function sanitizeValue(
       [...path, String(index)],
       findings,
       taken,
+      known,
       index > 0 && typeof value[index - 1] === "string" && SENSITIVE_FLAG.test(value[index - 1]),
     ));
   }
@@ -129,6 +148,7 @@ function sanitizeValue(
       object.sensitive !== false &&
       Object.hasOwn(object, "default");
     if (sensitiveEnvDeclaration) {
+      taken.add(object.name as string);
       findings.push({ path: [...path, "default"].join("."), variable: object.name as string });
     }
     return Object.fromEntries(
@@ -136,7 +156,7 @@ function sanitizeValue(
         .filter(([key]) => !(sensitiveEnvDeclaration && key === "default"))
         .map(([key, child]) => [
           key,
-          sanitizeValue(child, [...path, key], findings, taken),
+          sanitizeValue(child, [...path, key], findings, taken, known),
         ]),
     );
   }
@@ -146,8 +166,14 @@ function sanitizeValue(
 /** Replace captured credential values with local variable declarations. */
 export function sanitizeCapturedSecrets(config: HarnessConfig): SecretSanitizationResult {
   const findings: SecretSanitizationFinding[] = [];
+  // Names declared for a different field are taken; a field's own prior declaration is reused.
   const taken = new Set((config.env ?? []).map((entry) => entry.name));
-  const sanitized = sanitizeValue(config, [], findings, taken) as HarnessConfig;
+  const known = new Map<string, string>();
+  for (const entry of config.env ?? []) {
+    const field = entry.description?.match(DECLARED_FIELD)?.[1];
+    if (field !== undefined && !known.has(field)) known.set(field, entry.name);
+  }
+  const sanitized = sanitizeValue(config, [], findings, taken, known) as HarnessConfig;
   const declarations = new Map<string, EnvDeclaration>(
     (sanitized.env ?? []).map((entry) => [entry.name, entry]),
   );
