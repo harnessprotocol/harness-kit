@@ -9,12 +9,51 @@ export type EnvRefDialect = "plain" | "vscode";
 const PLAIN_REF = /\$\{([A-Za-z_][A-Za-z0-9_]*)\}/g;
 const VSCODE_REF = /\$\{env:([A-Za-z_][A-Za-z0-9_]*)\}/g;
 
-/** Canonical `${NAME}` -> the target's dialect. `${env:X}`, `${input:x}` and `$X` are untouched. */
+/**
+ * VS Code and Cursor predefined variables. `${workspaceFolder}` is a variable
+ * the editor resolves itself, not an environment variable, so it is never
+ * rewritten to `${env:workspaceFolder}`.
+ */
+export const VSCODE_PREDEFINED_VARIABLES: ReadonlySet<string> = new Set([
+  "workspaceFolder",
+  "workspaceFolderBasename",
+  "userHome",
+  "cwd",
+  "pathSeparator",
+  "/",
+  "file",
+  "fileWorkspaceFolder",
+  "relativeFile",
+  "relativeFileDirname",
+  "fileBasename",
+  "fileBasenameNoExtension",
+  "fileExtname",
+  "fileDirname",
+  "fileDirnameBasename",
+  "lineNumber",
+  "selectedText",
+  "execPath",
+  "defaultBuildTask",
+]);
+
+/**
+ * Canonical `${NAME}` -> the target's dialect. `${env:X}`, `${input:x}`, `$X`
+ * and VS Code predefined variables are untouched.
+ */
 export function toDialect(value: string, dialect: EnvRefDialect): string {
-  return dialect === "vscode" ? value.replace(PLAIN_REF, "${env:$1}") : value;
+  if (dialect !== "vscode") return value;
+  return value.replace(PLAIN_REF, (match, name: string) =>
+    VSCODE_PREDEFINED_VARIABLES.has(name) ? match : `\${env:${name}}`,
+  );
 }
 
-/** A target's `${env:NAME}` -> canonical `${NAME}`. */
+/**
+ * A target's `${env:NAME}` -> canonical `${NAME}`. `${env:workspaceFolder}` is a
+ * real environment variable that happens to share a predefined name, and stays
+ * as written so it is never equated with the predefined `${workspaceFolder}`.
+ */
 export function fromDialect(value: string): string {
-  return value.replace(VSCODE_REF, "${$1}");
+  return value.replace(VSCODE_REF, (match, name: string) =>
+    VSCODE_PREDEFINED_VARIABLES.has(name) ? match : `\${${name}}`,
+  );
 }

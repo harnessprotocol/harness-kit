@@ -88,7 +88,26 @@ export function uniqueVariableName(base: string, taken: Set<string>): string {
   return variable;
 }
 
-const DECLARED_FIELD = /^Local credential for captured field (.+)\.$/;
+const DECLARATION_PREFIX = "Local credential for captured field ";
+const DECLARATION_SUFFIX = ".";
+
+/** The description a capture writes on a variable it declares; `declaredField` reads it back. */
+function declarationDescription(path: string): string {
+  return `${DECLARATION_PREFIX}${path}${DECLARATION_SUFFIX}`;
+}
+
+/** The captured field path a declaration description names, or undefined for any other text. */
+function declaredField(description: string | undefined): string | undefined {
+  if (
+    description === undefined ||
+    !description.startsWith(DECLARATION_PREFIX) ||
+    !description.endsWith(DECLARATION_SUFFIX) ||
+    description.length <= DECLARATION_PREFIX.length + DECLARATION_SUFFIX.length
+  ) {
+    return undefined;
+  }
+  return description.slice(DECLARATION_PREFIX.length, description.length - DECLARATION_SUFFIX.length);
+}
 
 /**
  * The variable for a captured field. A field already declared by an earlier
@@ -170,7 +189,7 @@ export function sanitizeCapturedSecrets(config: HarnessConfig): SecretSanitizati
   const taken = new Set((config.env ?? []).map((entry) => entry.name));
   const known = new Map<string, string>();
   for (const entry of config.env ?? []) {
-    const field = entry.description?.match(DECLARED_FIELD)?.[1];
+    const field = declaredField(entry.description);
     if (field !== undefined && !known.has(field)) known.set(field, entry.name);
   }
   const sanitized = sanitizeValue(config, [], findings, taken, known) as HarnessConfig;
@@ -181,7 +200,7 @@ export function sanitizeCapturedSecrets(config: HarnessConfig): SecretSanitizati
     if (!declarations.has(finding.variable)) {
       declarations.set(finding.variable, {
         name: finding.variable,
-        description: `Local credential for captured field ${finding.path}.`,
+        description: declarationDescription(finding.path),
         required: true,
         sensitive: true,
       });

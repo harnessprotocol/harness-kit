@@ -38,10 +38,63 @@ describe("toDialect / fromDialect", () => {
     expect(toDialect("$A", "vscode")).toBe("$A");
     expect(toDialect("${A}", "plain")).toBe("${A}");
   });
+  it("leaves VS Code predefined variables alone", () => {
+    for (const name of ["workspaceFolder", "userHome", "cwd", "file", "relativeFile", "defaultBuildTask"]) {
+      expect(toDialect(`\${${name}}`, "vscode")).toBe(`\${${name}}`);
+    }
+    expect(toDialect("${workspaceFolder}/x ${TOKEN}", "vscode")).toBe("${workspaceFolder}/x ${env:TOKEN}");
+  });
   it("fromDialect rewrites ${env:NAME} to ${NAME}", () => {
     expect(fromDialect("${env:A} and ${env:B}")).toBe("${A} and ${B}");
     expect(fromDialect("${input:a}")).toBe("${input:a}");
     expect(fromDialect("${A}")).toBe("${A}");
+  });
+});
+
+describe("VS Code predefined variables survive compile and import", () => {
+  const withPredefined: HarnessConfig = {
+    version: "1",
+    metadata: { name: "t", description: "t" },
+    "mcp-servers": {
+      fs: { transport: "stdio", command: "x", args: ["${workspaceFolder}", "${userHome}/y", "--k=${KEY}"] },
+    },
+  };
+
+  it("compile to cursor and vscode keeps them and still rewrites real env refs", async () => {
+    const { files } = await compileMcpServers(withPredefined, ["cursor", "copilot-vscode"], new MockFsProvider());
+    const cursor = JSON.parse(files.find((f) => f.platform === "cursor")!.content).mcpServers;
+    const vscode = JSON.parse(files.find((f) => f.platform === "copilot-vscode")!.content).servers;
+    for (const s of [cursor, vscode]) {
+      expect(s.fs.args).toEqual(["${workspaceFolder}", "${userHome}/y", "--k=${env:KEY}"]);
+    }
+  });
+
+  it("import reads them back unchanged", async () => {
+    const fs = new MockFsProvider({
+      "/project/.cursor/mcp.json": JSON.stringify({
+        mcpServers: { fs: { command: "x", args: ["${workspaceFolder}", "${userHome}/y", "--k=${env:KEY}"] } },
+      }),
+    });
+    const { imported } = await readMcpConfigFile(fs, ".cursor/mcp.json", "cursor", { envRefDialect: "vscode" });
+    expect((imported!.servers.fs!.value as { args: string[] }).args).toEqual([
+      "${workspaceFolder}",
+      "${userHome}/y",
+      "--k=${KEY}",
+    ]);
+  });
+
+  it("normalize does not equate a predefined variable with an env ref of the same name", () => {
+    const res = (arg: string): ObservedResource => ({
+      surface: "cursor",
+      kind: "mcp-server",
+      scope: "project",
+      name: "g",
+      value: { command: "x", args: [arg] },
+      provenance: { file: "/p/.cursor/mcp.json", formatId: "json-mcpservers" },
+    });
+    expect(normalizeResource(res("${workspaceFolder}")).digest).not.toBe(
+      normalizeResource(res("${env:workspaceFolder}")).digest,
+    );
   });
 });
 

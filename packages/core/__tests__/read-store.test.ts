@@ -117,8 +117,27 @@ describe("readStore: json-mcpservers", () => {
 
     const result = await readStore(fs, configStore, path);
 
-    expect(result.entries.length).toBeGreaterThan(0);
     expect(result.skipped).toEqual([]);
+    expect(result.entries.map((e) => e.name).sort()).toEqual(["filesystem", "github"]);
+    const filesystem = result.entries.find((e) => e.name === "filesystem")!;
+    expect(filesystem.value).toEqual({
+      transport: "stdio",
+      command: "npx",
+      args: ["-y", "@modelcontextprotocol/server-filesystem", "/Users/someone/Documents"],
+    });
+    const github = result.entries.find((e) => e.name === "github")!.value as {
+      transport: string;
+      command: string;
+      args: string[];
+      env: Record<string, string>;
+    };
+    expect(github).toMatchObject({
+      transport: "stdio",
+      command: "docker",
+      args: ["run", "-i", "--rm", "ghcr.io/github/github-mcp-server"],
+    });
+    expect(Object.keys(github.env)).toEqual(["GITHUB_PERSONAL_ACCESS_TOKEN"]);
+    expect(github.env.GITHUB_PERSONAL_ACCESS_TOKEN.startsWith("ghp_FAKE")).toBe(true);
   });
 
   it("pinned: the sibling diagnostic does not fire when the sibling holds nothing MCP-shaped", async () => {
