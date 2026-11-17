@@ -27,7 +27,7 @@ use serde::Serialize;
 use tokio::io::{AsyncRead, AsyncReadExt};
 use tokio::process::Command;
 
-use super::fs_scope::granted_root_for;
+use super::fs_scope::is_exact_granted_root;
 
 const ALLOWED_BINARIES: [&str; 3] = ["claude", "copilot", "codex"];
 const RUN_TIMEOUT: Duration = Duration::from_secs(180);
@@ -73,19 +73,19 @@ fn check_repo(source: &str) -> Result<(), String> {
 
 /// `<id>` followed by nothing, or by one optional `flag`
 /// (an empty `values` list means the flag takes none).
-fn check_id_and_flag(rest: &[&str], flag: &str, values: &[&str]) -> Result<(), String> {
+fn check_id_and_flag(rest: &[&str], flag: Option<&str>, values: &[&str]) -> Result<(), String> {
     let Some((id, tail)) = rest.split_first() else {
         return Err("missing plugin id".into());
     };
     check_plugin_id(id)?;
     match (tail, values.is_empty()) {
         ([], _) => Ok(()),
-        ([f], true) if *f == flag => Ok(()),
-        ([f, v], false) if *f == flag => {
+        ([f], true) if Some(*f) == flag => Ok(()),
+        ([f, v], false) if Some(*f) == flag => {
             if values.contains(v) {
                 Ok(())
             } else {
-                Err(format!("{flag} value {v:?} is not one of {}", values.join("|")))
+                Err(format!("{f} value {v:?} is not one of {}", values.join("|")))
             }
         }
         (extra, _) => Err(format!("unexpected argument {:?}", extra[0])),
@@ -100,7 +100,7 @@ fn validate_invocation(command: &str, args: &[String]) -> Result<(), String> {
     match command {
         "claude" => match a.as_slice() {
             ["plugin", "install" | "uninstall", rest @ ..] => {
-                check_id_and_flag(rest, "--scope", &["user", "project", "local"])
+                check_id_and_flag(rest, Some("--scope"), &["user", "project", "local"])
             }
             ["plugin", "marketplace", "add", rest @ ..] => match rest {
                 [] => Err("missing marketplace source".into()),
@@ -111,12 +111,12 @@ fn validate_invocation(command: &str, args: &[String]) -> Result<(), String> {
             _ => Err("claude is only allowed to run `plugin ...`".into()),
         },
         "copilot" => match a.as_slice() {
-            ["plugin", "install" | "uninstall", rest @ ..] => check_id_and_flag(rest, "", &[]),
+            ["plugin", "install" | "uninstall", rest @ ..] => check_id_and_flag(rest, None, &[]),
             ["plugin", verb, ..] => Err(format!("copilot plugin {verb:?} is not allowed")),
             _ => Err("copilot is only allowed to run `plugin ...`".into()),
         },
         "codex" => match a.as_slice() {
-            ["plugin", "add" | "remove", rest @ ..] => check_id_and_flag(rest, "--json", &[]),
+            ["plugin", "add" | "remove", rest @ ..] => check_id_and_flag(rest, Some("--json"), &[]),
             ["plugin", verb, ..] => Err(format!("codex plugin {verb:?} is not allowed")),
             _ => Err("codex is only allowed to run `plugin ...`".into()),
         },
@@ -232,13 +232,14 @@ async fn run_with(
     }
 }
 
-/// A requested working directory must be a project root the user granted (or
-/// inside one). Returns the canonical path to run in.
+/// A requested working directory must BE a project root the user granted, not
+/// a subdirectory of one (`--scope project` writes into `<cwd>/.claude/`).
+/// Returns the canonical path to run in.
 fn check_cwd(cwd: &str) -> Result<PathBuf, String> {
     let canonical = Path::new(cwd)
         .canonicalize()
         .map_err(|_| format!("working directory {cwd:?} does not exist"))?;
-    if !canonical.is_dir() || granted_root_for(&canonical).is_none() {
+    if !canonical.is_dir() || !is_exact_granted_root(&canonical) {
         return Err(format!("working directory {cwd:?} is not a granted project root"));
     }
     Ok(canonical)
@@ -348,6 +349,7 @@ mod tests {
         refused("claude", &["plugin", "install", "a@b", "extra"], "extra");
         refused("claude", &["plugin", "install", "a@b", "--scope"], "--scope");
         refused("copilot", &["plugin", "install", "a@b", "extra"], "extra");
+        refused("copilot", &["plugin", "install", "a@b", ""], "\"\"");
         refused("codex", &["plugin", "add", "a@b", "--json", "x"], "--json");
         refused("claude", &["plugin", "marketplace", "add", "a/b", "extra"], "extra");
         refused("claude", &["plugin", "marketplace", "add"], "missing");
@@ -451,6 +453,21 @@ mod tests {
             let got = run_plugin_installer("claude".into(), args(), Some(cwd)).await;
             let Ok(RunResult::SpawnFailed { reason }) = got else { panic!("{got:?}") };
             assert!(reason.starts_with("refused:") && reason.contains("granted"), "{reason}");
+        }
+
+        #[test]
+        fn subdirectory_of_a_granted_root_is_refused_but_a_nested_grant_is_accepted() {
+            let root = tempfile::tempdir().unwrap();
+            let canonical = root.path().canonicalize().unwrap();
+            crate::commands::fs_scope::remember_granted_root(canonical.clone());
+            let sub = canonical.join("a").join("b");
+            std::fs::create_dir_all(&sub).unwrap();
+            let err = check_cwd(&sub.to_string_lossy()).unwrap_err();
+            assert!(err.contains("not a granted project root"), "{err}");
+            // A subdirectory the user granted on its own is a root too.
+            crate::commands::fs_scope::remember_granted_root(sub.clone());
+            assert_eq!(check_cwd(&sub.to_string_lossy()), Ok(sub));
+            assert_eq!(check_cwd(&canonical.to_string_lossy()), Ok(canonical));
         }
 
         #[test]
