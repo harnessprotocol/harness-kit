@@ -250,7 +250,8 @@ export type {
 } from "./plugins/installer.js";
 export { planNativePluginAction } from "./plugins/installer.js";
 export type { UnpackPlan } from "./plugins/unpack.js";
-export { planUnpackAction } from "./plugins/unpack.js";
+export { planUnpackAction, catalogSkillContent } from "./plugins/unpack.js";
+export type CatalogSkillFile = { dir: string; content: string };
 export type {
   BrokerPlan,
   ExecuteOptions,

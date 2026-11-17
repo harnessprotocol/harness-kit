@@ -175,6 +175,13 @@ export interface ExecuteOptions {
   /** Source surface to copy plugin contents FROM, for the unpack driver. */
   sourceSurface?: SurfaceId;
   homeRoot?: string;
+  /**
+   * Full SKILL.md text per skill directory, for the unpack driver. When
+   * present it is the source: no source surface or on-disk plugin cache is
+   * needed, so a caller that holds the catalog's content (the desktop) can
+   * install without Claude Code being present.
+   */
+  catalogSkills?: ReadonlyArray<{ dir: string; content: string }>;
 }
 
 /**
