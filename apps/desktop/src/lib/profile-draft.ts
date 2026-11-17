@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { errorDetails } from "./error-details";
 import { saveProfileText } from "./profile-save";
-import { setUnsavedDrafts } from "./tauri";
+import { readHarnessFile, setUnsavedDrafts } from "./tauri";
 import { LEGACY_CLAUDE_PROFILE_DISPLAY, PERSONAL_PROFILE_DISPLAY } from "./legacy-harness-notice";
 
 /**
@@ -135,7 +135,22 @@ export async function saveAllDrafts(): Promise<SaveAllResult> {
   const result: SaveAllResult = { saved: [], failed: [] };
   for (const [path, draft] of [...drafts]) {
     try {
-      await saveProfileText(path, draft.buffer, draft.synced);
+      // reconcileStored moved a legacy ~/.claude/harness.yaml draft to the
+      // personal key, so `synced` may be legacy text. The new file does not
+      // exist then, and a digest of an absent file reads as "changed on disk".
+      let loadedPath: string | null = path;
+      if (path === PERSONAL_PROFILE_DISPLAY) {
+        const current = await readHarnessFile();
+        if (current.legacy_claude_file) {
+          if (current.content !== draft.synced) {
+            throw new Error(
+              `${LEGACY_CLAUDE_PROFILE_DISPLAY} changed since this draft was made. Open Profile to review it before saving.`,
+            );
+          }
+          loadedPath = null;
+        }
+      }
+      await saveProfileText(loadedPath, draft.buffer, draft.synced);
       clearProfileDraft(path);
       result.saved.push(path);
     } catch (e) {

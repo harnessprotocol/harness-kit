@@ -88,7 +88,22 @@ describe("DriftPage", () => {
     mockValidateHarness.mockReturnValue({ valid: true });
     mockGetAcknowledgedDriftItems.mockResolvedValue([]);
     mockGrantProjectScope.mockResolvedValue(undefined);
-    mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null });
+    // Global's personal profile comes from Rust, which applies the legacy
+    // fallback; absent/unreadable paths drive the answer like they drive the fs.
+    mockReadHarnessFile.mockImplementation(async () => {
+      const fresh = "/home/user/.harness/harness.yaml";
+      const legacy = "/home/user/.claude/harness.yaml";
+      const body = 'version: "1"\nmetadata:\n  name: test-harness\n';
+      if (!absentPaths.has(fresh)) {
+        if (unreadablePaths.has(fresh)) throw new Error("EACCES: permission denied");
+        return { found: true, content: body, path: "~/.harness/harness.yaml" };
+      }
+      if (!absentPaths.has(legacy)) {
+        if (unreadablePaths.has(legacy)) throw new Error("EACCES: permission denied");
+        return { found: true, content: body, path: "~/.claude/harness.yaml", legacy_claude_file: true };
+      }
+      return { found: false, content: null, path: null };
+    });
   });
 
   it("shows the empty state when there is no drift", async () => {
@@ -142,7 +157,12 @@ describe("DriftPage", () => {
     });
 
     it("shows no move notice when ~/.harness/harness.yaml exists", async () => {
-      mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null, legacy_home_file: true });
+      mockReadHarnessFile.mockResolvedValue({
+        found: true,
+        content: 'version: "1"\nmetadata:\n  name: test-harness\n',
+        path: "~/.harness/harness.yaml",
+        legacy_home_file: true,
+      });
       mockDetectDrift.mockResolvedValue(EMPTY);
       renderPage();
       await screen.findByText("No drift detected");

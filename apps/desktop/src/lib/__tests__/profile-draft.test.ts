@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const writeHarnessFile = vi.hoisted(() => vi.fn());
 const setUnsavedDrafts = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
-vi.mock("../tauri", () => ({ writeHarnessFile, setUnsavedDrafts }));
+const readHarnessFile = vi.hoisted(() => vi.fn());
+vi.mock("../tauri", () => ({ writeHarnessFile, setUnsavedDrafts, readHarnessFile }));
 
 const KEY = "harness-kit:drafts:v1";
 const PATH = "~/.harness/harness.yaml";
@@ -116,6 +117,34 @@ describe("saveAllDrafts", () => {
   beforeEach(() => {
     localStorage.clear();
     writeHarnessFile.mockReset();
+    readHarnessFile.mockReset();
+    readHarnessFile.mockResolvedValue({ found: true, content: "old", path: "~/.harness/harness.yaml" });
+  });
+
+  it("saves a moved legacy-key draft with no digest when the legacy file is unchanged", async () => {
+    writeHarnessFile.mockResolvedValue("x");
+    readHarnessFile.mockResolvedValue({
+      found: true, content: "legacy", path: "~/.claude/harness.yaml", legacy_claude_file: true,
+    });
+    localStorage.setItem(KEY, JSON.stringify({ "~/.claude/harness.yaml": { buffer: "new", synced: "legacy" } }));
+    const m = await load();
+    const result = await m.saveAllDrafts();
+    expect(result).toEqual({ saved: [PATH], failed: [] });
+    expect(writeHarnessFile).toHaveBeenCalledWith("new", undefined);
+  });
+
+  it("refuses a moved legacy-key draft when the legacy file changed", async () => {
+    readHarnessFile.mockResolvedValue({
+      found: true, content: "edited elsewhere", path: "~/.claude/harness.yaml", legacy_claude_file: true,
+    });
+    localStorage.setItem(KEY, JSON.stringify({ "~/.claude/harness.yaml": { buffer: "new", synced: "legacy" } }));
+    const m = await load();
+    const result = await m.saveAllDrafts();
+    expect(result.saved).toEqual([]);
+    expect(result.failed[0].path).toBe(PATH);
+    expect(result.failed[0].reason).toContain("changed since this draft was made");
+    expect(writeHarnessFile).not.toHaveBeenCalled();
+    expect(m.getProfileDraft(PATH)).toBeDefined();
   });
 
   it("saves every draft through the write path and clears the saved ones", async () => {

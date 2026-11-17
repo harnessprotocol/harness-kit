@@ -15,7 +15,11 @@ const confirmQuit = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const quitRequestSeen = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const setUnsavedDrafts = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
 const writeHarnessFile = vi.hoisted(() => vi.fn());
+const readHarnessFile = vi.hoisted(() =>
+  vi.fn().mockResolvedValue({ found: true, content: "old", path: "~/.harness/harness.yaml" }),
+);
 vi.mock("../../lib/tauri", () => ({
+  readHarnessFile,
   confirmQuit,
   quitRequestSeen,
   setUnsavedDrafts,
