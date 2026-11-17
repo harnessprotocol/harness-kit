@@ -198,7 +198,7 @@ A Tauri desktop app that shows what each AI coding tool on your machine has conf
 
 - **Machine** is the home screen. A grid lists every MCP server, skill, instruction file and plugin across the tools it finds, with one column per tool. Click a cell to open a drawer that shows where the resource lives, how copies differ, and a copy action from one tool to another. Tools that are not installed are hidden until you choose "Show all".
 - **Drift** is a view inside Machine. It compares your `harness.yaml` with the files compiled from it, shows a diff for each item, and previews a fix before writing anything.
-- **Profile** edits `harness.yaml` and compiles it into a project. With no project chosen, Profile and Compile use your personal `~/.claude/harness.yaml`. With a project chosen in the title bar, they use that project's committed `harness.yaml` as the team baseline.
+- **Profile** edits `harness.yaml` and compiles it into a project. With no project chosen, Profile and Compile use your personal `~/.harness/harness.yaml` (the CLI uses the same file; `~/.claude/harness.yaml` is read only if that is absent). With a project chosen in the title bar, they use that project's committed `harness.yaml` as the team baseline.
 - **Claude Code** holds the editors for that tool: Instructions, MCP servers, Plugins, Hooks, Permissions, and Usage (sessions, tool calls and tokens read from `~/.claude`).
 - **Marketplace** browses the plugin catalog.
 - **Settings** holds preferences, secrets and the activity log.

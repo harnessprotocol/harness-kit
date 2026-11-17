@@ -436,10 +436,10 @@ describe("Profile unsaved indicator", () => {
     renderLayout();
     expect(screen.queryByTestId("profile-unsaved-indicator")).toBeNull();
     expect(screen.queryByText(/unsaved changes/i)).toBeNull();
-    act(() => setProfileDraft("~/.claude/harness.yaml", { buffer: "a", synced: "b" }));
+    act(() => setProfileDraft("~/.harness/harness.yaml", { buffer: "a", synced: "b" }));
     expect(screen.getByTestId("profile-unsaved-indicator")).toBeInTheDocument();
     expect(screen.getByText(/unsaved changes/i).closest('[role="link"]')).toHaveTextContent("Profile");
-    act(() => clearProfileDraft("~/.claude/harness.yaml"));
+    act(() => clearProfileDraft("~/.harness/harness.yaml"));
     expect(screen.queryByTestId("profile-unsaved-indicator")).toBeNull();
   });
 });

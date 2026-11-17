@@ -10,7 +10,14 @@ import {
 } from "@harness-kit/core";
 import type { HarnessScope } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
-import { readOptional, relativeInside, timestamp } from "./portability-common.js";
+import { PERSONAL_PROFILE_PATH } from "@harness-kit/core";
+import {
+  readOptional,
+  relativeInside,
+  resolvePersonalProfile,
+  timestamp,
+  warnLegacyProfile,
+} from "./portability-common.js";
 
 interface CaptureFlags {
   scope?: HarnessScope;
@@ -28,19 +35,29 @@ export async function captureCommand(flags: CaptureFlags): Promise<void> {
   }
   const hostFs = new NodeFsProvider();
   const root = scope === "personal" ? await hostFs.homedir() : resolve(".");
-  const defaultOutput = scope === "personal" ? resolve(root, ".harness/harness.yaml") : resolve(root, "harness.yaml");
+  const defaultOutput = scope === "personal" ? resolve(root, PERSONAL_PROFILE_PATH) : resolve(root, "harness.yaml");
   const output = resolve(flags.output ?? defaultOutput);
   const fs = new NodeFsProvider(root);
   const before = await readOptional(output);
+  // Capturing the personal profile at its default output merges into the
+  // legacy file when only that exists; the write still goes to the new path.
+  let priorText = before;
+  if (scope === "personal" && !flags.output && before === null) {
+    const source = await resolvePersonalProfile(root);
+    if (source.legacy) {
+      warnLegacyProfile();
+      priorText = await readOptional(source.readPath);
+    }
+  }
   const captured = await importProjectValidated({
     fs,
     name: basename(root),
     description: `Captured ${scope} harness configuration.`,
   });
   let prior: ReturnType<typeof parseHarness>["config"] | null = null;
-  if (before) {
+  if (priorText) {
     try {
-      const parsed = parseHarness(before).config;
+      const parsed = parseHarness(priorText).config;
       if (validateHarness(parsed).valid) prior = parsed;
     } catch {
       // Invalid prior files are never merged into a capture.

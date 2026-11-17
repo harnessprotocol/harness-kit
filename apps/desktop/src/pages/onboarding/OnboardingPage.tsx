@@ -28,7 +28,7 @@ export interface OnboardingPageProps {
  * screenshot-tested with fixture data with no live backend.
  */
 /** Where `write_harness_file` puts the file; the only path onboarding can overwrite. */
-const WRITE_TARGET = "~/.claude/harness.yaml";
+const WRITE_TARGET = "~/.harness/harness.yaml";
 
 export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
   const [step, setStep] = useState<OnboardingStep>("scan");
@@ -212,7 +212,7 @@ export default function OnboardingPage({ onFinish }: OnboardingPageProps) {
       >
         <p style={{ fontSize: 12.5, color: "var(--fg-subtle)", marginBottom: 10 }}>
           {WRITE_TARGET} differs from what onboarding would write. Replacing first copies the current
-          file to ~/.harness/backups/user/&lt;timestamp&gt;/.claude/harness.yaml, not next to the file.
+          file to ~/.harness/backups/user/&lt;timestamp&gt;/.harness/harness.yaml, not next to the file.
         </p>
         {conflict && result && (
           <DiffViewer lines={collapseToHunks(lineDiff(conflict.existing, result.harnessYaml))} />

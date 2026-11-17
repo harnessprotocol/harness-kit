@@ -10,7 +10,7 @@ export const MOCK_RESPONSES: Record<string, unknown> = {
   read_harness_file: {
     found: true,
     content: 'version: "1"\nmetadata:\n  name: test-harness\n',
-    path: "~/.claude/harness.yaml",
+    path: "~/.harness/harness.yaml",
   },
   list_installed_plugins: [],
   which_plugin_installer: null,

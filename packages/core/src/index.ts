@@ -116,6 +116,11 @@ export {
   captureNativeExtensions,
   parseNativeExtensionBlock,
 } from "./portability/native-extensions.js";
+export {
+  PERSONAL_PROFILE_PATH,
+  LEGACY_PERSONAL_PROFILE_PATH,
+  LEGACY_PERSONAL_PROFILE_WARNING,
+} from "./portability/profile-path.js";
 export { scanPortableContent } from "./portability/capsule.js";
 export { scanHarnessArtifact } from "./portability/artifact-security.js";
 export { isLegacyFormat, isProtocolV2 } from "./utils/legacy.js";

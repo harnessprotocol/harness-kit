@@ -5,7 +5,12 @@ import { Button, Card, ErrorNotice, Input } from "@harness-kit/ui";
 import { Share2 } from "lucide-react";
 import { writeHarnessFile, saveCustomProfile } from "../../lib/tauri";
 import { describeHarnessSource, readHarnessSource } from "../../lib/harness-source";
-import { LEGACY_HARNESS_NOTICE } from "../../lib/legacy-harness-notice";
+import {
+  LEGACY_CLAUDE_IGNORED_NOTICE,
+  LEGACY_CLAUDE_PROFILE_NOTICE,
+  LEGACY_HARNESS_NOTICE,
+  PERSONAL_PROFILE_DISPLAY,
+} from "../../lib/legacy-harness-notice";
 import { projectDirLabel, useProjectDir } from "../../lib/project-dir";
 import { importPersonalHarness } from "../../lib/personal-inventory";
 import { parseHarness, validateHarnessYaml } from "@harness-kit/core";
@@ -58,8 +63,12 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
   const [filePath, setFilePath] = useState<string | null>(null);
   const [view, setView] = useState<View>("formatted");
 
-  // A file at ~/harness.yaml with none at ~/.claude/harness.yaml (existence only).
+  // A file at ~/harness.yaml with none at ~/.harness/harness.yaml (existence only).
   const [legacyHomeFile, setLegacyHomeFile] = useState(false);
+  // The profile was read from the legacy ~/.claude/harness.yaml, or that file
+  // exists beside ~/.harness/harness.yaml and is ignored.
+  const [legacyClaudeFile, setLegacyClaudeFile] = useState(false);
+  const [legacyClaudeIgnored, setLegacyClaudeIgnored] = useState(false);
 
   // Editor state
   const [editorContent, setEditorContent] = useState("");
@@ -99,7 +108,7 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
 
   // AC-55: Profile follows the title-bar project. With one chosen it shows that
   // project's committed harness.yaml (the team baseline), read-only; without
-  // one it is the editable personal ~/.claude/harness.yaml.
+  // one it is the editable personal ~/.harness/harness.yaml.
   const [projectDir] = useProjectDir();
   const source = describeHarnessSource(projectDir);
   const readOnly = source.kind === "project";
@@ -115,6 +124,8 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
         if (generation !== loadGeneration.current) return;
         setFound(result.found);
         setLegacyHomeFile(result.legacy_home_file === true);
+        setLegacyClaudeFile(result.legacy_claude_file === true);
+        setLegacyClaudeIgnored(result.legacy_claude_ignored === true);
         setDiskContent(result.content);
         setFilePath(result.path);
         setLoadTick((n) => n + 1);
@@ -123,6 +134,8 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
         if (generation !== loadGeneration.current) return;
         setFound(false);
         setLegacyHomeFile(false);
+        setLegacyClaudeFile(false);
+        setLegacyClaudeIgnored(false);
         setDiskContent(null);
         setFilePath(null);
         setFetchError(errorDetails(e));
@@ -315,11 +328,11 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
     try {
       // AC-50: the digest is of the file at the write target; `undefined`
       // when the page found no file there (AC-55: the personal profile is
-      // ~/.claude/harness.yaml and nothing else).
+      // ~/.harness/harness.yaml; ~/.claude/harness.yaml is a read-only fallback).
       // It is of the text the buffer was last in step with, never of a disk
       // version still waiting in `pendingDisk`: Save must not overwrite that
       // one without asking.
-      const expected = filePath === "~/.claude/harness.yaml" ? await loadedDigest(syncedRef.current ?? diskContent) : undefined;
+      const expected = filePath === PERSONAL_PROFILE_DISPLAY ? await loadedDigest(syncedRef.current ?? diskContent) : undefined;
       const savedPath = await writeHarnessFile(content, expected);
       setDiskContent(content);
       // An edit made while the write ran stays in the buffer; the panel follows it.
@@ -331,13 +344,16 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
       setPendingDisk(null);
       setFilePath(savedPath);
       setFound(true);
+      // The legacy file stays on disk untouched; the new one now wins over it.
+      setLegacyClaudeIgnored((ignored) => ignored || legacyClaudeFile);
+      setLegacyClaudeFile(false);
     } catch (e) {
       setSaveError(errorDetails(e));
     } finally {
       savingRef.current = false;
       setSaving(false);
     }
-  }, [saveable, filePath, diskContent, setPanelText]);
+  }, [saveable, filePath, diskContent, setPanelText, legacyClaudeFile]);
 
   // Cmd+S while the editor is open. A panel field commits on blur, so blur it
   // first (synchronously) or the save would leave out what is being typed.
@@ -727,6 +743,16 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
           </Card>
         )}
 
+        {showFile && !loading && !fetchError && found && !readOnly && (legacyClaudeFile || legacyClaudeIgnored) && (
+          <p
+            role="note"
+            data-testid="legacy-claude-notice"
+            style={{ fontSize: "13px", color: "var(--fg-muted)", margin: "0 0 12px" }}
+          >
+            {legacyClaudeFile ? LEGACY_CLAUDE_PROFILE_NOTICE : LEGACY_CLAUDE_IGNORED_NOTICE}
+          </p>
+        )}
+
         {showFile && !loading && !fetchError && !found && !readOnly && legacyHomeFile && (
           <p
             role="note"
@@ -780,7 +806,7 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
               </h2>
               <p style={{ fontSize: "13px", color: "var(--fg-muted)", margin: 0 }}>
                 Nothing is written until you choose Write harness.yaml. It will be saved to{" "}
-                <code style={{ fontFamily: "ui-monospace, monospace", fontSize: "12px" }}>~/.claude/harness.yaml</code>.
+                <code style={{ fontFamily: "ui-monospace, monospace", fontSize: "12px" }}>~/.harness/harness.yaml</code>.
               </p>
             </div>
             {scanWriteError && (
@@ -811,7 +837,7 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
           <div style={{ height: "480px", display: "flex", flexDirection: "column", marginTop: "4px" }}>
             <div style={{ padding: "8px 0 8px", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <span style={{ fontSize: "11px", color: "var(--fg-subtle)" }}>
-                Will save to <code style={{ fontFamily: "ui-monospace, monospace" }}>~/.claude/harness.yaml</code>
+                Will save to <code style={{ fontFamily: "ui-monospace, monospace" }}>~/.harness/harness.yaml</code>
               </span>
               <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
                 <Button variant="primary" size="sm" onClick={handleSave} disabled={!saveable || saving}>

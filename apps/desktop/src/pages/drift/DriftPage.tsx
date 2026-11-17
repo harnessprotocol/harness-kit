@@ -1,3 +1,4 @@
+import { LEGACY_CLAUDE_IGNORED_NOTICE, LEGACY_CLAUDE_PROFILE_NOTICE } from "../../lib/legacy-harness-notice";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useToast } from "../../components/ToastProvider";
@@ -37,6 +38,21 @@ async function hasLegacyHomeFile(): Promise<boolean> {
   }
 }
 
+/**
+ * Notices about the legacy ~/.claude/harness.yaml, from what the Rust reader
+ * reports: read as a fallback, or present but ignored beside the new file.
+ */
+async function legacyClaudeNotices(): Promise<string[]> {
+  try {
+    const result = await readHarnessFile();
+    if (result.legacy_claude_file === true) return [LEGACY_CLAUDE_PROFILE_NOTICE];
+    if (result.legacy_claude_ignored === true) return [LEGACY_CLAUDE_IGNORED_NOTICE];
+  } catch {
+    // Notices are a courtesy; Drift's own statuses already say what it could read.
+  }
+  return [];
+}
+
 export interface DriftPageProps {
   /** Rendered inside the Machine view (AC-18) rather than as a page. */
   embedded?: boolean;
@@ -64,6 +80,7 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
   const [scanned, setScanned] = useState(false);
   const [scopeStatuses, setScopeStatuses] = useState<ScopeStatus[]>([]);
   const [legacyHomeFile, setLegacyHomeFile] = useState(false);
+  const [legacyNotes, setLegacyNotes] = useState<string[]>([]);
 
   // The app's one toast stack (AppLayout's ToastProvider, always-mounted live region).
   const pushToast = useToast();
@@ -102,6 +119,8 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
         statuses.some((s) => s.scope.kind === "global" && s.state === "no-file") &&
           (await hasLegacyHomeFile()),
       );
+      if (seq !== loadSeq.current) return;
+      setLegacyNotes(await legacyClaudeNotices());
       if (seq !== loadSeq.current) return;
       setPortability(portabilitySnapshot);
       setAcknowledged(
@@ -191,6 +210,7 @@ export default function DriftPage({ embedded = false, onSummary }: DriftPageProp
         portability={portability}
         scopeStatuses={scopeStatuses}
         legacyHomeFile={legacyHomeFile}
+        legacyNotes={legacyNotes}
       />
 
       <FixPreviewModal

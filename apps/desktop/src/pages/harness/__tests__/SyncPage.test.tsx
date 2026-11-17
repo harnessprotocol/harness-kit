@@ -114,7 +114,7 @@ describe("SyncPage", () => {
   });
 
   it("shows harness.yaml found state when file exists", async () => {
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.claude/harness.yaml" });
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.harness/harness.yaml" });
 
     renderPage();
 
@@ -136,7 +136,7 @@ describe("SyncPage", () => {
   it("says harness.yaml couldn't be read, not that it is missing, and Retry reads it again (AC-20)", async () => {
     mockReadHarnessFile
       .mockRejectedValueOnce(new Error("permission denied"))
-      .mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.claude/harness.yaml" });
+      .mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.harness/harness.yaml" });
 
     renderPage();
 
@@ -147,7 +147,7 @@ describe("SyncPage", () => {
     expect(screen.queryByRole("button", { name: "Create harness.yaml" })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));
-    expect(await screen.findByText("/home/user/.claude/harness.yaml")).toBeInTheDocument();
+    expect(await screen.findByText("/home/user/.harness/harness.yaml")).toBeInTheDocument();
     expect(mockReadHarnessFile).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
@@ -156,7 +156,7 @@ describe("SyncPage", () => {
     // Detection can report surfaces that aren't compile targets (pi). The
     // seeded selection feeds compile() directly, so a non-compile surface in
     // the detection results must never reach the compile targets list.
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.claude/harness.yaml" });
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.harness/harness.yaml" });
     mockSyncFileExists.mockResolvedValue(true);
     vi.mocked(detectPlatforms).mockResolvedValueOnce([
       { platform: "pi", indicators: [".pi"], needsConfirmation: false },
@@ -187,7 +187,7 @@ describe("SyncPage", () => {
   });
 
   it("offers Preview, then Apply, in the palette in step with their buttons (AC-21)", async () => {
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.claude/harness.yaml" });
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.harness/harness.yaml" });
     mockSyncFileExists.mockResolvedValue(true);
     vi.mocked(detectPlatforms).mockResolvedValueOnce([
       { platform: "cursor", indicators: [".cursor"], needsConfirmation: false },
@@ -222,7 +222,7 @@ describe("SyncPage", () => {
   });
 
   it("a failed preview names what failed, raw error behind Details, and Retry previews again (AC-20)", async () => {
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.claude/harness.yaml" });
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.harness/harness.yaml" });
     mockSyncFileExists.mockResolvedValue(true);
     vi.mocked(detectPlatforms).mockResolvedValueOnce([
       { platform: "cursor", indicators: [".cursor"], needsConfirmation: false },
@@ -248,7 +248,7 @@ describe("SyncPage", () => {
 
   describe("a preview stands for the inputs it was compiled from", () => {
     beforeEach(() => {
-      mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.claude/harness.yaml" });
+      mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.harness/harness.yaml" });
       mockSyncFileExists.mockResolvedValue(true);
       vi.mocked(syncCreateBackup).mockResolvedValue({ id: "backup-1" } as never);
       vi.mocked(syncWriteFiles).mockResolvedValue(undefined as never);
@@ -397,14 +397,14 @@ describe("SyncPage", () => {
     });
 
     it("names the personal profile when no project is chosen", async () => {
-      mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.claude/harness.yaml" });
+      mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.harness/harness.yaml" });
       renderPage();
       expect(await screen.findByTestId("compile-source")).toHaveTextContent("Personal profile");
     });
 
     it("compiles the project's committed harness.yaml, not the personal one", async () => {
       projectHarness = 'version: "1"\nmetadata:\n  name: team\n';
-      mockReadHarnessFile.mockResolvedValue({ found: true, content: "personal", path: "/home/user/.claude/harness.yaml" });
+      mockReadHarnessFile.mockResolvedValue({ found: true, content: "personal", path: "/home/user/.harness/harness.yaml" });
       vi.mocked(detectPlatforms).mockResolvedValueOnce([
         { platform: "cursor", indicators: [".cursor"], needsConfirmation: false },
       ]);
@@ -426,7 +426,7 @@ describe("SyncPage", () => {
 
     it("compiles the personal profile into a project that has no harness.yaml, and says so", async () => {
       projectHarness = null;
-      mockReadHarnessFile.mockResolvedValue({ found: true, content: "personal", path: "/home/user/.claude/harness.yaml" });
+      mockReadHarnessFile.mockResolvedValue({ found: true, content: "personal", path: "/home/user/.harness/harness.yaml" });
       vi.mocked(detectPlatforms).mockResolvedValueOnce([
         { platform: "cursor", indicators: [".cursor"], needsConfirmation: false },
       ]);
@@ -435,7 +435,7 @@ describe("SyncPage", () => {
       renderPage();
 
       expect(await screen.findByTestId("compile-source")).toHaveTextContent("Personal profile → acme");
-      expect(screen.getByText("/home/user/.claude/harness.yaml")).toBeInTheDocument();
+      expect(screen.getByText("/home/user/.harness/harness.yaml")).toBeInTheDocument();
       await screen.findByText(/Directory found/i);
       const previewButton = screen.getByRole("button", { name: "Preview Changes" });
       await waitFor(() => expect(previewButton).toBeEnabled());
@@ -457,7 +457,7 @@ describe("SyncPage", () => {
 
   describe("project directory (AC-17)", () => {
     beforeEach(() => {
-      mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.claude/harness.yaml" });
+      mockReadHarnessFile.mockResolvedValue({ found: true, content: 'version: "1"', path: "/home/user/.harness/harness.yaml" });
       mockSyncFileExists.mockResolvedValue(true);
     });
 

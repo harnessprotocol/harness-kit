@@ -51,12 +51,12 @@ describe("describeHarnessSource (AC-55)", () => {
 });
 
 describe("readHarnessSource (AC-55)", () => {
-  it("reads ~/.claude/harness.yaml through the personal reader when no project is chosen", async () => {
-    mockReadHarnessFile.mockResolvedValue({ found: true, content: "personal", path: "~/.claude/harness.yaml" });
+  it("reads ~/.harness/harness.yaml through the personal reader when no project is chosen", async () => {
+    mockReadHarnessFile.mockResolvedValue({ found: true, content: "personal", path: "~/.harness/harness.yaml" });
     await expect(readHarnessSource(null)).resolves.toEqual({
       found: true,
       content: "personal",
-      path: "~/.claude/harness.yaml",
+      path: "~/.harness/harness.yaml",
     });
     expect(mockGrant).not.toHaveBeenCalled();
   });

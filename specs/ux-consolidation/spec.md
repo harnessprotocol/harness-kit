@@ -97,7 +97,7 @@ From the adversarial review of main at 047e79d1 ("Harness Kit Red Team"). These 
 - [x] AC-52: WHEN the webview is granted capabilities THE SYSTEM SHALL grant only what production code calls (no shell execute, spawn, stdin or kill), SHALL bind project-scope grants to paths the native dialog returned, and SHALL keep every path-taking command inside its declared roots.
 - [x] AC-53: WHEN Compile writes into a project THE SYSTEM SHALL refuse any path component that is a symbolic link, dangling or not.
 - [x] AC-54: WHEN a secret is stored THE SYSTEM SHALL NOT pass its value on a command line.
-- [x] AC-55: WHEN Drift, Profile, Compile or onboarding read `harness.yaml` THE SYSTEM SHALL use `~/.claude/harness.yaml` as the personal profile and the selected project's committed `harness.yaml` as that project's team baseline, and Drift SHALL distinguish "no harness.yaml", "could not read", "never compiled" and "clean".
+- [x] AC-55: WHEN Drift, Profile, Compile or onboarding read `harness.yaml` THE SYSTEM SHALL use `~/.claude/harness.yaml` as the personal profile and the selected project's committed `harness.yaml` as that project's team baseline, and Drift SHALL distinguish "no harness.yaml", "could not read", "never compiled" and "clean". (2026-11-16: personal profile moved to ~/.harness/harness.yaml (John); ~/.claude/harness.yaml is a read-only fallback.)
 - [x] AC-56: WHEN onboarding or "Generate from Claude Code setup" builds a `harness.yaml` THE SYSTEM SHALL derive it from the same machine inventory the grid shows.
 - [x] AC-57: WHEN a grid cell is clicked THE SYSTEM SHALL open the drawer with that cell's surface as the target, SHALL show "+ copy" only where the drawer can apply, and a copy the app reports as done SHALL leave no gap in that cell.
 - [x] AC-58: WHEN an MCP config entry carries a `url` THE SYSTEM SHALL read it as a remote server.
@@ -167,7 +167,7 @@ Defaults are what the plan assumes until answered. Criteria tagged with the ques
 - Q1 (resolved). Comparator is kept, not deleted with Agents and the resilience profiles; its nav entry shows only with Settings › Labs on. The /comparator route itself is not guarded. Shipped in Phase 1.
 - Q2 (resolved). Fleet retires into Machine; /fleet redirects. Shipped in Phase 1.
 - [NEEDS CLARIFICATION: Q3. Keep the name "Machine" for the home (default) or rename it ("This computer", "Overview")? Default: keep, with the subtitle doing the explaining.]
-- Q4 (resolved 2026-09-27). Team baseline is git-only: the selected project's committed `harness.yaml`, read from the local checkout; URL fetch waits on the signed-definitions transport. The personal profile stays at `~/.claude/harness.yaml`. See AC-55.
+- Q4 (resolved 2026-09-27). Team baseline is git-only: the selected project's committed `harness.yaml`, read from the local checkout; URL fetch waits on the signed-definitions transport. The personal profile stays at `~/.claude/harness.yaml`. See AC-55. (2026-11-16: personal profile moved to ~/.harness/harness.yaml (John); ~/.claude/harness.yaml is a read-only fallback.)
 - Q5 (resolved). The Machine drawer is the only write path to Codex and Cursor. The editor group is named "Claude Code"; future surfaces become sibling groups.
 - Q6 (resolved 2026-11-16). The native menu bar shipped in Phase 4, macOS only.
 
@@ -176,7 +176,7 @@ Defaults are what the plan assumes until answered. Criteria tagged with the ques
 Taken after the adversarial review, on its recommendations:
 
 1. The webview is not trusted. The Rust side's guards are made real rather than the claims withdrawn (AC-52, AC-53, AC-54).
-2. `harness.yaml`: one personal file at `~/.claude/harness.yaml`, plus the selected project's committed `harness.yaml` as the team baseline; Profile follows the title-bar project (AC-55, Q4).
+2. `harness.yaml`: one personal file at `~/.claude/harness.yaml`, plus the selected project's committed `harness.yaml` as the team baseline; Profile follows the title-bar project (AC-55, Q4). (2026-11-16: personal profile moved to ~/.harness/harness.yaml (John); ~/.claude/harness.yaml is a read-only fallback.)
 3. Permission presets merge into existing rules and never silently drop a deny rule (AC-49).
 4. Surfaces that are not installed are hidden from the grid by default (AC-59).
 5. PR #400's change to `packages/core` (`atomicWriteFile` in the file-transaction engine) was approved when John started that task; recorded here because the Boundaries list it as ask-first.

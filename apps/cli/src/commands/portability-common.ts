@@ -30,6 +30,11 @@ import type {
   SurfaceId,
 } from "@harness-kit/core";
 import { NodeFsProvider } from "@harness-kit/core/node";
+import {
+  LEGACY_PERSONAL_PROFILE_PATH,
+  LEGACY_PERSONAL_PROFILE_WARNING,
+  PERSONAL_PROFILE_PATH,
+} from "@harness-kit/core";
 
 export const ALL_TARGETS: readonly SurfaceId[] = COMPILE_SURFACE_IDS;
 
@@ -135,12 +140,43 @@ export async function readProfile(
   return { scope, config, source: absolute };
 }
 
+export interface PersonalProfileSource {
+  /** Where the profile is read from: the new path, or the legacy one when only that exists. */
+  readPath: string;
+  /** Where the profile is written. Always the new path. */
+  writePath: string;
+  /** True when `readPath` is the legacy `~/.claude/harness.yaml`. */
+  legacy: boolean;
+}
+
+/**
+ * The personal profile: `~/.harness/harness.yaml`, or the legacy
+ * `~/.claude/harness.yaml` when only that exists. The new file wins when both
+ * do. The legacy file is never written or deleted.
+ */
+export async function resolvePersonalProfile(home: string): Promise<PersonalProfileSource> {
+  const writePath = resolve(home, PERSONAL_PROFILE_PATH);
+  if (await exists(writePath)) return { readPath: writePath, writePath, legacy: false };
+  const legacyPath = resolve(home, LEGACY_PERSONAL_PROFILE_PATH);
+  if (await exists(legacyPath)) return { readPath: legacyPath, writePath, legacy: true };
+  return { readPath: writePath, writePath, legacy: false };
+}
+
+export function warnLegacyProfile(): void {
+  console.warn(LEGACY_PERSONAL_PROFILE_WARNING);
+}
+
 export async function loadProfiles(projectPath: string, flags: LayerFlags): Promise<LayeredHarnessProfile[]> {
   const fs = new NodeFsProvider();
   const home = await fs.homedir();
   const profiles: LayeredHarnessProfile[] = [];
   if (flags.organization) profiles.push((await readProfile(flags.organization, "organization"))!);
-  const personalPath = flags.personal ?? resolve(home, ".harness/harness.yaml");
+  let personalPath = flags.personal;
+  if (!personalPath) {
+    const source = await resolvePersonalProfile(home);
+    personalPath = source.readPath;
+    if (source.legacy) warnLegacyProfile();
+  }
   const personal = await readProfile(personalPath, "personal", !flags.personal);
   if (personal) profiles.push(personal);
   profiles.push((await readProfile(projectPath, "project"))!);

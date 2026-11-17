@@ -6,7 +6,7 @@ import { scopeHarnessPath } from "../pages/drift/drift-data";
 
 /**
  * Which harness.yaml Profile and Compile work on (spec AC-55, Decisions
- * 2026-09-27 item 2): the personal `~/.claude/harness.yaml` when no project is
+ * 2026-09-27 item 2): the personal `~/.harness/harness.yaml` when no project is
  * chosen in the title bar, else that project's committed `harness.yaml`, the
  * team baseline. The project file is read-only here: Profile edits and saves
  * only the personal file.

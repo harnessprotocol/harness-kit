@@ -53,8 +53,8 @@ const item = (cls: DriftItem["class"]): DriftItem =>
 const entry = (scope: DriftScope, cls: DriftItem["class"]): ScopedDriftItem => ({ scope, item: item(cls) });
 
 describe("scopeHarnessPath (AC-55)", () => {
-  it("is ~/.claude/harness.yaml for Global and <project>/harness.yaml for a project", () => {
-    expect(scopeHarnessPath(globalScope({}))).toBe("/home/user/.claude/harness.yaml");
+  it("is ~/.harness/harness.yaml for Global and <project>/harness.yaml for a project", () => {
+    expect(scopeHarnessPath(globalScope({}))).toBe("/home/user/.harness/harness.yaml");
     expect(scopeHarnessPath(projectScope({}))).toBe("/repo/harness.yaml");
   });
 });
@@ -66,9 +66,27 @@ describe("collectDrift reads the personal profile and the project baseline (AC-5
     await collectDrift([stray]);
     expect(mockDetectDrift).not.toHaveBeenCalled();
 
-    const personal = globalScope({ "/home/user/.claude/harness.yaml": VALID });
+    const personal = globalScope({ "/home/user/.harness/harness.yaml": VALID });
     await collectDrift([personal]);
     expect(mockDetectDrift).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to ~/.claude/harness.yaml only when ~/.harness/harness.yaml is absent", async () => {
+    mockDetectDrift.mockReset().mockResolvedValue({ items: [], hasDrift: false, byClass: {} });
+    const legacyOnly = globalScope({ "/home/user/.claude/harness.yaml": VALID });
+    await collectDrift([legacyOnly]);
+    expect(mockDetectDrift).toHaveBeenCalledTimes(1);
+    const [s] = await describeScopes([legacyOnly], []);
+    expect(s.path).toBe("/home/user/.claude/harness.yaml");
+
+    mockDetectDrift.mockClear();
+    const both = globalScope({
+      "/home/user/.claude/harness.yaml": "version: [",
+      "/home/user/.harness/harness.yaml": VALID,
+    });
+    await collectDrift([both]);
+    expect(mockDetectDrift).toHaveBeenCalledTimes(1);
+    expect((await describeScopes([both], []))[0].path).toBe("/home/user/.harness/harness.yaml");
   });
 
   it("reads the project's committed harness.yaml", async () => {
@@ -82,12 +100,12 @@ describe("describeScopes distinguishes the four states (AC-55)", () => {
   it("no harness.yaml", async () => {
     const [s] = await describeScopes([globalScope({})], []);
     expect(s.state).toBe("no-file");
-    expect(s.path).toBe("/home/user/.claude/harness.yaml");
+    expect(s.path).toBe("/home/user/.harness/harness.yaml");
   });
 
   it("could not read: the file exists but reading throws", async () => {
     const [s] = await describeScopes(
-      [globalScope({ "/home/user/.claude/harness.yaml": new Error("EACCES: permission denied") })],
+      [globalScope({ "/home/user/.harness/harness.yaml": new Error("EACCES: permission denied") })],
       [],
     );
     expect(s.state).toBe("unreadable");
@@ -95,30 +113,30 @@ describe("describeScopes distinguishes the four states (AC-55)", () => {
   });
 
   it("could not read: the file exists but is not valid harness.yaml", async () => {
-    const [s] = await describeScopes([globalScope({ "/home/user/.claude/harness.yaml": "version: [" })], []);
+    const [s] = await describeScopes([globalScope({ "/home/user/.harness/harness.yaml": "version: [" })], []);
     expect(s.state).toBe("unreadable");
   });
 
   it("never compiled: a harness.yaml whose every deployed slot is missing", async () => {
-    const scope = globalScope({ "/home/user/.claude/harness.yaml": VALID });
+    const scope = globalScope({ "/home/user/.harness/harness.yaml": VALID });
     const [s] = await describeScopes([scope], [entry(scope, "missing"), entry(scope, "missing")]);
     expect(s.state).toBe("never-compiled");
   });
 
   it("clean: a harness.yaml with no drift", async () => {
-    const scope = globalScope({ "/home/user/.claude/harness.yaml": VALID });
+    const scope = globalScope({ "/home/user/.harness/harness.yaml": VALID });
     const [s] = await describeScopes([scope], []);
     expect(s.state).toBe("clean");
   });
 
   it("drifted: some slots missing, others not, is drift and not 'never compiled'", async () => {
-    const scope = globalScope({ "/home/user/.claude/harness.yaml": VALID });
+    const scope = globalScope({ "/home/user/.harness/harness.yaml": VALID });
     const [s] = await describeScopes([scope], [entry(scope, "missing"), entry(scope, "modified-inside-markers")]);
     expect(s.state).toBe("drifted");
   });
 
   it("keeps each scope's entries apart", async () => {
-    const g = globalScope({ "/home/user/.claude/harness.yaml": VALID });
+    const g = globalScope({ "/home/user/.harness/harness.yaml": VALID });
     const p = projectScope({ "/repo/harness.yaml": VALID });
     const states = await describeScopes([g, p], [entry(p, "missing")]);
     expect(states.map((s) => s.state)).toEqual(["clean", "never-compiled"]);

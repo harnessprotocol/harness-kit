@@ -55,14 +55,26 @@ export function summarizeDrift(entries: ScopedDriftItem[], acknowledged: Readonl
 
 /**
  * The harness.yaml a scope is compared against (AC-55): Global is the personal
- * profile at `~/.claude/harness.yaml`, the same file Profile, Compile and
+ * profile at `~/.harness/harness.yaml`, the same file Profile, Compile and
  * onboarding use; a project is its own committed `harness.yaml`, the team
  * baseline. Never `~/harness.yaml`.
  */
 export function scopeHarnessPath(scope: DriftScope): string {
   return scope.kind === "global"
-    ? scope.fs.joinPath(scope.root, ".claude", "harness.yaml")
+    ? scope.fs.joinPath(scope.root, ".harness", "harness.yaml")
     : scope.fs.joinPath(scope.root, "harness.yaml");
+}
+
+/**
+ * The file a scope is actually read from: `scopeHarnessPath`, except that
+ * Global falls back to the legacy `~/.claude/harness.yaml` when the new file
+ * is absent. The legacy file is only read, never written.
+ */
+export async function resolveScopeHarnessPath(scope: DriftScope): Promise<string> {
+  const path = scopeHarnessPath(scope);
+  if (scope.kind !== "global" || (await scope.fs.exists(path))) return path;
+  const legacy = scope.fs.joinPath(scope.root, ".claude", "harness.yaml");
+  return (await scope.fs.exists(legacy)) ? legacy : path;
 }
 
 /**
@@ -87,7 +99,7 @@ type ScopeFile =
   | { state: "ok"; config: HarnessConfig };
 
 async function loadScopeFile(scope: DriftScope): Promise<ScopeFile> {
-  const path = scopeHarnessPath(scope);
+  const path = await resolveScopeHarnessPath(scope);
   if (!(await scope.fs.exists(path))) return { state: "no-file" };
   let yamlString: string;
   try {
@@ -161,7 +173,7 @@ export async function collectDrift(scopes: DriftScope[]): Promise<ScopedDriftIte
 export async function describeScopes(scopes: DriftScope[], entries: ScopedDriftItem[]): Promise<ScopeStatus[]> {
   const statuses: ScopeStatus[] = [];
   for (const scope of scopes) {
-    const path = scopeHarnessPath(scope);
+    const path = await resolveScopeHarnessPath(scope);
     const file = await loadScopeFile(scope);
     if (file.state === "no-file") {
       statuses.push({ scope, state: "no-file", path });

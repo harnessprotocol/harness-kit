@@ -129,15 +129,19 @@ export interface HarnessFileResult {
   found: boolean;
   content: string | null;
   path: string | null;
-  /** A file sits at ~/harness.yaml and none at ~/.claude/harness.yaml. Existence only; never read. */
+  /** A file sits at ~/harness.yaml and none at ~/.harness/harness.yaml. Existence only; never read. */
   legacy_home_file?: boolean;
+  /** `content` was read from the legacy ~/.claude/harness.yaml because ~/.harness/harness.yaml is absent. */
+  legacy_claude_file?: boolean;
+  /** Both ~/.harness/harness.yaml and ~/.claude/harness.yaml exist; the old one is ignored. */
+  legacy_claude_ignored?: boolean;
 }
 
 export async function readHarnessFile(): Promise<HarnessFileResult> {
   return invoke<HarnessFileResult>("read_harness_file");
 }
 
-/** `expectedSha256`: digest of the loaded ~/.claude/harness.yaml (`loadedDigest`); omit when it did not exist. */
+/** `expectedSha256`: digest of the loaded ~/.harness/harness.yaml (`loadedDigest`); omit when it did not exist. */
 export async function writeHarnessFile(content: string, expectedSha256?: string): Promise<string> {
   return invoke<string>("write_harness_file", { content, expectedSha256 });
 }

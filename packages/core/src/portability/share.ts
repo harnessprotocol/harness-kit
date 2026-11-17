@@ -1,6 +1,7 @@
 import { stringify } from "yaml";
 import type { EnvDeclaration, HarnessConfig } from "../types.js";
 import { isRecord } from "../utils/is-record.js";
+import { PERSONAL_PROFILE_PATH } from "./profile-path.js";
 import {
   isSecretReference,
   isSensitiveQueryParam,
@@ -39,7 +40,7 @@ export interface ProfileShare {
 }
 
 /** Where the recipient's personal profile lives (spec decision, AC-55). */
-const PERSONAL_PROFILE = "~/.claude/harness.yaml";
+const PERSONAL_PROFILE = `~/${PERSONAL_PROFILE_PATH}`;
 const CLI = "npx -p @harnessprotocol/cli harness-kit";
 
 /** Credential shapes, matched inside any token. */

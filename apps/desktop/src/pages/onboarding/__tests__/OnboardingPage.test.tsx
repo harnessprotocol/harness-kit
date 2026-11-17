@@ -67,7 +67,7 @@ function renderPage(onFinish = vi.fn()) {
 describe("OnboardingPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockWriteHarnessFile.mockResolvedValue("~/.claude/harness.yaml");
+    mockWriteHarnessFile.mockResolvedValue("~/.harness/harness.yaml");
     mockReadHarnessFile.mockResolvedValue({ found: false, content: null, path: null });
     mockWriteConfigFile.mockResolvedValue(undefined);
     mockImportPersonalHarness.mockResolvedValue({ harnessConfig: INVENTORY_CONFIG, harnessYaml: "", inventory: {} });
@@ -210,7 +210,7 @@ describe("OnboardingPage", () => {
   });
 
   describe("existing harness.yaml (AC-51)", () => {
-    const TARGET = "~/.claude/harness.yaml";
+    const TARGET = "~/.harness/harness.yaml";
 
     async function toConfirm() {
       mockImportMachine.mockResolvedValue(ONBOARDING_FIXTURE_RESULT);
