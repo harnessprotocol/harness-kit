@@ -6,7 +6,7 @@ import type { MarketplacePlugin } from "@harness-kit/marketplace-data";
 import { resolveDesktopDefinitions } from "../../../lib/definitions";
 import { TauriFsProvider } from "../../../lib/harness-fs";
 import { TauriProcessRunner } from "../../../lib/process-runner";
-import { useProjectDir } from "../../../lib/project-dir";
+import { grantProjectDir, useProjectDir } from "../../../lib/project-dir";
 import { surfaceLabel } from "../../../lib/surface-labels";
 import { useToast } from "../../../components/ToastProvider";
 import { detectDesktopPlatform } from "../../machine/machine-data";
@@ -161,11 +161,46 @@ function InstallTo({
     });
   }, [registry, surface, identity, scope, project]);
 
+  // AC-9: Apply is enabled only when the native installer's binary is on PATH.
+  // Pending probes leave Apply as planned (the broker re-checks at Apply time);
+  // a result for a binary that is no longer the current one is ignored.
+  const binary =
+    view?.plan.kind === "native" && view.plan.plan.supported ? view.plan.plan.binary : null;
+  const [probe, setProbe] = useState<{ binary: string; found: boolean } | null>(null);
+  useEffect(() => {
+    if (binary === null) return;
+    let stale = false;
+    new TauriProcessRunner()
+      .which(binary)
+      .then(
+        (found) => found !== null,
+        () => false,
+      )
+      .then((found) => {
+        if (!stale) setProbe({ binary, found });
+      });
+    return () => {
+      stale = true;
+    };
+  }, [binary]);
+  const missingBinary = binary !== null && probe?.binary === binary && !probe.found;
+  const blockedReason = missingBinary
+    ? `${binary} is not installed or not on PATH. Copy the CLI command or the agent prompt instead.`
+    : (view?.applyBlockedReason ?? null);
+
   const apply = async () => {
-    if (!view || !surface || applying) return;
+    if (!view || !surface || applying || blockedReason !== null) return;
     const label = surfaceLabel(surface.id);
     setApplying(true);
     try {
+      if (scope === "project" && project !== null && !(await grantProjectDir(project))) {
+        toast({
+          title: `Couldn't install ${plugin.name} on ${label}`,
+          message: "Reopen the project folder, then try again.",
+          variant: "warning",
+        });
+        return;
+      }
       const home = await homeDir();
       const fs = new TauriFsProvider(home);
       const outcome = await applyCatalogInstall({
@@ -190,7 +225,11 @@ function InstallTo({
       } else {
         toast({
           title: `Couldn't install ${plugin.name} on ${label}`,
-          message: outcome.reason,
+          message:
+            outcome.reason +
+            ("files" in outcome && Array.isArray(outcome.files) && outcome.files.length > 0
+              ? `\nAlready written: ${outcome.files.join(", ")}`
+              : ""),
           variant: "warning",
         });
       }
@@ -267,9 +306,9 @@ function InstallTo({
 
           {view && (
             <>
-              {view.applyBlockedReason !== null && (
+              {blockedReason !== null && (
                 <p style={{ fontSize: 12, margin: 0 }} data-testid="apply-blocked">
-                  {view.applyBlockedReason}
+                  {blockedReason}
                 </p>
               )}
               {view.cli !== null && (
@@ -281,7 +320,7 @@ function InstallTo({
                 <Button
                   variant="primary"
                   size="sm"
-                  disabled={view.applyBlockedReason !== null || applying}
+                  disabled={blockedReason !== null || applying}
                   onClick={() => void apply()}
                 >
                   {applying ? "Installing…" : "Apply"}

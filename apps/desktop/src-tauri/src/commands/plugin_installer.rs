@@ -61,13 +61,16 @@ fn check_plugin_id(id: &str) -> Result<(), String> {
     }
 }
 
-/// `owner/repo`, each part matching the same pattern.
+/// The only marketplace the app ships. Marketplace add is pinned to it so a
+/// compromised webview cannot register an arbitrary marketplace and then
+/// install from it.
+const CATALOG_SOURCE: &str = "harnessprotocol/harness-kit";
+
 fn check_repo(source: &str) -> Result<(), String> {
-    let parts: Vec<&str> = source.split('/').collect();
-    if parts.len() == 2 && parts.iter().all(|p| valid_part(p)) {
+    if source == CATALOG_SOURCE {
         Ok(())
     } else {
-        Err(format!("marketplace source {source:?} is not owner/repo"))
+        Err(format!("marketplace source {source:?} is not the catalog source {CATALOG_SOURCE}"))
     }
 }
 
@@ -139,7 +142,7 @@ fn is_executable_file(path: &Path) -> bool {
 /// First executable file named `binary` on the `path_env` entries.
 fn find_in_path(binary: &str, path_env: &OsStr) -> Option<PathBuf> {
     std::env::split_paths(path_env)
-        .filter(|dir| !dir.as_os_str().is_empty())
+        .filter(|dir| dir.is_absolute())
         .map(|dir| dir.join(binary))
         .find(|candidate| is_executable_file(candidate))
 }
@@ -232,8 +235,11 @@ async fn run_with(
     }
 }
 
-/// A requested working directory must BE a project root the user granted, not
-/// a subdirectory of one (`--scope project` writes into `<cwd>/.claude/`).
+/// A requested working directory must be an exact root that was granted, not a
+/// subdirectory of one (`--scope project` writes into `<cwd>/.claude/`). The
+/// webview can grant a subdirectory of a folder the user picked, so the
+/// guarantee is "an exact root granted inside a folder the user picked", not
+/// "the folder the user picked".
 /// Returns the canonical path to run in.
 fn check_cwd(cwd: &str) -> Result<PathBuf, String> {
     let canonical = Path::new(cwd)
@@ -357,11 +363,37 @@ mod tests {
 
     #[test]
     fn bad_marketplace_sources_are_refused() {
-        for source in ["a/b/c", "../x", "-a/b", "ab", "a/", "/b", "a/-b", "a b/c"] {
+        for source in ["a/b/c", "../x", "-a/b", "ab", "a/", "/b", "a/-b", "a b/c", "attacker/evil"] {
             let err = validate_invocation("claude", &v(&["plugin", "marketplace", "add", source]))
                 .expect_err(source);
             assert!(err.contains(&format!("{source:?}")), "{err:?} should name {source:?}");
         }
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn find_in_path_skips_relative_entries() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        let bin = dir.path().join("claude");
+        std::fs::write(&bin, "#!/bin/sh\n").unwrap();
+        std::fs::set_permissions(&bin, std::fs::Permissions::from_mode(0o755)).unwrap();
+        let rel = pathdiff_relative(dir.path());
+        assert_eq!(find_in_path("claude", rel.as_os_str()), None);
+        assert_eq!(find_in_path("claude", dir.path().as_os_str()), Some(bin));
+    }
+
+    /// A relative spelling of `abs` from the current directory.
+    #[cfg(unix)]
+    fn pathdiff_relative(abs: &Path) -> std::ffi::OsString {
+        let cwd = std::env::current_dir().unwrap();
+        let ups = cwd.components().count() - 1;
+        let mut rel = PathBuf::new();
+        for _ in 0..ups {
+            rel.push("..");
+        }
+        rel.push(abs.strip_prefix("/").unwrap());
+        rel.into_os_string()
     }
 
     #[test]

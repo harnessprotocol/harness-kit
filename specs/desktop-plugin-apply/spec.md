@@ -20,10 +20,10 @@ The Marketplace's "Install to …" card and the Machine drawer's plugin cells bo
 
 - [x] AC-1: WHEN the webview asks Rust to run a plugin installer THE SYSTEM SHALL run it only when the binary is `claude`, `copilot` or `codex` and the argument vector matches one of these shapes exactly: *(plugin_installer.rs)*
   - `claude plugin install|uninstall <id> [--scope user|project|local]`
-  - `claude plugin marketplace add <owner>/<repo>`
+  - `claude plugin marketplace add harnessprotocol/harness-kit` (the catalog's own source only)
   - `copilot plugin install|uninstall <id>`
   - `codex plugin add|remove <id> [--json]`
-  where `<id>` is `name@marketplace` and each part matches `^[A-Za-z0-9][A-Za-z0-9._-]*$`, and `<owner>/<repo>` uses the same part pattern.
+  where `<id>` is `name@marketplace` and each part matches `^[A-Za-z0-9][A-Za-z0-9._-]*$`.
 - [x] AC-2: WHEN a request fails AC-1 THE SYSTEM SHALL refuse it without spawning anything and return a refusal reason that names the rejected part. *(plugin_installer.rs)*
 - [x] AC-3: WHEN an installer runs THE SYSTEM SHALL spawn it with an argument vector and no shell, with stdin closed, and with `NO_COLOR=1` added to the inherited environment. *(plugin_installer.rs)*
 - [x] AC-4: WHEN a request carries a working directory THE SYSTEM SHALL run only if that directory is a project root the user granted in the native folder dialog; otherwise it SHALL refuse. *(plugin_installer.rs)*

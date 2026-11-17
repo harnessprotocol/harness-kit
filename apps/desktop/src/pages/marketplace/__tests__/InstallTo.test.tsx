@@ -13,6 +13,8 @@ import {
 
 const toast = vi.fn();
 const applyMock = vi.fn();
+const grantMock = vi.fn();
+const whichMock = vi.fn();
 let project: string | null = null;
 
 // A registry of three: a native installer, a surface with a plugin store but
@@ -34,7 +36,13 @@ vi.mock("../../../lib/marketplace/install-to", async (importActual) => ({
   ...(await importActual<typeof import("../../../lib/marketplace/install-to")>()),
   applyCatalogInstall: (...args: unknown[]) => applyMock(...args),
 }));
-vi.mock("../../../lib/process-runner", () => ({ TauriProcessRunner: class {} }));
+vi.mock("../../../lib/process-runner", () => ({
+  TauriProcessRunner: class {
+    which(command: string) {
+      return whichMock(command);
+    }
+  },
+}));
 vi.mock("@tauri-apps/api/path", () => ({ homeDir: async () => "/home/test" }));
 vi.mock("../../../lib/definitions", () => ({
   resolveDesktopDefinitions: async () => ({ surfaces: REGISTRY }),
@@ -54,6 +62,7 @@ vi.mock("../../../lib/harness-fs", () => ({
 }));
 vi.mock("../../../lib/project-dir", () => ({
   useProjectDir: () => [project, () => {}],
+  grantProjectDir: (...args: unknown[]) => grantMock(...args),
 }));
 vi.mock("../../../components/ToastProvider", () => ({ useToast: () => toast }));
 
@@ -71,6 +80,10 @@ beforeEach(() => {
   project = null;
   toast.mockClear();
   applyMock.mockReset();
+  grantMock.mockReset();
+  grantMock.mockResolvedValue(true);
+  whichMock.mockReset();
+  whichMock.mockResolvedValue("/usr/local/bin/claude");
   writeText.mockClear();
   Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
 });
@@ -215,6 +228,109 @@ describe("Apply", () => {
     fireEvent.click(screen.getByRole("button", { name: "Apply" }));
     await waitFor(() =>
       expect(toast).toHaveBeenCalledWith(expect.objectContaining({ message: "bridge down" })),
+    );
+  });
+});
+
+describe("Apply: project scope grant", () => {
+  const pickProject = async () => {
+    project = "/work/app";
+    render(<InstallCard plugin={plugin} {...SOURCE} />);
+    const scope = (await screen.findByLabelText("Scope")) as HTMLSelectElement;
+    fireEvent.change(scope, { target: { value: "project" } });
+    await screen.findByTestId("install-cli");
+  };
+
+  it("awaits the project grant before the install runs", async () => {
+    const order: string[] = [];
+    let release!: (ok: boolean) => void;
+    grantMock.mockImplementation(() => {
+      order.push("grant");
+      return new Promise<boolean>((r) => (release = r));
+    });
+    applyMock.mockImplementation(async () => {
+      order.push("apply");
+      return { status: "installed", display: "x", files: [] };
+    });
+    await pickProject();
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await waitFor(() => expect(grantMock).toHaveBeenCalledWith("/work/app"));
+    expect(applyMock).not.toHaveBeenCalled();
+    await act(async () => release(true));
+    await waitFor(() => expect(applyMock).toHaveBeenCalledTimes(1));
+    expect(order).toEqual(["grant", "apply"]);
+  });
+
+  it("a refused grant stops the install with a reopen-the-folder warning", async () => {
+    grantMock.mockResolvedValue(false);
+    await pickProject();
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith({
+        title: "Couldn't install Research on Claude Code",
+        message: "Reopen the project folder, then try again.",
+        variant: "warning",
+      }),
+    );
+    expect(applyMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("Apply: binary probe (AC-9)", () => {
+  it("binary on PATH: Apply is enabled", async () => {
+    render(<InstallCard plugin={plugin} {...SOURCE} />);
+    await screen.findByTestId("install-cli");
+    await waitFor(() => expect(whichMock).toHaveBeenCalledWith("claude"));
+    expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled();
+    expect(screen.queryByTestId("apply-blocked")).toBeNull();
+  });
+
+  it("binary missing: Apply is disabled with the not-installed reason", async () => {
+    whichMock.mockResolvedValue(null);
+    render(<InstallCard plugin={plugin} {...SOURCE} />);
+    const blocked = await screen.findByTestId("apply-blocked");
+    expect(blocked.textContent).toBe(
+      "claude is not installed or not on PATH. Copy the CLI command or the agent prompt instead.",
+    );
+    expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
+  });
+
+  it("ignores a stale probe result after the surface changes", async () => {
+    let late!: (v: string | null) => void;
+    whichMock
+      .mockReturnValueOnce(new Promise((r) => (late = r)))
+      .mockReturnValue(new Promise(() => {}));
+    render(<InstallCard plugin={plugin} {...SOURCE} />);
+    await screen.findByTestId("install-cli");
+    const select = screen.getByLabelText("Surface") as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: "cursor" } });
+    await waitFor(() => expect(screen.queryByTestId("install-cli")).toBeNull());
+    fireEvent.change(select, { target: { value: "claude-code" } });
+    await screen.findByTestId("install-cli");
+    await act(async () => late(null));
+    // The first probe was superseded; the second (never resolved) decides.
+    expect(whichMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled();
+  });
+});
+
+describe("failure toast files", () => {
+  it("lists files a failed unpack already wrote", async () => {
+    applyMock.mockResolvedValue({
+      status: "failed",
+      reason: "unpacking a@b stopped: disk full",
+      files: ["/h/.claude/skills/x/SKILL.md", "/h/.claude/skills/y/SKILL.md"],
+    });
+    render(<InstallCard plugin={plugin} {...SOURCE} />);
+    await screen.findByTestId("install-cli");
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message:
+            "unpacking a@b stopped: disk full\nAlready written: /h/.claude/skills/x/SKILL.md, /h/.claude/skills/y/SKILL.md",
+        }),
+      ),
     );
   });
 });
