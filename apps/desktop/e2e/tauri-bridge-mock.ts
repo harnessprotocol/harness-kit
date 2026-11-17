@@ -13,6 +13,7 @@ export const MOCK_RESPONSES: Record<string, unknown> = {
     path: "~/.harness/harness.yaml",
   },
   list_installed_plugins: [],
+  confirm_quit: null,
   which_plugin_installer: null,
   run_plugin_installer: { status: "spawn-failed", reason: "mock" },
   check_plugin_updates: [],
@@ -120,7 +121,10 @@ export function buildBridgeScript(responses: Record<string, unknown>): string {
         invoke: function(cmd, args) {
           return new Promise(function(resolve, reject) {
             const response = RESPONSES[cmd];
-            if (cmd.indexOf('plugin:menu|') === 0) {
+            if (cmd.indexOf('plugin:event|') === 0) {
+              // Event API (quit request listener): listen resolves an event id.
+              setTimeout(function() { resolve(0); }, 0);
+            } else if (cmd.indexOf('plugin:menu|') === 0) {
               // Native menu API (AC-40): constructors resolve [rid, id]; other calls ignore the value.
               setTimeout(function() { resolve([1, 'mock-menu']); }, 0);
             } else if (response !== undefined) {
@@ -139,6 +143,9 @@ export function buildBridgeScript(responses: Record<string, unknown>): string {
           return 0;
         },
       };
+
+      // listen()'s unlisten calls this when a listener unmounts.
+      window.__TAURI_EVENT_PLUGIN_INTERNALS__ = { unregisterListener: function() {} };
 
       window.__TAURI__ = { invoke: window.__TAURI_INTERNALS__.invoke };
     })();

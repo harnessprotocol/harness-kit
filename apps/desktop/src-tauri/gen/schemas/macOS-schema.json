@@ -2271,6 +2271,12 @@
           "markdownDescription": "Enables the compute_live_stats command without any pre-configured scope."
         },
         {
+          "description": "Enables the confirm_quit command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-confirm-quit",
+          "markdownDescription": "Enables the confirm_quit command without any pre-configured scope."
+        },
+        {
           "description": "Enables the create_evaluation_session command without any pre-configured scope.",
           "type": "string",
           "const": "allow-create-evaluation-session",
@@ -2917,6 +2923,12 @@
           "type": "string",
           "const": "deny-compute-live-stats",
           "markdownDescription": "Denies the compute_live_stats command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the confirm_quit command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-confirm-quit",
+          "markdownDescription": "Denies the confirm_quit command without any pre-configured scope."
         },
         {
           "description": "Denies the create_evaluation_session command without any pre-configured scope.",

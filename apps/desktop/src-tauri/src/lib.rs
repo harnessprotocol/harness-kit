@@ -1,7 +1,7 @@
 mod commands;
 mod db;
 
-use tauri::{LogicalSize, Manager};
+use tauri::{Emitter, LogicalSize, Manager};
 
 /// Detect the current git branch by running `git branch --show-current`
 /// from the process working directory. Returns `None` when not in a git
@@ -186,6 +186,8 @@ pub fn run() {
             // Runtime FS scope grants (used by the project scope of Machine, Drift and Compile)
             commands::fs_scope::grant_project_scope,
             commands::fs_scope::choose_project_dir,
+            // Quit handshake: the webview answers a held close request
+            commands::app_lifecycle::confirm_quit,
             commands::share::save_share_file,
             // Guarded write/rename/remove for the webview's TauriFsProvider
             commands::fs_guarded::guarded_write_file,
@@ -206,9 +208,19 @@ pub fn run() {
         ])
         // The OS reports a drop to the native layer; remember the paths here
         // so plugin import can accept only paths the user actually dropped.
-        .on_window_event(|_window, event| {
-            if let tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) = event {
-                commands::plugin_explorer::record_dropped_paths(paths);
+        .on_window_event(|window, event| {
+            match event {
+                tauri::WindowEvent::DragDrop(tauri::DragDropEvent::Drop { paths, .. }) => {
+                    commands::plugin_explorer::record_dropped_paths(paths);
+                }
+                // Closing the main window quits the app. Hold it and let the
+                // webview decide: it saves, discards, cancels, or answers
+                // `confirm_quit` at once when nothing is unsaved.
+                tauri::WindowEvent::CloseRequested { api, .. } if window.label() == "main" => {
+                    api.prevent_close();
+                    let _ = window.emit(commands::app_lifecycle::QUIT_REQUESTED_EVENT, ());
+                }
+                _ => {}
             }
         })
         .setup(|app| {

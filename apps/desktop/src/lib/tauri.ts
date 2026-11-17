@@ -613,3 +613,11 @@ export function runPluginInstaller(
 export function whichPluginInstaller(binary: string): Promise<string | null> {
   return invoke<string | null>("which_plugin_installer", { binary });
 }
+
+// ── Quit ─────────────────────────────────────────────────────
+// Rust holds the window open on a close request and asks the webview
+// (`app://quit-requested`); this is the webview's answer to go ahead.
+
+export function confirmQuit(): Promise<void> {
+  return invoke<void>("confirm_quit");
+}

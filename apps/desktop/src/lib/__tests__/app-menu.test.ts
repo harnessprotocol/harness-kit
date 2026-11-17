@@ -5,6 +5,8 @@ type Node = { kind: string; text?: string; item?: unknown; accelerator?: string;
 const { open, setAsAppMenu } = vi.hoisted(() => ({ open: vi.fn(), setAsAppMenu: vi.fn() }));
 
 vi.mock("@tauri-apps/plugin-shell", () => ({ open }));
+const { emit } = vi.hoisted(() => ({ emit: vi.fn() }));
+vi.mock("@tauri-apps/api/event", () => ({ emit }));
 const { tauri, platform } = vi.hoisted(() => ({ tauri: vi.fn(() => true), platform: vi.fn(() => "darwin") }));
 vi.mock("../tauri", () => ({ isTauriRuntimeAvailable: tauri }));
 vi.mock("../../pages/machine/machine-data", () => ({ detectDesktopPlatform: platform }));
@@ -41,12 +43,24 @@ describe("app menu", () => {
     expect(items.map((i) => i.item)).toEqual(["Minimize", "Maximize", "Fullscreen", "Separator", "CloseWindow"]);
   });
 
-  it("App holds the predefined About, Hide, Hide others, Show all, Quit", async () => {
+  it("App holds the predefined About, Hide, Hide others, Show all, then a custom Quit", async () => {
     const { sub } = await build();
-    const items = sub("Harness Kit").items!.map((i) => i.item);
-    expect(items.filter((i) => i !== "Separator").map((i) => (typeof i === "string" ? i : Object.keys(i as object)[0]))).toEqual(
-      ["About", "Hide", "HideOthers", "ShowAll", "Quit"],
+    const items = sub("Harness Kit").items!;
+    const predefined = items.filter((i) => i.kind === "predefined").map((i) => i.item);
+    expect(predefined.filter((i) => i !== "Separator").map((i) => (typeof i === "string" ? i : Object.keys(i as object)[0]))).toEqual(
+      ["About", "Hide", "HideOthers", "ShowAll"],
     );
+    const quit = items[items.length - 1];
+    expect(quit.kind).toBe("item");
+    expect(quit.text).toBe("Quit Harness Kit");
+    expect(quit.accelerator).toBe("CmdOrCtrl+Q");
+  });
+
+  it("Quit asks the webview instead of exiting", async () => {
+    const { sub } = await build();
+    const items = sub("Harness Kit").items!;
+    items[items.length - 1].action!();
+    expect(emit).toHaveBeenCalledWith("app://quit-requested");
   });
 
   it("Edit holds the predefined Undo, Redo, Cut, Copy, Paste, Select All", async () => {

@@ -9,7 +9,6 @@ import {
   LEGACY_CLAUDE_IGNORED_NOTICE,
   LEGACY_CLAUDE_PROFILE_NOTICE,
   LEGACY_HARNESS_NOTICE,
-  PERSONAL_PROFILE_DISPLAY,
 } from "../../lib/legacy-harness-notice";
 import { projectDirLabel, useProjectDir } from "../../lib/project-dir";
 import { importPersonalHarness } from "../../lib/personal-inventory";
@@ -22,7 +21,7 @@ import type { YamlPatch } from "../../lib/harness-yaml-patch";
 import { getAvailableViewModes } from "../../lib/viewModes";
 import { useRegisterCommands } from "../../lib/commands";
 import { errorDetails } from "../../lib/error-details";
-import { loadedDigest } from "../../lib/loaded-digest";
+import { saveProfileText } from "../../lib/profile-save";
 import { clearProfileDraft, getProfileDraft, setProfileDraft } from "../../lib/profile-draft";
 import type { ProfileDraft } from "../../lib/profile-draft";
 import EditorToolbar from "../../components/file-explorer/EditorToolbar";
@@ -332,8 +331,7 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
       // It is of the text the buffer was last in step with, never of a disk
       // version still waiting in `pendingDisk`: Save must not overwrite that
       // one without asking.
-      const expected = filePath === PERSONAL_PROFILE_DISPLAY ? await loadedDigest(syncedRef.current ?? diskContent) : undefined;
-      const savedPath = await writeHarnessFile(content, expected);
+      const savedPath = await saveProfileText(filePath, content, syncedRef.current ?? diskContent);
       setDiskContent(content);
       // An edit made while the write ran stays in the buffer; the panel follows it.
       setPanelText(bufferRef.current);

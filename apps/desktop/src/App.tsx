@@ -5,6 +5,7 @@ import { getDefaultSection, getWelcomeSeen, setWelcomeSeen } from "./lib/prefere
 import { ObservatoryProvider } from "./hooks/useObservatoryData";
 import { DriftRedirect } from "./routes/DriftRedirect";
 import { FleetRedirect } from "./routes/FleetRedirect";
+import { QuitGuard } from "./components/QuitGuard";
 
 // Lazy-load all pages so the initial bundle only includes the shell + router
 const PreferencesPage = lazy(() => import("./pages/PreferencesPage"));
@@ -57,6 +58,7 @@ export default function App() {
 
   return (
     <>
+      <QuitGuard />
       <ObservatoryProvider>
         {showWelcome && (
           <Suspense fallback={null}>
