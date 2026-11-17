@@ -134,14 +134,15 @@ export async function generateMarketplaceData(repoRoot: string, strict = false):
   // Profiles are generated AFTER plugins so component refs can resolve
   const profiles = await readProfiles(repoRoot, plugins, strict);
 
+  const marketplaceSource = `${marketplace.owner?.name ?? "harnessprotocol"}/${marketplaceName}`;
+
   // GitHub stars — single fetch for the first-party repo; optional
-  const repoStars = await fetchRepoStars(
-    `${marketplace.owner?.name ?? "harnessprotocol"}/${marketplaceName}`,
-  );
+  const repoStars = await fetchRepoStars(marketplaceSource);
 
   return {
     generatedAt: new Date().toISOString(),
     marketplaceName,
+    marketplaceSource,
     owner: marketplace.owner?.name ?? "unknown",
     categories,
     plugins,

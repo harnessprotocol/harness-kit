@@ -157,6 +157,8 @@ export interface MarketplaceProfile {
 export interface MarketplaceData {
   generatedAt: string;
   marketplaceName: string;
+  /** `<owner>/<marketplaceName>`: the GitHub source `claude plugin marketplace add` takes. */
+  marketplaceSource: string;
   owner: string;
   categories: MarketplaceCategory[];
   plugins: MarketplacePlugin[];

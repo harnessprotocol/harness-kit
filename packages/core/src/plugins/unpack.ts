@@ -13,6 +13,10 @@ import type { PluginBrokerRequest, ExecuteOptions, PluginActionOutcome } from ".
  * can remove exactly what was added and no more, which is the whole reason
  * AC-19 asks for tracking rather than a plain copy.
  *
+ * There is no backup or rollback: a file written here is not restorable. For
+ * that reason unpack never overwrites; it refuses when any target exists.
+ * Each file is written to a temp name and renamed into place.
+ *
  * Deliberately NARROW this milestone: skills only. A plugin's MCP servers and
  * instructions would each need their own merge semantics against a file the
  * user also writes, and getting that wrong means clobbering their config. The
@@ -85,44 +89,51 @@ export function planUnpackAction(
             "that record is written by this milestone but not yet read back.",
         };
       }
-      // Only Claude Code's cache holds unpacked plugin contents on disk, and
-      // `resolvePluginRoot` reads exactly that. Accepting any other source and
-      // silently shipping Claude Code's bytes under its name would be worse
-      // than refusing: the user picked a surface and would get another
-      // vendor's files.
-      if (options.sourceSurface !== "claude-code") {
-        return {
-          status: "refused",
-          reason:
-            options.sourceSurface === undefined
-              ? "unpacking needs a source surface to copy the plugin's contents from."
-              : `only claude-code caches plugin contents on disk; HarnessKit cannot unpack from ${options.sourceSurface}.`,
-        };
-      }
-      const source = await resolvePluginRoot(options, request);
-      if (source === null) {
-        return {
-          status: "refused",
-          reason: `HarnessKit could not find ${request.identity}'s files on this machine to copy from.`,
-        };
-      }
+      let skills: Array<{ dir: string; content: string }>;
       const root = request.scope === "user" ? options.homeRoot : (request.projectRoot ?? undefined);
+      if (options.catalogSkills === undefined) {
+        // Only Claude Code's cache holds unpacked plugin contents on disk, and
+        // `resolvePluginRoot` reads exactly that. Accepting any other source and
+        // silently shipping Claude Code's bytes under its name would be worse
+        // than refusing: the user picked a surface and would get another
+        // vendor's files.
+        if (options.sourceSurface !== "claude-code") {
+          return {
+            status: "refused",
+            reason:
+              options.sourceSurface === undefined
+                ? "unpacking needs a source surface to copy the plugin's contents from."
+                : `only claude-code caches plugin contents on disk; HarnessKit cannot unpack from ${options.sourceSurface}.`,
+          };
+        }
+        const source = await resolvePluginRoot(options, request);
+        if (source === null) {
+          return {
+            status: "refused",
+            reason: `HarnessKit could not find ${request.identity}'s files on this machine to copy from.`,
+          };
+        }
+        skills = await readCachedSkills(options.fs, source);
+      } else {
+        skills = options.catalogSkills.filter((skill) => isSafeSegment(skill.dir)).map((s) => ({ ...s }));
+      }
       if (root === undefined || root === null) {
         return { status: "refused", reason: `no ${request.scope} root to unpack into.` };
       }
       const destination = options.fs.joinPath(root, store.path, pluginName);
       let written: string[];
       try {
-        written = await copySkills(options.fs, root, source, destination);
+        written = await writeSkills(options.fs, root, destination, skills, options.now);
       } catch (error) {
+        if (error instanceof UnpackRefused) return { status: "refused", reason: error.message };
         // The contract is "never throws for an ordinary failure". A refusal or
-        // an IO error mid-copy is ordinary — and the files already written are
-        // reported so the caller can record and later remove them, rather than
-        // being orphaned untracked on disk.
+        // an IO error mid-copy is ordinary.
         const message = error instanceof Error ? error.message : String(error);
+        const partial = error instanceof UnpackWriteFailed ? error.files : [];
         return {
           status: "failed",
           reason: `unpacking ${request.identity} stopped: ${message}`,
+          ...(partial.length > 0 ? { files: partial } : {}),
         };
       }
       if (written.length === 0) {
@@ -135,6 +146,7 @@ export function planUnpackAction(
         status: "installed",
         display: `unpack ${request.identity} → ${store.path}/${pluginName}`,
         files: written,
+        details: { note: SKILL_ONLY_NOTE },
       };
     },
   };
@@ -168,25 +180,12 @@ async function resolvePluginRoot(
   return recorded;
 }
 
-/**
- * Copy every SKILL.md tree from the plugin into the destination.
- *
- * `root` anchors the symlink check. Validating the plugin name and each skill
- * entry as safe segments stops traversal through the NAMES; it says nothing
- * about the destination directory itself, and a single symlink planted inside
- * a skills tree — by another installer, by synced dotfiles, by a previously
- * unpacked plugin — would otherwise redirect these writes to any path the
- * user can reach. This is the guard the transaction engine applies and that
- * writing directly would otherwise lose.
- */
-async function copySkills(
+/** Read every SKILL.md from the plugin's skills directories. */
+async function readCachedSkills(
   fs: FsProvider,
-  root: string,
   pluginRoot: string,
-  destination: string,
-): Promise<string[]> {
-  const written: string[] = [];
-  const prefix = root.endsWith("/") ? root : `${root}/`;
+): Promise<Array<{ dir: string; content: string }>> {
+  const skills: Array<{ dir: string; content: string }> = [];
   for (const directory of PLUGIN_SKILL_DIRS) {
     const source = fs.joinPath(pluginRoot, directory);
     if (!(await fs.isDirectory(source))) continue;
@@ -194,20 +193,104 @@ async function copySkills(
       if (!isSafeSegment(entry)) continue;
       const skillFile = fs.joinPath(source, entry, "SKILL.md");
       if (!(await fs.exists(skillFile))) continue;
-      const content = await fs.readFile(skillFile);
-      const target = fs.joinPath(destination, entry, "SKILL.md");
-      if (!target.startsWith(prefix)) {
-        throw new UnpackRefused(`refusing to write outside ${root}: ${target}`);
-      }
-      // Checked per file, AFTER any mkdir a previous iteration performed, so
-      // a symlink appearing mid-run is caught rather than followed.
-      await assertNoSymlinkBoundary(fs, root, target.slice(prefix.length));
-      await fs.mkdir(fs.dirname(target), { recursive: true });
-      await fs.writeFile(target, content);
-      written.push(target);
+      skills.push({ dir: entry, content: await fs.readFile(skillFile) });
     }
   }
+  return skills;
+}
+
+/**
+ * Write each skill's SKILL.md under the destination.
+ *
+ * Two passes. The first computes every target and refuses if ANY already
+ * exists: unpack never overwrites, because it has no backup to restore from.
+ * Nothing is written until every target is known to be free, so a refusal
+ * leaves the disk untouched. The second writes `<target>.harness-tmp-<suffix>`
+ * and renames it onto the target, the only write shape the desktop's guarded
+ * Rust commands accept.
+ *
+ * `root` anchors the symlink check. Validating the plugin name and each skill
+ * entry as safe segments stops traversal through the NAMES; it says nothing
+ * about the destination directory itself, and a single symlink planted inside
+ * a skills tree would otherwise redirect these writes to any path the user
+ * can reach.
+ */
+async function writeSkills(
+  fs: FsProvider,
+  root: string,
+  destination: string,
+  skills: ReadonlyArray<{ dir: string; content: string }>,
+  now: string,
+): Promise<string[]> {
+  const prefix = root.endsWith("/") ? root : `${root}/`;
+  const stamp = now.replace(/[^A-Za-z0-9-]/g, "-");
+  const targets = skills.map((skill) => ({
+    target: fs.joinPath(destination, skill.dir, "SKILL.md"),
+    content: skill.content,
+  }));
+  const seen = new Set<string>();
+  for (const { target } of targets) {
+    if (seen.has(target)) {
+      throw new UnpackRefused(`${target} appears more than once in the plugin's skills; HarnessKit does not overwrite.`);
+    }
+    seen.add(target);
+    if (!target.startsWith(prefix)) {
+      throw new UnpackRefused(`refusing to write outside ${root}: ${target}`);
+    }
+    if (await fs.exists(target)) {
+      throw new UnpackRefused(
+        `${target} already exists; HarnessKit does not overwrite a skill it did not write. Move or remove it first.`,
+      );
+    }
+  }
+  const written: string[] = [];
+  let index = 0;
+  for (const { target, content } of targets) {
+    // Checked per file, AFTER any mkdir a previous iteration performed, so
+    // a symlink appearing mid-run is caught rather than followed.
+    const temp = `${target}.harness-tmp-${stamp}-${index}`;
+    index += 1;
+    try {
+      await assertNoSymlinkBoundary(fs, root, target.slice(prefix.length));
+      await fs.mkdir(fs.dirname(target), { recursive: true });
+      await fs.writeFile(temp, content);
+      await fs.renameFile(temp, target);
+    } catch (error) {
+      // Best effort: do not leave the temp file behind. Its own failure is
+      // ignored so the original error is the one reported.
+      try {
+        await fs.removeFile?.(temp);
+      } catch {
+        /* ignore */
+      }
+      throw new UnpackWriteFailed(error instanceof Error ? error.message : String(error), written);
+    }
+    written.push(target);
+  }
   return written;
+}
+
+const SKILL_ONLY_NOTE =
+  "Only SKILL.md files were written; a skill's other files (scripts, references) were not copied.";
+
+/** SKILL.md text for a catalog skill: JSON-quoted frontmatter values, then the body. */
+export function catalogSkillContent(skill: {
+  name: string;
+  description: string;
+  body: string;
+}): string {
+  return `---\nname: ${JSON.stringify(skill.name)}\ndescription: ${JSON.stringify(skill.description)}\n---\n\n${skill.body}`;
+}
+
+/** An IO failure mid-write, carrying the files already placed. */
+class UnpackWriteFailed extends Error {
+  constructor(
+    message: string,
+    readonly files: string[],
+  ) {
+    super(message);
+    this.name = "UnpackWriteFailed";
+  }
 }
 
 /** A refusal the driver reports rather than throwing out of the broker. */

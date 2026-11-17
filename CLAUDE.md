@@ -159,6 +159,12 @@ Never write a whole token-shaped string (GitHub, Google, Stripe, npm, Slack, web
 
 ---
 
+## Desktop process bridge
+
+The only process the webview can start is an allowlisted plugin installer through `run_plugin_installer` (`apps/desktop/src-tauri/src/commands/plugin_installer.rs`). Widening the allowlist (a binary, verb or flag) is ask-first. `marketplace add` is pinned to `CATALOG_SOURCE` (`harnessprotocol/harness-kit`); if the owner or name in `.claude-plugin/marketplace.json` changes, update that constant or Apply cannot add the marketplace.
+
+---
+
 ## Release checklist
 
 1. Bump `version` in `plugins/<name>/.claude-plugin/plugin.json` and `.claude-plugin/marketplace.json` (must match)

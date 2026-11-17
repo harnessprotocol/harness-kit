@@ -43,9 +43,10 @@ export function relatedPlugins(plugin: MarketplacePlugin, limit = 5): Marketplac
     .slice(0, limit);
 }
 
-export function getMarketplaceMeta(): Pick<MarketplaceData, "marketplaceName" | "owner" | "generatedAt" | "repoStars"> {
+export function getMarketplaceMeta(): Pick<MarketplaceData, "marketplaceName" | "marketplaceSource" | "owner" | "generatedAt" | "repoStars"> {
   return {
     marketplaceName: data.marketplaceName,
+    marketplaceSource: data.marketplaceSource,
     owner: data.owner,
     generatedAt: data.generatedAt,
     repoStars: data.repoStars,

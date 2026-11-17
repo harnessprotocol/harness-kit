@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import type { ProcessResult } from "@harness-kit/core";
 import type {
   InstalledPlugin, KnownMarketplace, PluginUpdateInfo, HooksConfig, StatsCache,
   SessionSummary, SessionFacet, ActiveSession, LiveDailyActivity,
@@ -591,4 +592,20 @@ export async function submitFeedback(
     arch: sysInfo.arch,
     appVersion: sysInfo.appVersion,
   });
+}
+
+// ── Plugin installers (allowlisted Rust bridge) ──────────────
+// Rust accepts only claude / copilot / codex with a fixed set of argument
+// shapes; anything else comes back as `spawn-failed` with a `refused:` reason.
+
+export function runPluginInstaller(
+  command: string,
+  args: string[],
+  cwd: string | null,
+): Promise<ProcessResult> {
+  return invoke<ProcessResult>("run_plugin_installer", { command, args, cwd });
+}
+
+export function whichPluginInstaller(binary: string): Promise<string | null> {
+  return invoke<string | null>("which_plugin_installer", { binary });
 }

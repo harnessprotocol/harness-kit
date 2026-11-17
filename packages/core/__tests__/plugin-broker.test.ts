@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { planPluginAction, executePluginAction } from "../src/plugins/broker.js";
 import type { ExecuteOptions } from "../src/plugins/broker.js";
+import { catalogSkillContent } from "../src/plugins/unpack.js";
 import { planNativePluginAction } from "../src/plugins/installer.js";
 import { getSurface } from "../src/surfaces/registry.js";
 import type { ProcessCommand, ProcessResult, ProcessRunner } from "../src/process-runner.js";
@@ -489,5 +490,176 @@ describe("planNativePluginAction is pure", () => {
       scope: "user",
     });
     expect(plan.supported).toBe(true);
+  });
+});
+
+describe("unpack from catalog skills (AC-18..AC-21, AC-23)", () => {
+  const request = {
+    surface: "opencode" as const,
+    identity: "board@harness-kit",
+    scope: "user" as const,
+    action: "install" as const,
+  };
+  const STORE = `${HOME}/.config/opencode/skills/board`;
+
+  /** Records every write and rename so the temp-then-rename contract is checkable. */
+  function recordingFs(files: Record<string, string> = {}) {
+    const fs = new MockFsProvider(files, PROJECT, HOME);
+    const writes: string[] = [];
+    const renames: Array<[string, string]> = [];
+    const write = fs.writeFile.bind(fs);
+    const rename = fs.renameFile.bind(fs);
+    fs.writeFile = async (p: string, c: string) => {
+      writes.push(p);
+      return write(p, c);
+    };
+    fs.renameFile = async (a: string, b: string) => {
+      renames.push([a, b]);
+      return rename(a, b);
+    };
+    return { fs, writes, renames };
+  }
+
+  const catalogSkills = [
+    { dir: "review", content: "# review" },
+    { dir: "plan", content: "# plan" },
+  ];
+
+  it("writes each catalog skill with no source surface, via temp then rename", async () => {
+    const { fs, writes, renames } = recordingFs();
+    const outcome = await executePluginAction(planPluginAction(request), {
+      runner: new FakeRunner(),
+      fs,
+      now: "2026-09-07T00:00:00.000Z",
+      homeRoot: HOME,
+      catalogSkills,
+    });
+    expect(outcome.status).toBe("installed");
+    if (outcome.status !== "installed") return;
+    expect(outcome.files.sort()).toEqual([`${STORE}/plan/SKILL.md`, `${STORE}/review/SKILL.md`]);
+    expect(await fs.readFile(`${STORE}/review/SKILL.md`)).toBe("# review");
+    expect(writes.length).toBe(2);
+    for (const w of writes) expect(w).toMatch(/SKILL\.md\.harness-tmp-[A-Za-z0-9-]+$/);
+    for (const [from, to] of renames) {
+      expect(from.startsWith(`${to}.harness-tmp-`)).toBe(true);
+    }
+    expect(renames.map(([, to]) => to).sort()).toEqual(outcome.files.slice().sort());
+    expect(await fs.exists(writes[0])).toBe(false);
+  });
+
+  it("uses a distinct temp suffix per file", async () => {
+    const { fs, writes } = recordingFs();
+    await executePluginAction(planPluginAction(request), {
+      runner: new FakeRunner(),
+      fs,
+      now: "2026-09-07T00:00:00.000Z",
+      homeRoot: HOME,
+      catalogSkills,
+    });
+    const suffixes = writes.map((w) => w.slice(w.indexOf(".harness-tmp-")));
+    expect(new Set(suffixes).size).toBe(2);
+  });
+
+  it("refuses without writing anything when a target already exists", async () => {
+    const { fs, writes, renames } = recordingFs({ [`${STORE}/plan/SKILL.md`]: "mine" });
+    const outcome = await executePluginAction(planPluginAction(request), {
+      runner: new FakeRunner(),
+      fs,
+      now: "2026-09-07T00:00:00.000Z",
+      homeRoot: HOME,
+      catalogSkills,
+    });
+    expect(outcome.status).toBe("refused");
+    expect(outcome.status === "refused" ? outcome.reason : "").toContain(`${STORE}/plan/SKILL.md`);
+    expect(writes).toEqual([]);
+    expect(renames).toEqual([]);
+    expect(await fs.readFile(`${STORE}/plan/SKILL.md`)).toBe("mine");
+  });
+
+  it("skips unsafe skill directory names", async () => {
+    const { fs } = recordingFs();
+    const outcome = await executePluginAction(planPluginAction(request), {
+      runner: new FakeRunner(),
+      fs,
+      now: "2026-09-07T00:00:00.000Z",
+      homeRoot: HOME,
+      catalogSkills: [
+        { dir: "..", content: "x" },
+        { dir: "a/b", content: "x" },
+        { dir: "ok", content: "# ok" },
+      ],
+    });
+    expect(outcome.status === "installed" ? outcome.files : []).toEqual([`${STORE}/ok/SKILL.md`]);
+  });
+
+  it("states that only SKILL.md files were written", async () => {
+    const { fs } = recordingFs();
+    const outcome = await executePluginAction(planPluginAction(request), {
+      runner: new FakeRunner(),
+      fs,
+      now: "2026-09-07T00:00:00.000Z",
+      homeRoot: HOME,
+      catalogSkills,
+    });
+    expect(outcome.status === "installed" ? outcome.details : undefined).toEqual({
+      note: "Only SKILL.md files were written; a skill's other files (scripts, references) were not copied.",
+    });
+  });
+
+  it("refuses duplicate skill directories without writing", async () => {
+    const { fs, writes } = recordingFs();
+    const outcome = await executePluginAction(planPluginAction(request), {
+      runner: new FakeRunner(),
+      fs,
+      now: "2026-09-07T00:00:00.000Z",
+      homeRoot: HOME,
+      catalogSkills: [
+        { dir: "dup", content: "one" },
+        { dir: "dup", content: "two" },
+      ],
+    });
+    expect(outcome.status).toBe("refused");
+    expect(outcome.status === "refused" ? outcome.reason : "").toContain("more than once");
+    expect(writes).toEqual([]);
+  });
+
+  it("removes the temp file and reports earlier files when a rename fails", async () => {
+    const { fs } = recordingFs();
+    const rename = fs.renameFile.bind(fs);
+    let n = 0;
+    fs.renameFile = async (a: string, b: string) => {
+      n += 1;
+      if (n === 2) throw new Error("EXDEV: boom");
+      return rename(a, b);
+    };
+    const removed: string[] = [];
+    const base = fs as unknown as { removeFile?: (p: string) => Promise<void> };
+    base.removeFile = async (p: string) => {
+      removed.push(p);
+    };
+    const outcome = await executePluginAction(planPluginAction(request), {
+      runner: new FakeRunner(),
+      fs,
+      now: "2026-09-07T00:00:00.000Z",
+      homeRoot: HOME,
+      catalogSkills,
+    });
+    expect(outcome.status).toBe("failed");
+    if (outcome.status !== "failed") return;
+    expect(outcome.reason).toContain("EXDEV");
+    expect(outcome.files).toEqual([`${STORE}/review/SKILL.md`]);
+    expect(removed.length).toBe(1);
+    expect(removed[0]).toContain("/plan/SKILL.md.harness-tmp-");
+  });
+
+  it("catalogSkillContent JSON-quotes name and description", () => {
+    const text = catalogSkillContent({
+      name: "review",
+      description: 'Use when: "quoted" and a: colon',
+      body: "# Body",
+    });
+    expect(text).toBe(
+      `---\nname: "review"\ndescription: ${JSON.stringify('Use when: "quoted" and a: colon')}\n---\n\n# Body`,
+    );
   });
 });

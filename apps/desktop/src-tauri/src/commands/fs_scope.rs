@@ -17,6 +17,11 @@ fn granted_roots() -> &'static Mutex<HashSet<PathBuf>> {
     ROOTS.get_or_init(|| Mutex::new(HashSet::new()))
 }
 
+/// Whether `candidate` is itself a granted root (not merely inside one).
+pub(crate) fn is_exact_granted_root(candidate: &Path) -> bool {
+    granted_roots().lock().is_ok_and(|roots| roots.contains(candidate))
+}
+
 /// Whether `candidate` is a granted root or lives inside one.
 pub(crate) fn is_granted_root(candidate: &Path) -> bool {
     granted_root_for(candidate).is_some()

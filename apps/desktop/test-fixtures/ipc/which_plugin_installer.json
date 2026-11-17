@@ -1,0 +1,10 @@
+{
+  "command": "which_plugin_installer",
+  "calls": [
+    {
+      "fn": "whichPluginInstaller",
+      "args": ["claude"],
+      "payload": { "binary": "claude" }
+    }
+  ]
+}

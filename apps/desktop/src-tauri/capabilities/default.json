@@ -194,6 +194,8 @@
     "allow-guarded-write-file",
     "allow-guarded-rename-file",
     "allow-guarded-remove-file",
+    "allow-run-plugin-installer",
+    "allow-which-plugin-installer",
     "allow-acknowledge-drift-item",
     "allow-unacknowledge-drift-item",
     "allow-get-acknowledged-drift-items",

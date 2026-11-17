@@ -388,7 +388,11 @@ export default function MarketplacePage() {
               {/* Main column */}
               <div style={{ flex: 1, minWidth: 0 }}>
                 {/* Install command + Install to … (AC-27) */}
-                <InstallCard plugin={detail} />
+                <InstallCard
+                  plugin={detail}
+                  marketplaceName={MARKETPLACE_META.marketplaceName}
+                  marketplaceSource={MARKETPLACE_META.marketplaceSource}
+                />
 
                 {/* Required environment variables */}
                 {detail.requiresEnv.length > 0 && (
