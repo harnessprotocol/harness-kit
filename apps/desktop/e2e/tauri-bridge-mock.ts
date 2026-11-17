@@ -13,6 +13,8 @@ export const MOCK_RESPONSES: Record<string, unknown> = {
     path: "~/.claude/harness.yaml",
   },
   list_installed_plugins: [],
+  which_plugin_installer: null,
+  run_plugin_installer: { status: "spawn-failed", reason: "mock" },
   check_plugin_updates: [],
   list_marketplaces: [],
   read_plugin_tree: { name: "root", children: [], files: [] },

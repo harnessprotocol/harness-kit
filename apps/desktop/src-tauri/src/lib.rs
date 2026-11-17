@@ -191,6 +191,9 @@ pub fn run() {
             commands::fs_guarded::guarded_write_file,
             commands::fs_guarded::guarded_rename_file,
             commands::fs_guarded::guarded_remove_file,
+            // Allowlisted plugin installer bridge (claude / copilot / codex)
+            commands::plugin_installer::run_plugin_installer,
+            commands::plugin_installer::which_plugin_installer,
             // Drift (acknowledgement persistence; drift computation itself
             // lives in packages/core, run from the Drift page — see
             // commands/parity.rs module docs)

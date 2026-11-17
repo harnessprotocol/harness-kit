@@ -117,6 +117,9 @@ fn main() {
                 "guarded_write_file",
                 "guarded_rename_file",
                 "guarded_remove_file",
+                // Allowlisted plugin installer bridge
+                "run_plugin_installer",
+                "which_plugin_installer",
                 // Drift (acknowledgement persistence)
                 "acknowledge_drift_item",
                 "unacknowledge_drift_item",

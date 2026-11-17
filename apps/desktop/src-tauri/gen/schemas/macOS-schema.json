@@ -2655,6 +2655,12 @@
           "markdownDescription": "Enables the reveal_evaluation_session command without any pre-configured scope."
         },
         {
+          "description": "Enables the run_plugin_installer command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-run-plugin-installer",
+          "markdownDescription": "Enables the run_plugin_installer command without any pre-configured scope."
+        },
+        {
           "description": "Enables the save_comparison command without any pre-configured scope.",
           "type": "string",
           "const": "allow-save-comparison",
@@ -2821,6 +2827,12 @@
           "type": "string",
           "const": "allow-verify-definitions-signature",
           "markdownDescription": "Enables the verify_definitions_signature command without any pre-configured scope."
+        },
+        {
+          "description": "Enables the which_plugin_installer command without any pre-configured scope.",
+          "type": "string",
+          "const": "allow-which-plugin-installer",
+          "markdownDescription": "Enables the which_plugin_installer command without any pre-configured scope."
         },
         {
           "description": "Enables the write_config_file command without any pre-configured scope.",
@@ -3291,6 +3303,12 @@
           "markdownDescription": "Denies the reveal_evaluation_session command without any pre-configured scope."
         },
         {
+          "description": "Denies the run_plugin_installer command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-run-plugin-installer",
+          "markdownDescription": "Denies the run_plugin_installer command without any pre-configured scope."
+        },
+        {
           "description": "Denies the save_comparison command without any pre-configured scope.",
           "type": "string",
           "const": "deny-save-comparison",
@@ -3457,6 +3475,12 @@
           "type": "string",
           "const": "deny-verify-definitions-signature",
           "markdownDescription": "Denies the verify_definitions_signature command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the which_plugin_installer command without any pre-configured scope.",
+          "type": "string",
+          "const": "deny-which-plugin-installer",
+          "markdownDescription": "Denies the which_plugin_installer command without any pre-configured scope."
         },
         {
           "description": "Denies the write_config_file command without any pre-configured scope.",

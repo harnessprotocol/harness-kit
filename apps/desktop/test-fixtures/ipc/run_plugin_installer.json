@@ -1,0 +1,14 @@
+{
+  "command": "run_plugin_installer",
+  "calls": [
+    {
+      "fn": "runPluginInstaller",
+      "args": ["claude", ["plugin", "install", "explain@harness-kit", "--scope", "user"], null],
+      "payload": {
+        "command": "claude",
+        "args": ["plugin", "install", "explain@harness-kit", "--scope", "user"],
+        "cwd": null
+      }
+    }
+  ]
+}
