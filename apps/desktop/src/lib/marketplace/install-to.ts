@@ -1,7 +1,10 @@
-import { planPluginAction } from "@harness-kit/core";
+import { catalogSkillContent, executePluginAction, planPluginAction } from "@harness-kit/core";
+import type { MarketplacePlugin } from "@harness-kit/marketplace-data";
 import type {
   BrokerPlan,
   FsProvider,
+  PluginActionOutcome,
+  ProcessRunner,
   SurfaceDescriptor,
   SurfaceId,
   SurfaceScope,
@@ -113,17 +116,18 @@ export function planCatalogInstall(args: {
     const native = plan.plan;
     if (native.supported) {
       cli = native.display;
-      // The webview has no process-spawn bridge (see applyCellActionViaTauri in
-      // pages/machine/cell-actions.ts), so a supported native plan still cannot
-      // run from the app.
-      applyBlockedReason = `Harness Kit can't run ${args.label}'s installer yet. Copy the CLI command or the agent prompt instead.`;
+      // The Rust installer bridge runs it; a missing binary is reported at
+      // Apply time by the broker's `which` probe.
+      applyBlockedReason = null;
     } else {
       applyBlockedReason = native.reason;
     }
   } else if (plan.kind === "unsupported") {
     applyBlockedReason = plan.reason;
+  } else if (plan.plan.supported) {
+    applyBlockedReason = null;
   } else {
-    applyBlockedReason = `${args.label} has no plugin installer; the app cannot install here yet. Use the agent prompt.`;
+    applyBlockedReason = plan.plan.reason;
   }
   return {
     plan,
@@ -136,4 +140,76 @@ export function planCatalogInstall(args: {
       invocation: cli,
     }),
   };
+}
+
+/** Names of the marketplaces Claude Code already knows; missing or unreadable file is none. */
+export async function readKnownMarketplaces(fs: FsProvider, home: string): Promise<string[]> {
+  try {
+    const text = await fs.readFile(fs.joinPath(home, ".claude", "plugins", "known_marketplaces.json"));
+    const parsed: unknown = JSON.parse(text);
+    return typeof parsed === "object" && parsed !== null ? Object.keys(parsed) : [];
+  } catch {
+    return [];
+  }
+}
+
+function lastLine(text: string): string | undefined {
+  const lines = text
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+  return lines[lines.length - 1];
+}
+
+/**
+ * Run a planned catalog install. Claude Code needs the catalog's marketplace
+ * registered first, so it is added when `known_marketplaces.json` lacks it;
+ * every other surface goes straight to the broker.
+ */
+export async function applyCatalogInstall(args: {
+  view: CatalogInstallView;
+  surface: SurfaceDescriptor;
+  plugin: MarketplacePlugin;
+  marketplaceName: string;
+  marketplaceSource: string;
+  runner: ProcessRunner;
+  fs: FsProvider;
+  home: string;
+  now: string;
+  readKnownMarketplaces: () => Promise<string[]>;
+}): Promise<PluginActionOutcome> {
+  if (args.surface.id === "claude-code") {
+    const known = await args.readKnownMarketplaces();
+    if (!known.includes(args.marketplaceName)) {
+      const added = await args.runner.run({
+        command: "claude",
+        args: ["plugin", "marketplace", "add", args.marketplaceSource],
+      });
+      const failure =
+        added.status === "ok"
+          ? added.exitCode === 0
+            ? null
+            : (lastLine(added.stderr) ?? lastLine(added.stdout) ?? `exited with code ${added.exitCode}`)
+          : added.status === "spawn-failed"
+            ? added.reason
+            : "timed out";
+      if (failure !== null) {
+        return {
+          status: "failed",
+          reason: `Couldn't add the ${args.marketplaceName} marketplace: ${failure}`,
+        };
+      }
+    }
+  }
+  const catalogSkills =
+    args.view.plan.kind === "unpack"
+      ? args.plugin.skills.map((skill) => ({ dir: skill.dir, content: catalogSkillContent(skill) }))
+      : undefined;
+  return executePluginAction(args.view.plan, {
+    runner: args.runner,
+    fs: args.fs,
+    now: args.now,
+    homeRoot: args.home,
+    ...(catalogSkills ? { catalogSkills } : {}),
+  });
 }

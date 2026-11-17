@@ -5,15 +5,18 @@ import type { SurfaceDescriptor, SurfaceId, SurfaceScope } from "@harness-kit/co
 import type { MarketplacePlugin } from "@harness-kit/marketplace-data";
 import { resolveDesktopDefinitions } from "../../../lib/definitions";
 import { TauriFsProvider } from "../../../lib/harness-fs";
+import { TauriProcessRunner } from "../../../lib/process-runner";
 import { useProjectDir } from "../../../lib/project-dir";
 import { surfaceLabel } from "../../../lib/surface-labels";
 import { useToast } from "../../../components/ToastProvider";
 import { detectDesktopPlatform } from "../../machine/machine-data";
 import {
+  applyCatalogInstall,
   detectSurfaces,
   identityFromInstallCommand,
   installTargets,
   planCatalogInstall,
+  readKnownMarketplaces,
   supportsProjectScope,
 } from "../../../lib/marketplace/install-to";
 
@@ -44,7 +47,15 @@ const CODE = {
  * control, and "Install to …" with a surface picker that yields the same
  * three actions as the Machine drawer (AC-27).
  */
-export function InstallCard({ plugin }: { plugin: MarketplacePlugin }) {
+export function InstallCard({
+  plugin,
+  marketplaceName,
+  marketplaceSource,
+}: {
+  plugin: MarketplacePlugin;
+  marketplaceName: string;
+  marketplaceSource: string;
+}) {
   const toast = useToast();
   const copy = useCallback(
     async (text: string, label: string) => {
@@ -76,16 +87,25 @@ export function InstallCard({ plugin }: { plugin: MarketplacePlugin }) {
           Copy
         </Button>
       </div>
-      <InstallTo plugin={plugin} copy={copy} />
+      <InstallTo
+        plugin={plugin}
+        marketplaceName={marketplaceName}
+        marketplaceSource={marketplaceSource}
+        copy={copy}
+      />
     </Card>
   );
 }
 
 function InstallTo({
   plugin,
+  marketplaceName,
+  marketplaceSource,
   copy,
 }: {
   plugin: MarketplacePlugin;
+  marketplaceName: string;
+  marketplaceSource: string;
   copy: (text: string, label: string) => Promise<void>;
 }) {
   const [project] = useProjectDir();
@@ -93,6 +113,8 @@ function InstallTo({
   const [detected, setDetected] = useState<Set<SurfaceId> | null>(null);
   const [chosen, setChosen] = useState<SurfaceId | null>(null);
   const [chosenScope, setChosenScope] = useState<SurfaceScope>("user");
+  const [applying, setApplying] = useState(false);
+  const toast = useToast();
   const surfaceId = useId();
   const scopeId = useId();
 
@@ -138,6 +160,50 @@ function InstallTo({
       label: surfaceLabel(surface.id),
     });
   }, [registry, surface, identity, scope, project]);
+
+  const apply = async () => {
+    if (!view || !surface || applying) return;
+    const label = surfaceLabel(surface.id);
+    setApplying(true);
+    try {
+      const home = await homeDir();
+      const fs = new TauriFsProvider(home);
+      const outcome = await applyCatalogInstall({
+        view,
+        surface,
+        plugin,
+        marketplaceName,
+        marketplaceSource,
+        runner: new TauriProcessRunner(),
+        fs,
+        home,
+        now: new Date().toISOString(),
+        readKnownMarketplaces: () => readKnownMarketplaces(fs, home),
+      });
+      if (outcome.status !== "refused" && outcome.status !== "failed") {
+        const note = outcome.details?.note;
+        toast({
+          title: `Installed ${plugin.name} on ${label}`,
+          ...(typeof note === "string" ? { message: note } : {}),
+          variant: "success",
+        });
+      } else {
+        toast({
+          title: `Couldn't install ${plugin.name} on ${label}`,
+          message: outcome.reason,
+          variant: "warning",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: `Couldn't install ${plugin.name} on ${label}`,
+        message: error instanceof Error ? error.message : String(error),
+        variant: "warning",
+      });
+    } finally {
+      setApplying(false);
+    }
+  };
 
   const optionLabel = (item: SurfaceDescriptor) =>
     `${surfaceLabel(item.id)}${detected !== null && !detected.has(item.id) ? " (not detected)" : ""}`;
@@ -212,8 +278,13 @@ function InstallTo({
                 </code>
               )}
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                <Button variant="primary" size="sm" disabled={view.applyBlockedReason !== null}>
-                  Apply
+                <Button
+                  variant="primary"
+                  size="sm"
+                  disabled={view.applyBlockedReason !== null || applying}
+                  onClick={() => void apply()}
+                >
+                  {applying ? "Installing…" : "Apply"}
                 </Button>
                 <Button
                   variant="ghost"

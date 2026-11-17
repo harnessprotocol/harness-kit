@@ -26,6 +26,11 @@ describe("generateMarketplaceData", () => {
     expect(data.marketplaceName).toBe("harness-kit");
   });
 
+  it("emits marketplaceSource as owner/marketplaceName", async () => {
+    const data = await getData();
+    expect(data.marketplaceSource).toBe("harnessprotocol/harness-kit");
+  });
+
   it("references only known categories", async () => {
     const data = await getData();
     const known = new Set(data.categories.map((c) => c.slug));

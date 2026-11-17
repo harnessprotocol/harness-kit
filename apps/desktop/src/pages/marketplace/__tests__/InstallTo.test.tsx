@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { SURFACES } from "@harness-kit/core";
 import type { SurfaceDescriptor } from "@harness-kit/core";
 import type { MarketplacePlugin } from "@harness-kit/marketplace-data";
@@ -12,6 +12,7 @@ import {
 } from "../../../lib/marketplace/install-to";
 
 const toast = vi.fn();
+const applyMock = vi.fn();
 let project: string | null = null;
 
 // A registry of three: a native installer, a surface with a plugin store but
@@ -29,6 +30,11 @@ const REGISTRY: SurfaceDescriptor[] = [
   { ...base, id: "pi", label: "Pi", notApplicable: ["plugin"] },
 ];
 
+vi.mock("../../../lib/marketplace/install-to", async (importActual) => ({
+  ...(await importActual<typeof import("../../../lib/marketplace/install-to")>()),
+  applyCatalogInstall: (...args: unknown[]) => applyMock(...args),
+}));
+vi.mock("../../../lib/process-runner", () => ({ TauriProcessRunner: class {} }));
 vi.mock("@tauri-apps/api/path", () => ({ homeDir: async () => "/home/test" }));
 vi.mock("../../../lib/definitions", () => ({
   resolveDesktopDefinitions: async () => ({ surfaces: REGISTRY }),
@@ -41,6 +47,9 @@ vi.mock("../../../lib/harness-fs", () => ({
     async exists(path: string) {
       return !path.includes("missing");
     }
+    async readFile() {
+      return "{}";
+    }
   },
 }));
 vi.mock("../../../lib/project-dir", () => ({
@@ -52,20 +61,23 @@ const plugin = {
   name: "Research",
   slug: "research",
   installCommand: "/plugin install research@harness-kit",
-} as MarketplacePlugin;
+  skills: [],
+} as unknown as MarketplacePlugin;
+const SOURCE = { marketplaceName: "harness-kit", marketplaceSource: "harnessprotocol/harness-kit" };
 
 const writeText = vi.fn(async () => {});
 
 beforeEach(() => {
   project = null;
   toast.mockClear();
+  applyMock.mockReset();
   writeText.mockClear();
   Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
 });
 
 describe("install command copy", () => {
   it("copies the catalog install command and toasts", async () => {
-    render(<InstallCard plugin={plugin} />);
+    render(<InstallCard plugin={plugin} {...SOURCE} />);
     fireEvent.click(screen.getByRole("button", { name: "Copy install command" }));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(plugin.installCommand));
     await waitFor(() =>
@@ -76,7 +88,7 @@ describe("install command copy", () => {
 
 describe("Install to picker", () => {
   it("lists surfaces with a plugin store, drops not-applicable ones, marks undetected", async () => {
-    render(<InstallCard plugin={plugin} />);
+    render(<InstallCard plugin={plugin} {...SOURCE} />);
     const select = (await screen.findByLabelText("Surface")) as HTMLSelectElement;
     await waitFor(() =>
       expect(Array.from(select.options).map((o) => o.textContent)).toEqual([
@@ -87,21 +99,21 @@ describe("Install to picker", () => {
   });
 
   it("offers project scope only with a project selected", async () => {
-    const { unmount } = render(<InstallCard plugin={plugin} />);
+    const { unmount } = render(<InstallCard plugin={plugin} {...SOURCE} />);
     await screen.findByLabelText("Surface");
     expect(screen.queryByLabelText("Scope")).toBeNull();
     unmount();
     project = "/work/app";
-    render(<InstallCard plugin={plugin} />);
+    render(<InstallCard plugin={plugin} {...SOURCE} />);
     expect(await screen.findByLabelText("Scope")).toBeInTheDocument();
   });
 
-  it("supported surface: CLI, prompt and a disabled Apply that says why", async () => {
-    render(<InstallCard plugin={plugin} />);
+  it("supported surface: CLI, prompt and an enabled Apply", async () => {
+    render(<InstallCard plugin={plugin} {...SOURCE} />);
     const cli = await screen.findByTestId("install-cli");
     expect(cli.textContent).toContain("claude plugin install research@harness-kit");
-    expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
-    expect(screen.getByTestId("apply-blocked").textContent).toMatch(/can't run .*installer yet/);
+    expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled();
+    expect(screen.queryByTestId("apply-blocked")).toBeNull();
 
     fireEvent.click(screen.getByRole("button", { name: "Copy CLI command" }));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(cli.textContent));
@@ -112,7 +124,7 @@ describe("Install to picker", () => {
   });
 
   it("unsupported surface: no CLI, Apply disabled with the reason, prompt still copies", async () => {
-    render(<InstallCard plugin={plugin} />);
+    render(<InstallCard plugin={plugin} {...SOURCE} />);
     const select = (await screen.findByLabelText("Surface")) as HTMLSelectElement;
     fireEvent.change(select, { target: { value: "cursor" } });
     await waitFor(() => expect(screen.queryByTestId("install-cli")).toBeNull());
@@ -121,6 +133,89 @@ describe("Install to picker", () => {
     expect(screen.getByTestId("apply-blocked").textContent).toMatch(/no plugin installer/);
     fireEvent.click(screen.getByRole("button", { name: "Copy prompt" }));
     await waitFor(() => expect(writeText).toHaveBeenCalled());
+  });
+});
+
+describe("Apply", () => {
+  it("shows Installing…, disables Apply until resolved, then toasts success", async () => {
+    let resolve!: (value: unknown) => void;
+    applyMock.mockReturnValue(new Promise((r) => (resolve = r)));
+    render(<InstallCard plugin={plugin} {...SOURCE} />);
+    await screen.findByTestId("install-cli");
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    const busy = await screen.findByRole("button", { name: "Installing…" });
+    expect(busy).toBeDisabled();
+    expect(applyMock).toHaveBeenCalledTimes(1);
+    expect(applyMock.mock.calls[0]![0]).toMatchObject({
+      marketplaceName: "harness-kit",
+      marketplaceSource: "harnessprotocol/harness-kit",
+      home: "/home/test",
+    });
+    await act(async () => {
+      resolve({ status: "installed", display: "claude plugin install", files: [] });
+    });
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith(
+        expect.objectContaining({ title: "Installed Research on Claude Code", variant: "success" }),
+      ),
+    );
+    expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled();
+  });
+
+  it("an unpack success toast carries the outcome note", async () => {
+    applyMock.mockResolvedValue({
+      status: "installed",
+      display: "unpack",
+      files: ["a"],
+      details: { note: "Only SKILL.md files were written." },
+    });
+    render(<InstallCard plugin={plugin} {...SOURCE} />);
+    await screen.findByTestId("install-cli");
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith(
+        expect.objectContaining({ message: "Only SKILL.md files were written." }),
+      ),
+    );
+  });
+
+  it("failure toast names the plugin, surface and reason", async () => {
+    applyMock.mockResolvedValue({ status: "failed", reason: "network down" });
+    render(<InstallCard plugin={plugin} {...SOURCE} />);
+    await screen.findByTestId("install-cli");
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "Couldn't install Research on Claude Code",
+          message: "network down",
+          variant: "warning",
+        }),
+      ),
+    );
+    expect(screen.getByRole("button", { name: "Apply" })).toBeEnabled();
+  });
+
+  it("a refused outcome toasts a warning with the reason", async () => {
+    applyMock.mockResolvedValue({ status: "refused", reason: "claude is not installed" });
+    render(<InstallCard plugin={plugin} {...SOURCE} />);
+    await screen.findByTestId("install-cli");
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith(
+        expect.objectContaining({ message: "claude is not installed", variant: "warning" }),
+      ),
+    );
+  });
+
+  it("a thrown error is reported, not swallowed", async () => {
+    applyMock.mockRejectedValue(new Error("bridge down"));
+    render(<InstallCard plugin={plugin} {...SOURCE} />);
+    await screen.findByTestId("install-cli");
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
+    await waitFor(() =>
+      expect(toast).toHaveBeenCalledWith(expect.objectContaining({ message: "bridge down" })),
+    );
   });
 });
 
