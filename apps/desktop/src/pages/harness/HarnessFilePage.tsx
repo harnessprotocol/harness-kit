@@ -754,7 +754,7 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
           <p
             role="note"
             data-testid="legacy-claude-notice"
-            style={{ fontSize: "13px", color: "var(--fg-muted)", margin: "0 0 12px" }}
+            style={{ fontSize: "13px", color: "var(--fg-muted)", margin: "0 0 12px", padding: fullHeight ? "8px 24px 0" : 0 }}
           >
             {legacyClaudeFile ? LEGACY_CLAUDE_PROFILE_NOTICE : LEGACY_CLAUDE_IGNORED_NOTICE}
           </p>
@@ -764,7 +764,7 @@ export default function HarnessFilePage({ tab: tabProp }: HarnessFilePageProps =
           <p
             role="note"
             data-testid="legacy-harness-notice"
-            style={{ fontSize: "13px", color: "var(--fg-muted)", margin: "0 0 12px" }}
+            style={{ fontSize: "13px", color: "var(--fg-muted)", margin: "0 0 12px", padding: fullHeight ? "8px 24px 0" : 0 }}
           >
             {LEGACY_HARNESS_NOTICE}
           </p>
