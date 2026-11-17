@@ -159,7 +159,7 @@ export function CommandPalette({ open, onClose, sections }: CommandPaletteProps)
         position: "fixed",
         inset: 0,
         zIndex: 1000,
-        background: "rgba(0,0,0,0.4)",
+        background: "var(--scrim)",
         display: "flex",
         alignItems: "flex-start",
         justifyContent: "center",

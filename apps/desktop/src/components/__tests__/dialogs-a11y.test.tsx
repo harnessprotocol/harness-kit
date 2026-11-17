@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 
@@ -12,6 +12,7 @@ vi.mock("../../lib/tauri", () => ({
   deleteCustomProfile: vi.fn(),
 }));
 
+import { submitFeedback } from "../../lib/tauri";
 import FeedbackModal from "../FeedbackModal";
 import ProfilePickerModal from "../ProfilePickerModal";
 
@@ -31,7 +32,7 @@ function Host({ which }: { which: "feedback" | "profiles" }) {
 }
 
 describe.each([
-  ["feedback", "Send Feedback"],
+  ["feedback", "Send feedback"],
   ["profiles", "Choose a profile"],
 ] as const)("%s dialog", (which, name) => {
   it("is a named modal dialog that takes focus", async () => {
@@ -65,6 +66,25 @@ describe("feedback dialog close control", () => {
     const user = userEvent.setup();
     render(<Host which="feedback" />);
     await user.click(screen.getByRole("button", { name: "Launch" }));
-    expect(await screen.findByRole("button", { name: "Close" })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Close dialog" })).toBeInTheDocument();
+  });
+});
+
+describe("feedback dialog closed mid-submit", () => {
+  it("drops a late result instead of showing it on the next open", async () => {
+    const user = userEvent.setup();
+    let finish!: (r: { success: boolean; issueUrl: string | null; error: string | null }) => void;
+    vi.mocked(submitFeedback).mockReturnValueOnce(new Promise((res) => (finish = res)));
+    render(<Host which="feedback" />);
+    await user.click(screen.getByRole("button", { name: "Launch" }));
+    await user.type(await screen.findByPlaceholderText("Brief summary..."), "Broken thing");
+    await user.type(screen.getByPlaceholderText(/Describe the issue/), "It breaks when I click");
+    await user.click(await screen.findByRole("button", { name: "Submit" }));
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await act(async () => finish({ success: true, issueUrl: "https://example.test/1", error: null }));
+    await user.click(screen.getByRole("button", { name: "Launch" }));
+    expect(await screen.findByRole("button", { name: "Submit" })).toBeInTheDocument();
+    expect(screen.queryByText("Feedback sent")).not.toBeInTheDocument();
   });
 });

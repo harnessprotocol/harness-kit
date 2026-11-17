@@ -114,7 +114,7 @@ export function RowDrawer({
         display: "flex",
         flexDirection: "column",
         background: "var(--bg-surface)",
-        boxShadow: "-12px 0 32px rgba(0,0,0,0.28)",
+        boxShadow: "var(--shadow-lg)",
         overflowY: "auto",
       }}
     >

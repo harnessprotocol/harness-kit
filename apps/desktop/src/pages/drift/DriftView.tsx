@@ -7,6 +7,7 @@ import { lineDiff, collapseToHunks } from "./line-diff";
 import { ConflictLedger } from "./ConflictLedger";
 import { LEGACY_HARNESS_NOTICE } from "../../lib/legacy-harness-notice";
 import type { DesktopPortabilitySnapshot } from "../fleet/portability-data";
+import { useRegisterCommands } from "../../lib/commands";
 
 function groupKey(entry: ScopedDriftItem): string {
   return `${entry.scope.root}::${entry.item.adapter}`;
@@ -112,6 +113,39 @@ export function DriftView({
   const repairableCount = filteredEntries.filter((e) => isRepairable(e.item.class)).length;
   const needsAttention = attentionNotes(scopeStatuses).length > 0;
   const hasProject = scopeStatuses.some((s) => s.scope.kind === "project");
+
+  // ⌘K (spec AC-21): the page-level buttons, present in the states that show
+  // them. Acknowledge and per-item Fix live on rows only, so they stay out.
+  const scanning = loading && entries.length === 0;
+  const empty = !loading && filteredEntries.length === 0 && !portability?.conflicts.length;
+  const listShown = !scanning && !empty;
+  const rescanShown = !scanning && empty && !error;
+  useRegisterCommands(
+    [
+      ...(listShown
+        ? [
+            {
+              id: "drift.toggle-acknowledged",
+              title: showAcknowledged ? "Hide acknowledged" : "Show acknowledged",
+              group: "Drift",
+              run: onToggleShowAcknowledged,
+            },
+            {
+              id: "drift.fix-all",
+              title: `Fix all (${repairableCount})`,
+              group: "Drift",
+              keywords: ["fix", "repair"],
+              disabled: repairableCount === 0,
+              run: onFixAll,
+            },
+          ]
+        : []),
+      ...(rescanShown
+        ? [{ id: "drift.rescan", title: "Re-scan", group: "Drift", keywords: ["scan", "refresh"], run: onRescan }]
+        : []),
+    ],
+    [listShown, rescanShown, showAcknowledged, repairableCount],
+  );
 
   if (loading && entries.length === 0) {
     return (

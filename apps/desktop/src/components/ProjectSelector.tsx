@@ -7,6 +7,7 @@ import {
   useRecentProjectDirs,
 } from "../lib/project-dir";
 import "./ProjectSelector.css";
+import { Tooltip } from "@harness-kit/ui";
 
 const MAX_RECENT_SHOWN = 5;
 
@@ -103,23 +104,24 @@ export function ProjectSelector() {
 
   return (
     <div className="hk-project-selector" ref={rootRef} data-no-drag="">
-      <button
-        ref={buttonRef}
-        type="button"
-        className="hk-project-selector-button"
-        aria-haspopup="menu"
-        aria-expanded={open}
-        aria-controls={open ? menuId : undefined}
-        aria-label={dir ? `Project: ${label}` : "Project: none"}
-        title={dir ?? "No project directory. Machine scans this machine only."}
-        data-empty={dir ? undefined : ""}
-        onClick={() => (open ? close(false) : openMenu("first"))}
-        onKeyDown={onButtonKeyDown}
-      >
-        <Folder size={13} strokeWidth={1.7} aria-hidden="true" />
-        <span className="hk-project-selector-label">{label}</span>
-        <ChevronDown size={11} strokeWidth={1.7} aria-hidden="true" />
-      </button>
+      <Tooltip content={dir ?? "No project directory. Machine scans this machine only."}>
+        <button
+          ref={buttonRef}
+          type="button"
+          className="hk-project-selector-button"
+          aria-haspopup="menu"
+          aria-expanded={open}
+          aria-controls={open ? menuId : undefined}
+          aria-label={dir ? `Project: ${label}` : "Project: none"}
+          data-empty={dir ? undefined : ""}
+          onClick={() => (open ? close(false) : openMenu("first"))}
+          onKeyDown={onButtonKeyDown}
+        >
+          <Folder size={13} strokeWidth={1.7} aria-hidden="true" />
+          <span className="hk-project-selector-label">{label}</span>
+          <ChevronDown size={11} strokeWidth={1.7} aria-hidden="true" />
+        </button>
+      </Tooltip>
 
       {open && (
         <div
@@ -141,22 +143,22 @@ export function ProjectSelector() {
                 Recent
               </div>
               {recent.map((path) => (
-                <button
-                  key={path}
-                  type="button"
-                  role="menuitem"
-                  tabIndex={-1}
-                  className="hk-project-selector-item"
-                  title={path}
-                  aria-label={`${projectDirLabel(path)}, ${path}`}
-                  onClick={() => pick(path)}
-                >
-                  <Folder size={13} strokeWidth={1.7} aria-hidden="true" />
-                  <span className="hk-project-selector-item-text">
-                    <span className="hk-project-selector-item-name">{projectDirLabel(path)}</span>
-                    <span className="hk-project-selector-item-path">{path}</span>
-                  </span>
-                </button>
+                <Tooltip content={path} key={path}>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    tabIndex={-1}
+                    className="hk-project-selector-item"
+                    aria-label={`${projectDirLabel(path)}, ${path}`}
+                    onClick={() => pick(path)}
+                  >
+                    <Folder size={13} strokeWidth={1.7} aria-hidden="true" />
+                    <span className="hk-project-selector-item-text">
+                      <span className="hk-project-selector-item-name">{projectDirLabel(path)}</span>
+                      <span className="hk-project-selector-item-path">{path}</span>
+                    </span>
+                  </button>
+                </Tooltip>
               ))}
             </div>
           )}

@@ -73,7 +73,7 @@ export default function AccountStatusBadge({ account, monthlyTokens, loading }: 
               width: "7px",
               height: "7px",
               borderRadius: "50%",
-              background: "var(--success, #16a34a)",
+              background: "var(--success)",
               flexShrink: 0,
             }}
           />

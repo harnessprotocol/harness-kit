@@ -7,6 +7,7 @@ import {
 } from "../../lib/tauri";
 import { errorDetails } from "../../lib/error-details";
 import { isChangedOnDisk } from "../../lib/loaded-digest";
+import { useRegisterCommands } from "../../lib/commands";
 import type { KeychainSecretInfo, EnvConfigEntry } from "@harness-kit/shared";
 
 function StatusBadge({ isSet }: { isSet: boolean }) {
@@ -112,6 +113,16 @@ export default function SecretsPage() {
       );
     }
   }
+
+  // ⌘K (spec AC-21): Save all, listed while the button shows. Setting or
+  // deleting a secret is per row, so it stays out.
+  const envSaveShown = !loading && envDirty;
+  useRegisterCommands(
+    envSaveShown
+      ? [{ id: "secrets.save-all", title: "Save all", group: "Secrets", keywords: ["environment", "env"], run: handleSaveEnv }]
+      : [],
+    [envSaveShown],
+  );
 
   if (loading) {
     return (
@@ -250,7 +261,7 @@ export default function SecretsPage() {
           </p>
           {envDirty && (
             <Button variant="primary" size="sm" onClick={handleSaveEnv}>
-              Save All
+              Save all
             </Button>
           )}
         </div>

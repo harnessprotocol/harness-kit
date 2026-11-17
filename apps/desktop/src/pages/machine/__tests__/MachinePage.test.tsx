@@ -10,6 +10,7 @@ import { buildDriftScopes, collectDrift } from "../../drift/drift-data";
 import { acknowledgeDriftItem } from "../../../lib/tauri";
 import { PROJECT_CHANGED_EVENT, setCurrentProjectDir } from "../../../lib/project-dir";
 import { CommandPalette } from "../../../components/CommandPalette";
+import { tooltipText } from "../../../test-utils/tooltip";
 
 // ── Mocks ──────────────────────────────────────────────────────
 
@@ -430,12 +431,12 @@ describe("MachinePage", () => {
     const naCell = screen.getByTestId("cell-mcp-server:postgres-pi");
     expect(naCell).toHaveAttribute("data-status", "not-applicable");
     const dash = within(naCell).getByText("—");
-    expect(dash).toHaveAttribute("title", expect.stringContaining("No concept of MCP servers"));
+    expect(await tooltipText(dash)).toContain("No concept of MCP servers");
 
     const unknownCell = screen.getByTestId("cell-mcp-server:postgres-copilot-vscode");
     expect(unknownCell).toHaveAttribute("data-status", "unknown");
     const badge = within(unknownCell).getByText("?");
-    expect(badge).toHaveAttribute("title", expect.stringContaining("Needs confirmation"));
+    expect(await tooltipText(badge)).toContain("Needs confirmation");
   });
 
   it("opens the drawer on row click with verbatim delta paths and the three actions", async () => {
@@ -472,8 +473,9 @@ describe("MachinePage", () => {
 
     const badge = screen.getByTestId("surface-marketplaces-claude-code");
     expect(badge).toHaveTextContent("2");
-    expect(badge).toHaveAttribute("title", expect.stringContaining("harness-kit"));
-    expect(badge).toHaveAttribute("title", expect.stringContaining("official"));
+    const tip = await tooltipText(badge);
+    expect(tip).toContain("harness-kit");
+    expect(tip).toContain("official");
   });
 
   it("separates 'none registered' from 'cannot be read' (AC-2 semantics)", async () => {
@@ -483,7 +485,7 @@ describe("MachinePage", () => {
     // codex CAN be read and registers none here: a badge reading 0.
     const codex = screen.getByTestId("surface-marketplaces-codex");
     expect(codex).toHaveTextContent("0");
-    expect(codex).toHaveAttribute("title", "no plugin marketplaces registered");
+    expect(await tooltipText(codex)).toBe("no plugin marketplaces registered");
 
     // cursor declares no marketplace store at all, so HarnessKit cannot say
     // — no badge, rather than a badge claiming zero.
@@ -506,8 +508,9 @@ describe("MachinePage", () => {
     // the cell must not be the blank that means "could hold this, doesn't".
     const cell = screen.getByLabelText("unmanaged locally");
     expect(cell).toBeInTheDocument();
-    expect(cell).toHaveAttribute("title", expect.stringContaining("not managed locally"));
-    expect(cell).toHaveAttribute("title", expect.stringContaining("not a gap"));
+    const tip = await tooltipText(cell);
+    expect(tip).toContain("not managed locally");
+    expect(tip).toContain("not a gap");
     // not-applicable keeps its own em-dash glyph.
     expect(cell).not.toHaveTextContent("—");
   });

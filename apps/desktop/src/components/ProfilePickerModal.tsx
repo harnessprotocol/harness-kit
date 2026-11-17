@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { FileText, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { FileText } from "lucide-react";
 import { PROFILES } from "../lib/profiles";
 import type { HarnessProfile } from "../lib/profiles";
 import { listCustomProfiles, getCustomProfile, deleteCustomProfile } from "../lib/tauri";
 import type { CustomProfile } from "../lib/tauri";
-import { ErrorNotice, useDialogFocus } from "@harness-kit/ui";
+import { ErrorNotice, Modal } from "@harness-kit/ui";
 import { errorDetails } from "../lib/error-details";
 
 interface ProfilePickerModalProps {
@@ -22,18 +21,10 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
   const [deleteError, setDeleteError] = useState<{ id: string; details: string } | null>(null);
   const [loadError, setLoadError] = useState<{ profile: CustomProfile; details: string } | null>(null);
 
-  const dialogRef = useRef<HTMLDivElement>(null);
-  useDialogFocus(open, dialogRef);
-
   useEffect(() => {
     if (!open) return;
     listCustomProfiles().then(setCustomProfiles).catch(() => {});
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  }, [open]);
 
   async function handleDelete(id: string, e: React.MouseEvent) {
     e.stopPropagation();
@@ -74,83 +65,11 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
   );
 
   return (
-    <AnimatePresence>
-      {open && (
-        <motion.div
-          key="profile-picker-overlay"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.15 }}
-          onClick={onClose}
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: "rgba(0,0,0,0.5)",
-            zIndex: 200,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <motion.div
-            key="profile-picker-modal"
-            ref={dialogRef}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="profile-picker-title"
-            tabIndex={-1}
-            initial={{ opacity: 0, scale: 0.97, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: 12 }}
-            transition={{ type: "spring", stiffness: 420, damping: 36 }}
-            onClick={(e) => e.stopPropagation()}
-            style={{
-              width: "min(90%, 680px)",
-              maxHeight: "82%",
-              background: "var(--bg-surface)",
-              border: "1px solid var(--border-base)",
-              borderRadius: "12px",
-              zIndex: 210,
-              display: "flex",
-              flexDirection: "column",
-              overflow: "hidden",
-            }}
-          >
-            {/* Header */}
-            <div style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "14px 16px",
-              borderBottom: "1px solid var(--border-base)",
-              flexShrink: 0,
-            }}>
-              <div>
-                <p id="profile-picker-title" style={{ margin: 0, fontSize: "14px", fontWeight: 600, color: "var(--fg-base)" }}>
-                  Choose a profile
-                </p>
-                <p style={{ margin: "2px 0 0", fontSize: "11px", color: "var(--fg-muted)" }}>
-                  Pre-configured harness.yaml for different roles. Opens in the editor for customization.
-                </p>
-              </div>
-              <button
-                onClick={onClose}
-                aria-label="Close"
-                style={{
-                  width: "24px", height: "24px",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  borderRadius: "6px", border: "none",
-                  background: "transparent", color: "var(--fg-subtle)",
-                  cursor: "pointer", flexShrink: 0,
-                }}
-              >
-                <X size={14} strokeWidth={1.7} aria-hidden="true" />
-              </button>
-            </div>
-
-            {/* Content */}
-            <div style={{ overflowY: "auto", padding: "0 16px 16px" }}>
+    <Modal open={open} onClose={onClose} title="Choose a profile" size="lg">
+      <div>
+        <p style={{ margin: "0 0 4px", fontSize: "11px", color: "var(--fg-muted)" }}>
+          Pre-configured harness.yaml for different roles. Opens in the editor for customization.
+        </p>
               {deleteError && (
                 <div style={{ marginTop: "10px" }}>
                   <ErrorNotice title={`Couldn't delete the profile "${deleteError.id}"`} details={deleteError.details} />
@@ -288,10 +207,7 @@ export default function ProfilePickerModal({ open, onClose, onSelect }: ProfileP
                   </button>
                 ))}
               </div>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+      </div>
+    </Modal>
   );
 }

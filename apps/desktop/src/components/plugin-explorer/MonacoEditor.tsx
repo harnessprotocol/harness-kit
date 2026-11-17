@@ -94,7 +94,10 @@ export default function MonacoEditor({ filePath, content, onChange, onSave, read
     monacoRef.current = monaco;
 
     // Pages that omit `onSave` handle Cmd+S with their own window listener;
-    // registering an action here would swallow the chord.
+    // registering an action here would swallow the chord. The native menu's
+    // Cmd+S consumes the key before Monaco sees it and re-dispatches a keydown
+    // on the focused element carrying code and keyCode (Monaco reads keyCode,
+    // not key), so this action still fires; see app-menu.test.ts.
     if (onSaveRef.current) {
       editor.addAction({
         id: "harness-kit-save",

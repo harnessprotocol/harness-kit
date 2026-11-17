@@ -15,6 +15,7 @@ import {
   type McpStoreSnapshot,
 } from "../../lib/mcp-store";
 import { errorDetails } from "../../lib/error-details";
+import { useRegisterCommands } from "../../lib/commands";
 
 const MonacoEditor = lazy(() => import("../../components/plugin-explorer/MonacoEditor"));
 
@@ -431,6 +432,22 @@ export default function McpServersPage() {
       <Plus size={13} strokeWidth={1.7} aria-hidden="true" style={{ marginRight: 4 }} />
       Add server
     </Button>
+  );
+  // ⌘K (spec AC-21): Add server, wherever the button shows (the servers view
+  // once the store has loaded, empty or not).
+  useRegisterCommands(
+    snapshot && viewMode === "servers"
+      ? [
+          {
+            id: "mcp.add-server",
+            title: "Add server",
+            group: "MCP servers",
+            keywords: ["new", "mcp"],
+            run: () => openForm({ mode: "add" }),
+          },
+        ]
+      : [],
+    [Boolean(snapshot), viewMode],
   );
   const rawDirty = rawDraft !== null && rawDraft !== rawOriginal;
 

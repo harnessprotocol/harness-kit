@@ -73,6 +73,30 @@ body {
   --success-text: #1B6F47;
   --warning-text: #7A5000;
   --danger-text: #B3262C;
+  --scrim: rgba(20, 15, 10, 0.45);
+  --brand-mark-bg: #131215;
+  --brand-mark-fg: #6BC0F5;
+  --chart-1: #2E9BE6;
+  --chart-2: #0891B2;
+  --chart-3: #D97706;
+  --chart-4: #DC2626;
+  --chart-5: #16A34A;
+  --chart-6: #BE185D;
+  --chart-7: #7C3AED;
+  --chart-8: #EA580C;
+  --file-folder: #B45309;
+  --file-md: #3B82F6;
+  --file-py: #16A34A;
+  --file-sh: #9333EA;
+  --file-json: #EA580C;
+  --file-yaml: #DB2777;
+  --file-html: #DC2626;
+  --file-ts: #2563EB;
+  --file-js: #CA8A04;
+  --file-css: #0891B2;
+  --file-toml: #EA580C;
+  --file-txt: #6B7280;
+  --file-default: #6B7280;
   /* design-tokens:light:end */
 
   /* Status colors — shared across themes, NOT the accent (DESIGN.md §2) */
@@ -145,6 +169,30 @@ body {
   --success-text: #4CC08A;
   --warning-text: #E0A33D;
   --danger-text: #FF7A7E;
+  --scrim: rgba(0, 0, 0, 0.6);
+  --brand-mark-bg: #131215;
+  --brand-mark-fg: #6BC0F5;
+  --chart-1: #2E9BE6;
+  --chart-2: #22D3EE;
+  --chart-3: #F59E0B;
+  --chart-4: #F87171;
+  --chart-5: #4ADE80;
+  --chart-6: #D08A4A;
+  --chart-7: #A78BFA;
+  --chart-8: #FB923C;
+  --file-folder: #D97706;
+  --file-md: #3B82F6;
+  --file-py: #22C55E;
+  --file-sh: #A855F7;
+  --file-json: #F97316;
+  --file-yaml: #EC4899;
+  --file-html: #EF4444;
+  --file-ts: #2563EB;
+  --file-js: #EAB308;
+  --file-css: #06B6D4;
+  --file-toml: #F97316;
+  --file-txt: #6B7280;
+  --file-default: #9CA3AF;
   /* design-tokens:dark:end */
 
   /* Status colors — shared across themes, NOT the accent (DESIGN.md §2) */

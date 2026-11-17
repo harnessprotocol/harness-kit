@@ -123,7 +123,7 @@ const styles = {
     background: tokens.bgElevated,
     border: `1px solid ${tokens.borderBase}`,
     borderRadius: 8,
-    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+    boxShadow: "var(--shadow-sm)",
     padding: "24px",
     display: "flex",
     flexDirection: "column" as const,
@@ -352,7 +352,7 @@ const styles = {
     fontFamily: fontStack,
     cursor: "pointer",
     background: tokens.accent,
-    color: "#ffffff",
+    color: "var(--fg-on-fill)",
     transition: "background 150ms ease-out, transform 100ms ease-out",
   } as React.CSSProperties,
 
@@ -367,7 +367,7 @@ const styles = {
     background: tokens.bgElevated,
     border: `1px solid ${tokens.borderBase}`,
     borderRadius: 8,
-    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+    boxShadow: "var(--shadow-sm)",
     padding: "20px",
     display: "flex",
     flexDirection: "column" as const,
@@ -392,7 +392,7 @@ const styles = {
     fontWeight: 700,
     textTransform: "uppercase" as const,
     letterSpacing: "0.5px",
-    color: "#ffffff",
+    color: "var(--fg-on-fill)",
     background: tokens.success,
     padding: "2px 8px",
     borderRadius: 4,
@@ -440,7 +440,7 @@ const styles = {
     background: tokens.bgElevated,
     border: `1px solid ${tokens.borderBase}`,
     borderRadius: 8,
-    boxShadow: "0 1px 3px rgba(0, 0, 0, 0.04)",
+    boxShadow: "var(--shadow-sm)",
     padding: "20px",
     display: "flex",
     flexDirection: "column" as const,
@@ -524,7 +524,7 @@ function GavelIcon() {
 
 function CheckSmallIcon() {
   return (
-    <svg width="8" height="8" viewBox="0 0 16 16" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="8" height="8" viewBox="0 0 16 16" fill="none" stroke="var(--fg-on-fill)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="3 8 7 12 13 4" />
     </svg>
   );

@@ -8,7 +8,7 @@ import {
   CartesianGrid, Tooltip, Legend,
   ResponsiveContainer,
 } from "recharts";
-import HKTooltip from "../../components/Tooltip";
+import { Tooltip as HKTooltip } from "@harness-kit/ui";
 import { ErrorNotice, Stat } from "@harness-kit/ui";
 import AccountStatusBadge from "../../components/AccountStatusBadge";
 import { useObservatoryData } from "../../hooks/useObservatoryData";
@@ -24,7 +24,7 @@ import BudgetAlertBanner from "../../components/observatory/BudgetAlertBanner";
 
 // Categorical chart palette distinguishing models — avoids indigo/purple/violet
 // per DESIGN.md §1 (those hues are reserved for the azure accent in this direction).
-const MODEL_COLORS = ["#22b1ec", "#d97706", "#10b981", "#3b82f6", "#06b6d4", "#e11d48"];
+const MODEL_COLORS = ["var(--chart-1)", "var(--chart-3)", "var(--chart-5)", "var(--chart-2)", "var(--chart-7)", "var(--chart-4)"];
 
 // ── Date range types ─────────────────────────────────────────
 
@@ -171,7 +171,7 @@ function useReducedMotion() {
 }
 
 function getAccentColor() {
-  return getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#2E9BE6";
+  return getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "var(--accent)";
 }
 
 // ── Stat card ────────────────────────────────────────────────
@@ -183,8 +183,10 @@ function StatCard({ tooltip, ...rest }: { label: string; value: string; sub?: st
   return (
     <div style={{ flex: 1, minWidth: 0 }}>
       {tooltip ? (
-        <HKTooltip content={tooltip} position="bottom">
-          <Stat {...rest} />
+        <HKTooltip content={tooltip} side="bottom">
+          <div>
+            <Stat {...rest} />
+          </div>
         </HKTooltip>
       ) : (
         <Stat {...rest} />
@@ -657,8 +659,8 @@ export default function DashboardPage() {
   const TOKEN_TYPE_COLORS: Record<string, string> = {
     Input: "var(--fg-subtle)",
     Output: accentColor,
-    "Cache Read": "#10b981",
-    "Cache Create": "#6C665F",
+    "Cache Read": "var(--chart-5)",
+    "Cache Create": "var(--fg-placeholder)",
   };
 
   const hourlyChartData = useMemo(() => {
@@ -764,42 +766,43 @@ export default function DashboardPage() {
           >
             Sessions →
           </Link>
-          <button
-            onClick={refresh}
-            disabled={isRefreshing}
-            title={scanNote ? `Last scan: ${scanNote}` : undefined}
-            aria-label={isRefreshing ? "Refreshing data" : "Refresh data"}
-            style={{
-              fontSize: "11px",
-              fontWeight: 500,
-              padding: "4px 12px",
-              borderRadius: "6px",
-              border: "1px solid var(--border-base)",
-              background: "var(--bg-surface)",
-              color: isRefreshing ? "var(--accent-text)" : "var(--fg-muted)",
-              cursor: isRefreshing ? "default" : "pointer",
-              display: "flex",
-              alignItems: "center",
-              gap: "5px",
-              transition: "color 0.15s",
-            }}
-          >
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
+          <HKTooltip content={scanNote ? `Last scan: ${scanNote}` : ""}>
+            <button
+              onClick={refresh}
+              disabled={isRefreshing}
+              aria-label={isRefreshing ? "Refreshing data" : "Refresh data"}
               style={{
-                color: "currentColor",
-                ...(isRefreshing && !reducedMotion ? { animation: "hk-spin 0.8s linear infinite" } : {}),
-                ...(isRefreshing && reducedMotion ? { opacity: 0.6 } : {}),
+                fontSize: "11px",
+                fontWeight: 500,
+                padding: "4px 12px",
+                borderRadius: "6px",
+                border: "1px solid var(--border-base)",
+                background: "var(--bg-surface)",
+                color: isRefreshing ? "var(--accent-text)" : "var(--fg-muted)",
+                cursor: isRefreshing ? "default" : "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "5px",
+                transition: "color 0.15s",
               }}
             >
-              <path d="M21 12a9 9 0 1 1-2.63-6.36" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              <path d="M21 3v6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-            {isRefreshing ? "Refreshing…" : "Refresh"}
-          </button>
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                style={{
+                  color: "currentColor",
+                  ...(isRefreshing && !reducedMotion ? { animation: "hk-spin 0.8s linear infinite" } : {}),
+                  ...(isRefreshing && reducedMotion ? { opacity: 0.6 } : {}),
+                }}
+              >
+                <path d="M21 12a9 9 0 1 1-2.63-6.36" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                <path d="M21 3v6h-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              {isRefreshing ? "Refreshing…" : "Refresh"}
+            </button>
+          </HKTooltip>
         </div>
       </div>
 

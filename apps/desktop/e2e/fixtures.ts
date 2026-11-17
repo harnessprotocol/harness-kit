@@ -20,3 +20,22 @@ export const test = base.extend<HarnessFixtures>({
 });
 
 export { expect } from "@playwright/test";
+
+/**
+ * Collect console errors and uncaught page errors for the page's lifetime.
+ * Returns a function that yields the errors seen so far, minus known dev noise.
+ */
+export function collectConsoleErrors(page: Page): () => string[] {
+  const errors: string[] = [];
+  page.on("console", msg => {
+    if (msg.type() === "error") errors.push(msg.text());
+  });
+  page.on("pageerror", err => errors.push("PAGEERROR: " + err.message));
+  return () =>
+    errors.filter(e =>
+      !e.includes("favicon") &&
+      !e.includes("ResizeObserver") &&
+      !e.includes("webkit") &&
+      !e.includes("Supabase"), // marketplace has no supabase config in dev
+    );
+}

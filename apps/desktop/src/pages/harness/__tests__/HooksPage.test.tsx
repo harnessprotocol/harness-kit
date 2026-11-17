@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import HooksPage from "../HooksPage";
+import { CommandProbe } from "../../../test-utils/CommandProbe";
+import { useLocation } from "react-router-dom";
 
 const mockReadClaudeMd = vi.fn().mockResolvedValue('{"hooks": {}}');
 const mockWriteConfigFile = vi.fn().mockResolvedValue(undefined);
@@ -60,5 +62,18 @@ describe("HooksPage", () => {
     await waitFor(() => expect(mockWriteConfigFile).toHaveBeenCalledTimes(2));
     expect(mockWriteConfigFile).toHaveBeenLastCalledWith("~/.claude/settings.json", '{"hooks": {"x": 1}}', expect.any(String));
     await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+  });
+
+  it("lists the settings.json button in the palette and navigates like it does (AC-21)", async () => {
+    mockReadClaudeMd.mockResolvedValue('{"hooks": {}}');
+    function Where() {
+      return <span data-testid="where">{useLocation().pathname}</span>;
+    }
+    render(<MemoryRouter><HooksPage /><CommandProbe /><Where /></MemoryRouter>);
+    const command = await screen.findByTestId("cmd-hooks.open-settings");
+    expect(command).toHaveTextContent("settings.json");
+    expect(command).toHaveAttribute("data-disabled", "false");
+    fireEvent.click(command);
+    expect(screen.getByTestId("where")).toHaveTextContent("/harness/config/settings.json");
   });
 });

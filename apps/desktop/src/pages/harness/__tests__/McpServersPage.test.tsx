@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import McpServersPage from "../McpServersPage";
+import { CommandProbe } from "../../../test-utils/CommandProbe";
 import digestFixture from "../../../lib/__tests__/fixtures/precondition-digest.json";
 
 // ── In-memory home directory behind the Tauri calls ─────────────
@@ -673,5 +674,25 @@ describe("writeMcpServers on the transaction engine", () => {
       summary: expect.stringContaining("could not be restored automatically"),
     });
     expect(recorded).toEqual([]);
+  });
+
+  it("lists Add server in the palette for the servers view and opens the same form (AC-21)", async () => {
+    files.set(`${HOME}/.claude.json`, JSON.stringify({ mcpServers: { github: STDIO } }));
+    render(<MemoryRouter><McpServersPage /><CommandProbe /></MemoryRouter>);
+    await screen.findByText("GitHub");
+    const add = screen.getByTestId("cmd-mcp.add-server");
+    expect(add).toHaveTextContent("Add server");
+    expect(add).toHaveAttribute("data-disabled", "false");
+
+    fireEvent.click(add);
+    expect(await screen.findByRole("dialog", { name: "Add MCP server" })).toBeInTheDocument();
+  });
+
+  it("drops Add server from the palette in the raw JSON view, where the button is hidden (AC-21)", async () => {
+    files.set(`${HOME}/.claude.json`, JSON.stringify({ mcpServers: { github: STDIO } }));
+    render(<MemoryRouter><McpServersPage /><CommandProbe /></MemoryRouter>);
+    await screen.findByText("GitHub");
+    fireEvent.click(screen.getByRole("button", { name: "Raw JSON" }));
+    await waitFor(() => expect(screen.queryByTestId("cmd-mcp.add-server")).not.toBeInTheDocument());
   });
 });

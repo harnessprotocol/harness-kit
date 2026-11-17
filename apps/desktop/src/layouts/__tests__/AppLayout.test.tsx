@@ -6,6 +6,7 @@ import { MemoryRouter, useLocation } from "react-router-dom";
 import AppLayout from "../AppLayout";
 import { NAV, visibleNav } from "../../nav";
 import { getCurrentProjectDir, getRecentProjectDirs } from "../../lib/project-dir";
+import { tooltipText } from "../../test-utils/tooltip";
 
 // ── Mocks ─────────────────────────────────────────────────────
 
@@ -217,11 +218,11 @@ describe("title-bar project selector (AC-17)", () => {
     expect(mockGrantProjectScope).not.toHaveBeenCalled();
   });
 
-  it("shows the restored project's folder name, full path in the tooltip", () => {
+  it("shows the restored project's folder name, full path in the tooltip", async () => {
     localStorage.setItem("harness-kit-sync-recent-dirs", JSON.stringify(["/Users/me/repos/app"]));
     renderLayout();
     expect(selector()).toHaveTextContent("app");
-    expect(selector()).toHaveAttribute("title", "/Users/me/repos/app");
+    expect(await tooltipText(selector())).toBe("/Users/me/repos/app");
   });
 
   it("Choose folder… sets the project through lib/project-dir.ts", async () => {
