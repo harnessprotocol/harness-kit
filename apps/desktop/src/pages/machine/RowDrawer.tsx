@@ -478,7 +478,11 @@ function RowActions({
       // The rescan below replaces this row and clears the status line, so
       // the toast is what the user sees (AC-16). Named from the request that
       // ran, not the selects, which the rescan may re-default.
-      const title = `Copied ${view.request.name} to ${surfaceLabel(view.request.to)}`;
+      const surface = surfaceLabel(view.request.to);
+      const title =
+        view.plan.plugin !== undefined
+          ? `Installed ${view.request.name} on ${surface}`
+          : `Copied ${view.request.name} to ${surface}`;
       toast(
         applied.ledgerError
           ? {
@@ -497,7 +501,13 @@ function RowActions({
       onApplied?.();
     } catch (error) {
       setStatus(null);
-      setFailure({ title: `Couldn't copy ${view.request.name} to ${surfaceLabel(view.request.to)}`, details: errorDetails(error) });
+      setFailure({
+        title:
+          view.plan.plugin !== undefined
+            ? `Couldn't install ${view.request.name} on ${surfaceLabel(view.request.to)}`
+            : `Couldn't copy ${view.request.name} to ${surfaceLabel(view.request.to)}`,
+        details: errorDetails(error),
+      });
     } finally {
       setBusy(false);
     }
@@ -534,13 +544,6 @@ function RowActions({
   }
 
   const lossBlocked = view?.plan.requiresConfirmation === true && !confirmedLoss;
-  /**
-   * A plugin plan is `supported: true` — core CAN plan it, and the CLI can run
-   * it. The APP cannot: driving an installer needs a process-spawn bridge the
-   * webview does not have. Without this the button was live, threw on click,
-   * and showed its reason only after failing.
-   */
-  const appCannotRun = view?.plan.plugin !== undefined;
 
   return (
     <div style={{ marginTop: "auto", padding: "14px 18px 18px", display: "grid", gap: 10 }}>
@@ -679,13 +682,6 @@ function RowActions({
         <p style={{ fontSize: 12, margin: 0 }}>{view.plan.reason}</p>
       )}
 
-      {view && view.plan.supported && appCannotRun && (
-        <p style={{ fontSize: 12, margin: 0 }} data-testid="app-cannot-run">
-          Installing a plugin runs {surfaceLabel(target as SurfaceId)}&apos;s own installer, which
-          the app cannot do yet. Copy the CLI command below, or use the agent prompt.
-        </p>
-      )}
-
       {view && (
         <code style={{ fontSize: 11, opacity: 0.8, wordBreak: "break-all" }}>{view.cli}</code>
       )}
@@ -700,8 +696,7 @@ function RowActions({
             view.plan.noop ||
             lossBlocked ||
             busy ||
-            spent ||
-            appCannotRun
+            spent
           }
           onClick={apply}
         >

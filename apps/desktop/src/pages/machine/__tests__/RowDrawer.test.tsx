@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { GridRow, MachineGap, SurfaceId } from "@harness-kit/core";
 import { RowDrawer } from "../RowDrawer";
+import { ToastProvider } from "../../../components/ToastProvider";
 import { applyCellActionViaTauri, buildCellAction } from "../cell-actions";
 
 // The selectors (presentSources, missingTargets, divergentTargets) stay real;
@@ -295,5 +296,97 @@ describe("RowDrawer for a row only the team baseline declares (AC-26)", () => {
     fireEvent.click(within(actions).getByRole("button", { name: "Copy CLI command" }));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(command));
     expect(await screen.findByRole("status")).toHaveTextContent("CLI command copied.");
+  });
+});
+
+describe("RowDrawer plugin Apply (AC-15, AC-16, AC-17)", () => {
+  function pluginRow(): GridRow {
+    return {
+      key: "plugin:board@harness-kit",
+      kind: "plugin",
+      name: "board@harness-kit",
+      cells: {
+        "claude-code": present("sha256:xxxx"),
+        codex: { status: "absent", entries: [] },
+      },
+    } as unknown as GridRow;
+  }
+  const PLUGIN_GAP = [
+    { row: "plugin:board@harness-kit", presentOn: ["claude-code"], missingOn: ["codex"] },
+  ] as unknown as MachineGap[];
+
+  function planWith(supported: boolean) {
+    return async (row: { kind: string; name: string }, from: string, to: string) => ({
+      request: { kind: row.kind, name: row.name, from, to, scope: "user" },
+      plan: {
+        supported,
+        ...(supported ? {} : { reason: "codex has no installer for this plugin" }),
+        noop: false,
+        requiresConfirmation: false,
+        changes: [],
+        plugin: { kind: "native", action: "install", plan: { supported } },
+      },
+      cli: "harness-kit sync --plugin",
+      prompt: "",
+    });
+  }
+
+  beforeEach(() => {
+    vi.mocked(applyCellActionViaTauri).mockClear();
+  });
+
+  it("enables Apply for a supported plugin plan and rescans after it", async () => {
+    vi.mocked(buildCellAction).mockImplementation(planWith(true) as never);
+    const onApplied = vi.fn();
+    render(
+      <RowDrawer
+        row={pluginRow()}
+        diffs={[]}
+        gaps={PLUGIN_GAP}
+        surfaceOrder={SURFACE_ORDER}
+        onClose={vi.fn()}
+        onApplied={onApplied}
+      />,
+    );
+    const apply = screen.getByRole("button", { name: "Apply" });
+    await waitFor(() => expect(apply).toBeEnabled());
+    expect(screen.queryByTestId("app-cannot-run")).not.toBeInTheDocument();
+    fireEvent.click(apply);
+    await waitFor(() => expect(onApplied).toHaveBeenCalledTimes(1));
+    expect(applyCellActionViaTauri).toHaveBeenCalledTimes(1);
+  });
+
+  it("toasts 'Installed <name> on <Surface>' for a plugin", async () => {
+    vi.mocked(buildCellAction).mockImplementation(planWith(true) as never);
+    render(
+      <ToastProvider>
+        <RowDrawer
+          row={pluginRow()}
+          diffs={[]}
+          gaps={PLUGIN_GAP}
+          surfaceOrder={SURFACE_ORDER}
+          onClose={vi.fn()}
+        />
+      </ToastProvider>,
+    );
+    const apply = screen.getByRole("button", { name: "Apply" });
+    await waitFor(() => expect(apply).toBeEnabled());
+    fireEvent.click(apply);
+    expect(await screen.findByText("Installed board@harness-kit on Codex")).toBeInTheDocument();
+  });
+
+  it("disables Apply with the plan's reason when the plugin plan is unsupported", async () => {
+    vi.mocked(buildCellAction).mockImplementation(planWith(false) as never);
+    render(
+      <RowDrawer
+        row={pluginRow()}
+        diffs={[]}
+        gaps={PLUGIN_GAP}
+        surfaceOrder={SURFACE_ORDER}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(await screen.findByText("codex has no installer for this plugin")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled();
   });
 });

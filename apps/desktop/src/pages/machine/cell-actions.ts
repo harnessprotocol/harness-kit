@@ -1,6 +1,7 @@
 import { homeDir } from "@tauri-apps/api/path";
 import {
   applyCellAction,
+  applyPluginCellAction,
   buildAgentPrompt,
   createHomeTransactionRoot,
   planCellAction,
@@ -15,6 +16,7 @@ import type {
   SurfaceId,
 } from "@harness-kit/core";
 import { TauriFsProvider } from "../../lib/harness-fs";
+import { TauriProcessRunner } from "../../lib/process-runner";
 import { TauriSurfaceFsProvider } from "../../lib/surface-fs";
 import { TauriTransactionLedger } from "../../lib/state-ledger";
 import { detectDesktopPlatform } from "./machine-data";
@@ -149,17 +151,25 @@ export async function applyCellActionViaTauri(
   /** The user's explicit acknowledgement of capability loss (AC-34). */
   confirmedLoss = false,
 ): Promise<CellApplyResult> {
-  // A plugin action drives the surface's own installer, which needs a
-  // process-spawn bridge the app does not have. Adding arbitrary binary
-  // execution to the webview is a trust boundary of its own and gets its own
-  // change; until then the drawer shows the exact CLI invocation and the
-  // agent prompt (AC-13), and says why the button is off rather than
-  // applying an empty transaction and reporting success.
   if (view.plan.plugin !== undefined) {
-    throw new Error(
-      "Installing a plugin runs the surface's own installer, which the app cannot do yet — " +
-        "copy the CLI command below, or use the agent prompt.",
-    );
+    // A plugin action drives the surface's own installer through the
+    // allowlisted Rust bridge. No transaction, preimage or rollback point:
+    // nothing HarnessKit owns is written. No `state` either — the desktop
+    // does not record unpacks yet.
+    const home = await homeDir();
+    const outcome = await applyPluginCellAction(view.plan, {
+      runner: new TauriProcessRunner(),
+      fs: new TauriFsProvider(home),
+      now: new Date().toISOString(),
+      sourceSurface: view.request.from,
+      homeRoot: home,
+      surface: view.request.to,
+      identity: view.request.name,
+    });
+    if (outcome.status === "refused" || outcome.status === "failed") {
+      throw new Error(outcome.reason);
+    }
+    return { written: outcome.files };
   }
   const home = await homeDir();
   // Namespaced: the CLI mints ids from the same clock with the same format,

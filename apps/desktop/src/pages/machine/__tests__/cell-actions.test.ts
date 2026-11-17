@@ -18,14 +18,18 @@ const recordAppliedTransaction = vi.hoisted(
     ),
 );
 
+const applyPluginCellAction = vi.hoisted(() => vi.fn() as unknown as ReturnType<typeof vi.fn> & ((...args: unknown[]) => unknown));
+
 vi.mock("@tauri-apps/api/core", () => ({ invoke }));
 vi.mock("@tauri-apps/api/path", () => ({ homeDir }));
 vi.mock("@harness-kit/core", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@harness-kit/core")>();
-  return { ...actual, applyCellAction, recordAppliedTransaction };
+  return { ...actual, applyCellAction, applyPluginCellAction, recordAppliedTransaction };
 });
 
 const { applyCellActionViaTauri, divergentTargets } = await import("../cell-actions");
+const { TauriProcessRunner } = await import("../../../lib/process-runner");
+const { TauriFsProvider } = await import("../../../lib/harness-fs");
 
 function view(changePath = "/home/user/.cursor/mcp.json") {
   return {
@@ -157,28 +161,71 @@ describe("divergentTargets (AC-11 diff case)", () => {
   });
 });
 
-describe("the app refuses plugin applies before the user clicks", () => {
-  it("throws with a reason naming the installer, not an empty transaction", async () => {
-    // A plugin plan is `supported: true` — core can plan it and the CLI can
-    // run it. The APP cannot, and for a while the drawer's Apply button was
-    // live for these: it threw on click and showed its reason only after
-    // failing. The refusal is asserted here; the button's disabled state is
-    // asserted in MachinePage's drawer tests.
-    await expect(
-      applyCellActionViaTauri({
-        request: { from: "claude-code", to: "codex", kind: "plugin", name: "a@b", scope: "user" },
-        plan: {
-          supported: true,
-          changes: [],
-          noop: false,
-          carriesSecret: false,
-          loss: null,
-          requiresConfirmation: false,
-          plugin: { kind: "native", action: "install", plan: { supported: true } },
-        },
-        cli: "harness-kit sync ...",
-        prompt: "",
-      } as never),
-    ).rejects.toThrow(/installer/);
+describe("plugin cell actions run through the installer bridge (AC-15, AC-22)", () => {
+  function pluginView(to: "codex" | "pi" = "codex") {
+    return {
+      request: { from: "claude-code", to, kind: "plugin", name: "a@b", scope: "user" },
+      plan: {
+        supported: true,
+        changes: [],
+        noop: false,
+        carriesSecret: false,
+        loss: null,
+        requiresConfirmation: false,
+        plugin: { kind: "native", action: "install", plan: { supported: true } },
+      },
+      cli: "harness-kit sync ...",
+      prompt: "",
+    } as never;
+  }
+
+  beforeEach(() => {
+    applyCellAction.mockReset();
+    applyPluginCellAction.mockReset();
+    recordAppliedTransaction.mockClear();
+  });
+
+  it("drives applyPluginCellAction with the Tauri runner and fs, and skips the transaction path", async () => {
+    applyPluginCellAction.mockResolvedValue({
+      status: "installed",
+      display: "codex plugin add a@b",
+      files: ["/home/user/x"],
+    });
+    const result = await applyCellActionViaTauri(pluginView("pi"));
+    expect(result).toEqual({ written: ["/home/user/x"] });
+    const [plan, options] = applyPluginCellAction.mock.calls[0] as unknown as [
+      unknown,
+      Record<string, unknown>,
+    ];
+    expect(plan).toHaveProperty("plugin");
+    expect(options.runner).toBeInstanceOf(TauriProcessRunner);
+    expect(options.fs).toBeInstanceOf(TauriFsProvider);
+    expect(options).toMatchObject({
+      sourceSurface: "claude-code",
+      homeRoot: "/home/user",
+      surface: "pi",
+      identity: "a@b",
+    });
+    expect(options).not.toHaveProperty("state");
+    expect(typeof options.now).toBe("string");
+    expect(applyCellAction).not.toHaveBeenCalled();
+    expect(recordAppliedTransaction).not.toHaveBeenCalled();
+  });
+
+  it("throws the reason of a refused outcome", async () => {
+    applyPluginCellAction.mockResolvedValue({ status: "refused", reason: "codex is not installed" });
+    await expect(applyCellActionViaTauri(pluginView())).rejects.toThrow("codex is not installed");
+  });
+
+  it("throws the reason of a failed outcome", async () => {
+    applyPluginCellAction.mockResolvedValue({ status: "failed", reason: "exit 1: boom" });
+    await expect(applyCellActionViaTauri(pluginView())).rejects.toThrow("exit 1: boom");
+  });
+
+  it("still sends a non-plugin plan through the transaction engine (AC-22)", async () => {
+    applyCellAction.mockResolvedValue({ committed: true, written: [".cursor/mcp.json"], removed: [] });
+    await applyCellActionViaTauri(view());
+    expect(applyCellAction).toHaveBeenCalledTimes(1);
+    expect(applyPluginCellAction).not.toHaveBeenCalled();
   });
 });
